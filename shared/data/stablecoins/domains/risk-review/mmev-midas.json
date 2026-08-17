@@ -61,9 +61,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "mMEV is issued natively by Midas on Ethereum, Plume, and Etherlink. Row-level on-chain verification on 2026-07-20: each deployment is a Midas-administered transparent proxy (EIP-1967 impl/admin slots read on all three chains), no LayerZero endpoint() surface exists on any of them, and the verified mint-authority review (2026-07-13) confirms each chain mints through its own Midas deposit-vault minter holding M_MEV_MINT_OPERATOR_ROLE plus Midas admin EOAs under chain-local 1-of-3 Safes. No third-party bridge carries the representation; cross-chain movement is issuer-operated.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "summary": "mMEV has three independently native Midas issuance deployments on Ethereum, Plume, and Etherlink. Bridge Risk therefore contains only reviewed native route identities; no production OFT/OToken, lockbox, escrow, peer, validator, bridge-admin, or bridge-specific rate-limit control is evidenced. The mint-vault, admin-role, and delayed proxy-upgrade authorities remain exclusively in Mint Authority as native issuance controls. The issuer-native-burn-mint tier describes these native routes, not a third-party bridge.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Codex mint-bridge-boundary migration 2026-08-16",
     "confidence": "verified",
     "sources": [
       {

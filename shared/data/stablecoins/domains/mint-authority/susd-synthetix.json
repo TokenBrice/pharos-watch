@@ -4,29 +4,110 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "Synthetix sUSD is an overcollateralized debt-pool stablecoin; both the legacy sUSD token and V3 Core Proxy are owned by a 4-of-7 Gnosis Safe with no timelock.",
+    "summary": "Synthetix legacy sUSD has reviewed native-issuance deployments on Ethereum and Optimism, both now retired under SIP-423. Their terminal RetiredSynthsUSD targets have zero supply and no direct issue path, but proxy replacement remains a native issuance control; the Ethereum V3 Core owner and shared 4-of-7 Safe remain in Mint Authority. Arbitrum and Fantom representations are assessed only under bridgeRouteRisk.",
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+        "optimism:0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9"
+      ],
+      "proxyAddresses": [
+        "0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+        "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9"
+      ],
+      "implementationAddresses": [
+        "0xeb05c1de97296ae3dca16f99cd0bdf5a7910943c",
+        "0xc63442d483f8082eef3bcbaeddf80e0b004ca684"
+      ],
+      "adminAddresses": [
+        "0xeb3107117fead7de89cd14d463d340a2e6917769",
+        "0x6d4a64c57612841c2c6745db2a4e4db34f002d20",
+        "0x0e16a6876210841577b233c4165d7b7edf640b8a"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Synthetix governance multisig (4-of-7 Gnosis Safe)",
+      "observedAt": "2026-08-17",
+      "observedBlock": 25775088,
+      "sources": [
+        {
+          "label": "Synthetix Proxy source (owner-gated setTarget)",
+          "url": "https://raw.githubusercontent.com/Synthetixio/synthetix/master/contracts/Proxy.sol"
+        },
+        {
+          "label": "Ethereum verified sUSD ProxyERC20 source",
+          "url": "https://eth.blockscout.com/address/0x57ab1ec28d129707052df4df418d58a2d46d5f51?tab=contract"
+        },
+        {
+          "label": "Ethereum verified RetiredSynthsUSD source",
+          "url": "https://eth.blockscout.com/address/0xeb05c1de97296ae3dca16f99cd0bdf5a7910943c?tab=contract"
+        },
+        {
+          "label": "Optimism verified sUSD ProxyERC20 source",
+          "url": "https://optimism.blockscout.com/address/0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9?tab=contract"
+        },
+        {
+          "label": "Optimism verified RetiredSynthsUSD source",
+          "url": "https://optimism.blockscout.com/address/0xc63442d483f8082eef3bcbaeddf80e0b004ca684?tab=contract"
+        },
+        {
+          "label": "Synthetix OwnerRelayOnOptimism source",
+          "url": "https://raw.githubusercontent.com/Synthetixio/synthetix/master/contracts/OwnerRelayOnOptimism.sol"
+        },
+        {
+          "label": "Synthetix OwnerRelayOnEthereum source",
+          "url": "https://raw.githubusercontent.com/Synthetixio/synthetix/master/contracts/OwnerRelayOnEthereum.sol"
+        },
+        {
+          "label": "Ethereum governance Safe live JSON-RPC observation at block 25775088 (2026-08-17 UTC)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Optimism proxy and relay live JSON-RPC observation at block 155687189 (2026-08-17 UTC)",
+          "url": "https://optimism-rpc.publicnode.com"
+        },
+        {
+          "label": "Synthetix governance Safe",
+          "url": "https://etherscan.io/address/0xeb3107117fead7de89cd14d463d340a2e6917769#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x57ab1ec28d129707052df4df418d58a2d46d5f51",
-        "label": "sUSD token (Synthetix legacy proxy, target() pattern)",
+        "deploymentRefs": [
+          "ethereum:0x57ab1ec28d129707052df4df418d58a2d46d5f51"
+        ],
+        "label": "sUSD Ethereum legacy proxy (RetiredSynthsUSD target)",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Minting is bounded by the protocol-owned debt pool issuance ratio (~200% post-SIP-420) across SNX/ETH/USDC collateral types.",
+        "capDescription": "The current RetiredSynthsUSD target exposes no issue or mint path and totalSupply() is zero, but the proxy owner can call setTarget and install new mint-critical logic, so the native issuance bound can be reopened.",
         "sources": [
+          {
+            "label": "SIP-423: sUSD Retirement & Staking Reform",
+            "url": "https://sips.synthetix.io/sips/sip-423/"
+          },
           {
             "label": "sUSD token on Etherscan",
             "url": "https://etherscan.io/address/0x57ab1ec28d129707052df4df418d58a2d46d5f51"
+          },
+          {
+            "label": "Ethereum verified RetiredSynthsUSD implementation",
+            "url": "https://eth.blockscout.com/address/0xeb05c1de97296ae3dca16f99cd0bdf5a7910943c?tab=contract"
           }
         ],
-        "evidence": "At Ethereum block 25,360,249, token uses Synthetix legacy target() pattern (not EIP-1967). owner() = 0xeB3107117FEAd7de89Cd14D463D340A2E6917769 (Gnosis Safe 4-of-7)."
+        "evidence": "At Ethereum block 25,771,200, the tracked proxy name() was Synth sUSD (retired), totalSupply() was zero, target() resolved to verified RetiredSynthsUSD implementation 0xeb05c1de97296ae3dca16f99cd0bdf5a7910943c, and owner() was the 4-of-7 Safe 0xeb3107117fead7de89cd14d463d340a2e6917769. The terminal target has no issue or mint path, but the owner can call setTarget and replace it."
       },
       {
         "chain": "ethereum",
         "address": "0xffffffaEff0B96Ea8e4f94b2253f31abdD875847",
+        "deploymentRefs": [
+          "ethereum:0x57ab1ec28d129707052df4df418d58a2d46d5f51"
+        ],
         "label": "Synthetix V3 Core Proxy",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -40,11 +121,15 @@
             "url": "https://etherscan.io/address/0xffffffaEff0B96Ea8e4f94b2253f31abdD875847"
           }
         ],
-        "evidence": "At block 25,360,249, owner() = 0xeB3107117FEAd7de89Cd14D463D340A2E6917769 — same 4-of-7 Safe as sUSD token."
+        "evidence": "At Ethereum block 25,771,200, owner() = 0xeb3107117fead7de89cd14d463d340a2e6917769 — the same 4-of-7 Safe that controls the native sUSD proxy. This is a separate native Synthetix issuance control, not a bridge administrator."
       },
       {
         "chain": "ethereum",
         "address": "0xeB3107117FEAd7de89Cd14D463D340A2E6917769",
+        "deploymentRefs": [
+          "ethereum:0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+          "optimism:0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9"
+        ],
         "label": "Synthetix governance multisig (4-of-7 Gnosis Safe)",
         "role": "governor",
         "authorityType": "safe",
@@ -68,33 +153,71 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
-          "observedBlock": 25360249,
+          "observedBlock": 25771200,
           "source": "onchain"
         },
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Synthetix governance multisig on Etherscan",
             "url": "https://etherscan.io/address/0xeB3107117FEAd7de89Cd14D463D340A2E6917769"
+          },
+          {
+            "label": "SIP-423: sUSD Retirement & Staking Reform",
+            "url": "https://sips.synthetix.io/sips/sip-423/"
           }
         ],
-        "evidence": "On-chain getOwners()/getThreshold() at block 25,360,249 confirmed 4-of-7 Gnosis Safe v1.3.0, nonce 3334 (highly active). No timelock between Safe and contracts. Controls both legacy sUSD token and V3 Core Proxy."
+        "evidence": "On-chain getOwners()/getThreshold() at Ethereum block 25,771,200 confirmed the same 4-of-7 Gnosis Safe, current nonce 3359, and an empty enabled-module list. No timelock sits between the Safe and the Ethereum contracts. The Safe controls the Ethereum legacy sUSD proxy and V3 Core Proxy, and it is also the ultimate owner in the Optimism OwnerRelayOnOptimism -> OwnerRelayOnEthereum path that can replace the Optimism native sUSD proxy target."
+      },
+      {
+        "chain": "optimism",
+        "address": "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9",
+        "deploymentRefs": [
+          "optimism:0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9"
+        ],
+        "label": "sUSD Optimism legacy proxy (RetiredSynthsUSD target)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The current RetiredSynthsUSD target exposes no issue or mint path and totalSupply() is zero, but the Optimism proxy owner relay can authorize setTarget through the Ethereum OwnerRelay and Safe, so native issuance logic can be reopened.",
+        "sources": [
+          {
+            "label": "SIP-423: sUSD Retirement & Staking Reform",
+            "url": "https://sips.synthetix.io/sips/sip-423/"
+          },
+          {
+            "label": "Optimism sUSD proxy and verified retired implementation",
+            "url": "https://optimism.blockscout.com/address/0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9?tab=contract"
+          },
+          {
+            "label": "Optimism OwnerRelayOnOptimism",
+            "url": "https://optimism.blockscout.com/address/0x6d4a64c57612841c2c6745db2a4e4db34f002d20?tab=contract"
+          }
+        ],
+        "evidence": "At Optimism block 155,663,777, the tracked proxy name() was Synth sUSD (retired), totalSupply() was zero, target() resolved to the verified RetiredSynthsUSD implementation 0xc63442d483f8082eef3bcbaeddf80e0b004ca684, and owner() was OwnerRelayOnOptimism 0x6d4a64c57612841c2c6745db2a4e4db34f002d20. Its expired temporary owner is not current; the relay resolves through OwnerRelayOnEthereum 0x0e16a6876210841577b233c4165d7b7edf640b8a to the Ethereum 4-of-7 Safe, which can authorize setTarget."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25,360,249: sUSD token owner() = V3 Core Proxy owner() = 0xeB3107117FEAd7de89Cd14D463D340A2E6917769 (Gnosis Safe v1.3.0, 4-of-7, nonce 3334, no modules). Full governance chain verified on-chain via getOwners()/getThreshold(). No timelock present. Economic-posture fields reviewed 2026-08-15: the self-controlled Safe can raise collateralized issuance parameters without an independent timelock, reconciliation is not applicable to the on-chain CDP debt pool, and no supervisor or independent attestor is identified.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 25,771,200, the legacy sUSD proxy and V3 Core Proxy remained controlled by the 4-of-7 Safe 0xeb3107117fead7de89cd14d463d340a2e6917769; the Safe's current nonce was 3359 and getModulesPaginated returned an empty module list. The Ethereum proxy target and the Optimism proxy target are both verified RetiredSynthsUSD implementations with zero totalSupply() and no direct issue path, but their proxy replacement paths remain native issuance controls. The Optimism path is OwnerRelayOnOptimism -> OwnerRelayOnEthereum -> the same Ethereum Safe. The Safe can raise collateralized issuance parameters without an independent timelock, reconciliation is not applicable to the on-chain CDP debt pool, and no supervisor or independent attestor is identified. Arbitrum StandardArbERC20 and Fantom AnySwap controls are excluded from this Mint Authority review and are structured under bridgeRouteRisk.",
+      "reviewer": "Codex mint/bridge boundary migration; susd-synthetix verified finding",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
-          "label": "SIP-420 (Synthetix SIPs)",
-          "url": "https://sips.synthetix.io/sips/sip-420/"
+          "label": "SIP-423 (Synthetix SIPs)",
+          "url": "https://sips.synthetix.io/sips/sip-423/"
         },
         {
           "label": "sUSD token on Etherscan",
           "url": "https://etherscan.io/address/0x57ab1ec28d129707052df4df418d58a2d46d5f51"
+        },
+        {
+          "label": "Optimism sUSD proxy",
+          "url": "https://optimism.blockscout.com/address/0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9?tab=contract"
         },
         {
           "label": "Synthetix V3 Core Proxy on Etherscan",

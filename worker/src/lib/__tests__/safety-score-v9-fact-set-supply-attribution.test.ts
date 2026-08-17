@@ -326,7 +326,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
           capabilities: control.capabilities,
           deploymentKey: control.deploymentKey,
           authority: control.authority,
-        })),
+        }))
+        // Control identities are content-derived, so compare by authority rather than array order.
+        .sort((left, right) => (left.authority?.authorityKey ?? "").localeCompare(right.authority?.authorityKey ?? "")),
     ).toEqual([
       {
         controlKind: "mint",

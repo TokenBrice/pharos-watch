@@ -10,7 +10,7 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extensio
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 
 const AS_OF_SEC = 1_785_456_000;
-const REGISTRY_FIXTURE_CAPTURED_AT = "2026-08-15T00:00:00.000Z";
+const REGISTRY_FIXTURE_CAPTURED_AT = "2026-08-17T00:00:00.000Z";
 const REGISTRY_FIXTURE_CLOCK_SEC = Date.parse(REGISTRY_FIXTURE_CAPTURED_AT) / 1_000;
 const ASSET_ID = "authoring-example";
 const REVIEWED_INHERITED_WRAPPERS = [
@@ -44,6 +44,8 @@ const UNRESOLVED_INHERITED_WRAPPER = {
  */
 const UNRESOLVED_INHERITED_MINT_CONTROL = {
   label: "Inherited parent permissioned mint authority",
+  // The wrapper's own canonical deployment: inherited parent authority still governs local issuance.
+  deploymentRefs: ["plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"],
   role: "direct-minter",
   authorityType: "issuer-backend",
   directMintAbility: "direct",
@@ -223,7 +225,27 @@ function fixedInput(
 }
 
 function metaWith(profile: MintAuthorityProfile | undefined) {
-  return new Map([[ASSET_ID, { id: ASSET_ID, mechanismArchetype: "fiat-cash" as const, mintAuthority: profile }]]);
+  // Reviewed profiles name the deployments their controls govern; mirror those refs as authored
+  // contracts so the fixture satisfies the mint/bridge ownership contract like a real catalog entry.
+  const refs = new Set<string>([
+    ...(profile?.controls ?? []).flatMap((control) => control.deploymentRefs ?? []),
+    ...(profile?.upgradeability?.deploymentRefs ?? []),
+  ]);
+  const contracts = [...refs].map((ref) => {
+    const separator = ref.indexOf(":");
+    return { chain: ref.slice(0, separator), address: ref.slice(separator + 1), decimals: 18 };
+  });
+  return new Map([
+    [
+      ASSET_ID,
+      {
+        id: ASSET_ID,
+        mechanismArchetype: "fiat-cash" as const,
+        mintAuthority: profile,
+        ...(contracts.length > 0 ? { contracts } : {}),
+      },
+    ],
+  ]);
 }
 
 function mintReviewFor(profile: MintAuthorityProfile | undefined) {
@@ -314,13 +336,15 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     const mintControls = controlReview.controls.filter((control) =>
       control.controlKey.startsWith(`mint-meta:${assetId}:`),
     );
-    const expectedControlKeys = [
-      "mint-meta:dusd-dialectic:0:0753a29722c02f5eb3f2",
-      "mint-meta:dusd-dialectic:1:53c5cf56b4e8d9e0facf",
-      "mint-meta:dusd-dialectic:2:8a504a683206276bfc65",
-      "mint-meta:dusd-dialectic:3:1e5d1009d534d5ffa1b9",
-      "mint-meta:dusd-dialectic:4:307f52514a8019019079",
-    ];
+    // Control keys derive from stable control identity, not array position, so reordering the
+    // reviewed `controls` array cannot change compiled identities. Look controls up by their
+    // on-chain authority instead of by index.
+    const controlKeyByAuthority = new Map(
+      mintControls.map((control) => [control.authority?.authorityKey ?? "", control.controlKey] as const),
+    );
+    const FEE_SHARE_AUTHORITY = "ethereum:0xa7f0121375dc52028e333f02715183a1d1a690a7";
+    const DAO_PROXY_ADMIN_AUTHORITY = "ethereum:0x62244c74e1d09b3d86ef7342d354b5d7770bde10";
+    const SECURITY_COUNCIL_AUTHORITY = "ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc";
 
     expect(profile).toMatchObject({
       confidence: "probable",
@@ -348,22 +372,23 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       bypassSurfaces: [expect.stringContaining("only to request setRecoveryMode(true)")],
     });
     expect(controlReview.state).toBe("reviewed-controls");
-    expect(mintControls.map((control) => control.controlKey)).toEqual(expectedControlKeys);
+    expect(new Set(mintControls.map((control) => control.controlKey)).size).toBe(5);
     // The scoped historical review establishes incident absence positively, so no
     // control is left at the fail-closed "unknown" incident state.
     expect(mintControls.map((control) => control.incidentState)).toEqual(
-      Array.from({ length: expectedControlKeys.length }, () => "none"),
+      Array.from({ length: mintControls.length }, () => "none"),
     );
     expect(asset.economicControlReview?.mint.status.observationState).toBe("known");
-    // Mint selection lands on the fee-share dilution control (index 1) and the
-    // upgrade path on the DAO proxy admin (index 3); the Security Council's
-    // recovery-module control (index 4) carries only parameter-change capability.
-    expect(asset.economicControlReview?.mint.controlKey).toBe(expectedControlKeys[1]);
+    // Mint selection lands on the fee-share dilution control and the upgrade path on the DAO proxy
+    // admin; the Security Council's recovery-module control carries only parameter-change capability.
+    expect(asset.economicControlReview?.mint.controlKey).toBe(controlKeyByAuthority.get(FEE_SHARE_AUTHORITY));
     expect(asset.economicControlReview?.mint.upgrade).toMatchObject({
       state: "reviewed",
-      controlKey: expectedControlKeys[3],
+      controlKey: controlKeyByAuthority.get(DAO_PROXY_ADMIN_AUTHORITY),
     });
-    const councilControl = mintControls.find((control) => control.controlKey === expectedControlKeys[4])!;
+    const councilControl = mintControls.find(
+      (control) => control.controlKey === controlKeyByAuthority.get(SECURITY_COUNCIL_AUTHORITY),
+    )!;
     expect(councilControl.capabilities).toEqual(["parameter-change"]);
     expect(councilControl.capabilities).not.toContain("mint");
 
@@ -377,7 +402,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       gapIds: [],
     });
     expect(compiledMintControls.map((control) => control.status)).toEqual(
-      expectedControlKeys.map(() =>
+      compiledMintControls.map(() =>
         expect.objectContaining({
           observationState: "known",
           gapIds: [],
@@ -411,6 +436,18 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
               id: ASSET_ID,
               mechanismArchetype: "cdp" as const,
               mintAuthority,
+              // Keep only the deployments the reviewed controls name, so the fixture is a
+              // single-canonical asset rather than an unrouted multi-deployment one.
+              ...(() => {
+                const refs = new Set<string>([
+                  ...(mintAuthority.controls ?? []).flatMap((control) => control.deploymentRefs ?? []),
+                  ...(mintAuthority.upgradeability?.deploymentRefs ?? []),
+                ]);
+                const contracts = (meta.contracts ?? []).filter((contract) =>
+                  refs.has(`${contract.chain}:${contract.address}`.toLowerCase()),
+                );
+                return contracts.length > 0 ? { contracts } : {};
+              })(),
             },
           ],
         ]),

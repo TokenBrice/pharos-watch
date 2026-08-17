@@ -7,6 +7,12 @@
     "summary": "JPYC is a centralized FiatToken-style ERC-20. Minting requires being a configured minter with allowance; the sole ever-configured minter (0x11f14c2b…) currently has zero allowance on all three chains. Effective mint authority runs through the minterAdmin contract (owned by a 2/3 Safe) which calls configureMinter. The token owner (3/5 Safe) controls upgrades and minterAdmin replacement. Owner Safe and minterAdmin owner Safe confirmed unchanged on Ethereum, Polygon, and Avalanche.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "avalanche:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "ethereum:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "klaytn:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "polygon:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+      ],
       "proxyAddresses": [
         "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
       ],
@@ -59,6 +65,9 @@
       {
         "chain": "ethereum",
         "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "deploymentRefs": [
+          "ethereum:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+        ],
         "label": "JPYC regulated token proxy (Ethereum, Polygon, Avalanche)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -80,6 +89,9 @@
       {
         "chain": "ethereum",
         "address": "0x029ba134614B61EE129e2dc5Ae3eAd5f0A215694",
+        "deploymentRefs": [
+          "ethereum:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+        ],
         "label": "JPYC minterAdmin contract",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -97,6 +109,9 @@
       {
         "chain": "ethereum",
         "address": "0x5BA1b9aAf56Af1B761519F924079681D8d061F94",
+        "deploymentRefs": [
+          "ethereum:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+        ],
         "label": "JPYC minterAdmin owner Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -130,6 +145,9 @@
       {
         "chain": "ethereum",
         "address": "0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9",
+        "deploymentRefs": [
+          "ethereum:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+        ],
         "label": "JPYC token owner Safe",
         "role": "proxy-admin",
         "authorityType": "safe",

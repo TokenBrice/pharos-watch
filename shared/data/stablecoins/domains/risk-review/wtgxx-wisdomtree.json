@@ -13,169 +13,199 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "WisdomTree WTGXX is deployed across multiple EVM networks and Stellar, while the route candidate set includes Across plus rollup/canonical paths. Because cross-chain movement appears to depend materially on routing/liquidity surfaces, the reviewed tier is liquidity-or-intent.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "liquidity",
-          "intent"
-        ]
-      },
-      {
-        "source": "l2beat",
-        "name": "Arbitrum canonical bridge",
-        "slug": "arbitrum",
-        "url": "https://l2beat.com/scaling/projects/arbitrum",
-        "bridgeTypes": [
-          "canonicalBridge"
-        ]
-      },
-      {
-        "source": "l2beat",
-        "name": "Avalanche Bridge",
-        "slug": "avalanche",
-        "url": "https://l2beat.com/bridges/projects/avalanche",
-        "bridgeTypes": [
-          "canonicalBridge"
-        ]
-      },
-      {
-        "source": "l2beat",
-        "name": "OP Mainnet standard bridge",
-        "slug": "op-mainnet",
-        "url": "https://l2beat.com/scaling/projects/op-mainnet",
-        "bridgeTypes": [
-          "canonicalBridge"
-        ]
-      }
-    ],
+    "tier": "single-chain-or-native",
+    "summary": "WTGXX has six verified native issuer deployments on Arbitrum, Avalanche, Base, Ethereum, Optimism, and Plume. The token contracts expose issuer REGISTRAR_ROLE mint/burn and DEFAULT_ADMIN_ROLE beacon-upgrade paths, but no OFT/OToken adapter, lockbox, escrow, peer, validator, DVN, bridge pause, or route-specific rate-limit machinery was found. Unsupported generic Across and canonical-bridge candidates are removed; no WTGXX representation route is verified. The authored Stellar issuer account is excluded because Horizon identifies its live asset as WTGX rather than WTGXX, leaving an explicit identity gap.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos mint-bridge boundary migration; WTGXX verified finding",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "WisdomTree WTGXX",
-        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+        "label": "WisdomTree current WTGXX FAQ",
+        "url": "https://dataspanapi.wisdomtree.com/pdr/documents/WEBSITE_FUND_DETAILS/WDT/US/EN-US/WTGXX_3/"
       },
       {
-        "label": "WisdomTree Connect",
-        "url": "https://www.wisdomtree.com/connect"
+        "label": "WisdomTree 2026 WTGXX fund presentation",
+        "url": "https://dataspanapi.wisdomtree.com/pdr/documents/WEBSITE_FUND_DETAILS/WDT/US/EN-US/WTGXX_2/"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "WisdomTree WTGXX digital fund fact sheet",
+        "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
+      },
+      {
+        "label": "WTGXX Sourcify implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources%2Cabi%2Cmetadata"
+      },
+      {
+        "label": "WTGXX Arbitrum Sourcify implementation",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x6e46c98c4805b7cad59d557e1c47af535f1706b1?fields=sources%2Cabi%2Cmetadata"
+      },
+      {
+        "label": "Stellar Horizon WTGX asset record",
+        "url": "https://horizon.stellar.org/assets?asset_code=WTGX&asset_issuer=GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
       }
     ],
     "routes": [
       {
         "id": "arbitrum:0xfeb26f0943c3885b2cb85a9f933975356c81c33d",
         "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0xfeb26f0943c3885b2cb85a9f933975356c81c33d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "WisdomTree native WTGXX issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native WTGXX issuer deployment: the custom beacon-proxy token has role-gated local mint/burn and no bridge adapter, peer, validator, escrow, or route-specific rate-limit surface. Reviewed at Arbitrum block 495304232 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 495304232,
+        "sources": [
+          {
+            "label": "WTGXX Arbitrum deployment",
+            "url": "https://arbiscan.io/address/0xfeb26f0943c3885b2cb85a9f933975356c81c33d"
+          },
+          {
+            "label": "WTGXX Arbitrum implementation",
+            "url": "https://sourcify.dev/server/v2/contract/42161/0x6e46c98c4805b7cad59d557e1c47af535f1706b1?fields=sources%2Cabi%2Cmetadata"
+          }
+        ]
       },
       {
         "id": "avalanche:0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d",
         "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "WisdomTree native WTGXX issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native WTGXX issuer deployment: the custom beacon-proxy token has role-gated local mint/burn and no bridge adapter, peer, validator, escrow, or route-specific rate-limit surface. Reviewed at Avalanche block 92984819 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 92984819,
+        "sources": [
+          {
+            "label": "WTGXX Avalanche deployment",
+            "url": "https://snowtrace.io/address/0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d"
+          },
+          {
+            "label": "WisdomTree WTGXX digital fund fact sheet",
+            "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
+          }
+        ]
       },
       {
         "id": "base:0x5096b85ed11798fddcb8b5cb27c399c04689c435",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0x5096b85ed11798fddcb8b5cb27c399c04689c435",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "WisdomTree native WTGXX issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native WTGXX issuer deployment: the custom beacon-proxy token has role-gated local mint/burn and no bridge adapter, peer, validator, escrow, or route-specific rate-limit surface. Reviewed at Base block 50067802 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067802,
+        "sources": [
+          {
+            "label": "WTGXX Base deployment",
+            "url": "https://basescan.org/address/0x5096b85ed11798fddcb8b5cb27c399c04689c435"
+          },
+          {
+            "label": "WisdomTree WTGXX digital fund fact sheet",
+            "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
+          }
+        ]
       },
       {
         "id": "ethereum:0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "WisdomTree native WTGXX issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native WTGXX issuer deployment: the custom beacon-proxy token has role-gated local mint/burn and no bridge adapter, peer, validator, escrow, or route-specific rate-limit surface. Reviewed at Ethereum block 25771084 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771084,
+        "sources": [
+          {
+            "label": "WTGXX Ethereum deployment",
+            "url": "https://etherscan.io/address/0x1fecf3d9d4fee7f2c02917a66028a48c6706c179"
+          },
+          {
+            "label": "WTGXX Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources%2Cabi%2Cmetadata"
+          }
+        ]
       },
       {
         "id": "optimism:0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d",
         "destinationChain": "optimism",
+        "canonicalChain": "optimism",
         "contractAddress": "0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "WisdomTree native WTGXX issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native WTGXX issuer deployment: the custom beacon-proxy token has role-gated local mint/burn and no bridge adapter, peer, validator, escrow, or route-specific rate-limit surface. Reviewed at Optimism block 155663088 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 155663088,
+        "sources": [
+          {
+            "label": "WTGXX Optimism deployment",
+            "url": "https://optimistic.etherscan.io/address/0x870fd36b3bf7f5abeeea2c8d4abdf1dc4e33109d"
+          },
+          {
+            "label": "WisdomTree WTGXX digital fund fact sheet",
+            "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
+          }
+        ]
       },
       {
         "id": "plume:0xcf7a8813bd3bdaf70a9f46d310ce1ee8d80a4f5a",
         "destinationChain": "plume",
+        "canonicalChain": "plume",
         "contractAddress": "0xcf7a8813bd3bdaf70a9f46d310ce1ee8d80a4f5a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "WisdomTree native WTGXX issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native WTGXX issuer deployment: the custom beacon-proxy token has role-gated local mint/burn and no bridge adapter, peer, validator, escrow, or route-specific rate-limit surface. Reviewed at Plume block 87697435 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
-      },
-      {
-        "id": "stellar:GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
-        "destinationChain": "stellar",
-        "contractAddress": "GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 87697435,
+        "sources": [
+          {
+            "label": "WTGXX Plume deployment",
+            "url": "https://explorer.plume.org/address/0xcf7a8813bd3bdaf70a9f46d310ce1ee8d80a4f5a"
+          },
+          {
+            "label": "WisdomTree WTGXX digital fund fact sheet",
+            "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
+          }
+        ]
       }
     ]
   }

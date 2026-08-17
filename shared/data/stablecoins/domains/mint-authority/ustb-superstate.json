@@ -4,11 +4,14 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USTB is an ERC-1967 upgradeable proxy with issuance controlled by a single issuer EOA that owns both the token and the ProxyAdmin. The EOA custody model is consistent with enterprise MPC/HSM; chain state confirmed unchanged.",
+    "summary": "USTB has independently evidenced native issuance surfaces on Ethereum and Solana. The Ethereum issuer EOA controls the token proxy's direct mint path and ProxyAdmin, while the Solana Token-2022 mint has a live issuer mint authority held by a System Program-owned account. Plume is conservatively treated as an Ethereum-issued bridge representation: its owner-only mint/bulkMint and upgrade paths are reviewed as bridge-representation controls under bridgeRouteRisk because the evidence does not prove independent local Plume liabilities.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+        "deploymentRefs": [
+          "ethereum:0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
+        ],
         "label": "USTB token proxy",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -25,11 +28,14 @@
             "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
           }
         ],
-        "evidence": "At Ethereum block 25294990, owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83 (unchanged from block 25166611). Implementation slot = 0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4, proxy admin = 0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146. ProxyAdmin owner() = same EOA."
+        "evidence": "At Ethereum block 25294990, owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83 (unchanged from block 25166611). Implementation slot = 0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4, proxy admin = 0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146. ProxyAdmin owner() = same issuer EOA."
       },
       {
         "chain": "ethereum",
         "address": "0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83",
+        "deploymentRefs": [
+          "ethereum:0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
+        ],
         "label": "USTB token owner / ProxyAdmin owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -42,7 +48,42 @@
             "url": "https://etherscan.io/address/0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83"
           }
         ],
-        "evidence": "At Ethereum block 25294990, eth_getCode returned '0x' (no bytecode) — confirmed EOA. Issuer-context EOA consistent with enterprise MPC/HSM custody."
+        "evidence": "At Ethereum block 25294990, eth_getCode returned '0x' (no bytecode), confirming an EOA. This issuer-context EOA is consistent with enterprise MPC/HSM custody and owns both the token and ProxyAdmin paths."
+      },
+      {
+        "chain": "solana",
+        "address": "EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz",
+        "deploymentRefs": [
+          "solana:CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2"
+        ],
+        "label": "USTB Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "token-2022:solana:CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2",
+          "system-program:solana:EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz"
+        ],
+        "capDescription": "The finalized Token-2022 mint read returned live mintAuthority with supply 224,119.498751 USTB; no program or multisig cap was evidenced. The mint-authority account is System Program-owned. Solana freezeAuthority, permanent delegate, and default-frozen controls remain holder-transfer concerns in their owning risk review and are not part of native Mint Authority.",
+        "sources": [
+          {
+            "label": "Superstate smart-contract documentation",
+            "url": "https://docs.superstate.com/investors/smart-contracts"
+          },
+          {
+            "label": "Solana USTB Token-2022 mint",
+            "url": "https://explorer.solana.com/address/CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439721950,
+        "evidence": "At finalized Solana slot 439721950, Token-2022 mint CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2 reported mintAuthority EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz and supply 224,119.498751 USTB. The authority account is System Program-owned, so it is represented as a direct native minter; freezeAuthority and permanent-delegate state are intentionally left outside Mint Authority."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -56,6 +97,14 @@
           "url": "https://docs.superstate.com/investors/tokenized-funds/ustb"
         },
         {
+          "label": "Superstate smart-contract documentation",
+          "url": "https://docs.superstate.com/investors/smart-contracts"
+        },
+        {
+          "label": "Superstate USTB contract repository",
+          "url": "https://github.com/superstateinc/ustb"
+        },
+        {
           "label": "Superstate USTB product page",
           "url": "https://superstate.com/assets/ustb"
         },
@@ -64,20 +113,23 @@
           "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
         },
         {
-          "label": "Superstate NAV API documentation",
-          "url": "https://docs.superstate.com/introduction-to-superstate/api"
+          "label": "Plume USTB verified proxy",
+          "url": "https://explorer.plume.org/address/0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
         },
         {
-          "label": "SEC USTB Form D filing",
-          "url": "https://www.sec.gov/Archives/edgar/data/2004367/0000945621-25-000419-index.htm"
+          "label": "Solana USTB Token-2022 mint",
+          "url": "https://explorer.solana.com/address/CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2"
         }
       ],
-      "evidence": "At block 25294990: owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, eth_getCode = '0x' (EOA confirmed). ProxyAdmin owner() = same address. Token and ProxyAdmin both confirmed under same issuer EOA. No on-chain roles beyond owner; issuance is issuer-backend via Superstate's fund subscription API. Economic-control evidence reviewed 2026-07-15: NAV Fund Services independently calculates recurring USTB NAV and PwC audits the fund; the current product page exposes continuous NAV per share. The same page states that the fund is not registered under the Investment Company Act, and its Rule 506(c)/Section 3(c)(7) filing is not prudential supervision. 2026-07-20 follow-up: the token is a transparent proxy (EIP-1967 implementation 0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4, admin 0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146) whose ProxyAdmin owner() = 0xad309bb6f13074128b4f23ef9ea2fe8552afca83, matching the reviewed control; the proxy admin can change mint-critical logic with no on-chain delay. Economic-posture fields reviewed 2026-08-15: the issuer EOA controls token ownership and the ProxyAdmin and can replace mint-critical logic without delay; existing periodic reconciliation and attestation-only supervision remain supported.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "USTB has independently evidenced native issuance surfaces on Ethereum and Solana. Ethereum is an upgradeable token proxy whose issuer EOA owns both token and ProxyAdmin; Solana Token-2022 has live mintAuthority EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz in finalized slot 439721950, with the authority account owned by the System Program. The Plume proxy is separately deployed and exposes owner-only mint/bulkMint, ProxyAdmin 0xa5df717b304a50838c72cd310c8df636b1aecfa3, and the same issuer EOA owner at block 87678057, but the evidence does not establish independent local liabilities rather than bridge destination issuance. Its bridge-mint, pause, peer-configuration, admin, and upgrade powers are therefore scored under bridgeRouteRisk. The two native issuance surfaces support the retained unbounded, periodic, attestation-only posture. FreezeAuthority, permanent delegate, and default-frozen state remain outside Mint Authority.",
+      "reviewer": "Codex mint/bridge boundary migration; Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-17"
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
+      ],
       "proxyAddresses": [
         "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
       ],
@@ -89,16 +141,15 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "USTB token owner / ProxyAdmin owner",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25570980,
+      "observedAt": "2026-08-16",
       "sources": [
         {
           "label": "USTB Ethereum token proxy (EIP-1967 slots)",
           "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e#readProxyContract"
         },
         {
-          "label": "USTB ProxyAdmin (owner() = 0xad309bb6f13074128b4f23ef9ea2fe8552afca83)",
-          "url": "https://etherscan.io/address/0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146#code"
+          "label": "Ethereum JSON-RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
     }

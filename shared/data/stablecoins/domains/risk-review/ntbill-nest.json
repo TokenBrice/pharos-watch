@@ -13,24 +13,42 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "nTBILL is an issuer-native Nest BoringVault share deployed at the identical CREATE2 address 0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9 on Ethereum, Plume, and Arbitrum. Row-level on-chain verification on 2026-07-20: Ethereum and Plume owner() both return the Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (the same uniform owner seen on the reviewed nWISDOM deployments), and Arbitrum owner() returns the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 that also owns the nTBILL Teller and Manager on Ethereum. Shares mint only through Nest's own Teller at vault NAV; no third-party bridge mints any deployment.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
-    "confidence": "verified",
+    "tier": "external-validated-network",
+    "summary": "nTBILL has issuer-native NestVault issuance on Ethereum, Plume, and BNB Chain, plus a distinct Solana representation route. Solana USDC crosses Circle CCTP to Plume, the nTBILL shares settle through the Plume composer, and LayerZero OFT delivers the Solana SPL representation; redemptions reverse that path. The current route is scoreable as external validated-network exposure, while exact Solana peer/DVN, rate-limit, pause, and administrator state remains a reviewed evidence gap. Arbitrum has a live deployment but no current issuer-confirmed role and remains unresolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex migration FIX-01; Nest external verification 2026-08-16",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "issuer",
-        "name": "nTBILL issuer-operated multichain issuance",
+        "name": "Nest issuer-native EVM vault issuance",
         "bridgeTypes": [
           "issuer-native-mint-redeem"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Nest Solana CCTP and LayerZero OFT route",
+        "url": "https://docs.nest.credit/about/cross-chain",
+        "bridgeTypes": [
+          "cctp",
+          "layerzero-oft",
+          "burn-mint"
         ]
       }
     ],
     "sources": [
       {
-        "label": "Nest docs",
-        "url": "https://docs.nest.credit/"
+        "label": "Nest smart-contract registry",
+        "url": "https://docs.nest.credit/developers/smart-contracts"
+      },
+      {
+        "label": "Nest nTBILL integration guide",
+        "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+      },
+      {
+        "label": "Nest cross-chain architecture",
+        "url": "https://docs.nest.credit/about/cross-chain"
       }
     ],
     "routes": [
@@ -41,14 +59,14 @@
         "protocol": "Nest nTBILL vault",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "single-chain-or-native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads 2026-07-20 (Ethereum block 25570877): owner() returned the Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (5450-byte contract; not a Safe — getThreshold/getOwners revert), the same uniform owner read on the reviewed nWISDOM Nest deployments. The mint-authority review (2026-07-15, scoreable) confirms nTBILL shares mint only through Nest's own Teller 0x1492062b3ae7996c71f87a2b390b6b82afea0c59 against deposits at vault NAV, with Teller/Manager owned by the Nest 3-of-6 Safe. Identical CREATE2 address on all three chains. Native issuance.",
+        "reviewNote": "Nest's current smart-contract registry and nTBILL integration guide list the Ethereum USDC NestVault as a native deposit path. At Ethereum block 25770319, the nTBILL share and NestVault owner() both returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true and maxDeposit(address) returned uint256.max. The current mint path is native issuance, not a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25570877,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770319,
         "canonicalChain": "ethereum",
         "sources": [
           {
@@ -58,6 +76,14 @@
           {
             "label": "Nest smart contracts (Teller/Manager addresses)",
             "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Nest nTBILL integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+          },
+          {
+            "label": "Ethereum nTBILL NestVault",
+            "url": "https://etherscan.io/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12#code"
           }
         ]
       },
@@ -72,10 +98,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads 2026-07-20 (Plume block 82159591 via rpc.plume.org): owner() returned the same Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a as the Ethereum deployment, at the identical CREATE2 address with deployed bytecode. Cross-chain share movement runs through Nest's own vault rails (same uniform-owner pattern as the reviewed inALPHA/nWISDOM Nest deployments); shares mint only through Nest's own Teller contracts. No third-party bridge mints this deployment.",
+        "reviewNote": "Nest's current smart-contract registry and nTBILL integration guide list the Plume USDC NestVault as a native deposit path. At Plume block 87675658, the nTBILL share and NestVault owner() both returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true and maxDeposit(address) returned uint256.max. The current mint path is native issuance, while the separate LayerZero OFT transfer rail is reviewed below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 82159591,
+        "observedAt": "2026-08-16",
+        "observedBlock": 87675658,
         "canonicalChain": "ethereum",
         "sources": [
           {
@@ -85,6 +111,14 @@
           {
             "label": "Nest docs",
             "url": "https://docs.nest.credit/"
+          },
+          {
+            "label": "Nest nTBILL integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+          },
+          {
+            "label": "Plume nTBILL NestVault",
+            "url": "https://explorer.plume.org/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12?tab=contract"
           }
         ]
       },
@@ -93,17 +127,16 @@
         "destinationChain": "arbitrum",
         "contractAddress": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
         "protocol": "Nest nTBILL vault",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads 2026-07-20 (Arbitrum block 485690675): owner() returned the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (the same Safe that owns the nTBILL Teller and Manager on Ethereum per the 2026-07-15 mint-authority review), at the identical CREATE2 address with 7935-byte bytecode identical in size to the Ethereum deployment. Issuer-native deployment; no third-party bridge mints this deployment.",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Live code, owner(), and nonzero totalSupply() were confirmed at Arbitrum block 495251192, but the current Nest smart-contract registry and nTBILL integration guide omit Arbitrum and provide no current Arbitrum NestVault or issuer-supported mint-flow evidence. Canonicality and bridge role are unresolved; do not score this deployment as native or as a representation until Nest confirms its role.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 485690675,
-        "canonicalChain": "ethereum",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495251192,
         "sources": [
           {
             "label": "nTBILL Arbitrum token",
@@ -114,6 +147,309 @@
             "url": "https://docs.nest.credit/"
           }
         ]
+      },
+      {
+        "id": "bsc:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+        "destinationChain": "bsc",
+        "contractAddress": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+        "protocol": "Nest nTBILL vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Nest's current smart-contract registry and nTBILL integration guide list the BNB Chain USDT NestVault as a native deposit path. At BSC block 116344431, the nTBILL share owner() and NestVault owner() both returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true and maxDeposit(address) returned uint256.max. The current mint path is native issuance, not a bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116344431,
+        "sources": [
+          {
+            "label": "Nest smart-contract registry",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Nest nTBILL integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+          },
+          {
+            "label": "BNB Chain nTBILL NestVault",
+            "url": "https://bscscan.com/address/0x109df814e265cb62a1b366a4c0450b0a7af38a0c#code"
+          }
+        ]
+      },
+      {
+        "id": "solana:2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4",
+        "sourceChain": "plume",
+        "destinationChain": "solana",
+        "canonicalChain": "plume",
+        "contractAddress": "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4",
+        "protocol": "Nest nTBILL Solana CCTP/LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Nest's current smart-contract registry identifies the Solana nTBILL mint 2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4, OFT store 5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL, and Plume composer 0x719e01497ed0e4e917fd0482355b9a64ddbad873. Nest's current integration and cross-chain architecture docs state that Solana USDC crosses CCTP to Plume, the composer performs the vault action, and LayerZero OFT delivers nTBILL back to Solana; redemptions reverse this path. The route is a bridge representation, not independent native Solana issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL",
+        "failureDomainKeys": [
+          "protocol:nest-solana-cctp-layerzero",
+          "contract:solana:5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL",
+          "contract:plume:0x719e01497ed0e4e917fd0482355b9a64ddbad873",
+          "contract:plume:0x7de01896d36bea9cf072ac64e41685418941d8be"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest smart-contract registry (Solana OFT contracts)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Nest nTBILL Solana integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+          },
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          },
+          {
+            "label": "nTBILL Solana mint on Solscan",
+            "url": "https://solscan.io/token/2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4"
+          },
+          {
+            "label": "nTBILL Solana OFT store on Solscan",
+            "url": "https://solscan.io/account/5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "nest-ethereum-share-oft-owner",
+        "label": "Nest nTBILL Ethereum share OFT shared admin",
+        "routeRefs": [
+          "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "failureDomainKeys": [
+          "protocol:nest-shared-admin"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Nest's current cross-chain architecture identifies LayerZero OFT peer-configured burn/mint movement, but the current EID/peer/DVN values were not published in the reviewed sources.",
+          "rateLimits": "The reviewed Nest documentation describes CCTP standard and fast finality but does not publish an aggregate OFT mint-rate ceiling or current per-route rate-limit reads.",
+          "pausersAdminsUpgraders": "The shared Nest admin contract owns the current EVM share/vault authority domains and the ProxyAdmin owners; current pause and emergency-module state was not independently enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          },
+          {
+            "label": "Nest smart-contract registry",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "Nest states that EVM share movement uses LayerZero OFT burn/debit on the source and mint/credit on the destination. The same Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a controls the reviewed EVM vault/share authority domains, while the reviewed NestVault proxy paths are upgradeable."
+      },
+      {
+        "id": "nest-plume-share-oft-owner",
+        "label": "Nest nTBILL Plume share OFT shared admin",
+        "routeRefs": [
+          "plume:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "failureDomainKeys": [
+          "protocol:nest-shared-admin"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Nest's current cross-chain architecture identifies LayerZero OFT peer-configured burn/mint movement, but the current EID/peer/DVN values were not published in the reviewed sources.",
+          "rateLimits": "The reviewed Nest documentation describes CCTP standard and fast finality but does not publish an aggregate OFT mint-rate ceiling or current per-route rate-limit reads.",
+          "pausersAdminsUpgraders": "The shared Nest admin contract owns the current EVM share/vault authority domains and the ProxyAdmin owners; current pause and emergency-module state was not independently enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          },
+          {
+            "label": "Nest smart-contract registry",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "Nest states that EVM share movement uses LayerZero OFT burn/debit on the source and mint/credit on the destination. The same Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a controls the reviewed Plume vault/share authority domain, while the reviewed Plume NestVault proxy path is upgradeable."
+      },
+      {
+        "id": "nest-bsc-share-oft-owner",
+        "label": "Nest nTBILL BNB Chain share OFT shared admin",
+        "routeRefs": [
+          "bsc:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "failureDomainKeys": [
+          "protocol:nest-shared-admin"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Nest's current cross-chain architecture identifies LayerZero OFT peer-configured burn/mint movement, but the current EID/peer/DVN values were not published in the reviewed sources.",
+          "rateLimits": "The reviewed Nest documentation describes CCTP standard and fast finality but does not publish an aggregate OFT mint-rate ceiling or current per-route rate-limit reads.",
+          "pausersAdminsUpgraders": "The shared Nest admin contract owns the current EVM share/vault authority domains and the ProxyAdmin owners; current pause and emergency-module state was not independently enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          },
+          {
+            "label": "Nest smart-contract registry",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "Nest states that EVM share movement uses LayerZero OFT burn/debit on the source and mint/credit on the destination. The same Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a controls the reviewed BNB Chain vault/share authority domain, while the reviewed BNB Chain NestVault proxy path is upgradeable."
+      },
+      {
+        "id": "nest-solana-ntbill-oft-store",
+        "label": "Nest nTBILL Solana OFT store",
+        "routeRefs": [
+          "solana:2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL",
+        "failureDomainKeys": [
+          "protocol:nest-solana-cctp-layerzero",
+          "contract:solana:5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The issuer identifies this account as the Solana OFT store, and LayerZero OFT delivers the nTBILL representation; current peer/delegate/DVN values were not published in the reviewed sources.",
+          "rateLimits": "No current aggregate or per-message OFT rate-limit read was available in the reviewed issuer documentation.",
+          "pausersAdminsUpgraders": "The current Solana OFT store admin, pause, and upgrade authorities were not independently exposed by the reviewed primary sources."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest smart-contract registry (Solana OFT contracts)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          },
+          {
+            "label": "nTBILL Solana OFT store on Solscan",
+            "url": "https://solscan.io/account/5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL"
+          }
+        ],
+        "evidence": "Nest's current registry identifies 5B25A3r4yyN5iGi9PZEyte2ZyZEyx8CdASEX5GQErRSL as the nTBILL Solana OFT store, and Nest's integration/cross-chain docs describe its burn/mint delivery role. Exact on-chain administrator and LayerZero validation configuration remain unverified and are retained as an evidence gap rather than inferred."
+      },
+      {
+        "id": "nest-plume-ntbill-composer",
+        "label": "Nest Plume nTBILL Solana composer",
+        "routeRefs": [
+          "solana:2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x719e01497ed0e4e917fd0482355b9a64ddbad873",
+        "failureDomainKeys": [
+          "protocol:nest-solana-cctp-layerzero",
+          "contract:plume:0x719e01497ed0e4e917fd0482355b9a64ddbad873"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Nest states that the composer receives the CCTP-funded Plume action and sends vault shares back through LayerZero OFT; current peer/delegate values were not published.",
+          "rateLimits": "The reviewed docs describe CCTP finality modes but do not publish a composer-level aggregate or per-call rate limit.",
+          "pausersAdminsUpgraders": "The current composer admin, pause, and upgrade authority were not independently exposed by the reviewed primary sources."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest smart-contract registry (Plume composer)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          },
+          {
+            "label": "Nest nTBILL integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+          }
+        ],
+        "evidence": "Nest identifies 0x719e01497ed0e4e917fd0482355b9a64ddbad873 as the Plume nTBILL composer. The current architecture docs say it deposits the CCTP-delivered USDC into the Plume-side vault, receives the vault shares, and sends them back to Solana through LayerZero OFT."
+      },
+      {
+        "id": "nest-plume-ntbill-cctp-relayer",
+        "label": "Nest Plume CCTP relayer for nTBILL",
+        "routeRefs": [
+          "solana:2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4"
+        ],
+        "capabilities": [
+          "escrow"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x7de01896d36bea9cf072ac64e41685418941d8be",
+        "failureDomainKeys": [
+          "protocol:nest-solana-cctp-layerzero",
+          "contract:plume:0x7de01896d36bea9cf072ac64e41685418941d8be"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Nest's architecture docs state that the relayer receives the CCTP message and executes the configured hook into the NestVaultComposer; exact Circle attestation and hook-admin configuration were not independently enumerated.",
+          "rateLimits": "The reviewed sources do not publish a relayer-level aggregate rate limit.",
+          "pausersAdminsUpgraders": "The current relayer admin, pause, and upgrade authority were not independently exposed by the reviewed primary sources."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest smart-contract registry (NestCCTPRelayer)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          }
+        ],
+        "evidence": "Nest's current registry identifies 0x7de01896d36bea9cf072ac64e41685418941d8be as NestCCTPRelayer on Plume. Nest states that this relayer receives the CCTP message and invokes the configured composer hook; the relayer is therefore retained as bridge escrow/settlement machinery without inventing an administrator."
       }
     ]
   }

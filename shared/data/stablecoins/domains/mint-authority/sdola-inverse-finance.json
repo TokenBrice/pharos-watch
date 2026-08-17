@@ -29,6 +29,9 @@
       {
         "chain": "ethereum",
         "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+        "deploymentRefs": [
+          "ethereum:0xb45ad160634c528cc3d2926d9807104fa3157305"
+        ],
         "label": "sDOLA ERC-4626 wrapper",
         "role": "wrapper",
         "authorityType": "contract",

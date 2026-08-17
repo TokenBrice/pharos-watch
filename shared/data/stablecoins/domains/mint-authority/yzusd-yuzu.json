@@ -10,6 +10,9 @@
     "supervision": "attestation-only",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+      ],
       "proxyAddresses": [
         "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
       ],
@@ -56,6 +59,9 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "chain": "plasma",
+        "deploymentRefs": [
+          "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+        ],
         "canRaiseCap": "unknown",
         "sources": [
           {
@@ -67,6 +73,9 @@
       },
       {
         "chain": "plasma",
+        "deploymentRefs": [
+          "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+        ],
         "label": "yzUSD MINTER_ROLE EOA set (40 accounts, eligible-investor primary minters)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -96,6 +105,9 @@
         "directMintAbility": "upgrade-only",
         "chain": "plasma",
         "address": "0x2130457539612ae9838e0314cda1a8abbdb7cfbc",
+        "deploymentRefs": [
+          "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+        ],
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
@@ -120,6 +132,9 @@
         "directMintAbility": "upgrade-only",
         "chain": "plasma",
         "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+        "deploymentRefs": [
+          "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+        ],
         "threshold": 4,
         "signerCount": 5,
         "canRaiseCap": true,
@@ -156,6 +171,9 @@
         "directMintAbility": "parameter-only",
         "chain": "plasma",
         "address": "0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+        "deploymentRefs": [
+          "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+        ],
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": true,
@@ -194,6 +212,9 @@
         "directMintAbility": "parameter-only",
         "chain": "plasma",
         "address": "0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c",
+        "deploymentRefs": [
+          "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+        ],
         "timelockDelaySec": 43200,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",

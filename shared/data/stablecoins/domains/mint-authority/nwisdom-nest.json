@@ -3,69 +3,210 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "verified",
-    "summary": "nWISDOM is a Nest vault share on the Nucleus/BoringVault architecture; the permissioned Teller mints/burns shares when users deposit pUSD at vault NAV, while the Nest-controlled Manager directs WisdomTree-fund allocation. Both Teller and Manager are owned by the same Nest 3-of-6 Safe.",
+    "confidence": "manual-review",
+    "summary": "nWISDOM has issuer-native local deposit/mint paths on Ethereum, Plume, BNB Chain, and Solana. Ethereum, Plume, and BNB use the current NestVaultPredicateProxy and chain-local NestVault paths; Solana uses a Nest SPL mint authority. These native issuance controls are separate from LayerZero OFT and CCTP transfer machinery, which is authored under Bridge Risk. No hard aggregate supply cap is evidenced, and the current authority graph therefore remains adverse despite the documented deposit/NAV accounting invariant.",
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "controlRef": "Nest Wisdom Vault Teller and Manager constructor-deployed contracts",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25295096,
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "bsc:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+      ],
+      "proxyAddresses": [
+        "0xfc0c4222b3a0c9b060c0b959dec62442036b9035"
+      ],
+      "implementationAddresses": [
+        "0xc3cbd254c8b539e6ae7f7e0b93558778e75fb66e"
+      ],
+      "adminAddresses": [
+        "0xeff5d7efccd4492a65a6bc539adc5bdb28d575f0"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "BNB NestVaultPredicateProxy ProxyAdmin",
+      "observedAt": "2026-08-16",
+      "observedBlock": 116342916,
       "sources": [
         {
-          "label": "Nest smart contracts",
-          "url": "https://docs.nest.credit/developers/smart-contracts/"
+          "label": "Nest smart-contract deployments",
+          "url": "https://docs.nest.credit/developers/smart-contracts"
         },
         {
-          "label": "Nest Wisdom Vault Teller verified source",
-          "url": "https://etherscan.io/address/0xA1D572b63C963c6421236C22A10140305C6d41fd#code"
+          "label": "BNB NestVaultPredicateProxy on BscScan",
+          "url": "https://bscscan.com/address/0xfc0c4222b3a0c9b060c0b959dec62442036b9035"
         },
         {
-          "label": "Nest Wisdom Vault Manager verified source",
-          "url": "https://etherscan.io/address/0x8226B661EbaF1CBA4e2A92aE2616CCF2348F18cc#code"
+          "label": "BNB PredicateProxy admin on BscScan",
+          "url": "https://bscscan.com/address/0xeff5d7efccd4492a65a6bc539adc5bdb28d575f0"
         }
       ]
     },
     "controls": [
       {
-        "label": "Nest Wisdom Vault Teller (issuance/redemption)",
+        "label": "Nest nWISDOM Ethereum NestVault deposit path",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "ethereum",
-        "address": "0xA1D572b63C963c6421236C22A10140305C6d41fd",
+        "address": "0xfc0c4222b3a0c9b060c0b959dec62442036b9035",
+        "deploymentRefs": [
+          "ethereum:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
         "canRaiseCap": "unknown",
+        "capDescription": "The documented native path approves the PredicateProxy and deposits into the Ethereum USDC NestVault at vault NAV. No hard aggregate supply cap or complete bypass analysis is evidenced.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770023,
         "sources": [
           {
-            "label": "Nest smart contracts (Teller address)",
-            "url": "https://docs.nest.credit/developers/smart-contracts"
+            "label": "nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+          },
+          {
+            "label": "Ethereum nWISDOM share token",
+            "url": "https://etherscan.io/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
           }
         ],
-        "evidence": "At Ethereum block 25295096, owner() on the Wisdom Vault Teller returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982, confirmed as a 3-of-6 Gnosis Safe (v1.3.0+L2) via Safe API."
+        "evidence": "At Ethereum block 25770023, the documented nWISDOM native flow used the chain-local NestVaultPredicateProxy 0xfc0c4222b3a0c9b060c0b959dec62442036b9035 and USDC NestVault 0x6330a14fc1520cfdf0834ccf23b15fd47a89a651. The share token and NestVault owner() reads returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, while the PredicateProxy owner() returned the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
       },
       {
-        "label": "Nest Wisdom Vault Manager (strategy/admin)",
+        "label": "Nest nWISDOM Plume NestVault deposit path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "plume",
+        "address": "0xfc0c4222b3a0c9b060c0b959dec62442036b9035",
+        "deploymentRefs": [
+          "plume:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
+        "canRaiseCap": "unknown",
+        "capDescription": "The documented native path approves the PredicateProxy and deposits into the Plume USDC or pUSD NestVault at vault NAV. No hard aggregate supply cap or complete bypass analysis is evidenced.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 87667298,
+        "sources": [
+          {
+            "label": "nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+          },
+          {
+            "label": "Plume nWISDOM share token",
+            "url": "https://explorer.plume.org/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+          }
+        ],
+        "evidence": "At Plume block 87667298, the documented nWISDOM native flow used the chain-local NestVaultPredicateProxy 0xfc0c4222b3a0c9b060c0b959dec62442036b9035 and the USDC NestVault 0x6330a14fc1520cfdf0834ccf23b15fd47a89a651. The share token and NestVault owner() reads returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, while the PredicateProxy owner() returned the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
+      },
+      {
+        "label": "Nest nWISDOM BNB NestVault deposit path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0xfc0c4222b3a0c9b060c0b959dec62442036b9035",
+        "deploymentRefs": [
+          "bsc:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
+        "canRaiseCap": "unknown",
+        "capDescription": "The documented native path approves the PredicateProxy and deposits BNB USDT into the local nWISDOM NestVault at vault NAV. No hard aggregate supply cap or complete bypass analysis is evidenced.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116342916,
+        "sources": [
+          {
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+          },
+          {
+            "label": "BNB nWISDOM share token",
+            "url": "https://bscscan.com/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+          }
+        ],
+        "evidence": "At BNB block 116342916, owner() on the nWISDOM share token and the documented USDT NestVault 0xf6d67d698c139c217cf645c285dfac183f3ca45b returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. owner() on the common PredicateProxy returned the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. The same block showed deployed code for all three contracts."
+      },
+      {
+        "label": "Nest nWISDOM Ethereum share and NestVault owner",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
-        "address": "0x8226B661EbaF1CBA4e2A92aE2616CCF2348F18cc",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "deploymentRefs": [
+          "ethereum:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
         "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770023,
         "sources": [
           {
-            "label": "Nest smart contracts (Manager address)",
+            "label": "Ethereum nWISDOM share token",
+            "url": "https://etherscan.io/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+          },
+          {
+            "label": "Nest smart-contract deployments",
             "url": "https://docs.nest.credit/developers/smart-contracts"
           }
         ],
-        "evidence": "At Ethereum block 25295096, owner() on the Wisdom Vault Manager returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982, the same 3-of-6 Safe that owns the Teller."
+        "evidence": "At Ethereum block 25770023, owner() on both the nWISDOM share token and the USDC NestVault returned the Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. This owner is an issuer-native administrative surface, not the LayerZero transfer rail."
       },
       {
-        "label": "Nest 3-of-6 Safe (Teller and Manager owner)",
+        "label": "Nest nWISDOM Plume share and NestVault owner",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "plume",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "deploymentRefs": [
+          "plume:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 87667298,
+        "sources": [
+          {
+            "label": "Plume nWISDOM share token",
+            "url": "https://explorer.plume.org/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+          },
+          {
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "At Plume block 87667298, owner() on both the nWISDOM share token and the USDC NestVault returned the Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. This owner is an issuer-native administrative surface, not the LayerZero transfer rail."
+      },
+      {
+        "label": "Nest nWISDOM BNB share and NestVault owner",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "bsc",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "deploymentRefs": [
+          "bsc:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116342916,
+        "sources": [
+          {
+            "label": "BNB nWISDOM share token",
+            "url": "https://bscscan.com/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+          },
+          {
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "At BNB block 116342916, owner() on both the nWISDOM share token and the documented USDT NestVault 0xf6d67d698c139c217cf645c285dfac183f3ca45b returned the Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. This owner is an issuer-native administrative surface, not the LayerZero transfer rail."
+      },
+      {
+        "label": "Nest 3-of-6 Safe (current PredicateProxy owner across EVM native routes)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "chain": "ethereum",
-        "address": "0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982",
+        "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "deploymentRefs": [
+          "ethereum:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+          "plume:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+          "bsc:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
         "canRaiseCap": "unknown",
         "threshold": 3,
         "signerCount": 6,
@@ -87,51 +228,116 @@
           "observedBlock": 25295096,
           "source": "safe-api"
         },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116342916,
         "sources": [
           {
-            "label": "Nest Wisdom Vault Teller owner() at Ethereum block 25295096",
-            "url": "https://etherscan.io/address/0xA1D572b63C963c6421236C22A10140305C6d41fd#readContract"
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
           }
         ],
-        "evidence": "At Ethereum block 25295096, owner() on both Teller and Manager returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982. Safe API confirmed: 3-of-6 threshold, version 1.3.0+L2, no modules, no guard."
+        "evidence": "The Ethereum and Plume fixed-block reviews and the BNB block 116342916 read identify 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 as the current NestVaultPredicateProxy owner on the EVM native routes. The Safe observation at Ethereum block 25295096 confirmed a 3-of-6 Gnosis Safe v1.3.0+L2 with no enabled modules and no guard; its current route role is native deposit authorization, while LayerZero peer and DVN administration remains under Bridge Risk."
+      },
+      {
+        "label": "BNB NestVaultPredicateProxy ProxyAdmin",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "chain": "bsc",
+        "address": "0xeff5d7efccd4492a65a6bc539adc5bdb28d575f0",
+        "deploymentRefs": [
+          "bsc:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
+        "canRaiseCap": true,
+        "capDescription": "The EIP-1967 admin can replace the BNB PredicateProxy implementation and therefore alter the native deposit/mint path. The admin's owner() resolves to the same Nest 3-of-6 Safe.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116342916,
+        "sources": [
+          {
+            "label": "BNB NestVaultPredicateProxy on BscScan",
+            "url": "https://bscscan.com/address/0xfc0c4222b3a0c9b060c0b959dec62442036b9035"
+          },
+          {
+            "label": "BNB PredicateProxy admin on BscScan",
+            "url": "https://bscscan.com/address/0xeff5d7efccd4492a65a6bc539adc5bdb28d575f0"
+          }
+        ],
+        "evidence": "At BNB block 116342916, the EIP-1967 implementation slot of 0xfc0c4222b3a0c9b060c0b959dec62442036b9035 resolved to 0xc3cbd254c8b539e6ae7f7e0b93558778e75fb66e and its admin slot resolved to 0xeff5d7efccd4492a65a6bc539adc5bdb28d575f0. A current owner() read on that admin returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
+      },
+      {
+        "label": "nWISDOM Solana SPL mint authority (1-of-2 multisig)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y",
+        "deploymentRefs": [
+          "solana:77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT"
+        ],
+        "canRaiseCap": true,
+        "capDescription": "The nWISDOM SPL mint has no authored on-chain supply cap. Its 1-of-2 mint-authority multisig can mint directly; the documented CCTP-to-Plume and LayerZero OFT settlement path is separately scored under Bridge Risk.",
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439718400,
+        "sources": [
+          {
+            "label": "nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+          },
+          {
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "nWISDOM Solana mint on Solscan",
+            "url": "https://solscan.io/token/77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT"
+          }
+        ],
+        "evidence": "At Solana slot 439718375, getAccountInfo for the nWISDOM mint 77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT returned decimals 6, mintAuthority and freezeAuthority 9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y. At slot 439718400, that SPL Token multisig returned numRequiredSigners 1, numValidSigners 2, with signers RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq and J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295096: owner() on Wisdom Vault Teller (0xA1D572b6) and Manager (0x8226B661) both returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982. Safe API confirmed 3-of-6 Safe, version 1.3.0+L2, modules [], guard zero. Shared Safe with ntbill-nest. All mint-capable surfaces confirmed. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nWISDOM supply to portfolio assets was found. Regulation of underlying WisdomTree products does not prudentially supervise the Nest wrapper issuer. Economic-posture fields reviewed 2026-08-15: the Nest Safe controls the uncapped Teller/Manager issuance path, while issuer NAV and composition data do not reconcile whole supply and no wrapper regulator or independent attestor is evidenced. Wave 2 external verification 2026-08-15: current Nest documentation adds BNB Chain and Solana issuance surfaces but still provides only issuer-operated portfolio data rather than independent whole-supply reconciliation. Reconciliation review 2026-08-15: Nest's dated Available Vaults snapshot describes nWISDOM as a multi-asset private-credit vault share and its Audits register lists smart-contract audits, but no named third-party report or recurring attestation reconciling total nWISDOM liabilities across its EVM and Solana issuance surfaces to the portfolio was found; the available evidence therefore remains insufficient for periodic reconciliation.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex Wave 2 external verification 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Current Nest documentation and fixed observations now cover issuer-native nWISDOM issuance on Ethereum, Plume, BNB Chain, and Solana. Ethereum block 25770023 and Plume block 87667298 identified the local share/NestVault owner 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and the PredicateProxy owner 0xa08a0dc480bd60d1d56c8eec6c722125eafea982; BNB block 116342916 confirmed the same owner graph plus a mutable PredicateProxy implementation and admin; Solana slots 439718375-439718400 confirmed a 1-of-2 SPL mint authority with no authored supply cap. Native local deposit and mint controls are recorded here, while LayerZero OFT, CCTP, composer, peer, and DVN controls remain in Bridge Risk. The documented NAV/deposit accounting does not establish a hard aggregate cap or independent whole-supply reconciliation, so the adverse economic annotations remain scoreable and the profile confidence is manual-review pending the unresolved per-route control graph.",
+      "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {
-          "label": "Nest smart contracts (Teller/Manager addresses)",
+          "label": "Nest smart-contract deployments",
           "url": "https://docs.nest.credit/developers/smart-contracts"
         },
         {
-          "label": "How Nest vaults work (BoringVault/Teller/Manager roles)",
-          "url": "https://blog.nest.credit/blog/how-nest-vaults-work"
+          "label": "nWISDOM integration guide",
+          "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
         },
         {
-          "label": "Nest vault NAV methodology",
-          "url": "https://docs.nest.credit/about/vaults/"
+          "label": "Nest cross-chain architecture",
+          "url": "https://docs.nest.credit/about/cross-chain"
         },
         {
-          "label": "Nest nWISDOM integration",
-          "url": "https://docs.nest.credit/developers/integration-guides/nwisdom/"
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         },
         {
-          "label": "Nest terms identifying Nest DAO LLC",
-          "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+          "label": "BNB Chain RPC",
+          "url": "https://bsc-dataseed.binance.org"
         },
         {
-          "label": "Nest available vaults dated composition snapshot",
-          "url": "https://docs.nest.credit/about/available-vaults/"
+          "label": "Solana mainnet RPC",
+          "url": "https://api.mainnet-beta.solana.com"
         },
         {
-          "label": "Nest smart-contract audit register",
-          "url": "https://docs.nest.credit/security-and-compliance/audits/"
+          "label": "LayerZero OVault standard",
+          "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
         }
       ]
     }

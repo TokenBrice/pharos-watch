@@ -41,35 +41,58 @@
     "reviewedAt": "2026-07-31"
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "Wrapped Savings rUSD is deployed across many chains and the L2BEAT candidate route resolves Across liquidity/intent routing. The reviewed profile treats cross-chain movement as liquidity/intent route exposure rather than issuer-native finality.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-    "confidence": "verified",
+    "tier": "external-validated-network",
+    "summary": "wsrUSD has one native Ethereum ERC-4626 wrapper and 16 reviewed LayerZero/Solana bridge representations. The Ethereum MyOFTAdapter locks the canonical wrapper while LayerZero OFTs burn and mint on remote routes; the shared Reservoir owner can configure peers, delegates, and LayerZero OApp settings. Berachain source/destination peer asymmetry and unresolved endpoint validator configuration keep this bridge review at manual-review confidence, and the adapter lockbox balance must not be added to destination supplies.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration; wsrusd-reservoir finding",
+    "confidence": "manual-review",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "issuer",
+        "name": "Reservoir wsrUSD LayerZero OFT/adapter",
+        "slug": "reservoir-wsrusd-layerzero",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses",
         "bridgeTypes": [
-          "liquidity",
-          "intent"
+          "burn-mint",
+          "lock-mint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero V2 OFT and OFTAdapter",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/get-started/overview",
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint",
+          "lock-mint"
         ]
       }
     ],
     "sources": [
       {
-        "label": "Reservoir docs",
-        "url": "https://docs.reservoir.xyz"
+        "label": "Reservoir official contract addresses",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
       },
       {
-        "label": "Reservoir reserves",
-        "url": "https://app.reservoir.xyz/reserves"
+        "label": "Ethereum Blockscout verified MyOFTAdapter source",
+        "url": "https://eth.blockscout.com/address/0xbb431abd156b960e5b77cc45c75f107e3991258a?tab=contract"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "LayerZero OFT source",
+        "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFT.sol"
+      },
+      {
+        "label": "LayerZero OFTAdapter source",
+        "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFTAdapter.sol"
+      },
+      {
+        "label": "Ethereum PublicNode fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana finalized JSON-RPC",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
     "routes": [
@@ -120,10 +143,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "base",
-        "controllerAddress": "0x62344be8ca1c339b46274a4017dd87af436900b1",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:base:0x62344be8ca1c339b46274a4017dd87af436900b1"
+          "contract:base:0x62344be8ca1c339b46274a4017dd87af436900b1",
+          "eoa:base:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -157,14 +181,15 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification. Manual-review state: the Berachain OFT peers(30101) points to the Ethereum adapter, but the Ethereum adapter peers(30181) read zero at the reviewed block, so bidirectional activation is not established.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "berachain",
-        "controllerAddress": "0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514"
+          "contract:berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+          "eoa:berachain:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -202,10 +227,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "sonic",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:sonic:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:sonic:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:sonic:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -243,10 +269,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "arbitrum",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:arbitrum:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:arbitrum:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:arbitrum:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -284,10 +311,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "bsc",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:bsc:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:bsc:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:bsc:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -325,10 +353,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "avalanche",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:avalanche:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:avalanche:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:avalanche:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -366,10 +395,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "unichain",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:unichain:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:unichain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:unichain:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -407,10 +437,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "plume",
-        "controllerAddress": "0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15"
+          "contract:plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+          "eoa:plume:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -448,10 +479,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "sei",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:sei:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:sei:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:sei:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -489,10 +521,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "worldchain",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:worldchain:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:worldchain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:worldchain:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -530,10 +563,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "katana",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:katana:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:katana:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:katana:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -571,10 +605,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "hyperevm",
-        "controllerAddress": "0x04716db62c085d9e08050fcf6f7d775a03d07720",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720"
+          "contract:hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720",
+          "eoa:hyperevm:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -612,10 +647,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "linea",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:linea:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:linea:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:linea:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -653,10 +689,11 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "monad",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:monad:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:monad:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:monad:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -695,10 +732,11 @@
         "observedAt": "2026-07-21",
         "observedBlock": 12917021,
         "controllerChain": "pharos",
-        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:pharos:0x4809010926aec940b550d34a46a52739f996d75d"
+          "contract:pharos:0x4809010926aec940b550d34a46a52739f996d75d",
+          "eoa:pharos:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
         ],
         "sources": [
           {
@@ -735,7 +773,8 @@
         "controllerAddress": "ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:solana:ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp"
+          "contract:solana:ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp",
+          "program:solana:GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq"
         ],
         "sources": [
           {
@@ -755,6 +794,203 @@
             "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "wsrusd-ethereum-layerzero-adapter",
+        "label": "wsrUSD Ethereum MyOFTAdapter bridge rail",
+        "routeRefs": [
+          "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+          "base:0x62344be8ca1c339b46274a4017dd87af436900b1",
+          "berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+          "sonic:0x4809010926aec940b550d34a46a52739f996d75d",
+          "arbitrum:0x4809010926aec940b550d34a46a52739f996d75d",
+          "bsc:0x4809010926aec940b550d34a46a52739f996d75d",
+          "avalanche:0x4809010926aec940b550d34a46a52739f996d75d",
+          "unichain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+          "sei:0x4809010926aec940b550d34a46a52739f996d75d",
+          "worldchain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "katana:0x4809010926aec940b550d34a46a52739f996d75d",
+          "hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720",
+          "linea:0x4809010926aec940b550d34a46a52739f996d75d",
+          "monad:0x4809010926aec940b550d34a46a52739f996d75d",
+          "pharos:0x4809010926aec940b550d34a46a52739f996d75d",
+          "solana:7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xbb431abd156b960e5b77cc45c75f107e3991258a",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0xbb431abd156b960e5b77cc45c75f107e3991258a",
+          "contract:base:0x62344be8ca1c339b46274a4017dd87af436900b1",
+          "contract:berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+          "contract:sonic:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:arbitrum:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:bsc:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:avalanche:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:unichain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+          "contract:sei:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:worldchain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:katana:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720",
+          "contract:linea:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:monad:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:pharos:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:solana:ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp",
+          "program:solana:GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq",
+          "eoa:ethereum:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25771270, verified MyOFTAdapter 0xbb431abd156b960e5b77cc45c75f107e3991258a returned token() = wsrUSD 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094, endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c, and owner() = 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. It held 29,145,751.33607 wsrUSD; OFTAdapter locks the underlying on source debit and unlocks it on return credit, so this balance is already included in Ethereum totalSupply and must not be added to destination representation supply.",
+          "trustedPeerOrRemote": "At the same block, selected adapter peers were EID 30184 = Base OFT 0x62344be8...6900b1, EID 30110 = the shared OFT 0x480901...6d75d, EID 30102 = the shared OFT 0x480901...6d75d, EID 30106 = the shared OFT 0x480901...6d75d, and EID 30332 = the shared OFT 0x480901...6d75d. Destination peers(30101) pointed back to the adapter, except the source-side Berachain EID 30181 read zero while Berachain pointed back; this route state remains manual-review.",
+          "pausersAdminsUpgraders": "The adapter had 10,831 bytes of verified non-proxy runtime and zero EIP-1967 implementation/admin slots. Owner EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 can configure the LayerZero peer/delegate and OApp settings, but no adapter implementation replacement was evidenced. Enforced options, message inspector/pre-crime, and endpoint DVN/executor/validator configuration were not independently re-read in this review; no favorable validator assumption is made."
+        },
+        "capDescription": "The adapter is the canonical lockbox and authenticated LayerZero burn/mint transfer rail. Its return path is supply-conserving only while source-side lock accounting and authenticated peers remain intact; it is not independent native Mint Authority.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771270,
+        "sources": [
+          {
+            "label": "Ethereum Blockscout verified MyOFTAdapter source",
+            "url": "https://eth.blockscout.com/address/0xbb431abd156b960e5b77cc45c75f107e3991258a?tab=contract"
+          },
+          {
+            "label": "LayerZero OFT source",
+            "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFT.sol"
+          },
+          {
+            "label": "LayerZero OFTAdapter source",
+            "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFTAdapter.sol"
+          },
+          {
+            "label": "Ethereum PublicNode fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25771270 on 2026-08-16, MyOFTAdapter 0xbb431abd156b960e5b77cc45c75f107e3991258a was a verified 10,831-byte non-proxy adapter bound to wsrUSD 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094, with LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. Its 29,145,751.33607 wsrUSD balance is canonical lockbox inventory already inside Ethereum totalSupply. LayerZero OFT/OFTAdapter source confirms destination burn/mint and source lock/unlock semantics; the adapter, remote OFTs, and their separate contract failure domains remain Bridge Risk rather than native issuance."
+      },
+      {
+        "id": "wsrusd-layerzero-oft-owner",
+        "label": "wsrUSD LayerZero OFT and adapter owner EOA",
+        "routeRefs": [
+          "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+          "base:0x62344be8ca1c339b46274a4017dd87af436900b1",
+          "berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+          "sonic:0x4809010926aec940b550d34a46a52739f996d75d",
+          "arbitrum:0x4809010926aec940b550d34a46a52739f996d75d",
+          "bsc:0x4809010926aec940b550d34a46a52739f996d75d",
+          "avalanche:0x4809010926aec940b550d34a46a52739f996d75d",
+          "unichain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+          "sei:0x4809010926aec940b550d34a46a52739f996d75d",
+          "worldchain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "katana:0x4809010926aec940b550d34a46a52739f996d75d",
+          "hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720",
+          "linea:0x4809010926aec940b550d34a46a52739f996d75d",
+          "monad:0x4809010926aec940b550d34a46a52739f996d75d",
+          "pharos:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "eoa:ethereum:0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+          "contract:ethereum:0xbb431abd156b960e5b77cc45c75f107e3991258a",
+          "contract:base:0x62344be8ca1c339b46274a4017dd87af436900b1",
+          "contract:berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+          "contract:sonic:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:arbitrum:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:bsc:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:avalanche:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:unichain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+          "contract:sei:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:worldchain:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:katana:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720",
+          "contract:linea:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:monad:0x4809010926aec940b550d34a46a52739f996d75d",
+          "contract:pharos:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 is the verified owner of the Ethereum adapter and the reviewed EVM OFT deployments. The owner-controlled OApp surface includes peer and delegate configuration; destination peers(30101) point to the Ethereum adapter, while the Ethereum-side Berachain peer EID 30181 is zero despite the destination-side back-reference.",
+          "pausersAdminsUpgraders": "The reviewed EVM OFTs and Ethereum adapter are non-proxy code in the current evidence. The owner can configure peers, delegate, and LayerZero OApp settings but no representation implementation upgrade was evidenced. Current enforced options, message inspector/pre-crime, and DVN/executor/validator settings were not independently re-read, so no favorable configuration assumption is made.",
+          "unsupportedReason": "The common owner is verified, but the current delegate and full LayerZero endpoint validation configuration were not independently enumerated for every route."
+        },
+        "capDescription": "This EOA administers the LayerZero transfer-rail configuration for the adapter and EVM representations; it does not replace the immutable native wrapper or create a second canonical issuance path.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771270,
+        "sources": [
+          {
+            "label": "Ethereum Blockscout verified MyOFTAdapter source",
+            "url": "https://eth.blockscout.com/address/0xbb431abd156b960e5b77cc45c75f107e3991258a?tab=contract"
+          },
+          {
+            "label": "Base Blockscout verified WsrusdOft source",
+            "url": "https://base.blockscout.com/address/0x62344be8ca1c339b46274a4017dd87af436900b1?tab=contract"
+          },
+          {
+            "label": "Reservoir official contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          }
+        ],
+        "evidence": "At the reviewed Ethereum block 25771270 and current destination heads on 2026-08-16, owner reads identify Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 as the common controller of the Ethereum MyOFTAdapter and the EVM wsrUSD OFTs. Its peer/delegate/OApp configuration powers remain Bridge Risk; the route contract identities remain separate failure domains, and no native wrapper upgrade or privileged net-claim mint authority is attributed to this EOA through the wsrUSD bridge profile."
+      },
+      {
+        "id": "wsrusd-solana-oft-program",
+        "label": "wsrUSD Solana LayerZero OFT program mint authority",
+        "routeRefs": [
+          "solana:7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:solana:ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp",
+          "program:solana:GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At finalized Solana slot 439747243 on 2026-08-16, wsrUSD mint 7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE had mint authority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp, a PDA owned by LayerZero-related program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq. The mint is treated as a LayerZero bridge representation, but the current endpoint peer and validator configuration was not source-verified.",
+          "pausersAdminsUpgraders": "The finalized mint read showed no freeze authority. Program ownership of the mint authority leaves bridge-program administration material; the program's upgrade authority, enforced options, message inspector/pre-crime, and DVN/executor configuration were not independently verified."
+        },
+        "capDescription": "The program-owned mint authority can create the Solana wsrUSD representation through the LayerZero route; route-level supply conservation depends on authenticated remote burn/mint accounting and program configuration, not on independent native issuance.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Solana finalized mint account read",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Solana wsrUSD mint explorer",
+            "url": "https://solscan.io/token/7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE"
+          },
+          {
+            "label": "LayerZero OFT source",
+            "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFT.sol"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439747243 (2026-08-16T00:40:59Z), the wsrUSD SPL mint had 9 decimals, raw supply 10,000, mint authority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp, and no freeze authority. The mint-authority account is owned by LayerZero-related program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq; this is bridge representation machinery and remains separate from the Ethereum native wrapper's Mint Authority."
       }
     ]
   }

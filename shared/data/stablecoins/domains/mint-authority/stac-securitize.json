@@ -3,23 +3,30 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "STAC uses issuer-administered native token issuance on Ethereum and Solana. On Ethereum, the token is a UUPS proxy whose DSToken implementation permits ISSUER-or-above accounts to mint; the current token-owner EOA is the trust service's unique MASTER and can both mint and authorize upgrades. The later Solana deployment remains within Securitize's regulated issuance platform.",
+    "confidence": "manual-review",
+    "summary": "STAC uses issuer-administered native token issuance on Ethereum and Solana. On Ethereum, the token is a UUPS proxy whose DSToken implementation permits ISSUER-or-above accounts to mint; the current token-owner EOA is the trust service's unique MASTER and can both mint and authorize upgrades. On Solana, Token-2022 minting and freezing are controlled by the program-owned GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M account through controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP; its program upgrade authority is 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. The Solana signer/governance identity and off-chain issuance limits are not publicly resolved.",
     "upgradeability": {
-      "model": "uups",
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "solana:u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk"
+      ],
       "proxyAddresses": [
-        "0x51c2d74017390cbbd30550179a16a1c28f7210fc"
+        "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
       ],
       "implementationAddresses": [
-        "0x77684815f44b28726bc3efa4471b88ef3b93feb0"
+        "0x77684815f44b28726bc3efa4471b88ef3b93feb0",
+        "7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1"
       ],
       "adminAddresses": [
-        "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee"
+        "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
       ],
       "canChangeMintLogic": true,
       "controlRef": "STAC token owner",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25531350,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770050,
       "sources": [
         {
           "label": "STAC token proxy (Blockscout)",
@@ -32,6 +39,18 @@
         {
           "label": "DSTrustService verified source (Blockscout API)",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xec0f580a0fe6ea53654537d34788aebad70a6370"
+        },
+        {
+          "label": "STAC Solana Token-2022 mint",
+          "url": "https://solscan.io/token/u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk"
+        },
+        {
+          "label": "STAC Solana controller program",
+          "url": "https://solscan.io/account/7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
+        },
+        {
+          "label": "STAC Solana controller program upgrade authority",
+          "url": "https://solscan.io/account/8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
         }
       ]
     },
@@ -43,6 +62,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -70,6 +92,9 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -89,6 +114,80 @@
           }
         ],
         "evidence": "At Ethereum block 25531350, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and eth_getCode returned 0x, confirming an EOA. getDSService(1) returned DSTrustService 0xec0F580a0FE6eA53654537d34788AeBaD70A6370, where getRole(owner) returned 1 (MASTER). BaseDSContract gates _authorizeUpgrade with onlyMaster; ServiceConsumer accepts the token owner or a trust-service MASTER, and setServiceOwner removes the prior MASTER when assigning the next service owner. The current owner is therefore the terminal current UUPS upgrade authority and, as MASTER, also satisfies DSToken's onlyIssuerOrAbove mint gate."
+      },
+      {
+        "chain": "solana",
+        "address": "GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M",
+        "label": "STAC Solana Token-2022 mint/freeze authority controller",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "failureDomainKeys": [
+          "authority:solana:gsm7ztdnbyogwayftzcsrdqwmmf9l3mu6klvrca57j2m",
+          "program:solana:7txjmbkzvy3gmg9kdbebcnxt1yc5pyoxxxvlwdbv9tvp",
+          "program-upgrade-authority:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439718934,
+        "sources": [
+          {
+            "label": "STAC Solana Token-2022 mint",
+            "url": "https://solscan.io/token/u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk"
+          },
+          {
+            "label": "Solana PublicNode RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          },
+          {
+            "label": "STAC Solana controller program",
+            "url": "https://solscan.io/account/7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
+          },
+          {
+            "label": "Securitize STAC Solana expansion",
+            "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx"
+          }
+        ],
+        "capDescription": "The Token-2022 mint exposes no finite max-supply field; current supply was 244961.279015 STAC and mintAuthority remains active. The controller program's off-chain issuance restrictions and signer policy are not publicly resolved.",
+        "evidence": "At finalized Solana slot 439718934, getAccountInfo(jsonParsed) for Token-2022 mint u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk reported decimals 6, supply 244961279015, mintAuthority and freezeAuthority GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M, and owner TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb. The authority account is non-executable, program-owned by 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP, and the controller program is BPF-upgradeable through ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1. The exact signer/governance semantics of the controller state and any off-chain issuance cap remain unresolved."
+      },
+      {
+        "chain": "solana",
+        "address": "8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
+        "label": "STAC Solana controller program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "solana:u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "eoa:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6",
+          "program:solana:7txjmbkzvy3gmg9kdbebcnxt1yc5pyoxxxvlwdbv9tvp"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439719037,
+        "sources": [
+          {
+            "label": "STAC Solana controller program",
+            "url": "https://solscan.io/account/7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
+          },
+          {
+            "label": "STAC Solana controller program upgrade authority",
+            "url": "https://solscan.io/account/8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
+          },
+          {
+            "label": "Solana PublicNode RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439719037, getAccountInfo(jsonParsed) for controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP returned ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1. ProgramData at slot 439719080 reported upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6; that account is system-owned, non-executable, and zero-data. No on-chain timelock or multisig threshold was resolved, so this authority can replace the controller program immediately and can alter the Solana mint path."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -126,9 +225,13 @@
           "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
         }
       ],
-      "evidence": "At Ethereum block 25531350, STAC was an ERC-1967 UUPS proxy with implementation 0x77684815f44b28726bc3efa4471b88ef3b93feb0 and a zero admin slot. The verified implementation exposes proxiableUUID and upgradeToAndCall; BaseDSContract authorizes upgrades through onlyMaster. The token's owner was code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, getDSService(1) returned 0xec0F580a0FE6eA53654537d34788AeBaD70A6370, and getRole(owner) returned MASTER. The trust service keeps its service owner as the unique MASTER, making that EOA the current terminal upgrade authority. DSToken minting is onlyIssuerOrAbove, so the MASTER owner can mint, but the evidence does not establish that no other issuer-level accounts exist. Economic-control evidence reviewed 2026-07-15: Chronicle continuously and independently verifies STAC holdings and NAV inputs from BNY custody and publishes the results through its public Proof of Asset dashboard. The BVI company and U.S. private-placement exemptions are not product-level prudential supervision. Economic-posture fields reviewed 2026-08-15: unbounded issuer-or-above mint and immediate MASTER upgrade authority; Chronicle covers holdings continuously without product prudential supervision.",
+      "evidence": "Ethereum and Solana are both authored as issuer-native STAC deployments, with no third-party bridge machinery in the reviewed route inventory. At Ethereum block 25770050, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation slot resolved to 0x77684815f44b28726bc3efa4471b88ef3b93feb0. At finalized Solana slot 439718934, the Token-2022 mint reported supply 244961279015, mintAuthority and freezeAuthority GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M, and controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP; its ProgramData reported upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, a system-owned zero-data account with no resolved timelock or multisig threshold. The Solana authority is therefore a live native mint/freeze path and its controller program is immediately replaceable, but the controller state's signer/governance semantics and off-chain issuance limits remain unresolved. Ethereum DSToken minting is onlyIssuerOrAbove, so the MASTER owner can mint, but the evidence does not establish that no other issuer-level accounts exist. Chronicle continuously and independently verifies STAC holdings and NAV inputs from BNY custody and publishes the results through its public Proof of Asset dashboard; chain-specific Solana liability coverage is not separately exposed. The BVI company and U.S. private-placement exemptions are not product-level prudential supervision. Economic-posture fields remain unbounded issuer-or-above mint and immediate upgrade authority across the native routes, with continuous Chronicle reconciliation and attestation-only supervision.",
       "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16",
+      "unresolvedQuestions": [
+        "Which signer or governance account controls the Solana GSM authority state and what off-chain issuance limits apply?",
+        "Does Chronicle's continuous STAC proof explicitly reconcile Solana token liabilities separately from the fund-level holdings and NAV inputs?"
+      ]
     }
   }
 }

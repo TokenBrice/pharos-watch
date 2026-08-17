@@ -1,6 +1,6 @@
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { V9_SCORE_BEARING_GATES_POLICY_V922 } from "@shared/lib/safety-score-v9/score-bearing-gates-policy";
+import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "@shared/lib/safety-score-v9/score-bearing-gates-policy";
 import {
   RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
   validateReserveCompositionTotal,
@@ -226,9 +226,9 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
 ]);
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry.issuerAttestedReserveMaxAgeSec;
+  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.issuerAttestedReserveMaxAgeSec;
 const REVIEWED_CURATED_RESERVE_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry.reviewedCuratedReserveMaxAgeSec;
+  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedCuratedReserveMaxAgeSec;
 const UNRESOLVED_CURATED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
 
 function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {

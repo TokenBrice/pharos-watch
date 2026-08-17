@@ -9,10 +9,24 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "apyUSD is the ERC-4626 wrapper of apxUSD. Row-level on-chain verification on 2026-07-20: the Ethereum wrapper is a native UUPS deployment (asset() = apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665; no getCCIPPool or LayerZero endpoint() surface). The Base deployment is a Chainlink CCIP burn/mint representation: its getCCIPPool() returns BurnMintTokenPool 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d, whose getToken() returns the Base wrapper and whose owner() is the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2; pool bytecode matches the apxUSD CCIP pools byte-for-byte in size.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
-    "confidence": "verified",
+    "summary": "apyUSD is an ERC-4626 wrapper over canonical Ethereum apxUSD. Ethereum is the native Lock/Release home; Base is a Chainlink CCIP Burn/Mint representation whose token-level mint and burn are restricted to pool 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d and whose 100,000,000-token destination cap is separately governed by the Base AccessManager/Safe. The Chainlink directory also lists BNB Chain and Solana representations, but they are not authored in this coin's contracts[] and therefore remain explicit route-coverage follow-up rather than an assertion that Base is the only representation.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP (Cross-Chain Token standard)",
+        "slug": "chainlink-ccip",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD",
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint",
+          "lock-release"
+        ],
+        "note": "The official directory lists Ethereum as Lock/Release home and Base, BNB Chain, and Solana as Burn/Mint representations. Only the Ethereum and Base deployments are authored in this coin's catalog, so BNB/Solana control coverage is deferred pending catalog reconciliation."
+      }
+    ],
     "sources": [
       {
         "label": "APYX docs",
@@ -21,6 +35,14 @@
       {
         "label": "APYX dashboard",
         "url": "https://accountable.apyx.fi/"
+      },
+      {
+        "label": "Chainlink CCIP Directory - apyUSD",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
+      },
+      {
+        "label": "Apyx BridgedApyxToken source",
+        "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
       }
     ],
     "routes": [
@@ -35,10 +57,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads 2026-07-20 (Ethereum block 25570877): asset() returned apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665; getCCIPPool() and LayerZero endpoint() both revert — no bridge-minter surface. The wrapper is a UUPS proxy (EIP-1967 impl 0xfd616567ecc1607f61073951a1e822f7315bb112) whose shares mint natively on deposit of apxUSD under the reviewed Apyx AccessManager/3-of-6 Safe upgrade path (mint-authority review 2026-07-16, scoreable). Native issuance.",
+        "reviewNote": "At Ethereum block 25770413, asset() returned apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665, paused() was false, totalAssets() was nonzero, and the UUPS implementation was 0xfd616567ecc1607f61073951a1e822f7315bb112. No CCIP pool or LayerZero endpoint surface was found on the canonical wrapper; its shares mint natively against deposited apxUSD under the Ethereum AccessManager/3-of-6 Safe path. The Chainlink directory identifies Ethereum as the Lock/Release home deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25570877,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770413,
         "canonicalChain": "ethereum",
         "sources": [
           {
@@ -62,17 +84,18 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads 2026-07-20 (Base block 48862198): the Base apyUSD wrapper's getCCIPPool() returns Chainlink CCIP BurnMintTokenPool 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d; the pool's getToken() returns this wrapper and owner() returns the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 (pool bytecode 13813 bytes, matching the apxUSD CCIP pools). The wrapper has no LayerZero endpoint() surface. Mint/burn is gated to the CCIP pool per the verified BridgedApyxToken source, so CCIP mints this representation against the Ethereum deployment.",
+        "reviewNote": "At Base block 50063823, getCCIPPool() returned 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d; the pool's getToken() returned this wrapper and owner() returned the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. The verified BridgedApyxToken source gates mint(), burn(), and burnFrom() to this pool and enforces a destination supply cap, so this is a CCIP representation against the Ethereum deployment rather than independent native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 48862198,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063823,
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "base",
         "controllerAddress": "0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
-          "contract:base:0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d"
+          "contract:base:0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
         ],
         "sources": [
           {
@@ -86,8 +109,114 @@
           {
             "label": "Apyx bridged-token source",
             "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          },
+          {
+            "label": "Chainlink CCIP Directory - apyUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "apyusd-base-ccip-pool",
+        "label": "apyUSD Base CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "base:0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50063823, getToken() returned the authored Base apyUSD representation and owner() returned the Apyx Safe; the pool is the CCIP route's token-side mint/burn controller.",
+          "caps": "The verified BridgedApyxToken source gates mint(), burn(), and burnFrom() to the stored CCIP pool and rejects minting above the 100,000,000 apyUSD destination supply cap. Approximately 99,386,203.0065 apyUSD remained at Base block 50063823.",
+          "pausersAdminsUpgraders": "The pool supplies bridge mint/burn capability only; AccessManager and Safe controls for setCCIPPool, setCCIPAdmin, upgrades, cap changes, pause, and unpause are recorded separately."
+        },
+        "capDescription": "Base destination supply cap: 100,000,000 apyUSD; the pool cannot raise it.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063823,
+        "sources": [
+          {
+            "label": "apyUSD Base representation",
+            "url": "https://basescan.org/address/0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+          },
+          {
+            "label": "apyUSD Base CCIP BurnMintTokenPool",
+            "url": "https://basescan.org/address/0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d"
+          },
+          {
+            "label": "Apyx BridgedApyxToken source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          }
+        ],
+        "evidence": "At Base block 50063823, pool 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d returned token 0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa and owner 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. The deployed pool bytecode was 13,813 bytes; the destination token reported a 100,000,000 cap with approximately 99,386,203.0065 remaining."
+      },
+      {
+        "id": "apyusd-base-access-manager-safe",
+        "label": "apyUSD Base representation AccessManager and Apyx Safe",
+        "routeRefs": [
+          "base:0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "pause"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x8afde6a90d2396a64eb97e8e69e7548289f78a1d",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "version": "1.4.1",
+          "observedBlock": 50063992,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Role 25 governs setCCIPPool and setCCIPAdmin for the Base representation; the CCIP pool remains a separate route-level controller.",
+          "caps": "Role 24 governs setSupplyCap with a 259200-second delay; the current destination cap is 100,000,000 apyUSD.",
+          "pausersAdminsUpgraders": "Role 25 governs upgradeToAndCall with a 604800-second delay; role 21 pauses immediately and role 22 unpauses after 14400 seconds."
+        },
+        "capDescription": "Base representation cap is changeable by delayed role 24; this is bridge-route administration, not native Ethereum issuance.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063992,
+        "sources": [
+          {
+            "label": "Base apyUSD AccessManager",
+            "url": "https://basescan.org/address/0x8afde6a90d2396a64eb97e8e69e7548289f78a1d"
+          },
+          {
+            "label": "Apyx apyUSD 3-of-6 Safe",
+            "url": "https://etherscan.io/address/0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+          },
+          {
+            "label": "Base JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base blocks 50063823 and 50063992, AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d mapped setCCIPPool, setCCIPAdmin, and upgradeToAndCall to Safe-held role 25 with a 604800-second delay; setSupplyCap mapped to role 24 with a 259200-second delay; pause used role 21 with no delay; unpause used role 22 with a 14400-second delay. The same Safe returned threshold 3, six owners, version 1.4.1, no enabled modules, and no guard."
       }
     ]
   }

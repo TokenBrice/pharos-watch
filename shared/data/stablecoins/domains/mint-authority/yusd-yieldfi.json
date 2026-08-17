@@ -1,20 +1,35 @@
 {
   "id": "yusd-yieldfi",
   "mintAuthority": {
-    "mintPath": "wrapped-or-variant-inherited",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "YieldFi yUSD is an ERC-4626-style USDC strategy vault. Deposits mint shares, and the Manager additionally exposes a discretionary manageAssetAndShares mint/burn path with no supply ceiling. That path is gated on the Administrator's BRIDGE, LOCKBOX, or YIELD roles, which at Ethereum block 25575158 are held by eleven contracts. Two externally owned accounts hold ADMIN and can grant or revoke every non-ADMIN role instantly, so the operator set and therefore the uncapped mint path are under unilateral EOA control; only adding a new ADMIN is delayed, by a four-hour timelock. Base USDC mint authority remains inherited from Circle, and non-Ethereum yUSD is a LayerZero OFT representation with no independent local mint path.",
+    "summary": "YieldFi yUSD has ten reviewed native issuance deployments: the Ethereum YToken and nine chain-local YTokenL2 vaults. Users can mint local vault shares against each chain's configured asset, while the common Manager exposes a discretionary mintYToken/manageAssetAndShares path with no protocol supply ceiling. The native YIELD role path remains in Mint Authority; BridgeCCIP BRIDGE/LOCKBOX burn-mint accounting, peer configuration, LockBox escrow, and Chainlink CCIP validation are scored separately under Bridge Risk. Two bytecode-less ADMIN EOAs can change the native operator set immediately, so the canonical posture remains unbounded-or-compromised; base-asset USDC/USDT issuance remains an upstream dependency.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+      ],
       "proxyAddresses": [
         "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "0x03acc35286baae6d73d99a9f14ef13752208c8dc",
         "0x10472f91f67c49260bdd65f016ea0757bb1fc91e"
       ],
       "implementationAddresses": [
         "0x5bf44d32260aee6b807c490e92ef0481d15ab493",
+        "0x5d83b88f8770de1788e89cc1ec5b2cda8287212c",
+        "0x52cb1a9a9154f0e0a3c7ce08f95caee6062dbca9",
         "0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8",
         "0xccaa27e3db44e06bd9001958de5b41301fd28002"
       ],
@@ -26,10 +41,18 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 86400,
-      "controlRef": "YieldFi TimelockController proposer/executor EOA",
+      "controlRef": "YieldFi TimelockController proposer/executor EOA (common native upgrade path)",
       "observedAt": "2026-07-30",
       "observedBlock": 25648573,
       "sources": [
+        {
+          "label": "YieldFi current contract directory",
+          "url": "https://docs.yield.fi/resources/contract-addresses"
+        },
+        {
+          "label": "Arbitrum verified YTokenL2 implementation",
+          "url": "https://arbitrum.blockscout.com/address/0x5D83B88F8770de1788E89CC1eC5B2cDa8287212C?tab=contract"
+        },
         {
           "label": "Sourcify YieldFi YToken source",
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
@@ -48,13 +71,25 @@
       {
         "chain": "ethereum",
         "address": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
-        "label": "YieldFi YToken share minting",
+        "deploymentRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "label": "YieldFi YToken/YTokenL2 local share issuance",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source mints shares during deposit and permits manager-only mintYToken/burnYToken accounting; it does not mint base USDC.",
+        "capDescription": "The Ethereum YToken and nine YTokenL2 deployments mint local vault shares through ERC-4626 deposit/mint against each chain's configured asset; this share issuance does not mint the upstream base asset.",
         "sources": [
           {
             "label": "YieldFi yUSD terms",
@@ -77,18 +112,30 @@
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "Ethereum reads returned asset() = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493, admin 0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, manager() = 0x03ACc35286bAAE6D73d99a9f14Ef13752208C8dC, and administrator() = 0x10472f91f67C49260BDD65F016ea0757bb1Fc91e. Deposits mint vault shares but do not provide an independent base-USDC mint path."
+        "evidence": "At current reads on 2026-08-16 UTC, all ten authored token deployments had nonzero supply, a chain-local asset(), and manager() = 0x03acc35286baae6d73d99a9f14ef13752208c8dc plus administrator() = 0x10472f91f67c49260bdd65f016ea0757bb1fc91e. Ethereum uses verified YToken implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493; Arbitrum, Base, Optimism, Sonic, and Plume use verified YTokenL2 implementation 0x5d83b88f8770de1788e89cc1ec5b2cda8287212c; Katana, BNB, Avalanche, and Plasma use verified implementation 0x52cb1a9a9154f0e0a3c7ce08f95caee6062dbca9. Each local ERC-4626 deposit/mint path creates local vault shares and does not provide an independent base-asset mint path."
       },
       {
         "chain": "ethereum",
         "address": "0x03acc35286baae6d73d99a9f14ef13752208c8dc",
-        "label": "YieldFi Manager discretionary share mint/burn (Ethereum)",
+        "deploymentRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "label": "YieldFi Manager discretionary share mint/burn (all native deployments)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The Manager's manageAssetAndShares path mints or burns arbitrary yUSD shares with no supply ceiling. It is gated on Administrator BRIDGE, LOCKBOX, or YIELD roles, and holders of those roles can be added at will by the ADMIN EOAs, so no effective cap binds this path.",
+        "capDescription": "The common Manager's manageAssetAndShares and manager-only mintYToken/burnYToken paths can adjust arbitrary yUSD shares with no protocol supply ceiling on each local deployment. Native share issuance through the YIELD role remains Mint Authority; BRIDGE and LOCKBOX route accounting is separately authored under Bridge Risk.",
         "sources": [
           {
             "label": "YieldFi yUSD terms",
@@ -111,18 +158,30 @@
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "Verified Manager implementation 0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8 gates manageAssetAndShares on modifier onlyOperator, which requires Administrator hasRole for keccak256(\"BRIDGE\"), keccak256(\"LOCKBOX\"), or keccak256(\"YIELD\"). A complete RoleGranted/RoleRevoked replay of Administrator proxy 0x10472f91f67c49260bdd65f016ea0757bb1fc91e from its deployment block 22364994, confirmed by live hasRole reads at block 25575158, returns five BRIDGE holders (0x7cccd8ef51227a6c76c3824ed5e176cdc9598f7b, 0xce6beb6b0d349161a71cf547be769900ebcde358, 0x6d4f2f0a647c29983afb77ce3d35c085e851a97f, 0x6be164af10879a86e4643089638b6864ef12b1ee, 0xace45ffffafb20a5b0b68ff3c4cf312551d4cfff), one LOCKBOX holder (0x659b5bc7f2f888db3d5901b78cdb34df270e2231), and five YIELD holders (0x392017161a9507f19644e8886a237c58809212b5, 0xe017bc7793b649ffcfe30d55fa1474f03e1714f7, 0x2e3c5e514eef46727de1fe44618027a9b70d92fc, 0x3073112c2c4800b89764973d5790ccc7fba5c9f9, 0x1e2a5622178f93efd4349e2eb3dbdf2761749e1b). eth_getCode confirms all eleven are contracts. The Manager proxy 0x03acc35286baae6d73d99a9f14ef13752208c8dc also holds MANAGER role and reads administrator() = 0x10472f91f67c49260bdd65f016ea0757bb1fc91e."
+        "evidence": "Verified Manager implementations on the authored chains expose local ERC-4626 share issuance plus manager-only mintYToken/burnYToken and manageAssetAndShares. At Ethereum block 25575158, the YIELD role had five contract holders (0x392017161a9507f19644e8886a237c58809212b5, 0xe017bc7793b649ffcfe30d55fa1474f03e1714f7, 0x2e3c5e514eef46727de1fe44618027a9b70d92fc, 0x3073112c2c4800b89764973d5790ccc7fba5c9f9, 0x1e2a5622178f93efd4349e2eb3dbdf2761749e1b), and the verified source applies no supply ceiling to the discretionary path. The BRIDGE holders, LOCKBOX holder, BridgeCCIP burn/mint calls, and Ethereum LockBox are retained as structured Bridge Risk controls rather than compiled as native issuance."
       },
       {
         "chain": "ethereum",
         "address": "0x10472f91f67c49260bdd65f016ea0757bb1fc91e",
-        "label": "YieldFi Administrator role registry (Ethereum)",
+        "deploymentRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "label": "YieldFi Administrator native-issuance role registry (all native deployments)",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The Administrator is the single role registry the Manager consults. Granting BRIDGE, LOCKBOX, or YIELD here immediately confers the uncapped discretionary share-mint path.",
+        "capDescription": "The common Administrator is the role registry consulted by each local Manager. Granting YIELD here immediately confers the uncapped native discretionary share-mint path; BRIDGE and LOCKBOX role administration is scored separately under Bridge Risk.",
         "observedBlock": 25575158,
         "observedAt": "2026-07-20",
         "sources": [
@@ -147,17 +206,29 @@
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "Verified Administrator implementation 0xccaa27e3db44e06bd9001958de5b41301fd28002 stores roles in a plain mapping and exposes hasRole(bytes32,address). Its grantRoles and revokeRoles functions carry modifier onlyAdmin and take effect in the same transaction; only ADMIN-role grants are deferred, through scheduleAdminRole/executeAdminRole with timeLockPeriod() = 14400 seconds read live at block 25575158."
+        "evidence": "Verified Administrator implementation 0xccaa27e3db44e06bd9001958de5b41301fd28002 stores roles in a plain mapping and exposes hasRole(bytes32,address). Its grantRoles and revokeRoles functions carry modifier onlyAdmin and take effect in the same transaction; the native YIELD role therefore remains an immediate authorization surface for each local Manager. ADMIN-role grants alone are deferred through scheduleAdminRole/executeAdminRole with timeLockPeriod() = 14400 seconds read at block 25575158. The Administrator's separate BRIDGE and LOCKBOX role registry is represented in Bridge Risk."
       },
       {
         "chain": "ethereum",
-        "label": "YieldFi Administrator ADMIN-role EOAs",
+        "deploymentRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "label": "YieldFi Administrator ADMIN-role EOAs (common native dependency)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Either ADMIN key can grant itself or any address a BRIDGE, LOCKBOX, or YIELD role in one transaction and then mint uncapped yUSD shares through the Manager. No timelock, quorum, or guard stands between an ADMIN key and unlimited share issuance.",
+        "capDescription": "Either ADMIN key can grant itself or any address a YIELD role in one transaction and then mint uncapped local yUSD shares through the Manager. No timelock, quorum, or guard stands between an ADMIN key and unlimited native share issuance; bridge-role administration is separately scored under Bridge Risk.",
         "failureDomainKeys": [
           "eoa:evm:0xa6e98a21ea3cbe891b8a24f7233443748c17b387",
           "eoa:evm:0x241ac00dc77fc1981e0483de3da3828b787b8764"
@@ -194,14 +265,26 @@
       {
         "chain": "ethereum",
         "address": "0xa6e98a21ea3cbe891b8a24f7233443748c17b387",
-        "label": "YieldFi TimelockController proposer/executor EOA",
+        "deploymentRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "label": "YieldFi TimelockController proposer/executor EOA (common native upgrade path)",
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "timelockDelaySec": 86400,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "A single EOA holds PROPOSER, CANCELLER, and EXECUTOR on the YieldFiTimelockController that owns all three YieldFi ProxyAdmins, so it can replace the YToken, Manager, and Administrator implementations — and thereby rewrite mint logic — after the 86400-second timelock delay.",
+        "capDescription": "A single EOA holds PROPOSER, CANCELLER, and EXECUTOR on the YieldFiTimelockController. The reviewed Ethereum path owns the YToken, Manager, and Administrator ProxyAdmins, while the nine local YTokenL2 proxies and their verified implementations are included in the native multi-deployment upgrade coverage; the common-mode caveat remains that the complete per-chain proxy-admin mapping was not independently enumerated in this migration.",
         "failureDomainKeys": [
           "eoa:evm:0xa6e98a21ea3cbe891b8a24f7233443748c17b387",
           "contract:ethereum:0x8e31efda4453494a84fa6168d53eb1418c0b4ac4"
@@ -237,6 +320,14 @@
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "YieldFi current contract directory",
+          "url": "https://docs.yield.fi/resources/contract-addresses"
+        },
+        {
+          "label": "YieldFi yTokens architecture",
+          "url": "https://docs.yield.fi/technical-docs/ytokens"
+        },
         {
           "label": "YieldFi yUSD terms",
           "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
@@ -282,9 +373,9 @@
           "url": "https://docs.yield.fi/prime-analytics/transparency-and-analytics"
         }
       ],
-      "evidence": "Ethereum block 25575158. The prior open question on the Manager's terminal operator is resolved: manageAssetAndShares is gated on Administrator BRIDGE, LOCKBOX, or YIELD, whose complete current membership is eleven contracts enumerated by full event replay plus live hasRole reads, and whose grant authority sits with two bytecode-less ADMIN EOAs able to act with no delay. The uncapped nature of the path is read from the verified Manager source, which applies no supply ceiling. The non-Ethereum question is resolved at the route layer: every tracked non-Ethereum yUSD deployment is a LayerZero OFT representation of the Ethereum token with no independent local mint path. Reconciliation cadence stays unknown because YieldFi publishes no supply-versus-reserve attestation schedule and the vault's totalAssets is updated by the Manager rather than proven on-chain. Re-verified 2026-07-28 at Ethereum block 25629035 on ethereum-rpc.publicnode.com and eth.drpc.org: Administrator 0x10472f91f67c49260bdd65f016ea0757bb1fc91e hasRole(keccak256(\"ADMIN\"), 0xa6e98a21ea3cbe891b8a24f7233443748c17b387)=true and hasRole(ADMIN, 0x241ac00dc77fc1981e0483de3da3828b787b8764)=true; eth_getCode empty for both ADMIN EOAs. Upgrade-authority correction 2026-07-30 at Ethereum block 25648573 (publicnode + dRPC): the earlier 'zero timelock role holders, upgrade path inert' claim was wrong — the EIP-1967 admin slots of all three YieldFi proxies resolve to three OZ ProxyAdmins (0xe26e1d2a, 0x25249946, 0xc79920d4) all owned by YieldFiTimelockController 0x8e31efda (getMinDelay 86400), and a complete RoleGranted/RoleRevoked replay of the timelock from deployment block 22484772 plus live hasRole reads show ADMIN EOA 0xa6e98a21ea3cbe891b8a24f7233443748c17b387 holds PROPOSER, CANCELLER, and EXECUTOR with no revocations, so one EOA can upgrade every YieldFi implementation after a 24-hour delay; upgradeability is now modeled as transparent-proxy with controlRef on that EOA. Reconciliation remains profile.reconciliation=unknown (no published attestation schedule); that is scored via the reconciliation field rather than an open review question blocking incidentState. Economic-posture fields reviewed 2026-08-15: immediate ADMIN-controlled discretionary share minting remains unbounded, no whole-supply reconciliation schedule is published, and no local supervisor or independent attestor is established. Wave 1 reconciliation review 2026-08-15: searched the yUSD terms and YieldFi's operational-control, bankruptcy-remote, and transparency documentation; those pages describe generic vault-ledger/NAV reconciliation and proof-of-reserves intentions but publish no dated yUSD supply-versus-assets attestation, named examiner, or report cadence for the tracked vault. The vault's on-chain totalAssets/NAV mechanics are not an independent reserve reconciliation, so reconciliation remains unknown and supervision remains none.",
-      "reviewer": "Grok wave-8 GROK-RESEARCH controls yusd-yieldfi; Kimi T56 w2 upgrade-authority correction (2026-07-30); Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Reviewed 2026-08-16: all ten authored deployments are local native YToken/YTokenL2 ERC-4626 issuance paths with chain-local assets, common Manager 0x03acc35286baae6d73d99a9f14ef13752208c8dc, and common Administrator 0x10472f91f67c49260bdd65f016ea0757bb1fc91e. The native YIELD role path and immediate ADMIN ability to change its operators remain in Mint Authority; the Manager's BRIDGE/LOCKBOX path, BridgeCCIP contracts, peers, Ethereum LockBox, and Chainlink CCIP validation are represented separately in Bridge Risk. The reviewed Manager source provides no protocol supply ceiling, so authorityPosture remains unbounded-or-compromised and economicCapSemantics remains unbounded. The nine YTokenL2 implementations are included in upgradeability coverage alongside the three Ethereum proxy implementations; the common 86400-second Ethereum Timelock path and its ADMIN-EOA bypass remain adverse. YieldFi publishes no dated whole-supply reconciliation or independent prudential supervision, so reconciliation remains unknown and supervision remains none.",
+      "reviewer": "Grok wave-8 GROK-RESEARCH controls yusd-yieldfi; Kimi T56 w2 upgrade-authority correction (2026-07-30); Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Codex mint-bridge boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "unresolvedQuestions": []
     }

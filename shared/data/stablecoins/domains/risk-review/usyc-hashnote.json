@@ -9,10 +9,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USYC docs list the Ethereum, BSC, and Solana tokens with issuer-operated teller contracts. Subscription mints USYC against USDC and redemption burns USYC for USDC; BSC uses the Cross Chain Teller from Ethereum. The reviewed routes are issuer-native teller paths rather than permissionless bridges.",
-    "reviewedAt": "2026-07-16",
-    "reviewer": "Codex bridge route review",
-    "confidence": "verified",
+    "summary": "USYC has issuer-operated Teller paths on native Ethereum and Solana. BSC USYC is a canonical-chain-sourced Cross Chain Teller bridge representation from Ethereum with burn/mint semantics; its direct minter, shared allowance, Entitlements/admin, and token upgrade controls are assessed here rather than in Mint Authority. The route remains issuer-native-burn-mint, with no permissionless validator network evidenced.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review / mint-bridge boundary migration",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "issuer",
@@ -75,12 +75,13 @@
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "protocol": "USYC Cross Chain Teller",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Official USYC documentation identifies BSC as a BEP20 representation and directs subscription and redemption through the Cross Chain Teller from Ethereum. The BSC token's current mint, admin, and upgrade surfaces are therefore bridge-route controls rather than independent native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bsc",
         "controllerAddress": "0xf38979E05650be7926EA07BB59C48Fb9b1DB3D08",
@@ -129,6 +130,208 @@
             "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usyc-bsc-representation-minter",
+        "label": "USYC BSC Cross Chain Teller representation minter",
+        "routeRefs": [
+          "bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xfd78EE919681417d192449715b2594ab58f5D002",
+        "failureDomainKeys": [
+          "protocol:usyc-cross-chain-teller",
+          "mint:bsc:0xfd78ee919681417d192449715b2594ab58f5d002"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The BSC representation minter had a uint256.max allowance; this is bridge-route mint capacity and not an independent native issuance cap.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "rateLimits": "At BSC block 116356868, minterAllowance(0xfd78...D002) returned uint256.max; no aggregate or per-call token mint ceiling was evidenced for this representation route.",
+          "pausersAdminsUpgraders": "The BSC Cross Chain Teller representation minter is administered through the BSC Entitlements/RolesAuthority and token-owner surfaces recorded below."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356868,
+        "sources": [
+          {
+            "label": "BSC USYC TokenMinterV2",
+            "url": "https://bscscan.com/address/0xfd78ee919681417d192449715b2594ab58f5d002#code"
+          },
+          {
+            "label": "BSC USYC token",
+            "url": "https://bscscan.com/address/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311#code"
+          },
+          {
+            "label": "BSC USYC Cross Chain Teller",
+            "url": "https://bscscan.com/address/0xf38979e05650be7926ea07bb59c48fb9b1db3d08#code"
+          }
+        ],
+        "evidence": "At BSC block 116356868, minterAllowance(0xfd78...D002) returned uint256.max. The allowance is not decremented by minting and the BSC token has no global supply cap, but the token is an Ethereum-sourced Cross Chain Teller representation."
+      },
+      {
+        "id": "usyc-bsc-shared-allowance-eoa",
+        "label": "USYC BSC shared secondary EOA representation minter",
+        "routeRefs": [
+          "bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x85fBFb6a6EF755797Cf65A4C7D7A90423f96d011",
+        "failureDomainKeys": [
+          "protocol:usyc-cross-chain-teller",
+          "eoa:evm:0x85fbfb6a6ef755797cf65a4c7d7a90423f96d011"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "This zero-code EOA had a uint256.max allowance on the BSC representation; the allowance is bridge-route mint capacity and is not independent native issuance.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "rateLimits": "At BSC block 116356868, the shared EOA's minterAllowance returned uint256.max; the allowance is not decremented by representation minting.",
+          "pausersAdminsUpgraders": "The EOA's BSC representation allowance is separate from the native Ethereum allowance and is scored only under this bridge route."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356868,
+        "sources": [
+          {
+            "label": "BSC USYC token",
+            "url": "https://bscscan.com/address/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311#code"
+          },
+          {
+            "label": "BSC USYC Cross Chain Teller",
+            "url": "https://bscscan.com/address/0xf38979e05650be7926ea07bb59c48fb9b1db3d08#code"
+          }
+        ],
+        "evidence": "At BSC block 116356868, this zero-code EOA had uint256.max minter allowance on the BSC USYC representation. The allowance is not decremented by minting; this is the shared EOA's bridge-route capability, while its Ethereum native allowance remains separately reviewed in Mint Authority."
+      },
+      {
+        "id": "usyc-bsc-entitlements-owner",
+        "label": "USYC BSC Entitlements/RolesAuthority owner",
+        "routeRefs": [
+          "bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x2D833EF0B55a7578e6F0F86FBF29674e4a250782",
+        "failureDomainKeys": [
+          "protocol:usyc-cross-chain-teller",
+          "eoa:bsc:0x2d833ef0b55a7578e6f0f86fbf29674e4a250782",
+          "contract:bsc:0x6b7d54003f73be979cf92bf369432ac534853692"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The BSC Entitlements/RolesAuthority owner can modify authority capability assignments and grant or revoke the FundAdmin path that authorizes representation minters.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At BSC block 116356868, this zero-code EOA owned the BSC Entitlements/RolesAuthority and could immediately grant or revoke FundAdmin and related representation-minter permissions."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356868,
+        "sources": [
+          {
+            "label": "BSC USYC Entitlements/RolesAuthority",
+            "url": "https://bscscan.com/address/0x6b7d54003f73be979cf92bf369432ac534853692#code"
+          },
+          {
+            "label": "BSC USYC token",
+            "url": "https://bscscan.com/address/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311#code"
+          },
+          {
+            "label": "BSC USYC Cross Chain Teller",
+            "url": "https://bscscan.com/address/0xf38979e05650be7926ea07bb59c48fb9b1db3d08#code"
+          }
+        ],
+        "evidence": "At BSC block 116356868, this zero-code EOA owned Entitlements/RolesAuthority 0x6b7d...3692. It could immediately grant or revoke the FundAdmin role and modify authority capability assignments, enabling a new unbounded minter on the BSC representation route."
+      },
+      {
+        "id": "usyc-bsc-token-upgrade-owner",
+        "label": "USYC BSC representation token upgrade owner",
+        "routeRefs": [
+          "bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xcd636d955a95385ec5e2776b167b92e89ef6f70e",
+        "failureDomainKeys": [
+          "protocol:usyc-cross-chain-teller",
+          "eoa:bsc:0xcd636d955a95385ec5e2776b167b92e89ef6f70e",
+          "contract:bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The zero-code BSC token owner can replace the representation token's mint logic immediately through the UUPS onlyOwner upgrade path, with no on-chain delay.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356868,
+        "sources": [
+          {
+            "label": "BSC USYC token",
+            "url": "https://bscscan.com/address/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311#code"
+          },
+          {
+            "label": "BSC USYC implementation",
+            "url": "https://bscscan.com/address/0x191fb6f3ba332f1b8789caf67abbaba56147445b#code"
+          },
+          {
+            "label": "BSC USYC Cross Chain Teller",
+            "url": "https://bscscan.com/address/0xf38979e05650be7926ea07bb59c48fb9b1db3d08#code"
+          }
+        ],
+        "evidence": "At BSC block 116356868, this zero-code EOA was token owner. The UUPS implementation's _authorizeUpgrade is onlyOwner, so the account could replace BSC representation mint logic immediately with no on-chain delay. The current implementation still requires minterAllowance and does not give the owner a direct mint path by itself."
+      },
+      {
+        "id": "usyc-bsc-fundadmin",
+        "label": "USYC BSC Cross Chain Teller FundAdmin",
+        "routeRefs": [
+          "bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xDbE01f447040F78ccbC8Dfd101BEc1a2C21f800D",
+        "failureDomainKeys": [
+          "protocol:usyc-cross-chain-teller",
+          "eoa:evm:0xdbe01f447040f78ccbc8dfd101bec1a2c21f800d",
+          "contract:bsc:0x6b7d54003f73be979cf92bf369432ac534853692"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The shared zero-code FundAdmin can immediately set BSC representation minter allowances to uint256.max; its Ethereum native FundAdmin and minter capability remains separately scored in Mint Authority.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At BSC block 116356868, this zero-code EOA was the current FundAdmin on the BSC Entitlements/RolesAuthority and could immediately set representation-minter allowances."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356868,
+        "sources": [
+          {
+            "label": "BSC USYC Entitlements/RolesAuthority",
+            "url": "https://bscscan.com/address/0x6b7d54003f73be979cf92bf369432ac534853692#code"
+          },
+          {
+            "label": "BSC USYC token",
+            "url": "https://bscscan.com/address/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311#code"
+          },
+          {
+            "label": "BSC USYC Cross Chain Teller",
+            "url": "https://bscscan.com/address/0xf38979e05650be7926ea07bb59c48fb9b1db3d08#code"
+          }
+        ],
+        "evidence": "At BSC block 116356868, this zero-code EOA was the current FundAdmin on the BSC Entitlements/RolesAuthority. It could immediately set any BSC representation-minter allowance to uint256.max; this bridge-route capability is separate from its Ethereum native Mint Authority control."
       }
     ]
   }

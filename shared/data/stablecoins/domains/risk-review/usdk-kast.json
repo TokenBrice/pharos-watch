@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDK is a Solana M extension, not native unbridged issuance. Its mint-authority PDA wraps Portal-delivered M in an extension vault; M0 documents that Solana M is minted by the M0 Portal against M locked in the Ethereum HubPortal through Wormhole NTT.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex bridge route curation",
+    "summary": "USDK inherits the canonical Ethereum M0 M issuance rail; its Solana deployment is a wrapped representation rather than an independent native USDK issuance route. The M0 Solana Portal and Wormhole NTT are bridge machinery: they deliver representation M from the Ethereum hub. The USDK extension then transfers Solana M into its vault before minting USDK through the extension PDA; the extension admin and its no-delay program upgrade authority remain explicit Bridge Risk controls. The route remains external-lock-mint.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route curation; FIX2-13 mint/bridge boundary review",
     "confidence": "verified",
     "protocols": [
       {
@@ -61,7 +61,7 @@
         "semantics": "lock-mint",
         "scope": "global",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Composite route: Wormhole NTT carries M from the Ethereum HubPortal to the Solana Portal, then the USDK extension locks Solana M and mints the exact USDK token through its mint-authority PDA.",
+        "reviewNote": "Composite route: Wormhole NTT carries M from the Ethereum HubPortal to the Solana Portal, which is bridge machinery rather than native USDK issuance. The USDK extension then locks Solana M in its vault and mints the exact USDK token through its mint-authority PDA; the current wrapper invariant is supply-conserving but its extension program is upgradeable by a bare EOA.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "solana",
         "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
@@ -71,8 +71,8 @@
           "program:solana:extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw",
           "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 432836017,
+        "observedAt": "2026-08-16",
+        "observedBlock": 439716966,
         "sources": [
           {
             "label": "M0 cross-chain architecture",
@@ -95,6 +95,188 @@
             "url": "https://explorer.solana.com/address/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdk-solana-extension-mint-authority",
+        "label": "USDK Token-2022 extension mint authority PDA",
+        "routeRefs": [
+          "solana:usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7",
+        "failureDomainKeys": [
+          "program:solana:extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw",
+          "pda:solana:C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "contract",
+        "capDescription": "The USDK extension wrap path requires a configured wrap authority, transfers M into the PDA-owned extension vault ATA, and only then invokes Token-2022 minting. This representation-side mint is supply-conserving under the current program, but the mutable extension program can replace that invariant.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439716935,
+        "sources": [
+          {
+            "label": "USDK Solana token",
+            "url": "https://explorer.solana.com/address/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+          },
+          {
+            "label": "M0 extension wrap instruction",
+            "url": "https://raw.githubusercontent.com/m0-foundation/solana-m-extensions/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/programs/m_ext/src/instructions/wrap.rs"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439716935, USDK mintAuthority=C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 was the off-curve PDA derived from extension program extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw with seeds=[\"mint_authority\"]. The official wrap instruction requires a configured wrap authority and transfers M into the extension vault before PDA minting. The extension global account and Token-2022 metadata identify the same bare EOA as administrator/extension authority; USDK freeze authority 7Ahg145ZRP5LASPjAphRcHoR1UgvLjbZR5MP1j3dPpFr is null/uninitialized, and metadataPointer, confidentialTransfer, and transferHook authorities point to the same EOA."
+      },
+      {
+        "id": "usdk-solana-portal",
+        "label": "M0 Solana Portal / Wormhole NTT gateway",
+        "routeRefs": [
+          "solana:usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "failureDomainKeys": [
+          "program:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "contract",
+        "capDescription": "The Portal route can release/mint Solana M only through the Wormhole-validated hub-and-spoke path; effective USDK route capacity depends on the Portal and extension invariants rather than an immutable Solana token cap.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "M0's hub-and-spoke route locks M on the Ethereum HubPortal; Wormhole NTT delivers the message to the Solana Portal, and the USDK extension then transfers Solana M into its vault before minting USDK.",
+          "trustedPeerOrRemote": "M0 documents Wormhole NTT Portal message validation, but USDK-specific remote-peer configuration was not independently enumerated at a fixed observation.",
+          "caps": "The composed route is supply-conserving only while the Portal validation path and the USDK extension M-vault-before-mint invariant hold; no independent USDK bridge cap was established.",
+          "pausersAdminsUpgraders": "At finalized Solana slots 439716935-439716966, the Portal was executable under the upgradeable loader and its ProgramData upgrade authority was 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439716966,
+        "sources": [
+          {
+            "label": "M0 cross-chain architecture",
+            "url": "https://docs.m0.org/build/cross-chain"
+          },
+          {
+            "label": "M0 on Solana",
+            "url": "https://docs.m0.org/protocol/solana"
+          },
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://explorer.solana.com/address/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439716935, Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY was executable under BPFLoaderUpgradeable; at slot 439716966 its ProgramData named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. M0 documents that the Portal validates Wormhole messages and supplies Solana M from M locked in the Ethereum hub. These are bridge-route controls, not native USDK mint authority."
+      },
+      {
+        "id": "usdk-solana-portal-upgrade-authority",
+        "label": "USDK route Portal upgrade authority",
+        "routeRefs": [
+          "solana:usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "failureDomainKeys": [
+          "program:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "eoa",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439716966,
+        "sources": [
+          {
+            "label": "M0 on Solana",
+            "url": "https://docs.m0.org/protocol/solana"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439716966, the Portal ProgramData upgrade authority was the bare EOA 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. No Wormhole guardian quorum, Safe threshold, timelock, or Portal-specific pause/rate-limit control was established in this review."
+      },
+      {
+        "id": "usdk-solana-extension-admin",
+        "label": "USDK extension global admin",
+        "routeRefs": [
+          "solana:usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "failureDomainKeys": [
+          "program:solana:extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "caps": "At finalized Solana slot 439717960, the extension global account listed four configured wrap authorities. The admin can change the authorized wrap set, so it can change who may invoke wrapper-local bridge minting.",
+          "pausersAdminsUpgraders": "The current admin is 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW; pending admin is 5WVYUVeJvcwD4Fpko5aZgdoB346Ef9ioAG6znohbrbti and its signer/control relationship was not verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439717960,
+        "sources": [
+          {
+            "label": "M0 extension registry source",
+            "url": "https://raw.githubusercontent.com/m0-foundation/solana-m-extensions/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/services/cli/main.ts"
+          },
+          {
+            "label": "M0 extension wrap instruction",
+            "url": "https://raw.githubusercontent.com/m0-foundation/solana-m-extensions/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/programs/m_ext/src/instructions/wrap.rs"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439717960, the USDK extension global account named admin 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW, pending admin 5WVYUVeJvcwD4Fpko5aZgdoB346Ef9ioAG6znohbrbti, and four configured wrap authorities. The admin can change the set of addresses allowed to invoke wrap/unwrap and can transfer admin through the program's two-step flow."
+      },
+      {
+        "id": "usdk-solana-extension-upgrade-authority",
+        "label": "USDK extension program upgrade authority",
+        "routeRefs": [
+          "solana:usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "failureDomainKeys": [
+          "program:solana:extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "eoa",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439717137,
+        "sources": [
+          {
+            "label": "M0 extension wrap instruction",
+            "url": "https://raw.githubusercontent.com/m0-foundation/solana-m-extensions/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/programs/m_ext/src/instructions/wrap.rs"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439717137, extension program extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw resolved to ProgramData CK8fFmZLbHUVnCWsrc1kTFeEbgWgDbEtPsPysNgwBaTh, whose upgrade authority was the bare EOA 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. This upgrade path can replace the extension's M-transfer-before-mint logic; no timelock or Safe threshold was established."
       }
     ]
   }

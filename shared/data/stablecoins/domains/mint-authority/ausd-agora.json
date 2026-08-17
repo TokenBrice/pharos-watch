@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "AUSD uses rate-limited EVM minter and bridge-minter roles plus a Solana Token-2022 mint authority. Agora EOAs separately hold EVM role-administration, rate-limit management, and custom transparent-proxy upgrade authority; no multisig was found on these reviewed paths.",
+    "summary": "AUSD native issuance is governed by Agora's EVM MINTER_ROLE family and the Solana Token-2022 mint authority; the EVM LayerZero BRIDGE_MINTER_ROLE/adapter is bridge-only and is reviewed under bridgeRouteRisk. Agora EOAs separately hold EVM role-administration, rate-limit management, and custom transparent-proxy upgrade authority; no multisig was found on these reviewed native paths.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -15,6 +15,19 @@
       ],
       "adminAddresses": [
         "0xb8fcc66d613e5f54ee6a425ddbf4a2fdbe4dedee"
+      ],
+      "deploymentRefs": [
+        "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "arbitrum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "base:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "avalanche:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "bsc:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "polygon:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "monad:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "mantle:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "katana:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "immutable-zkevm:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "plume:0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
       ],
       "canChangeMintLogic": true,
       "controlRef": "AUSD EVM role administrator and proxy-admin owner",
@@ -39,6 +52,19 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "arbitrum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "base:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "avalanche:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "bsc:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "polygon:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "monad:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "mantle:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "katana:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "immutable-zkevm:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "plume:0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The rolling mint-rate-limit getter reported zero currently available AUSD at the fresh observation block; the minter cannot change its own rate limit, while the separate rate-limit manager can restore or raise capacity.",
@@ -54,31 +80,24 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x9cab7ede13dc56652e44d2404e969c212f22689b",
-        "label": "AUSD EVM BRIDGE_MINTER_ROLE holder",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The rolling mint-rate-limit getter reported zero currently available AUSD at the fresh observation block; the bridge adapter cannot change its own rate limit, while the separate rate-limit manager can restore or raise capacity.",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712131,
-        "sources": [
-          {
-            "label": "Etherscan — AUSD proxy",
-            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
-          }
-        ],
-        "evidence": "At Ethereum block 25712131, getBridgeMinterRoleMembers() returned only this contract and getAmountCanBeMinted() returned zero currently available capacity. The adapter cannot raise its own limit; its separately reviewed owner and Agora rate-limit manager remain external control surfaces."
-      },
-      {
-        "chain": "ethereum",
         "address": "0x72744c530b1b993bcbe779411bcab4e02091d6dc",
         "label": "AUSD EVM RATE_LIMIT_MANAGER_ROLE holder",
         "role": "cap-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "arbitrum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "base:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "avalanche:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "bsc:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "polygon:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "monad:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "mantle:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "katana:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "immutable-zkevm:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "plume:0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -98,6 +117,19 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "arbitrum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "base:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "avalanche:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "bsc:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "polygon:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "monad:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "mantle:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "katana:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "immutable-zkevm:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "plume:0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -117,6 +149,9 @@
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -172,9 +207,9 @@
           "url": "https://www.mondaq.com/fin-tech/1498718/bermuda-monetary-authority-consultation-guidance-on-digital-asset-business-single-currency-pegged-stablecoins-scps"
         }
       ],
-      "evidence": "Fresh Ethereum RPC at block 25712131 still enumerated one MINTER_ROLE holder, one BRIDGE_MINTER_ROLE holder, one RATE_LIMIT_MANAGER_ROLE holder, and one ACCESS_CONTROL_MANAGER_ROLE holder; both mint routes reported zero currently available rolling capacity, while the manager can restore or raise limits. The custom proxy getter and AgoraProxyAdmin owner resolve to the same access-control EOA. At finalized Solana slot 438046518, the Token-2022 mint authority remained EARe2..., with the recorded freeze authority and permanent delegate. Agora's transparency index lists Grant Thornton monthly reserve attestations. The OCC registry lists Agora National Trust Bank only as a pending application, while Agora Bermuda Limited's terms state that it holds a BMA Digital Asset Business Act Class F license. The Grant Thornton May 2026 report examines reserve value against AUSD in circulation at two month-end observation dates, supporting periodic reconciliation. Under the existing Pharos evidence-scoped ruling, BMA stablecoin-specific guidance plus the Class F license supports prudential supervision. Issuer-controlled rate limits and mint roles remain economically unbounded because the manager and role administrator can restore, raise, or replace capacity.",
+      "evidence": "Fresh Ethereum RPC at block 25712131 still enumerated one MINTER_ROLE holder, one BRIDGE_MINTER_ROLE holder, one RATE_LIMIT_MANAGER_ROLE holder, and one ACCESS_CONTROL_MANAGER_ROLE holder; both mint routes reported zero currently available rolling capacity, while the manager can restore or raise limits. The custom proxy getter and AgoraProxyAdmin owner resolve to the same access-control EOA. At finalized Solana slot 438046518, the Token-2022 mint authority remained EARe2..., with the recorded freeze authority and permanent delegate. Agora's transparency index lists Grant Thornton monthly reserve attestations. The OCC registry lists Agora National Trust Bank only as a pending application, while Agora Bermuda Limited's terms state that it holds a BMA Digital Asset Business Act Class F license. The Grant Thornton May 2026 report examines reserve value against AUSD in circulation at two month-end observation dates, supporting periodic reconciliation. Under the existing Pharos evidence-scoped ruling, BMA stablecoin-specific guidance plus the Class F license supports prudential supervision. Issuer-controlled rate limits and mint roles remain economically unbounded because the manager and role administrator can restore, raise, or replace capacity. The EVM BRIDGE_MINTER_ROLE holder is the LayerZero MintBurnOFTAdapter and is bridge-only; its burn/mint, pause, peer, rate-limit, owner, and adapter upgrade surfaces are retained in bridgeRouteRisk rather than counted as native Mint Authority. The native EVM and Solana controls, posture, cap semantics, reconciliation, and supervision are unchanged by that boundary correction.",
       "reviewer": "Kimi FIAT-CTRL shard-01 (V9 anchor-coherence swarm); Pharos owner ruling D4",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

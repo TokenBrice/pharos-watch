@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "Ethereum alUSD is minted through the AlchemistV2 CDP under a token ceiling controlled by two ADMIN_ROLE multisigs. The Alchemist proxy is now administered directly by a separate 3-of-7 Safe. Material Optimism xalUSD is minted by a rate-limited LayerZero bridge; its 3-of-7 chain Safe owns both that bridge and the token ProxyAdmin and can replace or raise its limits.",
+    "confidence": "manual-review",
+    "summary": "alUSD has independent native AlchemistV2 CDP issuance on Ethereum, Arbitrum, Optimism, and Fantom. Each local path is collateral-gated and carries an on-chain mint-limit or token ceiling, but local token admins can re-authorize the Alchemist or raise ceilings, and the Alchemist/debt-token proxy paths remain mutable. Metis is a bridge-only CrossChainCanonical representation and is excluded from Mint Authority; all LayerZero/xERC20 mint, burn, lockbox, rate-limit, and bridge-upgrade capabilities remain under Bridge Risk.",
     "controls": [
       {
         "label": "AlchemistV2 (CDP minter)",
@@ -13,17 +13,24 @@
         "directMintAbility": "cap-limited",
         "capDescription": "AlToken.ceiling(AlchemistV2) is an administrator-set token mint ceiling; Alchemist collateral and LTV checks further constrain user issuance. The contract cannot raise its own ceiling.",
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 25712278, AlToken.ceiling(AlchemistV2) returned 1,000,000,000,000 alUSD and hasMinted returned about 21.94 million alUSD. The proxy still used implementation 0x0f17d856ecc7c8ce9bd7d5b3e52a47eca5e8955a, while its EIP-1967 admin had changed from the previously recorded ProxyAdmin to 3-of-7 Safe 0xf56d660138815fc5d7a06cd0e1630225e788293d. The Alchemist cannot raise its own token ceiling.",
+        "evidence": "At Ethereum block 25770293, AlToken.ceiling(AlchemistV2) returned 1,000,000,000,000 alUSD and hasMinted returned 21,941,472.558855529... alUSD. The AlchemistV2 proxy used implementation 0x0f17d856ecc7c8ce9bd7d5b3e52a47eca5e8955a; its EIP-1967 admin slot resolved to ProxyAdmin 0xe0fc5cb7665041cda26969a2d1ceb5cd5046347d, whose owner is the separate 3-of-7 Safe 0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9. The Alchemist cannot raise its own token ceiling; user issuance remains constrained by its collateral/LTV checks.",
         "sources": [
           {
             "label": "AlchemistV2 on Etherscan",
             "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+          },
+          {
+            "label": "Ethereum AlchemistV2 deployment",
+            "url": "https://raw.githubusercontent.com/alchemix-finance/deployments/master/mainnet/AlchemistV2_alUSD.json"
           }
         ],
         "chain": "ethereum",
         "address": "0x5c6374a2ac4ebc38dea0fc1f8716e5ea1add94dd",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712278
+        "deploymentRefs": [
+          "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770293
       },
       {
         "label": "Alchemix MultiSigWalletWithTimeLock (ADMIN_ROLE)",
@@ -34,7 +41,7 @@
         "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25712278, AlToken ADMIN_ROLE still had exactly two members including this MultiSigWalletWithTimeLock. getOwners() returned seven owners, required() returned 4, and secondsTimeLocked() returned 600 seconds. ADMIN_ROLE can authorize minters and raise their token ceilings but cannot mint directly.",
+        "evidence": "At Ethereum block 25770293, AlToken ADMIN_ROLE had exactly two members including this MultiSigWalletWithTimeLock. getOwners() returned seven owners, required() returned 4, and secondsTimeLocked() returned 600 seconds. ADMIN_ROLE can authorize minters and raise their token ceilings but cannot mint directly.",
         "sources": [
           {
             "label": "MultiSigWalletWithTimeLock on Etherscan",
@@ -43,8 +50,11 @@
         ],
         "chain": "ethereum",
         "address": "0x8392f6669292fa56123f71949b52d883ae57e225",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712278
+        "deploymentRefs": [
+          "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770293
       },
       {
         "label": "Alchemix AlToken ADMIN_ROLE Safe",
@@ -76,7 +86,7 @@
           "observedAt": "2026-08-08",
           "source": "safe-api"
         },
-        "evidence": "At Ethereum block 25712278, this Safe remained the second of exactly two AlToken ADMIN_ROLE members. Safe API returned the listed 3-of-7 owners, no modules, zero guard and module guard, and Safe 1.3.0. It can authorize minters and raise token ceilings, but the Alchemist proxy-admin role has moved to the separately modeled Safe 0xf56d660138815fc5d7a06cd0e1630225e788293d.",
+        "evidence": "At Ethereum block 25770293, this Safe remained the second of exactly two AlToken ADMIN_ROLE members. Safe API returned the listed 3-of-7 owners, no modules, zero guard and module guard, and Safe 1.3.0. It can authorize minters and raise token ceilings; the Alchemist proxy-admin role is separately modeled through ProxyAdmin 0xe0fc5cb7665041cda26969a2d1ceb5cd5046347d, whose owner is this Safe.",
         "sources": [
           {
             "label": "Alchemix Safe on Etherscan",
@@ -85,11 +95,14 @@
         ],
         "chain": "ethereum",
         "address": "0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712278
+        "deploymentRefs": [
+          "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770293
       },
       {
-        "label": "Alchemix AlchemistV2 proxy-admin Safe (via ProxyAdmin 0xe0fc5cb7)",
+        "label": "Alchemix AlchemistV2 ProxyAdmin owner Safe (0xe0fc5cb7)",
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
@@ -128,49 +141,77 @@
             "url": "https://etherscan.io/address/0x5c6374a2ac4ebc38dea0fc1f8716e5ea1add94dd#code"
           },
           {
-            "label": "Current AlchemistV2 proxy-admin Safe API",
+            "label": "Current AlchemistV2 ProxyAdmin owner Safe API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9/"
+          }
+        ],
+        "evidence": "At Ethereum block 25770293, the AlchemistV2 EIP-1967 admin slot resolved to ProxyAdmin 0xe0fc5cb7665041cda26969a2d1ceb5cd5046347d, whose owner() returned this 3-of-7 Safe. Safe API returned the listed owners with no modules and zero guards. This Safe can replace collateral and mint-critical Alchemist logic through the ProxyAdmin without an external timelock.",
+        "deploymentRefs": [
+          "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770293
+      },
+      {
+        "label": "Alchemix Ethereum AlchemistV2 protocol-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xc0cdb2ff3699de3c90beb7ec9f312a4b0dd9dbc1",
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "version": "1.3.0",
+          "observedBlock": 25770293,
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "canRaiseCap": false,
+        "capDescription": "This Safe is the AlchemistV2 protocol admin() and can change Alchemist issuance configuration; the AlToken ceiling remains controlled by the separate two-member ADMIN_ROLE set.",
+        "evidence": "At Ethereum block 25770293, AlchemistV2.admin() returned 0xf56d660138815fc5d7a06cd0e1630225e788293d. This separate 3-of-7 Safe is the protocol administrator for the native CDP and is not the EIP-1967 ProxyAdmin owner or an AlToken ADMIN_ROLE member.",
+        "sources": [
+          {
+            "label": "Ethereum AlchemistV2 explorer",
+            "url": "https://etherscan.io/address/0x5c6374a2ac4ebc38dea0fc1f8716e5ea1add94dd"
+          },
+          {
+            "label": "Ethereum native-admin Safe API",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xf56d660138815fc5d7a06cd0e1630225e788293d/"
           }
         ],
-        "evidence": "At Ethereum block 25712278, the AlchemistV2 EIP-1967 admin slot resolved directly to this Safe, replacing the stale ProxyAdmin/owner path recorded previously. Safe API returned a 3-of-7 quorum with no modules and zero guards. It can replace collateral and mint-critical Alchemist logic without an external timelock."
+        "chain": "ethereum",
+        "address": "0xf56d660138815fc5d7a06cd0e1630225e788293d",
+        "deploymentRefs": [
+          "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770293
       },
       {
-        "label": "Optimism xalUSD LayerZero bridge minter",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The xalUSD xBridge entry limits this LayerZero bridge to a 1,000,000 alUSD replenishing mint capacity; the bridge cannot change its own allowance.",
-        "chain": "optimism",
-        "address": "0xd64ab29cc101e421ee3f4b0eaa721925395ddc05",
-        "observedAt": "2026-08-08",
-        "observedBlock": 155309063,
-        "failureDomainKeys": [
-          "protocol:layerzero",
-          "contract:optimism:0xd64ab29cc101e421ee3f4b0eaa721925395ddc05"
-        ],
-        "sources": [
-          {
-            "label": "Optimism xalUSD verified implementation",
-            "url": "https://sourcify.dev/server/v2/contract/10/0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6?fields=abi,metadata"
-          },
-          {
-            "label": "Optimism public RPC",
-            "url": "https://mainnet.optimism.io"
-          }
-        ],
-        "evidence": "At Optimism block 155309063, xBridges(this bridge) returned a 1,000,000 alUSD max mint limit with about 996,936 alUSD currently available. bridge.owner() returned the separately modeled Optimism Safe; token() returned xalUSD and endpoint() returned the canonical LayerZero V2 endpoint."
-      },
-      {
-        "label": "Alchemix Optimism xalUSD admin Safe",
-        "role": "proxy-admin",
+        "label": "Alchemix Optimism alUSD ADMIN_ROLE Safe",
+        "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 3,
         "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "This chain-local token owner holds ADMIN_ROLE and can call setWhitelist(AlchemistV2, true) and setCeiling, re-authorizing the local collateral-bounded Alchemist path and raising its token ceiling. Its bridge-owner and debt-token ProxyAdmin capabilities are reviewed separately under Bridge Risk.",
         "safe": {
           "owners": [
             "0xf0daaa720286868c8c7b235f450429c197cd579b",
@@ -194,8 +235,11 @@
         },
         "chain": "optimism",
         "address": "0xc224bf25dcc99236f00843c7d8c4194abe8aa94a",
-        "observedAt": "2026-08-08",
-        "observedBlock": 155309063,
+        "deploymentRefs": [
+          "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658381,
         "sources": [
           {
             "label": "Optimism xalUSD ProxyAdmin",
@@ -206,16 +250,626 @@
             "url": "https://api.safe.global/tx-service/oeth/api/v1/safes/0xc224bf25dcc99236f00843c7d8c4194abe8aa94a/"
           }
         ],
-        "evidence": "At Optimism block 155309063, this Safe remained owner of both the LayerZero bridge minter and ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6; the xalUSD proxy retained implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6. Safe API returned 3-of-7 owners, no modules, and zero guards. It can raise bridge limits or replace xalUSD mint logic."
+        "evidence": "At Optimism block 155658381, this 3-of-7 Safe held the local alUSD token ADMIN_ROLE while AlchemistV2 0x10294d57a419c8eb78c648372c5baa27fd1484af was not whitelisted. The Safe can call setWhitelist(AlchemistV2, true) and setCeiling to re-enable local native issuance and raise its ceiling. Safe API returned seven owners, no modules, and zero guards; LayerZero bridge ownership and the token ProxyAdmin remain separate Bridge Risk capabilities."
+      },
+      {
+        "label": "Alchemix Arbitrum AlchemistV2 (CDP minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "capDescription": "The Arbitrum AlchemistV2 path requires 200% minimum collateralization and is bounded by a 5,000,000 alUSD global mint-limit maximum. Its local token ADMIN_ROLE Safe can re-whitelist this currently de-whitelisted Alchemist and raise the token ceiling.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Arbitrum block 495266757, AlchemistV2 0xb46ee2e4165f629b4abce04b7eb4237f951ac66f returned local alUSD 0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a from debtToken(). It used implementation 0x7554616955e2227c1fcec373e53a809cd37d095c; minimumCollateralization was 2e18 and the global mint-limit maximum was 5,000,000 alUSD. whitelisted(AlchemistV2) was false, so the path is currently disabled but can be re-authorized by the token owner Safe 0x7e108711771dfdb10743f016d46d75a9379ca043.",
+        "sources": [
+          {
+            "label": "Arbitrum AlchemistV2 deployment",
+            "url": "https://raw.githubusercontent.com/alchemix-finance/deployments/master/arbitrum/AlchemistV2_alUSD.json"
+          },
+          {
+            "label": "Arbitrum AlchemistV2 explorer",
+            "url": "https://arbiscan.io/address/0xb46ee2e4165f629b4abce04b7eb4237f951ac66f"
+          },
+          {
+            "label": "Arbitrum public RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "chain": "arbitrum",
+        "address": "0xb46ee2e4165f629b4abce04b7eb4237f951ac66f",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495266757,
+        "failureDomainKeys": [
+          "contract:arbitrum:0xb46ee2e4165f629b4abce04b7eb4237f951ac66f",
+          "safe:arbitrum:0x7e108711771dfdb10743f016d46d75a9379ca043"
+        ]
+      },
+      {
+        "label": "Alchemix Arbitrum AlchemistV2 protocol admin",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "deploymentRefs": [
+          "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "AlchemistV2.admin() is a separate chain-local protocol-admin contract that can change native issuance parameters; its governing owner or timelock semantics were not identified from a verified source.",
+        "evidence": "At the reviewed Arbitrum AlchemistV2 read, admin() returned 0xee1aa1c3d0622fced823c7720cf9e8079558484b. The returned address is a code-bearing 171-byte admin contract, but its governing owner/timelock semantics were not resolved; it is retained as an explicit native parameter-control evidence gap.",
+        "sources": [
+          {
+            "label": "Arbitrum AlchemistV2 explorer",
+            "url": "https://arbiscan.io/address/0xb46ee2e4165f629b4abce04b7eb4237f951ac66f"
+          },
+          {
+            "label": "Arbitrum public RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "chain": "arbitrum",
+        "address": "0xee1aa1c3d0622fced823c7720cf9e8079558484b",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495266757,
+        "failureDomainKeys": [
+          "contract:arbitrum:0xee1aa1c3d0622fced823c7720cf9e8079558484b"
+        ]
+      },
+      {
+        "label": "Alchemix Arbitrum alUSD ADMIN_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xb9f256128aef64459ce9558826f6466bc010b687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0+L2",
+          "observedBlock": 495266757,
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "canRaiseCap": true,
+        "capDescription": "The Arbitrum token-owner Safe holds ADMIN_ROLE and can call setWhitelist(AlchemistV2, true) and setCeiling, re-authorizing the local collateral-bounded Alchemist path and raising its token ceiling. Its LayerZero bridge and token ProxyAdmin capabilities are separate Bridge Risk controls.",
+        "evidence": "At Arbitrum block 495266757, token owner Safe 0x7e108711771dfdb10743f016d46d75a9379ca043 held ADMIN_ROLE while local AlchemistV2 was not whitelisted. Safe API returned a 3-of-7 Safe with seven owners, no modules, and a zero guard; it can re-enable the native minter and set its token ceiling.",
+        "sources": [
+          {
+            "label": "Arbitrum alUSD token",
+            "url": "https://arbiscan.io/token/0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+          },
+          {
+            "label": "Arbitrum Safe API",
+            "url": "https://api.safe.global/tx-service/arb1/api/v1/safes/0x7e108711771DfdB10743F016D46d75A9379cA043/"
+          }
+        ],
+        "chain": "arbitrum",
+        "address": "0x7e108711771dfdb10743f016d46d75a9379ca043",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495266757,
+        "failureDomainKeys": [
+          "safe:arbitrum:0x7e108711771dfdb10743f016d46d75a9379ca043"
+        ]
+      },
+      {
+        "label": "Alchemix Arbitrum AlchemistV2 ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xb9f256128aef64459ce9558826f6466bc010b687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0+L2",
+          "observedBlock": 495266757,
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "canRaiseCap": true,
+        "capDescription": "ProxyAdmin 0x990162afaa06f591c03dd36ecbda24a8a80f2d0c owns the Arbitrum AlchemistV2 proxy and can replace its collateral and mint-critical logic; owner semantics beyond the 3-of-7 Safe are not assumed.",
+        "evidence": "At Arbitrum block 495266757, AlchemistV2 implementation was 0x7554616955e2227c1fcec373e53a809cd37d095c and its EIP-1967 ProxyAdmin was 0x990162afaa06f591c03dd36ecbda24a8a80f2d0c, owned by Safe 0x7e108711771dfdb10743f016d46d75a9379ca043. The Safe is 3-of-7 with no reported modules.",
+        "sources": [
+          {
+            "label": "Arbitrum AlchemistV2 explorer",
+            "url": "https://arbiscan.io/address/0xb46ee2e4165f629b4abce04b7eb4237f951ac66f"
+          },
+          {
+            "label": "Arbitrum Safe API",
+            "url": "https://api.safe.global/tx-service/arb1/api/v1/safes/0x7e108711771DfdB10743F016D46d75A9379cA043/"
+          }
+        ],
+        "chain": "arbitrum",
+        "address": "0x7e108711771dfdb10743f016d46d75a9379ca043",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495266757,
+        "failureDomainKeys": [
+          "safe:arbitrum:0x7e108711771dfdb10743f016d46d75a9379ca043",
+          "proxy-admin:arbitrum:0x990162afaa06f591c03dd36ecbda24a8a80f2d0c"
+        ]
+      },
+      {
+        "label": "Alchemix Arbitrum alUSD debt-token ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xb9f256128aef64459ce9558826f6466bc010b687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0+L2",
+          "observedBlock": 495266757,
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "canRaiseCap": true,
+        "capDescription": "Arbitrum debt token proxy implementation 0x37704b70cba0ffd12eb039274ff46992544a1f16 is replaceable through ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6 owned by the local Safe. This native debt-token upgrade surface is distinct from its bridge mint/burn capabilities under Bridge Risk.",
+        "evidence": "The reviewed Arbitrum token proxy resolved to implementation 0x37704b70cba0ffd12eb039274ff46992544a1f16 and ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6, whose owner is Safe 0x7e108711771dfdb10743f016d46d75a9379ca043. The same Safe's bridge-owner and LayerZero capabilities remain separately scoped under Bridge Risk.",
+        "sources": [
+          {
+            "label": "Arbitrum alUSD exact implementation verification",
+            "url": "https://sourcify.dev/server/v2/contract/42161/0x37704b70cba0ffd12eb039274ff46992544a1f16?fields=abi,metadata"
+          },
+          {
+            "label": "Arbitrum Safe API",
+            "url": "https://api.safe.global/tx-service/arb1/api/v1/safes/0x7e108711771DfdB10743F016D46d75A9379cA043/"
+          }
+        ],
+        "chain": "arbitrum",
+        "address": "0x7e108711771dfdb10743f016d46d75a9379ca043",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495266757,
+        "failureDomainKeys": [
+          "safe:arbitrum:0x7e108711771dfdb10743f016d46d75a9379ca043",
+          "proxy-admin:arbitrum:0xa44f69aeac480e23c0abfa9a55d99c9f098beac6"
+        ]
+      },
+      {
+        "label": "Alchemix Optimism AlchemistV2 (CDP minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "capDescription": "The Optimism AlchemistV2 path requires 200% minimum collateralization and is bounded by a 5,000,000 alUSD global mint-limit maximum. Its local token ADMIN_ROLE Safe can re-whitelist this currently de-whitelisted Alchemist and raise the token ceiling.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Optimism block 155658381, AlchemistV2 0x10294d57a419c8eb78c648372c5baa27fd1484af returned local alUSD 0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a from debtToken(). It used implementation 0xc96cb3a5e76247fdf1c623e85fb535aea566769e; minimumCollateralization was 2e18 and the global mint-limit maximum was 5,000,000 alUSD. whitelisted(AlchemistV2) was false, so the path is currently disabled but can be re-authorized by token owner Safe 0xc224bf25dcc99236f00843c7d8c4194abe8aa94a.",
+        "sources": [
+          {
+            "label": "Optimism AlchemistV2 deployment",
+            "url": "https://raw.githubusercontent.com/alchemix-finance/deployments/master/optimism/AlchemistV2_alUSD.json"
+          },
+          {
+            "label": "Optimism AlchemistV2 explorer",
+            "url": "https://optimistic.etherscan.io/address/0x10294d57a419c8eb78c648372c5baa27fd1484af"
+          },
+          {
+            "label": "Optimism public RPC",
+            "url": "https://mainnet.optimism.io"
+          }
+        ],
+        "chain": "optimism",
+        "address": "0x10294d57a419c8eb78c648372c5baa27fd1484af",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658381,
+        "failureDomainKeys": [
+          "contract:optimism:0x10294d57a419c8eb78c648372c5baa27fd1484af",
+          "safe:optimism:0xc224bf25dcc99236f00843c7d8c4194abe8aa94a"
+        ]
+      },
+      {
+        "label": "Alchemix Optimism AlchemistV2 protocol admin",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "deploymentRefs": [
+          "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "AlchemistV2.admin() is a separate chain-local protocol-admin contract that can change native issuance parameters; its governing owner or timelock semantics were not identified from a verified source.",
+        "evidence": "At Optimism block 155658381, AlchemistV2.admin() returned 0x3dda174aa9e897e18b8e10e6ce39c2a52398181d. The returned address is a code-bearing 171-byte admin contract, but its governing owner/timelock semantics were not resolved; it is retained as an explicit native parameter-control evidence gap.",
+        "sources": [
+          {
+            "label": "Optimism AlchemistV2 explorer",
+            "url": "https://optimistic.etherscan.io/address/0x10294d57a419c8eb78c648372c5baa27fd1484af"
+          },
+          {
+            "label": "Optimism public RPC",
+            "url": "https://mainnet.optimism.io"
+          }
+        ],
+        "chain": "optimism",
+        "address": "0x3dda174aa9e897e18b8e10e6ce39c2a52398181d",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658381,
+        "failureDomainKeys": [
+          "contract:optimism:0x3dda174aa9e897e18b8e10e6ce39c2a52398181d"
+        ]
+      },
+      {
+        "label": "Alchemix Optimism AlchemistV2 ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xb9f256128aef64459ce9558826f6466bc010b687",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "version": "1.3.0+L2",
+          "observedBlock": 155658381,
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "canRaiseCap": true,
+        "capDescription": "ProxyAdmin 0xd4bd68da9bf9112cf2137d500c37bd9b842eae85 owns the Optimism AlchemistV2 proxy and can replace its collateral and mint-critical logic; its owner is the local 3-of-7 Safe.",
+        "evidence": "At Optimism block 155658381, AlchemistV2 implementation was 0xc96cb3a5e76247fdf1c623e85fb535aea566769e and its EIP-1967 ProxyAdmin was 0xd4bd68da9bf9112cf2137d500c37bd9b842eae85, owned by Safe 0xc224bf25dcc99236f00843c7d8c4194abe8aa94a. The Safe is 3-of-7 with no reported modules.",
+        "sources": [
+          {
+            "label": "Optimism AlchemistV2 explorer",
+            "url": "https://optimistic.etherscan.io/address/0x10294d57a419c8eb78c648372c5baa27fd1484af"
+          },
+          {
+            "label": "Optimism Safe API",
+            "url": "https://api.safe.global/tx-service/oeth/api/v1/safes/0xC224bf25Dcc99236F00843c7D8C4194abE8AA94a/"
+          }
+        ],
+        "chain": "optimism",
+        "address": "0xc224bf25dcc99236f00843c7d8c4194abe8aa94a",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658381,
+        "failureDomainKeys": [
+          "safe:optimism:0xc224bf25dcc99236f00843c7d8c4194abe8aa94a",
+          "proxy-admin:optimism:0xd4bd68da9bf9112cf2137d500c37bd9b842eae85"
+        ]
+      },
+      {
+        "label": "Alchemix Optimism alUSD debt-token ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf0daaa720286868c8c7b235f450429c197cd579b",
+            "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
+            "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xb9f256128aef64459ce9558826f6466bc010b687",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "version": "1.3.0+L2",
+          "observedBlock": 155658381,
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "canRaiseCap": true,
+        "capDescription": "Optimism debt token proxy implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6 is replaceable through ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6 owned by the local Safe. This native debt-token upgrade surface is distinct from its bridge mint/burn capabilities under Bridge Risk.",
+        "evidence": "At the reviewed Optimism token read, the proxy resolved to implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6 and ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6, whose owner is Safe 0xc224bf25dcc99236f00843c7d8c4194abe8aa94a. The same Safe's bridge-owner and LayerZero capabilities remain separately scoped under Bridge Risk.",
+        "sources": [
+          {
+            "label": "Optimism alUSD exact implementation verification",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6?fields=abi,metadata"
+          },
+          {
+            "label": "Optimism Safe API",
+            "url": "https://api.safe.global/tx-service/oeth/api/v1/safes/0xC224bf25Dcc99236F00843c7D8C4194abE8AA94a/"
+          }
+        ],
+        "chain": "optimism",
+        "address": "0xc224bf25dcc99236f00843c7d8c4194abe8aa94a",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658381,
+        "failureDomainKeys": [
+          "safe:optimism:0xc224bf25dcc99236f00843c7d8c4194abe8aa94a",
+          "proxy-admin:optimism:0xa44f69aeac480e23c0abfa9a55d99c9f098beac6"
+        ]
+      },
+      {
+        "label": "Alchemix Fantom AlchemistV2 (CDP minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+        ],
+        "capDescription": "The Fantom AlchemistV2 path requires 200% minimum collateralization and is bounded by a 5,000,000 alUSD global mint-limit maximum. Its local token ADMIN_ROLE Safe can re-whitelist this currently de-whitelisted Alchemist and raise the token ceiling.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Fantom block 122918901, AlchemistV2 0x76b2e3c5a183970aaad2a48cf6ae79e3e16d3a0e returned local alUSD 0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e from debtToken(). It used implementation 0xede1b73ad0518038f820fa57c15884898471fd84; minimumCollateralization was 2e18 and the global mint-limit maximum was 5,000,000 alUSD. whitelisted(AlchemistV2) was false, so the path is currently disabled but can be re-authorized by token owner Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605.",
+        "sources": [
+          {
+            "label": "Fantom AlchemistV2 deployment",
+            "url": "https://raw.githubusercontent.com/alchemix-finance/deployments/master/fantom/AlchemistV2_alUSD.json"
+          },
+          {
+            "label": "Fantom AlchemistV2 explorer",
+            "url": "https://ftmscan.com/address/0x76b2e3c5a183970aaad2a48cf6ae79e3e16d3a0e"
+          },
+          {
+            "label": "Fantom public RPC",
+            "url": "https://rpcapi.fantom.network"
+          }
+        ],
+        "chain": "fantom",
+        "address": "0x76b2e3c5a183970aaad2a48cf6ae79e3e16d3a0e",
+        "observedAt": "2026-08-16",
+        "observedBlock": 122918901,
+        "failureDomainKeys": [
+          "contract:fantom:0x76b2e3c5a183970aaad2a48cf6ae79e3e16d3a0e",
+          "safe:fantom:0x6b291cf19370a14bbb4491b01091e1e29335e605"
+        ]
+      },
+      {
+        "label": "Alchemix Fantom AlchemistV2 protocol-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "deploymentRefs": [
+          "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0xf920f2688719012b587afbdec27ec5029c18e875",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xb9f256128aef64459ce9558826f6466bc010b687",
+            "0xa33a27b81a7156f0bb8c2a33b8c5f99a5c9e0573",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xacd8b7e9ac7a0900cb57007000302b3234e33a36",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e"
+          ],
+          "threshold": 3,
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "version": "1.3.0",
+          "observedBlock": 122918901,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "AlchemistV2.admin() returns the same local Safe that holds token ADMIN_ROLE; it can change native issuance parameters, while guard/module-guard view calls reverted and are not assumed absent.",
+        "evidence": "At Fantom block 122918901, AlchemistV2.admin() returned Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605. The Safe is 3-of-7; its guard and module-guard reads reverted on the available RPC, so those controls remain unknown.",
+        "sources": [
+          {
+            "label": "Fantom AlchemistV2 explorer",
+            "url": "https://ftmscan.com/address/0x76b2e3c5a183970aaad2a48cf6ae79e3e16d3a0e"
+          },
+          {
+            "label": "Fantom public RPC",
+            "url": "https://rpcapi.fantom.network"
+          }
+        ],
+        "chain": "fantom",
+        "address": "0x6b291cf19370a14bbb4491b01091e1e29335e605",
+        "observedAt": "2026-08-16",
+        "observedBlock": 122918901,
+        "failureDomainKeys": [
+          "safe:fantom:0x6b291cf19370a14bbb4491b01091e1e29335e605"
+        ]
+      },
+      {
+        "label": "Alchemix Fantom alUSD ADMIN_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0xf920f2688719012b587afbdec27ec5029c18e875",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xb9f256128aef64459ce9558826f6466bc010b687",
+            "0xa33a27b81a7156f0bb8c2a33b8c5f99a5c9e0573",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xacd8b7e9ac7a0900cb57007000302b3234e33a36",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e"
+          ],
+          "threshold": 3,
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "version": "1.3.0",
+          "observedBlock": 122918901,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "The Fantom token-owner Safe holds ADMIN_ROLE and can call setWhitelist(AlchemistV2, true) and setCeiling, re-authorizing the local collateral-bounded Alchemist path and raising its token ceiling. Its historical bridge/admin capabilities remain separately under Bridge Risk.",
+        "evidence": "At Fantom block 122918901, Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605 held token ADMIN_ROLE while AlchemistV2 was not whitelisted. It can re-enable local native issuance and set the native token ceiling. Safe version 1.3.0 and a 3-of-7 owner set were observed; guard and module-guard reads reverted.",
+        "sources": [
+          {
+            "label": "Fantom alUSD token",
+            "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+          },
+          {
+            "label": "Fantom public RPC",
+            "url": "https://rpcapi.fantom.network"
+          }
+        ],
+        "chain": "fantom",
+        "address": "0x6b291cf19370a14bbb4491b01091e1e29335e605",
+        "observedAt": "2026-08-16",
+        "observedBlock": 122918901,
+        "failureDomainKeys": [
+          "safe:fantom:0x6b291cf19370a14bbb4491b01091e1e29335e605"
+        ]
+      },
+      {
+        "label": "Alchemix Fantom AlchemistV2 ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0xf920f2688719012b587afbdec27ec5029c18e875",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xb9f256128aef64459ce9558826f6466bc010b687",
+            "0xa33a27b81a7156f0bb8c2a33b8c5f99a5c9e0573",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xacd8b7e9ac7a0900cb57007000302b3234e33a36",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e"
+          ],
+          "threshold": 3,
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "version": "1.3.0",
+          "observedBlock": 122918901,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "ProxyAdmin 0xf55db61d1e65718ac0d5a163b18cca3645791265 owns the Fantom AlchemistV2 proxy and can replace its collateral and mint-critical logic; the Safe's guard/module-guard status is unresolved.",
+        "evidence": "At Fantom block 122918901, AlchemistV2 implementation was 0xede1b73ad0518038f820fa57c15884898471fd84 and its EIP-1967 ProxyAdmin was 0xf55db61d1e65718ac0d5a163b18cca3645791265, owned by Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605. The Safe is 3-of-7; guard and module-guard reads reverted.",
+        "sources": [
+          {
+            "label": "Fantom AlchemistV2 explorer",
+            "url": "https://ftmscan.com/address/0x76b2e3c5a183970aaad2a48cf6ae79e3e16d3a0e"
+          },
+          {
+            "label": "Fantom public RPC",
+            "url": "https://rpcapi.fantom.network"
+          }
+        ],
+        "chain": "fantom",
+        "address": "0x6b291cf19370a14bbb4491b01091e1e29335e605",
+        "observedAt": "2026-08-16",
+        "observedBlock": 122918901,
+        "failureDomainKeys": [
+          "safe:fantom:0x6b291cf19370a14bbb4491b01091e1e29335e605",
+          "proxy-admin:fantom:0xf55db61d1e65718ac0d5a163b18cca3645791265"
+        ]
+      },
+      {
+        "label": "Alchemix Fantom alUSD debt-token proxy upgrade (controller unresolved)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The current Fantom debt-token implementation is mutable in the reviewed proxy family, but the current token proxy administrator was not resolved. No historical bridge EOA is promoted to native Mint Authority.",
+        "evidence": "At Fantom block 122918901, alUSD token 0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e resolved to implementation 0x211c74db951c161c5a379363716ebdca5125ef59. The current token proxy upgrade controller was not independently resolved; the code-less Multichain-era EOA remains only an unresolved Bridge Risk fact.",
+        "sources": [
+          {
+            "label": "Fantom alUSD token",
+            "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+          },
+          {
+            "label": "Fantom verified token implementation",
+            "url": "https://sourcify.dev/server/v2/contract/250/0x211c74db951c161c5a379363716ebdca5125ef59?fields=abi,metadata"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 122918901,
+        "failureDomainKeys": [
+          "implementation:fantom:0x211c74db951c161c5a379363716ebdca5125ef59"
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25712278, AlToken ADMIN_ROLE still had the 4-of-7 ten-minute multisig and 3-of-7 Safe as its only members, while AlchemistV2 remained cap-limited by the token ceiling. Correction: the Alchemist proxy admin is now the separate 3-of-7 Safe 0xf56d660138815fc5d7a06cd0e1630225e788293d, not the stale ProxyAdmin path. At Optimism block 155309063, the material xalUSD route retained a 1,000,000 alUSD replenishing LayerZero bridge limit; its 3-of-7 Safe owns the bridge and token ProxyAdmin and can raise or replace those constraints. Aggregate cap semantics are raiseable; reconciliation is on-chain/not applicable and no prudential supervisor applies. Economic-posture fields reviewed 2026-08-15: no-delay 3-of-7 Safe paths can raise token and bridge ceilings or replace mint logic, making the aggregate cap unbounded; issuance remains on-chain and no prudential supervisor or independent attestor applies.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 25770293 and the reviewed Arbitrum, Optimism, and Fantom blocks, alUSD has independent native AlchemistV2 CDP issuance paths. Ethereum has a 1,000,000,000,000 alUSD token ceiling and the L2 paths each showed a 200% minimum collateral ratio, a 5,000,000 alUSD global mint limit, and a false Alchemist whitelist flag at review time. The local token ADMIN_ROLE Safes can re-authorize an Alchemist and raise its token ceiling; the Alchemist and debt-token proxy families remain replaceable through their ProxyAdmin paths. Metis is a bridge-only representation and is excluded from Mint Authority. LayerZero/xERC20 mint, burn, lockbox, rate-limit, and bridge-upgrade powers remain under Bridge Risk. Aggregate economic cap semantics are raiseable/unbounded, reconciliation is on-chain/not applicable, and no prudential supervisor or independent attestor applies.",
+      "reviewer": "Claude Phase 0c continuation; FIX2-18 alusd-alchemix migration review",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {
@@ -234,31 +888,59 @@
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
+        "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+      ],
       "proxyAddresses": [
         "0x5c6374a2ac4ebc38dea0fc1f8716e5ea1add94dd",
-        "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        "0xb46ee2e4165f629b4abce04b7eb4237f951ac66f",
+        "0x10294d57a419c8eb78c648372c5baa27fd1484af",
+        "0x76b2e3c5a183970aaad2a48cf6ae79e3e16d3a0e",
+        "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
       ],
       "implementationAddresses": [
         "0x0f17d856ecc7c8ce9bd7d5b3e52a47eca5e8955a",
-        "0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6"
+        "0x7554616955e2227c1fcec373e53a809cd37d095c",
+        "0xc96cb3a5e76247fdf1c623e85fb535aea566769e",
+        "0xede1b73ad0518038f820fa57c15884898471fd84",
+        "0x37704b70cba0ffd12eb039274ff46992544a1f16",
+        "0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6",
+        "0x211c74db951c161c5a379363716ebdca5125ef59"
       ],
       "adminAddresses": [
         "0xe0fc5cb7665041cda26969a2d1ceb5cd5046347d",
-        "0xa44f69aeac480e23c0abfa9a55d99c9f098beac6",
-        "0xc224bf25dcc99236f00843c7d8c4194abe8aa94a"
+        "0x990162afaa06f591c03dd36ecbda24a8a80f2d0c",
+        "0xd4bd68da9bf9112cf2137d500c37bd9b842eae85",
+        "0xf55db61d1e65718ac0d5a163b18cca3645791265",
+        "0xa44f69aeac480e23c0abfa9a55d99c9f098beac6"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Alchemix AlchemistV2 proxy-admin Safe (via ProxyAdmin 0xe0fc5cb7)",
-      "observedAt": "2026-08-11",
-      "observedBlock": 25734856,
+      "controlRef": "Alchemix AlchemistV2 ProxyAdmin owner Safe (0xe0fc5cb7)",
+      "observedAt": "2026-08-16",
       "sources": [
         {
-          "label": "Alchemix Safe on Etherscan",
-          "url": "https://etherscan.io/address/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9"
+          "label": "Alchemix official deployment inventory",
+          "url": "https://raw.githubusercontent.com/alchemix-finance/deployments/master/mainnet/AlchemistV2_alUSD.json"
         },
         {
           "label": "AlToken (alUSD) on Etherscan",
           "url": "https://etherscan.io/address/0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        },
+        {
+          "label": "Arbitrum alUSD on Arbiscan",
+          "url": "https://arbiscan.io/token/0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        },
+        {
+          "label": "Optimism alUSD on Optimism Etherscan",
+          "url": "https://optimistic.etherscan.io/token/0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+        },
+        {
+          "label": "Fantom alUSD on FtmScan",
+          "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
         },
         {
           "label": "Alchemix V2 Developer Docs",

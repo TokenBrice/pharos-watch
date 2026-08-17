@@ -73,9 +73,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "FPI is deployed on Ethereum, Fraxtal, and zkSync Era. Frax documentation describes the Fraxtal bridge as derived from Optimism's standard bridge for Ethereum/Fraxtal asset movement, and Pharos treats the Ethereum/Fraxtal rows as canonical rollup-bridge exposure. 2026-07-30 cohort T11 pass: the previously unmatched zkSync Era supply row is now matched to the verified issuer-canonical CrossChainCanonicalV2 deployment 0xd405617db7473b0a3158356be7bc9ebec6d88b85 (sole-minter deployer EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651, the same Frax zkSync deployer pattern as the reviewed FRAX zkSync route), leaving no unmatched material deployment.",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T11 safety-v9 unknown-reduction w2",
+    "summary": "FPI has native issuance on Ethereum only. Fraxtal is a canonical Optimism-derived lock/mint representation controlled by the Fraxtal L2StandardBridge, and zkSync Era is an issuer-canonical CrossChainCanonicalV2 burn/mint representation attributed to the Frax Ferry path. The Ethereum OFT mintable adapter is separately retained as canonical-side bridge machinery; its exact destination peers and route binding remain unresolved and are not attached speculatively to Fraxtal or zkSync.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Kimi T11 safety-v9 unknown-reduction w2; Codex bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -99,12 +99,25 @@
       {
         "label": "Fraxtal FPI token address",
         "url": "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+      },
+      {
+        "label": "FPI OFT mintable adapter proxy",
+        "url": "https://eth.blockscout.com/address/0x9033bAd7aA130a2466060a2da71fAE2219781B4B?tab=contract"
+      },
+      {
+        "label": "FPI OFT adapter implementation",
+        "url": "https://eth.blockscout.com/address/0x2063961F26019B588F48007D1CC43770e8B7383C?tab=contract"
+      },
+      {
+        "label": "zkSync FPI CrossChainCanonicalV2",
+        "url": "https://explorer.zksync.io/address/0xD405617DB7473b0A3158356Be7bC9EbEc6D88b85"
       }
     ],
     "routes": [
       {
         "id": "ethereum:0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
         "protocol": "FPI (Frax native issuance on Ethereum)",
         "issuanceModel": "native-issuance",
@@ -129,22 +142,28 @@
       },
       {
         "id": "fraxtal:0xfc00000000000000000000000000000000000003",
+        "sourceChain": "ethereum",
         "destinationChain": "fraxtal",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xfc00000000000000000000000000000000000003",
-        "protocol": "FPI (Frax native issuance on Fraxtal)",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "Fraxtal canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Frax Price Index', symbol FPI, 18 decimals on Fraxtal; system-space deployment 0xFC00...0003 with owner() 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 and EIP-1967 admin 0xfc0000000000000000000000000000000000000a — Frax's own-chain native issuance.",
+        "reviewNote": "The Fraxtal system-space FPI deployment is the destination representation of the Ethereum token through Fraxtal's Optimism-derived canonical bridge; it is not an independent FPI liability surface.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "Fraxtal FPI",
             "url": "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+          },
+          {
+            "label": "Fraxtal Bridge documentation",
+            "url": "https://docs.frax.finance/cross-chain/fraxtal-bridge"
           }
         ]
       },
@@ -153,14 +172,20 @@
         "destinationChain": "zksync",
         "canonicalChain": "ethereum",
         "contractAddress": "0xd405617db7473b0a3158356be7bc9ebec6d88b85",
-        "protocol": "Frax CrossChainCanonicalV2 (Frax-issued)",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "Frax CrossChainCanonicalV2 / Frax Ferry",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "zksync",
+        "controllerAddress": "0x6549daa31c76d5c19099b7bdad82d8813774c651",
+        "failureDomainKeys": [
+          "protocol:frax-ferry",
+          "authority:zksync:0x6549daa31c76d5c19099b7bdad82d8813774c651"
+        ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-30 at zkSync Era block 71379489: name 'Frax Price Index', symbol FPI, 18 decimals, totalSupply 250,000 FPI (about 2% of cross-chain supply). Verified CrossChainCanonicalV2 source with zero EIP-1967 implementation and admin slots (immutable); owner(), timelock_address(), and sole minter all resolve to the codeless deployer EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651 — the same Frax zkSync deployer EOA pattern flagged in the reviewed FRAX zkSync route. L2Beat independently attributes zkSync Era FPI value to the Frax Ferry path. Issuer-canonical deployment, not a third-party bridge representation.",
+        "reviewNote": "Verified at zkSync Era block 71379489: CrossChainCanonicalV2 is the FPI destination representation, with owner(), timelock_address(), and sole minter resolving to the codeless Frax deployer EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651. L2BEAT attributes the route to Frax Ferry; it is issuer-canonical burn/mint representation, not independent native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-30",
         "sources": [
@@ -177,6 +202,161 @@
             "url": "https://l2beat.com/scaling/projects/zksync-era/tvs-breakdown"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "fpi-ethereum-oft-adapter",
+        "label": "FPI Ethereum OFT mintable adapter",
+        "routeRefs": [
+          "ethereum:0x5ca135cb8527d76e932f34b5145575f9d8cbe08e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+        "failureDomainKeys": [
+          "protocol:frax-oft",
+          "contract:ethereum:0x9033bad7aa130a2466060a2da71fae2219781b4b",
+          "proxy-admin:ethereum:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "timelock:ethereum:0xb898ad2976b4d8f2e21521c9db16b7497825e503",
+          "safe:ethereum:0xffffff4f3bac444b2c0ecf2a1840d018be783937"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "timelockDelaySec": 86400,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+            "0xDf41722D7b1355dB08D4e7D0528fE9c82377Bb37",
+            "0xC6EF452b0de9E95Ccb153c2A5A7a90154aab3419"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
+          "observedBlock": 25531776,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The verified FraxOFTMintableAdapterUpgradeable _credit path calls FPI minter_mint without a numeric cap; ProxyAdmin ownership is controlled through the one-day Timelock and 4-of-7 Safe.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The adapter is retained only as Ethereum canonical-side bridge machinery because its exact destination peers and OFT route set are not identified in the current review.",
+          "caps": "FPI minter_mint(address,uint256) and the adapter _credit path have no numeric mint cap.",
+          "pausersAdminsUpgraders": "At Ethereum block 25531776, the adapter proxy resolved to implementation 0x2063961f26019b588f48007d1cc43770e8b7383c and ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c; ProxyAdmin.owner() was one-day Timelock 0xb898ad2976b4d8f2e21521c9db16b7497825e503, administered by the 4-of-7 Safe.",
+          "unsupportedReason": "No primary-source route trace currently binds this adapter to Fraxtal or zkSync, and no current peer, DVN, rate-limit, pause, or destination-admin observations are available."
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531776,
+        "sources": [
+          {
+            "label": "FPI token verified source",
+            "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+          },
+          {
+            "label": "FPI OFT mintable adapter proxy",
+            "url": "https://eth.blockscout.com/address/0x9033bAd7aA130a2466060a2da71fAE2219781B4B?tab=contract"
+          },
+          {
+            "label": "FPI OFT adapter implementation",
+            "url": "https://eth.blockscout.com/address/0x2063961F26019B588F48007D1CC43770e8B7383C?tab=contract"
+          },
+          {
+            "label": "FPI adapter ProxyAdmin",
+            "url": "https://eth.blockscout.com/address/0x223a681fC5c5522c85c96157c0EFa18cd6C5405C?tab=contract"
+          },
+          {
+            "label": "FPI adapter one-day timelock",
+            "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531776, FPI minters(0x9033bAd7aA130a2466060a2da71fAE2219781B4B) returned true. The adapter proxy resolved to FraxOFTMintableAdapterUpgradeable 0x2063961F26019B588F48007D1CC43770e8B7383C, whose verified _credit implementation calls FPI minter_mint(_to,_amountLD) without a numeric cap. Its upgrade authority is ProxyAdmin 0x223a681fC5c5522c85c96157c0EFa18cd6C5405C, owned by the 86400-second Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503 and administered by the 4-of-7 Safe 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937."
+      },
+      {
+        "id": "fpi-fraxtal-l2-standard-bridge",
+        "label": "FPI Fraxtal L2StandardBridge representation controller",
+        "routeRefs": [
+          "fraxtal:0xfc00000000000000000000000000000000000003"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:fraxtal-canonical-messaging",
+          "contract:fraxtal:0x4200000000000000000000000000000000000010"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "Frax documents Ethereum-to-Fraxtal ERC20 movement through the L1StandardBridge and Fraxtal-to-Ethereum movement through L2StandardBridge 0x4200000000000000000000000000000000000010.",
+          "trustedPeerOrRemote": "The Fraxtal bridge is derived from the Optimism standard bridge and binds the Fraxtal destination representation to Ethereum canonical assets."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Fraxtal Bridge documentation",
+            "url": "https://docs.frax.finance/cross-chain/fraxtal-bridge"
+          }
+        ],
+        "evidence": "Frax's official bridge documentation identifies the Optimism-derived L1StandardBridge at Ethereum 0x34C0bD5877A5Ee7099D0f5688D65F4bB9158BDE2 and L2StandardBridge at Fraxtal 0x4200000000000000000000000000000000000010. The Fraxtal FPI system-space deployment is therefore a canonical bridge representation, not an independent native FPI liability surface."
+      },
+      {
+        "id": "fpi-zksync-crosschaincanonical-minter",
+        "label": "FPI zkSync CrossChainCanonicalV2 minter/deployer",
+        "routeRefs": [
+          "zksync:0xd405617db7473b0a3158356be7bc9ebec6d88b85"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin"
+        ],
+        "controllerChain": "zksync",
+        "controllerAddress": "0x6549daa31c76d5c19099b7bdad82d8813774c651",
+        "failureDomainKeys": [
+          "protocol:frax-ferry",
+          "authority:zksync:0x6549daa31c76d5c19099b7bdad82d8813774c651"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "L2BEAT attributes the zkSync Era FPI route to the Frax Ferry path.",
+          "pausersAdminsUpgraders": "At zkSync block 71379489, the verified CrossChainCanonicalV2 owner(), timelock_address(), and sole minter all resolved to the codeless Frax deployer EOA; EIP-1967 implementation and admin slots were zero."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 71379489,
+        "sources": [
+          {
+            "label": "FPI zkSync CrossChainCanonicalV2",
+            "url": "https://explorer.zksync.io/address/0xD405617DB7473b0A3158356Be7bC9EbEc6D88b85"
+          },
+          {
+            "label": "Frax CrossChainCanonicalV2 source",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalV2.sol"
+          },
+          {
+            "label": "L2BEAT zkSync Era FPI TVS",
+            "url": "https://l2beat.com/scaling/projects/zksync-era/tvs-breakdown"
+          }
+        ],
+        "evidence": "The verified zkSync CrossChainCanonicalV2 FPI deployment has a sole minter/deployer at 0x6549DAa31C76d5C19099B7bdAD82d8813774C651, observed at block 71379489. Its issuer-canonical burn/mint authority and Frax Ferry attribution are retained under Bridge Risk rather than Mint Authority."
       }
     ]
   }

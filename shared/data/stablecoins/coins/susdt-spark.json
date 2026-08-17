@@ -39,6 +39,11 @@
       "chain": "ethereum",
       "address": "0xe2e7a17dff93280dec073c995595155283e3c372",
       "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x45d91340b3b7b96985a72b5c678f7d9e8d664b62",
+      "decimals": 6
     }
   ],
   "collateralQuality": "native",

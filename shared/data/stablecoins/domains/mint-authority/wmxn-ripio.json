@@ -4,9 +4,17 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "WMXN is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "summary": "WMXN has six reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's issuer EOA directly holds MINTER_ROLE and UPGRADER_ROLE on each native token, the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE, and the fixed-destination LimitedMinter is an additional native issuer facility where currently authorized. The separate LimitedMinterBridge burn/mint adapter and Celo representation are reviewed only in Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "base:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "worldchain:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "polygon:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "gnosis:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+      ],
       "proxyAddresses": [
         "0x337e7456b420bd3481e7fa61fa9850343d610d34"
       ],
@@ -19,8 +27,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Ripio shared WMXN admin and MINTER_ROLE holder (EOA)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530763,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770925,
       "sources": [
         {
           "label": "Ethereum WMXN proxy and verified UUPS implementation",
@@ -40,17 +48,33 @@
       {
         "chain": "multichain",
         "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "deploymentRefs": [
+          "ethereum:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "base:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "worldchain:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "polygon:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "gnosis:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
         "label": "Ripio shared WMXN admin and MINTER_ROLE holder (EOA)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true. eth_getCode returned 0x (EOA). Same role confirmed via hasRole on Base, BSC, Polygon, Gnosis, and Worldchain at same block range."
+        "evidence": "At Ethereum block 25770925, Base block 50066834, Worldchain block 33793694, BSC block 116360770, Polygon block 92145385, and Gnosis block 47762454 (all 2026-08-16 UTC), issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b held MINTER_ROLE on each reviewed native WMXN deployment. The verified LatamStable source gives the same EOA the immediate UPGRADER_ROLE path, and the EOA has no contract code where checked. Celo is excluded from this native control because its current role graph is representation-like."
       },
       {
         "chain": "ethereum",
         "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": [
+          "ethereum:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "base:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "worldchain:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "polygon:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "gnosis:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
         "label": "Ripio WMXN Safe multisig (DEFAULT_ADMIN_ROLE)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -61,7 +85,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0x067823401127ca6647481c68011805b90d42231e",
+            "0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5",
             "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
             "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
             "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
@@ -74,32 +98,28 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "1.4.1",
-          "observedBlock": 25295015,
+          "observedBlock": 25770925,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) returned true. getOwners() returned 7 owners; getThreshold() returned 4. getModulesPaginated returned empty array (no modules). slot0 masterCopy = 0x41675c...61a (Safe v1.4.1 singleton). fallbackHandler = 0xfd0732...ec99 (standard CompatibilityFallbackHandler). getGuard() reverted (no guard)."
+        "evidence": "At Ethereum block 25770925, hasRole(DEFAULT_ADMIN_ROLE) returned true on WMXN. The current 4-of-7 Safe owner set is 0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5, 0x5ca3f8eeba12d83408fc097c2dad79212456f20f, 0x5b72e13f78feb8f5b44392f2e32940d4f37fa313, 0x23cec92f92bde95e401f0a2b50b072a6069dfbd5, 0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe, 0x00a74411ddbc50c04353543d5d3f4296936da645, and 0xa40d7d22873001f0140d76afc0ff0779e4210ed0. The prior on-chain Safe read found no enabled modules and no guard; the bridge adapter is not counted in this native control."
       },
       {
         "chain": "ethereum",
         "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+        "deploymentRefs": [
+          "ethereum:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "polygon:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "gnosis:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
         "label": "Ripio WMXN Ethereum minter-router contract",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WMXN token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
-      },
-      {
-        "chain": "multichain",
-        "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
-        "label": "Ripio WMXN cross-chain minter-router contract",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WMXN token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
+        "evidence": "At the reviewed role reads, fixed-destination LimitedMinter 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 held WMXN MINTER_ROLE on Ethereum, BSC, Polygon, and Gnosis, but not on Base or Worldchain. Its verified AccessControl path is administered by the Ripio issuer EOA and Safe; it remains a separate fixed-destination issuer facility and is not the cross-chain LimitedMinterBridge adapter."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -136,9 +156,10 @@
           "url": "https://www.ripio.com/en/wfiat"
         }
       ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Supervision review (2026-08-08): wMXN has its own independent certification - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 518,689 wMXN outstanding across six chains against MXN 937,364.13 in a Mexican bank account as of 2026-03-31 - so reserve evidence is attestation-backed. Reconciliation stays unknown because Ripio labels it the first attestation of wMXN collateral, the whitepaper's cadence language is permissive, and later-period certifications return 404. No prudential regime applies to the unnamed Ripio group affiliate that issues wFIAT. Economic-posture fields reviewed 2026-08-15: issuer-controlled mint roles have no firm cap, and the sole whole-supply certification is ad hoc rather than recurring. Wave 2 external verification 2026-08-15: no later WMXN certification was found, and Ripio's July Celo launch added a seventh deployment outside the March six-chain snapshot; reconciliation remains unknown. Codex wave 1 review 2026-08-15: Ripio's current wFIAT releases page still labels the 2026-03-31 wMXN certification the first attestation and supplies no later dated wMXN reconciliation, so a recurring cadence is not evidenced; supervision remains attestation-only because the named CPA certification is not a prudential regime.",
+      "evidence": "Current native-scope review on 2026-08-16 found issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b with MINTER_ROLE and immediate UUPS UPGRADER_ROLE on the six independent Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis deployments. The 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 remains DEFAULT_ADMIN_ROLE on the native routes; its current Ethereum read at block 25770925 returned the refreshed owner set recorded above. LatamStable.mint() has no intrinsic supply ceiling, so the native issuer posture remains unbounded. The separate fixed-destination LimitedMinter is retained only on its currently authorized native deployments. LimitedMinterBridge arbitrary-recipient bridge minting, daily limits, pause, BridgeDeposit/operator controls, and the Celo representation are intentionally excluded from Mint Authority and retained in bridgeRouteRisk. Supervision review (2026-08-08): wMXN has its own independent certification - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 518,689 wMXN outstanding across six chains against MXN 937,364.13 in a Mexican bank account as of 2026-03-31 - so reserve evidence is attestation-backed. Reconciliation stays unknown because Ripio labels it the first attestation of wMXN collateral, the whitepaper's cadence language is permissive, and later-period certifications return 404. No prudential regime applies to the unnamed Ripio group affiliate that issues wFIAT.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16",
+      "disposition": "scoreable"
     }
   }
 }

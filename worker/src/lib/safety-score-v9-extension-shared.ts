@@ -20,6 +20,7 @@ import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-exte
 export type V9ExtensionRegistryMeta = Pick<
   StablecoinMeta,
   | "id"
+  | "status"
   | "variantOf"
   | "variantKind"
   | "wrapperOperator"

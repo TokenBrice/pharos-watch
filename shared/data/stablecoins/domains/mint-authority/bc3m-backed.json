@@ -7,6 +7,15 @@
     "summary": "bC3M has independently mintable native transparent proxies on seven chains. Three chain-group Safe authorities can mint without an on-chain cap, while every chain-local token owner and ProxyAdmin owner resolves to the same separate zero-delay 2-of-3 EOA signer set.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "arbitrum:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "avalanche:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "base:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "bsc:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "ethereum:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "gnosis:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "polygon:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+      ],
       "proxyAddresses": [
         "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
       ],
@@ -35,6 +44,9 @@
       {
         "chain": "ethereum",
         "address": "0xdd276f57e40d745e09855ba5711613f5da0c4a71",
+        "deploymentRefs": [
+          "ethereum:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+        ],
         "label": "Backed Ethereum/Gnosis direct-minter Safe signer group",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -82,6 +94,9 @@
       {
         "chain": "base",
         "address": "0x20eb617cc8e8bf3c9b53fc2cf2444cf026da704f",
+        "deploymentRefs": [
+          "base:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+        ],
         "label": "Backed Base direct-minter Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -126,6 +141,9 @@
       {
         "chain": "polygon",
         "address": "0x8768cda7a463dae1baa6b2500efb025ebd7ffc50",
+        "deploymentRefs": [
+          "polygon:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+        ],
         "label": "Backed Polygon/BSC/Arbitrum/Avalanche direct-minter Safe signer group",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -173,6 +191,9 @@
       {
         "chain": "ethereum",
         "address": "0x22f2dfe84a2eacfe5d3ca81d26e610cb94eb1603",
+        "deploymentRefs": [
+          "ethereum:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+        ],
         "label": "Backed deployment-wide token-owner / ProxyAdmin signer authority",
         "role": "minter-admin",
         "authorityType": "safe",

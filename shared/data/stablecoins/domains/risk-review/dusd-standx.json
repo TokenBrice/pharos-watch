@@ -60,11 +60,23 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "StandX documents DUSD as chain-native on Solana and BNB Chain with StandX Gateway components handling minting and redemption. No third-party bridge route was verified, so the reviewed topology is issuer-native mint/redeem on each supported chain.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-    "confidence": "verified",
+    "tier": "liquidity-or-intent-route",
+    "summary": "StandX DUSD remains native issuance on BSC and Solana; the bridge risk reviewed here is the issuer-operated Highway/cash-wallet rail. StandX's off-chain Bridge API returns src_chain=standx and backend signatures, users send DUSD to target-chain Highway Vaults, and Gateway/Highway contracts handle collateral, message validation, and DUSD movement. No third-party representation was verified, so the route rows remain native while the issuer-operated liquidity/intent machinery and unresolved reconciliation are scored here.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Codex mint/bridge boundary migration 2026-08-16",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "StandX Highway / off-chain Bridge API",
+        "url": "https://docs.standx.com/standx-api/wallet-operation",
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ],
+        "note": "Issuer-operated settlement rail with off-chain bridge intent and target-chain Highway calls; it is not a third-party representation protocol."
+      }
+    ],
     "sources": [
       {
         "label": "StandX DUSD solutions",
@@ -73,6 +85,26 @@
       {
         "label": "StandX key addresses",
         "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+      },
+      {
+        "label": "StandX wallet operation",
+        "url": "https://docs.standx.com/standx-api/wallet-operation"
+      },
+      {
+        "label": "StandX Highway EVM audit",
+        "url": "https://github.com/standx-labs/stand_audit/blob/main/WatchPug_StandX_Highway_EVM_Audit.pdf"
+      },
+      {
+        "label": "StandX Highway SVM audit",
+        "url": "https://github.com/standx-labs/stand_audit/blob/main/WatchPug_StandX_Highway_SVM_Audit.pdf"
+      },
+      {
+        "label": "BSC public RPC (Highway and role reads, 2026-08-16)",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "Solana public RPC (Highway state and program data, 2026-08-16)",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
     "routes": [
@@ -87,9 +119,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "2026-07-20: a complete RoleGranted/RoleRevoked scan of this token from deployment through block 111,600,000 confirms the sole MINTER_ROLE is the StandX Gateway controller proxy 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a and DEFAULT_ADMIN_ROLE is the 3-of-4 Safe 0x6c2404092cb1acfe9a06bc7de61bf619933edba5 — StandX mints natively on BSC via its Gateway against collateral deposits. Issuer-native deployment; no bridge control carries the claim.",
+        "reviewNote": "2026-08-16: pinned reads at BSC block 116363031 continue to show the sole MINTER_ROLE on StandX Settler 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a and DEFAULT_ADMIN_ROLE on the 3-of-4 Safe 0x6c2404092cb1acfe9a06bc7de61bf619933edba5. Official docs separately identify Gateway 0x00b4f9b510893505acefb10ec91cbc972185088e as the deposit/redemption component. DUSD is native issuance on BSC; Highway and Gateway transfer-rail controls are structured below rather than treated as a representation token.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363031,
         "sources": [
           {
             "label": "DUSD token on BscScan",
@@ -112,9 +145,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At slot 425778638, this Token-2022 mint has mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, a PDA of the immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB (upgradeAuthority: None) — StandX mints natively on Solana via its program. Issuer-native deployment; no bridge control carries the claim.",
+        "reviewNote": "At finalized Solana slot 439738655 (block context 439738658, 2026-08-16), this Token-2022 mint has mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, a PDA owned by Settler program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB. Settler program data at slot 439738658 reports upgrade authority 8BRbk69F5dnPrxvnnWMhmWVyqECWnGcYDfMT8G96JzBh, so the prior immutable-program statement is stale. DUSD remains native issuance on Solana; Highway transfer-rail controls are structured below rather than treated as a representation token.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439738655,
         "sources": [
           {
             "label": "DUSD token on Solscan",
@@ -125,6 +159,405 @@
             "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "dusd-bsc-gateway-route",
+        "label": "StandX BSC Gateway deposit and redemption route",
+        "routeRefs": [
+          "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x00b4f9b510893505acefb10ec91cbc972185088e",
+        "failureDomainKeys": [
+          "contract:bsc:0x00b4f9b510893505acefb10ec91cbc972185088e",
+          "contract:bsc:0x90bb5bdc6acd166237640c8707a694f1fc3aab84",
+          "safe:bsc:0x6c2404092cb1acfe9a06bc7de61bf619933edba5"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "StandX wallet-operation documentation sends user DUSD to the target-chain Highway Vault; BSC Gateway depositToHighway moves USDC/USDT into the issuer path and DUSD from the null address to the Highway vault, consistent with an issuer-controlled native mint, redemption, and lockbox route.",
+          "onchainAmountBounds": "The Gateway route is collateral- and vault-linked, but no standalone bridge cap or dated whole-supply conservation model covering BSC, Solana, and off-chain positions was verified.",
+          "pausersAdminsUpgraders": "The BSC Gateway 0x00b4f9b510893505acefb10ec91cbc972185088e currently resolves to implementation 0xb69f4f80ec472ff9fe86933ac739329f8f72dc3b and is Safe-administered; the native mint-critical upgrade path is retained in Mint Authority and the route-level admin control is structured below."
+        },
+        "capDescription": "The Gateway connects collateral deposits and redemptions to the BSC Highway vault; its route capacity depends on issuer-controlled native minting, vault liquidity, and off-chain settlement rather than a verified third-party representation invariant.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363031,
+        "sources": [
+          {
+            "label": "StandX DUSD key addresses",
+            "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+          },
+          {
+            "label": "StandX wallet operation",
+            "url": "https://docs.standx.com/standx-api/wallet-operation"
+          },
+          {
+            "label": "BSC Gateway on BscScan",
+            "url": "https://bscscan.com/address/0x00b4f9b510893505acefb10ec91cbc972185088e"
+          },
+          {
+            "label": "BSC public RPC (Gateway implementation, 2026-08-16)",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "At BSC block 116363031, official StandX addresses identify Gateway 0x00b4f9b510893505acefb10ec91cbc972185088e as the deposit/redemption component. Current explorer and RPC evidence resolves it to implementation 0xb69f4f80ec472ff9fe86933ac739329f8f72dc3b; documented depositToHighway behavior moves collateral into the issuer path and DUSD into Highway custody. This is route machinery around the native BSC deployment, not evidence of a third-party representation token."
+      },
+      {
+        "id": "dusd-bsc-gateway-admin-safe",
+        "label": "StandX BSC Gateway route admin Safe",
+        "routeRefs": [
+          "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x6c2404092cb1acfe9a06bc7de61bf619933edba5",
+        "failureDomainKeys": [
+          "safe:bsc:0x6c2404092cb1acfe9a06bc7de61bf619933edba5",
+          "contract:bsc:0x00b4f9b510893505acefb10ec91cbc972185088e",
+          "contract:bsc:0x90bb5bdc6acd166237640c8707a694f1fc3aab84",
+          "eoa:bsc:0x649b82c8de192e92f8dc9c88f63038016ce56310"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "safe": {
+          "owners": [
+            "0x222542fac5d6f5c2562312f907d202be807ee415",
+            "0x955703b14f475bc0c53db9522283ba1bf1c8a8e1",
+            "0x649b82c8de192e92f8dc9c88f63038016ce56310",
+            "0x56383a4af4482a708dbbac53bf03ad706028b203"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 116363031,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At BSC block 116363031, this 3-of-4 Safe held the native DUSD DEFAULT_ADMIN_ROLE and custom mint-logic upgrade role. The Gateway route resolves to 0xb69f4f80ec472ff9fe86933ac739329f8f72dc3b and its upgrade/admin path is coupled to the same issuer Safe failure domain; native issuance authority remains separately scored in Mint Authority.",
+          "unsupportedReason": "The route is issuer-native on BSC; this control captures the Gateway/Highway transfer-rail administration and does not reclassify the DUSD token deployment as a representation."
+        },
+        "capDescription": "The 3-of-4 Safe can administer and replace the BSC Gateway route, changing collateral ingress, redemption, and Highway settlement behavior.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363031,
+        "sources": [
+          {
+            "label": "BSC admin Safe on BscScan",
+            "url": "https://bscscan.com/address/0x6c2404092cb1acfe9a06bc7de61bf619933edba5"
+          },
+          {
+            "label": "StandX DUSD key addresses",
+            "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+          },
+          {
+            "label": "BSC public RPC (Gateway upgrade authorization, 2026-08-16)",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "The BSC DUSD admin Safe is a Gnosis Safe with four owners and threshold three at block 116363031. The same Safe is the terminal administrator for the issuer Gateway path and shares an owner with the BSC Highway administrator, coupling native mint-logic, escrow, and settlement administration."
+      },
+      {
+        "id": "dusd-bsc-highway-admin",
+        "label": "StandX BSC Highway administrator",
+        "routeRefs": [
+          "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "pause",
+          "escrow"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x649b82c8de192e92f8dc9c88f63038016ce56310",
+        "failureDomainKeys": [
+          "contract:bsc:0x90bb5bdc6acd166237640c8707a694f1fc3aab84",
+          "eoa:bsc:0x649b82c8de192e92f8dc9c88f63038016ce56310",
+          "safe:bsc:0x6c2404092cb1acfe9a06bc7de61bf619933edba5"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "BSC Highway holds DUSD for remote-call settlement; the official EVM audit records successful ackRemoteCall as transferring DUSD from Highway's state token balance.",
+          "pausersAdminsUpgraders": "At BSC block 116363031, Highway 0x90bb5bdc6acd166237640c8707a694f1fc3aab84 resolved to implementation 0xe202fb00309c7e2322ca4cde977bc56f51a14f1c, DEFAULT_ADMIN_ROLE was held by 0x649b82c8de192e92f8dc9c88f63038016ce56310, and paused() was false. The admin/upgrade/pause surface is route risk, not native DUSD mint authority.",
+          "onchainAmountBounds": "The audited Highway acknowledgement transfers from Highway-held DUSD after remote-call validation; it does not mint a second token representation. No aggregate or per-call limit was verified in the current evidence."
+        },
+        "capDescription": "The Highway administrator governs the issuer-operated DUSD escrow and message-settlement contract, including its upgrade and pause surface; route capacity is bounded by Highway-held liquidity only while the transfer and off-chain settlement assumptions hold.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363031,
+        "sources": [
+          {
+            "label": "BSC Highway on BscScan",
+            "url": "https://bscscan.com/address/0x90bb5bdc6acd166237640c8707a694f1fc3aab84"
+          },
+          {
+            "label": "StandX Highway EVM audit",
+            "url": "https://github.com/standx-labs/stand_audit/blob/main/WatchPug_StandX_Highway_EVM_Audit.pdf"
+          },
+          {
+            "label": "BSC public RPC (Highway role and pause reads, 2026-08-16)",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "At BSC block 116363031, Highway 0x90bb5bdc6acd166237640c8707a694f1fc3aab84 reported validator 0xc6a6e3fade16c747dd8ac4d794a3976b70dc79cb, message signer 0xa327b9630cd18b7b252a7b3f6955251a2f0fb64b, DEFAULT_ADMIN_ROLE 0x649b82c8de192e92f8dc9c88f63038016ce56310, and paused() false. The administrator is also an owner of the DUSD admin Safe, creating a shared mint/escrow/settlement failure domain."
+      },
+      {
+        "id": "dusd-bsc-highway-validator",
+        "label": "StandX BSC Highway validator",
+        "routeRefs": [
+          "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xc6a6e3fade16c747dd8ac4d794a3976b70dc79cb",
+        "failureDomainKeys": [
+          "contract:bsc:0x90bb5bdc6acd166237640c8707a694f1fc3aab84",
+          "contract:bsc:0xc6a6e3fade16c747dd8ac4d794a3976b70dc79cb"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The BSC Highway state at block 116363031 reported this address as VALIDATOR_ROLE holder for the issuer-operated remote-call route.",
+          "onchainAmountBounds": "The validator participates in Highway message validation before audited DUSD balance transfers; no independent supply-conservation proof or aggregate validator limit was verified."
+        },
+        "capDescription": "The Highway validator is part of the route's message-validation failure domain; it does not hold the native DUSD MINTER_ROLE.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363031,
+        "sources": [
+          {
+            "label": "BSC Highway on BscScan",
+            "url": "https://bscscan.com/address/0x90bb5bdc6acd166237640c8707a694f1fc3aab84"
+          },
+          {
+            "label": "BSC public RPC (Highway validator role, 2026-08-16)",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "At BSC block 116363031, Highway state reported 0xc6a6e3fade16c747dd8ac4d794a3976b70dc79cb as VALIDATOR_ROLE holder. The official EVM audit describes the validator/message checks preceding remote-call acknowledgement transfers."
+      },
+      {
+        "id": "dusd-bsc-highway-message-signer",
+        "label": "StandX BSC Highway message signer",
+        "routeRefs": [
+          "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xa327b9630cd18b7b252a7b3f6955251a2f0fb64b",
+        "failureDomainKeys": [
+          "contract:bsc:0x90bb5bdc6acd166237640c8707a694f1fc3aab84",
+          "eoa:bsc:0xa327b9630cd18b7b252a7b3f6955251a2f0fb64b"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "signingModel": "At BSC block 116363031, Highway state reported 0xa327b9630cd18b7b252a7b3f6955251a2f0fb64b as the message signer used by the issuer-operated remote-call path.",
+          "unsupportedReason": "The public evidence identifies the current signer address but does not establish a published signer quorum or independent attestation regime."
+        },
+        "capDescription": "The message signer is a route-level authorization failure domain for Highway remote calls; it is not a DUSD native MINTER_ROLE holder.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363031,
+        "sources": [
+          {
+            "label": "BSC Highway on BscScan",
+            "url": "https://bscscan.com/address/0x90bb5bdc6acd166237640c8707a694f1fc3aab84"
+          },
+          {
+            "label": "BSC public RPC (Highway message signer, 2026-08-16)",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "At BSC block 116363031, Highway state reported 0xa327b9630cd18b7b252a7b3f6955251a2f0fb64b as its message signer. The exact signer governance and quorum are not published in the reviewed evidence."
+      },
+      {
+        "id": "dusd-bsc-highway-vault-custody",
+        "label": "StandX BSC Highway Vault custody Safe",
+        "routeRefs": [
+          "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+        ],
+        "capabilities": [
+          "escrow"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x11b660397382ae3a83c4ad80e2f791189b39e433",
+        "failureDomainKeys": [
+          "safe:bsc:0x11b660397382ae3a83c4ad80e2f791189b39e433",
+          "safe:bsc:0x6c2404092cb1acfe9a06bc7de61bf619933edba5",
+          "eoa:bsc:0x649b82c8de192e92f8dc9c88f63038016ce56310"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 4,
+        "safe": {
+          "threshold": 2,
+          "observedBlock": 116363031,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "StandX wallet-operation documentation identifies BSC Vault 0x11b660397382AE3A83c4Ad80e2F791189b39e433 as the target-chain custody endpoint. The Safe proxy has threshold 2 with four owners; sampled balances were 5,855,893.842393 DUSD in Highway and 19,957,181.359251 DUSD in the vault.",
+          "onchainAmountBounds": "Vault and Highway balances are route-liquidity observations, not a whole-supply reconciliation. The vault shares owners 0x222542...e415 and 0x649b82...6310 with the DUSD admin Safe/Highway administrator, so custody is a common-mode dependency."
+        },
+        "capDescription": "The BSC Vault Safe is the issuer-controlled DUSD lockbox/custody endpoint for Highway settlement; its signer quorum and shared owners are material to route liquidity and recovery.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363031,
+        "sources": [
+          {
+            "label": "StandX wallet operation",
+            "url": "https://docs.standx.com/standx-api/wallet-operation"
+          },
+          {
+            "label": "BSC Highway Vault on BscScan",
+            "url": "https://bscscan.com/address/0x11b660397382ae3a83c4ad80e2f791189b39e433"
+          },
+          {
+            "label": "BSC public RPC (Vault Safe state, 2026-08-16)",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "The documented BSC Highway Vault is a Safe proxy with threshold 2 and four owners. At the latest sampled BSC state, Highway held 5,855,893.842393 DUSD and the vault held 19,957,181.359251 DUSD. The vault shares owners with the DUSD admin Safe, including Highway administrator 0x649b82c8de192e92f8dc9c88f63038016ce56310, coupling custody and mint/settlement administration."
+      },
+      {
+        "id": "dusd-solana-highway-controller",
+        "label": "StandX Solana Highway controller and custody state",
+        "routeRefs": [
+          "solana:DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM"
+        ],
+        "capabilities": [
+          "escrow"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "64TDz8bnvNb6RwKmJxZ24sQLTwJGLdw3T6Bmqs2F8JpK",
+        "failureDomainKeys": [
+          "contract:solana:64TDz8bnvNb6RwKmJxZ24sQLTwJGLdw3T6Bmqs2F8JpK",
+          "program:solana:STANDjrnkxme4tKsZSnW3WUQ9iKxbhJQj33dbW2F9sZ"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "At finalized slot 439739800, this enabled Highway controller state included the DUSD mint. The official SVM audit says successful remote-call acknowledgement transfers from the Highway ATA after checking the DUSD mint.",
+          "unsupportedReason": "Current public IDL/source evidence was not available to map every raw controller field to validator, vault, and signer semantics; the exact Solana vault address also remains unresolved."
+        },
+        "capDescription": "The Solana Highway controller is an issuer-operated custody/settlement state for the native DUSD route; its exact validator, signer, and vault configuration is not fully decoded.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439739800,
+        "sources": [
+          {
+            "label": "Solana public RPC (Highway controller state, 2026-08-16)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "StandX Highway SVM audit",
+            "url": "https://github.com/standx-labs/stand_audit/blob/main/WatchPug_StandX_Highway_SVM_Audit.pdf"
+          },
+          {
+            "label": "StandX wallet operation",
+            "url": "https://docs.standx.com/standx-api/wallet-operation"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439739800, controller 64TDz8bnvNb6RwKmJxZ24sQLTwJGLdw3T6Bmqs2F8JpK was enabled and its raw state included the tracked DUSD mint. The state is owned by Highway program STANDjrnkxme4tKsZSnW3WUQ9iKxbhJQj33dbW2F9sZ; the public audit describes transfer-from-Highway-ATA acknowledgement rather than a second minting representation."
+      },
+      {
+        "id": "dusd-solana-highway-upgrade-authority",
+        "label": "StandX Solana Highway program upgrade authority",
+        "routeRefs": [
+          "solana:DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "8BRbk69F5dnPrxvnnWMhmWVyqECWnGcYDfMT8G96JzBh",
+        "failureDomainKeys": [
+          "program:solana:STANDjrnkxme4tKsZSnW3WUQ9iKxbhJQj33dbW2F9sZ",
+          "program-data:solana:5FB9Xq8Sj755Vzrveq3vHjJrucKH12CEzRfk8WdB3RhM",
+          "eoa:solana:8BRbk69F5dnPrxvnnWMhmWVyqECWnGcYDfMT8G96JzBh"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At finalized Solana slot 439740037, Highway program data 5FB9Xq8Sj755Vzrveq3vHjJrucKH12CEzRfk8WdB3RhM reported upgrade authority 8BRbk69F5dnPrxvnnWMhmWVyqECWnGcYDfMT8G96JzBh. That authority can replace Highway route logic, including custody and acknowledgement behavior.",
+          "unsupportedReason": "The public state does not establish a timelock, multisig threshold, or decoded validator/peer configuration for this upgrade authority."
+        },
+        "capDescription": "The Solana Highway program upgrade authority can replace the issuer-operated transfer-rail logic and potentially change route custody or message-validation behavior.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 439740037,
+        "sources": [
+          {
+            "label": "Solana public RPC (Highway program data, 2026-08-16)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "StandX Highway SVM audit",
+            "url": "https://github.com/standx-labs/stand_audit/blob/main/WatchPug_StandX_Highway_SVM_Audit.pdf"
+          }
+        ],
+        "evidence": "At finalized slot 439740037, Highway program data 5FB9Xq8Sj755Vzrveq3vHjJrucKH12CEzRfk8WdB3RhM reported current upgrade authority 8BRbk69F5dnPrxvnnWMhmWVyqECWnGcYDfMT8G96JzBh. This is a live bridge-route upgrade surface even though the authority account is system-owned and non-executable."
+      },
+      {
+        "id": "dusd-offchain-highway-backend",
+        "label": "StandX off-chain Bridge API and Settler/RSV settlement backend",
+        "routeRefs": [
+          "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122",
+          "solana:DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM"
+        ],
+        "capabilities": [
+          "validator",
+          "escrow"
+        ],
+        "failureDomainKeys": [
+          "issuer:standx-settler-backend",
+          "issuer:standx-rsv-fund",
+          "offchain:standx-bridge-api"
+        ],
+        "authorityType": "issuer-backend",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "signingModel": "StandX wallet-operation documentation describes an off-chain Bridge API response with src_chain=standx, a destination on BSC or Solana, a backend signature, and a subsequent on-chain Highway call.",
+          "lockboxOrEscrow": "Users send DUSD to a target-chain Highway Vault; the Settler/RSV backend moves collateral between on-chain and off-chain venues and manages issuer liquidity/settlement.",
+          "unsupportedReason": "The exact backend signer set, threshold, custody controls, and off-chain cash/hedge reconciliation are not published or independently verifiable."
+        },
+        "capDescription": "The issuer backend is a route-level attestation and liquidity/escrow dependency. Its signer set is undisclosed, and its bridge capacity cannot be treated as numerically bounded without a dated cross-domain reconciliation.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "StandX wallet operation",
+            "url": "https://docs.standx.com/standx-api/wallet-operation"
+          },
+          {
+            "label": "StandX DUSD solutions",
+            "url": "https://docs.standx.com/docs/dusd-solutions"
+          },
+          {
+            "label": "StandX redeeming DUSD",
+            "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+          }
+        ],
+        "evidence": "StandX's documented Bridge API returns an off-chain backend signature before a Highway call, and the wallet operation sends DUSD to a target-chain vault. The Settler manages delta-neutral positions and the RSV Fund moves assets between on-chain and off-chain platforms; exact signer quorum and whole-supply conservation across BSC, Solana, and off-chain cash/hedge balances remain unresolved."
       }
     ]
   }

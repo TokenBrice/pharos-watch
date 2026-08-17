@@ -8,34 +8,90 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
-    "summary": "USDH has HyperEVM and Hyperliquid deployments. Hyperliquid bridge documentation and L2BEAT describe the bridge as validator-signed, with more than two-thirds staking power required for deposits or withdrawals, so Pharos scores this as external validated-network exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "single-chain-or-native",
+    "summary": "USDH has one canonical native issuance route on HyperEVM and one peripheral HyperCore HIP-1 linked representation. HyperCore and HyperEVM are parts of the same Hyperliquid blockchain; the linked asset reflects the HyperEVM token through protocol system-address transfers and CoreWriter supply reflection, not an independently issued USDH bridge route. No USDH-specific validator, DVN, peer, escrow, or rate-limit controller was verified.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "Hyperliquid",
-        "slug": "hyperliquid",
-        "url": "https://l2beat.com/interop/protocols/hyperliquid",
-        "bridgeTypes": [
-          "validatorBridge"
-        ]
-      }
-    ],
     "sources": [
       {
-        "label": "USDH docs",
-        "url": "https://docs.usdh.com"
+        "label": "USDH HyperEVM proxy source",
+        "url": "https://hyperevmscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111#code"
       },
       {
-        "label": "Hyperliquid bridge docs",
-        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge"
+        "label": "Hyperliquid HyperCore ↔ HyperEVM transfers",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers"
       },
       {
-        "label": "L2BEAT Hyperliquid",
-        "url": "https://l2beat.com/interop/protocols/hyperliquid"
+        "label": "Hyperliquid HIP-1 native token standard",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-1-native-token-standard"
+      },
+      {
+        "label": "Hyperliquid official API",
+        "url": "https://api.hyperliquid.xyz/info"
+      }
+    ],
+    "routes": [
+      {
+        "id": "hyperevm:0x111111a1a0667d36bd57c0a9f569b98057111111",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "hyperevm",
+        "contractAddress": "0x111111a1a0667d36bd57c0a9f569b98057111111",
+        "protocol": "Bridge Building USDH native issuer contract",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The HyperEVM ERC-20 is the only verified canonical USDH issuance deployment. The verified implementation restricts mint and burn to MINTER_ROLE, requires approved recipients, and enforces totalSupply + amount <= getMaxSupply(); the issuer-native reserve-ledger handler and TokenAuthority are recorded in Mint Authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 43375036,
+        "sources": [
+          {
+            "label": "USDH HyperEVM proxy source",
+            "url": "https://hyperevmscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111#code"
+          },
+          {
+            "label": "USDH HyperEVM implementation source",
+            "url": "https://hyperevmscan.io/address/0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9#code"
+          }
+        ]
+      },
+      {
+        "id": "hyperliquid:0x54e00a5988577cb0b0c9ab0cb6ef7f4b",
+        "sourceChain": "hyperevm",
+        "destinationChain": "hyperliquid",
+        "canonicalChain": "hyperevm",
+        "contractAddress": "0x54e00a5988577cb0b0c9ab0cb6ef7f4b",
+        "protocol": "Hyperliquid HIP-1 HyperCore ↔ HyperEVM linked USDH representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "single-chain-or-native",
+        "semantics": "other",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Hyperliquid spotMeta/tokenDetails identify USDH as token index 360 with token ID 0x54e00a5988577cb0b0c9ab0cb6ef7f4b, isCanonical false, and an EVM link to the HyperEVM contract. The HIP-1 asset is represented through the HyperCore system address 0x2000000000000000000000000000000000000168 and CoreWriter supply reflection from EVM mint/burn; it is not independently issued. This platform linkage is peripheral to the HyperEVM canonical route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:hyperliquid-hypercore-evm-linkage"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Hyperliquid HyperCore ↔ HyperEVM transfers",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers"
+          },
+          {
+            "label": "Hyperliquid HIP-1 native token standard",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-1-native-token-standard"
+          },
+          {
+            "label": "Hyperliquid official API",
+            "url": "https://api.hyperliquid.xyz/info"
+          }
+        ]
       }
     ]
   }

@@ -9,10 +9,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDtb is native on Ethereum and Solana (per Anchorage's attestation). Arbitrum and Base deployments are the issuer's own LayerZero OFT (endpoint verified on-chain; owner is a 5-of-10 Ethena Safe) using burn-mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-    "confidence": "verified",
+    "summary": "USDtb has two native issuance routes—Ethereum Anchorage USDtb and the Solana Token-2022 mint—and separate LayerZero bridge representations: an Ethereum OFT adapter, Arbitrum and Base OFTs, and a Solana OFT mint. The EVM bridge owner is a 5-of-10 Safe; EVM lock/mint and burn/mint remain bridge-route risk, while the Solana OFT program and bridge authority remain unresolved and opaque rather than entering Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; mint-bridge-boundary migration",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "l2beat",
@@ -38,6 +38,18 @@
       {
         "label": "LayerZero OFT technical reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "USDtb official key addresses",
+        "url": "https://docs.usdtb.money/key-addresses"
+      },
+      {
+        "label": "LayerZero current OFT metadata",
+        "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list"
+      },
+      {
+        "label": "LayerZero Scan Arbitrum-to-Ethereum message history",
+        "url": "https://scan.layerzero-api.com/v1/messages/oapp/30110/0xc708b6887db46005da033501f8aebee72d191a5d"
       }
     ],
     "routes": [
@@ -71,15 +83,18 @@
         "destinationChain": "arbitrum",
         "contractAddress": "0xc708b6887db46005da033501f8aebee72d191a5d",
         "protocol": "Ethena issuer-deployed LayerZero OFT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 5-of-10 Safe 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec (getThreshold/getOwners verified on Arbitrum at 2026-07-20); the issuer's own OFT burns/mints USDtb across deployments.",
+        "reviewNote": "At Arbitrum block 495303139 on 2026-08-16, the verified USDtbOFT burns USDtb on send and mints only on validated LayerZero receive; owner/delegate is the 5-of-10 Safe 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec, not a native issuer. EndpointV2 is 0x1a44076050125825900e736c501f859c50fe728c, so this is a bridge representation rather than independent native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495303139,
         "sources": [
           {
             "label": "USDtb docs",
@@ -88,10 +103,17 @@
           {
             "label": "LayerZero docs",
             "url": "https://docs.layerzero.network/"
+          },
+          {
+            "label": "Arbitrum USDtb OFT",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xc708b6887db46005da033501f8aebee72d191a5d"
           }
         ],
         "failureDomainKeys": [
-          "layerzero:oft:usdtb-ethena"
+          "layerzero:oft:usdtb-ethena",
+          "layerzero:endpoint-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:arbitrum:0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
+          "contract:arbitrum:0xc708b6887db46005da033501f8aebee72d191a5d"
         ],
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum"
@@ -101,15 +123,18 @@
         "destinationChain": "base",
         "contractAddress": "0xc708b6887db46005da033501f8aebee72d191a5d",
         "protocol": "Ethena issuer-deployed LayerZero OFT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 5-of-10 Safe 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec (getThreshold/getOwners verified on Base at 2026-07-20); the issuer's own OFT burns/mints USDtb across deployments.",
+        "reviewNote": "At Base block 50067660 on 2026-08-16, the verified USDtbOFT burns USDtb on send and mints only on validated LayerZero receive; owner/delegate is the 5-of-10 Safe 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec, not a native issuer. EndpointV2 is 0x1a44076050125825900e736c501f859c50fe728c, so this is a bridge representation rather than independent native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067660,
         "sources": [
           {
             "label": "USDtb docs",
@@ -118,10 +143,17 @@
           {
             "label": "LayerZero docs",
             "url": "https://docs.layerzero.network/"
+          },
+          {
+            "label": "Base USDtb OFT",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc708b6887db46005da033501f8aebee72d191a5d"
           }
         ],
         "failureDomainKeys": [
-          "layerzero:oft:usdtb-ethena"
+          "layerzero:oft:usdtb-ethena",
+          "layerzero:endpoint-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:base:0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
+          "contract:base:0xc708b6887db46005da033501f8aebee72d191a5d"
         ],
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum"
@@ -150,6 +182,252 @@
             "url": "https://docs.layerzero.network/"
           }
         ]
+      },
+      {
+        "id": "solana:39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy",
+        "destinationChain": "solana",
+        "contractAddress": "39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy",
+        "protocol": "LayerZero Solana OFT mint",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "controllerChain": "solana",
+        "controllerAddress": "kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "LayerZero metadata identifies this as a separate Solana OFT mint, but the program upgrade authority, administrative signer, peer/config state, and DVN/executor configuration remain unresolved. The route stays opaque-or-unknown until those bridge controls are verified from primary sources.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439741723,
+        "sources": [
+          {
+            "label": "LayerZero current OFT metadata",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:usdtb-ethena",
+          "program:solana:BpV7o3yBPYqLnbauX5zdLu8XPhuJ9DESQXgLh8dzqcZ4",
+          "escrow:solana:8rkzuEhp2JiEZFmN7wDZMxzUBGtruKDXWXMxsjEPWEAX",
+          "mint-authority:solana:kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq"
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdtb-ethereum-oft-owner-safe",
+        "label": "USDtb Ethereum LayerZero OFT adapter owner Safe",
+        "routeRefs": [
+          "ethereum:0xc139190f447e929f090edeb554d95abb8b18ac1c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "escrow",
+          "peer-config",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
+        "failureDomainKeys": [
+          "layerzero:oft:usdtb-ethena",
+          "layerzero:endpoint-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:ethereum:0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
+          "contract:ethereum:0xc708b6887db46005da033501f8aebee72d191a5d"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 10,
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "LayerZero metadata identifies this deployment as an OFT_ADAPTER whose innerTokenAddress is native USDtb 0xc139190f447e929f090edeb554d95abb8b18ac1c; the adapter locks the inner token on outbound transfers and releases it on validated inbound messages.",
+          "trustedPeerOrRemote": "At Ethereum block 25771071 on 2026-08-16, isPeer(30110, 0xc708b6887db46005da033501f8aebee72d191a5d) and isPeer(30184, 0xc708b6887db46005da033501f8aebee72d191a5d) returned true on the adapter; the owner Safe can change peer configuration.",
+          "rateLimits": "rateLimiter() = address(0); the verified source exposes owner-controlled rate-limit configuration, so no active aggregate or per-call rate limiter was observed.",
+          "caps": "The adapter's bridge accounting is lock/unlock over the native inner token; no independent native-issuance cap is claimed for this route.",
+          "pausersAdminsUpgraders": "The owner Safe controls peer, delegate, enforced-options, message-inspector, and rate-limit configuration. Safe guard/fallback reads were unavailable through the tested ABI; enabled-module pagination returned an empty list.",
+          "attestorQuorum": "LayerZero Scan's latest returned Arbitrum-to-Ethereum message record (2026-05-26) showed required DVNs Horizen, LayerZero Labs, Canary, and Nethermind, 20 confirmations, ULN V302, and Executor 0x31cae3b7fb82d847621859fb1585353c5720660d. This historical record is not a fresh current getConfig read for every direction and is due for refresh."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771071,
+        "sources": [
+          {
+            "label": "Ethereum USDtb OFT adapter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc708b6887db46005da033501f8aebee72d191a5d"
+          },
+          {
+            "label": "LayerZero current OFT metadata",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list"
+          },
+          {
+            "label": "LayerZero Scan Arbitrum-to-Ethereum message history",
+            "url": "https://scan.layerzero-api.com/v1/messages/oapp/30110/0xc708b6887db46005da033501f8aebee72d191a5d"
+          }
+        ],
+        "evidence": "At Ethereum block 25771071 on 2026-08-16, the canonical-side LayerZero OFT adapter was owned by Safe 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec, whose current threshold is 5 of 10 signers and whose enabled-module pagination returned an empty list. The adapter locks native USDtb for outbound transfers and releases it on validated inbound messages; its owner controls peer, delegate, enforced-options, message-inspector, and rate-limit configuration. Guard/fallback status remains unverified."
+      },
+      {
+        "id": "usdtb-arbitrum-oft-owner-safe",
+        "label": "USDtb Arbitrum LayerZero OFT owner Safe",
+        "routeRefs": [
+          "arbitrum:0xc708b6887db46005da033501f8aebee72d191a5d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config",
+          "rate-limit"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
+        "failureDomainKeys": [
+          "layerzero:oft:usdtb-ethena",
+          "layerzero:endpoint-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:arbitrum:0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
+          "contract:arbitrum:0xc708b6887db46005da033501f8aebee72d191a5d"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 10,
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495303139 on 2026-08-16, isPeer(30101, 0xc708b6887db46005da033501f8aebee72d191a5d) returned true on the USDtbOFT; the owner Safe can change peer and delegate configuration.",
+          "rateLimits": "rateLimiter() = address(0); the verified source exposes owner-controlled rate-limit configuration, so no active aggregate or per-call rate limiter was observed.",
+          "caps": "The verified USDtbOFT burns on send and mints only on validated LayerZero receive; no independent token-level aggregate mint cap was observed, so route conservation depends on the validated message and source-burn path.",
+          "pausersAdminsUpgraders": "The owner Safe controls delegate, enforced-options, message-inspector, peer, and rate-limit configuration. Safe guard/fallback reads were unavailable through the tested ABI; enabled-module pagination returned an empty list.",
+          "attestorQuorum": "LayerZero Scan's latest returned Arbitrum-to-Ethereum message record (2026-05-26) showed required DVNs Horizen, LayerZero Labs, Canary, and Nethermind, 20 confirmations, ULN V302, and Executor 0x31cae3b7fb82d847621859fb1585353c5720660d. This historical record is not a fresh current getConfig read for every direction and is due for refresh."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495303139,
+        "sources": [
+          {
+            "label": "Arbitrum USDtb OFT",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xc708b6887db46005da033501f8aebee72d191a5d"
+          },
+          {
+            "label": "LayerZero OApp peer and delegate reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oapp-reference"
+          },
+          {
+            "label": "LayerZero Scan Arbitrum-to-Ethereum message history",
+            "url": "https://scan.layerzero-api.com/v1/messages/oapp/30110/0xc708b6887db46005da033501f8aebee72d191a5d"
+          }
+        ],
+        "evidence": "At Arbitrum block 495303139 on 2026-08-16, USDtbOFT owner 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec was a 5-of-10 Safe with an empty enabled-module result; guard/fallback status was not available through the tested ABI. The OFT burns on send and mints on validated receive, while the owner controls peer, delegate, enforced-options, message-inspector, and rate-limit configuration."
+      },
+      {
+        "id": "usdtb-base-oft-owner-safe",
+        "label": "USDtb Base LayerZero OFT owner Safe",
+        "routeRefs": [
+          "base:0xc708b6887db46005da033501f8aebee72d191a5d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config",
+          "rate-limit"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
+        "failureDomainKeys": [
+          "layerzero:oft:usdtb-ethena",
+          "layerzero:endpoint-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:base:0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec",
+          "contract:base:0xc708b6887db46005da033501f8aebee72d191a5d"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 10,
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50067660 on 2026-08-16, isPeer(30101, 0xc708b6887db46005da033501f8aebee72d191a5d) returned true on the USDtbOFT; the owner Safe can change peer and delegate configuration.",
+          "rateLimits": "rateLimiter() = address(0); the verified source exposes owner-controlled rate-limit configuration, so no active aggregate or per-call rate limiter was observed.",
+          "caps": "The verified USDtbOFT burns on send and mints only on validated LayerZero receive; no independent token-level aggregate mint cap was observed, so route conservation depends on the validated message and source-burn path.",
+          "pausersAdminsUpgraders": "The owner Safe controls delegate, enforced-options, message-inspector, peer, and rate-limit configuration. Safe guard/fallback reads were unavailable through the tested ABI; enabled-module pagination returned an empty list.",
+          "attestorQuorum": "LayerZero Scan's latest returned Arbitrum-to-Ethereum message record (2026-05-26) showed required DVNs Horizen, LayerZero Labs, Canary, and Nethermind, 20 confirmations, ULN V302, and Executor 0x31cae3b7fb82d847621859fb1585353c5720660d. This historical record is not a fresh current getConfig read for every direction and is due for refresh."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067660,
+        "sources": [
+          {
+            "label": "Base USDtb OFT",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc708b6887db46005da033501f8aebee72d191a5d"
+          },
+          {
+            "label": "LayerZero OApp peer and delegate reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oapp-reference"
+          },
+          {
+            "label": "LayerZero Scan Arbitrum-to-Ethereum message history",
+            "url": "https://scan.layerzero-api.com/v1/messages/oapp/30110/0xc708b6887db46005da033501f8aebee72d191a5d"
+          }
+        ],
+        "evidence": "At Base block 50067660 on 2026-08-16, USDtbOFT owner 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec was a 5-of-10 Safe with an empty enabled-module result; guard/fallback status was not available through the tested ABI. The OFT burns on send and mints on validated receive, while the owner controls peer, delegate, enforced-options, message-inspector, and rate-limit configuration."
+      },
+      {
+        "id": "usdtb-solana-oft-bridge-authority-unresolved",
+        "label": "USDtb Solana LayerZero OFT program and bridge mint authority",
+        "routeRefs": [
+          "solana:39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "escrow"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq",
+        "failureDomainKeys": [
+          "layerzero:oft:usdtb-ethena",
+          "program:solana:BpV7o3yBPYqLnbauX5zdLu8XPhuJ9DESQXgLh8dzqcZ4",
+          "escrow:solana:8rkzuEhp2JiEZFmN7wDZMxzUBGtruKDXWXMxsjEPWEAX",
+          "mint-authority:solana:kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq"
+        ],
+        "authorityType": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "LayerZero metadata lists escrow token account 8rkzuEhp2JiEZFmN7wDZMxzUBGtruKDXWXMxsjEPWEAX for the Solana OFT.",
+          "trustedPeerOrRemote": "The Solana OFT peer/config state and exact DVN/executor configuration remain unresolved.",
+          "pausersAdminsUpgraders": "LayerZero metadata lists OFT program BpV7o3yBPYqLnbauX5zdLu8XPhuJ9DESQXgLh8dzqcZ4 and bridge mint authority kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq; the program upgrade authority and administrative signer remain unresolved.",
+          "unsupportedReason": "The route remains unresolved and opaque-or-unknown until the Solana OFT program authority, admin signer, peers, and message validation configuration are verified from primary sources."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439741723,
+        "sources": [
+          {
+            "label": "LayerZero current OFT metadata",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439741723 on 2026-08-16, separate SPL mint 39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy had bridge mint authority kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq. LayerZero metadata lists its OFT program and escrow account, but the program upgrade authority, administrative signer, peer/config state, and DVN/executor configuration are unresolved; those facts remain opaque Bridge Risk rather than guessed controls or Mint Authority."
       }
     ]
   }

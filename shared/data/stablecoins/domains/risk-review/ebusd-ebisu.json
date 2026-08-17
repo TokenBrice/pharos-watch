@@ -1009,21 +1009,23 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "ebUSD is natively issued by independent Ebisu CDP deployments on both Ethereum and Plasma (each with its own BorrowerOperations branches); the LayerZero OFT adapters in ebisufinance/ebisu-oft are a transfer layer, not the supply-carrying route.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "ebUSD is natively issued by independent Ebisu CDP deployments on both Ethereum and Plasma, each with its own BorrowerOperations branches. The separate LayerZero MintBurnOFTAdapters provide a supply-conserving burn-on-source/mint-on-destination transfer route, secured by configured external DVNs and issuer-controlled adapter and burner administration. The native CCIP pool path is locked in the BoldToken and is not the active bridge route.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos bridge-route re-verification; FIX-08 migration",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Chainlink CCIP",
-        "slug": "ccip",
-        "url": "https://l2beat.com/interop/protocols/ccip",
+        "source": "issuer",
+        "name": "Ebisu LayerZero MintBurnOFTAdapter",
+        "slug": "layerzero",
+        "url": "https://github.com/ebisufinance/ebisu-oft/blob/main/layerzero.config.ts",
         "bridgeTypes": [
+          "oft",
           "burnAndMint",
-          "lockRelease"
-        ]
+          "external-validated-network"
+        ],
+        "note": "The official deployment and LayerZero configuration define bidirectional Ethereum/Plasma adapters with required Canary, Deutsche Telekom, and P2P DVNs, direction-specific confirmations, and enforced receive gas."
       }
     ],
     "sources": [
@@ -1032,14 +1034,47 @@
         "url": "https://ebisu.gitbook.io/ebisu-money"
       },
       {
-        "label": "Chainlink CCIP docs",
-        "url": "https://docs.chain.link/ccip"
+        "label": "Ebisu oracle and parameter configuration",
+        "url": "https://ebisu.gitbook.io/ebisu-money/developers/oracle-and-parameter-configuration"
+      },
+      {
+        "label": "Ebisu Ethereum deployment addresses",
+        "url": "https://ebisu.gitbook.io/ebisu-money/developers/deployment-addresses-mainnet"
+      },
+      {
+        "label": "Ebisu Plasma deployment addresses",
+        "url": "https://ebisu.gitbook.io/ebisu-money/developers/deployment-addresses-plasma"
+      },
+      {
+        "label": "Ebisu OFT repository",
+        "url": "https://github.com/ebisufinance/ebisu-oft"
+      },
+      {
+        "label": "Ebisu OFT LayerZero configuration",
+        "url": "https://github.com/ebisufinance/ebisu-oft/blob/main/layerzero.config.ts"
+      },
+      {
+        "label": "Ethereum LayerZero adapter",
+        "url": "https://etherscan.io/address/0xa7782997d363493eE55A59CA3Ccd015216C8e16B"
+      },
+      {
+        "label": "Plasma LayerZero adapter",
+        "url": "https://routescan.io/address/0xE46572553248e538c389010c6146ac499e3daeff"
+      },
+      {
+        "label": "Ethereum JSON-RPC fixed-block reads",
+        "url": "https://ethereum.publicnode.com/"
+      },
+      {
+        "label": "Plasma JSON-RPC fixed-block reads",
+        "url": "https://rpc.plasma.to/"
       }
     ],
     "routes": [
       {
         "id": "ethereum:0x09fd37d9aa613789c517e76df1c53aece2b60df4",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x09fd37d9aa613789c517e76df1c53aece2b60df4",
         "protocol": "Ebisu native deployment",
         "issuanceModel": "native-issuance",
@@ -1048,7 +1083,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "ebUSD is natively issued on Ethereum by the Ebisu CDP deployment (three BorrowerOperations branches 0x026cf854..., 0x116d3842..., 0x66283665... mint against branch collateral; ownership renounced). LayerZero OFT adapter 0xa7782997d363493eE55A59CA3Ccd015216C8e16B exists for transfers but does not define issuance.",
+        "reviewNote": "ebUSD is natively issued on Ethereum by the Ebisu CDP deployment (three BorrowerOperations branches 0x026cf854..., 0x116d3842..., 0x66283665... mint against branch collateral; ownership renounced). The BoldToken's CCIP pool path is locked, while LayerZero OFT adapter 0xa7782997d363493eE55A59CA3Ccd015216C8e16B is separately reviewed as transfer machinery and does not define native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -1065,6 +1100,7 @@
       {
         "id": "plasma:0xef7b1a03e0897c33b63159e38d779e3970c0e2fc",
         "destinationChain": "plasma",
+        "canonicalChain": "plasma",
         "contractAddress": "0xef7b1a03e0897c33b63159e38d779e3970c0e2fc",
         "protocol": "Ebisu native deployment",
         "issuanceModel": "native-issuance",
@@ -1073,7 +1109,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "ebUSD is natively issued on Plasma by a second Ebisu CDP deployment (five BorrowerOperations branches, verified contract code on Plasma at 2026-07-20; DefiLlama classifies both deployments as issued/native). LayerZero OFT adapter 0xE46572553248e538c389010c6146ac499e3daeff and ElevatedMinterBurner 0xC23Fc24C55DB916AE0D6E3f533E89f67462D64b2 (ebisufinance/ebisu-oft) cover transfers only.",
+        "reviewNote": "ebUSD is natively issued on Plasma by a second Ebisu CDP deployment (five BorrowerOperations branches, verified contract code on Plasma at 2026-07-20; DefiLlama classifies both deployments as issued/native). The BoldToken's CCIP pool path is locked, while LayerZero OFT adapter 0xE46572553248e538c389010c6146ac499e3daeff and ElevatedMinterBurner 0xC23Fc24C55DB916AE0D6E3f533E89f67462D64b2 (ebisufinance/ebisu-oft) cover transfers only.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -1086,6 +1122,210 @@
             "url": "https://github.com/ebisufinance/ebisu-oft/tree/main/deployments"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "ebusd-ethereum-layerzero-adapter-owner",
+        "label": "Ebisu Ethereum LayerZero adapter owner Safe",
+        "routeRefs": [
+          "ethereum:0x09fd37d9aa613789c517e76df1c53aece2b60df4"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x25b85831da750c912ab7f0cf53b9d82f7894ed07",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "safe:ethereum:0x25b85831da750c912ab7f0cf53b9d82f7894ed07"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "owners": [
+            "0x016ea729ca9a50d29d1058aaa6d975f7c905e82e",
+            "0xb18c27b28bca47eb4492e02630c52654c71cd76b",
+            "0x9a89f2595e6c8a63f1870861f8a5113523b4bf99"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 25295272,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "This MintBurnOFTAdapter route burns source ebUSD and mints the equivalent amount on the destination; no independent reserve lockbox is used.",
+          "trustedPeerOrRemote": "The official LayerZero configuration wires the Ethereum and Plasma adapters bidirectionally; the adapter owner can alter peer and delegate configuration.",
+          "attestorQuorum": "The official configuration requires Canary, Deutsche Telekom, and P2P DVNs with 15 confirmations Ethereum-to-Plasma and 5 confirmations Plasma-to-Ethereum; live Endpoint ULN state was not independently replayed.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770101 the adapter owner was this 2-of-3 Ebisu Safe. The owner can change peers, delegate, enforced options, message inspector, and pre-crime configuration; no adapter upgrade authority was separately evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770101,
+        "sources": [
+          {
+            "label": "Ethereum LayerZero adapter",
+            "url": "https://etherscan.io/address/0xa7782997d363493eE55A59CA3Ccd015216C8e16B"
+          },
+          {
+            "label": "Ebisu OFT LayerZero configuration",
+            "url": "https://github.com/ebisufinance/ebisu-oft/blob/main/layerzero.config.ts"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block reads",
+            "url": "https://ethereum.publicnode.com/"
+          }
+        ],
+        "evidence": "At Ethereum block 25770101, the LayerZero MintBurnOFTAdapter owner was the Ebisu 2-of-3 Safe 0x25b85831da750c912ab7f0cf53b9d82f7894ed07, endpoint() was 0x1a44076050125825900e736c501f859c50fe728c, minterBurner() was 0xfb2b88b3f888149ee6167b52b8440a56fe991cc4, and operators(adapter) returned true. The adapter's owner-controlled peer, delegate, enforced-option, inspector, and pre-crime surfaces are bridge administration, not native CDP mint authority."
+      },
+      {
+        "id": "ebusd-ethereum-layerzero-burner-owner",
+        "label": "Ebisu Ethereum ElevatedMinterBurner owner",
+        "routeRefs": [
+          "ethereum:0x09fd37d9aa613789c517e76df1c53aece2b60df4"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x2907912e63abfdf01b513e65d710e4c48830ba5a",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "eoa:ethereum:0x2907912e63abfdf01b513e65d710e4c48830ba5a"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "ElevatedMinterBurner restricts mint() and burn() to its operator and calls the token's privileged mint/burn methods; operators(adapter) was true at the observed block.",
+          "pausersAdminsUpgraders": "The burner owner can remove the adapter operator, changing whether this bridge adapter can execute its burn/mint path."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770101,
+        "sources": [
+          {
+            "label": "Ebisu OFT repository",
+            "url": "https://github.com/ebisufinance/ebisu-oft"
+          },
+          {
+            "label": "Ethereum LayerZero adapter",
+            "url": "https://etherscan.io/address/0xa7782997d363493eE55A59CA3Ccd015216C8e16B"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block reads",
+            "url": "https://ethereum.publicnode.com/"
+          }
+        ],
+        "evidence": "At Ethereum block 25770101, the adapter's minterBurner() returned 0xfb2b88b3f888149ee6167b52b8440a56fe991cc4, its owner() returned 0x2907912e63abfdf01b513e65d710e4c48830ba5a, and operators(adapter) returned true. The official ElevatedMinterBurner source restricts mint() and burn() to an operator and delegates to the native token's privileged mint/burn methods; the burner owner can remove the adapter operator."
+      },
+      {
+        "id": "ebusd-plasma-layerzero-adapter-owner",
+        "label": "Ebisu Plasma LayerZero adapter owner Safe",
+        "routeRefs": [
+          "plasma:0xef7b1a03e0897c33b63159e38d779e3970c0e2fc"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0x25b85831da750c912ab7f0cf53b9d82f7894ed07",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "safe:plasma:0x25b85831da750c912ab7f0cf53b9d82f7894ed07"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "owners": [
+            "0x016ea729ca9a50d29d1058aaa6d975f7c905e82e",
+            "0xb18c27b28bca47eb4492e02630c52654c71cd76b",
+            "0x9a89f2595e6c8a63f1870861f8a5113523b4bf99"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 25295272,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "This MintBurnOFTAdapter route burns source ebUSD and mints the equivalent amount on the destination; no independent reserve lockbox is used.",
+          "trustedPeerOrRemote": "The official LayerZero configuration wires the Plasma and Ethereum adapters bidirectionally; the adapter owner can alter peer and delegate configuration.",
+          "attestorQuorum": "The official configuration requires Canary, Deutsche Telekom, and P2P DVNs with 5 confirmations Plasma-to-Ethereum and 15 confirmations Ethereum-to-Plasma; live Endpoint ULN state was not independently replayed.",
+          "pausersAdminsUpgraders": "At Plasma block 29972504 the adapter owner was this 2-of-3 Ebisu Safe. The owner can change peers, delegate, enforced options, message inspector, and pre-crime configuration; no adapter upgrade authority was separately evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 29972504,
+        "sources": [
+          {
+            "label": "Plasma LayerZero adapter",
+            "url": "https://routescan.io/address/0xE46572553248e538c389010c6146ac499e3daeff"
+          },
+          {
+            "label": "Ebisu OFT LayerZero configuration",
+            "url": "https://github.com/ebisufinance/ebisu-oft/blob/main/layerzero.config.ts"
+          },
+          {
+            "label": "Plasma JSON-RPC fixed-block reads",
+            "url": "https://rpc.plasma.to/"
+          }
+        ],
+        "evidence": "At Plasma block 29972504, the LayerZero MintBurnOFTAdapter owner was the Ebisu 2-of-3 Safe 0x25b85831da750c912ab7f0cf53b9d82f7894ed07, endpoint() was 0x1a44076050125825900e736c501f859c50fe728c, minterBurner() was 0xc23fc24c55db916ae0d6e3f533e89f67462d64b2, and operators(adapter) returned true. The adapter's owner-controlled peer, delegate, enforced-option, inspector, and pre-crime surfaces are bridge administration, not native CDP mint authority."
+      },
+      {
+        "id": "ebusd-plasma-layerzero-burner-owner",
+        "label": "Ebisu Plasma ElevatedMinterBurner owner",
+        "routeRefs": [
+          "plasma:0xef7b1a03e0897c33b63159e38d779e3970c0e2fc"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0xcc3833a6533d01172709b8c638e139ec9b8b7cea",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "eoa:plasma:0xcc3833a6533d01172709b8c638e139ec9b8b7cea"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "ElevatedMinterBurner restricts mint() and burn() to its operator and calls the token's privileged mint/burn methods; operators(adapter) was true at the observed block.",
+          "pausersAdminsUpgraders": "The burner owner can remove the adapter operator, changing whether this bridge adapter can execute its burn/mint path."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 29972504,
+        "sources": [
+          {
+            "label": "Ebisu OFT repository",
+            "url": "https://github.com/ebisufinance/ebisu-oft"
+          },
+          {
+            "label": "Plasma LayerZero adapter",
+            "url": "https://routescan.io/address/0xE46572553248e538c389010c6146ac499e3daeff"
+          },
+          {
+            "label": "Plasma JSON-RPC fixed-block reads",
+            "url": "https://rpc.plasma.to/"
+          }
+        ],
+        "evidence": "At Plasma block 29972504, the adapter's minterBurner() returned 0xc23fc24c55db916ae0d6e3f533e89f67462d64b2, its owner() returned 0xcc3833a6533d01172709b8c638e139ec9b8b7cea, and operators(adapter) returned true. The official ElevatedMinterBurner source restricts mint() and burn() to an operator and delegates to the native token's privileged mint/burn methods; the burner owner can remove the adapter operator."
       }
     ]
   }

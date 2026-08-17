@@ -334,32 +334,51 @@ function isKnownRequiredStatus(status: V9FactStatusV2): boolean {
   return status.applicability.state === "required" && status.observationState === "known";
 }
 
+function commonModeMemberStatus(
+  member: V9CommonModeMember,
+  assetsById: ReadonlyMap<string, V9AssetFactsV3>,
+): V9FactStatusV2 | null {
+  const asset = assetsById.get(member.assetId);
+  if (!asset) return null;
+  if (member.owner === "backing") {
+    const exposure = asset.reserveExposures.find((candidate) => candidate.exposureKey === member.pathKey);
+    return exposure?.status ?? null;
+  }
+  if (member.owner === "exit") {
+    const route = asset.exitRoutes.find((candidate) => candidate.routeKey === member.pathKey);
+    return route?.status ?? null;
+  }
+  if (member.owner === "control") {
+    const control = asset.controls.find((candidate) => candidate.controlKey === member.pathKey);
+    return control?.status ?? null;
+  }
+  if (member.owner === "dependency") {
+    return (
+      asset.dependencies.edges.some((edge) => edge.edgeKey === member.pathKey)
+        ? asset.dependencies.status
+        : null
+    );
+  }
+  if (member.owner === "peg") return asset.peg.status;
+  return asset.supply.status;
+}
+
 function isKnownCommonModeMember(
   member: V9CommonModeMember,
   assetsById: ReadonlyMap<string, V9AssetFactsV3>,
 ): boolean {
-  const asset = assetsById.get(member.assetId);
-  if (!asset) return false;
-  if (member.owner === "backing") {
-    const exposure = asset.reserveExposures.find((candidate) => candidate.exposureKey === member.pathKey);
-    return exposure !== undefined && isKnownRequiredStatus(exposure.status);
-  }
-  if (member.owner === "exit") {
-    const route = asset.exitRoutes.find((candidate) => candidate.routeKey === member.pathKey);
-    return route !== undefined && isKnownRequiredStatus(route.status);
-  }
-  if (member.owner === "control") {
-    const control = asset.controls.find((candidate) => candidate.controlKey === member.pathKey);
-    return control !== undefined && isKnownRequiredStatus(control.status);
-  }
-  if (member.owner === "dependency") {
-    return (
-      isKnownRequiredStatus(asset.dependencies.status) &&
-      asset.dependencies.edges.some((edge) => edge.edgeKey === member.pathKey)
-    );
-  }
-  if (member.owner === "peg") return isKnownRequiredStatus(asset.peg.status);
-  return isKnownRequiredStatus(asset.supply.status);
+  const status = commonModeMemberStatus(member, assetsById);
+  return status !== null && isKnownRequiredStatus(status);
+}
+
+function isBoundedUnknownCommonModeMember(
+  member: V9CommonModeMember,
+  assetsById: ReadonlyMap<string, V9AssetFactsV3>,
+): boolean {
+  const status = commonModeMemberStatus(member, assetsById);
+  return status !== null &&
+    status.applicability.state === "required" &&
+    status.observationState === "bounded-unknown";
 }
 
 function sharesReconcile(left: number, right: number): boolean {
@@ -803,11 +822,21 @@ function commonModeSignalsByAsset(
       };
     })();
     const mintControlSeverity = mintControlAssessment?.severity ?? null;
-    const memberFactsKnown = effectiveMembers.every((member) =>
-      isKnownCommonModeMember(member, assetsById),
-    );
+    const boundedUnknownMemberCount = effectiveMembers.filter((member) =>
+      isBoundedUnknownCommonModeMember(member, assetsById),
+    ).length;
+    const groupHasBoundedUnknownMember = boundedUnknownMemberCount > 0;
     const controlAssetDomainId = v9ControlAssetDomainId(group.failureDomain);
     for (const assetId of assetIds) {
+      const ownMembers = effectiveMembers.filter((member) => member.assetId === assetId);
+      const ownMemberFactsKnown = ownMembers.every((member) =>
+        isKnownCommonModeMember(member, assetsById),
+      );
+      const ownMemberFactsReviewed = ownMembers.every(
+        (member) =>
+          isKnownCommonModeMember(member, assetsById) ||
+          isBoundedUnknownCommonModeMember(member, assetsById),
+      );
       const parentControlled = isV9ParentControlledCommonModeMember(assetId, controlAssetDomainId, plan.serialPaths);
       const controllerOwned = isV9ControllerOwnedCommonModeMember(
         assetId,
@@ -839,19 +868,26 @@ function commonModeSignalsByAsset(
       // that share and demote the cross-asset group trigger to secondary
       // context; readers otherwise misread the group count as the driver.
       const ownShare = severity !== "low" && shareInfo !== null ? shareInfo.share : null;
+      // Evidence ownership is local to the receiving asset. A reviewed
+      // bounded-unknown member is still adverse — an unverified critical
+      // control cannot make a shared failure domain safer — while a truly
+      // missing/stale/unresolved member remains integration-owned.
       const responsibility: V9EvidenceResponsibility =
         shareInfo !== null
           ? shareInfo.share === null
             ? "integration-missing"
             : "measured-adverse"
-          : memberFactsKnown &&
+          : ownMemberFactsReviewed &&
               (mintControlAssessment === null || mintControlAssessment.identitiesKnown)
             ? "measured-adverse"
             : "integration-missing";
+      const memberQualityClause = groupHasBoundedUnknownMember
+        ? `; ${boundedUnknownMemberCount} shared member${boundedUnknownMemberCount === 1 ? " is" : "s are"} bounded-unknown and remains adverse`
+        : "";
       const reason =
         ownShare !== null
-          ? `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier} (also ${groupClause}).`
-          : `${groupClause}, ${qualifier}.`;
+          ? `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier} (also ${groupClause}${memberQualityClause}).`
+          : `${groupClause}${memberQualityClause}, ${qualifier}.`;
       const economicLossScope = commonModeEconomicScope(group.failureDomain.kind);
       const localDeploymentKeys = uniqueSorted(
         effectiveMembers
@@ -891,7 +927,8 @@ function commonModeSignalsByAsset(
         expectedRecoverySec: null,
         lossAbsorptionPct: 0,
         responsibility,
-        evidenceConfidence: responsibility === "measured-adverse" ? "high" : "low",
+        evidenceConfidence:
+          responsibility === "measured-adverse" && ownMemberFactsKnown ? "high" : "low",
         failureDomainKeys: [key],
         evidence: [],
       };

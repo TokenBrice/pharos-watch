@@ -7,6 +7,9 @@
     "summary": "DOC is minted permissionlessly against rBTC locked in Money On Chain's overcollateralized contracts on Rootstock, with permissionless DOC-for-rBTC redemption. The DoCToken is Ownable and its owner is the MoCExchange proxy, which is the only direct minter. MoCExchange is a zeppelinOS transparent proxy whose admin is the published Admin contract, owned by the Upgrade Delegator, which is governed by the Money On Chain Governor. The Governor authorizes Changer contracts and can therefore upgrade mint-critical logic, so the mint bound is governance-revocable rather than immutable. The Governor's owner is the verified Money On Chain VotingMachine proxy: token holders vote on proposals, and an accepted proposal calls the Governor to execute its Changer. The VotingMachine is itself upgradeable through a ProxyAdmin and UpgradeDelegator governed by that same Governor. The posture remains partially bounded because governance can alter collateral parameters and replace mint-critical logic, not because of an unidentified off-chain signer set.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+      ],
       "proxyAddresses": [
         "0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038"
       ],
@@ -40,6 +43,9 @@
       {
         "chain": "rootstock",
         "address": "0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038",
+        "deploymentRefs": [
+          "rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+        ],
         "label": "MoCExchange (DOC mint and redeem contract)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -74,6 +80,9 @@
       {
         "chain": "rootstock",
         "address": "0x3b8853df65afbd94853e6d77ee0ab5590f41bb08",
+        "deploymentRefs": [
+          "rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+        ],
         "label": "Money On Chain Governor",
         "role": "governor",
         "authorityType": "contract",
@@ -99,6 +108,9 @@
       {
         "chain": "rootstock",
         "address": "0x65a5681be95d212f0c90ead40170d8277de81169",
+        "deploymentRefs": [
+          "rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+        ],
         "label": "Money On Chain VotingMachine",
         "role": "governor",
         "authorityType": "contract",

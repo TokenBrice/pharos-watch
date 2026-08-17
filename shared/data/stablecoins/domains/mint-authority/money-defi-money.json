@@ -4,18 +4,106 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "MONEY is an authorized crvUSD fork on Arbitrum/Optimism: users deposit approved collateral (WBTC, ETH, etc.) and mint MONEY against per-market debt ceilings using crvUSD's controller/LLAMMA design; defi.money governance/admin controls market onboarding and risk parameters.",
+    "summary": "MONEY has independent native crvUSD-style CDP issuance on Arbitrum, Base, and Optimism: users deposit approved collateral (WBTC, ETH, etc.) and mint MONEY against per-market debt ceilings using defi.money's controller/LLAMMA design; the defi.money admin Safe controls market onboarding and native risk parameters. LayerZero OFT transfer machinery is assessed separately in Bridge Risk.",
     "controls": [
       {
         "chain": "arbitrum",
+        "address": "0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD",
+        "deploymentRefs": [
+          "arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
         "label": "defi.money market controllers (crvUSD-style minter)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "MONEY is minted only against overcollateralized loans in defi.money markets under per-market debt ceilings, using crvUSD's controller and LLAMMA soft-liquidation mechanics; supply tracks collateralized borrowing, not an issuer minter.",
-        "evidence": "defi.money docs describe a crvUSD-style loan/CDP stablecoin where users deposit approved collateral and borrow MONEY against per-market risk parameters with peg-keeper/LLAMMA mechanics.",
+        "capDescription": "At Arbitrum block 495410695, MONEY is minted only against overcollateralized loans in defi.money markets under the 100,000,000 MONEY global ceiling and market-specific debt parameters; supply tracks collateralized borrowing, not an issuer minter.",
+        "observedAt": "2026-08-17",
+        "observedBlock": 495410695,
+        "sources": [
+          {
+            "label": "defi.money deployment registry",
+            "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+          },
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Arbitrum MONEY deployment",
+            "url": "https://arbiscan.io/address/0x69420f9e38a4e60a62224c489be4bf7a94402496"
+          }
+        ],
+        "evidence": "At Arbitrum block 495410695, the official deployment registry's MainController address was code-bearing and approved as a MONEY minter; STABLECOIN() returned the MONEY token, total_debt() was 1,108.978117087481937268 MONEY, get_market_count() returned 7, and global_market_debt_ceiling() returned 100,000,000 MONEY. MainController.create_loan deposits collateral, creates the loan, checks the debt ceiling, and calls MONEY.mint; this is native CDP issuance, not bridge representation minting.",
+        "failureDomainKeys": [
+          "protocol:defi-money-controllers"
+        ]
+      },
+      {
+        "chain": "optimism",
+        "address": "0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD",
+        "deploymentRefs": [
+          "optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "label": "defi.money Optimism market controller (crvUSD-style minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "At Optimism block 155676713, MONEY is minted only against overcollateralized loans in defi.money markets under the 100,000,000 MONEY global ceiling and market-specific debt parameters; supply tracks collateralized borrowing, not an issuer minter.",
+        "observedAt": "2026-08-17",
+        "observedBlock": 155676713,
+        "sources": [
+          {
+            "label": "defi.money deployment registry",
+            "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+          },
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Optimism MONEY deployment",
+            "url": "https://optimistic.etherscan.io/address/0x69420f9e38a4e60a62224c489be4bf7a94402496"
+          }
+        ],
+        "evidence": "At Optimism block 155676713, the official deployment registry's MainController address was code-bearing and approved as a MONEY minter; STABLECOIN() returned the MONEY token, total_debt() was 643.699565770568508326 MONEY, get_market_count() returned 5, and global_market_debt_ceiling() returned 100,000,000 MONEY. MainController.create_loan deposits collateral, creates the loan, checks the debt ceiling, and calls MONEY.mint; this is native CDP issuance, not bridge representation minting.",
+        "failureDomainKeys": [
+          "protocol:defi-money-controllers"
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD",
+        "deploymentRefs": [
+          "base:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "label": "defi.money Base market controller (crvUSD-style minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "At Base block 50081434, MONEY is minted only against overcollateralized loans in defi.money markets under the 100,000,000 MONEY global ceiling and market-specific debt parameters; supply tracks collateralized borrowing, not an issuer minter.",
+        "observedAt": "2026-08-17",
+        "observedBlock": 50081434,
+        "sources": [
+          {
+            "label": "defi.money deployment registry",
+            "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+          },
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Base MONEY deployment",
+            "url": "https://basescan.org/address/0x69420f9e38a4e60a62224c489be4bf7a94402496"
+          }
+        ],
+        "evidence": "At Base block 50081434, the official deployment registry's MainController address was code-bearing and approved as a MONEY minter; STABLECOIN() returned the MONEY token, total_debt() was 353.073553341062178176 MONEY, get_market_count() returned 5, and global_market_debt_ceiling() returned 100,000,000 MONEY. MainController.create_loan deposits collateral, creates the loan, checks the debt ceiling, and calls MONEY.mint; this is native CDP issuance, not bridge representation minting.",
         "failureDomainKeys": [
           "protocol:defi-money-controllers"
         ]
@@ -23,6 +111,9 @@
       {
         "chain": "arbitrum",
         "address": "0x222d2B30EcD382a058618d9F1ee01F147666E48b",
+        "deploymentRefs": [
+          "arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
         "label": "defi.money admin Safe (MONEY token owner)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -31,12 +122,14 @@
         "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "defi.money 3-of-7 Safe owns MONEY token and controls market onboarding, debt ceilings, and risk parameters.",
-        "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API (arb1) confirmed Gnosis Safe v1.3.0+L2, threshold 3, 7 owners (0x3e254c20, 0x334deb1b, 0xCA88C5D4, 0x31dADb64, 0x86cf559f, 0xDeF1c4aD, 0xbADbABEF), no modules, no guard, nonce 6. EIP-1967 admin slot returned zero — not an upgradeable proxy. Direct Arbitrum RPC reads at block 472427523: getOwners() returned 7 owners, getThreshold()=3, getModulesPaginated empty, guard slot zero, masterCopy GnosisSafeL2 v1.3.0.",
+        "capDescription": "defi.money 3-of-7 Safe owns the Arbitrum MONEY deployment and controls native market onboarding, debt ceilings, and risk parameters; its LayerZero peer, pause, options, and delegate powers are separately authored under Bridge Risk.",
+        "observedAt": "2026-08-17",
+        "observedBlock": 495412172,
+        "evidence": "At Arbitrum block 495412172, Safe API and on-chain reads confirmed Gnosis Safe v1.3.0+L2, threshold 3, 7 owners, no enabled modules, and zero guard. At the native MONEY deployment, the Safe's token ownership and controller administration can authorize native market controllers and raise debt ceilings; its separate LayerZero peer, pause, options, and delegate powers are Bridge Risk, not global Mint Authority bridge capability.",
         "sources": [
           {
-            "label": "Arbitrum MONEY token (Arbiscan)",
-            "url": "https://arbiscan.io/token/0x69420f9e38a4e60a62224c489be4bf7a94402496"
+            "label": "Arbitrum Safe state",
+            "url": "https://safe-transaction-arbitrum.safe.global/api/v1/safes/0x222d2B30EcD382a058618d9F1ee01F147666E48b/"
           }
         ],
         "safe": {
@@ -54,37 +147,150 @@
           "enabledModules": [],
           "guard": null,
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "observedBlock": 472427523,
+          "observedBlock": 495412172,
           "source": "onchain"
         }
+      },
+      {
+        "chain": "optimism",
+        "address": "0x222d2B30EcD382a058618d9F1ee01F147666E48b",
+        "deploymentRefs": [
+          "optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "label": "defi.money Optimism admin Safe (MONEY token owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 7,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "defi.money 3-of-7 Safe owns the Optimism MONEY deployment and controls native market onboarding, debt ceilings, and risk parameters; its LayerZero peer, pause, options, and delegate powers are separately authored under Bridge Risk.",
+        "observedAt": "2026-08-17",
+        "observedBlock": 155676732,
+        "sources": [
+          {
+            "label": "Optimism Safe state",
+            "url": "https://safe-transaction-optimism.safe.global/api/v1/safes/0x222d2B30EcD382a058618d9F1ee01F147666E48b/"
+          }
+        ],
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x3E254c201c2fF0097F87fa02f415c82a244450cA",
+            "0x334dEb1bC3bEdb88f20b77dCC5F1C624a8b8eDd5",
+            "0xcA88c5D43BB11edBcbc1436FEFa9d578D8d64489",
+            "0x31DAdB64d665d66665Bc026A18758663e88711FB",
+            "0x86Cf559F9bf1Bc9A9eFB9c77694D310f356Cf856",
+            "0xDef1c4Ad4A9C6BCD718c91E6Ab79958217FA27Da",
+            "0xBaDbabeFa66bfA6e01C4918229EA65e20Bbc79E2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 155676732,
+          "source": "onchain"
+        },
+        "evidence": "At Optimism block 155676732, Safe API and on-chain reads confirmed the same Gnosis Safe v1.3.0+L2 3-of-7 state as the other native deployments. The Safe controls native market onboarding and debt ceilings through the Optimism controller; its separate LayerZero peer, pause, options, and delegate powers are Bridge Risk.",
+        "failureDomainKeys": [
+          "safe:optimism:0x222d2b30ecd382a058618d9f1ee01f147666e48b"
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x222d2B30EcD382a058618d9F1ee01F147666E48b",
+        "deploymentRefs": [
+          "base:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "label": "defi.money Base admin Safe (MONEY token owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 7,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "defi.money 3-of-7 Safe owns the Base MONEY deployment and controls native market onboarding, debt ceilings, and risk parameters; its LayerZero peer, pause, options, and delegate powers are separately authored under Bridge Risk.",
+        "observedAt": "2026-08-17",
+        "observedBlock": 50081448,
+        "sources": [
+          {
+            "label": "Base Safe state",
+            "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x222d2B30EcD382a058618d9F1ee01F147666E48b/"
+          }
+        ],
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x3E254c201c2fF0097F87fa02f415c82a244450cA",
+            "0x334dEb1bC3bEdb88f20b77dCC5F1C624a8b8eDd5",
+            "0xcA88c5D43BB11edBcbc1436FEFa9d578D8d64489",
+            "0x31DAdB64d665d66665Bc026A18758663e88711FB",
+            "0x86Cf559F9bf1Bc9A9eFB9c77694D310f356Cf856",
+            "0xDef1c4Ad4A9C6BCD718c91E6Ab79958217FA27Da",
+            "0xBaDbabeFa66bfA6e01C4918229EA65e20Bbc79E2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 50081448,
+          "source": "onchain"
+        },
+        "evidence": "At Base block 50081448, Safe API and on-chain reads confirmed the same Gnosis Safe v1.3.0+L2 3-of-7 state as the other native deployments. The Safe controls native market onboarding and debt ceilings through the Base controller; its separate LayerZero peer, pause, options, and delegate powers are Bridge Risk.",
+        "failureDomainKeys": [
+          "safe:base:0x222d2b30ecd382a058618d9f1ee01f147666e48b"
+        ]
       }
     ],
     "upgradeability": {
       "model": "immutable",
+      "deploymentRefs": [
+        "arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+        "base:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+        "optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+      ],
       "implementationAddresses": [
         "0x69420f9e38a4e60a62224c489be4bf7a94402496"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-20",
-      "observedBlock": 472419864,
+      "observedAt": "2026-08-17",
+      "observedBlock": 495419385,
       "sources": [
         {
           "label": "Arbitrum MONEY token",
           "url": "https://arbiscan.io/address/0x69420f9e38a4e60a62224c489be4bf7a94402496#code"
+        },
+        {
+          "label": "Optimism MONEY token",
+          "url": "https://optimistic.etherscan.io/address/0x69420f9e38a4e60a62224c489be4bf7a94402496#code"
+        },
+        {
+          "label": "Base MONEY token",
+          "url": "https://basescan.org/address/0x69420f9e38a4e60a62224c489be4bf7a94402496#code"
         }
       ]
     },
-    "economicCapSemantics": "unbounded",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API confirmed Gnosis Safe v1.3.0+L2, 3-of-7 threshold, 7 owners, no modules, no guard. EIP-1967 admin slot zero (not upgradeable proxy). No minter() selector on token. crvUSD-style market controllers are bounded by the Safe's admin authority; no independent privileged mint surface detected on the token. 2026-07-20 dc-1 pass: the crvUSD-style market-controller set has no single contract address; its failure domain is recorded as protocol:defi-money-controllers. The economic mint cap is raiseable — the verified admin Safe 0x222d2B30EcD382a058618d9F1ee01F147666E48b can authorize controllers and raise caps (can-authorize + canRaiseCap=true in this profile). Economic-posture fields reviewed 2026-08-15: the self-controlled 3-of-7 Safe can authorize controllers and raise caps without an independent delay, while current issuance is on-chain CDP collateral and no supervisor or attestor is evidenced.",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Arbitrum block 495410695, the MainController approved the MONEY token as its minter and reported 7 markets, positive total debt, and a 100,000,000 MONEY global debt ceiling; equivalent native reads were confirmed at Optimism block 155676713 and Base block 50081434. Safe reads at Arbitrum block 495412172, Optimism block 155676732, and Base block 50081448 confirmed the same 3-of-7 Safe with 7 owners, no enabled modules, and zero guard. EIP-1967 implementation and admin slots for the token and controller were zero at Arbitrum block 495419385, Optimism block 155677632, and Base block 50082350, confirming immutable native mint logic. The Safe can authorize controllers and raise native debt ceilings without an independent delay; LayerZero OFT bridge mint/burn, peer configuration, pause, and message validation are separate Bridge Risk machinery.",
+      "reviewer": "Codex mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-17",
       "sources": [
         {
           "label": "defi.money docs",
           "url": "https://docs.defi.money/"
+        },
+        {
+          "label": "defi.money deployment registry",
+          "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+        },
+        {
+          "label": "Pinned MainController source",
+          "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
         },
         {
           "label": "Arbitrum MONEY token (Arbiscan)",

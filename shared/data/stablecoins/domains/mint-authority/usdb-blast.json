@@ -1,170 +1,61 @@
 {
   "id": "usdb-blast",
   "mintAuthority": {
-    "mintPath": "bridge-or-oft-synthetic",
-    "authorityPosture": "unbounded-or-compromised",
-    "confidence": "verified",
-    "summary": "USDB is the Blast L2 native dollar minted by the OP-stack L1 standard bridge / stablecoin yield manager. The L1 USDYieldManager is owned by a 3/5 Gnosis Safe (Blast operator multisig). USDB on Blast is an OP-stack predeploy with ProxyAdmin at the L2 standard predeploy (0x4200…0018).",
-    "upgradeability": {
-      "model": "transparent-proxy",
-      "proxyAddresses": [
-        "0x4300000000000000000000000000000000000003"
-      ],
-      "implementationAddresses": [
-        "0x4ef0d788470e2feb6559b93075ec5be51dba737d"
-      ],
-      "adminAddresses": [
-        "0x4200000000000000000000000000000000000018"
-      ],
-      "canChangeMintLogic": true,
-      "controlRef": "USDB L2 ProxyAdmin owner Safe",
-      "observedAt": "2026-07-14",
-      "observedBlock": 37610961,
-      "sources": [
-        {
-          "label": "USDB Blast token proxy",
-          "url": "https://blastscan.io/address/0x4300000000000000000000000000000000000003#code"
-        },
-        {
-          "label": "Blast L2 ProxyAdmin predeploy",
-          "url": "https://blastscan.io/address/0x4200000000000000000000000000000000000018#code"
-        },
-        {
-          "label": "Blast ProxyAdmin owner Safe",
-          "url": "https://blastscan.io/address/0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937#code"
-        },
-        {
-          "label": "Blast RPC",
-          "url": "https://rpc.blast.io"
-        }
-      ]
-    },
-    "controls": [
-      {
-        "label": "Blast USDYieldManager (L1 stablecoin escrow/yield manager)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "chain": "ethereum",
-        "address": "0xa230285d5683C74935aD14c446e137c8c8828438",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "USDB supply tracks stablecoins escrowed in the L1 bridge/yield manager; mint/burn is driven by L1 deposits and withdrawals, not a fixed cap.",
-        "routeChecks": {
-          "lockboxOrEscrow": "USDB supply tracks stablecoins escrowed in the L1 USDYieldManager / bridge route.",
-          "onchainAmountBounds": "Mint/burn is driven by L1 deposits and withdrawals rather than a standalone token minter.",
-          "caps": "No fixed cap; bridge mint capacity follows escrowed stablecoin balances in the yield manager.",
-          "pausersAdminsUpgraders": "USDYieldManager owner is the separately reviewed Blast operator Safe."
-        },
-        "evidence": "At Ethereum block 25294780: eth_getCode(0xa230285d5683C74935aD14c446e137c8c8828438) returned contract bytecode. owner() = 0x4f72ee94b8ba3be7f886565d3583a7f636c58b05 (Blast operator Safe). Metalayer/Blast docs confirm this contract escrows stablecoins and routes yield.",
-        "sources": [
-          {
-            "label": "Metalayer contracts",
-            "url": "https://metalayerlabs.mintlify.app/building/contracts"
-          }
-        ]
-      },
-      {
-        "label": "Blast operator multisig (USDYieldManager owner)",
-        "role": "bridge-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "chain": "ethereum",
-        "address": "0x4f72ee94b8ba3be7f886565d3583a7f636c58b05",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "threshold": 3,
-        "signerCount": 5,
-        "routeChecks": {
-          "pausersAdminsUpgraders": "Blast operator Safe owns the USDYieldManager bridge/yield route; reviewed as 3-of-5 with no modules.",
-          "caps": "Safe can administer the bridge/yield manager route, whose mint capacity follows escrowed stablecoin balances rather than an immutable cap."
-        },
-        "safe": {
-          "owners": [
-            "0x6520ad883d3d76f0120443c72ad7463cab2439a4",
-            "0x480ea8ba8de8d05a30f4f4cbede1e28e05ae1b2c",
-            "0xf97ec9b92efda3afe52945b4e9ade0394c9e705d",
-            "0xab5972612e8cee66f246feacb8d500df3c6cfada",
-            "0x7dbdfbb265bf26e626b44132ef4e3a3e6eec1282"
-          ],
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": null,
-          "fallbackHandler": null,
-          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
-          "observedBlock": 25294780,
-          "source": "onchain"
-        },
-        "evidence": "At Ethereum block 25294780: USDYieldManager.owner() = 0x4f72ee94b8ba3be7f886565d3583a7f636c58b05. Storage slot 0 = GnosisSafe v1.3.0 masterCopy (0xd9db270c…), slot 3 = ownerCount = 5, slot 4 = threshold = 3, slot 1 = 0 (no modules). getOwners() returned 5 addresses.",
-        "sources": [
-          {
-            "label": "Blast USDYieldManager (Etherscan)",
-            "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
-          }
-        ]
-      },
-      {
-        "chain": "blast",
-        "address": "0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937",
-        "label": "USDB L2 ProxyAdmin owner Safe",
-        "role": "proxy-admin",
-        "authorityType": "safe",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": true,
-        "threshold": 3,
-        "signerCount": 5,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "version": "1.3.0",
-          "owners": [
-            "0x6520ad883d3d76f0120443c72ad7463cab2439a4",
-            "0x480ea8ba8de8d05a30f4f4cbede1e28e05ae1b2c",
-            "0xf97ec9b92efda3afe52945b4e9ade0394c9e705d",
-            "0xab5972612e8cee66f246feacb8d500df3c6cfada",
-            "0x2cf48f69a61261e67e3317d28cf0edd1acafa03d"
-          ],
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": null,
-          "masterCopy": "0x27b673b874cebefc9ba9f2b8b6005c6b86210da0",
-          "observedBlock": 37610961,
-          "observedAt": "2026-07-14",
-          "source": "onchain"
-        },
-        "observedAt": "2026-07-14",
-        "observedBlock": 37610961,
-        "sources": [
-          {
-            "label": "Blast L2 ProxyAdmin predeploy",
-            "url": "https://blastscan.io/address/0x4200000000000000000000000000000000000018#code"
-          },
-          {
-            "label": "Blast ProxyAdmin owner Safe",
-            "url": "https://blastscan.io/address/0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937#code"
-          },
-          {
-            "label": "USDB Blast token proxy",
-            "url": "https://blastscan.io/address/0x4300000000000000000000000000000000000003#code"
-          }
-        ],
-        "evidence": "At Blast block 37610961, the USDB EIP-1967 admin slot and proxy admin() both returned 0x4200000000000000000000000000000000000018. L2 ProxyAdmin getProxyImplementation(USDB) returned 0x4ef0d788470e2feb6559b93075ec5be51dba737d and owner() returned 0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937. The owner is a Gnosis Safe v1.3.0 with five owners, threshold 3, no enabled modules, and no guard; its masterCopy is 0x27b673b874cebefc9ba9f2b8b6005c6b86210da0."
-      }
-    ],
-    "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "mintPath": "unknown",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "The sole authored USDB deployment is Blast's bridge representation. The Ethereum USDYieldManager/L1BlastBridge route anchors reserve and bridge accounting, but no independently authored native-USDB issuance deployment is claimed; bridge mint/burn and upgrade controls are reviewed only in Bridge Risk.",
+    "economicCapSemantics": "unknown",
+    "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25294780 (Ethereum) / Blast block 37610961: USDYieldManager owner = Blast operator Safe 0x4f72ee94b8 (5 owners, threshold 3, GnosisSafe v1.3.0, no modules). USDB on Blast is a transparent OP-stack proxy (implementation 0x4ef0d788470e2feb6559b93075ec5be51dba737d) with ProxyAdmin at predeploy 0x4200000000000000000000000000000000000018; that ProxyAdmin is owned by a separate 3-of-5 Gnosis Safe at 0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937 with no enabled modules or guard. All bridge-admin and proxy-admin controls confirmed on-chain.. Economic-posture fields reviewed 2026-08-15: the operator and proxy-owner Safes can replace mint logic without a timelock, while the live yield-manager path reconciles the sole DAI reserve against Blast supply and no prudential supervisor or independent attestor is evidenced.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Blast block 39052431 (2026-08-16), the authored USDB deployment 0x4300000000000000000000000000000000000003 resolved to a bridge-only mint/burn path through L2BlastBridge 0x4300000000000000000000000000000000000005, and the official USDB source restricts mint and burn to that bridge. At Ethereum block 25770239 (2026-08-16), L1BlastBridge and USDYieldManager reads establish the paired deposit, conversion, and withdrawal route; USDYieldManager totalValue() and sharePrice() describe route-level reserve accounting, not a native USDB issuance cap. The former bridge-admin and proxy-admin facts are preserved in bridgeRouteRisk and are not counted as native Mint Authority.",
+      "reviewer": "Codex mint-bridge-boundary migration FIX2-20",
+      "reviewedAt": "2026-08-16",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "No separate canonical Ethereum USDB contract is authored; if a distinct native-liability deployment exists outside the reviewed Blast route, it remains to be identified."
+      ],
+      "noLocalIssuance": {
+        "kind": "external-only-representation",
+        "reviewedAt": "2026-08-16",
+        "reviewer": "Codex mint-bridge-boundary migration FIX2-20",
+        "rationale": "The only authored contract is the Blast USDB bridge representation; official Blast documentation and verified source tie mint/burn to L2BlastBridge and the Ethereum route, so no independently authored local native-USDB issuance is claimed.",
+        "sources": [
+          {
+            "label": "Blast official contract directory",
+            "url": "https://docs.blast.io/building/contracts"
+          },
+          {
+            "label": "Blast mainnet bridge guide",
+            "url": "https://docs.blast.io/building/bridges/mainnet"
+          },
+          {
+            "label": "Blast USDB verified source",
+            "url": "https://github.com/blast-io/blast/blob/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/USDB.sol"
+          }
+        ]
+      },
       "sources": [
         {
-          "label": "Metalayer contracts",
-          "url": "https://metalayerlabs.mintlify.app/building/contracts"
+          "label": "Blast official contract directory",
+          "url": "https://docs.blast.io/building/contracts"
         },
         {
-          "label": "Blast USDYieldManager (Etherscan)",
-          "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
+          "label": "Blast mainnet bridge guide",
+          "url": "https://docs.blast.io/building/bridges/mainnet"
+        },
+        {
+          "label": "Blast USDB verified source",
+          "url": "https://github.com/blast-io/blast/blob/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/USDB.sol"
+        },
+        {
+          "label": "Blast StandardBridge verified source",
+          "url": "https://github.com/blast-io/blast/blob/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/universal/StandardBridge.sol"
+        },
+        {
+          "label": "Ethereum and Blast fixed-block JSON-RPC reads",
+          "url": "https://rpc.blast.io"
         }
       ]
     }

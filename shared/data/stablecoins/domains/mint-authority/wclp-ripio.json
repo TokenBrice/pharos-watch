@@ -4,10 +4,21 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "WCLP is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "summary": "WCLP has six reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's issuer EOA directly holds MINTER_ROLE and UPGRADER_ROLE on each native token, the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE, and the LimitedMinter contract is an additional bounded-but-raiseable issuer minter on four native deployments. The separate LimitedMinterBridge burn/mint adapter is reviewed only in Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+      ],
       "proxyAddresses": [
+        "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "0x61d450a098b6a7f69fc4b98ce68198fe59768651"
@@ -21,19 +32,19 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Ripio shared WCLP admin and MINTER_ROLE holder (EOA)",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25580089,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770539,
       "sources": [
+        {
+          "label": "Ripio LatamStable source",
+          "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LatamStable.sol"
+        },
         {
           "label": "WCLP Ethereum proxy",
           "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#code"
         },
         {
-          "label": "WCLP LatamStable implementation",
-          "url": "https://etherscan.io/address/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba#code"
-        },
-        {
-          "label": "Ethereum PublicNode RPC",
+          "label": "Ethereum JSON-RPC fixed reads",
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
@@ -42,17 +53,44 @@
       {
         "chain": "multichain",
         "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "deploymentRefs": [
+          "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
         "label": "Ripio shared WCLP admin and MINTER_ROLE holder (EOA)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true. eth_getCode returned 0x (EOA). Same role confirmed via hasRole on Base, BSC, Polygon, Gnosis, and Worldchain at same block range."
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio LatamStable source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LatamStable.sol"
+          },
+          {
+            "label": "WCLP Ethereum proxy",
+            "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25770539, Base block 50064508, Worldchain block 33791362, BSC block 116350307, Polygon block 92142224, and Gnosis block 47761530 (all 2026-08-16 UTC), issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b held MINTER_ROLE and UPGRADER_ROLE on each reviewed WCLP deployment. Its EVM code reads were empty where checked. LatamStable.mint() has no intrinsic cap or collateral condition, so this native issuer control remains unbounded."
       },
       {
-        "chain": "ethereum",
+        "chain": "multichain",
         "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": [
+          "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
         "label": "Ripio WCLP Safe multisig (DEFAULT_ADMIN_ROLE)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -76,32 +114,52 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "1.4.1",
-          "observedBlock": 25295015,
+          "observedBlock": 25770539,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) returned true. getOwners() returned 7 owners; getThreshold() returned 4. getModulesPaginated returned empty array (no modules). slot0 masterCopy = 0x41675c...61a (Safe v1.4.1 singleton). fallbackHandler = 0xfd0732...ec99 (standard CompatibilityFallbackHandler). getGuard() reverted (no guard)."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
-        "label": "Ripio WCLP Ethereum minter-router contract",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WCLP token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770539,
+        "sources": [
+          {
+            "label": "Ripio WCLP Safe multisig",
+            "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770539, the 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 held DEFAULT_ADMIN_ROLE on the native WCLP deployment. The Safe had the seven owners recorded above and no enabled modules; the current guard was not independently decoded in this pass. The Safe can authorize native minter and upgrade-role changes across the six issuer deployments, but the bridge adapter is not counted in this control."
       },
       {
         "chain": "multichain",
-        "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
-        "label": "Ripio WCLP cross-chain minter-router contract",
+        "address": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+        "deploymentRefs": [
+          "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "label": "Ripio WCLP LimitedMinter issuer facility",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WCLP token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
+        "capDescription": "Verified LimitedMinter source uses a fixed destination and daily limit. Its Ethereum and Celo configurations returned a 28,000,000-token daily limit; the contract is a separate issuer-operated minter facility and not the LimitedMinterBridge route.",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio LimitedMinter source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinter.sol"
+          },
+          {
+            "label": "WCLP Ethereum proxy",
+            "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#code"
+          }
+        ],
+        "evidence": "At the 2026-08-16 fixed reads, LimitedMinter 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 held WCLP MINTER_ROLE on Ethereum, BSC, Polygon, and Gnosis, but not on Base or Worldchain. The verified source fixes a destination and daily limit; the Ethereum and Celo configurations returned 28,000,000 wCLP per day. The contract's own MINTER_ROLE member count was zero where code was present, so its active operator path remains an evidence gap. This is an issuer-operated native minter on the four referenced deployments, not the cross-chain LimitedMinterBridge adapter."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -110,29 +168,50 @@
     "review": {
       "sources": [
         {
-          "label": "Ripio local stablecoins",
-          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
-        },
-        {
-          "label": "Ripio wFIAT page - attestation archive",
+          "label": "Ripio wFIAT product page",
           "url": "https://www.ripio.com/en/wfiat"
         },
         {
-          "label": "Ethereum WCLP contract",
-          "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+          "label": "Ripio latam-stables repository",
+          "url": "https://github.com/ripio/latam-stables"
         },
         {
-          "label": "Ripio Safe multisig",
-          "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          "label": "Ripio LatamStable source",
+          "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LatamStable.sol"
         },
         {
-          "label": "Ripio Celo launch and generic wFIAT attestation claim",
-          "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
+          "label": "Ripio LimitedMinter source",
+          "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinter.sol"
+        },
+        {
+          "label": "Ethereum JSON-RPC fixed reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Base JSON-RPC fixed reads",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "Worldchain JSON-RPC fixed reads",
+          "url": "https://worldchain-mainnet.g.alchemy.com/public"
+        },
+        {
+          "label": "BSC JSON-RPC fixed reads",
+          "url": "https://bsc-dataseed.binance.org"
+        },
+        {
+          "label": "Polygon JSON-RPC fixed reads",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Gnosis JSON-RPC fixed reads",
+          "url": "https://rpc.gnosischain.com"
         }
       ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Economic-posture fields reviewed 2026-08-15: issuer-controlled minters are uncapped across six chains, with no WCLP-specific whole-supply attestation or named prudential supervisor. Wave 2 external verification 2026-08-15: Ripio now generically claims local-auditor attestations for every wFIAT token and added Celo, but still publishes no WCLP-specific dated report, named attestor, or seven-chain liability reconciliation; reconciliation remains unknown and supervision remains none. Wave 1 reconciliation review: Ripio's current official wFIAT page lists dated attestations for wBRL, wCOP, wARS, and wMXN but none for wCLP; no named examiner, dated wCLP assets-and-liabilities report, or reconciliation cadence was found, so reconciliation remains unknown.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "The corrected native scope is six independent WCLP issuer deployments: Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis each expose the same LatamStable implementation, issuer EOA MINTER_ROLE and UPGRADER_ROLE, and current totalSupply at the fixed 2026-08-16 blocks. The issuer EOA can mint without an intrinsic token cap and can replace UUPS mint logic immediately; the 4-of-7 Safe can authorize role changes. The LimitedMinterBridge adapter's bridge burn/mint, rate-limit, admin, and pause machinery is relocated to bridgeRouteRisk and is not used to lower the native posture. Reconciliation remains unknown and no independent prudential supervisor is evidenced.",
+      "reviewer": "Codex mint-bridge-boundary migration FIX2-20",
+      "reviewedAt": "2026-08-16",
+      "disposition": "scoreable"
     }
   }
 }

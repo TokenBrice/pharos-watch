@@ -9,26 +9,26 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "AUDF is integrated with LayerZero and Stargate for cross-chain interoperability. Because Stargate/LayerZero introduces external bridge and messaging infrastructure, Pharos scores AUDF as external lock/mint route exposure rather than native-only issuance.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "summary": "AUDF has five issuer-native deployments on Ethereum, Polygon, Avalanche, Base, and Redbelly; those native issuance rows and their Admin Safe/operational EOA controls remain in Mint Authority. The Ethereum StablecoinMintBurnOFTAdapter at 0xd1ccc777949bd8c25a0c73ba0d20303c36ee6a91 is a separate LayerZero OFT bridge rail, with its bridge capabilities authored here as a control over the five token deployment routes. Exact destination peers, DVNs/validators, rate limits, pause/upgrade controls, and destination administrators remain unresolved, so external-lock-mint stays probable.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
     "confidence": "probable",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "LayerZero",
+        "source": "docs",
+        "name": "LayerZero OFT",
         "slug": "layerzero",
-        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart",
         "bridgeTypes": [
           "Lock & Mint",
           "Burn & Mint"
         ]
       },
       {
-        "source": "l2beat",
+        "source": "docs",
         "name": "Stargate",
         "slug": "stargate",
-        "url": "https://l2beat.com/interop/protocols/stargate",
+        "url": "https://stargate.finance/",
         "bridgeTypes": [
           "Lock & Mint",
           "Non-minting"
@@ -41,12 +41,12 @@
         "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/65f294b4fb7847349b4aa198/1710396597284/Forte%2BAUDF%2B-%2BWhitepaper%2B14.03.24.pdf"
       },
       {
-        "label": "L2BEAT LayerZero",
-        "url": "https://l2beat.com/interop/protocols/layerzero"
+        "label": "LayerZero OFT documentation",
+        "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
       },
       {
-        "label": "L2BEAT Stargate",
-        "url": "https://l2beat.com/interop/protocols/stargate"
+        "label": "Stargate",
+        "url": "https://stargate.finance/"
       }
     ],
     "routes": [
@@ -189,6 +189,77 @@
             "url": "https://forte.xyz/"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "audf-ethereum-oft-adapter",
+        "label": "AUDF Ethereum StablecoinMintBurnOFTAdapter",
+        "routeRefs": [
+          "ethereum:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "polygon:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "avalanche:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "base:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "redbelly:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x6929fd915b0755efdc255ea841b68a263a362c5a",
+        "failureDomainKeys": [
+          "contract:ethereum:0xd1ccc777949bd8c25a0c73ba0d20303c36ee6a91",
+          "safe:ethereum:0x6929fd915b0755efdc255ea841b68a263a362c5a",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x291aB44f97d76a65CD3fDC171C415543716296dE",
+            "0x4870de5A77E39d433050a02d393edeBFb039E5ae",
+            "0xB1BC0548A2A9afa1F3eB7B76c1cE6f51dc23D351",
+            "0x5280a66b32426FECaae87694F84cC46edfeC65D7",
+            "0xa39c07e5c15a065ceA1E51b50278fF57094D11e8"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25573497,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "The adapter is identified as a LayerZero StablecoinMintBurnOFTAdapter serving the AUDF native deployments; the exact destination peers and remote-token configuration were not enumerated.",
+          "rateLimits": "No adapter-specific bridge rate-limit state was enumerated in the reviewed primary sources.",
+          "pausersAdminsUpgraders": "The adapter owner() returned the AUDF Admin Safe, but exact adapter pause, upgrade, emergency, DVN, and destination administrator controls were not enumerated."
+        },
+        "capDescription": "The adapter can mint and burn AUDF as part of the cross-chain OFT path. Its route-level conservation, rate limits, and emergency controls remain unresolved and are not compiled into native Mint Authority.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770091,
+        "sources": [
+          {
+            "label": "AUDF Ethereum OFT adapter",
+            "url": "https://eth.blockscout.com/address/0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91"
+          },
+          {
+            "label": "AUDF admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6929Fd915b0755EfDC255eA841B68a263A362C5A/"
+          },
+          {
+            "label": "LayerZero OFT documentation",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ],
+        "evidence": "The AUDF implementation grants MINT_ROLE to StablecoinMintBurnOFTAdapter 0xd1ccc777949bd8c25a0c73ba0d20303c36ee6a91 for the LayerZero OFT route. A current Ethereum RPC read on 2026-08-16 returned owner() = 0x6929fd915b0755efdc255ea841b68a263a362c5a, the 2-of-5 AUDF Admin Safe; the adapter has deployed code. This bridge mint/burn capability and shared Safe failure domain are preserved here as a control over the five authored AUDF deployment routes, while native Admin Safe/EOA issuance controls remain in Mint Authority. The prior bridge-route-facts-v1 classification remains represented by the profile tier, route capabilities, route checks, and observed evidence."
       }
     ]
   }

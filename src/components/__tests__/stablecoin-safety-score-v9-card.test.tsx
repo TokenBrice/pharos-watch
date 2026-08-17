@@ -14,6 +14,44 @@ const EXIT_WEAKEST_PILLARS = makeV9Pillars({ backing: 88, exit: 84, control: 86 
 describe("StablecoinSafetyScoreV9Card", () => {
   afterEach(cleanup);
 
+  it("names its subject in the header so a screenshot of the module stands alone", () => {
+    const card = makeV9Card({ score: 84, grade: "A", pillars: EXIT_WEAKEST_PILLARS });
+    const response = makeReportCardsV9Response({ cards: [card] });
+
+    const { container } = render(
+      <StablecoinSafetyScoreV9Card
+        card={card}
+        identity={response.safetyScoreIdentity}
+        publicationHealth={response.publicationHealth}
+        updatedAtMs={response.updatedAt * 1000}
+        stablecoinName="Test Stablecoin"
+        stablecoinSymbol="TUSD"
+        logoSrc="/logos/test-usd.png"
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Safety Score" })).toBeTruthy();
+    expect(screen.getByText("TUSD")).toBeTruthy();
+    expect(container.querySelector('img[alt="TUSD logo"]')).not.toBeNull();
+  });
+
+  it("keeps the header title alone when no coin identity is supplied", () => {
+    const card = makeV9Card({ score: 84, grade: "A", pillars: EXIT_WEAKEST_PILLARS });
+    const response = makeReportCardsV9Response({ cards: [card] });
+
+    render(
+      <StablecoinSafetyScoreV9Card
+        card={card}
+        identity={response.safetyScoreIdentity}
+        publicationHealth={response.publicationHealth}
+        updatedAtMs={response.updatedAt * 1000}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Safety Score" })).toBeTruthy();
+    expect(screen.queryByText("TUSD")).toBeNull();
+  });
+
   it("renders rated V9 data and reserve composition in one responsive card", () => {
     const bindingCap = {
       kind: "track-record",

@@ -4,9 +4,12 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "Ethereum USDa is an immutable AccessControl/OFT token with two current MINT_ROLE-holder proxies. Both minter ProxyAdmins and the token's ADMIN_ROLE, DEFAULT_ADMIN_ROLE, and owner resolve to the same 5-of-6 Safe, which can add minters, upgrade either minter proxy, and configure OFT peers.",
+    "summary": "Ethereum USDa is an immutable AccessControl/OFT token with two current MINT_ROLE-holder proxies. Both minter ProxyAdmins and the token's ADMIN_ROLE, DEFAULT_ADMIN_ROLE, and owner resolve to the same 5-of-6 Safe, which can add minters and upgrade either minter proxy.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x8a60e489004ca22d775c5f2c657598278d17d9c2"
+      ],
       "proxyAddresses": [
         "0x3f390dd6ef69f68f9877aacc086856a200808693",
         "0x1e7dff07b891a40ef08bb7d1d2c4385d4ac39dfc"
@@ -46,6 +49,9 @@
       {
         "chain": "ethereum",
         "address": "0x3f390dd6ef69f68f9877aacc086856a200808693",
+        "deploymentRefs": [
+          "ethereum:0x8a60e489004ca22d775c5f2c657598278d17d9c2"
+        ],
         "label": "USDa MINT_ROLE holder",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -65,6 +71,9 @@
       {
         "chain": "ethereum",
         "address": "0x1e7dff07b891a40ef08bb7d1d2c4385d4ac39dfc",
+        "deploymentRefs": [
+          "ethereum:0x8a60e489004ca22d775c5f2c657598278d17d9c2"
+        ],
         "label": "USDa MINT_ROLE holder",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -84,6 +93,9 @@
       {
         "chain": "ethereum",
         "address": "0xdfb1b1c0e0f697829af500d73364d863cb3c6ce9",
+        "deploymentRefs": [
+          "ethereum:0x8a60e489004ca22d775c5f2c657598278d17d9c2"
+        ],
         "label": "USDa token and minter-proxy admin Safe",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -123,7 +135,7 @@
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "At Ethereum block 25712112, owner() returned this Safe and hasRole() confirmed it holds DEFAULT_ADMIN_ROLE and ADMIN_ROLE. Both minter ProxyAdmin owner() calls also returned this Safe. RPC and Safe Transaction Service reported threshold 5, six owners, no modules, and zero guard. It can grant MINT_ROLE, upgrade either existing minter proxy, and configure trusted OFT peers."
+        "evidence": "At Ethereum block 25712112, owner() returned this Safe and hasRole() confirmed it holds DEFAULT_ADMIN_ROLE and ADMIN_ROLE. Both minter ProxyAdmin owner() calls also returned this Safe. RPC and Safe Transaction Service reported threshold 5, six owners, no modules, and zero guard. It can grant MINT_ROLE and upgrade either existing minter proxy."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -152,9 +164,9 @@
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9/"
         }
       ],
-      "evidence": "Complete Ethereum role-event replay through block 25712112 identifies exactly two live MINT_ROLE holders and the sole current admin Safe. Direct storage and owner() reads establish both transparent-proxy minter implementations, their two ProxyAdmins, and common 5-of-6 Safe ownership. Both implementations remain unverified, so no call-level issuance cap can be established; the Safe can grant MINT_ROLE or upgrade either minter proxy, making aggregate economic cap semantics unbounded. The immutable USDa token also uses LayerZero OFT peer minting; deployment route semantics remain separately represented by bridgeRouteRisk rather than duplicated as an unidentified mint control.",
+      "evidence": "Complete Ethereum role-event replay through block 25712112 identifies exactly two live MINT_ROLE holders and the sole current admin Safe. Direct storage and owner() reads establish both transparent-proxy minter implementations, their two ProxyAdmins, and common 5-of-6 Safe ownership. Both implementations remain unverified, so no call-level issuance cap can be established; the Safe can grant MINT_ROLE or upgrade either minter proxy, making aggregate economic cap semantics unbounded.",
       "reviewer": "OpenAI Codex C03 control review",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

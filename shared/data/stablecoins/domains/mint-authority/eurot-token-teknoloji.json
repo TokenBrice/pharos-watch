@@ -4,9 +4,14 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "EUROT uses direct, immutable StableCoin deployments on Avalanche and Polygon. On Avalanche, EOA 0xff80b391b286887d446b1124820f87d5b049b4fb is both owner and supply manager. On Polygon, EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077 is both owner and supply manager, while the Avalanche EOA is the live proposed owner and can claim ownership immediately. Each current owner or supply manager can mint without an on-chain supply cap.",
+    "summary": "EUROT uses direct, immutable StableCoin deployments on Ethereum, Avalanche, and Polygon. On Ethereum and Avalanche, EOA 0xff80b391b286887d446b1124820f87d5b049b4fb is both owner and supply manager. On Polygon, EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077 is both owner and supply manager, while the same Avalanche EOA is the live proposed owner and can claim ownership immediately. Each current owner or supply manager can mint without an on-chain supply cap. The contracts' separate ExternallyTransferable burn/mint rail is assessed under Bridge Risk.",
     "upgradeability": {
       "model": "immutable",
+      "deploymentRefs": [
+        "avalanche:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "ethereum:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+      ],
       "canChangeMintLogic": false,
       "observedAt": "2026-07-13",
       "observedBlock": 90233120,
@@ -14,6 +19,10 @@
         {
           "label": "EUROT Avalanche verified source",
           "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        },
+        {
+          "label": "EUROT Ethereum verified source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
         },
         {
           "label": "EUROT Polygon contract",
@@ -33,6 +42,9 @@
       {
         "chain": "avalanche",
         "address": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "deploymentRefs": [
+          "avalanche:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
         "label": "EUROT Avalanche supply-manager and owner EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -57,6 +69,9 @@
       {
         "chain": "polygon",
         "address": "0xd61c0129f6c35a675db6e2a067b31e75b2573077",
+        "deploymentRefs": [
+          "polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
         "label": "EUROT Polygon supply-manager and owner EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -81,6 +96,9 @@
       {
         "chain": "polygon",
         "address": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "deploymentRefs": [
+          "polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
         "label": "EUROT Polygon pending-owner EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -100,6 +118,37 @@
           }
         ],
         "evidence": "At Polygon block 90179923, proposedOwner() returned 0xff80b391b286887d446b1124820f87d5b049b4fb. Verified Claimable ownership lets this EOA call claimOwnership without another current-owner action, after which owner() can mint or replace the supply manager immediately. eth_getCode returned 0x."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "deploymentRefs": [
+          "ethereum:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "label": "EUROT Ethereum supply-manager and owner EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "StableCoin.mint(uint256) has no aggregate supply ceiling and permits either supplyManager() or owner() to mint.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771272,
+        "failureDomainKeys": [
+          "ethereum:0xff80b391b286887d446b1124820f87d5b049b4fb"
+        ],
+        "sources": [
+          {
+            "label": "EUROT Ethereum verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+          },
+          {
+            "label": "Ethereum EUROT explorer",
+            "url": "https://etherscan.io/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25771272 on 2026-08-16, owner() and supplyManager() both returned 0xff80b391b286887d446b1124820f87d5b049b4fb, proposedOwner() was zero, and eth_getCode on the authority returned 0x. The immutable verified StableCoin source permits the owner or supply manager to call uncapped mint(uint256)."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -112,6 +161,14 @@
           "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
         },
         {
+          "label": "EUROT Ethereum verified source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        },
+        {
+          "label": "Ethereum JSON-RPC fixed-block observations",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
           "label": "Token Teknoloji proof of reserves",
           "url": "https://www.token.com.tr/en/proof-of-reserves/"
         },
@@ -120,9 +177,9 @@
           "url": "https://spk.gov.tr/kurumlar/kripto-varlik-hizmet-saglayicilar/tasfiye-surecinde-olanlar-listesi"
         }
       ],
-      "evidence": "At Avalanche block 90233120 and Polygon block 90179923, both EUROT deployments were direct contracts with zero EIP-1967 implementation, admin, and beacon slots. Their runtime hashes matched at 0x45c952bb677029fdf5df5248fe477025904a47d39ff185773834541e8e520f5c. Avalanche owner and supply manager were EOA 0xff80b391b286887d446b1124820f87d5b049b4fb. Polygon owner and supply manager were EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with the Avalanche EOA staged as proposed owner. Verified source permits each current owner or supply manager to mint uncapped supply and permits the proposed owner to claim Polygon ownership without delay. Mint-tier review (2026-07-15): No named independent attestor, recurring cadence, or dated reserve-to-liability report is public; Token Teknoloji's proof-of-reserves page is issuer-reported and ad hoc. Turkey's Capital Markets Board list matches Token Teknoloji A.S. as being in liquidation, not as an actively prudentially supervised stablecoin issuer. Economic-posture fields reviewed 2026-08-15: both chain owners can mint uncapped supply, while issuer-only ad-hoc bank letters do not reconcile the whole cross-chain supply and no prudential authorization is evidenced. Wave 1 reconciliation re-check: Token Teknoloji's EUROT page still describes 1:1 euro backing and its proof-of-reserves page names Ziraat Participation Bank and Akbank, but no dated recurring reconciliation of whole Avalanche, Polygon, and Ethereum liabilities against those reserves or named independent examiner was found, so reconciliation remains unknown.",
-    "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 25771272, Avalanche block 92986796, and Polygon block 92148079 on 2026-08-16, the three EUROT deployments were direct contracts with no proxy, beacon, implementation, or admin path. The verified StableCoin runtime was identical across the reviewed deployments. Ethereum and Avalanche owner and supply manager were EOA 0xff80b391b286887d446b1124820f87d5b049b4fb; Polygon owner and supply manager were EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with the Avalanche EOA staged as proposed owner. Verified source permits each current owner or supply manager to mint uncapped supply and permits the proposed owner to claim Polygon ownership without delay. Mint Authority covers only these native issuance paths; the separate ExternallyTransferable externalTransfer burn and externalTransferFrom arbitrary-mint rail is assessed under bridgeRouteRisk with its unresolved route machinery and controller failure domains. No named independent attestor, recurring cadence, or dated reserve-to-liability report is public; Token Teknoloji's proof-of-reserves page is issuer-reported and ad hoc, so it does not reconcile the whole Ethereum, Avalanche, and Polygon liability set. Turkey's Capital Markets Board list matches Token Teknoloji A.S. as being in liquidation, not as an actively prudentially supervised stablecoin issuer. The existing authority posture remains unbounded-or-compromised, with unbounded cap semantics, unknown reconciliation, and no supervision.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Codex mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

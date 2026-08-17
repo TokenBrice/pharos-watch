@@ -31,10 +31,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
-    "summary": "NUSD is Synapse's legacy intermediate bridge/liquidity token, with the current Synapse token list publishing deployments across thirteen registry-supported chains. Its supply and peg depend on Synapse liquidity and bridge settlement rather than issuer-native redemption, so the liquidity-or-intent route remains the conservative tier.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-    "confidence": "verified",
+    "summary": "NUSD has one canonical native issuance route on Ethereum: its fixed LPToken is minted by the Nexus SwapFlashLoan pool against deposited pool assets. The twelve non-Ethereum SynapseERC20 deployments are bridge representations with route-scoped MINTER_ROLE controls; those controls and their DEFAULT_ADMIN_ROLE relationship belong to Bridge Risk rather than global Mint Authority. Harmony remains an unresolved documented route because its current bytecode and role state could not be read.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration RELOC-03",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "docs",
@@ -67,11 +67,11 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f",
-        "protocol": "Synapse NexusPool",
-        "issuanceModel": "liquidity-settlement",
-        "routeClass": "third-party",
-        "riskTier": "liquidity-or-intent-route",
-        "semantics": "liquidity",
+        "protocol": "Synapse NexusPool LPToken",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
@@ -79,7 +79,8 @@
           "contract:ethereum:0x1116898dda4015ed8ddefb84b6e8bc24528af2d8",
           "synapse:nusd-liquidity"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770804,
         "sources": [
           {
             "label": "Synapse live token list",
@@ -96,7 +97,7 @@
         ],
         "controllerChain": "ethereum",
         "controllerAddress": "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8",
-        "reviewNote": "Mint controller verified on-chain 2026-07-20: Synapse SwapFlashLoan nUSD pool (token owner and sole ethereum minter, owner() read 2026-07-20)."
+        "reviewNote": "At Ethereum block 25770804 on 2026-08-16, the fixed LPToken clone's owner() was the Synapse SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8, which is the sole native minter against pool deposit/accounting state."
       },
       {
         "id": "optimism:0x67c10c397dd0ba417329543c1a40eb48aaa7cd00",
@@ -500,17 +501,13 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xed2a7edd7413021d440b09d654f3b87712abab66",
         "protocol": "Synapse Bridge",
-        "issuanceModel": "liquidity-settlement",
-        "routeClass": "third-party",
-        "riskTier": "liquidity-or-intent-route",
-        "semantics": "liquidity",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
         "mappingVersion": "bridge-route-facts-v1",
-        "failureDomainKeys": [
-          "contract:harmony:0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
-          "synapse:nusd-liquidity"
-        ],
         "observedAt": "2026-07-20",
         "sources": [
           {
@@ -526,9 +523,405 @@
             "url": "https://github.com/synapsecns/synapse-contracts/tree/master/deployments"
           }
         ],
-        "controllerChain": "harmony",
-        "controllerAddress": "0xAf41a65F786339e7911F4acDAD6BD49426F2Dc6b",
-        "reviewNote": "Mint controller verified on-chain 2026-07-20: SynapseBridge (hasRole(MINTER_ROLE, bridge) = true, read 2026-07-20)."
+        "reviewNote": "The official Synapse token list documents the Harmony deployment, but available public RPC endpoints did not return usable current bytecode, MINTER_ROLE, or role-admin reads; the current route classification and controller remain unresolved."
+      }
+    ],
+    "controls": [
+      {
+        "id": "nusd-optimism-minter-role",
+        "label": "NUSD Optimism SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "optimism:0x67c10c397dd0ba417329543c1a40eb48aaa7cd00"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
+        "failureDomainKeys": [
+          "contract:optimism:0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Optimism representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Optimism block 155661384 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 155661384,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Optimism JSON-RPC fixed role read",
+            "url": "https://optimism-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Optimism block 155661384 on 2026-08-16, fixed EIP-1167 representation 0x67c10c397dd0ba417329543c1a40eb48aaa7cd00 reported MINTER_ROLE for controller 0xaf41a65f786339e7911f4acdad6bd49426f2dc6b. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-cronos-minter-role",
+        "label": "NUSD Cronos SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "cronos:0x396c9c192dd323995346632581bef92a31ac623b"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "cronos",
+        "controllerAddress": "0xe27bff97ce92c3e1ff7aa9f86781fdd6d48f5ee9",
+        "failureDomainKeys": [
+          "contract:cronos:0xe27bff97ce92c3e1ff7aa9f86781fdd6d48f5ee9",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Cronos representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Cronos block 88619918 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 88619918,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Cronos JSON-RPC fixed role read",
+            "url": "https://evm.cronos.org"
+          }
+        ],
+        "evidence": "At Cronos block 88619918 on 2026-08-16, fixed EIP-1167 representation 0x396c9c192dd323995346632581bef92a31ac623b reported MINTER_ROLE for controller 0xe27bff97ce92c3e1ff7aa9f86781fdd6d48f5ee9. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-bsc-minter-role",
+        "label": "NUSD BSC SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "bsc:0x23b891e5c62e0955ae2bd185990103928ab817b3"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xd123f70ae324d34a9e76b67a27bf77593ba8749f",
+        "failureDomainKeys": [
+          "contract:bsc:0xd123f70ae324d34a9e76b67a27bf77593ba8749f",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the BSC representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At BSC block 116357386 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116357386,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "BSC JSON-RPC fixed role read",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BSC block 116357386 on 2026-08-16, fixed EIP-1167 representation 0x23b891e5c62e0955ae2bd185990103928ab817b3 reported MINTER_ROLE for controller 0xd123f70ae324d34a9e76b67a27bf77593ba8749f. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-polygon-minter-role",
+        "label": "NUSD Polygon SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "polygon:0xb6c473756050de474286bed418b77aeac39b02af"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x8f5bbb2bb8c2ee94639e55d5f41de9b4839c1280",
+        "failureDomainKeys": [
+          "contract:polygon:0x8f5bbb2bb8c2ee94639e55d5f41de9b4839c1280",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Polygon representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Polygon block 92144351 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92144351,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Polygon JSON-RPC fixed role read",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92144351 on 2026-08-16, fixed EIP-1167 representation 0xb6c473756050de474286bed418b77aeac39b02af reported MINTER_ROLE for controller 0x8f5bbb2bb8c2ee94639e55d5f41de9b4839c1280. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-fantom-minter-role",
+        "label": "NUSD Fantom SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "fantom:0xed2a7edd7413021d440b09d654f3b87712abab66"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "fantom",
+        "controllerAddress": "0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
+        "failureDomainKeys": [
+          "contract:fantom:0xaf41a65f786339e7911f4acdad6bd49426f2dc6b",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Fantom representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Fantom block 122919163 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 122919163,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Fantom JSON-RPC fixed role read",
+            "url": "https://rpcapi.fantom.network"
+          }
+        ],
+        "evidence": "At Fantom block 122919163 on 2026-08-16, fixed EIP-1167 representation 0xed2a7edd7413021d440b09d654f3b87712abab66 reported MINTER_ROLE for controller 0xaf41a65f786339e7911f4acdad6bd49426f2dc6b. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-boba-minter-role",
+        "label": "NUSD Boba SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "boba:0x6b4712ae9797c199edd44f897ca09bc57628a1cf"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "boba",
+        "controllerAddress": "0x432036208d2717394d2614d6697c46df3ed69540",
+        "failureDomainKeys": [
+          "contract:boba:0x432036208d2717394d2614d6697c46df3ed69540",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Boba representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Boba block 37958358 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 37958358,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Boba JSON-RPC fixed role read",
+            "url": "https://mainnet.boba.network"
+          }
+        ],
+        "evidence": "At Boba block 37958358 on 2026-08-16, fixed EIP-1167 representation 0x6b4712ae9797c199edd44f897ca09bc57628a1cf reported MINTER_ROLE for controller 0x432036208d2717394d2614d6697c46df3ed69540. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-metis-minter-role",
+        "label": "NUSD Metis SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "metis:0x961318fc85475e125b99cc9215f62679ae5200ab"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "metis",
+        "controllerAddress": "0x06fea8513ff03a0d3f61324da709d4cf06f42a5c",
+        "failureDomainKeys": [
+          "contract:metis:0x06fea8513ff03a0d3f61324da709d4cf06f42a5c",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Metis representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Metis block 23043238 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 23043238,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Metis JSON-RPC fixed role read",
+            "url": "https://metis-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Metis block 23043238 on 2026-08-16, fixed EIP-1167 representation 0x961318fc85475e125b99cc9215f62679ae5200ab reported MINTER_ROLE for controller 0x06fea8513ff03a0d3f61324da709d4cf06f42a5c. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-arbitrum-minter-role",
+        "label": "NUSD Arbitrum SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "arbitrum:0x2913e812cf0dcca30fb28e6cac3d2dcff4497688"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x6f4e8eba4d337f874ab57478acc2cb5bacdc19c9",
+        "failureDomainKeys": [
+          "contract:arbitrum:0x6f4e8eba4d337f874ab57478acc2cb5bacdc19c9",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Arbitrum representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Arbitrum block 495291025 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495291025,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Arbitrum JSON-RPC fixed role read",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 495291025 on 2026-08-16, fixed EIP-1167 representation 0x2913e812cf0dcca30fb28e6cac3d2dcff4497688 reported MINTER_ROLE for controller 0x6f4e8eba4d337f874ab57478acc2cb5bacdc19c9. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-avalanche-minter-role",
+        "label": "NUSD Avalanche SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "avalanche:0xcfc37a6ab183dd4aed08c204d1c2773c0b1bdf46"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xc05e61d0e7a63d27546389b7ad62fdff5a91aace",
+        "failureDomainKeys": [
+          "contract:avalanche:0xc05e61d0e7a63d27546389b7ad62fdff5a91aace",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Avalanche representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Avalanche block 92981687 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92981687,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Avalanche JSON-RPC fixed role read",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Avalanche block 92981687 on 2026-08-16, fixed EIP-1167 representation 0xcfc37a6ab183dd4aed08c204d1c2773c0b1bdf46 reported MINTER_ROLE for controller 0xc05e61d0e7a63d27546389b7ad62fdff5a91aace. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-blast-minter-role",
+        "label": "NUSD Blast SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "blast:0x3194b0a295d87fdaa54df852c248f7a6baf6c6e0"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "blast",
+        "controllerAddress": "0x55769baf6ec39b3bf4aae948eb890ea33307ef3c",
+        "failureDomainKeys": [
+          "contract:blast:0x55769baf6ec39b3bf4aae948eb890ea33307ef3c",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Blast representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Blast block 39055876 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 39055876,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Blast JSON-RPC fixed role read",
+            "url": "https://blast-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Blast block 39055876 on 2026-08-16, fixed EIP-1167 representation 0x3194b0a295d87fdaa54df852c248f7a6baf6c6e0 reported MINTER_ROLE for controller 0x55769baf6ec39b3bf4aae948eb890ea33307ef3c. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
+      },
+      {
+        "id": "nusd-aurora-minter-role",
+        "label": "NUSD Aurora SynapseERC20 MINTER_ROLE controller",
+        "routeRefs": [
+          "aurora:0x07379565cd8b0cae7c60dc78e7f601b34af2a21c"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "aurora",
+        "controllerAddress": "0xaed5b25be1c3163c907a471082640450f928ddfe",
+        "failureDomainKeys": [
+          "contract:aurora:0xaed5b25be1c3163c907a471082640450f928ddfe",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SynapseERC20 MINTER_ROLE can mint and burn the Aurora representation; no aggregate or per-call token mint ceiling was established, and route-level liquidity conservation was not independently reconciled.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "SynapseERC20 source exposes MINTER_ROLE-controlled mint and burn without an aggregate or per-call mint ceiling; route-level liquidity/settlement conservation is a separate unresolved question.",
+          "pausersAdminsUpgraders": "At Aurora block 211644407 on 2026-08-16, the controller held MINTER_ROLE and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the RPC response did not return a block timestamp, and exact current DEFAULT_ADMIN_ROLE holder(s) were not enumerable by the reviewed AccessControl implementation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 211644407,
+        "sources": [
+          {
+            "label": "SynapseERC20 source",
+            "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+          },
+          {
+            "label": "Aurora JSON-RPC fixed role read",
+            "url": "https://mainnet.aurora.dev"
+          }
+        ],
+        "evidence": "At Aurora block 211644407 on 2026-08-16, fixed EIP-1167 representation 0x07379565cd8b0cae7c60dc78e7f601b34af2a21c reported MINTER_ROLE for controller 0xaed5b25be1c3163c907a471082640450f928ddfe. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the RPC response did not return a block timestamp, and the current default-role holder(s) were not enumerable in this read."
       }
     ]
   }

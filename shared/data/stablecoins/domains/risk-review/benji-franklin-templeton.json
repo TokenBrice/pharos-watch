@@ -14,17 +14,17 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "BENJI is described by Franklin Templeton as natively issued on blockchains for fund recordkeeping, with separate published contract deployments rather than a holder-facing bridge route. Pharos treats the current route profile as native issuance on each supported network.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "BENJI has eight issuer-native deployments for the same FOBXX share record on Aptos, Arbitrum, Avalanche, Base, Ethereum, Polygon, Solana, and Stellar. Franklin Templeton's current contract directory and live chain reads do not show a holder-facing bridge, escrow, burn-on-source/mint-on-destination conservation route, validator/DVN path, or representation chain. The Solana MultiChain module remains a documented program-semantics gap, not evidence of a bridge; no bridge controls are authored.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos mint-bridge-boundary migration — BENJI",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Franklin Templeton Benji",
+        "label": "Franklin Templeton BENJI product description",
         "url": "https://digitalassets.franklintempleton.com/benji/"
       },
       {
-        "label": "Benji contracts",
+        "label": "Franklin Templeton BENJI contract directory",
         "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
       }
     ],
@@ -33,121 +33,217 @@
         "id": "aptos:0x7b5e9cac3433e9202f28527f707c89e1e47b19de2c33e4db9521a63ad219b739",
         "destinationChain": "aptos",
         "contractAddress": "0x7b5e9cac3433e9202f28527f707c89e1e47b19de2c33e4db9521a63ad219b739",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Franklin Templeton BENJI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Aptos deployment: the BENJI token object has ConcurrentSupply and a Franklin ManagedFungibleAsset mint_ref administered by a native 2-of-6 access multisig at the reviewed ledger. The exact mint_ref authorization call remains an evidence gap; no bridge representation was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 6783994604,
+        "sources": [
+          {
+            "label": "Franklin Templeton BENJI contract directory",
+            "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+          },
+          {
+            "label": "Aptos mainnet fullnode",
+            "url": "https://fullnode.mainnet.aptoslabs.com/v1"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xb9e4765bce2609bc1949592059b17ea72fee6c6a",
         "destinationChain": "arbitrum",
         "contractAddress": "0xb9e4765bce2609bc1949592059b17ea72fee6c6a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Franklin Templeton BENJI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Arbitrum deployment: Franklin's Authorization module recognizes the chain-local fund-admin multisig and transfer agent for direct BENJI issuance roles at the reviewed block. The UUPS proxy and issuer-native mint path are not bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 495300467,
+        "sources": [
+          {
+            "label": "Franklin Templeton BENJI contract directory",
+            "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+          },
+          {
+            "label": "Arbitrum One JSON-RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ]
       },
       {
         "id": "avalanche:0xe08b4c1005603427420e64252a8b120cace4d122",
         "destinationChain": "avalanche",
         "contractAddress": "0xe08b4c1005603427420e64252a8b120cace4d122",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Franklin Templeton BENJI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Avalanche C-Chain deployment: Franklin's Authorization module recognizes the chain-local fund-admin multisig and transfer agent for direct BENJI issuance roles at the reviewed block. The UUPS proxy and issuer-native mint path are not bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 92983909,
+        "sources": [
+          {
+            "label": "Franklin Templeton BENJI contract directory",
+            "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ]
       },
       {
         "id": "base:0x60cfc2b186a4cf647486e42c42b11cc6d571d1e4",
         "destinationChain": "base",
         "contractAddress": "0x60cfc2b186a4cf647486e42c42b11cc6d571d1e4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Franklin Templeton BENJI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Base deployment: Franklin's Authorization module recognizes the chain-local fund-admin multisig and transfer agent for direct BENJI issuance roles at the reviewed block. The UUPS proxy and issuer-native mint path are not bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067317,
+        "sources": [
+          {
+            "label": "Franklin Templeton BENJI contract directory",
+            "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+          },
+          {
+            "label": "Base JSON-RPC",
+            "url": "https://mainnet.base.org"
+          }
+        ]
       },
       {
         "id": "ethereum:0x3ddc84940ab509c11b20b76b466933f40b750dc9",
         "destinationChain": "ethereum",
         "contractAddress": "0x3ddc84940ab509c11b20b76b466933f40b750dc9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Franklin Templeton BENJI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Ethereum deployment: the verified Authorization module recognizes the fund-admin multisig and TransferAgentModule for direct BENJI issuance, while the UUPS proxy's ROLE_TOKEN_OWNER path is native upgrade authority. No bridge representation was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771006,
+        "sources": [
+          {
+            "label": "Franklin Templeton BENJI contract directory",
+            "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+          },
+          {
+            "label": "BENJI Ethereum token proxy",
+            "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+          },
+          {
+            "label": "Sourcify MoneyMarketFund_V6 implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x20ca56f1215c3376b25bba1f2f9d3701c5def4c5?fields=abi,sources"
+          }
+        ]
       },
       {
         "id": "polygon:0x408a634b8a8f0de729b48574a3a7ec3fe820b00a",
         "destinationChain": "polygon",
         "contractAddress": "0x408a634b8a8f0de729b48574a3a7ec3fe820b00a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Franklin Templeton BENJI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Polygon deployment: Franklin's Authorization module recognizes the chain-local fund-admin multisig and transfer agent for direct BENJI issuance roles at the reviewed block. The UUPS proxy and issuer-native mint path are not bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 92145977,
+        "sources": [
+          {
+            "label": "Franklin Templeton BENJI contract directory",
+            "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+          },
+          {
+            "label": "Polygon Bor JSON-RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ]
       },
       {
         "id": "solana:5Tu84fKBpe9vfXeotjvfvWdWbAjy3hqsExvuHgFqFxA1",
         "destinationChain": "solana",
         "contractAddress": "5Tu84fKBpe9vfXeotjvfvWdWbAjy3hqsExvuHgFqFxA1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Franklin Templeton BENJI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Solana Token-2022 deployment: finalized mint data reports mintAuthority equal to the BENJI mint address, with freeze authority and permanent delegate also on the native issuer-controlled path. The executable MultiChain module remains a program-semantics gap, not a verified bridge route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 439740044,
+        "sources": [
+          {
+            "label": "Franklin Templeton BENJI contract directory",
+            "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "BENJI Solana mint on Solscan",
+            "url": "https://solscan.io/token/5Tu84fKBpe9vfXeotjvfvWdWbAjy3hqsExvuHgFqFxA1"
+          }
+        ]
       },
       {
         "id": "stellar:BENJI-GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5",
         "destinationChain": "stellar",
         "contractAddress": "BENJI-GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Franklin Templeton BENJI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Stellar deployment: the BENJI issuing account has disabled master key, medium threshold 2, high threshold 6, and 14 additional signers. The account is the native issuer path with authorization and clawback enabled; no bridge representation was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 63965579,
+        "sources": [
+          {
+            "label": "Franklin Templeton BENJI contract directory",
+            "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+          },
+          {
+            "label": "Stellar Horizon issuing account",
+            "url": "https://horizon.stellar.org/accounts/GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5"
+          }
+        ]
       }
     ]
   }

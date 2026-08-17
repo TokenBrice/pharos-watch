@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import {
+  DETAIL_MODULE_TITLE_CLASS,
+  SECTION_SCROLL_MT,
+} from "@/components/stablecoin-detail/section-title-class";
 
 /**
  * The rail-module shell: the card surface plus the one header row every detail
@@ -20,6 +23,7 @@ export function RailCard({
   icon: Icon,
   trailing,
   frameless = false,
+  anchorTwin,
   children,
 }: {
   title: string;
@@ -49,11 +53,22 @@ export function RailCard({
    * inside the fold would duplicate all three.
    */
   frameless?: boolean;
+  /**
+   * Anchor id this rail instance stands in for. The in-flow (`xl:hidden`) copy
+   * owns the real id; at `xl+` that copy is display-hidden, so the passport
+   * strip's hash jump falls back to the visible twin marked here
+   * (`alignSection` in `hero-passport-strip.tsx`).
+   */
+  anchorTwin?: string;
   children: ReactNode;
 }) {
   if (frameless) return <>{children}</>;
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label={ariaLabel}>
+    <section
+      className={cn("pharos-card-shell overflow-hidden", anchorTwin ? SECTION_SCROLL_MT : undefined)}
+      aria-label={ariaLabel}
+      {...(anchorTwin ? { "data-anchor-twin": anchorTwin } : {})}
+    >
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
         <div className="flex min-w-0 items-center gap-2">
           {Icon ? <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" /> : null}

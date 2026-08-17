@@ -371,10 +371,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "BtcUSD/BTCFi relies on Bifrost cross-chain technology for collateral movement across networks. Bifrost bridge documentation describes a cross-chain bridge service rather than a native issuer-only route, so Pharos scores this as external validated-network exposure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-    "confidence": "verified",
+    "summary": "BtcUSD's reviewed Bifrost-to-Base route is a bridge-representation lock-mint path. At Base block 50067746, the verified ERC20_Bridged implementation allowed the current owners and admin to mint arbitrary destination supply, while the owners and proxy-admin chain could alter destination implementation. The official bridge guide confirms route support, but source lockbox/escrow, outbound burn accounting, validator set, route limits, and replay/idempotency evidence remain unresolved; token-level mint authority and route-level conservation are separate Bridge Risk facts.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Codex mint-bridge-boundary review",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "docs",
@@ -410,7 +410,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: this Base ERC20_Bridged proxy is the Bifrost bridge representation of native Bifrost BtcUSD; get_owners() returns bridge mint owners 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe (contract) and 0xf98e8601a1eef3bce943f9b002e83db8a0951aa5 (EOA). The bridge controller for the representation is the owner contract; the proxy admin 0x55506bcc5fa9b2e702848aa110b5a6987a735060 is owned by EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001.",
+        "reviewNote": "At Base block 50067746 (2026-08-16), this ERC20_Bridged proxy is the Bifrost Bridge representation of native Bifrost BtcUSD. get_owners() returned 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe (contract) and 0xf98e8601a1eef3bce943f9b002e83db8a0951aa5 (EOA); get_admins() returned 0x4f7ab59b5ac112970f5dd66d8a7ac505c8e5e08b. The verified implementation permits current owners and admin to mint, and owners to pause/blacklist and replace the implementation through set_1967impl(address). The EIP-1967 proxy admin 0x55506bcc5fa9b2e702848aa110b5a6987a735060 is owned through slot 0 by EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001. The official bridge guide confirms the route, but the reviewed evidence does not prove the source lockbox/escrow, outbound burn accounting, validator/signature set, route limits, or replay/idempotency invariant.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
         "controllerAddress": "0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe",
@@ -418,15 +418,24 @@
           "protocol:bifrost-bridge",
           "contract:base:0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067746,
         "sources": [
           {
             "label": "BtcUSD Base token on Blockscout",
             "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
           },
           {
+            "label": "Verified Base ERC20_Bridged implementation",
+            "url": "https://base.blockscout.com/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?tab=contract"
+          },
+          {
             "label": "Bifrost bridge guide",
             "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide"
+          },
+          {
+            "label": "Base JSON-RPC fixed-block reads",
+            "url": "https://base-rpc.publicnode.com"
           }
         ]
       },
@@ -455,6 +464,220 @@
             "url": "https://www.btcfi.one/"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "btcusd-base-bridge-owner-contract",
+        "label": "BtcUSD Base bridge owner contract",
+        "routeRefs": [
+          "base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "pause",
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe",
+        "failureDomainKeys": [
+          "protocol:bifrost-bridge",
+          "contract:base:0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 50067746, the verified ERC20_Bridged implementation's checkAuth accepts owners for mint, pause/blacklist, and administrative calls; the verified Ownable_1967_Proxy source makes set_1967impl(address) owner-only. get_owners() returned this source-unverified owner contract, and Safe probes returned empty data, so its signer policy is unknown."
+        },
+        "capDescription": "The owner contract can mint arbitrary BtcUSD destination representation supply; no aggregate or per-call route cap was evidenced.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067746,
+        "sources": [
+          {
+            "label": "BtcUSD Base proxy on Blockscout",
+            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+          },
+          {
+            "label": "Verified Base ERC20_Bridged implementation",
+            "url": "https://base.blockscout.com/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?tab=contract"
+          },
+          {
+            "label": "Base JSON-RPC fixed-block reads",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50067746, get_owners() on the BtcUSD proxy returned this contract. The verified ERC20_Bridged implementation's checkAuth permits owners to call mint(address,uint256), pause/blacklist controls, and administrative functions; the verified Ownable_1967_Proxy source makes set_1967impl(address) owner-only, so this owner can also replace the representation implementation. The owner contract is source-unverified and getOwners()/getThreshold() probes returned empty data, so its signer policy is unknown."
+      },
+      {
+        "id": "btcusd-base-bridge-owner-eoa",
+        "label": "BtcUSD Base bridge owner EOA",
+        "routeRefs": [
+          "base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "pause",
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xf98e8601a1eef3bce943f9b002e83db8a0951aa5",
+        "failureDomainKeys": [
+          "protocol:bifrost-bridge",
+          "eoa:base:0xf98e8601a1eef3bce943f9b002e83db8a0951aa5"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 50067746, the verified ERC20_Bridged implementation's checkAuth accepts owners for mint, pause/blacklist, and administrative calls; the verified Ownable_1967_Proxy source makes set_1967impl(address) owner-only. get_owners() returned this EOA as a current owner."
+        },
+        "capDescription": "The owner EOA can mint arbitrary BtcUSD destination representation supply; no aggregate or per-call route cap was evidenced.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067746,
+        "sources": [
+          {
+            "label": "BtcUSD Base proxy on Blockscout",
+            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+          },
+          {
+            "label": "Verified Base ERC20_Bridged implementation",
+            "url": "https://base.blockscout.com/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?tab=contract"
+          },
+          {
+            "label": "Base JSON-RPC fixed-block reads",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50067746, get_owners() on the BtcUSD proxy returned this EOA. The verified ERC20_Bridged implementation permits token owners to call mint(address,uint256), pause/blacklist controls, and administrative functions; the verified Ownable_1967_Proxy source makes set_1967impl(address) owner-only, so this owner can also replace the representation implementation."
+      },
+      {
+        "id": "btcusd-base-bridge-admin-eoa",
+        "label": "BtcUSD Base bridge admin EOA",
+        "routeRefs": [
+          "base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x4f7ab59b5ac112970f5dd66d8a7ac505c8e5e08b",
+        "failureDomainKeys": [
+          "protocol:bifrost-bridge",
+          "eoa:base:0x4f7ab59b5ac112970f5dd66d8a7ac505c8e5e08b"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 50067746, get_admins() returned this EOA and the verified ERC20_Bridged implementation's checkAuth accepts admins for mint, pause/blacklist, and administrative calls. No upgrade capability is attributed to this admin EOA."
+        },
+        "capDescription": "The admin EOA can mint arbitrary BtcUSD destination representation supply; no aggregate or per-call route cap was evidenced.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067746,
+        "sources": [
+          {
+            "label": "BtcUSD Base proxy on Blockscout",
+            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+          },
+          {
+            "label": "Verified Base ERC20_Bridged implementation",
+            "url": "https://base.blockscout.com/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?tab=contract"
+          },
+          {
+            "label": "Base JSON-RPC fixed-block reads",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50067746, get_admins() on the BtcUSD proxy returned this EOA, and a simulated mint(address,uint256) call from it returned success. The verified ERC20_Bridged implementation's checkAuth accepts admins for destination minting, pause/blacklist controls, and administrative functions."
+      },
+      {
+        "id": "btcusd-base-proxy-admin",
+        "label": "BtcUSD Base proxy admin contract",
+        "routeRefs": [
+          "base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x55506bcc5fa9b2e702848aa110b5a6987a735060",
+        "failureDomainKeys": [
+          "protocol:bifrost-bridge",
+          "contract:base:0x55506bcc5fa9b2e702848aa110b5a6987a735060",
+          "contract:base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 50067746, the EIP-1967 admin slot of the BtcUSD proxy returned this contract and the implementation slot returned 0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9. Its slot-0 owner resolves to EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001; the admin contract is source-unverified, Safe owner/threshold probes returned empty data, and no delay was established."
+        },
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067746,
+        "sources": [
+          {
+            "label": "BtcUSD Base proxy on Blockscout",
+            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+          },
+          {
+            "label": "Verified Base ERC20_Bridged implementation",
+            "url": "https://base.blockscout.com/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?tab=contract"
+          },
+          {
+            "label": "BtcUSD Base proxy admin contract",
+            "url": "https://basescan.org/address/0x55506bcc5fa9b2e702848aa110b5a6987a735060#code"
+          },
+          {
+            "label": "Base JSON-RPC fixed-block reads",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50067746, the EIP-1967 admin slot of the BtcUSD bridge proxy returned this contract and the implementation slot returned 0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9. The admin contract's slot-0 owner reads as EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001, so it controls the proxy implementation replacement path; the admin contract is source-unverified, Safe probes returned empty data, and its signer policy and delay are unknown."
+      },
+      {
+        "id": "btcusd-base-proxy-admin-owner",
+        "label": "BtcUSD Base proxy admin owner EOA",
+        "routeRefs": [
+          "base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xf9d5bd4013c955175185e406b407d5cee90b0001",
+        "failureDomainKeys": [
+          "protocol:bifrost-bridge",
+          "contract:base:0x55506bcc5fa9b2e702848aa110b5a6987a735060",
+          "eoa:base:0xf9d5bd4013c955175185e406b407d5cee90b0001"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 50067746, the proxy-admin contract's slot-0 owner resolved to this EOA. The EOA therefore controls the proxy implementation replacement path through the source-unverified admin contract; no delay or signer policy was established for that contract."
+        },
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067746,
+        "sources": [
+          {
+            "label": "BtcUSD Base proxy on Blockscout",
+            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+          },
+          {
+            "label": "BtcUSD Base proxy admin contract",
+            "url": "https://basescan.org/address/0x55506bcc5fa9b2e702848aa110b5a6987a735060#code"
+          },
+          {
+            "label": "Base JSON-RPC fixed-block reads",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50067746, the proxy-admin contract 0x55506bcc5fa9b2e702848aa110b5a6987a735060 slot-0 owner resolved to this EOA. The EOA therefore controls the BtcUSD representation proxy's implementation replacement path through the source-unverified admin contract; Safe probes returned empty data and no delay or signer policy was established."
       }
     ]
   }

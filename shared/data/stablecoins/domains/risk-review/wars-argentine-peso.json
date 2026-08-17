@@ -53,34 +53,45 @@
     "reviewedAt": "2026-07-15"
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "WARS is one of Ripio's wrapped local stablecoins deployed across several chains. The workflow's route signal points to Across/World-style liquidity routing rather than issuer-native bridging, so Pharos scores this as a liquidity-or-intent route with probable confidence.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-    "confidence": "verified",
+    "tier": "issuer-native-burn-mint",
+    "summary": "WARS has six reviewed independent native deployments, each with a separate issuer-operated BridgeDeposit burn path and LimitedMinterBridge destination mint path. Source WARS is burned before an authorized operator fulfills a destination mint; the adapter applies a 30,000,000 WARS per-token daily limit. Bridge admin, pause, fee, route configuration, adapter, and operator powers are structured below rather than counted as global native Mint Authority. A live Celo deployment remains explicitly unlisted pending catalog-owner adjudication; its current outbound-only bridge machinery is recorded against the six reviewed destination routes without adding reverse Celo routes.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration; verified Ripio bridge review",
+    "confidence": "manual-review",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "issuer",
+        "name": "Ripio BridgeDeposit / LimitedMinterBridge",
+        "url": "https://bridge.ripio.com/",
         "bridgeTypes": [
-          "Non-minting"
+          "Issuer-operated burn/mint"
         ]
       }
     ],
     "sources": [
       {
-        "label": "Ripio local stablecoins",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "label": "Ripio official bridge UI",
+        "url": "https://bridge.ripio.com/"
       },
       {
-        "label": "wFIAT whitepaper",
-        "url": "https://www.ripio.com/en/assets/wars/whitepaper"
+        "label": "Ripio BridgeDeposit source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "Ripio LimitedMinterBridge source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+      },
+      {
+        "label": "Ripio LatamStable source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LatamStable.sol"
+      },
+      {
+        "label": "Ripio wARS network announcement",
+        "url": "https://action.ripio.com/en/blog/chainlink-and-ripio-launch-wars-usd-and-wbrl-usd-price-feeds-bringing-latin-american-currencies-to-defi"
+      },
+      {
+        "label": "Celo current bridge read",
+        "url": "https://forno.celo.org"
       }
     ],
     "routes": [
@@ -89,132 +100,667 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "Ripio native issuance",
+        "protocol": "Ripio native issuance with issuer-operated burn/mint bridge",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "reviewNote": "Reviewed Ethereum native WARS: the 163-byte UUPS proxy uses implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9, while the issuer EOA has direct native MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE. The separate BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 burns source WARS and fulfills destination minting through LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6; those bridge controls are structured below.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771188,
         "sources": [
           {
-            "label": "Ripio",
-            "url": "https://www.ripio.com/"
+            "label": "Ethereum current WARS read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum BridgeDeposit",
+            "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47?tab=contract"
+          },
+          {
+            "label": "Ethereum LimitedMinterBridge",
+            "url": "https://eth.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6?tab=contract"
           }
         ]
       },
       {
         "id": "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "base",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "base",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "Ripio native issuance",
+        "protocol": "Ripio native issuance with issuer-operated burn/mint bridge",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "reviewNote": "Reviewed Base native WARS: the 163-byte UUPS proxy uses the same implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 and the issuer EOA has direct native MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE. The separate BridgeDeposit burns source WARS and fulfills destination minting through LimitedMinterBridge; those bridge controls are structured below.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068421,
         "sources": [
           {
-            "label": "Ripio",
-            "url": "https://www.ripio.com/"
+            "label": "Base current WARS read",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
           }
         ]
       },
       {
         "id": "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "worldchain",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "worldchain",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "Ripio native issuance",
+        "protocol": "Ripio native issuance with issuer-operated burn/mint bridge",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "reviewNote": "Reviewed World Chain native WARS: the 163-byte UUPS proxy uses the same implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 and the issuer EOA has direct native MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE. The separate BridgeDeposit burns source WARS and fulfills destination minting through LimitedMinterBridge; those bridge controls are structured below.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 33795277,
         "sources": [
           {
-            "label": "Ripio",
-            "url": "https://www.ripio.com/"
+            "label": "World Chain current WARS read",
+            "url": "https://worldchain-mainnet.gateway.tenderly.co"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
           }
         ]
       },
       {
         "id": "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "bsc",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "bsc",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "Ripio native issuance",
+        "protocol": "Ripio native issuance with issuer-operated burn/mint bridge",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "reviewNote": "Reviewed BSC native WARS: the 163-byte UUPS proxy uses the same implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 and the issuer EOA has direct native MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE. The separate BridgeDeposit burns source WARS and fulfills destination minting through LimitedMinterBridge; those bridge controls are structured below.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116367712,
         "sources": [
           {
-            "label": "Ripio",
-            "url": "https://www.ripio.com/"
+            "label": "BSC current WARS read",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
           }
         ]
       },
       {
         "id": "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "polygon",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "polygon",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "Ripio native issuance",
+        "protocol": "Ripio native issuance with issuer-operated burn/mint bridge",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "reviewNote": "Reviewed Polygon native WARS: the 163-byte UUPS proxy uses the same implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 and the issuer EOA has direct native MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE. The separate BridgeDeposit burns source WARS and fulfills destination minting through LimitedMinterBridge; those bridge controls are structured below.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92147450,
         "sources": [
           {
-            "label": "Ripio",
-            "url": "https://www.ripio.com/"
+            "label": "Polygon current WARS read",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
           }
         ]
       },
       {
         "id": "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "gnosis",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "gnosis",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "Ripio native issuance",
+        "protocol": "Ripio native issuance with issuer-operated burn/mint bridge",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "reviewNote": "Reviewed Gnosis native WARS: the 163-byte UUPS proxy uses the same implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 and the issuer EOA has direct native MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE. The separate BridgeDeposit burns source WARS and fulfills destination minting through LimitedMinterBridge; those bridge controls are structured below.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 47763061,
         "sources": [
           {
-            "label": "Ripio",
-            "url": "https://www.ripio.com/"
+            "label": "Gnosis current WARS read",
+            "url": "https://gnosis-rpc.publicnode.com"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "wars-bridge-deposit-contract",
+        "label": "Ripio BridgeDeposit issuer burn/mint rail",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "peer-config"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BridgeDeposit burns source WARS before a later operator fulfillment; it does not create independent native liabilities. Destination minting is delegated to LimitedMinterBridge and its per-token daily limit.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "depositForBridge() transfers the fixed fee and calls burnFrom on the source WARS deployment before recording BridgeDepositInitiated; the source burn is the route's conservation leg, not native issuance.",
+          "trustedPeerOrRemote": "Enabled destination mappings and idempotency keys bind fulfillment to source chain, source transaction hash, and deposit ID. All 30 directed routes among the six authored deployments were enabled at the observed reads.",
+          "rateLimits": "Destination fulfillment is limited by LimitedMinterBridge's registered 30,000,000 WARS per-token UTC-day capacity; BridgeDeposit itself has no separately verified aggregate mint ceiling.",
+          "caps": "Observed fixed fees were 15 WARS from Ethereum to each non-Ethereum destination, 1,500 WARS from each non-Ethereum chain to Ethereum, and 15 WARS between non-Ethereum chains.",
+          "pausersAdminsUpgraders": "BridgeDeposit is the issuer-operated route contract; its admin-controlled route, fee, operator, pause, and limited-minter surfaces remain bridge machinery."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771182,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum BridgeDeposit",
+            "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47?tab=contract"
+          },
+          {
+            "label": "Ethereum bridge read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the 2026-08-16 bridge observations, 6,924-byte BridgeDeposit code was live at 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on all six authored chains. Its depositForBridge() path burns source WARS, records the source event, and fulfillBridgeMint() later calls LimitedMinterBridge.mintTo() on the destination. The bridge contract therefore carries both source burn and destination fulfillment machinery, while native direct issuance remains separately reviewed in Mint Authority."
+      },
+      {
+        "id": "wars-limited-minter-bridge",
+        "label": "Ripio LimitedMinterBridge destination adapter",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "pause"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge.mintTo() is an arbitrary-recipient destination bridge mint. WARS is registered at a 30,000,000-token UTC-day limit on each authored chain; this is route-level bridge capacity, not a native issuance cap.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "rateLimits": "The current registered WARS daily capacity was 30,000,000 tokens on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis, with zero minted today at the observed reads.",
+          "caps": "The per-token daily limit bounds the observed route, but the external WARS DEFAULT_ADMIN_ROLE can call updateDailyMintLimit() on the adapter for a registered token; the shared issuer EOA and WARS Safe are therefore able to raise the route limit.",
+          "pausersAdminsUpgraders": "LimitedMinterBridge was live and unpaused on all six authored chains and held WARS MINTER_ROLE on each; its arbitrary-recipient mint capability is retained here rather than in Mint Authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771182,
+        "sources": [
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ethereum LimitedMinterBridge",
+            "url": "https://eth.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6?tab=contract"
+          },
+          {
+            "label": "Ethereum bridge read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the 2026-08-16 bridge observations, 4,894-byte LimitedMinterBridge code was live at 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on all six authored chains. It was unpaused, registered WARS at 30,000,000 tokens per UTC day, and held the token MINTER_ROLE on every route. Its mintTo() path is reachable only through the issuer-operated bridge fulfillment flow and remains an adverse bridge-mint failure domain."
+      },
+      {
+        "id": "wars-bridge-admin-safe",
+        "label": "Ripio WARS Safe bridge administrator",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "safe:multichain:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "contract:multichain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:multichain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "observedBlock": 25295015,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Safe is DEFAULT_ADMIN_ROLE on each authored BridgeDeposit and can administer route configuration and bridge operators. All 30 authored directed routes were enabled at the current reads.",
+          "caps": "The Safe is the BridgeDeposit feeCollector and can change the bridge machinery's configured destination-side adapter through its admin surface; observed fees were 15 or 1,500 WARS by route direction.",
+          "pausersAdminsUpgraders": "The Safe is a 4-of-7 shared WARS administrator. It held DEFAULT_ADMIN_ROLE on the authored BridgeDeposit instances; the separate token MINTER_ROLE and native token roles remain reviewed in their owning domains."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771182,
+        "sources": [
+          {
+            "label": "Ripio Safe multisig",
+            "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum bridge read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the current 2026-08-16 role reads, Safe 0x2b839174 remained the shared 4-of-7 WARS Safe and BridgeDeposit DEFAULT_ADMIN_ROLE holder/feeCollector across the authored route set. It can administer route and operator configuration and remains a bridge failure domain separate from the issuer EOA's native mint authority. Current Safe module and guard state was not fully re-enumerated after the owner read, so modulesOrGuardsStatus is explicitly unknown."
+      },
+      {
+        "id": "wars-bridge-admin-and-fee-eoa",
+        "label": "Ripio issuer EOA bridge administrator and fee manager",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "eoa:multichain:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "contract:multichain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The issuer EOA held BridgeDeposit DEFAULT_ADMIN_ROLE on every authored chain and can change enabled destination routes and operator/adapter configuration.",
+          "caps": "The issuer EOA held FEE_MANAGER_ROLE; observed fixed fees were 15 WARS on non-Ethereum destinations from Ethereum, 1,500 WARS to Ethereum from non-Ethereum chains, and 15 WARS between non-Ethereum chains.",
+          "pausersAdminsUpgraders": "The same empty-code issuer EOA is both native token MINTER/UPGRADER/PAUSER and bridge DEFAULT_ADMIN/FEE_MANAGER. Those capabilities are separately authored here so bridge administration is not counted as native mint authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771182,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum bridge read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the 2026-08-16 BridgeDeposit reads, issuer EOA 0x466c02e2 held DEFAULT_ADMIN_ROLE and FEE_MANAGER_ROLE on the authored bridge deployments. It can administer route and fee configuration in this domain; its separate direct token MINTER_ROLE remains in Mint Authority because it creates independent native liabilities."
+      },
+      {
+        "id": "wars-bridge-operator-primary",
+        "label": "Ripio primary BRIDGE_OPERATOR_ROLE EOA",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "operator:multichain:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "contract:multichain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "eoa",
+        "capDescription": "BRIDGE_OPERATOR_ROLE can call fulfillBridgeMint(), which reaches LimitedMinterBridge.mintTo() subject to the observed 30,000,000 WARS per-token daily limit.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "rateLimits": "The destination LimitedMinterBridge daily capacity was 30,000,000 WARS per token on every authored chain at the observed reads; this operator cannot change the limit through BRIDGE_OPERATOR_ROLE.",
+          "trustedPeerOrRemote": "fulfillBridgeMint() uses source chain, source transaction hash, and deposit ID in its idempotency key before destination minting."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771182,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum bridge read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "EOA 0x5ca3f8eeba12d83408fc097c2dad79212456f20f held BRIDGE_OPERATOR_ROLE on each authored BridgeDeposit at the 2026-08-16 reads. Its Ethereum code was empty. It can execute the destination fulfillment path but is not the role administrator and cannot change the adapter limit through this role."
+      },
+      {
+        "id": "wars-bridge-operator-secondary",
+        "label": "Ripio secondary BRIDGE_OPERATOR_ROLE EOA",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0xbc924f707ca021f9b220088afe56c85b9cb43085",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "operator:multichain:0xbc924f707ca021f9b220088afe56c85b9cb43085",
+          "contract:multichain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "eoa",
+        "capDescription": "BRIDGE_OPERATOR_ROLE can call fulfillBridgeMint(), which reaches LimitedMinterBridge.mintTo() subject to the observed 30,000,000 WARS per-token daily limit.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "rateLimits": "The destination LimitedMinterBridge daily capacity was 30,000,000 WARS per token on every authored chain at the observed reads; this operator cannot change the limit through BRIDGE_OPERATOR_ROLE.",
+          "trustedPeerOrRemote": "fulfillBridgeMint() uses source chain, source transaction hash, and deposit ID in its idempotency key before destination minting."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771182,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum bridge read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "EOA 0xbc924f707ca021f9b220088afe56c85b9cb43085 held BRIDGE_OPERATOR_ROLE on each authored BridgeDeposit at the 2026-08-16 reads. Its Ethereum code was empty. It is a separate bridge operator failure domain and is not a native minter or route administrator."
+      },
+      {
+        "id": "wars-celo-bridge-deposit",
+        "label": "Ripio Celo BridgeDeposit unlisted-source route",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The live but unlisted Celo BridgeDeposit is a source-side burn and destination-fulfillment route; it is not a reviewed Celo native token deployment in the catalog.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Celo block 75025526, routes from Celo to Ethereum, Base, World Chain, BSC, Polygon, and Gnosis were enabled. Reverse routes from each authored chain to Celo were disabled and are intentionally not inferred.",
+          "caps": "Current Celo fees were 1,500 WARS to Ethereum and 15 WARS to each of the other five authored destinations.",
+          "rateLimits": "Celo uses the same LimitedMinterBridge destination adapter; the Celo native deployment remains unlisted pending catalog-owner adjudication."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 75025526,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Celo current bridge read",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "The same 6,924-byte BridgeDeposit is live on Celo at block 75025526. Its current configuration enables outbound Celo routes to the six authored deployments but disables reverse ingress to Celo. This control preserves the live Celo bridge machinery without claiming the unlisted Celo token contract as an authored native route."
+      },
+      {
+        "id": "wars-celo-limited-minter-bridge",
+        "label": "Ripio Celo LimitedMinterBridge unlisted-source adapter",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "pause"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The live Celo LimitedMinterBridge is the destination bridge mint adapter for the outbound Celo routes; the Celo native token deployment itself is intentionally not catalogued yet.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "rateLimits": "The Celo adapter is the same LimitedMinterBridge implementation and supplies the destination-side daily-limited mint path for the enabled outbound Celo routes.",
+          "caps": "The Celo token's DEFAULT_ADMIN_ROLE can call updateDailyMintLimit() for the registered token, so the route limit is raiseable by the reviewed Safe-controlled admin path once Celo is admitted to the catalog.",
+          "pausersAdminsUpgraders": "The Celo bridge minter role points to LimitedMinterBridge; its route-scoped pause and adapter facts remain Bridge Risk evidence."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 75025526,
+        "sources": [
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Celo current bridge read",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 75025526, the same LimitedMinterBridge adapter was live and served the Celo BridgeDeposit outbound route. Its bridge-mint and daily-limit facts are retained without adding an unreviewed Celo native route or reverse Celo ingress."
+      },
+      {
+        "id": "wars-celo-bridge-admin-safe",
+        "label": "Ripio Celo BridgeDeposit administrator Safe",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "observedBlock": 75025526,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Celo Safe is a bridge admin/fee authority for the six enabled outbound destination mappings; reverse routes from the authored chains to Celo were disabled at the observed block.",
+          "caps": "The Safe-controlled Celo route charged 1,500 WARS to Ethereum and 15 WARS to each other enabled authored destination.",
+          "pausersAdminsUpgraders": "Celo bridge admin and fee control is kept separate from the unlisted Celo native token's pending catalog decision."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 75025526,
+        "sources": [
+          {
+            "label": "Ripio Safe multisig",
+            "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          },
+          {
+            "label": "Celo current bridge read",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 75025526, Safe 0x2b839174 was identified as a Celo BridgeDeposit bridge-admin/fee authority for the six enabled outbound destinations. The current native Celo token deployment and its Safe-controlled MINTER_ROLE remain an explicit unlisted catalog gap, not a bridge-only relabel."
+      },
+      {
+        "id": "wars-celo-bridge-fee-eoa",
+        "label": "Ripio Celo bridge administrator and fee EOA",
+        "routeRefs": [
+          "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+        "failureDomainKeys": [
+          "protocol:ripio-issuer-bridge",
+          "eoa:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Celo bridge EOA participates in the enabled outbound route configuration; no reverse Celo route is claimed.",
+          "caps": "At Celo block 75025526, this EOA shared bridge fee/admin responsibility with the WARS Safe; fees were 1,500 WARS to Ethereum and 15 WARS to the other five enabled destinations."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 75025526,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Celo current bridge read",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 75025526, EOA 0x5ca3f8eeba12d83408fc097c2dad79212456f20f was the documented Celo bridge admin/fee authority alongside the WARS Safe. Its Celo bridge powers are retained here; the EOA's native token roles on authored routes remain separately scoped in Mint Authority."
       }
     ]
   }

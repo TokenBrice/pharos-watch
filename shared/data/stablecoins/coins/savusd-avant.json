@@ -95,6 +95,21 @@
       "chain": "sei",
       "address": "0xd84a49df125f6744018518117fe59a86d39eae75",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xa6ef20fe18cd529ca15a8a53a29d1832b1f848ff",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xa322e23a357cb7c596a7a834102b9d6d5b15da3e",
+      "decimals": 18
+    },
+    {
+      "chain": "movement",
+      "address": "0xde6eb2598d91fd43c432ba7f0bca56158525a74ac0841b749ce17bf984cf5642",
+      "decimals": 8
     }
   ],
   "collateralQuality": "exotic",

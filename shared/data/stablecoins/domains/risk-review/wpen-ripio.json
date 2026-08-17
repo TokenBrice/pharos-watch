@@ -54,19 +54,20 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Ripio issues wPEN natively on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis: every deployment is an EIP-1167 clone of one Ripio master implementation, and per-chain MINTER_ROLE is held only by Ripio-administered accounts. No third-party bridge carries the representation.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "summary": "Ripio issues wPEN natively on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's wFIAT Bridge separately burns source WPEN through BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and fulfills destination minting through LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 across all 30 ordered pairs. The destination dailyMaxMint is 72.265625 WPEN per chain, but fulfillBridgeMint does not trustlessly verify the supplied source transaction or amount; the full rail is scored here rather than as native Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration wpen-ripio",
     "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "issuer",
+        "name": "Ripio wFIAT Bridge (BridgeDeposit + LimitedMinterBridge)",
+        "slug": "ripio-wfiat-bridge",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
         "bridgeTypes": [
-          "Non-minting"
-        ]
+          "burn-mint"
+        ],
+        "note": "The verified BridgeDeposit source burns WPEN on the source deployment and lets a BRIDGE_OPERATOR_ROLE caller fulfill destination minting through LimitedMinterBridge. Current 2026-08-16 routeConfigs reads show all 30 distinct ordered pairs among Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis enabled."
       }
     ],
     "sources": [
@@ -79,8 +80,40 @@
         "url": "https://www.ripio.com/en/assets/wars/whitepaper"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "LatamStable implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9d6266a9167f17ff3dd20f63a474812d0cd47969"
+      },
+      {
+        "label": "LimitedMinterBridge verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+      },
+      {
+        "label": "BridgeDeposit verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+      },
+      {
+        "label": "Ethereum fixed-block RPC reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base fixed-block RPC reads",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "Worldchain fixed-block RPC reads",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "BSC fixed-block RPC reads",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "Polygon fixed-block RPC reads",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Gnosis fixed-block RPC reads",
+        "url": "https://rpc.gnosischain.com"
       }
     ],
     "routes": [
@@ -95,9 +128,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the ethereum wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on ethereum is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment, re-verified at Ethereum block 25771050 on 2026-08-16: the wPEN proxy resolved to LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, and the issuer EOA held the native MINTER_ROLE and UPGRADER_ROLE. Ripio's separate wFIAT Bridge uses BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on the source and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on the destination; all 30 distinct ordered pairs are enabled and the destination WPEN daily cap is 72.265625. The bridge rail is assessed in structured Bridge Risk controls, not as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771050,
         "sources": [
           {
             "label": "wPEN ethereum token",
@@ -120,9 +154,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the base wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on base is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment, re-verified at Base block 50068492 on 2026-08-16: the wPEN proxy resolved to LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, and the issuer EOA held the native MINTER_ROLE and UPGRADER_ROLE. Ripio's separate wFIAT Bridge uses BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on the source and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on the destination; all 30 distinct ordered pairs are enabled and the destination WPEN daily cap is 72.265625. The bridge rail is assessed in structured Bridge Risk controls, not as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068492,
         "sources": [
           {
             "label": "wPEN base token",
@@ -145,9 +180,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the worldchain wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on worldchain is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment, re-verified at Worldchain block 33795348 on 2026-08-16: the wPEN proxy resolved to LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, and the issuer EOA held the native MINTER_ROLE and UPGRADER_ROLE. Ripio's separate wFIAT Bridge uses BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on the source and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on the destination; all 30 distinct ordered pairs are enabled and the destination WPEN daily cap is 72.265625. The bridge rail is assessed in structured Bridge Risk controls, not as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 33795348,
         "sources": [
           {
             "label": "wPEN worldchain token",
@@ -170,9 +206,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the bsc wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on bsc is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment, re-verified at BSC block 116366260 on 2026-08-16: the wPEN proxy resolved to LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, and the issuer EOA held the native MINTER_ROLE and UPGRADER_ROLE. Ripio's separate wFIAT Bridge uses BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on the source and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on the destination; all 30 distinct ordered pairs are enabled and the destination WPEN daily cap is 72.265625. The bridge rail is assessed in structured Bridge Risk controls, not as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116366260,
         "sources": [
           {
             "label": "wPEN bsc token",
@@ -195,9 +232,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the polygon wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on polygon is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment, re-verified at Polygon block 92147372 on 2026-08-16: the wPEN proxy resolved to LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, and the issuer EOA held the native MINTER_ROLE and UPGRADER_ROLE. Ripio's separate wFIAT Bridge uses BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on the source and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on the destination; all 30 distinct ordered pairs are enabled and the destination WPEN daily cap is 72.265625. The bridge rail is assessed in structured Bridge Risk controls, not as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92147372,
         "sources": [
           {
             "label": "wPEN polygon token",
@@ -220,9 +258,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the gnosis wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on gnosis is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment, re-verified at Gnosis block 47808712 on 2026-08-16: the wPEN proxy resolved to LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, and the issuer EOA held the native MINTER_ROLE and UPGRADER_ROLE. Ripio's separate wFIAT Bridge uses BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on the source and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on the destination; all 30 distinct ordered pairs are enabled and the destination WPEN daily cap is 72.265625. The bridge rail is assessed in structured Bridge Risk controls, not as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 47808712,
         "sources": [
           {
             "label": "wPEN gnosis token",
@@ -233,6 +272,324 @@
             "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "wpen-limited-minter-bridge",
+        "label": "Ripio WPEN LimitedMinterBridge destination minter",
+        "routeRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-wfiat-bridge",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "safe:base:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "safe:worldchain:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "safe:bsc:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "safe:polygon:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "safe:gnosis:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "At the 2026-08-16 fixed reads, tokenConfigs(WPEN) existed on all six LimitedMinterBridge deployments with dailyMaxMint = 72.265625 WPEN; DEFAULT_ADMIN_ROLE can change token registration and daily limits, while mintTo accepts an arbitrary recipient.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "WPEN dailyMaxMint was 72.265625 on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis at the reviewed blocks; the verified source permits an administrator to change token registration and daily limits.",
+          "trustedPeerOrRemote": "The issuer-native burn/mint rail uses BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on the source and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on the destination. Current routeConfigs show all 30 ordered pairs enabled: Ethereum→Base, Worldchain, BSC, Polygon, Gnosis; Base→Ethereum, Worldchain, BSC, Polygon, Gnosis; Worldchain→Ethereum, Base, BSC, Polygon, Gnosis; BSC→Ethereum, Base, Worldchain, Polygon, Gnosis; Polygon→Ethereum, Base, Worldchain, BSC, Gnosis; Gnosis→Ethereum, Base, Worldchain, BSC, Polygon.",
+          "pausersAdminsUpgraders": "LimitedMinterBridge DEFAULT_ADMIN_ROLE is held by issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 on every reviewed deployment; the issuer EOA and BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 hold MINTER_ROLE. The source exposes admin and pause surfaces; this adapter is not a native issuer mint path."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "LimitedMinterBridge verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "BridgeDeposit verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          }
+        ],
+        "evidence": "At Ethereum block 25771050, Base block 50068492, Worldchain block 33795348, BSC block 116366260, Polygon block 92147372, and Gnosis block 47808712 on 2026-08-16, LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 reported WPEN tokenConfigs exists = true and dailyMaxMint = 72.265625 WPEN. The verified source defines pause, admin-controlled token registration and daily limits, and arbitrary-recipient mintTo. The issuer EOA and BridgeDeposit held the bridge minter role, while the issuer EOA and Ripio Safe held the bridge adapter's default admin role."
+      },
+      {
+        "id": "wpen-limited-minter-bridge-admin-eoa",
+        "label": "Ripio WPEN LimitedMinterBridge issuer EOA admin and minter",
+        "routeRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "failureDomainKeys": [
+          "protocol:ripio-wfiat-bridge",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The issuer EOA held DEFAULT_ADMIN_ROLE and MINTER_ROLE on LimitedMinterBridge across all six deployments; it can change WPEN's 72.265625 daily cap through the adapter's admin surface.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The adapter's WPEN dailyMaxMint was 72.265625 on every reviewed deployment; DEFAULT_ADMIN_ROLE can change the token configuration and daily limit.",
+          "pausersAdminsUpgraders": "The issuer EOA is the common-mode LimitedMinterBridge DEFAULT_ADMIN_ROLE and MINTER_ROLE holder on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis; the bridge adapter's pause and admin surfaces are separate from the EOA's native LatamStable mint authority."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "LimitedMinterBridge verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ],
+        "evidence": "At the six 2026-08-16 fixed blocks recorded for the native routes, the issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b held DEFAULT_ADMIN_ROLE and MINTER_ROLE on LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on every deployment. Its bridge capabilities are daily-limit administration and destination minting; the EOA's separate direct native mint and UUPS upgrade powers remain scored under Mint Authority."
+      },
+      {
+        "id": "wpen-limited-minter-bridge-admin-safe",
+        "label": "Ripio WPEN LimitedMinterBridge Ripio Safe admin",
+        "routeRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "failureDomainKeys": [
+          "protocol:ripio-wfiat-bridge",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0x067823401127ca6647481c68011805b90d42231e",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295015,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The 4-of-7 Ripio Safe held DEFAULT_ADMIN_ROLE on LimitedMinterBridge across all six deployments and can administer WPEN token registration and the 72.265625 daily cap through the adapter.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The adapter's WPEN dailyMaxMint was 72.265625 on every reviewed deployment; the Safe's DEFAULT_ADMIN_ROLE can change token configuration and daily limits.",
+          "pausersAdminsUpgraders": "The Ripio Safe is the common-mode LimitedMinterBridge DEFAULT_ADMIN_ROLE holder; its bridge admin capability is separate from its native token DEFAULT_ADMIN_ROLE assessment."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "LimitedMinterBridge verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "Ripio Safe multisig",
+            "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          }
+        ],
+        "evidence": "At the six 2026-08-16 fixed blocks recorded for the native routes, the Ripio 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 held DEFAULT_ADMIN_ROLE on LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on every deployment. The preserved Safe state is 7 owners, threshold 4, no enabled modules, and no guard at Ethereum block 25295015."
+      },
+      {
+        "id": "wpen-bridge-deposit",
+        "label": "Ripio WPEN BridgeDeposit burn and fulfillment contract",
+        "routeRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-wfiat-bridge",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "eoa:0xbc924f707ca021f9b220088afe56c85b9cb43085"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "BridgeDeposit.depositForBridge burns WPEN from the source holder and emits the bridge deposit; it is not a reserve lockbox. An off-chain operator later calls fulfillBridgeMint, which invokes LimitedMinterBridge.mintTo on the destination.",
+          "trustedPeerOrRemote": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 is the source-side endpoint and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 is the destination minter for all 30 ordered pairs: Ethereum→Base, Worldchain, BSC, Polygon, Gnosis; Base→Ethereum, Worldchain, BSC, Polygon, Gnosis; Worldchain→Ethereum, Base, BSC, Polygon, Gnosis; BSC→Ethereum, Base, Worldchain, Polygon, Gnosis; Polygon→Ethereum, Base, Worldchain, BSC, Gnosis; Gnosis→Ethereum, Base, Worldchain, BSC, Polygon.",
+          "rateLimits": "Current routeConfigs show all 30 ordered pairs enabled. The fixed fee is 0.05 WPEN for Ethereum-to-other routes, 5 WPEN for other-to-Ethereum routes, and 0.05 WPEN for other non-Ethereum pairs.",
+          "pausersAdminsUpgraders": "The verified BridgeDeposit source exposes issuer-controlled route and fee configuration, pause, fee-collector, and limited-minter controls. Current reads enumerate BRIDGE_OPERATOR_ROLE but do not independently resolve every admin or fee-collector holder; this is retained as an evidence gap rather than inferred away.",
+          "onchainAmountBounds": "fulfillBridgeMint accepts source chain, source transaction hash, source deposit ID, recipient, and amount from a BRIDGE_OPERATOR_ROLE caller; it checks idempotency and destination limits but does not verify the source transaction or supplied amount on-chain."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "BridgeDeposit verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          },
+          {
+            "label": "LimitedMinterBridge verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          }
+        ],
+        "evidence": "The verified BridgeDeposit source burns WPEN in depositForBridge and allows a BRIDGE_OPERATOR_ROLE caller to fulfillBridgeMint on the destination. Current 2026-08-16 reads on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis found the same BridgeDeposit address deployed on each route and the two operator EOAs 0x5ca3f8eeba12d83408fc097c2dad79212456f20f and 0xbc924f707ca021f9b220088afe56c85b9cb43085 on every deployment. Live counters included Worldchain block 33795027 recording 3,995 WPEN burned toward Ethereum and 1,784.030778 WPEN minted from Ethereum, and Worldchain block 33795028 recording 1.32686 WPEN burned toward Polygon with the reciprocal Polygon counter; these counters confirm use but do not close the source-burn verification gap."
+      },
+      {
+        "id": "wpen-bridge-operator-5ca3f8",
+        "label": "Ripio WPEN bridge operator EOA 0x5ca3f8ee",
+        "routeRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+        "failureDomainKeys": [
+          "protocol:ripio-wfiat-bridge",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:0x5ca3f8eeba12d83408fc097c2dad79212456f20f"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BRIDGE_OPERATOR_ROLE on BridgeDeposit authorizes this EOA to submit fulfillBridgeMint for the reviewed source/destination route mesh.",
+          "onchainAmountBounds": "The operator supplies the source chain, source transaction hash, source deposit ID, recipient, and amount; BridgeDeposit checks idempotency and LimitedMinterBridge checks the destination daily limit, but no trustless source-burn or amount proof is enforced on-chain."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "BridgeDeposit verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          },
+          {
+            "label": "Ethereum fixed-block RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the reviewed 2026-08-16 reads on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis, BRIDGE_OPERATOR_ROLE on BridgeDeposit included 0x5ca3f8eeba12d83408fc097c2dad79212456f20f. This operator/backend path is a material bridge trust assumption because fulfillBridgeMint does not cryptographically bind the destination amount or recipient to a source burn."
+      },
+      {
+        "id": "wpen-bridge-operator-bc924f",
+        "label": "Ripio WPEN bridge operator EOA 0xbc924f70",
+        "routeRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xbc924f707ca021f9b220088afe56c85b9cb43085",
+        "failureDomainKeys": [
+          "protocol:ripio-wfiat-bridge",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:0xbc924f707ca021f9b220088afe56c85b9cb43085"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BRIDGE_OPERATOR_ROLE on BridgeDeposit authorizes this EOA to submit fulfillBridgeMint for the reviewed source/destination route mesh.",
+          "onchainAmountBounds": "The operator supplies the source chain, source transaction hash, source deposit ID, recipient, and amount; BridgeDeposit checks idempotency and LimitedMinterBridge checks the destination daily limit, but no trustless source-burn or amount proof is enforced on-chain."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "BridgeDeposit verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          },
+          {
+            "label": "Ethereum fixed-block RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the reviewed 2026-08-16 reads on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis, BRIDGE_OPERATOR_ROLE on BridgeDeposit included 0xbc924f707ca021f9b220088afe56c85b9cb43085. This operator/backend path is a material bridge trust assumption because fulfillBridgeMint does not cryptographically bind the destination amount or recipient to a source burn."
       }
     ]
   }

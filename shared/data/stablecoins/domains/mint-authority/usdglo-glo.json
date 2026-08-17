@@ -4,9 +4,17 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDGLO is issuer-native on six EVM chains and Stellar. The six GloDollarV3 UUPS proxies consolidate MINTER_ROLE, DEFAULT_ADMIN_ROLE, PAUSER_ROLE, and UPGRADER_ROLE in one Brale-operated EOA with no on-chain cap; the Stellar issuer account independently retains revocable and clawback-enabled authorization. Brale operates the 1:1 issuance backend and publishes monthly reserve reports.",
+    "summary": "USDGLO is issuer-native on six EVM chains and Stellar; every reviewed deployment is a canonical native-issuance route, not a bridge representation. The six GloDollarV3 UUPS proxies consolidate MINTER_ROLE, DEFAULT_ADMIN_ROLE, PAUSER_ROLE, and UPGRADER_ROLE in one Brale-operated EOA with no on-chain cap; the Stellar issuer account independently retains revocable and clawback-enabled authorization. Brale operates the 1:1 issuance backend and publishes monthly reserve reports. No bridge-only authority is included in Mint Authority.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "arbitrum:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "base:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "celo:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "ethereum:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "optimism:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "polygon:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+      ],
       "proxyAddresses": [
         "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
       ],
@@ -41,6 +49,14 @@
       {
         "chain": "multichain",
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "deploymentRefs": [
+          "arbitrum:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "base:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "celo:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "ethereum:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "optimism:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "polygon:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+        ],
         "label": "Brale operator EOA (sole MINTER_ROLE + DEFAULT_ADMIN_ROLE + UPGRADER_ROLE holder on all 6 EVM chains)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -62,6 +78,15 @@
         ]
       },
       {
+        "deploymentRefs": [
+          "arbitrum:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "base:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "celo:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "ethereum:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "optimism:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "polygon:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+          "stellar:USDGLO-GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV"
+        ],
         "label": "Brale issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -80,6 +105,9 @@
       {
         "chain": "stellar",
         "address": "GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV",
+        "deploymentRefs": [
+          "stellar:USDGLO-GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV"
+        ],
         "label": "USDGLO Stellar issuer account",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -100,7 +128,7 @@
     "reconciliation": "periodic",
     "supervision": "none",
     "review": {
-      "evidence": "Fresh 2026-08-08 reads confirm the same codeless Brale operator holds MINTER_ROLE, DEFAULT_ADMIN_ROLE, PAUSER_ROLE, and UPGRADER_ROLE on all six EVM deployments at Ethereum block 25712335 / Base 49713974 / Optimism 155309260 / Celo 74316538 / Polygon 91674848 / Arbitrum 492492610. ERC-1967 implementation slots remain 0xf8dbe4f52b7d4fe90cd360aa4f49b7a66783c56f (Ethereum/Polygon), 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8 (Base/Optimism/Arbitrum), and 0x865dda29597ce5f9404c5a56f643492720f2433f (Celo). Horizon ledger 63861135 confirms the Stellar issuer's single signer plus revocable and clawback flags. No on-chain supply cap, timelock, or multisig bounds either issuance lane. Brale publishes monthly reserve reports, including the June 2026 report, so reconciliation is periodic; money-transmitter/MSB status is not prudential stablecoin supervision.",
+      "evidence": "Boundary review on 2026-08-16 confirms all seven authored deployment refs resolve to reviewed native-issuance routes: six EVM GloDollarV3 UUPS proxies plus the native Stellar USDGLO asset; no authored deployment is a bridge representation. Fresh 2026-08-16 reads confirm the same codeless Brale operator remains the documented holder of MINTER_ROLE, DEFAULT_ADMIN_ROLE, PAUSER_ROLE, and UPGRADER_ROLE across the six EVM deployments; at Ethereum block 0x1893ccc, hasRole(MINTER_ROLE), hasRole(DEFAULT_ADMIN_ROLE), and hasRole(UPGRADER_ROLE) for 0xb180f98037a63a3dca66b6b4ddbf250265b65110 each returned true. The reviewed implementation slots are 0xf8dbe4f52b7d4fe90cd360aa4f49b7a66783c56f (Ethereum/Polygon), 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8 (Base/Optimism/Arbitrum), and 0x865dda29597ce5f9404c5a56f643492720f2433f (Celo). Horizon ledger 63861135 confirms the Stellar issuer's single signer plus revocable and clawback flags. No on-chain supply cap, timelock, or multisig bounds either issuance lane. No USDGLO-specific bridge adapter, lockbox/escrow, peer, validator/DVN, destination minter, or bridge-admin control was evidenced, so Mint Authority retains only native issuance controls and Bridge Risk has no structured bridge control. Brale publishes monthly reserve reports, including the June 2026 report, so reconciliation is periodic; money-transmitter/MSB status is not prudential stablecoin supervision.",
       "sources": [
         {
           "label": "Brale USDGLO proof of reserve",
@@ -123,8 +151,8 @@
           "url": "https://horizon.stellar.org/accounts/GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV"
         }
       ],
-      "reviewer": "OpenAI Codex C09 control review",
-      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C09 control review; mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     },
     "economicCapSemantics": "unbounded"

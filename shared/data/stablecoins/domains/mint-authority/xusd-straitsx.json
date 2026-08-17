@@ -7,6 +7,10 @@
     "summary": "StraitsX XUSD uses Circle-style MasterMinter deployments on Ethereum and BNB Chain with separate chain-local 3/5 owner and master-minter Safes. The BNB Chain token is a legacy ZeppelinOS proxy controlled by another 3/5 Safe; the Solana mint authority is a 3/10 multisig.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "bsc:0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+        "ethereum:0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+      ],
       "proxyAddresses": [
         "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
         "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
@@ -46,6 +50,9 @@
       {
         "chain": "ethereum",
         "address": "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
+        "deploymentRefs": [
+          "ethereum:0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+        ],
         "label": "XUSD token MasterMinter path",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -67,6 +74,9 @@
       {
         "chain": "ethereum",
         "address": "0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB",
+        "deploymentRefs": [
+          "ethereum:0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+        ],
         "label": "XUSD MasterMinter Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -102,6 +112,9 @@
       {
         "chain": "ethereum",
         "address": "0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964",
+        "deploymentRefs": [
+          "ethereum:0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+        ],
         "label": "StraitsX token owner Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -137,6 +150,9 @@
       {
         "chain": "bsc",
         "address": "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+        "deploymentRefs": [
+          "bsc:0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
+        ],
         "label": "BNB Chain XUSD token MasterMinter path",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -160,6 +176,9 @@
       {
         "chain": "bsc",
         "address": "0x31b964870f90d25837afC995239273F72931e7A3",
+        "deploymentRefs": [
+          "bsc:0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
+        ],
         "label": "BNB Chain XUSD MasterMinter Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -200,6 +219,9 @@
       {
         "chain": "bsc",
         "address": "0x7942337923d89D27e801B6DC05274fA9417968F5",
+        "deploymentRefs": [
+          "bsc:0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
+        ],
         "label": "BNB Chain XUSD token owner Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -240,6 +262,9 @@
       {
         "chain": "bsc",
         "address": "0xf4c8B80ff929b15A21A89B0cA754D176D88F5a14",
+        "deploymentRefs": [
+          "bsc:0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
+        ],
         "label": "BNB Chain XUSD legacy proxy-admin Safe",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -280,6 +305,9 @@
       {
         "chain": "solana",
         "address": "5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj",
+        "deploymentRefs": [
+          "solana:4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
+        ],
         "label": "StraitsX Solana mint authority",
         "role": "direct-minter",
         "authorityType": "multisig",

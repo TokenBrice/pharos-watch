@@ -1104,20 +1104,28 @@
     "factsAsOf": "2026-08-11"
   },
   "gusd-gate": {
-    "title": "Exchange Scrip, Treasury Wrapper",
-    "text": "Gate USD functions less as a stablecoin and more as a yield certificate: deposit USDT, USDC, or — since the July 2026 product refresh — USD1 on Gate, receive GUSD 1:1, and collect a {{term:treasury}}Treasury{{/term}}-flavored APR until you {{term:redemption}}redeem{{/term}} through the exchange. The backing pitch is T-bills plus \"Gate ecosystem revenue\" and yield-bearing stablecoin assets, and it is verified by nobody: the only reserve proof is Gate's exchange-wide zk-Merkle custody exercise, in which GUSD appears inside a pooled stablecoin bucket with no per-asset ratio and no named {{term:attestation}}attestor{{/term}}. That is why the backing pillar and the overall grade now both sit at F despite a near-perfect peg score — the price holds because redemption runs through Gate's own platform, not because anyone can see the reserves. Circulation roughly doubled in early June 2026 and has sat at a conspicuously round figure since, while on-chain exit remains effectively decorative — one thin Ethereum deployment beside an off-chain route that works exactly as long as the exchange does. A handful of shallow depeg blips says the mechanism works; the F says you're taking Gate's word for why.",
-    "updatedAt": "2026-08-11",
+    "title": "Par Price, Opaque Ledger",
+    "text": "GUSD is Gate's account-linked yield certificate: users subscribe 1:1 with USDT, USDC, or USD1, receive daily GUSD rewards, and {{term:redemption}}redeem{{/term}} through Gate. Gate says tokenized {{term:treasury}}Treasuries{{/term}} and stablecoins back the product, but publishes no holdings schedule, named backing-asset custody structure, legal segregation, or independent reserve-to-token reconciliation. Its exchange proof-of-reserves now publishes customer and platform GUSD balances, which answers whether Gate holds customer GUSD — not what backs every token — while the Ethereum control plane remains a single-EOA minter plus a separate no-delay EOA upgrader. GUSD also exists on GateLayer, although Pharos contract telemetry currently covers Ethereum only. The displayed market cap inherits DefiLlama's full Ethereum token-supply series and is materially above Gate subscription and CoinGecko circulating figures, so it should not be read as reconciled circulation. The peg has stayed close to par; the F reflects the evidence and control plane behind that price.",
+    "updatedAt": "2026-08-17",
     "authoredBy": "ai",
-    "model": "claude-fable-5",
-    "factsAsOf": "2026-08-11",
+    "model": "gpt-5-codex",
+    "factsAsOf": "2026-08-17",
     "sources": [
       {
-        "label": "Gate — GUSD Flexible US Treasury product upgrade (2026-07-27)",
-        "url": "https://www.gate.com/announcements/article/100840"
+        "label": "Gate GUSD current product page",
+        "url": "https://www.gate.com/staking/USDT?isDebtType=1&pid=33"
       },
       {
-        "label": "DefiLlama — Gate USD circulating supply",
-        "url": "https://defillama.com/stablecoin/gate-usd"
+        "label": "Gate exchange proof-of-reserves page",
+        "url": "https://www.gate.com/proof-of-reserves"
+      },
+      {
+        "label": "GateLayer documentation — GUSD contract",
+        "url": "https://www.gatechain.io/docs/GateLayer/Tutorial/X402/"
+      },
+      {
+        "label": "Ethereum Gate GUSD implementation",
+        "url": "https://etherscan.io/address/0xc181faf98a90993bba78af4a9d5dde37d3dbadaf#code"
       }
     ]
   },

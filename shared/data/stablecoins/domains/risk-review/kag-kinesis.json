@@ -6,5 +6,168 @@
     "evidence": "Inferred review retained: KAG resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "KAG's authored Ethereum deployment is a KMS Labs ERC-20 representation of Kinesis-native KAG. Official Kinesis disclosures describe a 1:1 reserve and redemption relationship, but the reviewed sources do not expose the Kinesis-side reserve-locking/accounting path or a current native issuance authority. The Ethereum ERC20F route therefore remains unresolved and opaque; its uncapped minter and default-admin/UUPS upgrade authorities are retained below as bridge-representation controls.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos bridge-route re-verification; FIX-08 migration",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Kinesis silver token disclosure",
+        "url": "https://kinesis.money/silver/"
+      },
+      {
+        "label": "Kinesis trust and security disclosure",
+        "url": "https://kinesis.money/trust-security/"
+      },
+      {
+        "label": "Kinesis ERC-20 silver announcement",
+        "url": "https://kinesis.money/unternehmensnachrichten/silver-kag-listed-on-ascendex/"
+      },
+      {
+        "label": "Kinesis ERC-20 silver MEXC announcement",
+        "url": "https://kinesis.money/pl/company-news/kag-listed-on-mexc-exchange/"
+      },
+      {
+        "label": "KAG token proxy on Etherscan",
+        "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+      },
+      {
+        "label": "ERC20F verified implementation on Blockscout",
+        "url": "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
+      },
+      {
+        "label": "Ethereum PublicNode JSON-RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Kinesis April 2026 physical-metal audit",
+        "url": "https://kinesis.money/audit-april-2026/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e",
+        "sourceChain": "kinesis",
+        "destinationChain": "ethereum",
+        "canonicalChain": "kinesis",
+        "contractAddress": "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e",
+        "protocol": "KMS Labs Ethereum KAG representation",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Official Kinesis material identifies native KAG as issued by Kinesis Cayman on the Kinesis network and the Ethereum ERC-20 as a KMS Labs 1:1 claim on Kinesis KAG held in KMS Labs reserves, redeemable into Kinesis KAG subject to compliance. The reviewed sources do not expose a verifiable Kinesis-side lockbox, reserve account, supply-conserving mint/burn invariant, or current native issuance authority, so this route cannot be assigned a favorable issuer-native lock/mint tier.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770003,
+        "sources": [
+          {
+            "label": "Kinesis trust and security disclosure",
+            "url": "https://kinesis.money/trust-security/"
+          },
+          {
+            "label": "KAG token proxy on Etherscan",
+            "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+          },
+          {
+            "label": "ERC20F verified implementation on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC role and storage reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "kag-ethereum-erc20f-minter",
+        "label": "KMS Labs Ethereum KAG ERC20F minter EOA",
+        "routeRefs": [
+          "ethereum:0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xe560c473dee7b1d1d5ae316f4c1cba7157de498e",
+        "failureDomainKeys": [
+          "eoa:ethereum:0xe560c473dee7b1d1d5ae316f4c1cba7157de498e"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified ERC20F mint path has no supply cap or per-minter allowance, so this EOA can expand Ethereum representation supply without an on-chain ceiling.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The ERC20F source defines mint(address,uint256) as onlyRole(MINTER_ROLE) without a numeric cap or per-minter allowance.",
+          "pausersAdminsUpgraders": "This is a plain EOA with no multisig, timelock, or guard evidence in front of the representation minter control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770003,
+        "sources": [
+          {
+            "label": "KAG token proxy on Etherscan",
+            "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+          },
+          {
+            "label": "ERC20F verified implementation on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770003 on 2026-08-16, hasRole(MINTER_ROLE, 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e) on the KAG proxy returned true and eth_getCode returned 0x (EOA). The verified ERC20F source defines mint(address,uint256) as onlyRole(MINTER_ROLE) with no supply cap or per-minter allowance, so this key can mint an unbounded amount of the Ethereum representation. The role was granted at deployment block 23337287 and was not revoked in the reviewed role state."
+      },
+      {
+        "id": "kag-ethereum-erc20f-default-admin",
+        "label": "KMS Labs Ethereum KAG ERC20F default-admin EOA",
+        "routeRefs": [
+          "ethereum:0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x24945ec1be35c11c1fc13c72c910851541afb10f",
+        "failureDomainKeys": [
+          "eoa:ethereum:0x24945ec1be35c11c1fc13c72c910851541afb10f"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "DEFAULT_ADMIN_ROLE administers MINTER_ROLE and UPGRADER_ROLE; it can grant mint authority to any address or self-grant the UUPS upgrade role, with no numeric representation-supply cap.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The ERC20F source imposes no mint cap; granting another MINTER_ROLE or replacing the implementation can expand representation supply without an on-chain ceiling.",
+          "pausersAdminsUpgraders": "At the observed block, DEFAULT_ADMIN_ROLE and CONTRACT_ADMIN_ROLE are held by this plain EOA. It is the role admin for MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE, and PAUSER_ROLE, and no multisig, timelock, or guard sits in front of it."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770003,
+        "sources": [
+          {
+            "label": "KAG token proxy on Etherscan",
+            "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+          },
+          {
+            "label": "ERC20F verified implementation on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770003 on 2026-08-16, hasRole(DEFAULT_ADMIN_ROLE, 0x24945ec1be35c11c1fc13c72c910851541afb10f) returned true and eth_getCode returned 0x (EOA). getRoleAdmin() for MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE, and PAUSER_ROLE returned DEFAULT_ADMIN_ROLE, so this key can grant MINTER_ROLE to any address and can self-grant UPGRADER_ROLE to replace the ERC20F implementation. No timelock, multisig, or guard sits in front of this representation administrator."
+      }
+    ]
   }
 }

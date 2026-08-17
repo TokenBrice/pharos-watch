@@ -33,6 +33,9 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "address": "0xAD60d43a33cA26e40eAcc5BBc60f1C7136FFB89b",
+        "deploymentRefs": [
+          "ethereum:0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -50,6 +53,9 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0x17767f384cead5182cAaf9056635bAc14aFC24a1",
+        "deploymentRefs": [
+          "ethereum:0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -67,6 +73,9 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "deploymentRefs": [
+          "ethereum:0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        ],
         "canRaiseCap": "unknown",
         "threshold": 3,
         "signerCount": 6,

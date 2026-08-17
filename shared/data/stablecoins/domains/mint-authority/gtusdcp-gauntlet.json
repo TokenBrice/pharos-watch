@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "gtUSDCp has three direct immutable Morpho vault deployments; shares mint only against each chain's USDC deposits. Ethereum and Base parameter owners are 4-of-7 Gauntlet Safes, while Arbitrum uses the same seven signers at a 3-of-7 threshold.",
+    "summary": "gtUSDCp has three independent immutable Morpho vault deployments on Ethereum, Base, and Arbitrum; local ERC-4626 shares mint only against each chain's USDC deposits. The inherited Ethereum USDC MasterMinter remains parent exposure from usdc-circle and does not mint gtUSDCp shares or replace vault bytecode; no bridge representation is included in Mint Authority.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "immutable",
@@ -33,6 +33,9 @@
       {
         "chain": "ethereum",
         "address": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "deploymentRefs": [
+          "ethereum:0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+        ],
         "label": "Gauntlet USDC Prime MetaMorpho V2 vault Ethereum (immutable, deposit-only mint)",
         "role": "wrapper",
         "authorityType": "contract",
@@ -56,6 +59,9 @@
       {
         "chain": "base",
         "address": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "deploymentRefs": [
+          "base:0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+        ],
         "label": "Gauntlet USDC Prime MetaMorpho vault Base (immutable, deposit-only mint)",
         "role": "wrapper",
         "authorityType": "contract",
@@ -75,6 +81,9 @@
       {
         "chain": "arbitrum",
         "address": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+        "deploymentRefs": [
+          "arbitrum:0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+        ],
         "label": "Gauntlet USDC Prime MetaMorpho vault Arbitrum (immutable, deposit-only mint)",
         "role": "wrapper",
         "authorityType": "contract",
@@ -94,6 +103,10 @@
       {
         "chain": "ethereum",
         "address": "0xe982615d461dd5cd06575bbea87624fda4e3de17",
+        "deploymentRefs": [
+          "ethereum:0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+        ],
+        "controllerAssetId": "usdc-circle",
         "label": "Inherited Ethereum USDC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -143,9 +156,9 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "The full three-chain inventory was checked independently: Ethereum at block 25527215, Base at block 48599296, and Arbitrum at block 483587934. Every verified direct vault had zero EIP-1967 implementation, admin, and beacon slots and returned the chain-local native USDC as asset(). Ethereum owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec and Base owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 were 4-of-7 Safes; the same Arbitrum owner address was 3-of-7. All three had no modules or guard. Owners can curate vault parameters but cannot replace vault bytecode or mint base USDC. Economic-control evidence reviewed 2026-07-15: each immutable MetaMorpho deployment can mint shares only against deposited native USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. Economic-posture fields reviewed 2026-08-15: all three immutable vaults mint shares only against chain-local USDC deposits, with no local attestation or prudential regime.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "The full three-chain inventory was checked independently: Ethereum at block 25527215, Base at block 48599296, and Arbitrum at block 483587934. Every verified direct vault had zero EIP-1967 implementation, admin, and beacon slots and returned the chain-local native USDC as asset(). Ethereum owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec and Base owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 were 4-of-7 Safes; the same Arbitrum owner address was 3-of-7. All three had no modules or guard. Owners can curate vault parameters but cannot replace vault bytecode or mint base USDC. The inherited Ethereum USDC MasterMinter control is parent exposure from usdc-circle, scoped to the Ethereum native vault route; it cannot mint gtUSDCp shares without a USDC deposit or replace any gtUSDCp vault bytecode. No bridge representation or bridge controller is included in Mint Authority. Economic-control evidence reviewed 2026-07-15: each immutable MetaMorpho deployment can mint shares only against deposited native USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. Economic-posture fields reviewed 2026-08-15: all three immutable vaults mint shares only against chain-local USDC deposits, with no local attestation or prudential regime.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex mint/bridge boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

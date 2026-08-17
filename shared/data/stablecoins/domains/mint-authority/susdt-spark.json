@@ -4,25 +4,32 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "spUSDT is a Spark ERC-4626 savings wrapper over USDT. Wrapper shares are minted against deposited USDT and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply. The wrapper is UUPS-upgradeable by the Spark SubProxy through Sky governance's enforceable 48-hour DSPause path.",
+    "summary": "spUSDT is a Spark ERC-4626 savings wrapper with canonical local issuance on Ethereum and Arbitrum. Shares are minted only against deposited local USDT or USDT0 after each vault's deposit-cap check and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply. Ethereum vault upgrades and cap changes flow through the Spark SubProxy and Sky's enforceable 48-hour DSPause path; Arbitrum vault administration flows through the Spark Receiver and zero-delay Spark Executor governance path.",
     "inheritedFrom": "usdt-tether",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "arbitrum:0x45d91340b3b7b96985a72b5c678f7d9e8d664b62",
+        "ethereum:0xe2e7a17dff93280dec073c995595155283e3c372"
+      ],
       "proxyAddresses": [
-        "0xe2e7a17dff93280dec073c995595155283e3c372"
+        "0xe2e7a17dff93280dec073c995595155283e3c372",
+        "0x45d91340b3b7b96985a72b5c678f7d9e8d664b62"
       ],
       "implementationAddresses": [
-        "0x1b992302652a92611dcd5090d1cb388c6377f455"
+        "0x1b992302652a92611dcd5090d1cb388c6377f455",
+        "0x282dafe8b97e2db5053761a4601ab2e1cb976318"
       ],
       "adminAddresses": [
         "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "0x65d946e533748a998b1f0e430803e39a6388f7a1",
+        "0x212871A1C235892F86cAB30E937e18c94AEd8474",
         "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
         "0xbE286431454714F511008713973d3B053A2d38f3",
         "0x6605aa120fe8b656482903E7757BaBF56947E45E",
         "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9"
       ],
       "canChangeMintLogic": true,
-      "delaySec": 172800,
       "controlRef": "Spark/Sky SubProxy upgrade governance (48-hour DSPause)",
       "observedAt": "2026-07-13",
       "observedBlock": 25526129,
@@ -53,6 +60,9 @@
       {
         "chain": "ethereum",
         "address": "0xe2e7a17dff93280dec073c995595155283e3c372",
+        "deploymentRefs": [
+          "ethereum:0xe2e7a17dff93280dec073c995595155283e3c372"
+        ],
         "label": "Spark Savings USDT vault",
         "role": "wrapper",
         "authorityType": "contract",
@@ -74,8 +84,41 @@
         "evidence": "At Ethereum block 25526129, the vault was an ERC1967 UUPS proxy with implementation 0x1b992302652a92611dcd5090d1cb388c6377f455 and zero admin and beacon slots. asset() returned USDT 0xdac17f958d2ee523a2206206994597c13d831ec7. DEFAULT_ADMIN_ROLE had one member, SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4."
       },
       {
+        "chain": "arbitrum",
+        "address": "0x45d91340b3b7b96985a72b5c678f7d9e8d664b62",
+        "deploymentRefs": [
+          "arbitrum:0x45d91340b3b7b96985a72b5c678f7d9e8d664b62"
+        ],
+        "label": "Spark Savings USDT Arbitrum vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ERC-4626 share accounting over deposited Arbitrum USDT0; the 250,000,000 USDT0 deposit cap bounds ordinary share issuance, and SETTER_ROLE/TAKER_ROLE operate reserve liquidity and rate settings rather than arbitrary share minting.",
+        "sources": [
+          {
+            "label": "Spark Savings product documentation",
+            "url": "https://docs.spark.fi/products/spark-savings"
+          },
+          {
+            "label": "Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          },
+          {
+            "label": "Verified Arbitrum SparkVault V2 implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x282dafe8b97e2db5053761a4601ab2e1cb976318?tab=contract"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495303977,
+        "evidence": "At Arbitrum block 495303977 (2026-08-16 00:01:22 UTC), the Spark spUSDT V2 vault 0x45d91340b3b7b96985a72b5c678f7d9e8d664b62 resolved to implementation 0x282dafe8b97e2db5053761a4601ab2e1cb976318 with a zero EIP-1967 admin slot. asset() returned USDT0 0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9 and the deposit cap was 250,000,000 USDT0 (6 decimals). DEFAULT_ADMIN_ROLE was held by Spark Executor 0x65d946e533748a998b1f0e430803e39a6388f7a1, SETTER_ROLE by 0x4eE67c8Db1BAa6ddE99d936C7D313B5d31e8fa38, and TAKER_ROLE by 0x92afd6F2385a90e44da3a8B60Fe36f6cBe1D8709. The verified implementation uses the same deposit-gated share-mint pattern; the USDT0 dependency is a separate LayerZero bridge representation and no bridge control mints spUSDT."
+      },
+      {
         "chain": "ethereum",
         "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "deploymentRefs": [
+          "ethereum:0xe2e7a17dff93280dec073c995595155283e3c372"
+        ],
         "label": "Spark/Sky SubProxy upgrade governance (48-hour DSPause)",
         "role": "governor",
         "authorityType": "dao-governor",
@@ -113,6 +156,9 @@
       {
         "chain": "ethereum",
         "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "deploymentRefs": [
+          "ethereum:0xe2e7a17dff93280dec073c995595155283e3c372"
+        ],
         "label": "Inherited Ethereum USDT token owner multisig",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -148,14 +194,30 @@
           "label": "Spark Savings USDT contract",
           "url": "https://etherscan.io/address/0xe2e7a17dff93280dec073c995595155283e3c372"
         },
-        {
-          "label": "BDO Tether assurance report - 31 March 2026",
-          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
-        }
-      ],
-      "evidence": "At Ethereum block 25526129, spUSDT vault 0xe2e7a17dff93280dec073c995595155283e3c372 was a UUPS proxy using SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455. Its sole DEFAULT_ADMIN_ROLE member was Spark SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. Arbitrary SubProxy execution flowed through DSPauseProxy and DSPause with a mandatory 172800-second delay under live Sky Chief governance. StarGuard's seven-day maxDelay was only an expiry bound. Wrapper shares remained collateralized by deposited USDT and did not create base USDT supply. Economic-control evidence reviewed 2026-07-15: spUSDT share issuance is deposit-only and wrapper upgrades require Sky's 48-hour DSPause, but the scored base-supply mint is inherited from Tether and remains issuer-controlled. BDO reconciles Tether reserves quarterly; the latest available report covers 2026-03-31. Tether's El Salvador registration is not treated as prudential stablecoin supervision. Economic-posture fields reviewed 2026-08-15: local share issuance is deposit-gated and cap changes or mint-logic upgrades require Sky governance's enforced 48-hour DSPause; recurring third-party reserve reports support periodic attestation-only posture.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+          {
+            "label": "BDO Tether assurance report - 31 March 2026",
+            "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
+          },
+          {
+            "label": "Spark Vaults V2 integration documentation",
+            "url": "https://docs.spark.fi/integrators/spark-vaults-v2"
+          },
+          {
+            "label": "Verified Arbitrum SparkVault V2 implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x282dafe8b97e2db5053761a4601ab2e1cb976318?tab=contract"
+          },
+          {
+            "label": "Verified Arbitrum Spark Executor",
+            "url": "https://arbitrum.blockscout.com/address/0x65d946e533748a998b1f0e430803e39a6388f7a1?tab=contract"
+          },
+          {
+            "label": "Verified Arbitrum Spark Receiver",
+            "url": "https://arbitrum.blockscout.com/address/0x212871a1c235892f86cab30e937e18c94aed8474?tab=contract"
+          }
+        ],
+      "evidence": "At Ethereum block 25526129, spUSDT vault 0xe2e7a17dff93280dec073c995595155283e3c372 was a UUPS proxy using SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455. Its sole DEFAULT_ADMIN_ROLE member was Spark SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. Arbitrary SubProxy execution flowed through DSPauseProxy and DSPause with a mandatory 172800-second delay under live Sky Chief governance; StarGuard's seven-day maxDelay was only an expiry bound. At Arbitrum block 495303977 (2026-08-16), the omitted spUSDT V2 vault 0x45d91340b3b7b96985a72b5c678f7d9e8d664b62 used implementation 0x282dafe8b97e2db5053761a4601ab2e1cb976318, had a 250,000,000 USDT0 deposit cap, and was administered by Spark Executor 0x65d946e533748a998b1f0e430803e39a6388f7a1 with SETTER_ROLE 0x4eE67c8Db1BAa6ddE99d936C7D313B5d31e8fa38 and TAKER_ROLE 0x92afd6F2385a90e44da3a8B60Fe36f6cBe1D8709. At Arbitrum block 495305504, Spark Receiver 0x212871A1C235892F86cAB30E937e18c94AEd8474 returned L1 authority 0x3300f198988e4c9c63f75df86de36421f06af8c4 and target Executor 0x65d946e533748a998b1f0e430803e39a6388f7a1; Executor delay() was 0 and gracePeriod() 604800 seconds, so this is not a timelock. Both vaults mint wrapper shares only against local deposits and do not create base USDT supply. The Arbitrum vault's USDT0 collateral is a separate LayerZero lock-and-mint representation of Tether's Ethereum USDT, not a bridged spUSDT representation. Economic-control evidence reviewed 2026-08-16: local share issuance remains deposit-gated and mutable through the respective native governance paths, while scored base-supply mint authority remains inherited from Tether. BDO reconciles Tether reserves quarterly; the latest available report covers 2026-03-31. Tether's El Salvador registration is not treated as prudential stablecoin supervision.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Pharos mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

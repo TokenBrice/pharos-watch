@@ -9,15 +9,15 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "GRAMG uses Token Teknoloji issuer-native StableCoin contracts on Avalanche and Polygon. Direct source verification resolves externalTransfer/externalTransferFrom burn/mint functions controlled by the issuer supply manager, so the previous Across/Avalanche route signal is not the durable supply path.",
-    "reviewedAt": "2026-06-30",
-    "reviewer": "Codex static correction review",
+    "summary": "GRAMG's StableCoin contracts expose an issuer-controlled externalTransfer/externalTransferFrom burn/mint rail on Avalanche and Polygon. The route-level controllers are chain-local EOAs, with a Polygon proposed owner able to claim and replace authority immediately; no verified peer, validator, escrow, replay, conservation, or rate-limit machinery constrains the rail. Native mint() remains in Mint Authority, while the exact bridge protocol, source/destination mapping, and Polygon canonical-versus-representation status remain unresolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
     "protocols": [
       {
         "source": "explorer",
-        "name": "Token Teknoloji StableCoin externalTransfer route",
-        "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "name": "Token Teknoloji StableCoin externalTransfer/externalTransferFrom",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
         "bridgeTypes": [
           "issuer-native-burn-mint"
         ]
@@ -26,11 +26,23 @@
     "sources": [
       {
         "label": "Token Teknoloji GRAMG product page",
-        "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-gold-gramg/"
       },
       {
-        "label": "GRAMG Avalanche contract source",
-        "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        "label": "GRAMG Avalanche verified source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+      },
+      {
+        "label": "Avalanche C-Chain RPC",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      },
+      {
+        "label": "GRAMG Polygon contract",
+        "url": "https://polygonscan.com/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9#code"
+      },
+      {
+        "label": "Polygon RPC",
+        "url": "https://polygon.drpc.org"
       }
     ],
     "routes": [
@@ -38,31 +50,195 @@
         "id": "avalanche:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
         "destinationChain": "avalanche",
         "contractAddress": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
-        "protocol": "unresolved route",
+        "protocol": "Token Teknoloji StableCoin externalTransfer/externalTransferFrom",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Verified token-level facts at Avalanche block 92980453 on 2026-08-16: issuer-controlled externalTransfer burns after a user-approved external allowance, and externalTransferFrom mints through the supply manager before recipient transfer. No primary source identifies a source/destination pair, peer registry, validator, escrow, replay protection, conservation check, or rate limit, so route scope and the exact cross-chain mapping remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "failureDomainKeys": [
+          "avalanche:0xff80b391b286887d446b1124820f87d5b049b4fb",
+          "contract:avalanche:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92980453,
+        "sources": [
+          {
+            "label": "GRAMG Avalanche verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+          },
+          {
+            "label": "Avalanche C-Chain RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ]
       },
       {
         "id": "polygon:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
         "destinationChain": "polygon",
         "contractAddress": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
-        "protocol": "unresolved route",
+        "protocol": "Token Teknoloji StableCoin externalTransfer/externalTransferFrom",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Verified token-level facts at Polygon block 92143429 on 2026-08-16: issuer-controlled externalTransfer burns after a user-approved external allowance, and externalTransferFrom mints through the supply manager before recipient transfer. The current owner is separate from the Avalanche owner, while the Avalanche EOA is proposedOwner and can claim immediately. No primary source identifies a source/destination pair, peer registry, validator, escrow, replay protection, conservation check, or rate limit, so route scope and the exact cross-chain mapping remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "controllerChain": "polygon",
+        "controllerAddress": "0xd61c0129f6c35a675db6e2a067b31e75b2573077",
+        "failureDomainKeys": [
+          "polygon:0xd61c0129f6c35a675db6e2a067b31e75b2573077",
+          "polygon:0xff80b391b286887d446b1124820f87d5b049b4fb",
+          "contract:polygon:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92143429,
+        "sources": [
+          {
+            "label": "GRAMG Polygon contract",
+            "url": "https://polygonscan.com/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9#code"
+          },
+          {
+            "label": "Polygon RPC",
+            "url": "https://polygon.drpc.org"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "gramg-avalanche-external-transfer-controller",
+        "label": "GRAMG Avalanche external-transfer owner and supply manager",
+        "routeRefs": [
+          "avalanche:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin"],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "failureDomainKeys": [
+          "avalanche:0xff80b391b286887d446b1124820f87d5b049b4fb",
+          "contract:avalanche:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "No bridge escrow or lockbox is present; externalTransfer burns from the user after allowance and externalTransferFrom mints through the supply manager before recipient transfer.",
+          "trustedPeerOrRemote": "externalTransfer and externalTransferFrom accept arbitrary networkURI and bytes addresses; no on-chain peer or source-chain allowlist is verified.",
+          "attestorQuorum": "No validator, DVN, signer set, or attestor quorum is present in the verified StableCoin source.",
+          "rateLimits": "No aggregate, per-call, or route-level rate limit is present in the verified external-transfer path.",
+          "pausersAdminsUpgraders": "The chain-local owner or supply manager controls external transfers; owner can replace supplyManager, and pause, frozen-account, and KYC checks remain issuer-controlled.",
+          "onchainAmountBounds": "externalTransfer is bounded by the user-approved external allowance and balance; externalTransferFrom has no verified prior-burn or lock accounting bound.",
+          "unsupportedReason": "The exact off-chain bridge protocol and source/destination mapping are unresolved; no conservation or replay protection is verified."
+        },
+        "capDescription": "externalTransferFrom mints directly through the supply manager with no verified aggregate supply ceiling or route-level amount bound.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "arbitrary networkURI and bytes destination parameters",
+          "issuer owner or supply manager can invoke external transfer without a verified peer, validator, conservation, or rate-limit control"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92980453,
+        "sources": [
+          {
+            "label": "GRAMG Avalanche verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+          },
+          {
+            "label": "Avalanche C-Chain RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "At Avalanche block 92980453 on 2026-08-16, owner() and supplyManager() both returned 0xff80b391b286887d446b1124820f87d5b049b4fb, an EOA. Verified StableCoin source exposes owner-or-supply-manager externalTransfer burn and externalTransferFrom mint calls accepting arbitrary networkURI and bytes addresses, with no verified peer registry, validator/DVN set, escrow, replay protection, conservation check, or rate limit. The owner can replace supplyManager, so the bridge mint and burn failure domains are this chain-local EOA and contract."
+      },
+      {
+        "id": "gramg-polygon-external-transfer-controller",
+        "label": "GRAMG Polygon external-transfer owner and supply manager",
+        "routeRefs": [
+          "polygon:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin"],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xd61c0129f6c35a675db6e2a067b31e75b2573077",
+        "failureDomainKeys": [
+          "polygon:0xd61c0129f6c35a675db6e2a067b31e75b2573077",
+          "contract:polygon:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "No bridge escrow or lockbox is present; externalTransfer burns from the user after allowance and externalTransferFrom mints through the supply manager before recipient transfer.",
+          "trustedPeerOrRemote": "externalTransfer and externalTransferFrom accept arbitrary networkURI and bytes addresses; no on-chain peer or source-chain allowlist is verified.",
+          "attestorQuorum": "No validator, DVN, signer set, or attestor quorum is present in the verified StableCoin source.",
+          "rateLimits": "No aggregate, per-call, or route-level rate limit is present in the verified external-transfer path.",
+          "pausersAdminsUpgraders": "The chain-local owner or supply manager controls external transfers; owner can replace supplyManager, and pause, frozen-account, and KYC checks remain issuer-controlled.",
+          "onchainAmountBounds": "externalTransfer is bounded by the user-approved external allowance and balance; externalTransferFrom has no verified prior-burn or lock accounting bound.",
+          "unsupportedReason": "The exact off-chain bridge protocol and source/destination mapping are unresolved; no conservation or replay protection is verified."
+        },
+        "capDescription": "externalTransferFrom mints directly through the supply manager with no verified aggregate supply ceiling or route-level amount bound.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "arbitrary networkURI and bytes destination parameters",
+          "issuer owner or supply manager can invoke external transfer without a verified peer, validator, conservation, or rate-limit control"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92143429,
+        "sources": [
+          {
+            "label": "GRAMG Polygon contract",
+            "url": "https://polygonscan.com/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9#code"
+          },
+          {
+            "label": "Polygon RPC",
+            "url": "https://polygon.drpc.org"
+          }
+        ],
+        "evidence": "At Polygon block 92143429 on 2026-08-16, owner() and supplyManager() both returned 0xd61c0129f6c35a675db6e2a067b31e75b2573077, an EOA. Verified StableCoin source exposes owner-or-supply-manager externalTransfer burn and externalTransferFrom mint calls accepting arbitrary networkURI and bytes addresses, with no verified peer registry, validator/DVN set, escrow, replay protection, conservation check, or rate limit. The owner can replace supplyManager, so the bridge mint and burn failure domains are this chain-local EOA and contract."
+      },
+      {
+        "id": "gramg-polygon-pending-owner-external-transfer-admin",
+        "label": "GRAMG Polygon pending owner external-transfer admin",
+        "routeRefs": [
+          "polygon:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin"],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "failureDomainKeys": [
+          "polygon:0xff80b391b286887d446b1124820f87d5b049b4fb",
+          "contract:polygon:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The proposed owner is not a peer or validator; the route accepts arbitrary networkURI and bytes addresses and no on-chain peer allowlist is verified.",
+          "attestorQuorum": "No validator, DVN, signer set, or attestor quorum is present in the verified StableCoin source.",
+          "rateLimits": "No aggregate, per-call, or route-level rate limit is present in the verified external-transfer path.",
+          "pausersAdminsUpgraders": "At Polygon block 92143429, proposedOwner() returned this EOA; Claimable ownership permits claimOwnership without another current-owner transaction, after which it can control external transfers or replace supplyManager immediately.",
+          "onchainAmountBounds": "After ownership claim, externalTransferFrom has no verified prior-burn or lock accounting bound.",
+          "unsupportedReason": "The exact off-chain bridge protocol and source/destination mapping are unresolved; no conservation or replay protection is verified."
+        },
+        "capDescription": "After claimOwnership, this EOA can control the external-transfer mint/burn rail or replace the supply manager; no aggregate route cap is verified.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "claimOwnership requires no additional current-owner transaction",
+          "after claim, owner can replace supplyManager and invoke external transfer"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92143429,
+        "sources": [
+          {
+            "label": "GRAMG Polygon contract",
+            "url": "https://polygonscan.com/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9#code"
+          }
+        ],
+        "evidence": "At Polygon block 92143429 on 2026-08-16, proposedOwner() returned 0xff80b391b286887d446b1124820f87d5b049b4fb, an EOA. Verified Claimable ownership lets this EOA call claimOwnership without another current-owner action, after which owner() can invoke the issuer-controlled externalTransfer burn and externalTransferFrom mint rail or replace supplyManager immediately."
       }
     ]
   }

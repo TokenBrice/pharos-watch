@@ -7,6 +7,12 @@
     "summary": "dUSD mint authority is now enumerated on all four deployments. Every chain runs a transparent proxy whose ProxyAdmin is governed by a 3-of-5 Safe behind a 1-day TimelockController on Ethereum, Fraxtal and Katana, while Sonic's ProxyAdmin and token DEFAULT_ADMIN_ROLE sit directly under a 2-of-4 Safe with no timelock. Six contracts hold MINTER_ROLE across the four tokens and the dUSD token exposes no supply cap, so authorized minting is economically unbounded.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+        "fraxtal:0x788d96f655735f52c676a133f4dfc53cec614d4a",
+        "katana:0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+        "sonic:0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+      ],
       "proxyAddresses": [
         "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
         "0x788d96f655735f52c676a133f4dfc53cec614d4a",
@@ -56,6 +62,9 @@
       {
         "chain": "ethereum",
         "address": "0x29532F74A9302e0a1E9f7d015FE355FFdE6e6880",
+        "deploymentRefs": [
+          "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+        ],
         "label": "dTRINITY AMO Manager (peg operations controller)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -76,6 +85,9 @@
       {
         "chain": "ethereum",
         "address": "0xf84cc8217713a53fc3e3eb2d62d2af33a084ff85",
+        "deploymentRefs": [
+          "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+        ],
         "label": "dTRINITY second MINTER_ROLE holder (undocumented in registry)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -96,6 +108,9 @@
       {
         "chain": "ethereum",
         "address": "0xE83c188a7BE46B90715C757A06cF917175f30262",
+        "deploymentRefs": [
+          "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+        ],
         "label": "dTRINITY Timelocked Governance 3-of-5 Safe (1-day TimelockController)",
         "role": "governor",
         "authorityType": "safe",
@@ -138,6 +153,9 @@
       {
         "chain": "ethereum",
         "address": "0x04401537CA997a43EBCFEc8194c7e88c7ee79804",
+        "deploymentRefs": [
+          "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+        ],
         "label": "dTRINITY Emergency Governance 5-of-5 Safe (PAUSER_ROLE)",
         "role": "governor",
         "authorityType": "safe",
@@ -175,6 +193,9 @@
       {
         "chain": "fraxtal",
         "address": "0x9e8d871077bb496e388fd48f659cedd6d0abdc3a",
+        "deploymentRefs": [
+          "fraxtal:0x788d96f655735f52c676a133f4dfc53cec614d4a"
+        ],
         "label": "dTRINITY Fraxtal dUSD MINTER_ROLE holder A",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -197,6 +218,9 @@
       {
         "chain": "fraxtal",
         "address": "0x57bbd5026503bb54cc50a4129c4896cba40bebae",
+        "deploymentRefs": [
+          "fraxtal:0x788d96f655735f52c676a133f4dfc53cec614d4a"
+        ],
         "label": "dTRINITY Fraxtal dUSD MINTER_ROLE holder B",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -219,6 +243,9 @@
       {
         "chain": "fraxtal",
         "address": "0xfc2f89f9982be98a9672cefc3ea6dbbdd88bc8e9",
+        "deploymentRefs": [
+          "fraxtal:0x788d96f655735f52c676a133f4dfc53cec614d4a"
+        ],
         "label": "dTRINITY Fraxtal Governance 3-of-5 Safe (1-day TimelockController)",
         "role": "governor",
         "authorityType": "safe",
@@ -263,6 +290,9 @@
       {
         "chain": "katana",
         "address": "0xfdb85fdfcee413eb05287f9d4157c1ef1f336207",
+        "deploymentRefs": [
+          "katana:0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+        ],
         "label": "dTRINITY Katana dUSD MINTER_ROLE holder",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -285,6 +315,9 @@
       {
         "chain": "katana",
         "address": "0xE83c188a7BE46B90715C757A06cF917175f30262",
+        "deploymentRefs": [
+          "katana:0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+        ],
         "label": "dTRINITY Katana Governance 3-of-5 Safe (1-day TimelockController)",
         "role": "governor",
         "authorityType": "safe",
@@ -329,6 +362,9 @@
       {
         "chain": "sonic",
         "address": "0x9b93c3995235c2c16b87976c763360d08c725ddc",
+        "deploymentRefs": [
+          "sonic:0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+        ],
         "label": "dTRINITY Sonic dUSD MINTER_ROLE holder",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -351,6 +387,9 @@
       {
         "chain": "sonic",
         "address": "0xE83c188a7BE46B90715C757A06cF917175f30262",
+        "deploymentRefs": [
+          "sonic:0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+        ],
         "label": "dTRINITY Sonic Governance 2-of-4 Safe (no timelock)",
         "role": "governor",
         "authorityType": "safe",

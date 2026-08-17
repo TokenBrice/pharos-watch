@@ -3,18 +3,25 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "USDY issuance is Ondo-operated and remains economically unbounded overall. At Ethereum block 25711921, AccessControl enumeration identified four live MINTER_ROLE holders: the uncapped legacy USDYManager, a LayerZero adapter with replaceable per-EID inbound rate limits, a rate-limited USDY InstantManager, and a 4-of-7 Safe that can mint directly. The same Safe was the sole token DEFAULT_ADMIN_ROLE holder, owned the token's ProxyAdmin, and could replace the adapter's peers and limits.",
+    "confidence": "manual-review",
+    "summary": "USDY issuance is Ondo-operated across six native deployments: Ethereum, Plume, Sui, Aptos, Stellar, and Noble. Ethereum has an uncapped legacy USDYManager route, a rate-limited InstantManager, and a 4-of-7 Safe that can mint directly; Plume has a 3-of-7 Safe as sole DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Sui, Aptos, Stellar, and Noble expose chain-local issuer mint authorities. The Ethereum direct Safe and native chain authorities keep overall issuance economically unbounded; bridge representations and their controls are reviewed separately under Bridge Risk.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c",
+        "plume:0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2"
+      ],
       "proxyAddresses": [
-        "0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        "0x96f6ef951840721adbf46ac996b59e0235cb985c",
+        "0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2"
       ],
       "implementationAddresses": [
-        "0xea0f7eebdc2ae40edfe33bf03d332f8a7f617528"
+        "0xea0f7eebdc2ae40edfe33bf03d332f8a7f617528",
+        "0xbbfe105992808f4f92d2becd9e586358014ce613"
       ],
       "adminAddresses": [
-        "0x3ed61633057da0bc58f84b2b9002845e56f94c19"
+        "0x3ed61633057da0bc58f84b2b9002845e56f94c19",
+        "0xbd452c59fa3c4c03de464500e94e8f3e6cf12167"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
@@ -37,6 +44,14 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "USDY Plume verified proxy",
+          "url": "https://explorer.plume.org/address/0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2"
+        },
+        {
+          "label": "Plume JSON-RPC",
+          "url": "https://rpc.plume.org"
         }
       ]
     },
@@ -44,17 +59,14 @@
       {
         "chain": "ethereum",
         "address": "0x25a103a1d6aec5967c1a4fe2039cdc514886b97e",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "Legacy USDYManager minter",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "signingModel": "Subscriptions are administered through the 3-of-6 manager-admin Safe, while the separate 2-of-6 relayer/pricer Safe co-controls price-ID assignment and claim timing.",
-          "caps": "No aggregate or immutable numeric issuance ceiling was identified in the verified USDYManager mint path.",
-          "onchainAmountBounds": "A claim requires a recorded subscription, an assigned price ID, and a claimable timestamp before USDYManager calls the token's mint function; those workflow checks do not impose an aggregate supply cap.",
-          "pausersAdminsUpgraders": "The 4-of-7 token-admin Safe and 3-of-6 manager-admin Safe hold manager administration roles; the 4-of-7 Safe can also revoke or replace this token MINTER_ROLE."
-        },
         "observedAt": "2026-08-08",
         "observedBlock": 25711921,
         "sources": [
@@ -83,53 +95,10 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xa6275720b3fb1efe3e6ef2b5bf2293148852307d",
-        "label": "USDY LayerZero mint-burn adapter",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Inbound bridge minting is limited per trusted LayerZero endpoint ID over rolling 24-hour windows: 500,000 USDY for EIDs 30110, 30181, and 30280; 300,000 USDY for EID 30168; and disabled for EIDs 30102 and 30370 at the observation block.",
-        "routeChecks": {
-          "trustedPeerOrRemote": "LayerZero OApp peer checks bind inbound messages to owner-configured peers for EIDs 30102, 30110, 30168, 30181, 30280, and 30370 before crediting USDY.",
-          "attestorQuorum": "Message acceptance inherits the configured LayerZero EndpointV2 messaging and DVN verification path; this review does not restate a fixed DVN quorum because it is endpoint/path configuration.",
-          "rateLimits": "The adapter checks and updates a per-EID inbound rate limiter before minting. Active 24-hour inbound limits were 500,000 USDY for EIDs 30110, 30181, and 30280 and 300,000 USDY for EID 30168; inbound mint was disabled for EIDs 30102 and 30370.",
-          "pausersAdminsUpgraders": "The 4-of-7 Ondo Safe owns the adapter and can change trusted peers and rate-limit parameters, so the observed limits are replaceable even though the adapter itself cannot raise them."
-        },
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711915,
-        "failureDomainKeys": [
-          "protocol:layerzero",
-          "contract:ethereum:0xa6275720b3fb1efe3e6ef2b5bf2293148852307d"
-        ],
-        "sources": [
-          {
-            "label": "Ondo deployed-address registry",
-            "url": "https://docs.ondo.finance/addresses"
-          },
-          {
-            "label": "OndoMintBurnAdapter verified contract",
-            "url": "https://eth.blockscout.com/address/0xa6275720b3fb1efe3e6ef2b5bf2293148852307d?tab=contract"
-          },
-          {
-            "label": "OndoMintBurnAdapter verified source API",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa6275720b3fb1efe3e6ef2b5bf2293148852307d"
-          },
-          {
-            "label": "USDY Ethereum verified proxy",
-            "url": "https://eth.blockscout.com/address/0x96f6ef951840721adbf46ac996b59e0235cb985c?tab=contract"
-          },
-          {
-            "label": "Ethereum PublicNode RPC",
-            "url": "https://ethereum-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At Ethereum block 25711915, the verified adapter was an active USDY MINTER_ROLE holder, owned by the 4-of-7 Ondo Safe, and configured with six LayerZero peers. Its inbound credit path authenticates the peer and applies the per-EID rate limiter before minting. The adapter is therefore cap-limited; its owner, not the adapter, can replace peers or raise limits."
-      },
-      {
-        "chain": "ethereum",
         "address": "0x505ff4462ba5e62ed529fa836d768ecd7b85439c",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "USDY manager-admin / admin-subscription Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -185,6 +154,9 @@
       {
         "chain": "ethereum",
         "address": "0x8d52a385d19f13ef5a544e0514c62f0a44ff31bf",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "USDY relayer / pricer co-control Safe",
         "role": "backend-signer",
         "authorityType": "safe",
@@ -236,6 +208,9 @@
       {
         "chain": "ethereum",
         "address": "0x5ae21c99fc5f1584d8cb09a298cffd92b5d178ef",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "USDY InstantManager default-admin Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -291,6 +266,9 @@
       {
         "chain": "ethereum",
         "address": "0x5e7cda85a3ce07ff3be580b585e95bba7cfde336",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "USDY rate-limit cap-admin Safe",
         "role": "cap-admin",
         "authorityType": "safe",
@@ -338,6 +316,9 @@
       {
         "chain": "ethereum",
         "address": "0x682d3d7cb33a9089c19b9b135a5db3d2c5cf20c4",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "USDY rate-limit operations Safe",
         "role": "cap-admin",
         "authorityType": "safe",
@@ -386,6 +367,9 @@
       {
         "chain": "ethereum",
         "address": "0x1a694a09494e214a3be3652e4b343b7b81a73ad7",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "USDY default admin / direct-minter Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -414,11 +398,6 @@
           "observedAt": "2026-08-08",
           "source": "safe-api"
         },
-        "routeChecks": {
-          "trustedPeerOrRemote": "As adapter owner, this Safe can replace the LayerZero peer accepted for each endpoint ID.",
-          "caps": "As adapter owner, this Safe can raise or replace the per-EID bridge rate limits; as token DEFAULT_ADMIN_ROLE holder, it can also replace MINTER_ROLE membership.",
-          "pausersAdminsUpgraders": "This Safe is simultaneously a direct USDY minter, sole token default admin, adapter owner, and ProxyAdmin owner, so its direct token mint is an uncapped bypass of downstream route limits."
-        },
         "observedAt": "2026-08-08",
         "observedBlock": 25711921,
         "failureDomainKeys": [
@@ -439,11 +418,14 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25711921, this 4-of-7 Safe was one of four MINTER_ROLE holders and the sole token DEFAULT_ADMIN_ROLE holder. It can mint directly, grant or revoke token roles, and as adapter owner raise bridge limits or replace peers. The Safe Transaction Service reported no enabled modules and a zero guard."
+        "evidence": "At Ethereum block 25711921, this 4-of-7 Safe was one of four MINTER_ROLE holders and the sole token DEFAULT_ADMIN_ROLE holder. It can mint directly and grant or revoke token roles. The Safe Transaction Service reported no enabled modules and a zero guard. Bridge-adapter ownership and its peer/limit controls are recorded separately under Bridge Risk."
       },
       {
         "chain": "ethereum",
         "address": "0xa42613c243b67bf6194ac327795b926b4b491f15",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "USDY InstantManager minter",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -451,12 +433,6 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "InstantManager issuance is bounded by the OndoRateLimiter's 100,000,000 USDY global subscription limit per 24 hours and 50,000,000 USDY default per-user subscription limit per 24 hours; the reviewed admin subscriber Safe additionally had about 9,081,309 USD of remaining configured allowance.",
-        "routeChecks": {
-          "lockboxOrEscrow": "Public subscriptions require supported collateral transfer and the InstantManager's pricing, fee, and compliance checks before minting USDY.",
-          "rateLimits": "OndoRateLimiter enforced a 100,000,000 USDY global subscription limit per 86,400 seconds and a 50,000,000 USDY default per-user subscription limit per 86,400 seconds.",
-          "caps": "AdminSubscriptionChecker reported 9,081,308.999999999822580517 USD of remaining allowance for the 3-of-6 admin-subscription Safe at the observation block.",
-          "pausersAdminsUpgraders": "The 3-of-5 default-admin Safe can grant InstantManager and checker roles and configure their limits; separate 3-of-5 and 3-of-6 rate-limit configurer Safes can raise limiter caps."
-        },
         "observedAt": "2026-08-08",
         "observedBlock": 25711917,
         "failureDomainKeys": [
@@ -498,6 +474,9 @@
       {
         "chain": "ethereum",
         "address": "0x1a694a09494e214a3be3652e4b343b7b81a73ad7",
+        "deploymentRefs": [
+          "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c"
+        ],
         "label": "USDY ProxyAdmin owner Safe",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -542,6 +521,244 @@
           }
         ],
         "evidence": "At Ethereum block 25711753, ProxyAdmin owner() was this 4-of-7 Safe. The Safe can direct ProxyAdmin to replace USDY's implementation; no separate timelock, enabled Safe module, or nonzero guard was observed."
+      },
+      {
+        "chain": "plume",
+        "address": "0x8df2b047e5d7c854fa2e96d558496b04362c03da",
+        "deploymentRefs": [
+          "plume:0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2"
+        ],
+        "label": "USDY Plume default admin / direct-minter Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 87675398,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 87675398,
+        "failureDomainKeys": [
+          "safe:plume:0x8df2b047e5d7c854fa2e96d558496b04362c03da",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "USDY Plume verified proxy",
+            "url": "https://explorer.plume.org/address/0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2"
+          },
+          {
+            "label": "Plume JSON-RPC",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Ondo Plume native-issuance announcement",
+            "url": "https://plume.org/blog/ondo"
+          }
+        ],
+        "evidence": "At Plume block 87675398, USDY DEFAULT_ADMIN_ROLE and MINTER_ROLE each had one member, this Safe's getThreshold() returned 3, getOwners() returned the seven owners recorded above, and getModulesPaginated() returned an empty module list. getGuard() reverted, so guard state remains unresolved and modulesOrGuardsStatus is recorded as unknown. The Safe is also the owner of Plume ProxyAdmin 0xbd452c59fa3c4c03de464500e94e8f3e6cf12167, so it can mint directly, change token roles, and replace mint-critical proxy logic. No bridge minter was found on Plume."
+      },
+      {
+        "chain": "plume",
+        "address": "0x8df2b047e5d7c854fa2e96d558496b04362c03da",
+        "deploymentRefs": [
+          "plume:0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2"
+        ],
+        "label": "USDY Plume ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 87675398,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 87675398,
+        "failureDomainKeys": [
+          "safe:plume:0x8df2b047e5d7c854fa2e96d558496b04362c03da",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "USDY Plume verified proxy",
+            "url": "https://explorer.plume.org/address/0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2"
+          },
+          {
+            "label": "Plume JSON-RPC",
+            "url": "https://rpc.plume.org"
+          }
+        ],
+        "evidence": "At Plume block 87675398, ProxyAdmin 0xbd452c59fa3c4c03de464500e94e8f3e6cf12167 owner() returned this Safe; getThreshold() returned 3, getOwners() returned the seven owners recorded above, and getModulesPaginated() returned an empty module list. getGuard() reverted, so guard state remains unresolved and modulesOrGuardsStatus is recorded as unknown. The transparent USDY proxy implementation was 0xbbfe105992808f4f92d2becd9e586358014ce613; no upgrade delay was established."
+      },
+      {
+        "chain": "sui",
+        "address": "0xabebc1a41aa460eb560469e6b3c22d610b44b877979989e5e9227cca5b271fd2",
+        "deploymentRefs": [
+          "sui:0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY"
+        ],
+        "label": "USDY Sui TreasuryCap owner",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Live 0x2::coin::TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267 controls native Sui USDY issuance; the owner's signer policy and package upgrade authority were not exposed by public reads.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 311459302,
+        "failureDomainKeys": [
+          "sui:treasury-cap:0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "Sui GraphQL mainnet",
+            "url": "https://graphql.mainnet.sui.io/graphql"
+          },
+          {
+            "label": "USDY Sui coin metadata",
+            "url": "https://suiscan.xyz/mainnet/coin/0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY"
+          },
+          {
+            "label": "Ondo docs",
+            "url": "https://docs.ondo.finance/"
+          }
+        ],
+        "evidence": "At Sui checkpoint 311459302, package 0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb published the first-class USDY coin and TreasuryCap 0x9dca9f57a78fa7f132f95a0cf5c4d1b796836145ead7337da6b94012db62267 was owned by this address. The cap holder can execute the native mint path; public reads did not expose its signer policy or package upgrade authority."
+      },
+      {
+        "chain": "aptos",
+        "address": "0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc",
+        "deploymentRefs": [
+          "aptos:0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc"
+        ],
+        "label": "USDY Aptos deployment multisig and mint capabilities",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The deployment account's managed_coin::Capabilities resource contains the live mint capability; the 0x1::multisig_account requires 4 of 7 owners.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 6782686855,
+        "failureDomainKeys": [
+          "multisig:aptos:0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "Aptos mainnet REST API",
+            "url": "https://fullnode.mainnet.aptoslabs.com/v1"
+          },
+          {
+            "label": "USDY Aptos deployment account",
+            "url": "https://explorer.aptoslabs.com/account/0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc?network=mainnet"
+          }
+        ],
+        "evidence": "At Aptos ledger version 6782686855, the deployment account held managed_coin::Capabilities including the live mint capability. Its 0x1::multisig_account had seven owners and required four signatures, establishing the native Aptos mint controller and its 4-of-7 approval threshold."
+      },
+      {
+        "chain": "stellar",
+        "address": "GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6",
+        "deploymentRefs": [
+          "stellar:USDY-GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6"
+        ],
+        "label": "USDY Stellar issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The issuer account directly issues USDY with no protocol numeric cap; current account thresholds are 0/0/0 and its sole ed25519 signer has weight 1.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 63985710,
+        "failureDomainKeys": [
+          "issuer-account:stellar:GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "Stellar Horizon",
+            "url": "https://horizon.stellar.org"
+          },
+          {
+            "label": "USDY Stellar issuer account",
+            "url": "https://stellar.expert/explorer/public/account/GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6"
+          }
+        ],
+        "evidence": "At Stellar ledger 63985710, USDY issuer GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6 had one ed25519 signer with weight 1 and low/medium/high thresholds 0/0/0. The issuer account is the direct native Stellar issuance authority; the observed authorized USDY balance was 461,622,840.7079827."
+      },
+      {
+        "chain": "noble",
+        "address": "noble1t6ypyedl6ggvvlgx3cn6jvy9xpr3p2395m2dg5",
+        "deploymentRefs": [
+          "noble:ausdy"
+        ],
+        "label": "USDY Noble module owner and minter",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Noble USDY module reported this address as owner and sole minter with allowance 40,000,000,000 base units; the owner can add/remove minters or change allowances.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 57127887,
+        "failureDomainKeys": [
+          "multisig:noble:noble1t6ypyedl6ggvvlgx3cn6jvy9xpr3p2395m2dg5",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "Noble official API",
+            "url": "https://api.noble.xyz"
+          },
+          {
+            "label": "Noble mainnet endpoints",
+            "url": "https://docs.noble.xyz/build/endpoints/mainnet"
+          },
+          {
+            "label": "Ondo USDY-Noble source",
+            "url": "https://github.com/ondoprotocol/usdy-noble"
+          }
+        ],
+        "evidence": "At Noble block 57127887, the USDY module reported denom ausdy, paused=false, owner noble1t6ypyedl6ggvvlgx3cn6jvy9xpr3p2395m2dg5, and that same address as sole minter with allowance 40,000,000,000 base units. The owner is a current 3-of-6 Cosmos multisig and can change minter authorization or allowances; Noble's ausdy is the native source for the reviewed IBC vouchers."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -588,11 +805,31 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "USDY Plume native deployment",
+          "url": "https://plume.org/blog/ondo"
+        },
+        {
+          "label": "USDY Sui coin metadata",
+          "url": "https://suiscan.xyz/mainnet/coin/0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY"
+        },
+        {
+          "label": "USDY Aptos deployment account",
+          "url": "https://explorer.aptoslabs.com/account/0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc?network=mainnet"
+        },
+        {
+          "label": "USDY Stellar issuer account",
+          "url": "https://stellar.expert/explorer/public/account/GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6"
+        },
+        {
+          "label": "USDY Noble module source",
+          "url": "https://github.com/ondoprotocol/usdy-noble"
         }
       ],
-      "evidence": "At Ethereum blocks 25711915-25711923, four live token MINTER_ROLE holders remained. Legacy USDYManager was an uncapped workflow-gated route; the LayerZero adapter was bounded by trusted peers and replaceable per-EID 24-hour limits; InstantManager was bounded by a roughly $9.081 million admin allowance plus $100 million global and $50 million default-user 24-hour limits; and the 4-of-7 Safe could mint directly. The reviewed Safes expose manager-admin, relayer/pricer, default-admin, cap-admin, direct-mint, and upgrade authorities, with no enabled modules or nonzero guards reported by Safe API. Overall semantics remain unbounded because the Safe direct-mint route and uncapped legacy path bypass downstream limits, while cap owners can replace limits. No public mint-authority incident was identified. Supervision remains attestation-only; reconciliation remains periodic based on Ondo's documented daily asset and investor-liability verification.",
+      "evidence": "The six native USDY deployment set is now represented in Mint Authority. Ethereum's live native controls include the uncapped workflow-gated USDYManager, rate-limited InstantManager, its manager/pricer/admin/cap co-controls, the 4-of-7 Safe direct minter and token DEFAULT_ADMIN_ROLE holder, and the same Safe as ProxyAdmin owner. Plume's 3-of-7 Safe is the sole DEFAULT_ADMIN_ROLE and MINTER_ROLE holder and owns its ProxyAdmin. Sui has a live TreasuryCap owned by the reviewed address, Aptos has managed_coin::Capabilities held by a 4-of-7 deployment multisig, Stellar has a single-signer issuer, and Noble's 3-of-6 module owner is the sole minter with a replaceable allowance. Sui signer/package-upgrade policy and Plume Safe module/guard state remain unresolved evidence gaps. Native economics remain unbounded because direct issuer authorities and the uncapped legacy/direct routes can exceed downstream workflow limits. Ondo's documented daily asset and investor-liability verification supports periodic reconciliation and attestation-only supervision. LayerZero adapter, destination minters, Solana token-level bypass, and IBC voucher controls are recorded separately under Bridge Risk.",
       "reviewer": "OpenAI Codex C01 control review",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

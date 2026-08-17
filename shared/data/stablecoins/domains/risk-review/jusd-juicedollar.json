@@ -82,5 +82,339 @@
         "url": "https://docs.juicedollar.com/smart-contracts/functions"
       }
     ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-lock-mint",
+    "summary": "JUSD is natively issued on Citrea through its ownerless accepted-minter registry. Four immutable canonical-side JuiceDollar StablecoinBridge contracts separately lock StartUSD, USDC, USDT, or ctUSD, mint canonical JUSD against the escrowed source asset, and burn JUSD before releasing it. Each route has an immutable 1e26 raw-unit outstanding limit, a horizon, a mutable minted counter, and an irreversible permissionless emergency stop subject to Equity's 10% delegated-vote quorum. These route-level controls are Bridge Risk and do not bound the token-level unrestricted accepted-minter path.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Codex mint-bridge-boundary migration FIX-03",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "JuiceDollar StablecoinBridge",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol",
+        "bridgeTypes": [
+          "lockAndMint"
+        ],
+        "note": "The pinned source implements canonical-side escrow, route limits, mint/burn accounting, expiry, and irreversible emergency stop."
+      }
+    ],
+    "sources": [
+      {
+        "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+      },
+      {
+        "label": "Citrea protocol deployment manifest (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+      },
+      {
+        "label": "JuiceDollar token source (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+      },
+      {
+        "label": "Citrea Public RPC (fixed block 11404611)",
+        "url": "https://rpc.mainnet.citrea.xyz"
+      }
+    ],
+    "routes": [
+      {
+        "id": "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+        "destinationChain": "citrea",
+        "canonicalChain": "citrea",
+        "contractAddress": "0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+        "protocol": "JuiceDollar native JUSD issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Citrea block 9984927 (2026-07-15), the sole authored JUSD deployment is the native Citrea issuance contract. Its owner() reverted and EIP-1967 implementation/admin slots were zero; native mint() is gated by the accepted-minter registry but has no numeric amount cap. The four StablecoinBridge contracts are canonical-side bridge machinery reviewed in bridge controls below, not separate JUSD deployments.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "contract:citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "observedAt": "2026-07-15",
+        "observedBlock": 9984927,
+        "sources": [
+          {
+            "label": "JuiceDollar token source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+          },
+          {
+            "label": "CitreaScan verified JUSD source",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+          },
+          {
+            "label": "Citrea Public RPC (fixed block 9984927)",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "jusd-bridge-startusd",
+        "label": "JUSD bridgeStartUSD immutable lock/mint contract",
+        "routeRefs": [
+          "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow",
+          "rate-limit"
+        ],
+        "controllerChain": "citrea",
+        "controllerAddress": "0x51ff8141d731676fb21ae1e5d5a88c04511994dd",
+        "failureDomainKeys": [
+          "contract:citrea:0x51ff8141d731676fb21ae1e5d5a88c04511994dd",
+          "contract:citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "authorityType": "contract",
+        "capDescription": "Immutable 100000000000000000000000000 raw-unit outstanding limit; route horizon expired 2026-03-09T04:33:31Z.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "mintTo transfers source StartUSD 0xd41ab73af9c7324b9c7c6e63de1aec666d98bc80 into the bridge before minting JUSD; burnAndSend burns JUSD before returning the source asset.",
+          "caps": "At block 11404611, minted = 0, stopped = false, and the immutable limit is 100000000000000000000000000; minting is also expired by the immutable horizon."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 11404611,
+        "sources": [
+          {
+            "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+          },
+          {
+            "label": "Citrea protocol deployment manifest (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+          },
+          {
+            "label": "Citrea Public RPC",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ],
+        "evidence": "The pinned StablecoinBridge source has immutable usd, JUSD, horizon, and limit values, a minted counter, safeTransferFrom escrow on mintTo, burnFrom before release on burnAndSend, and no owner or upgrade hook. At Citrea block 11404611 this bridge had non-empty code, token() = JUSD, minted = 0, stopped = false, and the fixed limit and expired horizon above."
+      },
+      {
+        "id": "jusd-bridge-usdc",
+        "label": "JUSD bridgeUSDC immutable lock/mint contract",
+        "routeRefs": [
+          "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow",
+          "rate-limit"
+        ],
+        "controllerChain": "citrea",
+        "controllerAddress": "0x920db0adf6fee2d69401e9f68d60319177dca20f",
+        "failureDomainKeys": [
+          "contract:citrea:0x920db0adf6fee2d69401e9f68d60319177dca20f",
+          "contract:citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "authorityType": "contract",
+        "capDescription": "Immutable 100000000000000000000000000 raw-unit outstanding limit through 2030-01-21T04:33:31Z.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "mintTo transfers source USDC 0xe045e6c36cf77faa2cfb54466d71a3aef7bbe839 into the bridge before minting JUSD; burnAndSend burns JUSD before returning the source asset.",
+          "caps": "At block 11404611, minted = 42642797128251190, stopped = false, the immutable limit is 100000000000000000000000000, and the horizon is 2030-01-21T04:33:31Z."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 11404611,
+        "sources": [
+          {
+            "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+          },
+          {
+            "label": "Citrea protocol deployment manifest (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+          },
+          {
+            "label": "Citrea Public RPC",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ],
+        "evidence": "The pinned StablecoinBridge source has immutable usd, JUSD, horizon, and limit values, a minted counter, safeTransferFrom escrow on mintTo, burnFrom before release on burnAndSend, and no owner or upgrade hook. At Citrea block 11404611 this bridge had non-empty code, token() = JUSD, minted = 42642797128251190, stopped = false, and the fixed limit and horizon above."
+      },
+      {
+        "id": "jusd-bridge-usdt",
+        "label": "JUSD bridgeUSDT immutable lock/mint contract",
+        "routeRefs": [
+          "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow",
+          "rate-limit"
+        ],
+        "controllerChain": "citrea",
+        "controllerAddress": "0x5cc0e668f8ba61e111b6168e19d17d3c65040614",
+        "failureDomainKeys": [
+          "contract:citrea:0x5cc0e668f8ba61e111b6168e19d17d3c65040614",
+          "contract:citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "authorityType": "contract",
+        "capDescription": "Immutable 100000000000000000000000000 raw-unit outstanding limit through 2030-01-21T04:33:31Z.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "mintTo transfers source USDT 0x9f3096bac87e7f03dc09b0b416eb0df837304dc4 into the bridge before minting JUSD; burnAndSend burns JUSD before returning the source asset.",
+          "caps": "At block 11404611, minted = 0, stopped = false, the immutable limit is 100000000000000000000000000, and the horizon is 2030-01-21T04:33:31Z."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 11404611,
+        "sources": [
+          {
+            "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+          },
+          {
+            "label": "Citrea protocol deployment manifest (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+          },
+          {
+            "label": "Citrea Public RPC",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ],
+        "evidence": "The pinned StablecoinBridge source has immutable usd, JUSD, horizon, and limit values, a minted counter, safeTransferFrom escrow on mintTo, burnFrom before release on burnAndSend, and no owner or upgrade hook. At Citrea block 11404611 this bridge had non-empty code, token() = JUSD, minted = 0, stopped = false, and the fixed limit and horizon above."
+      },
+      {
+        "id": "jusd-bridge-ctusd",
+        "label": "JUSD bridgeCTUSD immutable lock/mint contract",
+        "routeRefs": [
+          "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow",
+          "rate-limit"
+        ],
+        "controllerChain": "citrea",
+        "controllerAddress": "0x8d11020286af9ecf7e5d7bd79699c391b224a0bd",
+        "failureDomainKeys": [
+          "contract:citrea:0x8d11020286af9ecf7e5d7bd79699c391b224a0bd",
+          "contract:citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "authorityType": "contract",
+        "capDescription": "Immutable 100000000000000000000000000 raw-unit outstanding limit through 2030-01-21T04:33:31Z.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "mintTo transfers source ctUSD 0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d into the bridge before minting JUSD; burnAndSend burns JUSD before returning the source asset.",
+          "caps": "At block 11404611, minted = 335569204600963577, stopped = false, the immutable limit is 100000000000000000000000000, and the horizon is 2030-01-21T04:33:31Z."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 11404611,
+        "sources": [
+          {
+            "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+          },
+          {
+            "label": "Citrea protocol deployment manifest (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+          },
+          {
+            "label": "Citrea Public RPC",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ],
+        "evidence": "The pinned StablecoinBridge source has immutable usd, JUSD, horizon, and limit values, a minted counter, safeTransferFrom escrow on mintTo, burnFrom before release on burnAndSend, and no owner or upgrade hook. At Citrea block 11404611 this bridge had non-empty code, token() = JUSD, minted = 335569204600963577, stopped = false, and the fixed limit and horizon above."
+      },
+      {
+        "id": "jusd-stablecoin-bridge-minter-registry",
+        "label": "JUSD minter registry and Equity veto for StablecoinBridge routes",
+        "routeRefs": [
+          "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "citrea",
+        "controllerAddress": "0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+        "failureDomainKeys": [
+          "contract:citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+          "contract:citrea:0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4"
+        ],
+        "authorityType": "contract",
+        "capDescription": "The JUSD registered-minter mapping admits bridge contracts to an unrestricted token-level mint() path; each bridge's separate immutable route limit remains enforced by its own contract.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "caps": "At Citrea block 11404611, the four bridge contracts were accepted minters; the token-level mint() has no numeric amount cap, while route-level limits are immutable and recorded per route.",
+          "pausersAdminsUpgraders": "Equity 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4 supplies the qualified-holder veto path during minter application; it is not an owner, proxy admin, or upgrade controller."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 11404611,
+        "sources": [
+          {
+            "label": "JuiceDollar token source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+          },
+          {
+            "label": "JuiceDollar Equity source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/Equity.sol"
+          },
+          {
+            "label": "Citrea protocol deployment manifest (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+          },
+          {
+            "label": "Citrea Public RPC",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ],
+        "evidence": "At Citrea block 11404611, minters(address) returned accepted timestamps for bridgeStartUSD, bridgeUSDC, and bridgeUSDT at 2026-01-26T04:33:33Z and for bridgeCTUSD at 2026-01-26T04:33:35Z. JUSD's accepted-minter registry gates token-level mint(), while Equity-qualified pool-share holders can veto proposed minters during their application period. The registry and veto path are bridge-route controls; the native token-level unrestricted accepted-minter risk remains in Mint Authority."
+      },
+      {
+        "id": "jusd-equity-bridge-emergency-stop",
+        "label": "Equity-governed irreversible emergency stop for JUSD bridges",
+        "routeRefs": [
+          "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "capabilities": [
+          "pause"
+        ],
+        "controllerChain": "citrea",
+        "controllerAddress": "0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+        "failureDomainKeys": [
+          "contract:citrea:0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+          "contract:citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
+        "authorityType": "dao-governor",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The StablecoinBridge emergency stop is irreversible and can be triggered only with 10% of Equity's delegated voting power. There is no owner, proxy admin, validator, DVN, or timelock in the bridge source or fixed-block review."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 11404611,
+        "sources": [
+          {
+            "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+          },
+          {
+            "label": "JuiceDollar Equity source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/Equity.sol"
+          },
+          {
+            "label": "Citrea Public RPC",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ],
+        "evidence": "The pinned StablecoinBridge source exposes a permissionless emergency-stop request that succeeds only when the caller has at least 10% of Equity's delegated voting power; stopped is irreversible. At Citrea block 11404611 all four routes reported stopped = false. This is a bridge pause control, not native JUSD mint authority."
+      }
+    ]
   }
 }

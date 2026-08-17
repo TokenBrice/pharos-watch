@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "IDRX documents both direct issuer minting on a selected supported chain and an issuer-operated bridge in which a source burn and its transaction hash are submitted to IDRX before the destination wallet receives IDRX. Its supported-chain page lists the exact current Solana mint and Lisk deployment. Pharos therefore treats the documented route as issuer-native burn/mint rather than a third-party bridge.",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Codex bridge route review; OpenAI Codex V9 integration audit",
+    "summary": "IDRX's nine reviewed canonical deployments are issuer-native. The documented route is an issuer-operated burn/API/mint flow: a user burns on the source with burnBridge, submits txHashBurn plus source/destination chain IDs, amount, and bridge nonce to the IDRX API, and the issuer credits the destination through mint or mintBridge. Route-level conservation therefore depends on issuer nonce/accounting and operations; EVM MINTER_ROLE holders and generic mint() remain token-level unbounded native issuance and are not bounded by the bridge path. No third-party validator/DVN, escrow, peer, or rate-limit contract was evidenced. Structured controls below cover the observed EVM role/timelock surfaces and current Solana key; Gnosis, Etherlink, and Kaia role inventories plus API operator signing and reconciliation remain evidence gaps.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -62,7 +62,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on Polygon.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on Polygon. The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -83,7 +83,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on Base (uniform address; EIP-1967 impl 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693).",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on Base (uniform address; EIP-1967 impl 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -104,7 +104,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on BSC.",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on BSC. The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -125,7 +125,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Klaytn (uniform address).",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Klaytn (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -146,7 +146,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Gnosis (uniform address).",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Gnosis (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -167,7 +167,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Etherlink (uniform address).",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Etherlink (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -188,7 +188,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Worldchain (uniform address).",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Worldchain (uniform address). The issuer-operated route burns on the source, processes the burn hash/nonce through the IDRX API, and credits the destination through mint/mintBridge; conservation depends on issuer nonce/accounting, while generic mint() remains an unbounded native path.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -209,7 +209,7 @@
         "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "IDRX's official supported-chain page names this exact current Solana mint and deprecates its predecessor. Its bridge flow burns IDRX on the source chain, submits the burn transaction hash to IDRX, then sends IDRX to the destination wallet; direct issuer minting is also available for a selected supported chain. At finalized Solana slot 434086281, the exact SPL mint reported 2 decimals, mint authority Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn, and no freeze authority.",
+        "reviewNote": "IDRX's official supported-chain page names this exact current Solana mint and deprecates its predecessor. Its issuer-operated route burns IDRX on the source chain, submits the burn transaction hash and bridge nonce to IDRX, then sends IDRX to the destination wallet; route conservation depends on issuer nonce/accounting, while the current mint authority and any direct mint path are not bounded by that route. At finalized Solana slot 434086281, the exact SPL mint reported 2 decimals, mint authority Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn, and no freeze authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "observedBlock": 434086281,
@@ -231,6 +231,807 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "idrx-evm-burnbridge-entrypoint",
+        "label": "IDRX EVM burnBridge source entrypoints",
+        "routeRefs": [
+          "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+          "etherlink:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "gnosis:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "klaytn:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+          "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-burn"
+        ],
+        "failureDomainKeys": [
+          "contract:base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "contract:bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+          "contract:etherlink:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "contract:gnosis:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "contract:klaytn:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "contract:lisk:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "contract:polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+          "contract:worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "onchainAmountBounds": "burnBridge is the source-side user burn entrypoint. The destination mintBridge path checks the submitted burn transaction hash and bridge nonce, but generic mint() remains an unbounded native path.",
+          "unsupportedReason": "No separate on-chain escrow, peer, validator, DVN, or rate-limit contract was evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "IDRX bridge processing flow",
+            "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
+          }
+        ],
+        "evidence": "IDRX documents burnBridge on the source token followed by an issuer API request and destination credit; the EVM token ABI also exposes mintBridge and generic mint()."
+      },
+      {
+        "id": "idrx-base-minter-safe-a",
+        "label": "IDRX Base bridge-mint Safe A",
+        "routeRefs": [
+          "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
+        "failureDomainKeys": [
+          "safe:base:0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
+          "contract:base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The role has no economic token cap; mintBridge is nonce/accounting-aware, but generic mint() can create native liabilities without a prior burn.",
+          "pausersAdminsUpgraders": "At Base block 48887752 this Safe held MINTER_ROLE and DEFAULT_ADMIN_ROLE; DEFAULT_ADMIN can grant or revoke MINTER_ROLE and UPGRADER_ROLE without delay."
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752,
+        "sources": [
+          {
+            "label": "IDRX Base token",
+            "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          }
+        ],
+        "evidence": "At Base block 48887752, the 2-of-3 Safe held both MINTER_ROLE and DEFAULT_ADMIN_ROLE on IDRX and had no detected modules or guard."
+      },
+      {
+        "id": "idrx-base-minter-safe-b",
+        "label": "IDRX Base bridge-mint Safe B",
+        "routeRefs": [
+          "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f",
+        "failureDomainKeys": [
+          "safe:base:0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At Base block 48887752 this 2-of-8 Safe held MINTER_ROLE and not DEFAULT_ADMIN_ROLE; modules were absent and the guard was zero."
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752,
+        "sources": [
+          {
+            "label": "IDRX Base token",
+            "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          }
+        ],
+        "evidence": "At Base block 48887752, the 2-of-8 Safe held MINTER_ROLE on IDRX; its Safe modules were empty and its guard was zero."
+      },
+      {
+        "id": "idrx-base-minter-safe-c",
+        "label": "IDRX Base bridge-mint Safe C",
+        "routeRefs": [
+          "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x3274da26046eed0d315a81050507ff07d3993eb4",
+        "failureDomainKeys": [
+          "safe:base:0x3274da26046eed0d315a81050507ff07d3993eb4"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At Base block 48887752 this 2-of-4 Safe held MINTER_ROLE and not DEFAULT_ADMIN_ROLE; modules were absent and the guard was zero."
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752,
+        "sources": [
+          {
+            "label": "IDRX Base token",
+            "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          }
+        ],
+        "evidence": "At Base block 48887752, the 2-of-4 Safe held MINTER_ROLE on IDRX; its Safe modules were empty and its guard was zero."
+      },
+      {
+        "id": "idrx-base-elevated-minter-burner",
+        "label": "IDRX Base ElevatedMinterBurner bridge/elevated path",
+        "routeRefs": [
+          "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xfe328208da684e2da63dc27837869e33507dd0ae",
+        "failureDomainKeys": [
+          "contract:base:0xfe328208da684e2da63dc27837869e33507dd0ae",
+          "eoa:base:0x46d58b6230be4af3dfa7883fffd6a17ba1db2965"
+        ],
+        "authorityType": "issuer-backend",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "mintBridge is route-level burn/nonce aware, but this contract's generic mint() is an unbounded native liability path.",
+          "pausersAdminsUpgraders": "The ElevatedMinterBurner owner is 0x46d58b6230be4af3dfa7883fffd6a17ba1db2965 and can authorize its operators."
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752,
+        "sources": [
+          {
+            "label": "ElevatedMinterBurner source (Blockscout)",
+            "url": "https://base.blockscout.com/address/0xfe328208da684e2da63dc27837869e33507dd0ae"
+          }
+        ],
+        "evidence": "At Base block 48887752, ElevatedMinterBurner held MINTER_ROLE and its generic mint() was callable by operators authorized by owner 0x46d58b6230be4af3dfa7883fffd6a17ba1db2965."
+      },
+      {
+        "id": "idrx-base-default-admin",
+        "label": "IDRX Base DEFAULT_ADMIN bridge role administrator",
+        "routeRefs": [
+          "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x5515be1db2a513888f5cf375bf5c7956ee93c779",
+        "failureDomainKeys": [
+          "eoa:base:0x5515be1db2a513888f5cf375bf5c7956ee93c779"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 48887752 this EOA held DEFAULT_ADMIN_ROLE and could grant or revoke MINTER_ROLE and UPGRADER_ROLE without delay."
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752,
+        "sources": [
+          {
+            "label": "IDRX Base token",
+            "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          }
+        ],
+        "evidence": "The Base DEFAULT_ADMIN EOA was confirmed at block 48887752 and is the role-grant authority for the Base bridge-mint holders."
+      },
+      {
+        "id": "idrx-polygon-minter-safe",
+        "label": "IDRX Polygon bridge-mint Safe A",
+        "routeRefs": [
+          "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
+        "failureDomainKeys": [
+          "safe:polygon:0xf80fdf246928b7862b23e094b3a14c4e36ee117e"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The role has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At Polygon block 91160867 this 2-of-3 Safe held MINTER_ROLE and DEFAULT_ADMIN_ROLE; the Safe had no modules and a zero guard."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 91160867,
+        "sources": [
+          {
+            "label": "Polygon IDRX proxy",
+            "url": "https://polygonscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The Polygon 2-of-3 Safe was confirmed as both MINTER_ROLE and DEFAULT_ADMIN_ROLE at block 91160867."
+      },
+      {
+        "id": "idrx-polygon-minter-safe-b",
+        "label": "IDRX Polygon bridge-mint Safe B",
+        "routeRefs": [
+          "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f",
+        "failureDomainKeys": [
+          "safe:polygon:0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At Polygon block 91160867 this 2-of-8 Safe held MINTER_ROLE, with no modules and a zero guard."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 91160867,
+        "sources": [
+          {
+            "label": "Polygon IDRX proxy",
+            "url": "https://polygonscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The Polygon 2-of-8 Safe was confirmed as a current MINTER_ROLE holder at block 91160867."
+      },
+      {
+        "id": "idrx-polygon-minter-safe-c",
+        "label": "IDRX Polygon bridge-mint Safe C",
+        "routeRefs": [
+          "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x3274da26046eed0d315a81050507ff07d3993eb4",
+        "failureDomainKeys": [
+          "safe:polygon:0x3274da26046eed0d315a81050507ff07d3993eb4"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At Polygon block 91160867 this 2-of-5 Safe held MINTER_ROLE, with no modules and a zero guard."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 91160867,
+        "sources": [
+          {
+            "label": "Polygon IDRX proxy",
+            "url": "https://polygonscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The Polygon 2-of-5 Safe was confirmed as a current MINTER_ROLE holder at block 91160867."
+      },
+      {
+        "id": "idrx-polygon-legacy-minter",
+        "label": "IDRX Polygon legacy bridge-mint EOA",
+        "routeRefs": [
+          "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x71275e8fd8249109fb9bf318d4e6dbbf6f08b6d6",
+        "failureDomainKeys": [
+          "eoa:polygon:0x71275e8fd8249109fb9bf318d4e6dbbf6f08b6d6"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The legacy MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 91160867,
+        "sources": [
+          {
+            "label": "Polygon IDRX proxy",
+            "url": "https://polygonscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The Polygon MINTER_ROLE was granted to this EOA on 2023-06-27 and remained current at block 91160867."
+      },
+      {
+        "id": "idrx-polygon-default-admin",
+        "label": "IDRX Polygon DEFAULT_ADMIN bridge role administrator",
+        "routeRefs": [
+          "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x5515be1db2a513888f5cf375bf5c7956ee93c779",
+        "failureDomainKeys": [
+          "eoa:polygon:0x5515be1db2a513888f5cf375bf5c7956ee93c779"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Polygon block 91160867 this EOA held DEFAULT_ADMIN_ROLE and could grant or revoke MINTER_ROLE and UPGRADER_ROLE without delay."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 91160867,
+        "sources": [
+          {
+            "label": "Polygon IDRX proxy",
+            "url": "https://polygonscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The Polygon DEFAULT_ADMIN EOA was confirmed at block 91160867 as the role-grant authority for bridge-mint holders."
+      },
+      {
+        "id": "idrx-polygon-upgrader-timelock",
+        "label": "IDRX Polygon bridge-route UUPS timelock",
+        "routeRefs": [
+          "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x58aa9720f456667c97093aaf87623d656f1ee6fa",
+        "failureDomainKeys": [
+          "timelock:polygon:0x58aa9720f456667c97093aaf87623d656f1ee6fa"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Polygon block 91160867 the timelock held UPGRADER_ROLE with getMinDelay = 172800 seconds; DEFAULT_ADMIN_ROLE can bypass the delay by re-granting UPGRADER_ROLE."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 91160867,
+        "sources": [
+          {
+            "label": "Polygon IDRX proxy",
+            "url": "https://polygonscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The Polygon UUPS upgrade path is controlled by the reviewed 48-hour TimelockController, with a DEFAULT_ADMIN bypass surface."
+      },
+      {
+        "id": "idrx-bsc-minter-safe",
+        "label": "IDRX BSC bridge-mint Safe A",
+        "routeRefs": [
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xfcdd28163ac6fe6bde0c508ccb2b62a86a26cd25",
+        "failureDomainKeys": [
+          "safe:bsc:0xfcdd28163ac6fe6bde0c508ccb2b62a86a26cd25"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The role has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At BSC block 113086546 this 2-of-3 Safe held MINTER_ROLE and DEFAULT_ADMIN_ROLE; the Safe had no modules and a zero guard."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 113086546,
+        "sources": [
+          {
+            "label": "BSC IDRX proxy",
+            "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The BSC 2-of-3 Safe was confirmed as both MINTER_ROLE and DEFAULT_ADMIN_ROLE at block 113086546."
+      },
+      {
+        "id": "idrx-bsc-minter-safe-b",
+        "label": "IDRX BSC bridge-mint Safe B",
+        "routeRefs": [
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f",
+        "failureDomainKeys": [
+          "safe:bsc:0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 113086546,
+        "sources": [
+          {
+            "label": "BSC IDRX proxy",
+            "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The BSC 2-of-8 Safe was confirmed as a current MINTER_ROLE holder at block 113086546, with no modules and a zero guard."
+      },
+      {
+        "id": "idrx-bsc-minter-safe-c",
+        "label": "IDRX BSC bridge-mint Safe C",
+        "routeRefs": [
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x3274da26046eed0d315a81050507ff07d3993eb4",
+        "failureDomainKeys": [
+          "safe:bsc:0x3274da26046eed0d315a81050507ff07d3993eb4"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 113086546,
+        "sources": [
+          {
+            "label": "BSC IDRX proxy",
+            "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The BSC 2-of-5 Safe was confirmed as a current MINTER_ROLE holder at block 113086546, with no modules and a zero guard."
+      },
+      {
+        "id": "idrx-bsc-inert-minter-assignment",
+        "label": "IDRX BSC inert bridge-mint role assignment",
+        "routeRefs": [
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
+        "failureDomainKeys": [
+          "eoa:bsc:0xf80fdf246928b7862b23e094b3a14c4e36ee117e"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The MINTER_ROLE assignment has no economic token cap, but eth_getCode is empty on BSC so this assignment is currently inert unless code is deployed at the address."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 113086546,
+        "sources": [
+          {
+            "label": "BSC IDRX proxy",
+            "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The BSC role history showed MINTER_ROLE true at block 113086546, but eth_getCode was 0x and the assignment was not currently executable."
+      },
+      {
+        "id": "idrx-bsc-default-admin",
+        "label": "IDRX BSC DEFAULT_ADMIN bridge role administrator",
+        "routeRefs": [
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x5515be1db2a513888f5cf375bf5c7956ee93c779",
+        "failureDomainKeys": [
+          "eoa:bsc:0x5515be1db2a513888f5cf375bf5c7956ee93c779"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At BSC block 113086546 this EOA held DEFAULT_ADMIN_ROLE and could grant or revoke MINTER_ROLE and UPGRADER_ROLE without delay."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 113086546,
+        "sources": [
+          {
+            "label": "BSC IDRX proxy",
+            "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The BSC DEFAULT_ADMIN EOA was confirmed at block 113086546 as the role-grant authority for bridge-mint holders."
+      },
+      {
+        "id": "idrx-bsc-upgrader-timelock",
+        "label": "IDRX BSC bridge-route UUPS timelock",
+        "routeRefs": [
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x58aa9720f456667c97093aaf87623d656f1ee6fa",
+        "failureDomainKeys": [
+          "timelock:bsc:0x58aa9720f456667c97093aaf87623d656f1ee6fa"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 1,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At BSC block 113086546 the timelock held UPGRADER_ROLE with getMinDelay = 1 second; DEFAULT_ADMIN_ROLE can bypass the delay by re-granting UPGRADER_ROLE."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 113086546,
+        "sources": [
+          {
+            "label": "BSC IDRX proxy",
+            "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
+          }
+        ],
+        "evidence": "The BSC UUPS upgrade path uses the reviewed one-second TimelockController and retains a DEFAULT_ADMIN bypass surface."
+      },
+      {
+        "id": "idrx-worldchain-minter-safe",
+        "label": "IDRX World Chain bridge-mint Safe A",
+        "routeRefs": [
+          "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
+        "failureDomainKeys": [
+          "safe:worldchain:0xf80fdf246928b7862b23e094b3a14c4e36ee117e"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The role has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting.",
+          "pausersAdminsUpgraders": "At World Chain block 33055037 this 2-of-3 Safe held MINTER_ROLE and DEFAULT_ADMIN_ROLE; the Safe had no modules and a zero guard."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 33055037,
+        "sources": [
+          {
+            "label": "Worldchain IDRX proxy and implementation",
+            "url": "https://worldscan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          }
+        ],
+        "evidence": "The World Chain 2-of-3 Safe was confirmed as both MINTER_ROLE and DEFAULT_ADMIN_ROLE at block 33055037."
+      },
+      {
+        "id": "idrx-worldchain-minter-safe-b",
+        "label": "IDRX World Chain bridge-mint Safe B",
+        "routeRefs": [
+          "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f",
+        "failureDomainKeys": [
+          "safe:worldchain:0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 33055037,
+        "sources": [
+          {
+            "label": "Worldchain IDRX proxy and implementation",
+            "url": "https://worldscan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          }
+        ],
+        "evidence": "The World Chain 2-of-8 Safe was confirmed as a current MINTER_ROLE holder at block 33055037, with no modules and a zero guard."
+      },
+      {
+        "id": "idrx-worldchain-minter-safe-c",
+        "label": "IDRX World Chain bridge-mint Safe C",
+        "routeRefs": [
+          "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x3274da26046eed0d315a81050507ff07d3993eb4",
+        "failureDomainKeys": [
+          "safe:worldchain:0x3274da26046eed0d315a81050507ff07d3993eb4"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's MINTER_ROLE has no economic token cap; generic mint() remains unbounded even though mintBridge carries burn/nonce accounting."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 33055037,
+        "sources": [
+          {
+            "label": "Worldchain IDRX proxy and implementation",
+            "url": "https://worldscan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          }
+        ],
+        "evidence": "The World Chain 2-of-5 Safe was confirmed as a current MINTER_ROLE holder at block 33055037, with no modules and a zero guard."
+      },
+      {
+        "id": "idrx-worldchain-default-admin",
+        "label": "IDRX World Chain DEFAULT_ADMIN bridge role administrator",
+        "routeRefs": [
+          "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x5515be1db2a513888f5cf375bf5c7956ee93c779",
+        "failureDomainKeys": [
+          "eoa:worldchain:0x5515be1db2a513888f5cf375bf5c7956ee93c779"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At World Chain block 33055037 this EOA held DEFAULT_ADMIN_ROLE and could grant or revoke MINTER_ROLE and UPGRADER_ROLE without delay."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 33055037,
+        "sources": [
+          {
+            "label": "Worldchain IDRX proxy and implementation",
+            "url": "https://worldscan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          }
+        ],
+        "evidence": "The World Chain DEFAULT_ADMIN EOA was confirmed at block 33055037 as the role-grant authority for bridge-mint holders."
+      },
+      {
+        "id": "idrx-worldchain-upgrader-timelock",
+        "label": "IDRX World Chain bridge-route UUPS timelock",
+        "routeRefs": [
+          "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x30d940c7b4a21e10f3fcaf4faabe8fe826a5b92d",
+        "failureDomainKeys": [
+          "timelock:worldchain:0x30d940c7b4a21e10f3fcaf4faabe8fe826a5b92d"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At World Chain block 33055037 the timelock held UPGRADER_ROLE with getMinDelay = 172800 seconds; DEFAULT_ADMIN_ROLE can bypass the delay by re-granting UPGRADER_ROLE."
+        },
+        "observedAt": "2026-07-30",
+        "observedBlock": 33055037,
+        "sources": [
+          {
+            "label": "Worldchain TimeLock (Blockscout)",
+            "url": "https://worldchain-mainnet.explorer.alchemy.com/address/0x30d940c7b4a21e10f3fcaf4faabe8fe826a5b92d"
+          }
+        ],
+        "evidence": "The World Chain UUPS upgrade path uses the reviewed 48-hour TimelockController and retains a DEFAULT_ADMIN bypass surface."
+      },
+      {
+        "id": "idrx-solana-current-mint-authority",
+        "label": "IDRX current Solana bridge-mint authority",
+        "routeRefs": [
+          "solana:idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn",
+        "failureDomainKeys": [
+          "eoa:solana:Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "onchainAmountBounds": "The current SPL mint is controlled by a single System-Program key. The issuer burn/API/mint route is not independently reconciled against every mint, so bridge conservation does not bound this mint authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439741247,
+        "sources": [
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439741247, the current IDRX mint had mint authority Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn, a single System-Program key, and no freeze authority."
+      },
+      {
+        "id": "idrx-issuer-api-bridge-processor",
+        "label": "IDRX issuer-operated bridge API processor",
+        "routeRefs": [
+          "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+          "etherlink:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "gnosis:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "klaytn:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+          "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+          "solana:idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
+          "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "failureDomainKeys": [
+          "offchain:idrx-bridge-api-processor"
+        ],
+        "authorityType": "issuer-backend",
+        "capDescription": "The API request carries the source burn transaction hash, source/destination chain IDs, amount, and bridge nonce; no public aggregate cap or operator signer policy was evidenced.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "onchainAmountBounds": "Bridge conservation depends on the issuer matching each API request to a source burn and nonce; the reviewed sources do not independently prove reconciliation of every credit.",
+          "signingModel": "The issuer API and operational signer controls are not publicly auditable from the reviewed primary sources.",
+          "unsupportedReason": "Failure handling, operator authorization, and whether every API credit is reconciled against the on-chain burn nonce remain unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "IDRX bridge processing flow",
+            "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
+          },
+          {
+            "label": "IDRX bridge request API",
+            "url": "https://docs.idrx.co/api/transaction-api/post-api-transaction-bridge-request"
+          }
+        ],
+        "evidence": "IDRX documents an issuer-operated API processor that receives txHashBurn and bridge nonce data after a source burn and credits the destination; its signer, failure, and reconciliation controls are not publicly verified."
       }
     ]
   }

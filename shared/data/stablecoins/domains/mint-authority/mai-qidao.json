@@ -3,11 +3,14 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "MAI is minted by borrowing against overcollateralized QiDao vault positions under owner-set debt ceilings. Token owners confirmed on primary chains: Polygon 3/5 Safe, Ethereum 4/6 Safe, Arbitrum 2/4 Safe - all with overlapping signers and no modules. The Polygon collateral vaults are owned by a separate but signer-overlapping 3-of-4 QiDao Safe that sets the per-vault ceilings. Other chains note-only per task scope.",
+    "confidence": "manual-review",
+    "summary": "MAI is minted natively on 14 reviewed non-Fraxtal QiDao deployments by borrowing against overcollateralized vault positions under owner-set debt ceilings. Polygon and Base are currently identified by QiDao as fully live; the other nonzero-supply deployments remain legacy native issuance surfaces whose current ability to accept new issuance is not independently established. Per-chain MAI owner Safes can authorize or revoke native mint paths and change issuance parameters; the Polygon collateral vaults are owned by a separate 3-of-4 QiDao Safe that sets per-vault ceilings. Fraxtal is a reviewed native deployment but is sunset with ownership renounced and zero supply. No current tracked deployment is classified as a bridge representation.",
     "controls": [
       {
         "chain": "polygon",
+        "deploymentRefs": [
+          "polygon:0xa3fa99a148fa48d14ed51d610c367c61876997f1"
+        ],
         "label": "QiDao vault/minter contracts",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -35,8 +38,50 @@
         ]
       },
       {
+        "deploymentRefs": [
+          "ethereum:0x8d6cebd76f18e1558d4db88138e2defb3909fad6",
+          "arbitrum:0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+          "optimism:0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+          "base:0xbf1aea8670d2528e08334083616dd9c5f3b087ae",
+          "avalanche:0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b",
+          "fantom:0xfb98b335551a418cd0737375a2ea0ded62ea213b",
+          "gnosis:0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+          "metis:0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+          "moonbeam:0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+          "kava:0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
+          "polygon-zkevm:0x615b25500403eb688be49221b303084d9cf0e5b4",
+          "bsc:0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+          "linea:0xf3b001d64c656e30a62fbaaca003b1336b4ce12a"
+        ],
+        "label": "QiDao native vault/minter mechanics (other reviewed deployments)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "QiDao's native deployments use the same borrower-collateralized vault path: vault contracts enforce debt ceilings, collateral ratios and the configured oracle before transferring newly minted MAI. The vault execution surface cannot raise its own ceiling; owner-controlled token and vault administration remains a separate native issuance control.",
+        "failureDomainKeys": [
+          "protocol:qidao-vaults"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "QiDao chain-risk documentation",
+            "url": "https://docs.mai.finance/risks/chain-risk"
+          },
+          {
+            "label": "QiDao erc20Stablecoin source",
+            "url": "https://github.com/0xlaozi/qidao/blob/main/contracts/erc20Stablecoin/erc20Stablecoin.sol"
+          }
+        ],
+        "evidence": "QiDao's official chain-risk documentation states that each deployment operates as a separate protocol on its blockchain, users mint and repay MAI against collateral on that chain, and only the protocol—not a bridge—can mint MAI. The official erc20Stablecoin source enforces the debt-ceiling and collateral-ratio checks in borrowToken(). This control covers the reviewed native routes other than the separately evidenced Polygon vault sample and excludes the sunset Fraxtal deployment."
+      },
+      {
         "chain": "polygon",
         "address": "0x1d8a6b7941ef1349c1b5e378783cd56b001ecfbc",
+        "deploymentRefs": [
+          "polygon:0xa3fa99a148fa48d14ed51d610c367c61876997f1"
+        ],
         "label": "QiDao vault-admin Safe (Polygon vault owner, 3/4)",
         "role": "cap-admin",
         "authorityType": "safe",
@@ -79,6 +124,9 @@
       {
         "chain": "polygon",
         "address": "0x3feacf904b152b1880bde8bf04ac9eb636fee4d8",
+        "deploymentRefs": [
+          "polygon:0xa3fa99a148fa48d14ed51d610c367c61876997f1"
+        ],
         "label": "QiDao admin Safe (Polygon MAI owner, 3/5)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -115,6 +163,9 @@
       {
         "chain": "ethereum",
         "address": "0x3182e6856c3b59c39114416075770ec9dc9ff436",
+        "deploymentRefs": [
+          "ethereum:0x8d6cebd76f18e1558d4db88138e2defb3909fad6"
+        ],
         "label": "QiDao admin Safe (Ethereum MAI owner, 4/6)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -150,6 +201,9 @@
       {
         "chain": "arbitrum",
         "address": "0xf32e759d5f1c63ed62042497d3a50f044ee0982b",
+        "deploymentRefs": [
+          "arbitrum:0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+        ],
         "label": "QiDao admin Safe (Arbitrum MAI owner, 2/4)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -178,6 +232,366 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "source": "onchain",
           "observedBlock": 471552027
+        }
+      },
+      {
+        "chain": "optimism",
+        "address": "0xb1a8d1d6dc07ca0e1e78a0004aa0bb034fa73d60",
+        "deploymentRefs": [
+          "optimism:0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+        ],
+        "label": "QiDao admin Safe (Optimism MAI owner, 2/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "capDescription": "The Optimism MAI owner Safe can authorize or revoke native mint paths and change owner-gated issuance parameters; current vault inventory and new-issuance status are not independently established.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155662088,
+        "sources": [
+          {
+            "label": "Optimism MAI token",
+            "url": "https://optimistic.etherscan.io/address/0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+          },
+          {
+            "label": "Optimism public RPC Safe observation",
+            "url": "https://optimism-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Optimism block 155662088, owner() on the MAI deployment returned 0xb1a8d1d6dc07ca0e1e78a0004aa0bb034fa73d60, a 2-of-4 Safe. getOwners() returned four signers and getModulesPaginated() returned enabled modules 0x7433a4844fc7339a7458792e30136c6782f09e46 and 0xc6dbceb5789635bd7e894e7f7401e7e7766e08fb; getGuard() reverted on this Safe implementation. This is the chain-local native issuer owner, not a bridge controller; current vault activity remains unresolved.",
+        "safe": {
+          "owners": [
+            "0x22cfae74ed0b44eecd9b0cba30d74b47ee13dbff",
+            "0xbfef4bf4cb89b414e1fb2357b2b763e240890059",
+            "0x86fe8d6d4c8a007353617587988552b6921514cb",
+            "0xa475af18a0d5f3de67a498d91dab86f6eccbf843"
+          ],
+          "threshold": 2,
+          "enabledModules": [
+            "0x7433a4844fc7339a7458792e30136c6782f09e46",
+            "0xc6dbceb5789635bd7e894e7f7401e7e7766e08fb"
+          ],
+          "observedBlock": 155662088,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        }
+      },
+      {
+        "chain": "base",
+        "address": "0xe816f03e31a75cabe64861064a6219ebe62c613d",
+        "deploymentRefs": [
+          "base:0xbf1aea8670d2528e08334083616dd9c5f3b087ae"
+        ],
+        "label": "QiDao admin Safe (Base MAI owner, 4/6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Base MAI owner Safe can authorize or revoke native mint paths and change owner-gated issuance parameters. QiDao currently identifies Base as a fully live deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066803,
+        "sources": [
+          {
+            "label": "Base MAI token",
+            "url": "https://basescan.org/address/0xbf1aea8670d2528e08334083616dd9c5f3b087ae"
+          },
+          {
+            "label": "Base Safe transaction service",
+            "url": "https://safe-transaction-base.safe.global/api/v1/safes/0xE816F03e31a75cAbE64861064a6219ebe62c613D/"
+          }
+        ],
+        "evidence": "At Base block 50066803, owner() on the MAI deployment returned 0xe816f03e31a75cabe64861064a6219ebe62c613d, a 4-of-6 Safe. Fixed-block getOwners(), getThreshold(), and getModulesPaginated() returned six owners, threshold 4, and no enabled modules; the Safe transaction service reports a zero guard. This is the chain-local native issuer owner, not a bridge controller; QiDao's current site identifies Base as fully live, while current vault inventory remains unresolved.",
+        "safe": {
+          "owners": [
+            "0xcAA86775c4565416D47533467a7C0c3FD9075102",
+            "0x9120E7f03Cd2830Cd5fc4a6402a493cEa4C04f82",
+            "0x329c54289Ff5D6B7b7daE13592C6B1EDA1543eD4",
+            "0xCB2714d04318b78CBfcDd43A784AF6a357B718C7",
+            "0xa475aF18A0D5f3De67a498d91dAb86F6ecCbf843",
+            "0xbFEF4Bf4cB89B414e1fb2357b2B763E240890059"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 50066803,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        }
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x3cf6a36876bdecadeab420aff93171439abf9ca2",
+        "deploymentRefs": [
+          "avalanche:0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b"
+        ],
+        "label": "QiDao admin Safe (Avalanche MAI owner, 2/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Avalanche MAI owner Safe can authorize or revoke native mint paths and change owner-gated issuance parameters; current vault inventory and new-issuance status are not independently established.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92982965,
+        "sources": [
+          {
+            "label": "Avalanche MAI token",
+            "url": "https://snowtrace.io/address/0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b"
+          }
+        ],
+        "evidence": "At Avalanche block 92982965, owner() on the MAI deployment returned 0x3cf6a36876bdecadeab420aff93171439abf9ca2, a 2-of-4 Safe. This is the chain-local native issuer owner, not a bridge controller; the reviewed evidence does not establish current vault activity or Safe module/guard state.",
+        "safe": {
+          "threshold": 2,
+          "observedAt": "2026-08-16",
+          "source": "manual"
+        }
+      },
+      {
+        "chain": "fantom",
+        "address": "0x679016b3f8e98673f85c6f72567f22b58aa15a54",
+        "deploymentRefs": [
+          "fantom:0xfb98b335551a418cd0737375a2ea0ded62ea213b"
+        ],
+        "label": "QiDao admin Safe (Fantom MAI owner, 2/3)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Fantom MAI owner Safe is a native issuance authority, but current new-issuance status is unresolved and the deployment is affected by dead-oracle legacy markets.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 122578793,
+        "sources": [
+          {
+            "label": "Fantom MAI token",
+            "url": "https://ftmscan.com/address/0xfb98b335551a418cd0737375a2ea0ded62ea213b"
+          }
+        ],
+        "evidence": "At the latest successful Fantom observation, block 122578793, owner() on the MAI deployment returned 0x679016b3f8e98673f85c6f72567f22b58aa15a54, a 2-of-3 Safe. The current provider read was unavailable; this is the chain-local native issuer owner, not a bridge controller, and current Safe module/guard state is not established.",
+        "safe": {
+          "threshold": 2,
+          "observedAt": "2026-07-20",
+          "source": "manual"
+        }
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x4f5af8bc14812fe5e4c7253ebf5335481e3a9e80",
+        "deploymentRefs": [
+          "gnosis:0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+        ],
+        "label": "QiDao admin Safe (Gnosis MAI owner, 4/6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Gnosis MAI owner Safe can authorize or revoke native mint paths and change owner-gated issuance parameters; current vault inventory and new-issuance status are not independently established.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762426,
+        "sources": [
+          {
+            "label": "Gnosis MAI token",
+            "url": "https://gnosisscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+          }
+        ],
+        "evidence": "At Gnosis block 47762426, owner() on the MAI deployment returned 0x4f5af8bc14812fe5e4c7253ebf5335481e3a9e80, a 4-of-6 Safe. This is the chain-local native issuer owner, not a bridge controller; the reviewed evidence does not establish current vault activity or Safe module/guard state.",
+        "safe": {
+          "threshold": 4,
+          "observedAt": "2026-08-16",
+          "source": "manual"
+        }
+      },
+      {
+        "chain": "metis",
+        "address": "0xc9d3750d3ccb25835799087a34bf9ed9cad854d8",
+        "deploymentRefs": [
+          "metis:0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+        ],
+        "label": "QiDao admin Safe (Metis MAI owner, 4/6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Metis MAI owner Safe can authorize or revoke native mint paths and change owner-gated issuance parameters; current vault inventory and new-issuance status are not independently established.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 23043283,
+        "sources": [
+          {
+            "label": "Metis MAI token",
+            "url": "https://andromeda-explorer.metis.io/address/0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+          }
+        ],
+        "evidence": "At Metis block 23043283, owner() on the MAI deployment returned 0xc9d3750d3ccb25835799087a34bf9ed9cad854d8, a 4-of-6 Safe. This is the chain-local native issuer owner, not a bridge controller; the reviewed evidence does not establish current vault activity or Safe module/guard state.",
+        "safe": {
+          "threshold": 4,
+          "observedAt": "2026-08-16",
+          "source": "manual"
+        }
+      },
+      {
+        "chain": "moonbeam",
+        "address": "0x75c7b52899b435ea81e118b429481b0ecbc0104d",
+        "deploymentRefs": [
+          "moonbeam:0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+        ],
+        "label": "QiDao admin Safe (Moonbeam MAI owner, 4/6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Moonbeam MAI owner Safe is a native issuance authority, but current new-issuance status is unresolved and the deployment has dead-oracle legacy markets.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 16514101,
+        "sources": [
+          {
+            "label": "Moonbeam MAI token",
+            "url": "https://moonscan.io/address/0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+          }
+        ],
+        "evidence": "At the latest successful Moonbeam observation, block 16514101, owner() on the MAI deployment returned 0x75c7b52899b435ea81e118b429481b0ecbc0104d, a 4-of-6 Safe. The current provider read was unavailable; this is the chain-local native issuer owner, not a bridge controller, and current Safe module/guard state is not established.",
+        "safe": {
+          "threshold": 4,
+          "observedAt": "2026-07-20",
+          "source": "manual"
+        }
+      },
+      {
+        "chain": "kava",
+        "address": "0xe43d58b8e376650440ff8b249226b1d8c95c3a83",
+        "deploymentRefs": [
+          "kava:0xb84df10966a5d7e1ab46d9276f55d57bd336afc7"
+        ],
+        "label": "QiDao admin Safe (Kava MAI owner, 4/6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Kava MAI owner Safe can authorize or revoke native mint paths and change owner-gated issuance parameters; current vault inventory and new-issuance status are not independently established.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 22136771,
+        "sources": [
+          {
+            "label": "Kava MAI token",
+            "url": "https://kavascan.com/address/0xb84df10966a5d7e1ab46d9276f55d57bd336afc7"
+          }
+        ],
+        "evidence": "At Kava block 22136771, owner() on the MAI deployment returned 0xe43d58b8e376650440ff8b249226b1d8c95c3a83, a 4-of-6 Safe. This is the chain-local native issuer owner, not a bridge controller; the reviewed evidence does not establish current vault activity or Safe module/guard state.",
+        "safe": {
+          "threshold": 4,
+          "observedAt": "2026-08-16",
+          "source": "manual"
+        }
+      },
+      {
+        "chain": "polygon-zkevm",
+        "address": "0x20265d77e0f5a7e86fdb013e408c4adf11289355",
+        "deploymentRefs": [
+          "polygon-zkevm:0x615b25500403eb688be49221b303084d9cf0e5b4"
+        ],
+        "label": "QiDao admin Safe (Polygon zkEVM MAI owner, 2/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Polygon zkEVM MAI owner Safe is a native issuance authority; the latest available provider observation is stale, so current vault inventory and new-issuance status are unresolved.",
+        "observedAt": "2026-07-03",
+        "observedBlock": 33391890,
+        "sources": [
+          {
+            "label": "Polygon zkEVM MAI token",
+            "url": "https://zkevm.polygonscan.com/address/0x615b25500403eb688be49221b303084d9cf0e5b4"
+          }
+        ],
+        "evidence": "The latest available Polygon zkEVM provider observation, block 33391890, returned owner() = 0x20265d77e0f5a7e86fdb013e408c4adf11289355, a 2-of-4 Safe, but the provider response is dated 2026-07-03 and stale relative to this review. This is the chain-local native issuer owner, not a bridge controller.",
+        "safe": {
+          "threshold": 2,
+          "observedAt": "2026-07-03",
+          "source": "manual"
+        }
+      },
+      {
+        "chain": "bsc",
+        "address": "0xff34fdcf12174293a518e585807c9b60decf5843",
+        "deploymentRefs": [
+          "bsc:0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+        ],
+        "label": "QiDao admin Safe (BSC MAI owner, 2/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The BSC MAI owner Safe can authorize or revoke native mint paths and change owner-gated issuance parameters; current vault inventory and new-issuance status are not independently established.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116360515,
+        "sources": [
+          {
+            "label": "BSC MAI token",
+            "url": "https://bscscan.com/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+          }
+        ],
+        "evidence": "At BSC block 116360515, owner() on the MAI deployment returned 0xff34fdcf12174293a518e585807c9b60decf5843, a 2-of-4 Safe. This is the chain-local native issuer owner, not a bridge controller; the reviewed evidence does not establish current vault activity or Safe module/guard state.",
+        "safe": {
+          "threshold": 2,
+          "observedAt": "2026-08-16",
+          "source": "manual"
+        }
+      },
+      {
+        "chain": "linea",
+        "address": "0xf1da2623e31be26d8faea038c3046d142341cf20",
+        "deploymentRefs": [
+          "linea:0xf3b001d64c656e30a62fbaaca003b1336b4ce12a"
+        ],
+        "label": "QiDao admin Safe (Linea MAI owner, 2/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Linea MAI owner Safe can authorize or revoke native mint paths and change owner-gated issuance parameters; current vault inventory and new-issuance status are not independently established.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 31737844,
+        "sources": [
+          {
+            "label": "Linea MAI token",
+            "url": "https://lineascan.build/address/0xf3b001d64c656e30a62fbaaca003b1336b4ce12a"
+          }
+        ],
+        "evidence": "At Linea block 31737844, owner() on the MAI deployment returned 0xf1da2623e31be26d8faea038c3046d142341cf20, a 2-of-4 Safe. This is the chain-local native issuer owner, not a bridge controller; the reviewed evidence does not establish current vault activity or Safe module/guard state.",
+        "safe": {
+          "threshold": 2,
+          "observedAt": "2026-08-16",
+          "source": "manual"
         }
       }
     ],
@@ -214,9 +628,9 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Polygon (block 88326121): 3/5 Safe owner, no modules. Ethereum (block 25361903): 4/6 Safe owner, no modules. Arbitrum (block 471552027): 2/4 Safe owner, no modules. All three chains use GnosisProxy multisigs with overlapping signers. masterMinter()/MINTER_ROLE both revert — owner-only mint pattern. Other minor chains (Optimism, Base, Avalanche, BSC, etc.) use the same Ownable pattern but their admins are note-only per brief scope; primary covered chains verified. 2026-07-20 cur-8 extension (Polygon block 90573828): the vault/minter surface was resolved from on-chain reads. MAI token debtCeiling() = 206,000,000e18 under token-owner Safe 0x3feacf90 against a totalSupply() of 305,129,005.936e18, so the binding limits are the per-vault ceilings; collateral vaults are separate cap-limited contracts (camWMATIC and WETH sampled) whose owner() chain terminates in Gnosis Safe 0x1d8a6b7941ef1349c1b5e378783cd56b001ecfbc (v1.3.0, 3-of-4, no modules, zero guard), directly or via administration contract 0x257ff75bef85ca0c1517168ef27efc69e5c7016f. No mint entry point can raise its own ceiling, so cap raising is a separate multisig control. Three of the vault-admin signers also sign the Polygon token-owner Safe. Economic-posture fields reviewed 2026-08-15: overlapping undelayed QiDao Safes can raise vault ceilings or replace authorized mint paths, while issuance remains on-chain collateral-gated with no named supervisor or attestor.",
-      "reviewer": "Claude Phase 0c continuation + cur-8 vault-surface resolution; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "MAI has 15 authored chain-local deployments, of which 14 remain non-Fraxtal native issuance surfaces and Fraxtal is sunset. Current owner reads on 2026-08-16 returned the reviewed issuer Safe domains: Polygon 3/5 at block 92145284, Ethereum 4/6 at block 25770921, Arbitrum 2/4 at block 495296480, Optimism 2/4 at block 155662088, Base 4/6 at block 50066803, Avalanche 2/4 at block 92982965, Gnosis 4/6 at block 47762426, Metis 4/6 at block 23043283, Kava 4/6 at block 22136771, BSC 2/4 at block 116360515, and Linea 2/4 at block 31737844. Fantom and Moonbeam current provider reads were unavailable, so their latest successful 2026-07-20 observations remain 2/3 at block 122578793 and 4/6 at block 16514101; Polygon zkEVM's latest available response is stale at block 33391890 from 2026-07-03 and reports 2/4. These are chain-local native issuer owners, not bridge controllers; fixed-block Safe reads establish two enabled Optimism modules and no Base modules with a zero guard, while module/guard state remains unresolved for the remaining newly covered long-tail chains. QiDao's official chain-risk documentation describes independent per-chain native minting, and the official erc20Stablecoin source enforces debt-ceiling and collateral-ratio checks in borrowToken(). masterMinter()/MINTER_ROLE both revert on the primary sampled chains — owner-only mint pattern. 2026-07-20 cur-8 extension (Polygon block 90573828): the vault/minter surface was resolved from on-chain reads. MAI token debtCeiling() = 206,000,000e18 under token-owner Safe 0x3feacf90 against a totalSupply() of 305,129,005.936e18, so the binding limits are the per-vault ceilings; collateral vaults are separate cap-limited contracts (camWMATIC and WETH sampled) whose owner() chain terminates in Gnosis Safe 0x1d8a6b7941ef1349c1b5e378783cd56b001ecfbc (v1.3.0, 3-of-4, no modules, zero guard), directly or via administration contract 0x257ff75bef85ca0c1517168ef27efc69e5c7016f. No mint entry point can raise its own ceiling, so cap raising is a separate multisig control. Three of the vault-admin signers also sign the Polygon token-owner Safe. Economic-posture fields remain partially-bounded-admin/unbounded: overlapping QiDao Safes can raise vault ceilings or replace authorized mint paths, while issuance remains on-chain collateral-gated with no named supervisor or attestor. Polygon and Base are currently described by QiDao as fully live; legacy nonzero-supply deployments are not assumed to accept new issuance; Fraxtal owner is renounced and total supply is zero.",
+      "reviewer": "Mint/bridge boundary migration; verified mai-qidao finding 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "QiDao docs",
@@ -233,6 +647,18 @@
         {
           "label": "Arbitrum MAI token",
           "url": "https://arbiscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+        },
+        {
+          "label": "QiDao official smart-contract addresses",
+          "url": "https://docs.mai.finance/functions/smart-contract-addresses"
+        },
+        {
+          "label": "QiDao chain-risk documentation",
+          "url": "https://docs.mai.finance/risks/chain-risk"
+        },
+        {
+          "label": "QiDao erc20Stablecoin source",
+          "url": "https://github.com/0xlaozi/qidao/blob/main/contracts/erc20Stablecoin/erc20Stablecoin.sol"
         },
         {
           "label": "Polygon public RPC (polygon-bor-rpc.publicnode.com)",

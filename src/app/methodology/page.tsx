@@ -46,7 +46,7 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "What is the Mint Authority Score?",
     answer:
-      "Since methodology v9.1 mint risk is graded once, by the Safety Score V9 Economic Control pillar; the standalone Mint Authority Score is retired. The published 0-100 mint component starts from a derived posture (cap semantics, claim impairment, reserve reconciliation, and supervision), then applies resolved-incident age decay, a key-custody penalty that MPC or HSM attestation waives, a multisig quorum ladder, and a small Safe module modifier. Mint route family is deliberately not priced separately because the cap and claim semantics already price it. Missing or unresolved required evidence stays explicit as NR rather than receiving a guessed score.",
+      "Since methodology v9.1 mint risk is graded once, by the Safety Score V9 Economic Control pillar; the standalone Mint Authority Score is retired. The published 0-100 mint component evaluates native issuance on the canonical deployment or deployments and the controls that can expand or replace it. Representations, adapters, lockboxes, messaging, route limits, bridge upgrades, and bridge administrators are scored separately on the bridge routes they govern, even when a controller also appears in Mint Authority. Missing or unresolved required evidence stays explicit as NR rather than receiving a guessed score.",
   },
   {
     question: "How does Pharos confirm depegs and maintain DEWS history?",

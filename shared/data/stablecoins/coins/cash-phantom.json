@@ -35,6 +35,11 @@
       "chain": "solana",
       "address": "CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
       "decimals": 6
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-regulated",

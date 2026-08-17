@@ -27,5 +27,87 @@
     "evidence": "Re-verified 2026-08-08 at Polygon block 91673086. The pUSD proxy implementation remained 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f and owner() remained Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. The verified CollateralToken implementation defines wrap, unwrap, allowance-gated burn, role administration, and UUPS authorization but no blacklist, holder freeze, seizure, arbitrary-holder burn, pause, or transfer-hook restriction. The immutable CollateralOnramp can pause new wrapping per collateral but cannot freeze existing pUSD balances. Circle can restrict reserve USDC, and the Timelock can replace pUSD logic; those are reserve and future-upgrade risks captured separately, not a current direct holder-blacklist mechanism.",
     "reviewer": "OpenAI Codex C02 control review",
     "reviewedAt": "2026-08-08"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "PUSD has one reviewed native issuance deployment on Polygon. Polymarket's official Bridge API is a material multi-source cross-chain deposit and withdrawal route: source assets are sent to API-created deposit addresses, delivered to Polygon, and wrapped into PUSD, while withdrawals unwrap PUSD to USDC before bridging or swapping to external assets. The underlying bridge or swap provider, custody and escrow addresses, validators or DVNs, peers, rate limits, pause and upgrade administrators, and conservation or reconciliation evidence are not disclosed. No additional PUSD representation or bridge controller is inferred, so the route profile remains opaque-or-unknown.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Polymarket Bridge API",
+        "url": "https://docs.polymarket.com/trading/bridge/deposit",
+        "bridgeTypes": [
+          "unknown"
+        ],
+        "note": "Polymarket documents multi-source deposits into Polygon PUSD and withdrawals from PUSD to external assets, but does not identify the underlying bridge or swap provider or its live control surfaces."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Polymarket PUSD documentation",
+        "url": "https://docs.polymarket.com/concepts/pusd"
+      },
+      {
+        "label": "Polymarket contract registry",
+        "url": "https://docs.polymarket.com/resources/contracts"
+      },
+      {
+        "label": "Polymarket Bridge API deposit documentation",
+        "url": "https://docs.polymarket.com/trading/bridge/deposit"
+      },
+      {
+        "label": "Polymarket Bridge API withdrawal documentation",
+        "url": "https://docs.polymarket.com/trading/bridge/withdraw"
+      },
+      {
+        "label": "Polymarket Bridge API supported assets",
+        "url": "https://docs.polymarket.com/trading/bridge/supported-assets"
+      },
+      {
+        "label": "Polygon Blockscout PUSD proxy",
+        "url": "https://polygon.blockscout.com/address/0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb"
+      }
+    ],
+    "routes": [
+      {
+        "id": "polygon:0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+        "sourceChain": "multi-source",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+        "protocol": "Polymarket PUSD native CollateralToken; external Bridge API provider unresolved",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified at Polygon block 92146238 on 2026-08-16: this is the sole catalog PUSD deployment and its verified CollateralToken implementation exposes Polygon-native wrap, unwrap, and burn paths, with role holders reviewed separately in Mint Authority. Official Bridge API documentation describes multi-source deposits to Polygon PUSD and PUSD withdrawals to external assets, but does not disclose its bridge or swap provider or live control surfaces; no additional PUSD representation is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92146238,
+        "sources": [
+          {
+            "label": "Polymarket PUSD documentation",
+            "url": "https://docs.polymarket.com/concepts/pusd"
+          },
+          {
+            "label": "Polymarket contract registry",
+            "url": "https://docs.polymarket.com/resources/contracts"
+          },
+          {
+            "label": "Polygon Blockscout PUSD proxy",
+            "url": "https://polygon.blockscout.com/address/0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb"
+          },
+          {
+            "label": "Polygon dRPC JSON-RPC endpoint used for live reads",
+            "url": "https://polygon.drpc.org"
+          }
+        ]
+      }
+    ]
   }
 }

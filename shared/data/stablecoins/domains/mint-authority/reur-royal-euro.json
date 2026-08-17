@@ -4,29 +4,40 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "REUR is issued by RIB Digital Holdings (Hong Kong) via non-upgradeable token contracts on three chains. On Ethereum and BSC the MASTERMINTER and DEFAULT_ADMIN is EOA 0xc50ebe57; on Tron the MASTERMINTER is a separate EOA (0x9a0c5f3a in EVM notation). The MASTERMINTER can call mintByMaster() directly or configureMinter() to authorize sub-minters; no active sub-minters were found at review time.",
+    "summary": "REUR is issued by RIB Digital Holdings (Hong Kong) through three independent, non-upgradeable native token deployments on Ethereum, BSC, and TRON. The current Ethereum/BSC DEFAULT_ADMIN EOA 0x92067bd4 and TRON DEFAULT_ADMIN EOA 0xed82999e can re-authorize the uncapped MASTERMINTER mint path; the historical owner EOAs no longer hold the master-minter role. No bridge or representation capability is included in Mint Authority.",
     "controls": [
       {
-        "label": "RIB Digital issuance EOA — Ethereum and BSC (MASTERMINTER + DEFAULT_ADMIN)",
-        "role": "direct-minter",
+        "label": "RIB Digital issuance EOA — Ethereum and BSC (DEFAULT_ADMIN)",
+        "role": "minter-admin",
         "authorityType": "eoa",
-        "directMintAbility": "direct",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+          "bsc:0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+        ],
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295037, owner() on 0x3ed0b3c4c0168a560d34e361b8130dcca4677736 returned 0xc50ebe57ae937a8ac0bcaab8945777c3be54a511; eth_getCode = 0x (EOA). hasRole(DEFAULT_ADMIN_ROLE, 0xc50ebe57) = true; hasRole(MASTERMINTER_ROLE, 0xc50ebe57) = true. Neither the proxy-admin slot nor the EIP-1967 impl slot is set (contract is not upgradeable). BSC: owner() same address confirmed at BSC block 103629529. isMinter(owner) = false (no sub-minter configured); mintByMaster() is available directly to the MASTERMINTER.",
+        "evidence": "At Ethereum block 25770811 and BSC block 116357570 on 2026-08-16, 0x92067bd47a81e4a906165edba84cefe290382871 holds DEFAULT_ADMIN_ROLE on the direct, non-upgradeable REUR deployments. A read-only grantRole(MASTERMINTER_ROLE, 0xdeadbeef...) simulation succeeds from the current default admin on both chains, while the historical owner EOA 0xc50ebe57ae937a8ac0bcaab8945777c3be54a511 no longer holds MASTERMINTER_ROLE and its equivalent authorization attempt reverts. The verified token exposes mintByMaster() and configureMinter() with no global economic cap, so this admin can authorize an uncapped master minter. Public RPC logs did not provide an exhaustive enumeration of every current master-role holder.",
         "sources": [
           {
             "label": "REUR Ethereum token",
             "url": "https://etherscan.io/address/0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+          },
+          {
+            "label": "REUR BSC token",
+            "url": "https://bscscan.com/address/0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
           }
         ]
       },
       {
-        "label": "RIB Digital issuance EOA — Tron (MASTERMINTER + DEFAULT_ADMIN)",
-        "role": "direct-minter",
+        "label": "RIB Digital issuance EOA — TRON (DEFAULT_ADMIN)",
+        "role": "minter-admin",
         "authorityType": "eoa",
-        "directMintAbility": "direct",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "tron:TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz"
+        ],
         "canRaiseCap": true,
-        "evidence": "On Tron, owner() on TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz (EVM 0xebef0a34) returned 0x9a0c5f3a73fafb8bd7e7c4c8295cdd8daa87f692; eth_getCode via Tron JSONRPC = 0x (EOA). hasRole(MASTERMINTER_ROLE, 0x9a0c5f3a) = true. Different EOA from ETH/BSC but same concentrated-admin pattern.",
+        "evidence": "At TRON block 85416672 on 2026-08-16, 0xed82999e4af3dad588f323b49ab3a15f14188ad9 holds DEFAULT_ADMIN_ROLE on the direct, non-upgradeable REUR deployment. A read-only grantRole(MASTERMINTER_ROLE, 0xdeadbeef...) simulation succeeds from this admin, while the historical owner EOA 0x9a0c5f3a73fafb8bd7e7c4c8295cdd8daa87f692 no longer holds MASTERMINTER_ROLE and mintByMaster() from it reverts with NotMasterMinter (0xd5295ad1). The default-admin grant was recorded at TRON block 83961369 and the subsequent historical master-role revoke at block 83961425 on 2026-06-27; the current admin can authorize an uncapped master minter.",
         "sources": [
           {
             "label": "REUR Tron token",
@@ -39,13 +50,17 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Ethereum block 25295037: owner = DEFAULT_ADMIN = MASTERMINTER = 0xc50ebe57 (EOA), not upgradeable, no sub-minters configured. BSC block 103629529: same owner confirmed. Tron (TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz): MASTERMINTER = 0x9a0c5f3a (EOA). All on-chain mint surfaces resolved across all deployed chains. REUR proof-of-reserves is issuer-self-published (RIB Digital-signed snapshots, self-verification, no liability reconciliation) with no named independent accounting firm, so reconciliation is unknown. The only verifiable banking licence in the Royal-branded group (Labuan FSA investment-bank licence 220147BI) belongs to a separate Malaysian entity, The Royal Investment Bank of Kelantan, not the Hong Kong REUR issuer RIB Digital Holdings Limited, and no regulator supervising the actual issuer was found, so supervision is none. Economic-posture fields reviewed 2026-08-15: direct issuer EOAs can mint without a firm cap, while self-verified assets-only snapshots leave reconciliation unknown and no issuer supervisor is evidenced.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Live role reads at Ethereum block 25770811, BSC block 116357570, and TRON block 85416672 on 2026-08-16 establish three independent native REUR issuance deployments. Ethereum/BSC DEFAULT_ADMIN_ROLE is held by 0x92067bd47a81e4a906165edba84cefe290382871 and TRON DEFAULT_ADMIN_ROLE by 0xed82999e4af3dad588f323b49ab3a15f14188ad9; read-only grantRole(MASTERMINTER_ROLE, 0xdeadbeef...) simulations establish that each current admin can re-authorize the uncapped master-minter path. The historical owner EOAs 0xc50ebe57 and 0x9a0c5f3a no longer hold MASTERMINTER_ROLE and are retained only as revoked-role evidence. The direct token ABI has no bridge, lockbox, escrow, peer, or messaging surface, so these controls remain native Mint Authority rather than Bridge Risk. REUR proof-of-reserves is issuer-self-published (RIB Digital-signed snapshots, self-verification, no liability reconciliation) with no named independent accounting firm, so reconciliation is unknown. The only verifiable banking licence in the Royal-branded group (Labuan FSA investment-bank licence 220147BI) belongs to a separate Malaysian entity, The Royal Investment Bank of Kelantan, not the Hong Kong REUR issuer RIB Digital Holdings Limited, and no regulator supervising the actual issuer was found, so supervision is none. Economic-posture fields reviewed 2026-08-16: direct issuer admins can authorize minting without a firm cap, while self-verified assets-only snapshots leave reconciliation unknown and no issuer supervisor is evidenced.",
+      "reviewer": "Codex mint-bridge-boundary migration; verified finding 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "REUR Ethereum token",
           "url": "https://etherscan.io/address/0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+        },
+        {
+          "label": "REUR BSC token",
+          "url": "https://bscscan.com/address/0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
         },
         {
           "label": "REUR Tron token",

@@ -8,96 +8,468 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "Etherfuse documents per-chain asset setup and mint/burn style issuance through its platform for supported assets including CETES. No independent bridge route is required in the reviewed public docs, so Pharos treats it as issuer-native multichain issuance.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
-    "sources": [
+    "tier": "external-validated-network",
+    "summary": "CETES has two native issuance routes and three LayerZero V2 OFT representations. Solana Token-2022 and the classic Stellar CETES issuer are native and remain in Mint Authority; Base, Polygon, and Monad burn source representations and mint destination representations through Etherfuse's TESOURO_OFT / RateLimitedOFTUpgradeable LayerZero path. The same owner EOA controls each EVM OFT's peers, delegate, and rate limits, and a shared ProxyAdmin controls implementation replacement. The EVM route observations are verified, but Monad's implementation source, the complete Monad EID mesh, the Solana-side LayerZero program permissions, and DVN/ULN configuration remain open evidence gaps. Horizon's Stellar authorized balance also differs from Etherfuse's API total and is retained as a separate reconciliation gap rather than bridge evidence.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos mint/bridge boundary migration; Codex FIX2-03",
+    "confidence": "verified",
+    "protocols": [
       {
-        "label": "Etherfuse docs overview",
-        "url": "https://docs.etherfuse.com/overview"
+        "source": "issuer",
+        "name": "Etherfuse Stablebond bridge",
+        "slug": "etherfuse",
+        "url": "https://app.etherfuse.com/bridge",
+        "bridgeTypes": [
+          "external-validated-network",
+          "oft-burn-mint"
+        ],
+        "note": "Etherfuse states that Stablebonds are bridged between blockchains through LayerZero."
       },
       {
-        "label": "Etherfuse developer docs",
+        "source": "explorer",
+        "name": "LayerZero V2 OFT (TESOURO_OFT / RateLimitedOFTUpgradeable)",
+        "slug": "layerzero",
+        "url": "https://base.blockscout.com/address/0xd2acc459fd2a8f2ef7a42bff1e61b8d9dc71b678",
+        "bridgeTypes": [
+          "external-validated-network",
+          "oft-burn-mint"
+        ],
+        "note": "Verified Base implementation burns in _debit, mints in destination _credit, and exposes owner-controlled rate limits."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Etherfuse Stablebond bridge page",
+        "url": "https://app.etherfuse.com/bridge"
+      },
+      {
+        "label": "Etherfuse developer documentation",
         "url": "https://app.etherfuse.com/legal/dev-docs"
+      },
+      {
+        "label": "Base CETES proxy and verified OFT implementation",
+        "url": "https://base.blockscout.com/address/0x834df4c1d8f51be24322e39e4766697be015512f"
+      },
+      {
+        "label": "Base shared ProxyAdmin",
+        "url": "https://base.blockscout.com/address/0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+      },
+      {
+        "label": "Polygon CETES proxy and OFT implementation",
+        "url": "https://polygon.blockscout.com/address/0x834df4c1d8f51be24322e39e4766697be015512f"
+      },
+      {
+        "label": "LayerZero V2 OFT documentation",
+        "url": "https://docs.layerzero.network/v2/developers/evm/oft/overview"
+      },
+      {
+        "label": "Solana CETES mint",
+        "url": "https://solscan.io/token/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
+      },
+      {
+        "label": "Stellar CETES issuer account",
+        "url": "https://horizon.stellar.org/accounts/GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
       }
     ],
     "routes": [
       {
         "id": "solana:CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Etherfuse CETES Token-2022 native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Solana slots 439724560 and 439725250 on 2026-08-16, this Token-2022 mint returned native mint authority A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP and its 1-of-2 multisig signer set. This row is the native Solana liability route; its LayerZero peer relationship is scored only in the EVM bridge controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "solana",
+        "controllerAddress": "A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP",
+        "failureDomainKeys": [
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "eoa:solana:CB8DiXX5DUEqvc1xA4PAhYMNUVaqW5BGatantgqEHJ4A"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439725250,
+        "sources": [
+          {
+            "label": "CETES Solana mint on Solscan",
+            "url": "https://solscan.io/token/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
       },
       {
         "id": "base:0x834df4c1d8f51be24322e39e4766697be015512f",
+        "sourceChain": "solana",
         "destinationChain": "base",
+        "canonicalChain": "solana",
         "contractAddress": "0x834df4c1d8f51be24322e39e4766697be015512f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero V2 OFT (TESOURO_OFT / RateLimitedOFTUpgradeable)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Base block 50064297 on 2026-08-16, this transparent OFT proxy used implementation 0xd2acc459fd2a8f2ef7a42bff1e61b8d9dc71b678, endpoint 0x1a44076050125825900e736c501f859c50fe728c, and owner EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f. The Solana EID 30168 peer is G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc, the Polygon peer was reciprocal, and getAmountCanBeSent(30168) returned 8441397 CETES. Source burns and destination minting are LayerZero bridge representation behavior.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "base",
+        "controllerAddress": "0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:base:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "contract:base:0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064297,
+        "sources": [
+          {
+            "label": "Base CETES proxy",
+            "url": "https://base.blockscout.com/address/0x834df4c1d8f51be24322e39e4766697be015512f"
+          },
+          {
+            "label": "Base TESOURO_OFT implementation",
+            "url": "https://base.blockscout.com/address/0xd2acc459fd2a8f2ef7a42bff1e61b8d9dc71b678"
+          },
+          {
+            "label": "Base shared ProxyAdmin",
+            "url": "https://base.blockscout.com/address/0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+          }
+        ]
       },
       {
         "id": "polygon:0x834df4c1d8f51be24322e39e4766697be015512f",
+        "sourceChain": "solana",
         "destinationChain": "polygon",
+        "canonicalChain": "solana",
         "contractAddress": "0x834df4c1d8f51be24322e39e4766697be015512f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero V2 OFT (TESOURO_OFT / RateLimitedOFTUpgradeable)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Polygon block 92141955 on 2026-08-16, this transparent OFT proxy used implementation 0x8643d478e074b211b3c8d50f08a417e0c6e2490a, endpoint 0x1a44076050125825900e736c501f859c50fe728c, and owner EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f. The Solana EID 30168 peer is G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc, the Base peer was reciprocal, and getAmountCanBeSent(30168) returned 8441397 CETES. Source burns and destination minting are LayerZero bridge representation behavior.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "polygon",
+        "controllerAddress": "0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:polygon:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "contract:polygon:0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141955,
+        "sources": [
+          {
+            "label": "Polygon CETES proxy",
+            "url": "https://polygon.blockscout.com/address/0x834df4c1d8f51be24322e39e4766697be015512f"
+          },
+          {
+            "label": "Polygon TESOURO_OFT implementation",
+            "url": "https://polygon.blockscout.com/address/0x8643d478e074b211b3c8d50f08a417e0c6e2490a"
+          },
+          {
+            "label": "Polygon shared ProxyAdmin",
+            "url": "https://polygon.blockscout.com/address/0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+          }
+        ]
       },
       {
         "id": "monad:0x834df4c1d8f51be24322e39e4766697be015512f",
+        "sourceChain": "solana",
         "destinationChain": "monad",
+        "canonicalChain": "solana",
         "contractAddress": "0x834df4c1d8f51be24322e39e4766697be015512f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero V2 OFT (TESOURO_OFT / RateLimitedOFTUpgradeable)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Monad block 96604174 on 2026-08-16, live endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() returned EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f, implementation was 0x481e4d19c077a702cde596fda5e24aef6d5149c8, and getAmountCanBeSent(30168) returned 8441397 CETES. The Solana EID 30168 peer is G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc; no Base or Polygon peer was returned for the EIDs checked. The implementation was not independently source-verified on a Monad explorer, so no Base/Polygon source claim is copied.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "monad",
+        "controllerAddress": "0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:monad:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "contract:monad:0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 96604174,
+        "sources": [
+          {
+            "label": "Monad JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "LayerZero V2 OFT documentation",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/overview"
+          }
+        ]
       },
       {
         "id": "stellar:CETES-GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC",
         "destinationChain": "stellar",
+        "canonicalChain": "stellar",
         "contractAddress": "CETES-GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Etherfuse CETES Stellar native issuer",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Horizon ledger 63986106, closed 2026-08-16T22:05:15Z, the authored Stellar CETES asset was issued by GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC, which had a self signer of weight 1, zero thresholds, and auth_required=false, auth_revocable=false, and auth_clawback_enabled=false. No LayerZero endpoint or peer was identified on this native Stellar asset.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "stellar",
+        "controllerAddress": "GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC",
+        "failureDomainKeys": [
+          "eoa:stellar:GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 63986106,
+        "sources": [
+          {
+            "label": "CETES Stellar issuer account",
+            "url": "https://horizon.stellar.org/accounts/GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+          },
+          {
+            "label": "CETES Stellar asset",
+            "url": "https://horizon.stellar.org/assets?asset_code=CETES&asset_issuer=GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "cetes-layerzero-oft-message-path",
+        "label": "CETES LayerZero OFT message-path burn/mint",
+        "routeRefs": [
+          "base:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "polygon:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "monad:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:base:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "contract:polygon:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "contract:monad:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Base, Polygon, and Monad EID 30168 peers resolve to the Solana key G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc. Base and Polygon also returned reciprocal peers; Monad returned no Base/Polygon peer for the EIDs checked.",
+          "rateLimits": "getAmountCanBeSent(30168) returned 8441397 CETES (8441397000000 raw units) on Base block 50064297, Polygon block 92141955, and Monad block 96604174.",
+          "pausersAdminsUpgraders": "The verified EVM implementation burns in _debit and mints in destination _credit; the current Base mint(address,uint256) probe reverted. Peer/delegate/rate-limit administration and transparent-proxy replacement are separately controlled by the EVM owner and shared ProxyAdmin controls."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Base TESOURO_OFT implementation",
+            "url": "https://base.blockscout.com/address/0xd2acc459fd2a8f2ef7a42bff1e61b8d9dc71b678"
+          },
+          {
+            "label": "Etherfuse Stablebond bridge page",
+            "url": "https://app.etherfuse.com/bridge"
+          },
+          {
+            "label": "LayerZero V2 OFT documentation",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/overview"
+          }
+        ],
+        "evidence": "The Base verified TESOURO_OFT / RateLimitedOFTUpgradeable source burns source units in _debit and mints destination units in _credit, so the Base, Polygon, and Monad token contracts are LayerZero representations rather than issuer-native mint surfaces. Fixed-block peers connect each EVM route to Solana EID 30168; the Solana peer identity G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc is also one signer of the native Solana mint multisig and is retained as an overlapping failure domain."
+      },
+      {
+        "id": "cetes-base-oft-owner",
+        "label": "CETES Base OFT owner EOA",
+        "routeRefs": [
+          "base:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "rate-limit"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:base:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The owner EOA can change LayerZero peers, delegate/application configuration, and the route rate limit; it is not a current issuer-owner public mint path.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50064297, the EID 30168 peer resolved to Solana key G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc and the EID 30109 peer resolved to the Polygon CETES address.",
+          "rateLimits": "getAmountCanBeSent(30168) returned 8441397 CETES at Base block 50064297; the owner-only setRateLimits surface can change route limits.",
+          "pausersAdminsUpgraders": "owner() returned this code-empty EOA at Base block 50064297; the shared ProxyAdmin upgrade path is separately scored below."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064297,
+        "sources": [
+          {
+            "label": "Base CETES proxy",
+            "url": "https://base.blockscout.com/address/0x834df4c1d8f51be24322e39e4766697be015512f"
+          },
+          {
+            "label": "Base JSON-RPC",
+            "url": "https://mainnet.base.org"
+          }
+        ],
+        "evidence": "At Base block 50064297, owner() returned the code-empty EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f. The verified OFT owner-only surfaces include peer/delegate and rate-limit administration; a direct mint(address,uint256) probe reverted. This is bridge control, not native CETES issuance."
+      },
+      {
+        "id": "cetes-polygon-oft-owner",
+        "label": "CETES Polygon OFT owner EOA",
+        "routeRefs": [
+          "polygon:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "rate-limit"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:polygon:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The owner EOA can change LayerZero peers, delegate/application configuration, and the route rate limit; it is not a current issuer-owner public mint path.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Polygon block 92141955, the EID 30168 peer resolved to Solana key G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc and the EID 30184 peer resolved to the Base CETES address.",
+          "rateLimits": "getAmountCanBeSent(30168) returned 8441397 CETES at Polygon block 92141955; the owner-only setRateLimits surface can change route limits.",
+          "pausersAdminsUpgraders": "owner() returned this code-empty EOA at Polygon block 92141955; the shared ProxyAdmin upgrade path is separately scored below."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141955,
+        "sources": [
+          {
+            "label": "Polygon CETES proxy",
+            "url": "https://polygon.blockscout.com/address/0x834df4c1d8f51be24322e39e4766697be015512f"
+          },
+          {
+            "label": "Polygon JSON-RPC",
+            "url": "https://polygon.drpc.org"
+          }
+        ],
+        "evidence": "At Polygon block 92141955, owner() returned the code-empty EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f. The verified OFT owner-only surfaces include peer/delegate and rate-limit administration; the EVM representation is not a native CETES issuer mint path."
+      },
+      {
+        "id": "cetes-monad-oft-owner",
+        "label": "CETES Monad OFT owner EOA",
+        "routeRefs": [
+          "monad:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "rate-limit"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "contract:monad:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The owner EOA can change LayerZero peers, delegate/application configuration, and the route rate limit; it is not a current issuer-owner public mint path.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Monad block 96604174, the EID 30168 peer resolved to Solana key G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc; no Base or Polygon peer was returned for the EIDs checked.",
+          "rateLimits": "getAmountCanBeSent(30168) returned 8441397 CETES at Monad block 96604174; the owner-only setRateLimits surface can change route limits.",
+          "pausersAdminsUpgraders": "owner() returned this code-empty EOA at Monad block 96604174. The implementation 0x481e4d19c077a702cde596fda5e24aef6d5149c8 was not independently source-verified on a Monad explorer, so the live owner evidence is retained without copying Base/Polygon source claims."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96604174,
+        "sources": [
+          {
+            "label": "Monad JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "LayerZero V2 OFT documentation",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/overview"
+          }
+        ],
+        "evidence": "At Monad block 96604174, owner() returned the code-empty EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f and the live OFT peer/rate-limit surfaces were present. This is bridge administration over a representation, not native CETES issuance; the Monad implementation-source gap remains explicit."
+      },
+      {
+        "id": "cetes-evm-shared-proxy-admin",
+        "label": "CETES EVM shared ProxyAdmin",
+        "routeRefs": [
+          "base:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "polygon:0x834df4c1d8f51be24322e39e4766697be015512f",
+          "monad:0x834df4c1d8f51be24322e39e4766697be015512f"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x322922f0e1675a8e7be2a38b0636a7c184082ca8",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f",
+          "contract:base:0x322922f0e1675a8e7be2a38b0636a7c184082ca8",
+          "contract:polygon:0x322922f0e1675a8e7be2a38b0636a7c184082ca8",
+          "contract:monad:0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The shared transparent ProxyAdmin can replace the live OFT implementation on Base, Polygon, and Monad; a replacement can alter mint/burn, peer, or rate-limit logic, but no Safe threshold or timelock was verified.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The EIP-1967 admin on all three EVM proxies is 0x322922f0e1675a8e7be2a38b0636a7c184082ca8, whose owner() returns EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f. Implementations observed were Base 0xd2acc459fd2a8f2ef7a42bff1e61b8d9dc71b678 at block 50064297, Polygon 0x8643d478e074b211b3c8d50f08a417e0c6e2490a at block 92141955, and Monad 0x481e4d19c077a702cde596fda5e24aef6d5149c8 at block 96604174."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Base shared ProxyAdmin",
+            "url": "https://base.blockscout.com/address/0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+          },
+          {
+            "label": "Polygon shared ProxyAdmin",
+            "url": "https://polygon.blockscout.com/address/0x322922f0e1675a8e7be2a38b0636a7c184082ca8"
+          },
+          {
+            "label": "Monad JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Base block 50064297, Polygon block 92141955, and Monad block 96604174, the three transparent OFT proxies resolved to the shared ProxyAdmin address 0x322922f0e1675a8e7be2a38b0636a7c184082ca8. Its owner was the same code-empty EOA 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f. No Safe threshold, timelock, or bounded upgrade delay was verified, so the upgrade failure domain remains adverse and route-scoped."
       }
     ]
   }

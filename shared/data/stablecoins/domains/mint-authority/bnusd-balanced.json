@@ -7,6 +7,9 @@
     "summary": "bnUSD minting is limited on ICON to the registered Balanced Loans and Peg Stability SCOREs, subject to the token debt ceiling; the current owner of the Governance SCORE is a single EOA that can raise that ceiling and upgrade mint-critical SCORE logic.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "icon:cx88fd7df7ddff82f7cc735c871dc519838cb235bb"
+      ],
       "adminAddresses": [
         "hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368"
       ],
@@ -29,6 +32,9 @@
       {
         "chain": "icon",
         "address": "cx66d4d90f5f113eba575bf793570135f9b10cece1",
+        "deploymentRefs": [
+          "icon:cx88fd7df7ddff82f7cc735c871dc519838cb235bb"
+        ],
         "label": "Balanced Loans SCORE",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -53,6 +59,9 @@
       {
         "chain": "icon",
         "address": "cxa09dbb60dcb62fffbd232b6eae132d730a2aafa6",
+        "deploymentRefs": [
+          "icon:cx88fd7df7ddff82f7cc735c871dc519838cb235bb"
+        ],
         "label": "Balanced Peg Stability SCORE",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -77,6 +86,9 @@
       {
         "chain": "icon",
         "address": "hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368",
+        "deploymentRefs": [
+          "icon:cx88fd7df7ddff82f7cc735c871dc519838cb235bb"
+        ],
         "label": "Balanced Governance owner",
         "role": "governor",
         "authorityType": "eoa",

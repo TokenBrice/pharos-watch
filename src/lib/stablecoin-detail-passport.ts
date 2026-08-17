@@ -13,6 +13,7 @@ import { GENIUS_STATUS_SHORT_LABELS, GENIUS_STATUS_TEXT_CLS } from "@shared/lib/
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { REDEMPTION_ACCESS_LABELS, REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/redemption-backstop-scoring";
 import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
+import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
 import { HERO_MUTED_CLASS } from "@/lib/stablecoin-detail-hero-metrics";
 
 export interface HeroPassportItemViewModel {
@@ -70,9 +71,9 @@ export interface PassportPegRecordInput {
  * Loose-validates the curated ISO `launchDate` (a population sweep is filling
  * it coin-by-coin, so absence is normal) and formats it as a long-form UTC
  * date, e.g. "September 26, 2018". Returns null for absent or malformed
- * values. Also backs the Key Information card's `Launched` proof line.
+ * values.
  */
-export function formatLaunchDate(launchDate: string | undefined): string | null {
+function formatLaunchDate(launchDate: string | undefined): string | null {
   if (!launchDate || !/^\d{4}-\d{2}-\d{2}$/.test(launchDate)) return null;
   const parsed = new Date(`${launchDate}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) return null;
@@ -99,7 +100,7 @@ const COUNTRY_PASSPORT_CODES: Record<string, string> = {
 };
 
 // Passport-short attestor tiers (Figma: "NICHE"); full labels stay in the
-// aria-label and the Key Information card.
+// aria-label and the Key Links card's attestation line.
 const ATTESTOR_PASSPORT_LABELS: Record<keyof typeof POR_TIER_STYLES, string> = {
   big4: "Big-4",
   regional: "Regional CPA",
@@ -169,7 +170,7 @@ function buildFreezePassportItem(
  * who stands behind it (jurisdiction, MiCA/GENIUS regulatory visas, attestor,
  * launch date). Entries whose dedicated proof block does not render fall
  * back to `#info`; the attestor entry is omitted entirely for decentralized
- * coins (mirroring the Key Information card's skip), and every other
+ * coins (they publish no reserve attestation), and every other
  * conditional entry is omitted when its dataset has no record for the coin —
  * honest emptiness over faked fields.
  */
@@ -193,7 +194,11 @@ export function buildHeroPassportItems({
   isNavToken: boolean;
 }): HeroPassportItemViewModel[] {
   const isDecentralized = coin.flags.governance === "decentralized";
-  const hasMechanismBlock = Boolean(coin.collateral || coin.pegMechanism);
+  const hasMechanismBlock = Boolean(coin.pegMechanism);
+  // Jurisdiction facts render on-page in the Regulatory standing module (rail at
+  // `xl+`, `#jurisdiction` fold below it); when neither regime is reviewed there
+  // is nothing to jump to, so the strip's own value is the whole answer.
+  const jurisdictionHref = buildRegulatoryStandingView(coin) ? "#jurisdiction" : "#info";
   const mintAuthorityReviewed = mintAuthority.status === "reviewed";
   const mechanismValue = resolvedMechanismArchetype
     ? MECHANISM_ARCHETYPE_SHORT_LABELS[resolvedMechanismArchetype]
@@ -208,7 +213,7 @@ export function buildHeroPassportItems({
       category: "Mechanism",
       value: mechanismValue,
       href: hasMechanismBlock ? "#mechanism" : "#info",
-      ariaLabel: `Peg mechanism: ${mechanismValue} — jump to Key Information`,
+      ariaLabel: `Peg mechanism: ${mechanismValue} — jump to Peg Stability`,
     },
   ];
 
@@ -283,16 +288,16 @@ export function buildHeroPassportItems({
     key: "jurisdiction",
     category: "Jurisdiction",
     value: jurisdictionCountry ? (COUNTRY_PASSPORT_CODES[jurisdictionCountry] ?? jurisdictionCountry) : "Not disclosed",
-    href: isDecentralized ? "#info" : "#jurisdiction",
+    href: isDecentralized ? "#info" : jurisdictionHref,
     valueClass: jurisdictionCountry ? undefined : HERO_MUTED_CLASS,
     tooltipLines: jurisdictionTooltipLines.length > 1 ? jurisdictionTooltipLines : undefined,
     ariaLabel: jurisdictionCountry
       ? `Jurisdiction: ${jurisdictionTooltipLines.join(", ")} — jump to jurisdiction details`
-      : "Jurisdiction not disclosed — jump to Key Information",
+      : "Jurisdiction not disclosed — jump to the coin overview",
   });
 
-  // Regulatory visas: MiCA jumps to its proof badge in the jurisdiction block;
-  // frozen assets carry the Key Information card's "Historical MiCA" framing.
+  // Regulatory visas: MiCA jumps to its facts in the Regulatory standing
+  // module; frozen assets keep the "Historical MiCA" framing.
   if (coin.mica) {
     const micaStyle = MICA_STATUS_BADGE_STYLES[coin.mica.status];
     const micaPrefix = coin.status === "frozen" ? "Historical MiCA" : "MiCA";
@@ -338,7 +343,7 @@ export function buildHeroPassportItems({
   }
 
   // Date of issue: year only protects the strip's one-line width budget; the
-  // full date lives in the aria-label and the Key Information proof line.
+  // full date lives in the aria-label.
   if (coin.launchDate) {
     const launchDateLong = formatLaunchDate(coin.launchDate);
     if (launchDateLong) {
@@ -347,7 +352,7 @@ export function buildHeroPassportItems({
         category: "Issued",
         value: coin.launchDate.slice(0, 4),
         href: "#info",
-        ariaLabel: `Issued: launched ${launchDateLong} — jump to Key Information`,
+        ariaLabel: `Issued: launched ${launchDateLong} — jump to the coin overview`,
       });
     }
   }

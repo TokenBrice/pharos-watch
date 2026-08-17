@@ -100,7 +100,9 @@ export function buildDetailSharedModules({
     custody: custodySummary ? <CustodyCard summary={custodySummary} /> : null,
     backingMechanics: mechanismBacking ? <BackingMechanicsCard view={mechanismBacking} /> : null,
     bridging: bridgeSummary ? <BridgingCard summary={bridgeSummary} /> : null,
-    regulatoryStanding: regulatoryStanding ? <RegulatoryStandingCard view={regulatoryStanding} /> : null,
+    regulatoryStanding: regulatoryStanding ? (
+      <RegulatoryStandingCard view={regulatoryStanding} anchorTwin="jurisdiction" />
+    ) : null,
     controlPosture: controlPosture ? <ControlPostureCard view={controlPosture} /> : null,
     freezeSeizure: blacklistabilitySummary ? <FreezeSeizureCard summary={blacklistabilitySummary} /> : null,
     foldBodies: {

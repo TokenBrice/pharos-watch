@@ -8,6 +8,7 @@ import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import { CanonicalOrderAssetSchema } from "@shared/lib/stablecoins/schema";
 import { type ListingDecisionRegistry } from "@shared/lib/stablecoins/listing-governance";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge-ownership";
 import { validateVariantRelationships } from "@shared/lib/stablecoins/validate-variants";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
@@ -534,6 +535,11 @@ function runStablecoinDataCheck(): void {
     }
 
     for (const entry of allEntries) {
+      for (const violation of validateMintBridgeOwnership(entry.coin, { enforce: true })) {
+        const message = `${entry.file} (${entry.coin.id}) [${violation.code}] ${violation.path}: ${violation.message}`;
+        reportError(message);
+      }
+
       const reserveTotalIssue = getReserveTotalIssue(entry.coin);
       if (reserveTotalIssue) {
         reportError(`${entry.file} (${entry.coin.id}): ${reserveTotalIssue}`);

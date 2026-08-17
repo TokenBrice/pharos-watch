@@ -18,8 +18,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "ACRDX uses Centrifuge V3's native burn-and-mint share bridge over external messaging. The protocol burns shares through the source-chain Spoke before hub-authorized destination minting; the reviewed inventory covers Ethereum, Base, Plume, Monad, Optimism, and Solana.",
-    "reviewedAt": "2026-07-29",
+    "summary": "ACRDX uses Centrifuge V3's native burn-and-mint share bridge over external messaging. Ethereum is the native issuance hub; the Ethereum Spoke, Root, and ProtocolGuardian are also canonical-side bridge identities only for messaging and route administration, while Base, Plume, Monad, Optimism, and Solana are representations.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "GPT SOL-NR-A wave6; Codex V9 runtime supply audit; Claude V9 bridge-deployment materiality wave3",
     "confidence": "verified",
     "protocols": [
@@ -64,8 +64,16 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native ACRDX share token on Ethereum (7,501-byte code): the Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab holds wards() = 1 on the token (read 2026-07-20) and mints under the Ethereum hub (Root ward 0x7ed48c31f2fdc40d37407cbabf0870b2b688368f, ProtocolGuardian Safe).",
+        "reviewNote": "Native ACRDX share token on Ethereum: the Centrifuge Spoke, Root, and ProtocolGuardian Safe establish canonical issuance; the same identities are referenced here only for their Ethereum-side Centrifuge messaging and bridge-route administration, not as evidence that destination deployments are native.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:ethereum:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+          "contract:ethereum:0x7ed48c31f2fdc40d37407cbabf0870b2b688368f",
+          "contract:ethereum:0xceb7ed5d5b3bad3088f6a1697738b60d829635c6"
+        ],
         "observedAt": "2026-07-20",
         "sources": [
           {
@@ -232,6 +240,140 @@
             "url": "https://solscan.io/token/ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "acrdx-ethereum-spoke-bridge",
+        "label": "ACRDX Ethereum Centrifuge Spoke bridge rail",
+        "routeRefs": [
+          "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:ethereum:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "Centrifuge's native share-token bridge burns source-chain shares through the Spoke before hub-authorized destination minting.",
+          "pausersAdminsUpgraders": "The Ethereum Spoke is warded on the canonical ShareToken; this control scopes its cross-chain transfer and destination-mint capability to Bridge Risk rather than treating destination wards as native issuance."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25769985,
+        "sources": [
+          {
+            "label": "Centrifuge share-token bridge guide",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "Centrifuge Spoke architecture",
+            "url": "https://docs.centrifuge.io/developer/protocol/architecture/spoke/"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25769985, the canonical ACRDX ShareToken returned wards(0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab) = 1. Centrifuge's bridge guide identifies the Spoke as the source-chain crosschainTransferShares rail and destination mint authority; those bridge capabilities are retained here separately from its Ethereum-native issuance role."
+      },
+      {
+        "id": "acrdx-ethereum-root-bridge-admin",
+        "label": "ACRDX Ethereum Centrifuge Root bridge administration",
+        "routeRefs": [
+          "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x7ed48c31f2fdc40d37407cbabf0870b2b688368f",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:ethereum:0x7ed48c31f2fdc40d37407cbabf0870b2b688368f"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Root is warded on the Ethereum ShareToken and can rely or deny wards, including the Spoke used by the canonical-side messaging rail."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25769985,
+        "sources": [
+          {
+            "label": "Centrifuge deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25769985, the Root ward on the canonical ACRDX ShareToken returned 1. Root's rely/deny authority over the ShareToken ward set is a canonical-side bridge-administration surface when it governs the Spoke messaging rail; native Root authority remains separately scoped in Mint Authority."
+      },
+      {
+        "id": "acrdx-ethereum-protocolguardian-safe",
+        "label": "ACRDX Ethereum ProtocolGuardian Safe bridge administration",
+        "routeRefs": [
+          "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x9711730060c73ee7fcfe1890e8a0993858a7d225",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "safe:ethereum:0x9711730060c73ee7fcfe1890e8a0993858a7d225"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 9,
+        "safe": {
+          "owners": [
+            "0xb307f0b2eddb84ef63f3f9dc99a3a1a66d68eb3a",
+            "0x044671acf58340ac9d7ab782d3f93d1943fe24bf",
+            "0x701da7a0c8ee46521955cc29d32943d47e2c02b9",
+            "0x5e7a86178252aeae9cbda30f9c342c71799a3ee1",
+            "0xe9441b34f71659cca2bfe90d98ee0e57d9cad28f",
+            "0x4d47a7a89478745200bd51c26ba87664538df541",
+            "0x080001dbe12fa46a1d7c03fa0cbf1839e367f155",
+            "0xd55114BfE98a2ca16202Aa741BeE571765292616",
+            "0x9edec77dd2651ce062ab17e941347018ad4eaea9"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295029,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The ProtocolGuardian is warded on Root; its 4-of-9 Safe can administer the Root authority that governs the Ethereum-side Spoke messaging rail."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25769985,
+        "sources": [
+          {
+            "label": "Ethereum Blockscout ProtocolGuardian",
+            "url": "https://eth.blockscout.com/address/0xceb7ed5d5b3bad3088f6a1697738b60d829635c6"
+          },
+          {
+            "label": "Ethereum Blockscout ProtocolGuardian Safe",
+            "url": "https://eth.blockscout.com/address/0x9711730060c73ee7fcfe1890e8a0993858a7d225"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "The ProtocolGuardian Safe 0x9711730060c73ee7fcfe1890e8a0993858a7d225 is a verified 4-of-9 Safe with no enabled modules or guard in the authored inspection at block 25295029. ProtocolGuardian is warded on the Ethereum Root, so this Safe's Root-administration capability is represented here only for canonical-side bridge messaging and separately remains a native issuance control in Mint Authority."
       }
     ]
   }

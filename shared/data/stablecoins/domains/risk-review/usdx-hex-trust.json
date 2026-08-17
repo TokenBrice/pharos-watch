@@ -8,11 +8,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "USDX is issuer-minted natively by Hex Trust on Ethereum, Flare, and Songbird (per-chain MINTER_ROLE holders reviewed in the mint-authority profile); no bridge carries the claim.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "USDX has three independent native issuance chains: Ethereum, Flare, and Songbird. The Ethereum and Flare V2 deployments also expose a LayerZero OFT burn/mint route with reciprocal peers; their bridge mint/burn, peer/configuration, upgrade, and external validation domains are assessed here, while direct MINTER_ROLE issuance and native UUPS mint-logic controls remain in Mint Authority. Songbird V1 has no callable OFT surface and remains native-only.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration; verified finding 2026-08-16",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
@@ -20,6 +20,15 @@
         "bridgeTypes": [
           "issuer-native-mint-redeem"
         ]
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero V2 OFT",
+        "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference",
+        "bridgeTypes": [
+          "oft"
+        ],
+        "note": "Ethereum and Flare USDX V2 deployments expose OFT burn/mint and reciprocal peers; Songbird V1 does not expose a callable OFT surface."
       }
     ],
     "sources": [
@@ -30,6 +39,50 @@
       {
         "label": "Flare USDX launch",
         "url": "https://flare.network/news/defi-on-flare-boosted-by-hex-trusts-usdx-stablecoin-and-clearpool-yield-vault"
+      },
+      {
+        "label": "Hex Trust April in review",
+        "url": "https://www.hextrust.com/resources-collection/april-in-review-navigating-tariffs"
+      },
+      {
+        "label": "HT Digital Assets USDX",
+        "url": "https://www.htdigitalassets.com/"
+      },
+      {
+        "label": "USDX Ethereum Sourcify implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+      },
+      {
+        "label": "USDX Flare verified implementation",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=contract&action=getsourcecode&address=0x35151bA1c19b31cc258787A414c93Bbe77251147"
+      },
+      {
+        "label": "USDX Songbird verified implementation",
+        "url": "https://songbird-explorer.flare.network/address/0xF34A47Df7098a23f42A06839F0CC2eA61cAafb0B"
+      },
+      {
+        "label": "LayerZero Ethereum Mainnet deployment",
+        "url": "https://docs.layerzero.network/v2/deployments/chains/ethereum"
+      },
+      {
+        "label": "LayerZero Flare Mainnet deployment",
+        "url": "https://docs.layerzero.network/v2/deployments/chains/flare"
+      },
+      {
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+      },
+      {
+        "label": "Ethereum PublicNode JSON-RPC",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Flare official JSON-RPC",
+        "url": "https://flare-api.flare.network/ext/C/rpc"
+      },
+      {
+        "label": "Songbird official JSON-RPC",
+        "url": "https://songbird-api.flare.network/ext/C/rpc"
       }
     ],
     "routes": [
@@ -37,20 +90,37 @@
         "id": "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
         "destinationChain": "ethereum",
         "contractAddress": "0xf8750b54d86be7ae9e32b4a0c826811198d63313",
-        "protocol": "Hex Trust native issuance",
+        "protocol": "Hex Trust native issuance / LayerZero V2 OFT",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "external-validated-network",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "USDX is issuer-minted natively on ethereum by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
+        "reviewNote": "USDX is independently issuer-minted natively on ethereum, and the same V2 deployment is a LayerZero OFT route. At Ethereum block 25771176 on 2026-08-16, the proxy resolved to implementation 0xce2d107b6046e61a651484b4ee65023d89a42d7b with endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, token() = address(this), msgInspector() = 0, preCrime() = 0, and peers(30295) = Flare USDX 0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b. The verified HexTrustUSDV2 _debit path burns source balances and _credit path mints destination balances. The direct MINTER_ROLE native issuance path remains in Mint Authority; this route's OFT bridge capabilities, peer/configuration, upgrade, and external validation domains are assessed here.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771176,
         "sources": [
           {
             "label": "HT Digital Assets USDX",
             "url": "https://www.htdigitalassets.com/"
+          },
+          {
+            "label": "USDX Ethereum Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+          },
+          {
+            "label": "LayerZero Ethereum Mainnet deployment",
+            "url": "https://docs.layerzero.network/v2/deployments/chains/ethereum"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum.publicnode.com"
           }
         ]
       },
@@ -58,20 +128,37 @@
         "id": "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
         "destinationChain": "flare",
         "contractAddress": "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
-        "protocol": "Hex Trust native issuance",
+        "protocol": "Hex Trust native issuance / LayerZero V2 OFT",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "external-validated-network",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "USDX is issuer-minted natively on flare by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
+        "reviewNote": "USDX is independently issuer-minted natively on flare, and the same V2 deployment is a LayerZero OFT route. At Flare block 67571965 on 2026-08-16, the proxy resolved to implementation 0x35151ba1c19b31cc258787a414c93bbe77251147 with endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, token() = address(this), msgInspector() = 0, preCrime() = 0, and peers(30101) = Ethereum USDX 0xf8750b54d86be7ae9e32b4a0c826811198d63313. The verified HexTrustUSDV2 _debit path burns source balances and _credit path mints destination balances. The direct MINTER_ROLE native issuance path remains in Mint Authority; this route's OFT bridge capabilities, peer/configuration, upgrade, and external validation domains are assessed here.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 67571965,
         "sources": [
           {
             "label": "HT Digital Assets USDX",
             "url": "https://www.htdigitalassets.com/"
+          },
+          {
+            "label": "USDX Flare verified implementation",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=contract&action=getsourcecode&address=0x35151bA1c19b31cc258787A414c93Bbe77251147"
+          },
+          {
+            "label": "LayerZero Flare Mainnet deployment",
+            "url": "https://docs.layerzero.network/v2/deployments/chains/flare"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+          },
+          {
+            "label": "Flare official JSON-RPC",
+            "url": "https://flare-api.flare.network/ext/C/rpc"
           }
         ]
       },
@@ -86,15 +173,229 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "USDX is issuer-minted natively on songbird by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
+        "reviewNote": "USDX is independently issuer-minted natively on songbird. At Songbird block 130516710 on 2026-08-16, the proxy resolved to implementation 0xf34a47df7098a23f42a06839f0cc2ea61caafb0b; current V1 reads expose no callable OFT endpoint(), token(), msgInspector(), preCrime(), or peers(uint32) surface (the calls reverted). No LayerZero bridge controls are attributed to Songbird; direct MINTER_ROLE and native UUPS mint-logic controls remain in Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 130516710,
         "sources": [
           {
             "label": "HT Digital Assets USDX",
             "url": "https://www.htdigitalassets.com/"
+          },
+          {
+            "label": "USDX Songbird verified implementation",
+            "url": "https://songbird-explorer.flare.network/address/0xF34A47Df7098a23f42A06839F0CC2eA61cAafb0B"
+          },
+          {
+            "label": "Songbird official JSON-RPC",
+            "url": "https://songbird-api.flare.network/ext/C/rpc"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdx-ethereum-layerzero-oft-default-admin",
+        "label": "USDX Ethereum LayerZero OFT default-admin EOA",
+        "routeRefs": [
+          "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "eoa:ethereum:0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25771176, peers(30295) returned Flare USDX 0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b. LayerZero EID 30295 is Flare mainnet, so the configured peer binds this OFT route to the reviewed Flare deployment.",
+          "onchainAmountBounds": "HexTrustUSDV2._debit burns the source sender balance and _credit mints the destination balance. Route supply conservation depends on LayerZero message validation and reciprocal peer configuration; this is bridge accounting, not independent native mint authority.",
+          "pausersAdminsUpgraders": "At Ethereum block 25771176, defaultAdmin() resolved to 0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb and the EOA held UPGRADE_ADMIN_ROLE. The verified V2 source authorizes OFT peer/configuration and UUPS upgrade paths through the default-admin or upgrade-admin role; native MINTER_ROLE grant/revoke authority remains separately reviewed in Mint Authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771176,
+        "sources": [
+          {
+            "label": "USDX Ethereum Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum.publicnode.com"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Ethereum block 25771176 on 2026-08-16, the USDX proxy's defaultAdmin() returned 0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb, the EIP-1967 implementation was 0xce2d107b6046e61a651484b4ee65023d89a42d7b, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, peers(30295) returned the Flare USDX deployment, and the OFT source exposed burn-on-debit and mint-on-credit. This preserves the Ethereum route's LayerZero bridge and upgrade risk without treating the same EOA's native MINTER_ROLE administration as bridge authority."
+      },
+      {
+        "id": "usdx-flare-layerzero-oft-default-admin",
+        "label": "USDX Flare LayerZero OFT default-admin EOA",
+        "routeRefs": [
+          "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "flare",
+        "controllerAddress": "0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+          "contract:flare:0x1a44076050125825900e736c501f859c50fe728c",
+          "eoa:flare:0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Flare block 67571965, peers(30101) returned Ethereum USDX 0xf8750b54d86be7ae9e32b4a0c826811198d63313. LayerZero EID 30101 is Ethereum mainnet, so the configured peer binds this OFT route to the reviewed Ethereum deployment.",
+          "onchainAmountBounds": "HexTrustUSDV2._debit burns the source sender balance and _credit mints the destination balance. Route supply conservation depends on LayerZero message validation and reciprocal peer configuration; this is bridge accounting, not independent native mint authority.",
+          "pausersAdminsUpgraders": "At Flare block 67571965, defaultAdmin() resolved to 0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb and the EOA held UPGRADE_ADMIN_ROLE. The verified V2 source authorizes OFT peer/configuration and UUPS upgrade paths through the default-admin or upgrade-admin role; native MINTER_ROLE grant/revoke authority remains separately reviewed in Mint Authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 67571965,
+        "sources": [
+          {
+            "label": "USDX Flare verified implementation",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=contract&action=getsourcecode&address=0x35151bA1c19b31cc258787A414c93Bbe77251147"
+          },
+          {
+            "label": "Flare official JSON-RPC",
+            "url": "https://flare-api.flare.network/ext/C/rpc"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Flare block 67571965 on 2026-08-16, the USDX proxy's defaultAdmin() returned 0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb, the EIP-1967 implementation was 0x35151ba1c19b31cc258787a414c93bbe77251147, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, peers(30101) returned the Ethereum USDX deployment, and the OFT source exposed burn-on-debit and mint-on-credit. This preserves the Flare route's LayerZero bridge and upgrade risk without treating the same EOA's native MINTER_ROLE administration as bridge authority."
+      },
+      {
+        "id": "usdx-ethereum-layerzero-oft-upgrade-admin",
+        "label": "USDX Ethereum LayerZero OFT secondary UPGRADE_ADMIN_ROLE EOA",
+        "routeRefs": [
+          "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+        ],
+        "capabilities": [
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x47345bb878501cc204d6e7d13d74ce159f287c55",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "eoa:ethereum:0x47345bb878501cc204d6e7d13d74ce159f287c55"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25771176, peers(30295) returned Flare USDX 0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b. The verified V2 source authorizes OFT peer/configuration through UPGRADE_ADMIN_ROLE in addition to the default-admin path.",
+          "pausersAdminsUpgraders": "At Ethereum block 25771176, hasRole(UPGRADE_ADMIN_ROLE, 0x47345bb878501cc204d6e7d13d74ce159f287c55) returned true. The source gates UUPS implementation replacement and the relevant OFT configuration path through this role; this EOA was not recorded as DEFAULT_ADMIN_ROLE or MINTER_ROLE."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771176,
+        "sources": [
+          {
+            "label": "USDX Ethereum Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25771176 on 2026-08-16, 0x47345bb878501cc204d6e7d13d74ce159f287c55 held UPGRADE_ADMIN_ROLE on the USDX proxy. The verified V2 source uses that role for UUPS upgrade authorization and OFT peer/configuration, so this bridge-route control remains distinct from the same EOA's native mint-logic upgrade control in Mint Authority."
+      },
+      {
+        "id": "usdx-flare-layerzero-oft-upgrade-admin",
+        "label": "USDX Flare LayerZero OFT secondary UPGRADE_ADMIN_ROLE EOA",
+        "routeRefs": [
+          "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+        ],
+        "capabilities": [
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "flare",
+        "controllerAddress": "0x47345bb878501cc204d6e7d13d74ce159f287c55",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+          "contract:flare:0x1a44076050125825900e736c501f859c50fe728c",
+          "eoa:flare:0x47345bb878501cc204d6e7d13d74ce159f287c55"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Flare block 67571965, peers(30101) returned Ethereum USDX 0xf8750b54d86be7ae9e32b4a0c826811198d63313. The verified V2 source authorizes OFT peer/configuration through UPGRADE_ADMIN_ROLE in addition to the default-admin path.",
+          "pausersAdminsUpgraders": "At Flare block 67571965, hasRole(UPGRADE_ADMIN_ROLE, 0x47345bb878501cc204d6e7d13d74ce159f287c55) returned true. The source gates UUPS implementation replacement and the relevant OFT configuration path through this role; this EOA was not recorded as DEFAULT_ADMIN_ROLE or MINTER_ROLE."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 67571965,
+        "sources": [
+          {
+            "label": "USDX Flare verified implementation",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=contract&action=getsourcecode&address=0x35151bA1c19b31cc258787A414c93Bbe77251147"
+          },
+          {
+            "label": "Flare official JSON-RPC",
+            "url": "https://flare-api.flare.network/ext/C/rpc"
+          }
+        ],
+        "evidence": "At Flare block 67571965 on 2026-08-16, 0x47345bb878501cc204d6e7d13d74ce159f287c55 held UPGRADE_ADMIN_ROLE on the USDX proxy. The verified V2 source uses that role for UUPS upgrade authorization and OFT peer/configuration, so this bridge-route control remains distinct from the same EOA's native mint-logic upgrade control in Mint Authority."
+      },
+      {
+        "id": "usdx-layerzero-v2-validation-domain",
+        "label": "USDX Ethereum-Flare LayerZero V2 validation domain",
+        "routeRefs": [
+          "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+          "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:flare:0x1a44076050125825900e736c501f859c50fe728c"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "LayerZero V2 endpoint/DVN/executor validation is an external route failure domain. The exact per-OApp DVN and executor configuration, validator membership, quorum, and emergency override roster were not read; no threshold or custody claim is made.",
+          "trustedPeerOrRemote": "LayerZero's reviewed Ethereum and Flare deployment records identify EIDs 30101 and 30295, while fixed-block reads confirmed reciprocal USDX peers between those EIDs."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "LayerZero Ethereum Mainnet deployment",
+            "url": "https://docs.layerzero.network/v2/deployments/chains/ethereum"
+          },
+          {
+            "label": "LayerZero Flare Mainnet deployment",
+            "url": "https://docs.layerzero.network/v2/deployments/chains/flare"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/developers/evm/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "The Ethereum and Flare USDX V2 deployments use the LayerZero V2 OFT burn/mint route with reciprocal peers, so external message validation remains a material bridge failure domain. The reviewed evidence does not resolve the exact DVN/executor roster or custody threshold; this control records the unresolved validator dependency without inventing a favorable configuration."
       }
     ]
   }

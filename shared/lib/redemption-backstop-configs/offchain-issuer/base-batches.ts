@@ -47,7 +47,20 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
       "settlement",
     ]),
   ],
-  "gusd-gate": [sourceRef("Gate GUSD", "https://www.gate.com/gusd", ["route", "capacity"])],
+  "gusd-gate": [
+    sourceRef("Gate GUSD product", "https://www.gate.com/staking/USDT?isDebtType=1&pid=33", [
+      "route",
+      "fees",
+      "access",
+    ]),
+    sourceRef("Gate GUSD minting and redemption guide", "https://www.gate.com/help/lend/staking/46831", [
+      "route",
+      "capacity",
+      "fees",
+      "access",
+      "settlement",
+    ]),
+  ],
   "reur-royal-euro": [sourceRef("REUR", "https://www.rcoins.digital/REUR.html", ["route", "capacity", "access"])],
   "rusd-royal-dollar": [sourceRef("RUSD", "https://www.rcoins.digital/RUSD.html", ["route", "capacity", "access"])],
   "usyc-hashnote": [
@@ -263,6 +276,14 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
               feeBpsMax: 3,
             },
           }
+        : entry.id === "gusd-gate"
+          ? {
+              ...entry.config,
+              ...documentedBoundSupplyFull("2026-08-17"),
+              costModel: documentedVariableFee(
+                "Gate currently advertises fee-free redemption into the original subscription asset; an older help article says fees may vary by redemption mode and market conditions",
+              ),
+            }
         : entry.config,
     overrideReason: "Direct-redemption review cohort upgrades issuer defaults to documented-bound capacity.",
   })),

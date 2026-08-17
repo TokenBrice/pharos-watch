@@ -13,11 +13,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
-    "summary": "Wormhole is Securitize and VanEck's official interoperability provider for VBILL, powering token transfers between Securitize-issued deployments on Ethereum, Avalanche, BNB Chain, and Solana.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-    "confidence": "verified",
+    "tier": "opaque-or-unknown",
+    "summary": "VBILL has issuer-native minting surfaces on Ethereum, Avalanche, BNB Chain, and Solana, while Wormhole is Securitize and VanEck's official interoperability provider for transfers between those deployments. Wormhole's Guardian/VAA validation and governance are assessed as a separate bridge failure domain. The public materials confirm the protocol relationship but do not expose the VBILL-specific Securitize transfer contracts, emitter or peer bindings, rate limits, pause controls, or route administrators, so the aggregate bridge assessment remains fail-closed opaque-or-unknown until those route facts are verified.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Codex mint-bridge-boundary migration FIX-03",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "Securitize VBILL page",
@@ -30,6 +30,18 @@
       {
         "label": "Wormhole VBILL interoperability announcement",
         "url": "https://wormhole.com/blog/securitize-announces-wormhole-as-official-interoperability-provider-for-vaneck-vbill"
+      },
+      {
+        "label": "Wormhole security model and Guardian governance",
+        "url": "https://wormhole.com/docs/protocol/security/"
+      },
+      {
+        "label": "Wormhole core contract and message semantics",
+        "url": "https://wormhole.com/docs/protocol/infrastructure/core-contracts/"
+      },
+      {
+        "label": "Wormhole Native Token Transfers overview",
+        "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/"
       }
     ],
     "protocols": [
@@ -57,13 +69,18 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native VBILL: 170-byte EIP-1967 proxy, owner() = the Securitize token owner EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on every chain (mint-authority review; read 2026-07-20). Securitize issues VBILL natively per chain under its DS protocol.",
+        "reviewNote": "Native VBILL issuance: at Avalanche block 92972905, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation = 0xc7579a9a4801a805b66742e5bd56a1581705fe0d. The issuer-native mint and upgrade surface is reviewed in mintAuthority; Wormhole transfer machinery is a separate bridge route, but its VBILL-specific manager, peers, limits, and admin identities remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92972905,
         "sources": [
           {
             "label": "Securitize",
             "url": "https://securitize.io/"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
           }
         ]
       },
@@ -79,13 +96,18 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native VBILL: 170-byte EIP-1967 proxy, owner() = the Securitize token owner EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on every chain (mint-authority review; read 2026-07-20). Securitize issues VBILL natively per chain under its DS protocol.",
+        "reviewNote": "Native VBILL issuance: at BNB Chain block 116336111, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation = 0xcd01d1c5c78ad428cd01913d4664c20ed1e61923. The issuer-native mint and upgrade surface is reviewed in mintAuthority; Wormhole transfer machinery is a separate bridge route, but its VBILL-specific manager, peers, limits, and admin identities remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116336111,
         "sources": [
           {
             "label": "Securitize",
             "url": "https://securitize.io/"
+          },
+          {
+            "label": "BNB Chain JSON-RPC",
+            "url": "https://bsc-dataseed.binance.org"
           }
         ]
       },
@@ -101,13 +123,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native VBILL: 170-byte EIP-1967 proxy, owner() = the Securitize token owner EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on every chain (mint-authority review; read 2026-07-20). Securitize issues VBILL natively per chain under its DS protocol.",
+        "reviewNote": "Native VBILL issuance: at Ethereum block 25770003, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation = 0xaf88485377cca5e690e7dcb1ba81370f0b575156. The issuer-native mint and upgrade surface is reviewed in mintAuthority; Wormhole transfer machinery is a separate bridge route, but its VBILL-specific manager, peers, limits, and admin identities remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770003,
         "sources": [
           {
             "label": "Securitize",
             "url": "https://securitize.io/"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
@@ -123,15 +150,90 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native VBILL on Solana: SPL mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1 has mintAuthority = freezeAuthority = BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK — the Securitize issuance authority (read 2026-07-20 via Solana RPC).",
+        "reviewNote": "Native VBILL issuance: at Solana slot 439710513, Token-2022 mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1 has mintAuthority = freezeAuthority = BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK. The issuer-native mint surface is reviewed in mintAuthority; Wormhole transfer machinery is a separate bridge route, but its VBILL-specific manager, peers, limits, and admin identities remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439710513,
         "sources": [
           {
             "label": "Securitize",
             "url": "https://securitize.io/"
+          },
+          {
+            "label": "Solana JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "vbill-wormhole-guardian-validation",
+        "label": "Wormhole Guardian VAA validation for VBILL transfers",
+        "routeRefs": [
+          "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183",
+          "bsc:0x14d72634328c4d03bba184a48081df65f1911279",
+          "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+          "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:wormhole-guardian-set",
+          "protocol:wormhole-core"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "attestorQuorum": "Wormhole's current security documentation describes a 13-of-19 Guardian supermajority for signed VAAs. The VBILL-specific emitter, transceiver, peer bindings, and delegated-observer configuration were not exposed by the reviewed materials.",
+          "trustedPeerOrRemote": "Wormhole is the official VBILL interoperability provider, but the exact Securitize transfer contracts and per-route peer configuration remain unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Wormhole security model and Guardian governance",
+            "url": "https://wormhole.com/docs/protocol/security/"
+          },
+          {
+            "label": "Wormhole VBILL interoperability announcement",
+            "url": "https://wormhole.com/blog/securitize-announces-wormhole-as-official-interoperability-provider-for-vaneck-vbill"
+          }
+        ],
+        "evidence": "Wormhole's official security documentation describes Guardian-signed VAAs and a 13-of-19 supermajority as the protocol validation layer. The VBILL announcement names Wormhole as the official interoperability provider across Ethereum, Avalanche, BNB Chain, and Solana, but neither source identifies the VBILL-specific transfer manager or peer contracts."
+      },
+      {
+        "id": "vbill-wormhole-governance",
+        "label": "Wormhole governance over Guardian sets and protocol upgrades",
+        "routeRefs": [
+          "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183",
+          "bsc:0x14d72634328c4d03bba184a48081df65f1911279",
+          "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+          "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "failureDomainKeys": [
+          "protocol:wormhole-governance",
+          "protocol:wormhole-guardian-set"
+        ],
+        "authorityType": "dao-governor",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Wormhole's security documentation states that protocol upgrades and delegated Guardian-set configuration are managed through on-chain governance. The VBILL-specific Securitize transfer-admin and upgrade identities remain unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Wormhole security model and Guardian governance",
+            "url": "https://wormhole.com/docs/protocol/security/"
+          },
+          {
+            "label": "Wormhole core contract and message semantics",
+            "url": "https://wormhole.com/docs/protocol/infrastructure/core-contracts/"
+          }
+        ],
+        "evidence": "Wormhole documents on-chain governance for Guardian-set and protocol upgrade actions. This is a protocol-level common-mode control for the VBILL transfer rail; it is not an issuer-native VBILL mint authority. Exact VBILL-specific contracts, administrators, and any Securitize override path were not identified."
       }
     ]
   }

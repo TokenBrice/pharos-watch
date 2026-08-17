@@ -4,28 +4,35 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "wM is an EIP-1967 minimal proxy (no admin slot, no UUPS) over WrappedMToken — wrap/unwrap is pure M-backed accounting with no privileged mint path. The contract's Migratable mechanism allows implementation changes, but only when a TTG-registered migrator key exists AND is called by migrationAdmin (a 2/2 Safe, v1.3.0, no modules). Base M issuance is inherited from reviewed m-m0 MinterGateway controls.",
+    "summary": "wM is a pure M-backed wrapper: Ethereum wrap/unwrap transfers M before minting or burns wM before returning M, while the Solana m_ext path mints Token-2022 wM only after M is deposited into its extension vault. Wrapper-local logic remains mutable: Ethereum migration requires a TTG-registered migrator and the current one-of-two migrationAdmin Safe, while the Solana m_ext ProgramData upgrade authority is scored on the Solana bridge-representation route in Bridge Risk. Base M issuance is inherited from reviewed m-m0 and is not a second direct wM controller.",
     "inheritedFrom": "m-m0",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291"
+      ],
       "proxyAddresses": [
         "0x437cc33344a0B27A429f795ff6B469C72698B291"
       ],
       "implementationAddresses": [
-        "0x6d9db63afccf515f393d5e65be69d38bb3b29d13"
+        "0x6d9d63afccf515f393d5e65be69d38bb3b29d13"
       ],
       "adminAddresses": [
-        "0x431169728d75bd02f4053435b87d15c8d1fb2c72",
+        "0xf7298f047f92d0eb21231478ef6ba9fe1ecd4c73",
         "0x119fbeedd4f4f4298fb59b720d5654442b81ae2c"
       ],
       "canChangeMintLogic": true,
       "controlRef": "WrappedMToken EIP-1967 proxy (Migratable)",
-      "observedAt": "2026-08-11",
-      "observedBlock": 25734737,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25773353,
       "sources": [
         {
-          "label": "WrappedMToken source (Blockscout ETH)",
-          "url": "https://eth.blockscout.com/address/0x813b926b1d096e117721bd1eb017fba122302da0"
+          "label": "Current WrappedMToken V2 implementation (Blockscout ETH)",
+          "url": "https://eth.blockscout.com/address/0x6d9d63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
+        },
+        {
+          "label": "Ethereum wM proxy (Blockscout ETH)",
+          "url": "https://eth.blockscout.com/address/0x437cc33344a0b27a429f795ff6b469c72698b291?tab=contract"
         },
         {
           "label": "M0 Migratable GitHub",
@@ -37,31 +44,38 @@
       {
         "chain": "ethereum",
         "address": "0x437cc33344a0B27A429f795ff6B469C72698B291",
+        "deploymentRefs": [
+          "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
         "label": "WrappedMToken EIP-1967 proxy (Migratable)",
         "role": "wrapper",
         "authorityType": "safe",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "none-detected",
-        "threshold": 2,
+        "threshold": 1,
         "signerCount": 2,
         "safe": {
           "owners": [
-            "0xdcf79c332cb3fe9d39a830a5f8de7ce6b1bd6fd1",
-            "0xe0c6ac12d0e13c0cb2fcd583430198cbee0b3a10"
+            "0xA8F0Db29280BF3ABBb90d9EC3815a7632597bde4",
+            "0xB487aF3e8DDA0184E93E15D6117580E03F31222b"
           ],
-          "threshold": 2,
+          "threshold": 1,
           "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
-          "version": "1.3.0",
-          "observedBlock": 25295240,
+          "version": "1.4.1",
+          "observedAt": "2026-08-16",
+          "observedBlock": 25773353,
           "source": "onchain"
         },
-        "capDescription": "EIP-1967 minimal proxy with no admin slot; upgrade requires TTG-registered migrator AND migrationAdmin (2/2 Safe) to call migrate(). vault()=0xd7298f620b0f752cf41bd818a16c756d9dcaa34f confirmed. Wrapper mints wM only by wrapping deposited M.",
+        "capDescription": "EIP-1967 minimal proxy with no admin slot; current implementation 0x6d9d63afccf515f393d5e65be69d38bb3b29d13 keeps wrap/unwrap M-backed, but upgrade requires a TTG-registered migrator AND migrationAdmin 0xf7298f047f92d0eb21231478ef6ba9fe1ecd4c73 to call migrate(). The migration Safe is one-of-two, so replacement logic can change the wrapper-local economic bound.",
+        "canRaiseCap": true,
         "sources": [
           {
-            "label": "WrappedMToken source (Blockscout ETH)",
-            "url": "https://eth.blockscout.com/address/0x813b926b1d096e117721bd1eb017fba122302da0"
+            "label": "Current WrappedMToken V2 implementation (Blockscout ETH)",
+            "url": "https://eth.blockscout.com/address/0x6d9d63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
+          },
+          {
+            "label": "Ethereum wM proxy (Blockscout ETH)",
+            "url": "https://eth.blockscout.com/address/0x437cc33344a0b27a429f795ff6b469c72698b291?tab=contract"
           },
           {
             "label": "M0 WrappedMToken GitHub",
@@ -72,82 +86,70 @@
             "url": "https://github.com/m0-platform/common/blob/489fae6daecd227616155e4f8cacfd17aeb3e2a1/src/Migratable.sol"
           }
         ],
-        "evidence": "At Ethereum block 25295240: EIP-1967 impl slot = 0x813b926b1d096e117721bd1eb017fba122302da0 (WrappedMToken, verified); no EIP-1967 admin slot (0x0); proxy code is a pure EIP-1967 minimal forwarder with no upgrade functions. migrationAdmin() selector 0x74df2558 returned 0x431169728d75bd02f4053435b87d15c8d1fb2c72; that address getOwners()=[0xdcf79c..., 0xe0c6ac...], threshold=2, masterCopy=0xd9db270c (v1.3.0), getModulesPaginated sentinel only (no modules), guard slot=0x0. vault()=0xd7298f... confirmed via 0xfbfa77cf. Migration additionally requires TTG Registrar key wm_migrator_v1 to be populated."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
-        "controllerAssetId": "m-m0",
-        "label": "Inherited M0 MinterGateway",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "capDescription": "Base M issuance inherited by wM depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
-          },
-          {
-            "label": "M0 minter gateway docs",
-            "url": "https://docs.m0.org/protocol/minting-burning"
-          },
-          {
-            "label": "M0 MinterGateway (ttgRegistrar/minterRate reads 2026-07-20)",
-            "url": "https://etherscan.io/address/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"
-          },
-          {
-            "label": "M0 docs",
-            "url": "https://docs.m0.org/"
-          }
-        ],
-        "evidence": "Inherited from reviewed m-m0 mintAuthority. 2026-07-20 (Kimi P2 dc-2): the MinterGateway (0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e) exposes ttgRegistrar() = 0x119fbeedd4f4f4298fb59b720d5654442b81ae2c and minterRate() = 333 bps (both read 2026-07-20); minter caps/rates are set and can be raised by M0 TTG governance, so the cap is raiseable rather than fixed."
+        "evidence": "At Ethereum block 25773353, the EIP-1967 implementation slot resolved to 0x6d9d63afccf515f393d5e65be69d38bb3b29d13 and the admin slot was zero. migrationAdmin() returned 0xf7298f047f92d0eb21231478ef6ba9fe1ecd4c73; that Safe returned two owners, threshold 1, Safe version 1.4.1, and no enabled modules. Guard and fallback-handler reads reverted and are not treated as verified controls. The current WrappedMToken implementation transfers M before minting wM and burns wM before returning M; migration additionally requires the TTG Registrar migrator key."
       },
       {
         "chain": "solana",
-        "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
-        "label": "Solana Wrapped M Token-2022 program",
+        "address": "Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv",
+        "deploymentRefs": [
+          "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "label": "Solana wM m_ext wrapper mint authority PDA",
         "role": "wrapper",
         "authorityType": "contract",
-        "directMintAbility": "none",
-        "capDescription": "The Solana wM deployment is a wrapped, 1:1 M-backed extension; base M supply remains inherited from M0 rails.",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "program:solana:wMXX1K1nca5W4pZr1piETe78gcAVVrEFi9f4g46uXko",
+          "pda:solana:Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "capDescription": "The m_ext program's mint-authority PDA Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv mints Token-2022 wM only after the wrap instruction transfers canonical M into the extension vault. This is wrapper-local issuance, not native M issuance; the current bound can be replaced by the program upgrade authority.",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "label": "Solana M Extensions repository",
+            "url": "https://github.com/m0-foundation/solana-m-extensions"
           },
           {
-            "label": "M0 on Solana technical deep dive",
-            "url": "https://docs.m0.org/protocol/solana"
+            "label": "wM wrap instruction source",
+            "url": "https://raw.githubusercontent.com/m0-foundation/solana-m-extensions/main/programs/m_ext/src/instructions/wrap.rs"
           }
         ],
-        "evidence": "Official M0 deployments list Solana Wrapped M Token at mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp; Solana wrapper does not mint base M."
+        "observedAt": "2026-08-16",
+        "observedBlock": 439806760,
+        "evidence": "At finalized Solana slot 439806760, the Token-2022 mint mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp had mint authority PDA Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv and freeze authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. Official m_ext wrap.rs transfers M into the extension vault before invoking Token-2022 mintTo, so the PDA is currently M-backed and cap-limited; the upgradeable m_ext ProgramData names the same EOA as upgrade authority, with that upgrade surface separately scored under Bridge Risk."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "attestation-only",
     "review": {
       "sources": [
         {
-          "label": "WrappedMToken source (Blockscout ETH)",
-          "url": "https://eth.blockscout.com/address/0x813b926b1d096e117721bd1eb017fba122302da0"
+          "label": "Current WrappedMToken V2 implementation (Blockscout ETH)",
+          "url": "https://eth.blockscout.com/address/0x6d9d63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
         },
         {
           "label": "M0 WrappedMToken GitHub",
           "url": "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/WrappedMToken.sol"
         },
         {
+          "label": "Solana M Extensions repository",
+          "url": "https://github.com/m0-foundation/solana-m-extensions"
+        },
+        {
+          "label": "Solana mainnet JSON-RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/protocol/minting-burning"
         }
       ],
-      "evidence": "Wrapper surface verified at Ethereum block 25295240: EIP-1967 minimal proxy, no admin slot. migrationAdmin confirmed as 2/2 Safe (v1.3.0, no modules); migration also requires TTG Registrar to have wm_migrator_v1 key populated (governance-gated). vault() and totalSupply() confirmed functional. Base M mint authority reviewed under m-m0. Economic-posture fields reviewed 2026-08-15: local issuance is 1:1 M-backed and changing wrapper logic requires both the 2/2 migration Safe and TTG-registered migrator governance, with real-time on-chain backing and independent M0 Validator attestations but no prudential supervisor.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Boundary review at Ethereum block 25773353 and finalized Solana slot 439806760: Ethereum wM remains a 1:1 M-backed wrapper with a current one-of-two migrationAdmin Safe and TTG-registered migrator gate; Solana m_ext likewise transfers canonical M into its extension vault before minting Token-2022 wM, but its ProgramData is upgradeable by 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW, whose route-scoped upgrade control is retained in Bridge Risk. The inherited Ethereum MinterGateway is reviewed under m-m0 and is not duplicated as a direct wm-m0 control. Continuous M/wM reconciliation and M0 Validator attestations remain relevant, but wrapper code replacement makes the economic cap unbounded and there is no prudential supervisor.",
+      "reviewer": "Codex mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

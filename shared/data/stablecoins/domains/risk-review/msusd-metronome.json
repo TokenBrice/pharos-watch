@@ -835,9 +835,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Metronome Synth msUSD is natively issued on every deployed chain: each deployment is a 2,739-byte EIP-1967 proxy whose minting is controlled by that chain's Metronome Synth core under Metronome DAO governance, not by a third-party bridge. DefiLlama records every chain's msUSD supply as issued.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "summary": "All five authored msUSD SyntheticToken deployments remain independent native liabilities and keep native-issuance route rows. A separate five-chain LayerZero ProxyOFT mesh burns and mints those local tokens; its chain-local governor, upgrade, peer, destination, pause, and current bridged-supply-cap surfaces are represented as bridge controls referencing the native deployments. Current reads confirm the external-lock-mint route tier; bridge capabilities remain separate from native Mint Authority posture.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex migration FIX-01; Metronome five-chain bridge verification 2026-08-16",
     "confidence": "verified",
     "protocols": [
       {
@@ -859,11 +859,19 @@
       {
         "label": "LayerZero OFT reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "Metronome ProxyOFT source",
+        "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/ProxyOFT.sol"
+      },
+      {
+        "label": "Metronome mainnet ProxyOFT deployment script",
+        "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/deploy/scripts/mainnet/06_msusd_proxy_oft.ts"
       }
     ],
     "routes": [
       {
-        "id": "ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+      "id": "ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
@@ -874,10 +882,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0x206b88b20d9b2709153ab596add007b21124eb26, admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
+        "reviewNote": "Native Ethereum msUSD deployment: EIP-1967 proxy (impl 0x206b88b20d9b2709153ab596add007b21124eb26, admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc) with native Pool/DebtToken mint paths. This token proxy has no LayerZero endpoint; the separate Ethereum ProxyOFT is recorded below. ProxyAdmin owner is the Ethereum 3-of-5 PoolRegistry governor Safe 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-08-16).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
+      "observedAt": "2026-08-16",
+      "sources": [
           {
             "label": "ethereum explorer msUSD token",
             "url": "https://etherscan.io/token/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
@@ -889,7 +897,7 @@
         ]
       },
       {
-        "id": "optimism:0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
+      "id": "optimism:0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
         "destinationChain": "optimism",
         "canonicalChain": "ethereum",
         "contractAddress": "0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
@@ -900,10 +908,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0xe8f4d8cf2cc7fd70d048b6188bc1d17e6a58245e, admin 0xc44f15dde7b39da0e687a86b3201b4c8e8ce8cc3) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
+        "reviewNote": "Native Optimism msUSD deployment: EIP-1967 proxy (impl 0xe8f4d8cf2cc7fd70d048b6188bc1d17e6a58245e, admin 0xc44f15dde7b39da0e687a86b3201b4c8e8ce8cc3) with native Pool/DebtToken mint paths. This token proxy has no LayerZero endpoint; the separate Optimism ProxyOFT is recorded below. ProxyAdmin owner is the Optimism 3-of-5 PoolRegistry governor Safe 0xe01df4ac1e1e57266900e62c37f12c986495a618 (read 2026-08-16).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
+      "observedAt": "2026-08-16",
+      "sources": [
           {
             "label": "optimism explorer msUSD token",
             "url": "https://optimistic.etherscan.io/token/0x9dabae7274d28a45f0b65bf8ed201a5731492ca0"
@@ -915,7 +923,7 @@
         ]
       },
       {
-        "id": "base:0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
+      "id": "base:0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
         "destinationChain": "base",
         "canonicalChain": "ethereum",
         "contractAddress": "0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
@@ -926,10 +934,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0xb0bb44f501fc5d45861086a49361df21164bf644, admin 0xf3f1b456fb3a61d96024dfbb8ef9be510b689ba6) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
+        "reviewNote": "Native Base msUSD deployment: EIP-1967 proxy (impl 0xb0bb44f501fc5d45861086a49361df21164bf644, admin 0xf3f1b456fb3a61d96024dfbb8ef9be510b689ba6) with native Pool/DebtToken mint paths. This token proxy has no LayerZero endpoint; the separate Base ProxyOFT is recorded below. ProxyAdmin owner is the Base 3-of-5 PoolRegistry governor Safe 0xe01df4ac1e1e57266900e62c37f12c986495a618 (read 2026-08-16).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
+      "observedAt": "2026-08-16",
+      "sources": [
           {
             "label": "base explorer msUSD token",
             "url": "https://basescan.org/token/0x526728dbc96689597f85ae4cd716d4f7fccbae9d"
@@ -941,7 +949,7 @@
         ]
       },
       {
-        "id": "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
+      "id": "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
         "destinationChain": "hemi",
         "canonicalChain": "ethereum",
         "contractAddress": "0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
@@ -952,10 +960,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0x952a7dfa706806f1d744ff150dd231c0616e33d1, admin 0x51bc603a29bef7181e9866ed27beaae215865761) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
+        "reviewNote": "Native Hemi msUSD deployment: EIP-1967 proxy (impl 0x952a7dfa706806f1d744ff150dd231c0616e33d1, admin 0x51bc603a29bef7181e9866ed27beaae215865761) with native Pool/DebtToken mint paths. This token proxy has no LayerZero endpoint; the separate Hemi ProxyOFT is recorded below. ProxyAdmin owner is the Hemi 3-of-5 PoolRegistry governor Safe 0x468f87db090bc61c690cd86430b5407675b99242 (read 2026-08-16).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
+      "observedAt": "2026-08-16",
+      "sources": [
           {
             "label": "hemi explorer msUSD token",
             "url": "https://explorer.hemi.xyz/token/0x3ea24e3727a85a479e29e02cc70e792936fbbcad"
@@ -967,7 +975,7 @@
         ]
       },
       {
-        "id": "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234",
+      "id": "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234",
         "destinationChain": "plasma",
         "canonicalChain": "ethereum",
         "contractAddress": "0x29ad7fe4516909b9e498b5a65339e54791293234",
@@ -978,10 +986,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0x68c87ff1ce2630a180294b211d755e416a681245, admin 0xd7c751fa32590451548b100c4f6442f062c9bc8e) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
+        "reviewNote": "Native Plasma msUSD deployment: EIP-1967 proxy (impl 0x68c87ff1ce2630a180294b211d755e416a681245, admin 0xd7c751fa32590451548b100c4f6442f062c9bc8e) with a governed native issuance surface but no registered collateral pool in the reviewed PoolRegistry graph. This token proxy has no LayerZero endpoint; the separate Plasma ProxyOFT is recorded below. ProxyAdmin owner is the Plasma 3-of-5 PoolRegistry governor Safe 0xe01df4ac1e1e57266900e62c37f12c986495a618 (read 2026-08-16).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
+      "observedAt": "2026-08-16",
+      "sources": [
           {
             "label": "plasma explorer msUSD token",
             "url": "https://plasmascan.to/token/0x29ad7fe4516909b9e498b5a65339e54791293234"
@@ -991,6 +999,323 @@
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/metronome-synth-usd/index.ts"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "msusd-ethereum-proxy-oft-governor",
+        "label": "Metronome Ethereum ProxyOFT governor Safe",
+        "routeRefs": [
+          "ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33",
+        "failureDomainKeys": [
+          "contract:ethereum:0xf37982e3f33ac007c690ed6266f3402d24aa27ea",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-verifier",
+          "safe:ethereum:0xd1de3f9cd4ae2f23da941a67ca4c739f8dd9af33"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25770059,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "No lockbox is used: ProxyOFT burns source msUSD and mints the equivalent destination amount under LayerZero delivery.",
+          "trustedPeerOrRemote": "The Ethereum ProxyOFT uses LayerZero endpoint 0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675. At block 25773774, getProxyOFTOf() returned EID 111 Optimism 0xc2c433d36d7184192e442a243b351a9e3055fd5f, 184 Base 0x2af13bf84f8b452cb86839330f514cc5c2899217, 329 Hemi 0x182c58c10fa565d9d9a3b929294b8803f38463a1, and 383 Plasma 0xcbfa3f8a32ab63e461b6bbfda881ef01eb4ef75d; all four remote destinations were supported by PoolRegistry.",
+          "attestorQuorum": "The deployments use legacy LayerZero uint16 endpoint/trustedRemoteLookup configuration. The endpoint's current verifier/relayer quorum and executor assumptions were not independently enumerated; no LayerZero V2 DVN quorum is inferred.",
+          "rateLimits": "At block 25773774, the local SyntheticToken maxBridgedInSupply was 10,000,000 msUSD and maxBridgedOutSupply was 42,500,000 msUSD.",
+          "pausersAdminsUpgraders": "At block 25773774, isBridgingActive() was true. ProxyOFT implementation is upgradeable through ProxyAdmin 0x634bbd5dd301995a70fa9014d3af8095c737f4f3. owner() resolves to the 3-of-5 PoolRegistry Safe, which controls peer/destination configuration and the crossChainDispatcher pause gate."
+        },
+        "capDescription": "The Ethereum ProxyOFT is a supply-conserving LayerZero burn/mint route. Its governor Safe can alter bridge peers, destination support, bridge caps, pause state, and upgrade administration; this does not reclassify the native Ethereum SyntheticToken liability.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25773774,
+        "sources": [
+          {
+            "label": "Ethereum msUSD ProxyOFT",
+            "url": "https://etherscan.io/address/0xf37982e3f33ac007c690ed6266f3402d24aa27ea"
+          },
+          {
+            "label": "Metronome ProxyOFT source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/ProxyOFT.sol"
+          },
+          {
+            "label": "Metronome mainnet ProxyOFT deployment script",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/deploy/scripts/mainnet/06_msusd_proxy_oft.ts"
+          }
+        ],
+        "evidence": "The Ethereum ProxyOFT at 0xf37982e3f33ac007c690ed6266f3402d24aa27ea has owner() resolving through SyntheticToken.poolRegistry().governor() to 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33. The source gates debit on ownership, bridge-active state, and supported destination, then burns; delivery credits mint through the same local token."
+      },
+      {
+        "id": "msusd-optimism-proxy-oft-governor",
+        "label": "Metronome Optimism ProxyOFT governor Safe",
+        "routeRefs": [
+          "optimism:0x9dabae7274d28a45f0b65bf8ed201a5731492ca0"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "failureDomainKeys": [
+          "contract:optimism:0xc2c433d36d7184192e442a243b351a9e3055fd5f",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-verifier",
+          "safe:optimism:0xe01df4ac1e1e57266900e62c37f12c986495a618"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 155656915,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "No lockbox is used: ProxyOFT burns source msUSD and mints the equivalent destination amount under LayerZero delivery.",
+          "trustedPeerOrRemote": "The Optimism ProxyOFT uses LayerZero endpoint 0x3c2269811836af69497E5F486A85D7316753cf62. At block 155679277, getProxyOFTOf() returned EID 101 Ethereum 0xf37982e3f33ac007c690ed6266f3402d24aa27ea, 184 Base 0x2af13bf84f8b452cb86839330f514cc5c2899217, 329 Hemi 0x182c58c10fa565d9d9a3b929294b8803f38463a1, and 383 Plasma 0xcbfa3f8a32ab63e461b6bbfda881ef01eb4ef75d; all four remote destinations were supported by PoolRegistry.",
+          "attestorQuorum": "The deployments use legacy LayerZero uint16 endpoint/trustedRemoteLookup configuration. The endpoint's current verifier/relayer quorum and executor assumptions were not independently enumerated; no LayerZero V2 DVN quorum is inferred.",
+          "rateLimits": "At block 155679277, the local SyntheticToken maxBridgedInSupply and maxBridgedOutSupply were 10,000,000 msUSD each.",
+          "pausersAdminsUpgraders": "At block 155679277, isBridgingActive() was true. ProxyOFT implementation is upgradeable through ProxyAdmin 0x0f6fd010da1e4184b129f00f2dc5b96c16b8e866. owner() resolves to the 3-of-5 PoolRegistry Safe, which controls peer/destination configuration and the crossChainDispatcher pause gate."
+        },
+        "capDescription": "The Optimism ProxyOFT is a supply-conserving LayerZero burn/mint route. Its governor Safe can alter bridge peers, destination support, bridge caps, pause state, and upgrade administration; this does not reclassify the native Optimism SyntheticToken liability.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 155679277,
+        "sources": [
+          {
+            "label": "Optimism msUSD ProxyOFT",
+            "url": "https://optimistic.etherscan.io/address/0xc2c433d36d7184192e442a243b351a9e3055fd5f"
+          },
+          {
+            "label": "Metronome Optimism ProxyOFT deployment script",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/deploy/scripts/optimism/06_msusd_proxy_oft.ts"
+          },
+          {
+            "label": "Metronome ProxyOFT source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/ProxyOFT.sol"
+          }
+        ],
+        "evidence": "The Optimism ProxyOFT at 0xc2c433d36d7184192e442a243b351a9e3055fd5f has owner() resolving through SyntheticToken.poolRegistry().governor() to 0xe01df4ac1e1e57266900e62c37f12c986495a618. The official source gates debit on ownership, bridge-active state, and supported destination, then burns; delivery credits mint through the same local token."
+      },
+      {
+        "id": "msusd-base-proxy-oft-governor",
+        "label": "Metronome Base ProxyOFT governor Safe",
+        "routeRefs": [
+          "base:0x526728dbc96689597f85ae4cd716d4f7fccbae9d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "failureDomainKeys": [
+          "contract:base:0x2af13bf84f8b452cb86839330f514cc5c2899217",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-verifier",
+          "safe:base:0xe01df4ac1e1e57266900e62c37f12c986495a618"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 50061631,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "No lockbox is used: ProxyOFT burns source msUSD and mints the equivalent destination amount under LayerZero delivery.",
+          "trustedPeerOrRemote": "The Base ProxyOFT uses LayerZero endpoint 0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7. At block 50083993, getProxyOFTOf() returned EID 101 Ethereum 0xf37982e3f33ac007c690ed6266f3402d24aa27ea, 111 Optimism 0xc2c433d36d7184192e442a243b351a9e3055fd5f, 329 Hemi 0x182c58c10fa565d9d9a3b929294b8803f38463a1, and 383 Plasma 0xcbfa3f8a32ab63e461b6bbfda881ef01eb4ef75d; all four remote destinations were supported by PoolRegistry.",
+          "attestorQuorum": "The deployments use legacy LayerZero uint16 endpoint/trustedRemoteLookup configuration. The endpoint's current verifier/relayer quorum and executor assumptions were not independently enumerated; no LayerZero V2 DVN quorum is inferred.",
+          "rateLimits": "At block 50083993, the local SyntheticToken maxBridgedInSupply was 45,000,000 msUSD and maxBridgedOutSupply was 10,000,000 msUSD.",
+          "pausersAdminsUpgraders": "At block 50083993, isBridgingActive() was true. ProxyOFT implementation is upgradeable through ProxyAdmin 0xecfe7634abcd2140bede1fb34753a7f5d412c881. owner() resolves to the 3-of-5 PoolRegistry Safe, which controls peer/destination configuration and the crossChainDispatcher pause gate."
+        },
+        "capDescription": "The Base ProxyOFT is a supply-conserving LayerZero burn/mint route. Its governor Safe can alter bridge peers, destination support, bridge caps, pause state, and upgrade administration; this does not reclassify the native Base SyntheticToken liability.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50083993,
+        "sources": [
+          {
+            "label": "Base msUSD ProxyOFT",
+            "url": "https://basescan.org/address/0x2af13bf84f8b452cb86839330f514cc5c2899217"
+          },
+          {
+            "label": "Metronome Base ProxyOFT deployment script",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/deploy/scripts/base/05_msusd_proxy_oft.ts"
+          },
+          {
+            "label": "Metronome ProxyOFT source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/ProxyOFT.sol"
+          }
+        ],
+        "evidence": "The Base ProxyOFT at 0x2af13bf84f8b452cb86839330f514cc5c2899217 has owner() resolving through SyntheticToken.poolRegistry().governor() to 0xe01df4ac1e1e57266900e62c37f12c986495a618. The official source gates debit on ownership, bridge-active state, and supported destination, then burns; delivery credits mint through the same local token."
+      },
+      {
+        "id": "msusd-hemi-proxy-oft-governor",
+        "label": "Metronome Hemi ProxyOFT governor Safe",
+        "routeRefs": [
+          "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "hemi",
+        "controllerAddress": "0x468f87db090bc61c690cd86430b5407675b99242",
+        "failureDomainKeys": [
+          "contract:hemi:0x182c58c10fa565d9d9a3b929294b8803f38463a1",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-verifier",
+          "safe:hemi:0x468f87db090bc61c690cd86430b5407675b99242"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 5087158,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "No lockbox is used: ProxyOFT burns source msUSD and mints the equivalent destination amount under LayerZero delivery.",
+          "trustedPeerOrRemote": "The Hemi ProxyOFT uses LayerZero endpoint 0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7. At block 5090885, getProxyOFTOf() returned EID 101 Ethereum 0xf37982e3f33ac007c690ed6266f3402d24aa27ea, 111 Optimism 0xc2c433d36d7184192e442a243b351a9e3055fd5f, 184 Base 0x2af13bf84f8b452cb86839330f514cc5c2899217, and 383 Plasma 0xcbfa3f8a32ab63e461b6bbfda881ef01eb4ef75d; EIDs 101, 111, and 184 were supported by PoolRegistry, while EID 383 was configured but unsupported.",
+          "attestorQuorum": "The deployments use legacy LayerZero uint16 endpoint/trustedRemoteLookup configuration. The endpoint's current verifier/relayer quorum and executor assumptions were not independently enumerated; no LayerZero V2 DVN quorum is inferred.",
+          "rateLimits": "At block 5090885, the local SyntheticToken maxBridgedInSupply and maxBridgedOutSupply were 3,000,000 msUSD each.",
+          "pausersAdminsUpgraders": "At block 5090885, isBridgingActive() was true. ProxyOFT implementation is upgradeable through ProxyAdmin 0x04db2da16318e616d28f0da7aa59eeb12acec72c. owner() resolves to the 3-of-5 PoolRegistry Safe, which controls peer/destination configuration and the crossChainDispatcher pause gate."
+        },
+        "capDescription": "The Hemi ProxyOFT is a supply-conserving LayerZero burn/mint route. Its governor Safe can alter bridge peers, destination support, bridge caps, pause state, and upgrade administration; this does not reclassify the native Hemi SyntheticToken liability.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 5090885,
+        "sources": [
+          {
+            "label": "Hemi msUSD ProxyOFT",
+            "url": "https://explorer.hemi.xyz/address/0x182c58c10fa565d9d9a3b929294b8803f38463a1"
+          },
+          {
+            "label": "Metronome Hemi ProxyOFT deployment script",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/deploy/scripts/hemi/06_msusd_proxy_oft.ts"
+          },
+          {
+            "label": "Metronome ProxyOFT source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/ProxyOFT.sol"
+          }
+        ],
+        "evidence": "The Hemi ProxyOFT at 0x182c58c10fa565d9d9a3b929294b8803f38463a1 has owner() resolving through SyntheticToken.poolRegistry().governor() to 0x468f87db090bc61c690cd86430b5407675b99242. The official source gates debit on ownership, bridge-active state, and supported destination, then burns; delivery credits mint through the same local token."
+      },
+      {
+        "id": "msusd-plasma-proxy-oft-governor",
+        "label": "Metronome Plasma ProxyOFT governor Safe",
+        "routeRefs": [
+          "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "failureDomainKeys": [
+          "contract:plasma:0xcbfa3f8a32ab63e461b6bbfda881ef01eb4ef75d",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-verifier",
+          "safe:plasma:0xe01df4ac1e1e57266900e62c37f12c986495a618"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 29972062,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "No lockbox is used: ProxyOFT burns source msUSD and mints the equivalent destination amount under LayerZero delivery.",
+          "trustedPeerOrRemote": "The Plasma ProxyOFT uses LayerZero endpoint 0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7. At block 30016797, getProxyOFTOf() returned EID 101 Ethereum 0xf37982e3f33ac007c690ed6266f3402d24aa27ea, 111 Optimism 0xc2c433d36d7184192e442a243b351a9e3055fd5f, 184 Base 0x2af13bf84f8b452cb86839330f514cc5c2899217, and 329 Hemi 0x182c58c10fa565d9d9a3b929294b8803f38463a1; EIDs 101, 111, and 184 were supported by PoolRegistry, while EID 329 was configured but unsupported.",
+          "attestorQuorum": "The deployments use legacy LayerZero uint16 endpoint/trustedRemoteLookup configuration. The endpoint's current verifier/relayer quorum and executor assumptions were not independently enumerated; no LayerZero V2 DVN quorum is inferred.",
+          "rateLimits": "At block 30016797, the local SyntheticToken maxBridgedInSupply and maxBridgedOutSupply were 3,000,000 msUSD each.",
+          "pausersAdminsUpgraders": "At block 30016797, isBridgingActive() was true. ProxyOFT implementation is upgradeable through ProxyAdmin 0x9e5bd296ff20372e231dbea8b03b8a6363929f06c. owner() resolves to the 3-of-5 PoolRegistry Safe, which controls peer/destination configuration and the crossChainDispatcher pause gate."
+        },
+        "capDescription": "The Plasma ProxyOFT is a supply-conserving LayerZero burn/mint route. Its governor Safe can alter bridge peers, destination support, bridge caps, pause state, and upgrade administration; this does not reclassify the native Plasma SyntheticToken liability.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 30016797,
+        "sources": [
+          {
+            "label": "Plasma msUSD ProxyOFT",
+            "url": "https://plasmascan.to/address/0xcbfa3f8a32ab63e461b6bbfda881ef01eb4ef75d"
+          },
+          {
+            "label": "Metronome Plasma ProxyOFT deployment script",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/deploy/scripts/plasma/03_msusd_proxy_oft.ts"
+          },
+          {
+            "label": "Metronome ProxyOFT source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/ProxyOFT.sol"
+          }
+        ],
+        "evidence": "The Plasma ProxyOFT at 0xcbfa3f8a32ab63e461b6bbfda881ef01eb4ef75d has owner() resolving through SyntheticToken.poolRegistry().governor() to 0xe01df4ac1e1e57266900e62c37f12c986495a618. The official source gates debit on ownership, bridge-active state, and supported destination, then burns; delivery credits mint through the same local token."
       }
     ]
   }

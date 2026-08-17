@@ -50,85 +50,632 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "USDNR is an M0-extension stablecoin; its Ethereum and Fluent deployments are transparent proxies administered by Nerona's own ProxyAdmin (identical admin on both chains, read 2026-07-20). No third-party bridge carries the representation.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "summary": "USDnr has one native issuance deployment on Ethereum; Fluent is an M0 spoke representation. M0 HubPortal/SpokePortal and Hyperlane adapter machinery lock and account for the hub principal, then burn and mint spoke $M before local USDnr wrapping, so the route is issuer-native lock/mint rather than an independent Fluent liability. Portal, adapter, Fluent representation, SwapFacility, Mailbox, and ISM administrators are scored here, while Ethereum M issuance and wrapper upgrade risk remain in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle); Codex mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
-        "name": "M0 bridge portals",
-        "url": "https://docs.m0.org/build/bridging-user",
+        "name": "M0 Portal V2 / Hyperlane",
+        "url": "https://docs.m0.org/build/bridging-developer",
         "bridgeTypes": [
           "hubAndSpoke",
-          "lockMint"
-        ]
+          "lockMint",
+          "burnMint"
+        ],
+        "note": "Ethereum is the M0 hub and Fluent is a spoke; HubPortal/SpokePortal use Hyperlane adapters and route-level principal accounting."
       }
     ],
     "sources": [
       {
-        "label": "Nerona docs",
-        "url": "https://docs.nerona.xyz/"
+        "label": "M0 Platform Deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
       },
       {
-        "label": "M0 bridging docs",
-        "url": "https://docs.m0.org/build/bridging-user"
+        "label": "M0 cross-chain architecture",
+        "url": "https://docs.m0.org/protocol/m-portals"
+      },
+      {
+        "label": "M0 Portal V2 developer guide",
+        "url": "https://docs.m0.org/build/bridging-developer"
+      },
+      {
+        "label": "M0 extension architecture",
+        "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "Ethereum M0 HubPortal",
+        "url": "https://eth.blockscout.com/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+      },
+      {
+        "label": "Fluent M0 SpokePortal",
+        "url": "https://fluentscan.xyz/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
       }
     ],
     "routes": [
       {
         "id": "ethereum:0xd48e565561416de59da1050ed70b8d75e8ef28f9",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
-        "protocol": "Nerona USDNR (M0 extension)",
+        "protocol": "Nerona USDnr (M0 extension and HubPortal route)",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical home deployment: USDNR is an M0 extension on Ethereum backed by the M0 MinterGateway rail (mint-authority review 2026-06-11); the token proxy's EIP-1967 admin is Nerona's ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256 (owner EOA 0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33, read 2026-07-20).",
+        "reviewNote": "Canonical home deployment: USDnr is an M0 extension on Ethereum backed by the M0 MinterGateway rail. The HubPortal is also the canonical-side lock/release and principal-accounting rail for the Fluent route; at Ethereum block 25770356, bridgedPrincipal(25363) was 1,987,695,152,499 base units (1,987,695.152499 M). The token proxy's EIP-1967 admin is Nerona's ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256, whose owner is the single EOA 0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33; those native wrapper facts remain in Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770356,
         "sources": [
           {
-            "label": "USDNR Ethereum token",
-            "url": "https://etherscan.io/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+            "label": "Ethereum USDnr proxy",
+            "url": "https://eth.blockscout.com/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9"
           },
           {
-            "label": "M0 docs",
-            "url": "https://docs.m0.org/"
+            "label": "Ethereum M0 HubPortal",
+            "url": "https://eth.blockscout.com/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "M0 cross-chain architecture",
+            "url": "https://docs.m0.org/protocol/m-portals"
           }
         ]
       },
       {
         "id": "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+        "sourceChain": "ethereum",
         "destinationChain": "fluent",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
-        "protocol": "Nerona USDNR (M0 extension)",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "Nerona USDnr (M0 SpokePortal / Hyperlane representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the Fluent USDNR token is the same-style transparent proxy with the identical EIP-1967 admin 0x9ffe615c92635e5b36de004dd78a94c51aa04256 (owner EOA 0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33) as the canonical Ethereum deployment (read 2026-07-20) — Nerona/M0 administers the deployment directly; no third-party bridge contract sits in the mint path. The Fluent Foundation's BLEND token-sale disclosure (April 2026) confirms USDnr is an M0-platform extension legally issued by MXON as Minter, with Fluent as an official M0 spoke chain.",
+        "reviewNote": "Fluent is an M0 spoke representation, not an independent native USDnr liability chain. At Fluent block 13144952, SpokePortal currentChainId() was 25363 and hubChainId() was 1; its default adapter for Ethereum was 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 and supportedBridgingPath(USDnr, 1, USDnr) was true. The spoke burn/mint path first moves local $M through the Portal and then wraps it into USDnr through the local SwapFacility; route-level conservation is bounded by the Ethereum HubPortal principal accounting.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
         "sources": [
           {
-            "label": "USDNR Fluent token (EIP-1967 admin read 2026-07-20)",
-            "url": "https://explorer.fluent.xyz/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+            "label": "Fluent USDnr proxy",
+            "url": "https://fluentscan.xyz/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9?tab=contract"
           },
           {
-            "label": "M0 docs",
-            "url": "https://docs.m0.org/"
+            "label": "Fluent M0 SpokePortal",
+            "url": "https://fluentscan.xyz/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
           },
           {
-            "label": "Fluent Foundation BLEND token disclosure (USDnr / M0 description)",
-            "url": "https://cdn.fluent.xyz/docs/token-disclosure.pdf"
+            "label": "Fluent Hyperlane adapter",
+            "url": "https://fluentscan.xyz/address/0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+          },
+          {
+            "label": "M0 Portal V2 developer guide",
+            "url": "https://docs.m0.org/build/bridging-developer"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdnr-ethereum-hub-portal-admin",
+        "label": "USDnr Ethereum HubPortal DEFAULT_ADMIN Safe",
+        "routeRefs": [
+          "ethereum:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:ethereum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "safe:ethereum:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x2490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 13144952,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25770356, HubPortal bridgedPrincipal(25363) was 1,987,695,152,499 base units (1,987,695.152499 M), providing the hub-side principal bound for the Fluent route.",
+          "trustedPeerOrRemote": "The HubPortal's current default adapter for chain 25363 was HyperlaneBridgeAdapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, with supportedBridgingPath(USDnr, 25363, USDnr) = true.",
+          "pausersAdminsUpgraders": "The Ethereum HubPortal at 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd is a UUPS deployment; this Safe holds its DEFAULT_ADMIN_ROLE and its bridge-only upgrade/admin power is not native USDnr issuance authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770356,
+        "sources": [
+          {
+            "label": "Ethereum M0 HubPortal",
+            "url": "https://eth.blockscout.com/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "Ethereum Hyperlane adapter",
+            "url": "https://eth.blockscout.com/address/0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+          },
+          {
+            "label": "M0 cross-chain architecture",
+            "url": "https://docs.m0.org/protocol/m-portals"
+          }
+        ],
+        "evidence": "At Ethereum block 25770356, the HubPortal reported currentChainId() = 1, selected adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 for Fluent chain 25363, supported the USDnr path, and held bridgedPrincipal(25363) = 1,987,695,152,499 base units. Role reads and the fixed Fluent Safe observation at block 13144952 identify 0x48670b46380fe1645f0e3e821a25162db2589d19 as the current 3-of-5 DEFAULT_ADMIN Safe for the Portal/adapter system; the Safe had five owners, no enabled modules, a zero guard, and SafeL2 master copy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762."
+      },
+      {
+        "id": "usdnr-fluent-spoke-portal-admin",
+        "label": "USDnr Fluent SpokePortal DEFAULT_ADMIN Safe",
+        "routeRefs": [
+          "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "fluent",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:fluent:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "safe:fluent:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x2490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 13144952,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Fluent block 13144952, SpokePortal currentChainId() = 25363, hubChainId() = 1, default adapter for Ethereum = 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, and supportedBridgingPath(USDnr, 1, USDnr) = true.",
+          "pausersAdminsUpgraders": "The Fluent SpokePortal at 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd is a UUPS deployment. This 3-of-5 Safe holds DEFAULT_ADMIN_ROLE and can administer the representation's bridge route; it is not a Fluent-native USDnr issuer."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
+        "sources": [
+          {
+            "label": "Fluent M0 SpokePortal",
+            "url": "https://fluentscan.xyz/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "Fluent Hyperlane adapter",
+            "url": "https://fluentscan.xyz/address/0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+          },
+          {
+            "label": "M0 Portal V2 developer guide",
+            "url": "https://docs.m0.org/build/bridging-developer"
+          }
+        ],
+        "evidence": "At Fluent block 13144952, the 3-of-5 Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 held DEFAULT_ADMIN_ROLE on the SpokePortal. Its five owners, empty module list, zero guard, and SafeL2 master copy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 were read at the same block. The SpokePortal's $M burn/mint and local USDnr wrap path remains a bridge representation backed by the Ethereum hub, not independent Fluent Mint Authority."
+      },
+      {
+        "id": "usdnr-fluent-portal-operator",
+        "label": "USDnr Fluent Portal operator and pauser EOA",
+        "routeRefs": [
+          "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "fluent",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "eoa:fluent:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "contract:fluent:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Fluent Portal OPERATOR_ROLE controls the spoke's path/default-adapter configuration and route operations; its cross-chain peer is the reviewed Ethereum Hyperlane adapter.",
+          "pausersAdminsUpgraders": "The same EOA holds OPERATOR_ROLE and PAUSER_ROLE on the Fluent SpokePortal and the Fluent Hyperlane adapter; pause is therefore an immediate bridge-route control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
+        "sources": [
+          {
+            "label": "Fluent SpokePortal role reads",
+            "url": "https://fluentscan.xyz/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "M0 Portal V2 developer guide",
+            "url": "https://docs.m0.org/build/bridging-developer"
+          }
+        ],
+        "evidence": "At Fluent block 13144952, 0xf2f1acbe0ba726fee8d75f3e32900526874740bb was current OPERATOR_ROLE and PAUSER_ROLE holder on the SpokePortal and adapter. Role history records the grants at block 6564362 (2026-06-01) and the DEFAULT_ADMIN handoff/revocation at block 6893768 (2026-06-05); current role reads were pinned at block 13144952."
+      },
+      {
+        "id": "usdnr-ethereum-hyperlane-adapter-admin",
+        "label": "USDnr Ethereum Hyperlane adapter admin Safe",
+        "routeRefs": [
+          "ethereum:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:hyperlane",
+          "contract:ethereum:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:ethereum:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x2490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 13144952,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770356, getPeer(25363) on the adapter returned 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 and the bridge-domain read returned 25363; the adapter points to the Ethereum HubPortal and mailbox 0xc005dc82818d67af737725bd4bf75435d065d239.",
+          "pausersAdminsUpgraders": "The Ethereum adapter is UUPS and its Portal/adapter admin is the reviewed 3-of-5 Safe; this is Hyperlane route administration, not canonical MinterGateway authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770356,
+        "sources": [
+          {
+            "label": "Ethereum Hyperlane adapter",
+            "url": "https://eth.blockscout.com/address/0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+          },
+          {
+            "label": "Ethereum M0 HubPortal",
+            "url": "https://eth.blockscout.com/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          }
+        ],
+        "evidence": "At Ethereum block 25770356, the Hyperlane adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 was a UUPS route component pointing to the HubPortal, with getPeer(25363) equal to the adapter address and bridge domain 25363. Its DEFAULT_ADMIN path is the 3-of-5 Safe 0x48670b46380fe1645f0e3e821a25162db2589d19; the adapter's bridge mint/burn, upgrade, and peer configuration exposure remains under Bridge Risk."
+      },
+      {
+        "id": "usdnr-fluent-hyperlane-adapter-admin",
+        "label": "USDnr Fluent Hyperlane adapter admin Safe",
+        "routeRefs": [
+          "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "fluent",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:hyperlane",
+          "contract:fluent:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:fluent:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x2490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 13144952,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Fluent block 13144952, getPeer(1) on the adapter returned 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 and the bridge-domain read returned 1; the adapter points to the SpokePortal and Fluent Mailbox 0x3a867fcffec2b790970eebdc9023e75b0a172aa7.",
+          "pausersAdminsUpgraders": "The Fluent adapter implementation 0x23d8162e084aa33d8ef6fcc0ab33f4028a53ee79 is UUPS. The same 3-of-5 Safe is its current DEFAULT_ADMIN controller, while the separate operator/pauser EOA is recorded in the adjacent control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
+        "sources": [
+          {
+            "label": "Fluent Hyperlane adapter",
+            "url": "https://fluentscan.xyz/address/0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+          },
+          {
+            "label": "Fluent M0 SpokePortal",
+            "url": "https://fluentscan.xyz/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          }
+        ],
+        "evidence": "At Fluent block 13144952, the UUPS Hyperlane adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 resolved to implementation 0x23d8162e084aa33d8ef6fcc0ab33f4028a53ee79, pointed to the SpokePortal, and returned getPeer(1) equal to the adapter address. The current DEFAULT_ADMIN controller is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19; its route upgrade, peer, and bridge transfer-rail powers are retained here."
+      },
+      {
+        "id": "usdnr-fluent-hyperlane-adapter-operator",
+        "label": "USDnr Fluent Hyperlane adapter operator EOA",
+        "routeRefs": [
+          "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "fluent",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:hyperlane",
+          "eoa:fluent:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "contract:fluent:0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The adapter operator role is part of the live Fluent-to-Ethereum Hyperlane peer/configuration path; getPeer(1) returned the reviewed adapter at block 13144952.",
+          "pausersAdminsUpgraders": "The operator EOA is distinct from the Safe DEFAULT_ADMIN and is separately current on the Fluent adapter; the same EOA also holds the Portal PAUSER_ROLE."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
+        "sources": [
+          {
+            "label": "Fluent Hyperlane adapter role reads",
+            "url": "https://fluentscan.xyz/address/0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+          },
+          {
+            "label": "Fluent Hyperlane adapter role history",
+            "url": "https://fluentscan.xyz/address/0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+          }
+        ],
+        "evidence": "At Fluent block 13144952, the adapter's current operator was 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The role grant history was observed at block 6564362 and the DEFAULT_ADMIN handoff/revocation at block 6893768; current peer and role reads were pinned at block 13144952."
+      },
+      {
+        "id": "usdnr-fluent-usdnr-proxy-admin",
+        "label": "USDnr Fluent representation ProxyAdmin Safe",
+        "routeRefs": [
+          "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "fluent",
+        "controllerAddress": "0x169a3703d64a100897c0e208a3dcad86f3f6ec29",
+        "failureDomainKeys": [
+          "protocol:nerona-usdnr",
+          "proxy-admin:fluent:0x9ffe615c92635e5b36de004dd78a94c51aa04256",
+          "safe:fluent:0x169a3703d64a100897c0e208a3dcad86f3f6ec29"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 4,
+        "safe": {
+          "owners": [
+            "0xd72815a5e35b6bbd8b18ed4f8a92d685fa65deda",
+            "0xb4638e799996a6927b4fb855826c4b16618f7767",
+            "0xdfc9898e1798f1c67042b9c0c9a1973aa64ba9d",
+            "0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 13144952,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Fluent representation ProxyAdmin can replace the local USDnr implementation and thereby change representation wrapping, freeze, or bridge-local mint/burn logic; it is not a second native issuance authority.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Fluent block 13144952, ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256 was controlled by this 2-of-4 Safe and the representation implementation was 0x18091d82d55f68205f7f829acadb7897a7cb7d9c."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
+        "sources": [
+          {
+            "label": "Fluent USDnr proxy",
+            "url": "https://fluentscan.xyz/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9?tab=contract"
+          },
+          {
+            "label": "Fluent USDnr representation implementation",
+            "url": "https://fluentscan.xyz/address/0x18091d82d55f68205f7f829acadb7897a7cb7d9c?tab=contract"
+          }
+        ],
+        "evidence": "At Fluent block 13144952, the USDnr representation proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9 resolved to implementation 0x18091d82d55f68205f7f829acadb7897a7cb7d9c and ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256. Its owner path resolved to Safe 0x169a3703d64a100897c0e208a3dcad86f3f6ec29, a 2-of-4 Safe with four listed owners, no modules, and a zero guard. This representation upgrade risk is retained here; canonical Ethereum wrapper upgrade risk remains in Mint Authority."
+      },
+      {
+        "id": "usdnr-fluent-swap-facility-admin",
+        "label": "USDnr Fluent SwapFacility ProxyAdmin Safe",
+        "routeRefs": [
+          "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "fluent",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-swap-facility",
+          "proxy-admin:fluent:0x0f38d8a5583f9316084e9c40737244870c565924",
+          "safe:fluent:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x2490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 13144952,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Fluent SwapFacility wraps local spoke $M into USDnr and unwraps it on redemption; the route-level bridge bound is the Ethereum HubPortal bridgedPrincipal, while a ProxyAdmin upgrade could change the representation transfer rail.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "The local SwapFacility wrap/unwrap path is 1:1 against Fluent $M; it does not independently create base M supply, and route conservation is tied to HubPortal principal accounting.",
+          "pausersAdminsUpgraders": "At Fluent block 13144952, the SwapFacility proxy's ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 was controlled by Safe 0x48670b46380fe1645f0e3e821a25162db2589d19; this is bridge-backed representation machinery."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
+        "sources": [
+          {
+            "label": "Fluent USDnr SwapFacility",
+            "url": "https://fluentscan.xyz/address/0xb6807116b3b1b321a390594e31ecd6e0076f6278"
+          },
+          {
+            "label": "Fluent M0 SpokePortal",
+            "url": "https://fluentscan.xyz/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "M0 extension architecture",
+            "url": "https://docs.m0.org/protocol/extensions"
+          }
+        ],
+        "evidence": "At Fluent block 13144952, the USDnr swapFacility() address was 0xb6807116b3b1b321a390594e31ecd6e0076f6278 and its Transparent ProxyAdmin was 0x0f38d8a5583f9316084e9c40737244870c565924, controlled by the 3-of-5 Safe 0x48670b46380fe1645f0e3e821a25162db2589d19. Its local M wrapper path is part of the spoke burn/mint representation and is not an independent native Fluent USDnr issuance rail."
+      },
+      {
+        "id": "usdnr-fluent-mailbox-proxy-admin",
+        "label": "USDnr Fluent Hyperlane Mailbox ProxyAdmin owner",
+        "routeRefs": [
+          "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "validator"
+        ],
+        "controllerChain": "fluent",
+        "controllerAddress": "0x50c0d2a50a9d4143c856d9323228f2c7fa63906f",
+        "failureDomainKeys": [
+          "protocol:hyperlane-mailbox",
+          "contract:fluent:0x3a867fcffec2b790970eebdc9023e75b0a172aa7",
+          "proxy-admin:fluent:0xea87ae93fa0019a82a727bfd3ebd1cfca8f64f1d",
+          "eoa:fluent:0x50c0d2a50a9d4143c856d9323228f2c7fa63906f"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Fluent block 13144952, Mailbox localDomain() = 25363 and defaultIsm() = 0x3d4b33d1841db83518fe6da91c633fdc73927a91; the adapter's interchainSecurityModule() returned zero, so the Mailbox default ISM is effective.",
+          "attestorQuorum": "The default ISM reported moduleType() = 2 and clone arguments encoding a threshold-2 aggregation of two modules; one aggregation module implementation 0x12ed1bba182cbc63692f813651bd493b7445c874 was not source-verified.",
+          "pausersAdminsUpgraders": "The Mailbox proxy 0x3a867fcffec2b790970eebdc9023e75b0a172aa7 resolved to implementation 0x3a464f746d23ab22155710f44db16dca53e0775e; ProxyAdmin 0xea87ae93fa0019a82a727bfd3ebd1cfca8f64f1d owner() returned 0x50c0d2a50a9d4143c856d9323228f2c7fa63906f. The owner path is contract-mediated and no independent Safe threshold/signers were established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
+        "sources": [
+          {
+            "label": "Fluent Hyperlane Mailbox",
+            "url": "https://fluentscan.xyz/address/0x3a867fcffec2b790970eebdc9023e75b0a172aa7"
+          },
+          {
+            "label": "Fluent Mailbox ProxyAdmin",
+            "url": "https://fluentscan.xyz/address/0xea87ae93fa0019a82a727bfd3ebd1cfca8f64f1d"
+          },
+          {
+            "label": "Hyperlane protocol",
+            "url": "https://docs.hyperlane.xyz/docs/protocol/ISM"
+          }
+        ],
+        "evidence": "At Fluent block 13144952, the Mailbox proxy 0x3a867fcffec2b790970eebdc9023e75b0a172aa7 resolved to implementation 0x3a464f746d23ab22155710f44db16dca53e0775e. Its ProxyAdmin 0xea87ae93fa0019a82a727bfd3ebd1cfca8f64f1d was owned by 0x50c0d2a50a9d4143c856d9323228f2c7fa63906f; the owner path resolves through OwnableMulticall owner 0xa697...8236 with the ICA router pointing back to 0x50c0...906f, without an independently verified Safe threshold. The effective default ISM and validator uncertainty remain explicit in this bridge control."
+      },
+      {
+        "id": "usdnr-fluent-pausable-ism-owner",
+        "label": "USDnr Fluent Hyperlane PausableIsm owner",
+        "routeRefs": [
+          "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+        ],
+        "capabilities": [
+          "validator",
+          "pause",
+          "admin"
+        ],
+        "controllerChain": "fluent",
+        "controllerAddress": "0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba",
+        "failureDomainKeys": [
+          "protocol:hyperlane-ism",
+          "contract:fluent:0x3d4b33d1841db83518fe6da91c633fdc73927a91",
+          "contract:fluent:0xab37d331f5f862e45a20137069f8374cf43b00d8",
+          "eoa:fluent:0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "attestorQuorum": "The effective Fluent Mailbox default ISM 0x3d4b33d1841db83518fe6da91c633fdc73927a91 reported moduleType() = 2 with a threshold-2 aggregation including module clone 0x7b1c6aae2afc3f0a3da55d7a3e9da820901008ad and PausableIsm 0xab37d331f5f862e45a20137069f8374cf43b00d8.",
+          "pausersAdminsUpgraders": "At Fluent block 13144952, the PausableIsm was unpaused and its owner was 0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba; the other aggregation module implementation 0x12ed1bba182cbc63692f813651bd493b7445c874 was not source-verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 13144952,
+        "sources": [
+          {
+            "label": "Fluent default ISM",
+            "url": "https://fluentscan.xyz/address/0x3d4b33d1841db83518fe6da91c633fdc73927a91"
+          },
+          {
+            "label": "Fluent PausableIsm",
+            "url": "https://fluentscan.xyz/address/0xab37d331f5f862e45a20137069f8374cf43b00d8"
+          },
+          {
+            "label": "Hyperlane ISM documentation",
+            "url": "https://docs.hyperlane.xyz/docs/protocol/ISM"
+          }
+        ],
+        "evidence": "At Fluent block 13144952, Mailbox defaultIsm() returned 0x3d4b33d1841db83518fe6da91c633fdc73927a91 and moduleType() returned 2. The clone arguments encoded a threshold-2 aggregation including the PausableIsm 0xab37d331f5f862e45a20137069f8374cf43b00d8, which was unpaused and owned by 0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba; the other module's implementation 0x12ed1bba182cbc63692f813651bd493b7445c874 remains unverified."
       }
     ]
   }

@@ -2046,10 +2046,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "MAI historically expanded across many chains through third-party bridge allocations (Multichain era), and public governance and post-incident reporting tied MAI's cross-chain supply to Multichain-era bridge exposure. Current tracked deployments are QiDao-administered native MAI contracts with per-chain Safe owners; Fraxtal's native MAI was permanently sunset under QIP250 (ownership renounced, zero supply). Because legacy supply integrity depended on external lock/mint infrastructure, the profile keeps external-lock-mint tiering history while current deployments are issuer-native.",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 controls research (Fraxtal route resolution)",
-    "confidence": "probable",
+    "summary": "Historical-only Bridge Risk: MAI had Multichain-era external lock/mint exposure, and public governance and post-incident reporting tied historical cross-chain supply and bad debt to that infrastructure. No exact historical lockbox, bridge controller, message path, or dated burn/mint event route is currently verified, so external-lock-mint is retained as a profile-level historical tier with manual-review confidence rather than as a current route classification. All 15 reviewed deployments are chain-local QiDao native issuance routes, not bridge representations; Polygon and Base are currently described by QiDao as fully live, the other nonzero-supply deployments are legacy native routes with current mintability unresolved, and Fraxtal is native but sunset with ownership renounced and zero supply. No bridge control is authored because no current or historical bridge controller is sufficiently verified to scope to a reviewed route.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Mint/bridge boundary migration; verified mai-qidao finding 2026-08-16",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "manual",
@@ -2092,11 +2092,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on polygon at block 90539741: MAI token 0xa3fa99a148fa48d14ed51d610c367c61876997f1 (symbol miMATIC) owner() = 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8, a Safe multisig with getThreshold/getOwners = 3-of-5. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract. Polygon is QiDao's canonical home chain.",
+        "reviewNote": "Verified on polygon at block 90539741: MAI token 0xa3fa99a148fa48d14ed51d610c367c61876997f1 (symbol miMATIC) owner() = 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8, a Safe multisig with getThreshold/getOwners = 3-of-5. This is a QiDao-administered chain-local native issuance contract whose mint authority is the issuer's per-chain Safe, not a third-party bridge controller. QiDao currently identifies Polygon as fully live; it is one of the independent native deployment chains, not a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 90539741,
         "sources": [
           {
@@ -2123,8 +2121,6 @@
         "reviewNote": "Verified on ethereum at block 25570948: MAI token 0x8d6cebd76f18e1558d4db88138e2defb3909fad6 (symbol MAI) owner() = 0x3182e6856c3b59c39114416075770ec9dc9ff436, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 25570948,
         "sources": [
           {
@@ -2151,8 +2147,6 @@
         "reviewNote": "Verified on arbitrum at block 485694120: MAI token 0x3f56e0c36d275367b8c502090edf38289b3dea0d (symbol MAI) owner() = 0xf32e759d5f1c63ed62042497d3a50f044ee0982b, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 485694120,
         "sources": [
           {
@@ -2179,8 +2173,6 @@
         "reviewNote": "Verified on optimism at block 154457915: MAI token 0xdfa46478f9e5ea86d57387849598dbfb2e964b02 (symbol MAI) owner() = 0xb1a8d1d6dc07ca0e1e78a0004aa0bb034fa73d60, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 154457915,
         "sources": [
           {
@@ -2207,8 +2199,6 @@
         "reviewNote": "Verified on base at block 48862632: MAI token 0xbf1aea8670d2528e08334083616dd9c5f3b087ae (symbol MAI) owner() = 0xe816f03e31a75cabe64861064a6219ebe62c613d, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 48862632,
         "sources": [
           {
@@ -2235,8 +2225,6 @@
         "reviewNote": "Verified on avalanche at block 90754854: MAI token 0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b (symbol MAI) owner() = 0x3cf6a36876bdecadeab420aff93171439abf9ca2, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 90754854,
         "sources": [
           {
@@ -2263,8 +2251,6 @@
         "reviewNote": "Verified on fantom at block 122578793: MAI token 0xfb98b335551a418cd0737375a2ea0ded62ea213b (symbol miMATIC) owner() = 0x679016b3f8e98673f85c6f72567f22b58aa15a54, a Safe multisig with getThreshold/getOwners = 2-of-3. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 122578793,
         "sources": [
           {
@@ -2291,8 +2277,6 @@
         "reviewNote": "Verified on gnosis at block 47292558: MAI token 0x3f56e0c36d275367b8c502090edf38289b3dea0d (symbol MAI) owner() = 0x4f5af8bc14812fe5e4c7253ebf5335481e3a9e80, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 47292558,
         "sources": [
           {
@@ -2319,8 +2303,6 @@
         "reviewNote": "Verified on metis at block 22922619: MAI token 0xdfa46478f9e5ea86d57387849598dbfb2e964b02 (symbol MAI) owner() = 0xc9d3750d3ccb25835799087a34bf9ed9cad854d8, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 22922619,
         "sources": [
           {
@@ -2347,8 +2329,6 @@
         "reviewNote": "Verified on moonbeam at block 16514101: MAI token 0xdfa46478f9e5ea86d57387849598dbfb2e964b02 (symbol MAI) owner() = 0x75c7b52899b435ea81e118b429481b0ecbc0104d, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 16514101,
         "sources": [
           {
@@ -2375,8 +2355,6 @@
         "reviewNote": "Verified on kava at block 21715995: MAI token 0xb84df10966a5d7e1ab46d9276f55d57bd336afc7 (symbol MAI) owner() = 0xe43d58b8e376650440ff8b249226b1d8c95c3a83, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 21715995,
         "sources": [
           {
@@ -2403,8 +2381,6 @@
         "reviewNote": "Verified on polygon-zkevm at block 33391890: MAI token 0x615b25500403eb688be49221b303084d9cf0e5b4 (symbol MAI) owner() = 0x20265d77e0f5a7e86fdb013e408c4adf11289355, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 33391890,
         "sources": [
           {
@@ -2431,8 +2407,6 @@
         "reviewNote": "Re-verified on Fraxtal at block 39190926 via rpc.frax.com and fraxtal-rpc.publicnode.com: MAI token 0xb84df10966a5d7e1ab46d9276f55d57bd336afc7 reports name 'Mai Stablecoin', symbol 'MAI', decimals 18, totalSupply() = 0, and owner() = the zero address. Fraxscan verifies EditableERC20 source with onlyOwner mint and renounceOwnership. QiDao Snapshot QIP250 (passed For; closed) specifies this exact Fraxtal MAI address as the protocol's native token, mandates renounceOwnership to permanently remove native minting, and states zero circulating MAI and no outstanding vault debt; QiDao's 2026-06-03 announcement confirms the Fraxtal deployment was fully sunset after QIP250. This is therefore issuer-native MAI that has been permanently decommissioned, not a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-28",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 39190926,
         "sources": [
           {
@@ -2467,8 +2441,6 @@
         "reviewNote": "Verified on bsc at block 111011381: MAI token 0x3f56e0c36d275367b8c502090edf38289b3dea0d (symbol MAI) owner() = 0xff34fdcf12174293a518e585807c9b60decf5843, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 111011381,
         "sources": [
           {
@@ -2495,8 +2467,6 @@
         "reviewNote": "Verified on linea at block 31447174: MAI token 0xf3b001d64c656e30a62fbaaca003b1336b4ce12a (symbol MAI) owner() = 0xf1da2623e31be26d8faea038c3046d142341cf20, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
         "observedBlock": 31447174,
         "sources": [
           {

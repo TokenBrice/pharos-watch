@@ -281,6 +281,12 @@ export type MintAuthorityPosture = (typeof MINT_AUTHORITY_POSTURE_VALUES)[number
 export const MINT_AUTHORITY_CONFIDENCE_VALUES = ["verified", "probable", "manual-review", "unknown"] as const;
 export type MintAuthorityConfidence = (typeof MINT_AUTHORITY_CONFIDENCE_VALUES)[number];
 
+export const MINT_AUTHORITY_NO_LOCAL_ISSUANCE_KIND_VALUES = [
+  "inherited-parent-issuance",
+  "external-only-representation",
+] as const;
+export type MintAuthorityNoLocalIssuanceKind = (typeof MINT_AUTHORITY_NO_LOCAL_ISSUANCE_KIND_VALUES)[number];
+
 export const MINT_AUTHORITY_CONTROL_ROLE_VALUES = [
   "direct-minter",
   "minter-admin",
@@ -376,6 +382,7 @@ export type MintAuthorityUpgradeModel = (typeof MINT_AUTHORITY_UPGRADE_MODEL_VAL
 
 export interface MintAuthorityUpgradeability {
   model: MintAuthorityUpgradeModel;
+  deploymentRefs?: string[];
   proxyAddresses?: string[];
   implementationAddresses?: string[];
   adminAddresses?: string[];
@@ -412,6 +419,7 @@ export interface MintAuthorityKeyCustodyAttestation {
 export interface MintAuthorityControl {
   chain?: string;
   address?: string;
+  deploymentRefs?: string[];
   /**
    * Tracked native asset whose issuance system owns this controller.
    *
@@ -450,6 +458,15 @@ export interface MintAuthorityReview {
   reviewedAt: string;
   disposition?: "scoreable" | "unresolved";
   unresolvedQuestions?: string[];
+  noLocalIssuance?: MintAuthorityNoLocalIssuanceException;
+}
+
+export interface MintAuthorityNoLocalIssuanceException {
+  kind: MintAuthorityNoLocalIssuanceKind;
+  reviewedAt: string;
+  reviewer: string;
+  rationale: string;
+  sources?: StablecoinLink[];
 }
 
 export interface MintAuthorityProfile {
@@ -816,6 +833,44 @@ export type BridgeRouteSemantics = (typeof BRIDGE_ROUTE_SEMANTICS_VALUES)[number
 export const BRIDGE_ROUTE_SCOPE_VALUES = ["global", "canonical", "peripheral", "unknown"] as const;
 export type BridgeRouteScope = (typeof BRIDGE_ROUTE_SCOPE_VALUES)[number];
 
+export const BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES = [
+  "bridge-mint",
+  "bridge-burn",
+  "upgrade",
+  "admin",
+  "pause",
+  "rate-limit",
+  "validator",
+  "escrow",
+  "peer-config",
+] as const;
+export type BridgeRouteControlCapability = (typeof BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES)[number];
+
+export interface BridgeRouteControl {
+  id: string;
+  label: string;
+  routeRefs: string[];
+  capabilities: BridgeRouteControlCapability[];
+  controllerChain?: string;
+  controllerAddress?: string;
+  failureDomainKeys?: string[];
+  authorityType: MintAuthorityType;
+  threshold?: number;
+  signerCount?: number;
+  timelockDelaySec?: number;
+  safe?: MintAuthoritySafeState;
+  modulesOrGuardsStatus?: MintAuthorityModulesOrGuardsStatus;
+  keyCustodyAttestation?: MintAuthorityKeyCustodyAttestation;
+  routeChecks?: MintAuthorityRouteChecks;
+  capDescription?: string;
+  canRaiseCap?: boolean | "unknown";
+  bypassSurfaces?: string[];
+  observedAt?: string;
+  observedBlock?: number;
+  sources?: StablecoinLink[];
+  evidence?: string;
+}
+
 export interface BridgeRouteDeployment {
   id: string;
   sourceChain?: string;
@@ -850,6 +905,7 @@ export interface BridgeRouteRiskProfile {
   sourceFreeRationale?: string;
   sources?: StablecoinLink[];
   routes?: BridgeRouteDeployment[];
+  controls?: BridgeRouteControl[];
 }
 
 export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;

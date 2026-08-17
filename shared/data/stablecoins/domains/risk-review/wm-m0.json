@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "wM is Ethereum-native (M0 WrappedM) and reaches Arbitrum, Base, and Solana through M0's own Wormhole-NTT Portal (hub lock/release, spoke mint/burn) and Plume through the Hyperlane-based M0 Portal Lite — all issuer-operated routes with the portal contracts verified on-chain 2026-07-20; the audited Wrapped M V2 migrations on Ethereum, Arbitrum, and Base were verified 2026-08-07.",
-    "reviewedAt": "2026-08-07",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "summary": "wM has one canonical Ethereum wrapper deployment; Arbitrum, Base, Plume, and Solana are bridge representations reached through M0 issuer-native burn/mint routes. Current Arbitrum and Base SpokePortal admins/operators, route paths, pause state, and upgrade implementations are structured below; Plume uses an owner-controlled Hyperlane Portal/Bridge with a separate pauser; Solana Portal message validation, Portal upgrade authority, and m_ext ProgramData upgrade authority are route-scoped separately from the local M-backed wrapper mint recorded in Mint Authority. The route tier remains issuer-native-lock-mint.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -54,7 +54,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical home deployment: wM on Ethereum is M0's WrappedM (wraps $M 1:1 via M0's own wrapper under a Migratable upgrade admin). The proxy migrated to M0's audited Wrapped M V2 implementation 0x6d9db63afccf515f393d5e65be69d38bb3b29d13 on 2026-07-31; the proxy runtime, underlying M, and M0 Minter Gateway controller 0xF7f9638cB444D65E5A40bf5fF98eBE4ff319F04e remained unchanged (verified 2026-08-07).",
+        "reviewNote": "Canonical home deployment: wM on Ethereum is M0's WrappedM (wraps $M 1:1 via M0's own wrapper under a Migratable upgrade admin). The proxy migrated to M0's audited Wrapped M V2 implementation 0x6d9d63afccf515f393d5e65be69d38bb3b29d13 on 2026-07-31; the proxy runtime, underlying M, and M0 Minter Gateway controller 0xF7f9638cB444D65E5A40bf5fF98eBE4ff319F04e remained unchanged (verified at Ethereum block 25773353 on 2026-08-16).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-07",
         "sources": [
@@ -68,7 +68,7 @@
           },
           {
             "label": "Ethereum Wrapped M V2 implementation (code verified 2026-08-07)",
-            "url": "https://eth.blockscout.com/address/0x6D9DB63aFCCF515f393D5e65Be69d38Bb3B29D13?tab=contract"
+            "url": "https://eth.blockscout.com/address/0x6D9D63aFCCF515f393D5e65Be69d38Bb3B29D13?tab=contract"
           },
           {
             "label": "Ethereum Wrapped M V2 migration transaction",
@@ -199,15 +199,18 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "wM on Solana is the Token-2022 $wM extension mint documented in M0's Solana technical documentation; bridging runs through M0's own Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY — the Wormhole-NTT-fork gateway that validates VAAs and mints $wM on Solana (program ID per M0 docs, 2026-07-20).",
+        "reviewNote": "wM on Solana is the Token-2022 $wM extension mint documented in M0's Solana technical documentation. M0's Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY validates the Wormhole message and reaches the Solana route; the local m_ext wrapper then transfers canonical M into its extension vault before minting wM. The m_ext mint authority remains in Mint Authority, while its ProgramData upgrade authority and Portal controls are scored separately under Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439806760,
         "sourceChain": "ethereum",
         "controllerChain": "solana",
         "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
         "failureDomainKeys": [
           "protocol:m0-portal-ntt",
-          "program:solana:mzp1q2j5hr1qulc3kfbcauz5auckt6qyuzkz3wjnmmy"
+          "program:solana:mzp1q2j5hr1qulc3kfbcauz5auckt6qyuzkz3wjnmmy",
+          "program:solana:wmxx1k1nca5w4pzr1piet78gcavvrfe9f4g46uxko",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
         ],
         "sources": [
           {
@@ -217,8 +220,468 @@
           {
             "label": "wM Solana mint",
             "url": "https://solscan.io/token/mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp"
+          },
+          {
+            "label": "M0 Solana m_ext wrap instruction",
+            "url": "https://raw.githubusercontent.com/m0-foundation/solana-m-extensions/main/programs/m_ext/src/instructions/wrap.rs"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "wm-arbitrum-portal-admin",
+        "label": "wM Arbitrum M0 SpokePortal DEFAULT_ADMIN Safe",
+        "routeRefs": [
+          "arbitrum:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "contract:arbitrum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:arbitrum:0xacffec28c4eee21c889a4e6c0704c540ed9d4fdd",
+          "safe:arbitrum:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490F751d7d69115d2466239391FAAd0a00B650",
+            "0xa00Baef9aDb918bf57A124EC0CA469b68362Ee3a",
+            "0x0e9b9509C0e6E6F816f31d23140db8fe6B9A22F0",
+            "0xcf4D90C0ce49E0DB337B3bd8042916145D5387Be",
+            "0x9cEd0724B8B93c2C7CE6c6C314d21CbF88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "version": "1.4.1",
+          "observedBlock": 495432840,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Arbitrum SpokePortal is the issuer-native burn/mint route for the local wM representation. Its DEFAULT_ADMIN_ROLE Safe can administer the Portal role graph and authorize replacement of the UUPS Portal logic; no independent immutable local cap was established.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495432840, hubChainId() returned 1, defaultBridgeAdapter(1) returned 0xaCffEC28C4eEe21C889a4e6C0704c540Ed9D4fDd, and that adapter was supported. At adapter block 495435471, getPeer(1) and getSenderPeer(1) both returned the adapter address and getBridgeChainId(1) returned 2; the M-to-wM and wM-to-M Portal paths both returned true.",
+          "rateLimits": "The verified SpokePortal exposes no token-specific aggregate mint cap. The WormholeBridgeAdapter getMsgValue(1) read was 0 at block 495435471, but no token-amount rate limit was exposed; route capacity follows VAA validation and M burn/mint accounting.",
+          "pausersAdminsUpgraders": "At Arbitrum block 495432840, the Portal implementation slot resolved to 0x9e72e098cbb48ea6b8ff317d158335a3ab048001 and the EIP-1967 admin slot was zero. At adapter block 495435471, WormholeBridgeAdapter implementation 0xa8ecb2f4265c4bf47382b229011c4b1bfb061e4b also had admin slot zero; DEFAULT_ADMIN_ROLE on both route components was held by this 3-of-5 Safe, while the separate OPERATOR_ROLE and PAUSER_ROLE EOA and current Portal pause reads are recorded in the adjacent control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495432840,
+        "sources": [
+          {
+            "label": "Arbitrum M0 SpokePortal",
+            "url": "https://arbitrum.blockscout.com/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "M0 Portal V2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Arbitrum public JSON-RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Arbitrum block 495432840, the M0 SpokePortal's DEFAULT_ADMIN_ROLE was held by Safe 0x48670b46380fe1645f0e3e821a25162db2589d19. The Safe returned five owners, threshold 3, Safe version 1.4.1, and no enabled modules; guard and fallback-handler reads were not independently decoded. The Portal implementation was 0x9e72e098cbb48ea6b8ff317d158335a3ab048001 with no EIP-1967 admin slot, so the Safe is a bridge-route admin/upgrade controller rather than native wM Mint Authority."
+      },
+      {
+        "id": "wm-arbitrum-portal-operator-pauser",
+        "label": "wM Arbitrum M0 SpokePortal operator and pauser EOA",
+        "routeRefs": [
+          "arbitrum:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "contract:arbitrum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:arbitrum:0xacffec28c4eee21c889a4e6c0704c540ed9d4fdd",
+          "eoa:arbitrum:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Arbitrum OPERATOR_ROLE controls the Portal's supported adapter/path configuration and the same EOA holds PAUSER_ROLE; it can change the bridge route or halt it, but is not a native wM issuer.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495432840, the default adapter for hub chain 1 was 0xaCffEC28C4eEe21C889a4e6C0704c540Ed9D4fDd and it was supported. At adapter block 495435471, getPeer(1) and getSenderPeer(1) both returned the adapter address with Wormhole chain ID 2; M-to-wM and wM-to-M path reads returned true.",
+          "rateLimits": "No token-specific aggregate Portal cap was exposed; WormholeBridgeAdapter getMsgValue(1) returned 0 at block 495435471 and is a message-value setting, not a token-amount cap.",
+          "pausersAdminsUpgraders": "At Arbitrum block 495432840, this EOA held both OPERATOR_ROLE and PAUSER_ROLE; sendPaused() and receivePaused() were false. The adapter's OPERATOR_ROLE was also held by this EOA at block 495435471. The roles govern the bridge representation route and do not govern canonical Ethereum wM wrapping."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495432840,
+        "sources": [
+          {
+            "label": "Arbitrum M0 SpokePortal",
+            "url": "https://arbitrum.blockscout.com/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "M0 Portal V2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Arbitrum public JSON-RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Arbitrum block 495432840, 0xf2f1acbe0ba726fee8d75f3e32900526874740bb held OPERATOR_ROLE and PAUSER_ROLE on the SpokePortal. The route's default adapter was supported, both M/wM path checks returned true, and sendPaused()/receivePaused() were false. This is route configuration and pause authority for the Arbitrum representation."
+      },
+      {
+        "id": "wm-base-portal-admin",
+        "label": "wM Base M0 SpokePortal DEFAULT_ADMIN Safe",
+        "routeRefs": [
+          "base:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "contract:base:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:base:0xacffec28c4eee21c889a4e6c0704c540ed9d4fdd",
+          "safe:base:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490F751d7d69115d2466239391FAAd0a00B650",
+            "0xa00Baef9aDb918bf57A124EC0CA469b68362Ee3a",
+            "0x0e9b9509C0e6E6F816f31d23140db8fe6B9A22F0",
+            "0xcf4D90C0ce49E0DB337B3bd8042916145D5387Be",
+            "0x9cEd0724B8B93c2C7CE6c6C314d21CbF88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "version": "1.4.1",
+          "observedBlock": 50084040,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Base SpokePortal is the issuer-native burn/mint route for the local wM representation. Its DEFAULT_ADMIN_ROLE Safe can administer the Portal role graph and authorize replacement of the UUPS Portal logic; no independent immutable local cap was established.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50084040, hubChainId() returned 1, defaultBridgeAdapter(1) returned 0xaCffEC28C4eEe21C889a4e6C0704c540Ed9D4fDd, and that adapter was supported. At adapter block 50084392, getPeer(1) and getSenderPeer(1) both returned the adapter address and getBridgeChainId(1) returned 2; the M-to-wM and wM-to-M Portal paths both returned true.",
+          "rateLimits": "The verified SpokePortal exposes no token-specific aggregate mint cap. The WormholeBridgeAdapter getMsgValue(1) read was 0 at block 50084392, but no token-amount rate limit was exposed; route capacity follows VAA validation and M burn/mint accounting.",
+          "pausersAdminsUpgraders": "At Base block 50084040, the Portal implementation slot resolved to 0xd5fd4d2e1e82bccc2a8380860f54df24d88d7b24 and the EIP-1967 admin slot was zero. At adapter block 50084392, WormholeBridgeAdapter implementation 0x7ae99b6029ca77f3a6814173a30b84264f5e5f74 also had admin slot zero; DEFAULT_ADMIN_ROLE on both route components was held by this 3-of-5 Safe, while the separate OPERATOR_ROLE and PAUSER_ROLE EOA and current Portal pause reads are recorded in the adjacent control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50084040,
+        "sources": [
+          {
+            "label": "Base M0 SpokePortal",
+            "url": "https://basescan.org/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "M0 Portal V2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Base public JSON-RPC",
+            "url": "https://mainnet.base.org"
+          }
+        ],
+        "evidence": "At Base block 50084040, the M0 SpokePortal's DEFAULT_ADMIN_ROLE was held by Safe 0x48670b46380fe1645f0e3e821a25162db2589d19. The Safe returned five owners, threshold 3, Safe version 1.4.1, and no enabled modules; guard and fallback-handler reads were not independently decoded. The Portal implementation was 0xd5fd4d2e1e82bccc2a8380860f54df24d88d7b24 with no EIP-1967 admin slot, so the Safe is a bridge-route admin/upgrade controller rather than native wM Mint Authority."
+      },
+      {
+        "id": "wm-base-portal-operator-pauser",
+        "label": "wM Base M0 SpokePortal operator and pauser EOA",
+        "routeRefs": [
+          "base:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "contract:base:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:base:0xacffec28c4eee21c889a4e6c0704c540ed9d4fdd",
+          "eoa:base:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Base OPERATOR_ROLE controls the Portal's supported adapter/path configuration and the same EOA holds PAUSER_ROLE; it can change the bridge route or halt it, but is not a native wM issuer.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50084040, the default adapter for hub chain 1 was 0xaCffEC28C4eEe21C889a4e6C0704c540Ed9D4fDd and it was supported. At adapter block 50084392, getPeer(1) and getSenderPeer(1) both returned the adapter address with Wormhole chain ID 2; M-to-wM and wM-to-M path reads returned true.",
+          "rateLimits": "No token-specific aggregate Portal cap was exposed; WormholeBridgeAdapter getMsgValue(1) returned 0 at block 50084392 and is a message-value setting, not a token-amount cap.",
+          "pausersAdminsUpgraders": "At Base block 50084040, this EOA held both OPERATOR_ROLE and PAUSER_ROLE; sendPaused() and receivePaused() were false. The adapter's OPERATOR_ROLE was also held by this EOA at block 50084392. The roles govern the bridge representation route and do not govern canonical Ethereum wM wrapping."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50084040,
+        "sources": [
+          {
+            "label": "Base M0 SpokePortal",
+            "url": "https://basescan.org/address/0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          },
+          {
+            "label": "M0 Portal V2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Base public JSON-RPC",
+            "url": "https://mainnet.base.org"
+          }
+        ],
+        "evidence": "At Base block 50084040, 0xf2f1acbe0ba726fee8d75f3e32900526874740bb held OPERATOR_ROLE and PAUSER_ROLE on the SpokePortal. The route's default adapter was supported, both M/wM path checks returned true, and sendPaused()/receivePaused() were false. This is route configuration and pause authority for the Base representation."
+      },
+      {
+        "id": "wm-plume-portal-owner",
+        "label": "wM Plume Portal and Hyperlane Bridge owner Safe",
+        "routeRefs": [
+          "plume:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x658f3465d58518105c051C5B5f981a1038D6f5B6",
+        "failureDomainKeys": [
+          "protocol:m0-portal-lite-hyperlane",
+          "contract:plume:0x36f586a30502ae3afb555b8aa4dcc05d233c2ece",
+          "contract:plume:0x51dce104e5ba88fabc19a2c519f955bb834b0dc3",
+          "safe:plume:0x658f3465d58518105c051c5b5f981a1038d6f5b6"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "owners": [
+            "0x8C9B09Eb2312311Bcabc4069Ea2329c734e770Cd",
+            "0xc13604A9Be6bb4D3781a7f84B39f92D59Ea84789",
+            "0x61A771a8A4eD092cd9254C504847483df0163D4C"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "version": "1.3.0",
+          "observedAt": "2026-08-16",
+          "observedBlock": 87772437,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Plume Portal owner Safe controls the Hyperlane bridge binding, destination/path configuration, and owner-only Portal migrate(address) path. The same Safe owns the HyperlaneBridge and can change its peer; these are bridge-route controls, not independent native wM issuance.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The owner Safe can replace Plume Portal logic through migrate(address), change the bridge binding, and change supported M/wM paths or Hyperlane peers without an independently established delay."
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Plume block 87772065, Portal bridge() returned HyperlaneBridge 0x51dce104e5ba88fabc19a2c519f955bb834b0dc3; that bridge's portal() returned the Plume Portal, mailbox() returned 0x3a464f746d23ab22155710f44db16dca53e0775e, peer(1) returned the bridge address, and all M/wM path checks for hub chain 1 returned true.",
+          "rateLimits": "The verified Plume Portal and HyperlaneBridge expose no token-specific aggregate rate-limit field; route capacity follows mailbox message validation and M burn/mint accounting. The mailbox's default ISM was not separately decoded.",
+          "pausersAdminsUpgraders": "At Plume block 87772437, Portal owner() was Safe 0x658f3465d58518105c051C5B5f981a1038D6f5B6 and Portal paused() was true. The verified Portal source makes migrate(address), setBridge, setDestinationMToken, and setSupportedBridgingPath owner-only; the HyperlaneBridge owner() returned the same Safe and controls setPeer."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 87772437,
+        "sources": [
+          {
+            "label": "Plume M0 SpokePortal",
+            "url": "https://explorer.plume.org/address/0x36f586a30502ae3afb555b8aa4dcc05d233c2ece"
+          },
+          {
+            "label": "Plume HyperlaneBridge",
+            "url": "https://explorer.plume.org/address/0x51dce104e5ba88fabc19a2c519f955bb834b0dc3"
+          },
+          {
+            "label": "M0 Portal architecture",
+            "url": "https://docs.m0.org/protocol/m-portals"
+          },
+          {
+            "label": "M0 Portal Lite source",
+            "url": "https://github.com/m0-platform/m-portal/blob/main/src/Portal.sol"
+          },
+          {
+            "label": "Plume public JSON-RPC",
+            "url": "https://rpc.plume.org"
+          }
+        ],
+        "evidence": "At Plume block 87772437, the Portal owner was Safe 0x658f3465d58518105c051C5B5f981a1038D6f5B6. The owner Safe was observed with three owners, threshold 2, version 1.3.0, and no enabled modules; the Portal was bound to HyperlaneBridge 0x51dce104e5ba88fabc19a2c519f955bb834b0dc3, whose owner was the same Safe. The owner can alter the bridge/path configuration or migrate Portal logic; the current Portal paused state was true."
+      },
+      {
+        "id": "wm-plume-portal-pauser",
+        "label": "wM Plume Portal pauser EOA",
+        "routeRefs": [
+          "plume:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "pause"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-lite-hyperlane",
+          "contract:plume:0x36f586a30502ae3afb555b8aa4dcc05d233c2ece",
+          "eoa:plume:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Plume block 87771597, pauser() returned 0xf2f1acbe0ba726fee8d75f3e32900526874740bb and paused() returned true. The verified PausableOwnable source allows the pauser or owner to pause/unpause the Portal; this EOA is a bridge-route halt control, not a mint authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 87771597,
+        "sources": [
+          {
+            "label": "Plume M0 SpokePortal",
+            "url": "https://explorer.plume.org/address/0x36f586a30502ae3afb555b8aa4dcc05d233c2ece"
+          },
+          {
+            "label": "Plume public JSON-RPC",
+            "url": "https://rpc.plume.org"
+          }
+        ],
+        "evidence": "At Plume block 87771597, the current Portal pauser was 0xf2f1acbe0ba726fee8d75f3e32900526874740bb and the route was paused. This immediate pause authority remains under Bridge Risk even though it shares an operator identity with other M0 route deployments."
+      },
+      {
+        "id": "wm-solana-portal",
+        "label": "wM Solana M0 Portal program",
+        "routeRefs": [
+          "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "validator",
+          "admin"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "program:solana:mzp1q2j5hr1qulc3kfbcauz5auckt6qyuzkz3wjnmmy",
+          "programdata:solana:GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Solana Portal validates the cross-chain Wormhole message and reaches the local m_ext route; it is bridge machinery for the wM representation, while the M-vault-before-mint wrapper invariant is separately authored in Mint Authority.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "M0 documents the Solana Portal as the Wormhole-NTT route controller that validates inbound VAAs/messages. The exact current Portal-to-m_ext invocation account set was not independently enumerated in this pass.",
+          "caps": "The route is supply-conserving only while Portal message validation and the local m_ext M-vault-before-mint invariant hold; the local wrapper mint is not an independent native M mint.",
+          "pausersAdminsUpgraders": "At finalized Solana slot 439806760, Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY resolved to ProgramData GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n; its upgrade authority is modeled in the adjacent control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439806760,
+        "sources": [
+          {
+            "label": "M0 on Solana technical documentation",
+            "url": "https://docs.m0.org/protocol/solana"
+          },
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://solscan.io/account/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439806760, Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY resolved through the upgradeable loader to ProgramData GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n. M0's official Solana design identifies the Portal as the VAA-validating route into Extensions; the local m_ext mint authority and its M-backed invariant are not counted as Portal-native mint authority."
+      },
+      {
+        "id": "wm-solana-portal-upgrade-authority",
+        "label": "wM Solana Portal ProgramData upgrade authority",
+        "routeRefs": [
+          "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "program:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "programdata:solana:GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The Portal ProgramData upgrade authority can replace Solana bridge logic and alter or bypass current inbound message and route constraints without an independent delay."
+        ],
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At finalized Solana slot 439806760, Portal ProgramData GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. The same EOA is separately observed as m_ext upgrade authority, but overlap of those authorities is not inferred here."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439806760,
+        "sources": [
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://solscan.io/account/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439806760, the Portal ProgramData account identified 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. It is modeled as bridge-program upgrade risk for the Solana representation, separate from the m_ext wrapper upgrade control below."
+      },
+      {
+        "id": "wm-solana-m-ext-upgrade-authority",
+        "label": "wM Solana m_ext ProgramData upgrade authority",
+        "routeRefs": [
+          "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "program:solana:wMXX1K1nca5W4pZr1piETe78gcAVVrEFi9f4g46uXko",
+          "programdata:solana:BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The m_ext upgrade authority can replace the wrapper program and remove or relax the observed M-vault-before-mint invariant without an independent delay."
+        ],
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At finalized Solana slot 439806760, m_ext ProgramData BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. The EOA can replace local wrapper logic for the Solana representation; the observed Portal and m_ext upgrade authorities are separately authored despite sharing this identity."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439806760,
+        "sources": [
+          {
+            "label": "Solana M Extensions repository",
+            "url": "https://github.com/m0-foundation/solana-m-extensions"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439806760, m_ext ProgramData BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. This EOA can replace the local wrapper logic and change the current deposit-before-mint bound; it is bridge-representation upgrade risk, not an issuer of native M."
       }
     ]
   }

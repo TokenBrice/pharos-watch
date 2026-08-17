@@ -1920,10 +1920,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "River documents satUSD as an omnichain asset and bridge built on LayerZero's OFT standard, including cross-chain collateral and minting flows. Because route finality depends on the LayerZero/OFT stack, satUSD is scored as external-lock-mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-    "confidence": "verified",
+    "summary": "River's chain-local SatoshiXApp/CDP paths create native satUSD liabilities and remain in Mint Authority. Bridge Risk separately scores the issuer-deployed DebtTokenWithLz LayerZero OFT burn/mint routes, including owner-gated upgrades, peer/delegate/configuration authority, endpoint and messaging dependencies, and DVN/executor common-mode risk; the resulting route tier remains external-lock-mint.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Codex mint-bridge-boundary migration 2026-08-16",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "l2beat",
@@ -1952,16 +1952,26 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
-        "protocol": "River native satUSD (SatoshiXApp CDP mint)",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xb8374e4dff99202292da2fe34425e1de665b67e6 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. This DebtToken deployment exposes no LayerZero endpoint; minting is local CDP only.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xb8374e4dff99202292da2fe34425e1de665b67e6 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The same DebtTokenWithLz deployment also exposes LayerZero V2 OFT endpoint() = 0x1a44076050125825900e736c501f859c50fe728c (read at Ethereum block 25771252 on 2026-08-16); native CDP issuance and the bridge burn/mint path are separately assessed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771252,
         "sources": [
           {
             "label": "ethereum explorer satUSD token",
@@ -1985,9 +1995,19 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = 0x1a44076050125825900e736c501f859c50fe728c, read at Arbitrum block 495310633 on 2026-08-16), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495310633,
         "sources": [
           {
             "label": "arbitrum explorer satUSD token",
@@ -2001,10 +2021,6 @@
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
-        ],
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
         ]
       },
       {
@@ -2012,16 +2028,26 @@
         "destinationChain": "base",
         "canonicalChain": "ethereum",
         "contractAddress": "0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
-        "protocol": "River native satUSD (SatoshiXApp CDP mint)",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x9a3c724ee9603a7550499be73dc743b371811dd3 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. This DebtToken deployment exposes no LayerZero endpoint; minting is local CDP only.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x9a3c724ee9603a7550499be73dc743b371811dd3 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The same DebtTokenWithLz deployment also exposes LayerZero V2 OFT endpoint() = 0x1a44076050125825900e736c501f859c50fe728c (read at Base block 50068609 on 2026-08-16); native CDP issuance and the bridge burn/mint path are separately assessed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "base",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068609,
         "sources": [
           {
             "label": "base explorer satUSD token",
@@ -2045,9 +2071,19 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = 0x1a44076050125825900e736c501f859c50fe728c, read at BSC block 116368532 on 2026-08-16), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116368532,
         "sources": [
           {
             "label": "bsc explorer satUSD token",
@@ -2061,10 +2097,6 @@
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
-        ],
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
         ]
       },
       {
@@ -2079,9 +2111,19 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, read at Sonic block 77635658 on 2026-08-16), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "sonic",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "endpoint:layerzero-v2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 77635658,
         "sources": [
           {
             "label": "sonic explorer satUSD token",
@@ -2095,10 +2137,6 @@
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
-        ],
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
         ]
       },
       {
@@ -2113,9 +2151,19 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xec272af6e65c4d7857091225fa8ed300df787ccf (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation. A deprecated satUSD V1 token 0x78Fea795cBFcC5fFD6Fb5B845a4f53d25C283bDB also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xec272af6e65c4d7857091225fa8ed300df787ccf (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = 0x1a44076050125825900e736c501f859c50fe728c, read at BOB block 37032292 on 2026-08-16), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation. A deprecated satUSD V1 token 0x78Fea795cBFcC5fFD6Fb5B845a4f53d25C283bDB also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "bob",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 37032292,
         "sources": [
           {
             "label": "bob explorer satUSD token",
@@ -2129,10 +2177,6 @@
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
-        ],
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f"
         ]
       },
       {
@@ -2147,9 +2191,19 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x95e5b977c8c33de5b3b5d2216f1097c2017bdf71 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation. A deprecated satUSD V1 token 0xa1e63CB2CE698CfD3c2Ac6704813e3b870FEDADf also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x95e5b977c8c33de5b3b5d2216f1097c2017bdf71 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, read at Bitlayer block 24883067 on 2026-08-16), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation. A deprecated satUSD V1 token 0xa1e63CB2CE698CfD3c2Ac6704813e3b870FEDADf also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "bitlayer",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
+          "endpoint:layerzero-v2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 24883067,
         "sources": [
           {
             "label": "bitlayer explorer satUSD token",
@@ -2163,10 +2217,6 @@
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
-        ],
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783"
         ]
       },
       {
@@ -2207,9 +2257,19 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, read at Hemi block 5088321 on 2026-08-16), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "hemi",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "endpoint:layerzero-v2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 5088321,
         "sources": [
           {
             "label": "hemi explorer satUSD token",
@@ -2223,10 +2283,6 @@
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
-        ],
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
         ]
       },
       {
@@ -2241,8 +2297,16 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xd4b0eecf327c0f1b43d487fecfd2ea56e746a72b (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation. A deprecated satUSD V1 token 0xF2692468666E459D87052f68aE474E36C1a34fbB also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xd4b0eecf327c0f1b43d487fecfd2ea56e746a72b (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment was reviewed as an issuer-deployed DebtTokenWithLz OFT (endpoint() = the LayerZero V2 endpoint); current BEVM RPC state, including the endpoint address and peer/delegate/DVN-executor configuration, was unavailable in the 2026-08-16 re-read. Supply movement and native CDP issuance remain separately assessed. A deprecated satUSD V1 token 0xF2692468666E459D87052f68aE474E36C1a34fbB also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bevm",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
+          "config:layerzero-v2-dvn-executor"
+        ],
         "observedAt": "2026-07-20",
         "sources": [
           {
@@ -2257,10 +2321,6 @@
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
-        ],
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478"
         ]
       },
       {
@@ -2275,9 +2335,19 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xb4d4793a1cd57b6ecebadf6fcbe5aed03e8e93ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xb4d4793a1cd57b6ecebadf6fcbe5aed03e8e93ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = 0x1a44076050125825900e736c501f859c50fe728c, read at X Layer block 68157538 on 2026-08-16), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 68157538,
         "sources": [
           {
             "label": "xlayer explorer satUSD token",
@@ -2291,12 +2361,479 @@
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
           }
-        ],
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
         ]
       }
+    ],
+    "controls": [
+      {
+        "id": "satusd-ethereum-oft-owner",
+        "label": "satUSD Ethereum LayerZero OFT owner",
+        "routeRefs": [
+          "ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25771252, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At Ethereum block 25771252, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the Ethereum DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771252,
+        "sources": [
+          {
+            "label": "satUSD Ethereum DebtTokenWithLz implementation",
+            "url": "https://eth.blockscout.com/address/0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block observation",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At Ethereum block 25771252, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-arbitrum-oft-owner",
+        "label": "satUSD Arbitrum LayerZero OFT owner",
+        "routeRefs": [
+          "arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495310633, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At Arbitrum block 495310633, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the Arbitrum DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495310633,
+        "sources": [
+          {
+            "label": "satUSD Arbitrum token",
+            "url": "https://arbiscan.io/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          },
+          {
+            "label": "Arbitrum JSON-RPC fixed-block observation",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At Arbitrum block 495310633, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The reviewed DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-base-oft-owner",
+        "label": "satUSD Base LayerZero OFT owner",
+        "routeRefs": [
+          "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50068609, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At Base block 50068609, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the Base DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068609,
+        "sources": [
+          {
+            "label": "satUSD Base DebtTokenWithLz implementation",
+            "url": "https://base.blockscout.com/address/0x256bd26fddc17a1d1a9b974bcd268f89bfe15789"
+          },
+          {
+            "label": "Base JSON-RPC fixed-block observation",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At Base block 50068609, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-bsc-oft-owner",
+        "label": "satUSD BSC LayerZero OFT owner",
+        "routeRefs": [
+          "bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At BSC block 116368532, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At BSC block 116368532, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the BSC DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116368532,
+        "sources": [
+          {
+            "label": "satUSD BSC token",
+            "url": "https://bscscan.com/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          },
+          {
+            "label": "BSC JSON-RPC fixed-block observation",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At BSC block 116368532, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-sonic-oft-owner",
+        "label": "satUSD Sonic LayerZero OFT owner",
+        "routeRefs": [
+          "sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "endpoint:layerzero-v2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sonic block 77635658, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At Sonic block 77635658, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the Sonic DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 77635658,
+        "sources": [
+          {
+            "label": "satUSD Sonic token",
+            "url": "https://sonicscan.org/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          },
+          {
+            "label": "Sonic JSON-RPC fixed-block observation",
+            "url": "https://rpc.soniclabs.com"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At Sonic block 77635658, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-bob-oft-owner",
+        "label": "satUSD BOB LayerZero OFT owner",
+        "routeRefs": [
+          "bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "bob",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At BOB block 37032292, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At BOB block 37032292, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the BOB DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 37032292,
+        "sources": [
+          {
+            "label": "satUSD BOB token",
+            "url": "https://explorer.gobob.xyz/token/0xecf21b335b41f9d5a89f6186a99c19a3c467871f"
+          },
+          {
+            "label": "BOB JSON-RPC fixed-block observation",
+            "url": "https://rpc.gobob.xyz"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At BOB block 37032292, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-bitlayer-oft-owner",
+        "label": "satUSD Bitlayer LayerZero OFT owner",
+        "routeRefs": [
+          "bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "bitlayer",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
+          "endpoint:layerzero-v2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Bitlayer block 24883067, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At Bitlayer block 24883067, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the Bitlayer DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 24883067,
+        "sources": [
+          {
+            "label": "satUSD Bitlayer token",
+            "url": "https://www.btrscan.com/token/0xba50ddac6b2f5482ca064efac621e0c7c0f6a783"
+          },
+          {
+            "label": "Bitlayer JSON-RPC fixed-block observation",
+            "url": "https://rpc.bitlayer.org"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At Bitlayer block 24883067, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-hemi-oft-owner",
+        "label": "satUSD Hemi LayerZero OFT owner",
+        "routeRefs": [
+          "hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "hemi",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "endpoint:layerzero-v2:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Hemi block 5088321, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At Hemi block 5088321, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the Hemi DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 5088321,
+        "sources": [
+          {
+            "label": "satUSD Hemi token",
+            "url": "https://explorer.hemi.xyz/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          },
+          {
+            "label": "Hemi JSON-RPC fixed-block observation",
+            "url": "https://rpc.hemi.network/rpc"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At Hemi block 5088321, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      },
+      {
+        "id": "satusd-bevm-oft-owner",
+        "label": "satUSD BEVM LayerZero OFT owner",
+        "routeRefs": [
+          "bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "bevm",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The reviewed fixed-block route inventory identified owner-gated setPeer(...) and peers(...) on the BEVM DebtTokenWithLz route; current peer state was not re-read because the BEVM RPC endpoint did not return state in the 2026-08-16 pass.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; current aggregate, per-lane, and endpoint-side limits were not enumerated because the BEVM RPC endpoint was unavailable.",
+          "pausersAdminsUpgraders": "The reviewed route inventory identified owner-gated UUPS upgrade, setDelegate(), and LayerZero configuration paths. Current owner, endpoint address, delegate, and DVN/executor configuration remain unresolved because the BEVM RPC endpoint did not return state in the 2026-08-16 pass."
+        },
+        "capDescription": "The River owner is the reviewed controller for the BEVM DebtTokenWithLz OFT representation, including bridge burn/mint and the owner-gated upgrade and peer/delegate paths. Current BEVM endpoint and LayerZero configuration are unresolved; local SatoshiXApp/CDP issuance remains separately authored in Mint Authority.",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "satUSD BEVM token",
+            "url": "https://scan-mainnet.bevm.io/token/0x2031c8848775a5efb7cff2a4edbe3f04c50a1478"
+          },
+          {
+            "label": "BEVM JSON-RPC state endpoint",
+            "url": "https://rpc-mainnet.bevm.io"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "The reviewed fixed-block route inventory identifies the BEVM DebtTokenWithLz OFT path and River owner controller. Current BEVM endpoint, implementation, peer, delegate, and DVN/executor reads were not available in the 2026-08-16 pass, so those facts remain explicit evidence gaps rather than inferred values."
+      },
+      {
+        "id": "satusd-xlayer-oft-owner",
+        "label": "satUSD X Layer LayerZero OFT owner",
+        "routeRefs": [
+          "xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "failureDomainKeys": [
+          "eoa:river-satusd-owner:0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+          "protocol:layerzero-oft-v2",
+          "contract:xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a",
+          "endpoint:layerzero-v2:0x1a44076050125825900e736c501f859c50fe728c",
+          "config:layerzero-v2-dvn-executor"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At X Layer block 68157538, the verified DebtTokenWithLz implementation exposed owner-gated setPeer(...) and peers(...). The current peer mapping was not re-read in this pass and remains a freshness gap.",
+          "rateLimits": "LayerZero V2 messaging and route configuration are external bridge machinery; aggregate and per-lane limits were not enumerated in this pass.",
+          "pausersAdminsUpgraders": "At X Layer block 68157538, owner() returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47 and endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c. The owner gates UUPS _authorizeUpgrade(), setDelegate(), and LayerZero message-inspector/pre-crime/configuration functions; endpoint-side DVN/executor configuration is a separate LayerZero failure domain."
+        },
+        "capDescription": "The River owner administers the X Layer DebtTokenWithLz OFT representation, including bridge burn/mint, owner-gated upgrades, and peer/delegate configuration. LayerZero endpoint, messaging, and DVN/executor dependencies remain bridge failure domains; local SatoshiXApp/CDP issuance is not scored here.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 68157538,
+        "sources": [
+          {
+            "label": "satUSD X Layer token",
+            "url": "https://www.oklink.com/xlayer/token/0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+          },
+          {
+            "label": "X Layer JSON-RPC fixed-block observation",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "River bridge documentation",
+            "url": "https://docs.river.inc/products/editor/bridge"
+          }
+        ],
+        "evidence": "At X Layer block 68157538, satUSD owner() returned the River owner EOA and endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c. The verified DebtTokenWithLz source exposes OFT burn/mint, owner-gated UUPS upgrade, setPeer, setDelegate, and configuration paths. This is bridge-route authority; the independent SatoshiXApp/CDP mint path remains in Mint Authority."
+      }
     ]
+
   }
 }

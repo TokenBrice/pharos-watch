@@ -4,10 +4,14 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "sYUSD is Aegis's yield-bearing ERC-4626 wrapper over YUSD. Both Ethereum and BSC deployments are transparent proxies controlled via ProxyAdmin → 3/5 Safe (same Safe address on both chains, v1.4.1, no modules, no guard). Shares minted only by depositing YUSD; base YUSD mint authority is inherited from reviewed yusd-aegis controls.",
+    "summary": "sYUSD is Aegis's yield-bearing ERC-4626 wrapper over chain-local YUSD on Ethereum and BSC. Each local wrapper mints shares only through YUSD-backed deposit/mint accounting; its transparent-proxy replacement path is controlled by a chain-local ProxyAdmin owned by the same 3-of-5 Safe. Durable YUSD issuance is inherited from the reviewed Ethereum and BSC AegisMinting controls, while the parent's LayerZero bridge remains outside this profile.",
     "inheritedFrom": "yusd-aegis",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2"
+      ],
       "proxyAddresses": [
         "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
         "0x24db057b19241eefb9b522e8627c293ed8f93af2"
@@ -18,12 +22,16 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Aegis sYUSD upgrade owner Safe (3-of-5)",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25295176,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25771120,
       "sources": [
         {
           "label": "sYUSD Ethereum proxy (Etherscan)",
           "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+        },
+        {
+          "label": "sYUSD BSC proxy (BscScan)",
+          "url": "https://bscscan.com/address/0x24db057b19241eefb9b522e8627c293ed8f93af2#code"
         },
         {
           "label": "Aegis sYUSD docs",
@@ -35,6 +43,9 @@
       {
         "chain": "ethereum",
         "address": "0x4fe78ef65bd8edded480efab030ba680646503c8",
+        "deploymentRefs": [
+          "ethereum:0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+        ],
         "label": "Aegis sYUSD upgrade owner Safe (3-of-5)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -69,11 +80,89 @@
             "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
           }
         ],
-        "evidence": "At Ethereum block 25295176: EIP-1967 admin slot = ProxyAdmin 0x5b35fca1874083000a6ef64ff27c891f311282a9 (2144 bytes); ProxyAdmin owner() = Safe 0x4fe78ef65bd8edded480efab030ba680646503c8. Safe getOwners()=5 owners, getThreshold()=3. masterCopy=0x41675c (v1.4.1). getModulesPaginated sentinel only (no modules). Guard keccak slot=0x0. BSC deployment 0x24db057b19241eefb9b522e8627c293ed8f93af2: admin slot = ProxyAdmin 0x87696e700eb66a4c807731f68ad33d9dba2036a8; ProxyAdmin owner() = same Safe 0x4fe78ef... (BSC masterCopy=0x29fcb43, v1.4.1, same 5 owners, threshold=3, no modules)."
+        "evidence": "At Ethereum block 25295176: EIP-1967 admin slot = ProxyAdmin 0x5b35fca1874083000a6ef64ff27c891f311282a9; ProxyAdmin owner() = Safe 0x4fe78ef65bd8edded480efab030ba680646503c8. Safe getOwners()=5 owners, getThreshold()=3. masterCopy=0x41675c (v1.4.1). getModulesPaginated sentinel only (no modules). Guard keccak slot=0x0. This is the Ethereum sYUSD wrapper's native upgrade authority; the separately observed BSC ProxyAdmin/Safe path is authored below."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "deploymentRefs": [
+          "bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2"
+        ],
+        "label": "Aegis sYUSD BSC ERC-4626 wrapper share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The BSC sYUSD wrapper mints shares through ERC-4626 deposit/mint flows against YUSD asset 0xab3dbcd9b096c3ff76275038bf58eac10d22c61f and burns shares during withdrawal/cooldown; this local share accounting cannot create base YUSD supply. ADMIN_ROLE/DEFAULT_ADMIN_ROLE controls pause, cooldown, and rescue settings but does not bypass the deposit-bound accounting in the reviewed implementation.",
+        "sources": [
+          {
+            "label": "sYUSD BSC proxy (BscScan)",
+            "url": "https://bscscan.com/address/0x24db057b19241eefb9b522e8627c293ed8f93af2#code"
+          },
+          {
+            "label": "sYUSD BSC implementation (BscScan)",
+            "url": "https://bscscan.com/address/0x42940c329e2a4d0bd0e828b7815c90111065415e#code"
+          },
+          {
+            "label": "Aegis sYUSD documentation",
+            "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116365876,
+        "evidence": "At BSC block 116365876, the proxy returned name() = Staked YUSD, symbol() = sYUSD, 18 decimals, asset() = 0xab3dbcd9b096c3ff76275038bf58eac10d22c61f, implementation 0x42940c329e2a4d0bd0e828b7815c90111065415e, and EIP-1967 admin 0x87696e700eb66a4c807731f68ad33d9dba2036a8. The verified contracts/sYUSD.sol implementation mints shares through local ERC-4626 deposit/mint flows only after the wrapper receives YUSD and burns shares during withdrawal/cooldown. Its ADMIN_ROLE/DEFAULT_ADMIN_ROLE controls pause, cooldown, and rescue surfaces, but no arbitrary or cross-chain mint function is exposed."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x4fe78ef65bd8edded480efab030ba680646503c8",
+        "deploymentRefs": [
+          "bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2"
+        ],
+        "label": "Aegis sYUSD BSC ProxyAdmin owner Safe (3-of-5)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0xa09a1319ace58b466d71377b958248265420cf6c",
+            "0x9bd53dda93630ba2856cbbd376e3ed04d3d23d21",
+            "0x0b241d2f1a060feae6968f7ced3221d4ab29d865",
+            "0x89caffdd8f3ca008aaeaa69ba85332ca85d18d3e",
+            "0x7eff43566b8c7491a39f81e3bf9e4d9b2d212787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 116365876,
+          "source": "onchain"
+        },
+        "capDescription": "Transparent BSC sYUSD proxy; EIP-1967 admin slot = ProxyAdmin 0x87696e700eb66a4c807731f68ad33d9dba2036a8; ProxyAdmin owner() = Safe 0x4fe78ef65bd8edded480efab030ba680646503c8 (3/5). The Safe also holds the BSC wrapper's ADMIN_ROLE, so it can replace local share-mint logic and administer pause, cooldown, and rescue settings; this is native wrapper administration, not bridge control.",
+        "sources": [
+          {
+            "label": "sYUSD BSC proxy (BscScan)",
+            "url": "https://bscscan.com/address/0x24db057b19241eefb9b522e8627c293ed8f93af2#code"
+          },
+          {
+            "label": "sYUSD BSC implementation (BscScan)",
+            "url": "https://bscscan.com/address/0x42940c329e2a4d0bd0e828b7815c90111065415e#code"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116365876,
+        "evidence": "At BSC block 116365876, sYUSD proxy 0x24db057b19241eefb9b522e8627c293ed8f93af2 returned implementation 0x42940c329e2a4d0bd0e828b7815c90111065415e and EIP-1967 admin 0x87696e700eb66a4c807731f68ad33d9dba2036a8; ProxyAdmin owner() returned Safe 0x4fe78ef65bd8edded480efab030ba680646503c8. The Safe read confirmed threshold 3, five owners, no module evidence, and zero guard. The BSC wrapper ADMIN_ROLE is held by this Safe, which can replace the implementation and alter local share accounting, but no bridge capability is evidenced."
       },
       {
         "chain": "ethereum",
         "address": "0xC4Df68e592245cA5202fE8b7C438d2b799820fc2",
+        "deploymentRefs": [
+          "ethereum:0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+        ],
         "label": "Inherited AegisMinting",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -86,7 +175,34 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
           }
         ],
-        "evidence": "Inherited from reviewed yusd-aegis mintAuthority."
+        "evidence": "Inherited from reviewed yusd-aegis mintAuthority. Ethereum sYUSD's durable YUSD exposure follows the Ethereum AegisMinting path at 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2; the separate BSC AegisMinting path is authored below."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x02bf8f0e046F471709E578b1E633077096ce65CF",
+        "deploymentRefs": [
+          "bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2"
+        ],
+        "label": "Inherited AegisMinting (BSC)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "No permanent on-chain supply ceiling; BSC AegisMinting is the sole minter of BSC YUSD and its configurable mint limits are administered by the common Aegis admin Safe.",
+        "sources": [
+          {
+            "label": "BSC AegisMinting verified source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x02bf8f0e046f471709e578b1e633077096ce65cf?fields=all"
+          },
+          {
+            "label": "YUSD BSC token",
+            "url": "https://bscscan.com/address/0xab3dbcd9b096c3ff76275038bf58eac10d22c61f"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116345704,
+        "evidence": "Inherited from reviewed yusd-aegis mintAuthority. At BSC block 116345704, YUSD 0xab3dbcd9b096c3ff76275038bf58eac10d22c61f.minter() = AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF, and AegisMinting.owner()/defaultAdmin() and AegisConfig.owner() returned the common Aegis admin Safe 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8. BSC AegisConfig 0xB9f1E8417ABaedF6Fd838212267cA8260c4ca9da trustedSigner() returned 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e; the native mint(Order,signature) path requires that single signer plus the collateral/order checks. The 600-second, 210,000e18 BSC mint limit is configurable and raiseable, not a permanent supply ceiling. This is inherited native YUSD issuance for the BSC sYUSD wrapper, not a bridge route."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -124,9 +240,9 @@
           "url": "https://paragraph.com/%40aegis-im-2/transparency-dashboard-guide"
         }
       ],
-      "evidence": "Wrapper surface verified at Ethereum block 25295176 and BSC block 103632491: both deployments are transparent proxies controlled by same 3/5 Safe (v1.4.1, no modules, no guard) via per-chain ProxyAdmins. Base YUSD mint authority reviewed under yusd-aegis. Reserve reconciliation: Accountable independently retrieves backing data for inherited YUSD reserves and publishes signed proofs plus a reserve-history series. The primary API returned a signed snapshot at 2026-07-15 21:16:00 UTC, a Merkle update at 21:24:02 UTC, and daily history through 2026-07-15. This recurring third-party evidence supports periodic reconciliation; the conservative authoring does not treat the dashboard's Live label alone as continuous cadence. Neither Aegis's product materials nor the reviewed corporate information established an exact prudential supervisor for the YUSD/sYUSD issuer or product. Reviewed 2026-07-15. 2026-07-21 gap-fill pass: the mintAuthority.upgradeability object was added, structuring this same already-verified transparent-proxy/ProxyAdmin/Safe evidence into canChangeMintLogic/controlRef fields; no new on-chain read was required. Economic-posture fields reviewed 2026-08-15: the local 3-of-5 Safe can replace wrapper mint logic without an enforced timelock; Accountable proofs support periodic attestation-only posture.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Mint Authority review refreshed 2026-08-16. At Ethereum block 25771120, sYUSD proxy 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 returned asset() = YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a, implementation 0xb0c63bb1667b6e9215aee562af2957739b2676fe, and ProxyAdmin 0x5b35fca1874083000a6ef64ff27c891f311282a9. At BSC block 116365876, proxy 0x24db057b19241eefb9b522e8627c293ed8f93af2 returned asset() = YUSD 0xab3dbcd9b096c3ff76275038bf58eac10d22c61f, implementation 0x42940c329e2a4d0bd0e828b7815c90111065415e, and ProxyAdmin 0x87696e700eb66a4c807731f68ad33d9dba2036a8. Both are local ERC-4626 wrappers: verified deposit/mint flows transfer chain-local YUSD before minting shares, and withdrawal/cooldown burns shares; the BSC ADMIN_ROLE/DEFAULT_ADMIN_ROLE surface controls pause, cooldown, and rescue but cannot bypass asset accounting in the reviewed implementation. Each ProxyAdmin is owned by the same Aegis 3-of-5 Safe with five owners, no module evidence, and a zero guard. Durable YUSD issuance is inherited from the reviewed Ethereum and BSC AegisMinting controls; the BSC path requires the single AegisConfig trusted signer and collateral/order checks, and its configurable 600-second, 210,000e18 mint limit is raiseable. Accountable signed reserve proofs support periodic reconciliation and attestation-only supervision. No sYUSD contract exposes LayerZero/OFT, peer, endpoint, lockbox, validator/DVN, cross-chain mint/burn, or rate-limit machinery; the parent YUSD bridge remains under yusd-aegis Bridge Risk.",
+      "reviewer": "Codex mint-bridge boundary migration; syusd-aegis finding",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

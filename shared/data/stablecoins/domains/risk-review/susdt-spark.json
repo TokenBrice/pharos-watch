@@ -6,5 +6,178 @@
     "evidence": "Inferred review retained: spUSDT resolves to Upstream because the wrapper holds USDT as its only reserve, inheriting Tether's blacklist surface.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "spUSDT has two canonical local Spark ERC-4626 issuance routes, on Ethereum and Arbitrum, and no bridge control mints spUSDT representations. The Arbitrum vault's Spark Receiver-to-Executor path is cross-chain governance transport for that local native vault, not a spUSDT bridge. Its collateral is USDT0, whose Ethereum lock-and-mint adapter and Arbitrum OFT/token are a separate LayerZero bridge representation of Tether's Ethereum USDT; the USDT0 owner Safe is therefore a collateral-bridge failure domain rather than a spUSDT issuer or minter. LayerZero DVN configuration and rate limits were not independently enumerated, so the collateral dependency remains external-lock-mint and no narrower tier is claimed.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos mint/bridge boundary migration; verified susdt-spark research finding",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Spark Vaults V2 cross-chain governance",
+        "slug": "spark-vaults-v2",
+        "url": "https://docs.spark.fi/integrators/spark-vaults-v2",
+        "bridgeTypes": [
+          "cross-chain-governance"
+        ],
+        "note": "Both authored spUSDT deployments are native local share issuance. The Arbitrum Spark Receiver 0x212871A1C235892F86cAB30E937e18c94AEd8474 targets Spark Executor 0x65d946e533748a998b1f0e430803e39a6388f7a1 and resolves its L1 authority to SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4; this governance transport administers the local vault and does not mint a spUSDT representation."
+      },
+      {
+        "source": "docs",
+        "name": "USDT0 LayerZero OFT collateral route",
+        "slug": "usdt0-layerzero-oft",
+        "url": "https://docs.usdt0.to/technical-documentation/deployments",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint",
+          "external-lock-mint"
+        ],
+        "note": "USDT0 is the Arbitrum spUSDT vault's collateral dependency, not a spUSDT representation. The reviewed route is Ethereum OFT Adapter 0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee to Arbitrum token 0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9 and OFT 0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92, with common owner Safe 0x4DFF9b5B0143E642A3F63A5BcF2d1C328E600BF8."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spark Savings product documentation",
+        "url": "https://docs.spark.fi/products/spark-savings"
+      },
+      {
+        "label": "Spark Vaults V2 integration documentation",
+        "url": "https://docs.spark.fi/integrators/spark-vaults-v2"
+      },
+      {
+        "label": "Official Spark address registry",
+        "url": "https://github.com/sparkdotfi/spark-address-registry"
+      },
+      {
+        "label": "Verified Ethereum SparkVault V2 implementation",
+        "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+      },
+      {
+        "label": "Verified Arbitrum SparkVault V2 implementation",
+        "url": "https://arbitrum.blockscout.com/address/0x282dafe8b97e2db5053761a4601ab2e1cb976318?tab=contract"
+      },
+      {
+        "label": "Verified Arbitrum Spark Executor",
+        "url": "https://arbitrum.blockscout.com/address/0x65d946e533748a998b1f0e430803e39a6388f7a1?tab=contract"
+      },
+      {
+        "label": "Verified Arbitrum Spark Receiver",
+        "url": "https://arbitrum.blockscout.com/address/0x212871a1c235892f86cab30e937e18c94aed8474?tab=contract"
+      },
+      {
+        "label": "USDT0 deployment documentation",
+        "url": "https://docs.usdt0.to/technical-documentation/deployments"
+      },
+      {
+        "label": "USDT0 technical documentation",
+        "url": "https://docs.usdt0.to/"
+      },
+      {
+        "label": "Verified Arbitrum USDT0 token",
+        "url": "https://arbitrum.blockscout.com/address/0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9?tab=contract"
+      },
+      {
+        "label": "Verified Arbitrum USDT0 OFT",
+        "url": "https://arbitrum.blockscout.com/address/0x14e4a1b13bf7f943c8ff7c51fb60fa964a298d92?tab=contract"
+      },
+      {
+        "label": "Arbitrum RPC fixed-block reads",
+        "url": "https://arb1.arbitrum.io/rpc"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xe2e7a17dff93280dec073c995595155283e3c372",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe2e7a17dff93280dec073c995595155283e3c372",
+        "protocol": "Spark native savings vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical Ethereum spUSDT issuance. At Ethereum block 25771061 (2026-08-16 23:57:35 UTC), the vault implementation was 0x1b992302652a92611dcd5090d1cb388c6377f455, the EIP-1967 admin slot was zero, asset() returned USDT 0xdac17f958d2ee523a2206206994597c13d831ec7, and verified SparkVault deposit() and mint() pulled the underlying before minting shares after the deposit-cap check. No bridge control carries the spUSDT claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771061,
+        "sources": [
+          {
+            "label": "Spark Savings Ethereum vault",
+            "url": "https://eth.blockscout.com/address/0xe2e7a17dff93280dec073c995595155283e3c372?tab=contract"
+          },
+          {
+            "label": "Verified Ethereum SparkVault V2 implementation",
+            "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+          },
+          {
+            "label": "Ethereum RPC fixed-block reads",
+            "url": "https://ethereum.publicnode.com/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x45d91340b3b7b96985a72b5c678f7d9e8d664b62",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x45d91340b3b7b96985a72b5c678f7d9e8d664b62",
+        "protocol": "Spark native savings vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical Arbitrum spUSDT issuance. At Arbitrum block 495303977 (2026-08-16 00:01:22 UTC), the vault implementation was 0x282dafe8b97e2db5053761a4601ab2e1cb976318, the EIP-1967 admin slot was zero, asset() returned USDT0 0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9, and the deposit cap was 250,000,000 USDT0 (6 decimals). DEFAULT_ADMIN_ROLE was Spark Executor 0x65d946e533748a998b1f0e430803e39a6388f7a1; SETTER_ROLE and TAKER_ROLE were reserve-liquidity/rate controls, not arbitrary share minters. At block 495305504, Receiver 0x212871A1C235892F86cAB30E937e18c94AEd8474 returned L1 authority SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4 and target Executor 0x65d946e533748a998b1f0e430803e39a6388f7a1; Executor delay() was 0 with a 604800-second grace period, not a timelock. USDT0's LayerZero route is a collateral dependency and not a bridged spUSDT representation; no bridge control carries the spUSDT claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x65d946e533748a998b1f0e430803e39a6388f7a1",
+        "failureDomainKeys": [
+          "protocol:spark-cross-chain-governance",
+          "contract:arbitrum:0x65d946e533748a998b1f0e430803e39a6388f7a1",
+          "contract:arbitrum:0x212871a1c235892f86cab30e937e18c94aed8474",
+          "contract:ethereum:0x3300f198988e4c9c63f75df86de36421f06af8c4"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495305504,
+        "sources": [
+          {
+            "label": "Official Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          },
+          {
+            "label": "Verified Arbitrum SparkVault V2 implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x282dafe8b97e2db5053761a4601ab2e1cb976318?tab=contract"
+          },
+          {
+            "label": "Verified Arbitrum Spark Executor",
+            "url": "https://arbitrum.blockscout.com/address/0x65d946e533748a998b1f0e430803e39a6388f7a1?tab=contract"
+          },
+          {
+            "label": "Verified Arbitrum Spark Receiver",
+            "url": "https://arbitrum.blockscout.com/address/0x212871a1c235892f86cab30e937e18c94aed8474?tab=contract"
+          },
+          {
+            "label": "USDT0 deployment documentation",
+            "url": "https://docs.usdt0.to/technical-documentation/deployments"
+          },
+          {
+            "label": "Verified Arbitrum USDT0 token",
+            "url": "https://arbitrum.blockscout.com/address/0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9?tab=contract"
+          },
+          {
+            "label": "Verified Arbitrum USDT0 OFT",
+            "url": "https://arbitrum.blockscout.com/address/0x14e4a1b13bf7f943c8ff7c51fb60fa964a298d92?tab=contract"
+          },
+          {
+            "label": "Arbitrum RPC fixed-block reads",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ]
+      }
+    ]
   }
 }

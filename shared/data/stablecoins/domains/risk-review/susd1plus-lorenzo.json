@@ -43,19 +43,93 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "sUSD1+ has one tracked BNB Chain deployment and is modeled as a staked wrapper of USD1+. No separate bridge route for the wrapper was verified, so the secondary row is triaged as single-chain/native.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "verified",
-    "sources": [
+    "tier": "opaque-or-unknown",
+    "summary": "sUSD1+ has one reviewed native BNB Chain strategy-vault deployment. Lorenzo's official bridge UI maps sUSD1+ to an Ethereum (chain ID 1) ↔ BNB Chain (chain ID 56) Interport route, but no Ethereum token contract or bridge escrow, liquidity, mint/burn authority, caps, pause controls, or peers were verified. The Interport path remains an unresolved route lead; no bridge controller is inferred or counted as native Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
+    "confidence": "manual-review",
+    "protocols": [
       {
-        "label": "Lorenzo docs",
-        "url": "https://lorenzo-protocol.gitbook.io/docs"
+        "source": "issuer",
+        "name": "Lorenzo official sUSD1+ bridge selection",
+        "url": "https://app.lorenzo-protocol.xyz/bridge",
+        "bridgeTypes": [
+          "unknown"
+        ],
+        "note": "The official Lorenzo bridge page lists sUSD1+ and warns that cross-chain operations redirect externally; it does not expose the Ethereum token or bridge contracts."
       },
       {
-        "label": "Lorenzo GitHub",
-        "url": "https://github.com/Lorenzo-Protocol/"
+        "source": "manual",
+        "name": "Interport sUSD1+ route lead",
+        "url": "https://app.interport.fi/bridge/1/56/sUSD1+/sUSD1+",
+        "bridgeTypes": [
+          "unknown"
+        ],
+        "note": "The route URL supplied by Lorenzo identifies Ethereum chain ID 1 ↔ BNB Chain chain ID 56 and the sUSD1+ token label, but it is a bridge UI rather than verified contract or authority evidence."
+      },
+      {
+        "source": "manual",
+        "name": "Lorenzo app bundle sUSD1+ route mapping",
+        "url": "https://app.lorenzo-protocol.xyz/_next/static/chunks/pages/_app-b4d9e8782993d9b8.js",
+        "bridgeTypes": [
+          "unknown"
+        ],
+        "note": "The current deployed bundle maps sUSD1+ to the Interport Ethereum-to-BNB route; no remote token, escrow, liquidity, or mint authority is identified."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Lorenzo official bridge page",
+        "url": "https://app.lorenzo-protocol.xyz/bridge"
+      },
+      {
+        "label": "Lorenzo current app bundle",
+        "url": "https://app.lorenzo-protocol.xyz/_next/static/chunks/pages/_app-b4d9e8782993d9b8.js"
+      },
+      {
+        "label": "Interport sUSD1+ route",
+        "url": "https://app.interport.fi/bridge/1/56/sUSD1+/sUSD1+"
+      },
+      {
+        "label": "BscScan sUSD1+ proxy",
+        "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b#code"
+      },
+      {
+        "label": "BscScan current sUSD1+ implementation",
+        "url": "https://bscscan.com/address/0xaafe784a51f119d38e57717fd8a00f844bd86f13#code"
+      },
+      {
+        "label": "Lorenzo Protocol repository",
+        "url": "https://github.com/Lorenzo-Protocol/lorenzo"
+      }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0x4f2760b32720f013e900dc92f65480137391199b",
+        "destinationChain": "bsc",
+        "canonicalChain": "bsc",
+        "contractAddress": "0x4f2760b32720f013e900dc92f65480137391199b",
+        "protocol": "Lorenzo sUSD1+ native strategy-vault share token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified at BNB Chain block 116357653 on 2026-08-16: the only authored deployment is the Lorenzo sUSD1+ strategy-vault share token proxy; underlying() returns BSC USD1 and the wrapper is locally manager-controlled. No bridge endpoint, remote peer, escrow, or bridge-specific mint controller was verified on this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116357653,
+        "sources": [
+          {
+            "label": "BscScan sUSD1+ proxy",
+            "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b#code"
+          },
+          {
+            "label": "BscScan current sUSD1+ implementation",
+            "url": "https://bscscan.com/address/0xaafe784a51f119d38e57717fd8a00f844bd86f13#code"
+          }
+        ]
       }
     ]
   }

@@ -17,30 +17,39 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "canonical-rollup-bridge",
-    "summary": "BRLV has a Base canonical deployment and an Ethereum bridged variant in the existing on-chain review. The route is limited to Base/Ethereum and maps to the Base canonical bridge family, so it is scored as canonical-rollup-bridge.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "tier": "issuer-native-burn-mint",
+    "summary": "BRLV is natively issued on Base. Ethereum bridgedBRLV is an issuer-operated burn/mint representation coordinated by an off-chain relayer, while the Base BRLVCanonicalGateway is canonical-side bridge machinery that tracks totalBridgedSupply, validates remote domains and replay hashes, and requests remote mints. No decentralized Base rollup bridge or proof system is involved; the relayer, gateway roles, UUPS administrators, and representation controls remain scoreable here.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration; verified finding 2026-08-16",
     "confidence": "verified",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "Base Canonical",
-        "slug": "base",
-        "url": "https://l2beat.com/interop/protocols/base",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
-      }
-    ],
     "sources": [
       {
-        "label": "Crown BRLV docs",
-        "url": "https://docs.crown-brlv.com/whitepaper"
+        "label": "Crown BRLV whitepaper",
+        "url": "https://docs.crown-brlv.com/whitepaper.md"
       },
       {
-        "label": "L2BEAT Base Canonical",
-        "url": "https://l2beat.com/interop/protocols/base"
+        "label": "Verified Base BRLV implementation",
+        "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
+      },
+      {
+        "label": "Verified Base BRLVCanonicalGateway implementation",
+        "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
+      },
+      {
+        "label": "Verified Base BRLVRewards implementation",
+        "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
+      },
+      {
+        "label": "Verified Ethereum bridgedBRLV implementation",
+        "url": "https://eth.blockscout.com/address/0x57323db6d883811c17877d075e05ad9e2ed41519"
+      },
+      {
+        "label": "Base gateway RoleGranted history",
+        "url": "https://base.blockscout.com/api/v2/addresses/0x7e0d3f1a390209d87d9e1425d03066eb567a9844/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+      },
+      {
+        "label": "Ethereum bridgedBRLV RoleGranted history",
+        "url": "https://eth.blockscout.com/api/v2/addresses/0xd7ca0e2c36d647446b782d1b72308e598373e2f5/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
       }
     ],
     "routes": [
@@ -55,20 +64,23 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on base at block 48862878: BRLV token 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 (symbol BRLV, EIP-1967 proxy). The verified mint-authority review confirms BRLV is Crown-issued with MINTER_ROLE held by Crown's gasless relay EOA and gateway contracts on this chain. Issuer-minted natively; no third-party bridge mints this deployment.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "observedBlock": 48862878,
+        "reviewNote": "Base is the canonical BRLV issuance deployment. The verified token is an ERC-4626-style wrapper over BRLY, and its issuer-facing mint path creates the native Base liability. BRLVCanonicalGateway is canonical-side bridge machinery for remote burn/mint accounting, not an independent issuance chain; its controls are represented below.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "canonicalChain": "base",
+        "observedBlock": 50068610,
         "sources": [
           {
-            "label": "BRLV on base explorer (verified 2026-07-20)",
-            "url": "https://basescan.org/address/0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+            "label": "BRLV Base proxy",
+            "url": "https://basescan.org/address/0xd2047ebdb205ee6862b69ae9fb3501652cc97d36#code"
           },
           {
-            "label": "Crown BRLV",
-            "url": "https://www.crown.finance/"
+            "label": "Crown BRLV whitepaper",
+            "url": "https://docs.crown-brlv.com/whitepaper.md"
+          },
+          {
+            "label": "Verified Base BRLV implementation",
+            "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
           }
         ]
       },
@@ -76,29 +88,450 @@
         "id": "ethereum:0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
         "destinationChain": "ethereum",
         "contractAddress": "0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
-        "protocol": "Crown issuer-native BRLV",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "protocol": "Crown issuer-operated bridgedBRLV",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on ethereum at block 25570988: BRLV token 0xd7ca0e2c36d647446b782d1b72308e598373e2f5 (symbol BRLV, EIP-1967 proxy). The verified mint-authority review confirms BRLV is Crown-issued with MINTER_ROLE held by Crown's gasless relay EOA and gateway contracts on this chain. Issuer-minted natively; no third-party bridge mints this deployment.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "observedBlock": 25570988,
+        "reviewNote": "Ethereum is not an independent native BRLV issuer. The verified bridgedBRLV implementation is a remote-chain representation coordinated with Base by an off-chain relayer; mint() is gated by MINTER_ROLE and checks the canonical domain and processed canonical transaction hash. Its burn/mint and administrator controls are represented below.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "sourceChain": "base",
+        "canonicalChain": "base",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x039b419dafc801c3e375046efabd00813b0c48b6",
+        "failureDomainKeys": [
+          "protocol:crown-off-chain-relayer",
+          "eoa:ethereum:0x039b419dafc801c3e375046efabd00813b0c48b6"
+        ],
+        "observedBlock": 25771220,
         "sources": [
           {
-            "label": "BRLV on ethereum explorer (verified 2026-07-20)",
-            "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5"
+            "label": "BRLV Ethereum bridgedBRLV proxy",
+            "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5#code"
           },
           {
-            "label": "Crown BRLV",
-            "url": "https://www.crown.finance/"
+            "label": "Verified Ethereum bridgedBRLV implementation",
+            "url": "https://eth.blockscout.com/address/0x57323db6d883811c17877d075e05ad9e2ed41519"
+          },
+          {
+            "label": "Crown BRLV whitepaper",
+            "url": "https://docs.crown-brlv.com/whitepaper.md"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "brlv-base-canonical-gateway",
+        "label": "BRLV Base MINTER_ROLE — BRLVCanonicalGateway proxy",
+        "routeRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x7e0d3f1a390209d87d9e1425d03066eb567a9844",
+        "failureDomainKeys": [
+          "contract:base:0x7e0d3f1a390209d87d9e1425d03066eb567a9844",
+          "protocol:crown-off-chain-relayer"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The gateway burns canonical BRLV collateral on remote burns and tracks totalBridgedSupply; no separate escrowed bridge representation is used on Base.",
+          "trustedPeerOrRemote": "bridgedMint and bridgedBurn validate configured remote domains and replay hashes before cross-chain accounting and relayer requests.",
+          "rateLimits": "No separate aggregate or per-call bridge rate limit was identified; totalBridgedSupply and availableSurplus are route-accounting invariants, not rate limits.",
+          "pausersAdminsUpgraders": "The gateway is a UUPS proxy; its default admin can grant bridge roles and UPGRADE_ROLE immediately."
+        },
+        "capDescription": "The gateway can request remote representation mints and burn canonical collateral; totalBridgedSupply and availableSurplus provide supply-conserving route accounting but do not make this native Mint Authority.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068610,
+        "sources": [
+          {
+            "label": "BRLVCanonicalGateway Base proxy",
+            "url": "https://basescan.org/address/0x7e0d3f1a390209d87d9e1425d03066eb567a9844#code"
+          },
+          {
+            "label": "Verified Base BRLVCanonicalGateway implementation",
+            "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
+          },
+          {
+            "label": "Base gateway RoleGranted history",
+            "url": "https://base.blockscout.com/api/v2/addresses/0x7e0d3f1a390209d87d9e1425d03066eb567a9844/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "At Base block 50068610, the gateway proxy resolves to verified BRLVCanonicalGateway implementation 0xc25f26268c634057611151e76b4e8a3b51a35688. Its bridgedMint path validates configured remote domains, calls BRLV mintAssets, increments totalBridgedSupply, and emits an off-chain relayer request; bridgedBurn validates the remote domain and replay hash, decrements totalBridgedSupply, and calls BRLV burnAssets. This is canonical-side bridge machinery, not an independent native issuance chain."
+      },
+      {
+        "id": "brlv-base-canonical-gateway-default-admin",
+        "label": "BRLVCanonicalGateway DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0xc2f5fc",
+        "routeRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xc2f5fc350f579b8990180dab115ab6e0a3e118c3",
+        "failureDomainKeys": [
+          "eoa:base:0xc2f5fc350f579b8990180dab115ab6e0a3e118c3",
+          "contract:base:0x7e0d3f1a390209d87d9e1425d03066eb567a9844"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "DEFAULT_ADMIN_ROLE can manage the gateway CONFIG_ROLE that validates configured remote domains.",
+          "pausersAdminsUpgraders": "At Base block 50068610, the EOA held DEFAULT_ADMIN_ROLE; getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE, so it can grant UPGRADE_ROLE, PAUSE_ROLE, or bridge roles without a timelock and replace the gateway implementation."
+        },
+        "capDescription": "The zero-delay gateway default-admin path can grant bridge mint/burn, configuration, pause, and upgrade roles; it can therefore raise or replace the effective bridge route controls.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068610,
+        "sources": [
+          {
+            "label": "BRLVCanonicalGateway Base proxy",
+            "url": "https://basescan.org/address/0x7e0d3f1a390209d87d9e1425d03066eb567a9844#code"
+          },
+          {
+            "label": "Verified Base BRLVCanonicalGateway implementation",
+            "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
+          }
+        ],
+        "evidence": "At Base block 50068610, hasRole(DEFAULT_ADMIN_ROLE, 0xc2f5fc350f579b8990180dab115ab6e0a3e118c3) returned true, hasRole(UPGRADE_ROLE, that EOA) returned false, getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE, and eth_getCode returned 0x. The verified gateway implementation's _authorizeUpgrade requires UPGRADE_ROLE, so this zero-delay EOA can grant that role and replace the bridge gateway implementation; the same administrator can grant the gateway's CONFIG_ROLE, MINTER_ROLE, BURNER_ROLE, and pause-related roles."
+      },
+      {
+        "id": "brlv-base-canonical-gateway-config-role",
+        "label": "BRLVCanonicalGateway CONFIG_ROLE holder",
+        "routeRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "capabilities": [
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x8fc7d0ca2e803c8c0737bb49da1d2623bbd76305",
+        "failureDomainKeys": [
+          "eoa:base:0x8fc7d0ca2e803c8c0737bb49da1d2623bbd76305",
+          "contract:base:0x7e0d3f1a390209d87d9e1425d03066eb567a9844"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "CONFIG_ROLE can alter the configured remote domains used by bridgedMint and bridgedBurn.",
+          "pausersAdminsUpgraders": "The role holder is administered by the gateway DEFAULT_ADMIN_ROLE."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068610,
+        "sources": [
+          {
+            "label": "Base gateway RoleGranted history",
+            "url": "https://base.blockscout.com/api/v2/addresses/0x7e0d3f1a390209d87d9e1425d03066eb567a9844/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Verified Base BRLVCanonicalGateway implementation",
+            "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
+          }
+        ],
+        "evidence": "Current Base reads at block 50068610 returned CONFIG_ROLE for 0x8fc7d0ca2e803c8c0737bb49da1d2623bbd76305. The role controls the gateway's configured remote domains and is part of the issuer-operated bridge route."
+      },
+      {
+        "id": "brlv-base-canonical-gateway-minter-role",
+        "label": "BRLVCanonicalGateway MINTER_ROLE holder",
+        "routeRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x8bec53b3bd5590f93fba62fcdbce14aab411d8624",
+        "failureDomainKeys": [
+          "eoa:base:0x8bec53b3bd5590f93fba62fcdbce14aab411d8624",
+          "contract:base:0x7e0d3f1a390209d87d9e1425d03066eb567a9844"
+        ],
+        "authorityType": "eoa",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068610,
+        "sources": [
+          {
+            "label": "Base gateway RoleGranted history",
+            "url": "https://base.blockscout.com/api/v2/addresses/0x7e0d3f1a390209d87d9e1425d03066eb567a9844/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Verified Base BRLVCanonicalGateway implementation",
+            "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
+          }
+        ],
+        "evidence": "Current Base hasRole(MINTER_ROLE, 0x8bec53b3bd5590f93fba62fcdbce14aab411d8624) returned true at block 50068610. This role is a bridge-route minter on BRLVCanonicalGateway, not an independent native BRLV issuance authority."
+      },
+      {
+        "id": "brlv-base-canonical-gateway-burner-role",
+        "label": "BRLVCanonicalGateway BURNER_ROLE holder",
+        "routeRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "capabilities": [
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xd5fe1b38b1141202b54f6e294886a98438ca8dc4",
+        "failureDomainKeys": [
+          "eoa:base:0xd5fe1b38b1141202b54f6e294886a98438ca8dc4",
+          "contract:base:0x7e0d3f1a390209d87d9e1425d03066eb567a9844"
+        ],
+        "authorityType": "eoa",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50068610,
+        "sources": [
+          {
+            "label": "Base gateway RoleGranted history",
+            "url": "https://base.blockscout.com/api/v2/addresses/0x7e0d3f1a390209d87d9e1425d03066eb567a9844/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Verified Base BRLVCanonicalGateway implementation",
+            "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
+          }
+        ],
+        "evidence": "Current Base hasRole(BURNER_ROLE, 0xd5fe1b38b1141202b54f6e294886a98438ca8dc4) returned true at block 50068610. This role controls the gateway's bridge-burn path and remains Bridge Risk evidence."
+      },
+      {
+        "id": "brlv-base-rewards-remote-claims",
+        "label": "BRLVRewards remote-domain bridgedSharesMint branch",
+        "routeRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
+        "failureDomainKeys": [
+          "contract:base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
+          "protocol:crown-off-chain-relayer"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Remote-domain reward claims call gateway.bridgedSharesMint; the gateway validates remote domains and tracks totalBridgedSupply for the bridge route.",
+          "caps": "Canonical-domain reward claims call brlv.mintShares against gateway.availableSurplus(); the remote branch is bridge machinery and is not independent native issuance.",
+          "pausersAdminsUpgraders": "BRLVRewards is a UUPS proxy; its active UPGRADE_ROLE and DEFAULT_ADMIN_ROLE controllers are recorded as separate Bridge Risk controls."
+        },
+        "capDescription": "The BRLVRewards remote branch can mint bridge representations through the canonical gateway; its canonical-domain surplus-bounded branch remains in Mint Authority.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 48678900,
+        "sources": [
+          {
+            "label": "BRLVRewards Base proxy",
+            "url": "https://basescan.org/address/0x5315c03f8cf027d1b67dac72ef9eec8988d80f88#code"
+          },
+          {
+            "label": "Verified Base BRLVRewards implementation",
+            "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
+          }
+        ],
+        "evidence": "The verified BRLVRewards source distinguishes canonical-domain claims, which call brlv.mintShares against gateway.availableSurplus(), from remote-domain claims, which call gateway.bridgedSharesMint. The remote branch is a bridge representation capability and is retained here separately from the native canonical reward control."
+      },
+      {
+        "id": "brlv-base-rewards-upgrade-role",
+        "label": "BRLVRewards active UPGRADE_ROLE - EOA 0x548634",
+        "routeRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x548634f237eae194f5e20982c9819d917fe17f04",
+        "failureDomainKeys": [
+          "eoa:base:0x548634f237eae194f5e20982c9819d917fe17f04",
+          "contract:base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The active UPGRADE_ROLE can replace the BRLVRewards UUPS implementation without a timelock, including the remote-domain bridgedSharesMint branch."
+        },
+        "observedAt": "2026-07-15",
+        "observedBlock": 48678900,
+        "sources": [
+          {
+            "label": "BRLVRewards Base proxy",
+            "url": "https://basescan.org/address/0x5315c03f8cf027d1b67dac72ef9eec8988d80f88#code"
+          },
+          {
+            "label": "Verified Base BRLVRewards implementation",
+            "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
+          }
+        ],
+        "evidence": "At Base block 48678900, hasRole(UPGRADE_ROLE, 0x548634f237eae194f5e20982c9819d917fe17f04) returned true and eth_getCode returned 0x. The zero-admin-slot rewards proxy resolves to implementation 0x6818b4b2c3cc572726aed81a836b5e069519ad0a, whose verified _authorizeUpgrade requires UPGRADE_ROLE, giving this EOA an immediate upgrade path over the remote reward bridge branch as well as the canonical reward module."
+      },
+      {
+        "id": "brlv-base-rewards-default-admin",
+        "label": "BRLVRewards DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0x7ecf4c",
+        "routeRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
+        "failureDomainKeys": [
+          "eoa:base:0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
+          "contract:base:0x5315c03f8cf027d1b67dac72ef9eec8988d80f88"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE is the BRLVRewards UPGRADE_ROLE administrator; it can grant or revoke the zero-delay upgrade role that replaces the remote reward bridge branch."
+        },
+        "observedAt": "2026-07-15",
+        "observedBlock": 48678900,
+        "sources": [
+          {
+            "label": "BRLVRewards Base proxy",
+            "url": "https://basescan.org/address/0x5315c03f8cf027d1b67dac72ef9eec8988d80f88#code"
+          },
+          {
+            "label": "Verified Base BRLVRewards implementation",
+            "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
+          }
+        ],
+        "evidence": "At Base block 48678900, hasRole(DEFAULT_ADMIN_ROLE, 0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f) returned true and eth_getCode returned 0x. getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE; therefore this zero-delay EOA can grant or revoke the rewards implementation's UPGRADE_ROLE, independently of the current 0x548634 holder, including over the remote bridge branch."
+      },
+      {
+        "id": "brlv-ethereum-bridged-minter",
+        "label": "BRLV Ethereum bridgedBRLV MINTER_ROLE — off-chain relayer EOA 0x039b41",
+        "routeRefs": [
+          "ethereum:0xd7ca0e2c36d647446b782d1b72308e598373e2f5"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x039b419dafc801c3e375046efabd00813b0c48b6",
+        "failureDomainKeys": [
+          "protocol:crown-off-chain-relayer",
+          "eoa:ethereum:0x039b419dafc801c3e375046efabd00813b0c48b6"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "bridgedBRLV mint() requires the supplied canonical domain to equal the configured Base canonical domain and rejects a processed canonical transaction hash.",
+          "rateLimits": "The verified mint path has no aggregate or per-call mint ceiling; canonical-domain and replay checks are the on-chain route constraints.",
+          "pausersAdminsUpgraders": "The relayer is an EIP-7702 delegated EOA; DEFAULT_ADMIN_ROLE can grant or revoke its MINTER_ROLE."
+        },
+        "capDescription": "The Ethereum representation minter is constrained by canonical-domain and processed-transaction checks, not by a reserve or per-call cap.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771220,
+        "sources": [
+          {
+            "label": "BRLV Ethereum bridgedBRLV proxy",
+            "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5#code"
+          },
+          {
+            "label": "Verified Ethereum bridgedBRLV implementation",
+            "url": "https://eth.blockscout.com/address/0x57323db6d883811c17877d075e05ad9e2ed41519"
+          },
+          {
+            "label": "Ethereum bridgedBRLV RoleGranted history",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xd7ca0e2c36d647446b782d1b72308e598373e2f5/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "At Ethereum block 25771220, the bridgedBRLV proxy resolves to implementation 0x57323db6d883811c17877d075e05ad9e2ed41519 and MINTER_ROLE is held by relayer EOA 0x039b419dafc801c3e375046efabd00813b0c48b6. The verified mint function checks the canonical domain and processed canonical transaction hash but is not an Ethereum native reserve/deposit mint."
+      },
+      {
+        "id": "brlv-ethereum-bridged-burner",
+        "label": "BRLV Ethereum bridgedBRLV BURNER_ROLE holder",
+        "routeRefs": [
+          "ethereum:0xd7ca0e2c36d647446b782d1b72308e598373e2f5"
+        ],
+        "capabilities": [
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x161247c7c1b01715b1a3cc32f5036999c559a754",
+        "failureDomainKeys": [
+          "eoa:ethereum:0x161247c7c1b01715b1a3cc32f5036999c559a754",
+          "protocol:crown-off-chain-relayer"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "BURNER_ROLE is administered by the Ethereum bridgedBRLV DEFAULT_ADMIN_ROLE."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771220,
+        "sources": [
+          {
+            "label": "Ethereum bridgedBRLV RoleGranted history",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xd7ca0e2c36d647446b782d1b72308e598373e2f5/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Verified Ethereum bridgedBRLV implementation",
+            "url": "https://eth.blockscout.com/address/0x57323db6d883811c17877d075e05ad9e2ed41519"
+          }
+        ],
+        "evidence": "Ethereum RoleGranted history and current reads at block 25771220 show BURNER_ROLE held by 0x161247c7c1b01715b1a3cc32f5036999c559a754. This is the burn side of the Ethereum bridgedBRLV representation route."
+      },
+      {
+        "id": "brlv-ethereum-bridged-default-admin",
+        "label": "BRLV Ethereum bridgedBRLV DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0x239d4a",
+        "routeRefs": [
+          "ethereum:0xd7ca0e2c36d647446b782d1b72308e598373e2f5"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x239d4a24efa36a8987b86184c080ace26b3a8968",
+        "failureDomainKeys": [
+          "eoa:ethereum:0x239d4a24efa36a8987b86184c080ace26b3a8968",
+          "protocol:crown-off-chain-relayer"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "DEFAULT_ADMIN_ROLE controls the bridgedBRLV canonical-domain configuration used by the off-chain relayer route.",
+          "rateLimits": "No aggregate or per-call mint ceiling is enforced by the verified bridgedBRLV mint path.",
+          "pausersAdminsUpgraders": "At Ethereum block 25771220, DEFAULT_ADMIN_ROLE is held by 0x239d4a; it can grant UPGRADE_ROLE, PAUSE_ROLE, BLOCKLIST_ROLE, MINTER_ROLE, or BURNER_ROLE immediately. No current UPGRADE_ROLE or PAUSE_ROLE holder was observed, so their absence is not a durable control guarantee."
+        },
+        "capDescription": "The zero-delay default administrator can replace bridgedBRLV implementation logic or grant the representation's mint, burn, pause, and upgrade roles; the route has no reserve or per-call mint cap.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771220,
+        "sources": [
+          {
+            "label": "BRLV Ethereum bridgedBRLV proxy",
+            "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5#code"
+          },
+          {
+            "label": "Verified Ethereum bridgedBRLV implementation",
+            "url": "https://eth.blockscout.com/address/0x57323db6d883811c17877d075e05ad9e2ed41519"
+          },
+          {
+            "label": "Ethereum bridgedBRLV RoleGranted history",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xd7ca0e2c36d647446b782d1b72308e598373e2f5/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "At Ethereum block 25771220, the bridgedBRLV proxy resolves to implementation 0x57323db6d883811c17877d075e05ad9e2ed41519, with MINTER_ROLE held by relayer EOA 0x039b419dafc801c3e375046efabd00813b0c48b6, BURNER_ROLE held by 0x161247c7c1b01715b1a3cc32f5036999c559a754, and DEFAULT_ADMIN_ROLE held by 0x239d4a24efa36a8987b86184c080ace26b3a8968. The default admin can grant UPGRADE_ROLE, PAUSE_ROLE, or BLOCKLIST_ROLE immediately; this is an off-chain relayer/common-admin bridge failure domain, not an Ethereum native mint authority."
       }
     ]
   }

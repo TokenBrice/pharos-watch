@@ -1,5 +1,26 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_MINT_BRIDGE_SCOPE_BOUNDARY: MethodologyChangelogEntry = {
+  version: "9.23",
+  title: "Mint authority follows native issuance; bridge controls stay route-scoped",
+  date: "2026-08-17",
+  effectiveAt: 1786924800,
+  summary:
+    "Economic Control now binds Mint Authority controls to reviewed canonical native-issuance deployments and compiles structured bridge controls separately for each referenced route. A controller may operate in both domains, but a representation or transfer-rail capability can no longer become global native-mint risk.",
+  impact: [
+    "Active multi-deployment Mint Authority controls and mutable mint-logic upgrade paths name their reviewed native deployments; inherited or external-only products require an explicit reviewed no-local-issuance exception",
+    "Bridge mint/burn, adapters, lockboxes or escrow, messaging, peer configuration, limits, upgrades, validators, pause, and administrators are authored as structured route-scoped controls, while conservative route-derived controls remain when structured evidence is absent",
+    "The ownership gate blocks active bridge vocabulary in Mint Authority, invalid or non-native deployment references, and duplicate cross-domain bridge capabilities instead of silently filtering them during compilation",
+    "A structured bridge control covering a reviewed bridge- or wrapped-representation route must name that route's bridge-mint holder; otherwise the ownership gate fails closed, because leaving the route unreferenced is what preserves the conservative route-derived mint overlay",
+    "Common-mode evidence for a shared critical control identity is now resolved per receiving asset: a reviewed bounded-unknown member stays measured-adverse, a missing or stale member remains an integration gap, and evidence confidence is high only when the receiving asset's own member facts are known. Previously one bounded-unknown member released the shared-critical-control ceiling for peers whose own facts were known, so weaker evidence could raise a published score",
+    "USDai's satellite OToken administrator exposure remains scoreable under Bridge Risk but no longer classifies canonical Arbitrum issuance as unbounded-or-compromised; the corrected scope moved USDai from D to B",
+    "Across the 375 scoreable assets, 159 changed on score-material terms: 16 improved and 36 worsened, with the rest moving only posture, bridge tier, or compiled capabilities. The distribution is net more conservative, the largest moves being downgrades of 33, 23, and 22 points where satellite bridge machinery had been masking canonical or route risk",
+    "Pillar weights, bounded aggregation, caps, grade thresholds, and non-bridge Mint Authority scoring are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_RESERVE_SLICE_IDENTITY: MethodologyChangelogEntry = {
   version: "9.21",
   title: "Reserve classifications follow source identity, not daily weights",

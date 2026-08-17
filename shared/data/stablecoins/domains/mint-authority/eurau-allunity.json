@@ -4,9 +4,17 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "EURAU uses the same uncapped EOA minter and EOA DEFAULT_ADMIN across all six EVM deployments; the admin can grant roles, pause, and immediately upgrade the UUPS logic. Solana issuance is delegated to an AllUnity program-controlled Token-2022 mint authority, while AllUnity's regulated issuer backend controls the off-chain issuance workflow and other native lanes. The previously modeled Stellar issuer string is checksum-invalid and was removed rather than treated as a controller.",
+    "summary": "EURAU has eight reviewed issuer-native issuance lanes: six EVM deployments using the same uncapped EOA minter and EOA DEFAULT_ADMIN, a Solana Token-2022 mint, and a Tempo TIP-20 deployment. The EVM admin can grant roles, pause, and immediately upgrade the UUPS logic; AllUnity's regulated issuer backend controls the issuance workflow across the native lanes. Chainlink CCIP/CCT burn-and-mint transfers are supply-conserving bridge machinery scored under Bridge Risk, not additional native Mint Authority. The previously modeled Stellar issuer string is checksum-invalid and was removed rather than treated as a controller.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+        "arbitrum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+        "optimism:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+        "base:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+        "polygon:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+        "bsc:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+      ],
       "proxyAddresses": [
         "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
       ],
@@ -56,6 +64,14 @@
       {
         "chain": "multichain",
         "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
+        "deploymentRefs": [
+          "ethereum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "arbitrum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "optimism:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "base:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "polygon:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "bsc:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        ],
         "label": "EURAU EOA MINTER_ROLE (all EVM chains)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -79,6 +95,14 @@
       {
         "chain": "multichain",
         "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
+        "deploymentRefs": [
+          "ethereum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "arbitrum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "optimism:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "base:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "polygon:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "bsc:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        ],
         "label": "EURAU EOA DEFAULT_ADMIN_ROLE (all EVM chains)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -98,6 +122,9 @@
       {
         "chain": "solana",
         "address": "APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP",
+        "deploymentRefs": [
+          "solana:9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS"
+        ],
         "label": "EURAU Solana Token-2022 program mint authority",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -120,6 +147,16 @@
       },
       {
         "label": "AllUnity regulated issuance backend",
+        "deploymentRefs": [
+          "ethereum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "arbitrum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "optimism:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "base:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "polygon:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "solana:9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS",
+          "tempo:0x20c0000000000000000000009a4a4b17e0dc6651",
+          "bsc:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        ],
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
@@ -200,9 +237,9 @@
           "url": "https://eth.blockscout.com/block/25712415"
         }
       ],
-      "evidence": "Fresh 2026-08-08 reads show the same EOA minter and EOA DEFAULT_ADMIN/PAUSER on all six EVM deployments at Ethereum block 25712415, Arbitrum 492496443, Optimism 155309746, Base 49714461, Polygon 91675496, and BNB Chain 114795046; all implementation slots remain 0x56c19aea2192ff0ac5f6b252776480db601a1482 and paused() is false. Solana finalized slot 438052335 identifies the program-owned APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP as mint/freeze/permanent-delegate authority. The invalid Stellar issuer string was removed: Horizon rejects it and the only discoverable EURAU assets have unrelated issuers. AllUnity's whitepaper describes regular internal and external reserve audits and regulatory reporting, supporting periodic reconciliation, although its Trust Center still has no public dated reserve audit report. ESMA/BaFin primary records support the existing prudential-supervision classification.",
+      "evidence": "Fresh 2026-08-16/17 reads and official AllUnity deployment announcements confirm eight reviewed issuer-native lanes: the six EVM proxies retain the same AllUnity implementation and issuer MINTER_ROLE/DEFAULT_ADMIN/PAUSER surfaces; Solana finalized slot 439739367 retains the issuer-controlled Token-2022 mint authority; and Tempo block 35113390 identifies the AllUnity EURAU TIP-20 deployment, although its precompile-based admin identity remains an evidence gap. The EVM minter has no numeric supply ceiling and the EVM admin can grant roles or replace mint logic immediately. Chainlink CCIP/CCT burn-and-mint transfers are supply-conserving bridge machinery and are not counted as independent native issuer controls. The invalid Stellar issuer string was removed: Horizon rejects it and the only discoverable EURAU assets have unrelated issuers. AllUnity's whitepaper describes regular internal and external reserve audits and regulatory reporting, supporting periodic reconciliation, although its Trust Center still has no public dated reserve audit report. ESMA/BaFin primary records support the existing prudential-supervision classification.",
       "reviewer": "OpenAI Codex C09 control review",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "unresolvedQuestions": []
     }

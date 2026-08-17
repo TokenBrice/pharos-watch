@@ -3,18 +3,37 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "Ethereum XSGD currently has two allowance-capped minter multisigs, a 3-of-5 MasterMinter Safe that can change those allowances, a separate 3-of-5 token-owner Safe, and a 2-of-5 legacy multisig controlling proxy upgrades. Solana mint and freeze authority remains a direct 3-of-10 SPL multisig. Overall issuance is economically unbounded but periodically reconciled.",
+    "confidence": "manual-review",
+    "summary": "XSGD has issuer-native issuance on all eight authored deployments. Ethereum has two allowance-capped minter multisigs, a 3-of-5 MasterMinter Safe that can change those allowances, a separate 3-of-5 token-owner Safe, and a 2-of-5 legacy multisig controlling proxy upgrades; Polygon, Arbitrum, Avalanche, and Base have their own native FiatToken minters and issuer controls; Hedera has a 2-of-5 supply key; XRPL has its issuer account; and Solana has a direct 3-of-10 SPL multisig. Overall issuance is economically unbounded but periodically reconciled. Bridge representations and cross-chain machinery are not included in this Mint Authority profile.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x70e8de73ce538da2beed35d14187f6959a8eca96",
+        "polygon:0xdc3326e71d45186f113a2f448984ca0e8d201995",
+        "arbitrum:0xe333e7754a2dc1e020a162ecab019254b9dab653",
+        "avalanche:0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e",
+        "base:0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b"
+      ],
       "proxyAddresses": [
-        "0x70e8de73ce538da2beed35d14187f6959a8eca96"
+        "0x70e8de73ce538da2beed35d14187f6959a8eca96",
+        "0xdc3326e71d45186f113a2f448984ca0e8d201995",
+        "0xe333e7754a2dc1e020a162ecab019254b9dab653",
+        "0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e",
+        "0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b"
       ],
       "implementationAddresses": [
-        "0x256bf13787d308fe15b4297369ea00006b638fbf"
+        "0x256bf13787d308fe15b4297369ea00006b638fbf",
+        "0x735e27546c7d2fe3c097f880e258c96ea66597b7",
+        "0xb9f5fc449ddd21302ab52af1ffea8d7a49614d3b",
+        "0x7c0fe33b1acb50de0c15b70b8a5f40a294b2fccb",
+        "0xcff17e464626adef615ffc1ecdb1661f1ed1ca16"
       ],
       "adminAddresses": [
-        "0x5daab87246b8f8556e159a54f1b21832e1376951"
+        "0x5daab87246b8f8556e159a54f1b21832e1376951",
+        "0x352eb4ec16bdd00a28047f256c5b072e58de0ac8",
+        "0xe71755750dca4bd16645b7b2bedfddc162e22f31",
+        "0xdab3c072c49daba01e471066d23f33c8057a1337",
+        "0x9f3b5feafc89b4fcb8c1c8bf70dc5ee5bb261cc9"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
@@ -72,6 +91,9 @@
       {
         "chain": "ethereum",
         "address": "0x098a4c0c291c35109e742ba8f0961b0490e9a7f6",
+        "deploymentRefs": [
+          "ethereum:0x70e8de73ce538da2beed35d14187f6959a8eca96"
+        ],
         "label": "XSGD live minter legacy multisig",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -102,6 +124,9 @@
       {
         "chain": "ethereum",
         "address": "0x92d271c7cc0c18239222774f59a31dc4c7dc2fee",
+        "deploymentRefs": [
+          "ethereum:0x70e8de73ce538da2beed35d14187f6959a8eca96"
+        ],
         "label": "XSGD live minter Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -153,6 +178,9 @@
       {
         "chain": "ethereum",
         "address": "0x4a423f581df9a7575fbe9cf22013638e8dbbe273",
+        "deploymentRefs": [
+          "ethereum:0x70e8de73ce538da2beed35d14187f6959a8eca96"
+        ],
         "label": "XSGD MasterMinter Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -200,6 +228,9 @@
       {
         "chain": "ethereum",
         "address": "0x9bd41d6caa1ad2be20ea48c5f4be3c180522f964",
+        "deploymentRefs": [
+          "ethereum:0x70e8de73ce538da2beed35d14187f6959a8eca96"
+        ],
         "label": "StraitsX token owner Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -247,6 +278,9 @@
       {
         "chain": "ethereum",
         "address": "0x5daab87246b8f8556e159a54f1b21832e1376951",
+        "deploymentRefs": [
+          "ethereum:0x70e8de73ce538da2beed35d14187f6959a8eca96"
+        ],
         "label": "XSGD proxy-admin legacy multisig",
         "role": "proxy-admin",
         "authorityType": "multisig",
@@ -274,8 +308,460 @@
         "evidence": "At Ethereum block 25712169, the legacy Zeppelinos admin slot keccak256('org.zeppelinos.proxy.admin') resolved to this verified MultiSigWalletWithDailyLimit. It returned required() = 2, five owners, and dailyLimit() = 0. The same block resolved implementation 0x256bf13787d308fe15b4297369ea00006b638fbf from the legacy Zeppelinos implementation slot; the admin can replace that mint and access-control logic without a delay."
       },
       {
+        "chain": "polygon",
+        "address": "0x8392bb8ac285baf1041a81ad49aa34e5a0cfd1d8",
+        "deploymentRefs": [
+          "polygon:0xdc3326e71d45186f113a2f448984ca0e8d201995"
+        ],
+        "label": "XSGD Polygon live minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92142756,
+        "capDescription": "Current token minter allowance: 200,000,000 XSGD. The minter cannot raise its own allowance; the separate Polygon MasterMinter can reconfigure it.",
+        "sources": [
+          {
+            "label": "XSGD Polygon token",
+            "url": "https://polygon.blockscout.com/address/0xdc3326e71d45186f113a2f448984ca0e8d201995?tab=contract"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "A MinterConfigured event replay through Polygon block 92142756 found this address configured with allowance 200000000000000 base units; no MinterRemoved event was found in the reviewed token logs. The minter cannot raise its own allowance."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xd75c83e8a0fb2bab20ac89aeaaeb1b2f6faa1878",
+        "deploymentRefs": [
+          "polygon:0xdc3326e71d45186f113a2f448984ca0e8d201995"
+        ],
+        "label": "XSGD Polygon MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92142756,
+        "sources": [
+          {
+            "label": "XSGD Polygon token",
+            "url": "https://polygon.blockscout.com/address/0xdc3326e71d45186f113a2f448984ca0e8d201995?tab=contract"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92142756, masterMinter() returned 0xd75c83e8a0fb2bab20ac89aeaaeb1b2f6faa1878. This issuer-controlled contract can configure or remove Polygon token minters and raise their allowances."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x0abf5f8cf954e174310b63bd1571ef6ae64cd5c4",
+        "deploymentRefs": [
+          "polygon:0xdc3326e71d45186f113a2f448984ca0e8d201995"
+        ],
+        "label": "XSGD Polygon token owner",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92142756,
+        "sources": [
+          {
+            "label": "XSGD Polygon token",
+            "url": "https://polygon.blockscout.com/address/0xdc3326e71d45186f113a2f448984ca0e8d201995?tab=contract"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92142756, owner() returned 0x0abf5f8cf954e174310b63bd1571ef6ae64cd5c4. The token owner can replace the MasterMinter and other privileged issuance roles."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x352eb4ec16bdd00a28047f256c5b072e58de0ac8",
+        "deploymentRefs": [
+          "polygon:0xdc3326e71d45186f113a2f448984ca0e8d201995"
+        ],
+        "label": "XSGD Polygon proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92142756,
+        "sources": [
+          {
+            "label": "XSGD Polygon proxy admin",
+            "url": "https://polygon.blockscout.com/address/0x352eb4ec16bdd00a28047f256c5b072e58de0ac8?tab=contract"
+          },
+          {
+            "label": "XSGD Polygon token",
+            "url": "https://polygon.blockscout.com/address/0xdc3326e71d45186f113a2f448984ca0e8d201995?tab=contract"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92142756, the proxy resolved implementation 0x735e27546c7d2fe3c097f880e258c96ea66597b7 and admin 0x352eb4ec16bdd00a28047f256c5b072e58de0ac8. The verified Polygon MultiSigWallet is 3-of-5; its admin path can replace mint and access-control logic without a recorded delay."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7bbdee806581c5404639555d2aeaf1933f2f47a0",
+        "deploymentRefs": [
+          "arbitrum:0xe333e7754a2dc1e020a162ecab019254b9dab653"
+        ],
+        "label": "XSGD Arbitrum live minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495281539,
+        "capDescription": "Current token minter allowance: 200,000,000 XSGD. The minter cannot raise its own allowance; the separate Arbitrum MasterMinter can reconfigure it.",
+        "sources": [
+          {
+            "label": "XSGD Arbitrum token",
+            "url": "https://arbitrum.blockscout.com/address/0xe333e7754a2dc1e020a162ecab019254b9dab653?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "A MinterConfigured event replay through Arbitrum block 495281539 found this address configured with allowance 200000000000000 base units; no MinterRemoved event was found in the reviewed token logs. The minter cannot raise its own allowance."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xf0465edee01f8ec329e26d1af937aa82ce497116",
+        "deploymentRefs": [
+          "arbitrum:0xe333e7754a2dc1e020a162ecab019254b9dab653"
+        ],
+        "label": "XSGD Arbitrum MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495281539,
+        "sources": [
+          {
+            "label": "XSGD Arbitrum token",
+            "url": "https://arbitrum.blockscout.com/address/0xe333e7754a2dc1e020a162ecab019254b9dab653?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 495281539, masterMinter() returned 0xf0465edee01f8ec329e26d1af937aa82ce497116. This issuer-controlled contract can configure or remove Arbitrum token minters and raise their allowances."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x01a5c17d8431543ec228675a9e750f9f7788f3d6",
+        "deploymentRefs": [
+          "arbitrum:0xe333e7754a2dc1e020a162ecab019254b9dab653"
+        ],
+        "label": "XSGD Arbitrum token owner",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495281539,
+        "sources": [
+          {
+            "label": "XSGD Arbitrum token",
+            "url": "https://arbitrum.blockscout.com/address/0xe333e7754a2dc1e020a162ecab019254b9dab653?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 495281539, owner() returned 0x01a5c17d8431543ec228675a9e750f9f7788f3d6. The token owner can replace the MasterMinter and other privileged issuance roles."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xe71755750dca4bd16645b7b2bedfddc162e22f31",
+        "deploymentRefs": [
+          "arbitrum:0xe333e7754a2dc1e020a162ecab019254b9dab653"
+        ],
+        "label": "XSGD Arbitrum proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495281539,
+        "sources": [
+          {
+            "label": "XSGD Arbitrum proxy admin",
+            "url": "https://arbitrum.blockscout.com/address/0xe71755750dca4bd16645b7b2bedfddc162e22f31?tab=contract"
+          },
+          {
+            "label": "XSGD Arbitrum token",
+            "url": "https://arbitrum.blockscout.com/address/0xe333e7754a2dc1e020a162ecab019254b9dab653?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 495281539, the proxy resolved implementation 0xb9f5fc449ddd21302ab52af1ffea8d7a49614d3b and admin 0xe71755750dca4bd16645b7b2bedfddc162e22f31. The admin is a contract; its signer set was not resolved from the available verified explorer metadata, and it can replace mint and access-control logic without a recorded delay."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x93f0f4a8ae925742f444d0d0f7b052189ea78ca3",
+        "deploymentRefs": [
+          "avalanche:0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e"
+        ],
+        "label": "XSGD Avalanche live minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92979593,
+        "capDescription": "Current token minter allowance: 200,000,000 XSGD. The minter cannot raise its own allowance; the separate Avalanche MasterMinter can reconfigure it.",
+        "sources": [
+          {
+            "label": "XSGD Avalanche token",
+            "url": "https://snowtrace.io/address/0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e#code"
+          },
+          {
+            "label": "Avalanche C-Chain PublicNode RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "A MinterConfigured event replay through Avalanche block 92979593 found this address configured with allowance 200000000000000 base units; no MinterRemoved event was found in the reviewed token logs. The minter cannot raise its own allowance."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x9841a2fcd4af9ea19329192e7188940e162964d3",
+        "deploymentRefs": [
+          "avalanche:0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e"
+        ],
+        "label": "XSGD Avalanche secondary live minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92979593,
+        "capDescription": "Current token minter allowance: 20,000,000 XSGD. The minter cannot raise its own allowance; the separate Avalanche MasterMinter can reconfigure it.",
+        "sources": [
+          {
+            "label": "XSGD Avalanche token",
+            "url": "https://snowtrace.io/address/0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e#code"
+          },
+          {
+            "label": "Avalanche C-Chain PublicNode RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "A MinterConfigured event replay through Avalanche block 92979593 found this address configured with allowance 20000000000000 base units; no MinterRemoved event was found in the reviewed token logs. The minter cannot raise its own allowance."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x9290a4c35217e0a6b67a48596867c58a8d467787",
+        "deploymentRefs": [
+          "avalanche:0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e"
+        ],
+        "label": "XSGD Avalanche MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92979593,
+        "sources": [
+          {
+            "label": "XSGD Avalanche token",
+            "url": "https://snowtrace.io/address/0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e#code"
+          },
+          {
+            "label": "Avalanche C-Chain PublicNode RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Avalanche block 92979593, masterMinter() returned 0x9290a4c35217e0a6b67a48596867c58a8d467787. This issuer-controlled contract can configure or remove Avalanche token minters and raise their allowances."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x76bd5f5b1cef12637ef876d018b5def4a031ea01",
+        "deploymentRefs": [
+          "avalanche:0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e"
+        ],
+        "label": "XSGD Avalanche token owner",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92979593,
+        "sources": [
+          {
+            "label": "XSGD Avalanche token",
+            "url": "https://snowtrace.io/address/0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e#code"
+          },
+          {
+            "label": "Avalanche C-Chain PublicNode RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Avalanche block 92979593, owner() returned 0x76bd5f5b1cef12637ef876d018b5def4a031ea01. The token owner can replace the MasterMinter and other privileged issuance roles."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xdab3c072c49daba01e471066d23f33c8057a1337",
+        "deploymentRefs": [
+          "avalanche:0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e"
+        ],
+        "label": "XSGD Avalanche proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92979593,
+        "sources": [
+          {
+            "label": "XSGD Avalanche proxy admin",
+            "url": "https://snowtrace.io/address/0xdab3c072c49daba01e471066d23f33c8057a1337#code"
+          },
+          {
+            "label": "XSGD Avalanche token",
+            "url": "https://snowtrace.io/address/0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e#code"
+          },
+          {
+            "label": "Avalanche C-Chain PublicNode RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Avalanche block 92979593, the proxy resolved implementation 0x7c0fe33b1acb50de0c15b70b8a5f40a294b2fccb and admin 0xdab3c072c49daba01e471066d23f33c8057a1337. The admin is a contract; its signer set was not resolved from the available verified explorer metadata, and it can replace mint and access-control logic without a recorded delay."
+      },
+      {
+        "chain": "base",
+        "address": "0x88d014af64619f2d5000bf0f53df33e4dd67a0da",
+        "deploymentRefs": [
+          "base:0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b"
+        ],
+        "label": "XSGD Base live minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064941,
+        "capDescription": "Current token minter allowance: 200,000,000 XSGD. The minter cannot raise its own allowance; the separate Base MasterMinter can reconfigure it.",
+        "sources": [
+          {
+            "label": "XSGD Base token",
+            "url": "https://base.blockscout.com/address/0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b?tab=contract"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "A MinterConfigured event replay through Base block 50064941 found this address configured with allowance 200000000000000 base units; no MinterRemoved event was found in the reviewed token logs. The minter cannot raise its own allowance."
+      },
+      {
+        "chain": "base",
+        "address": "0x64e23625304278fe7501701f857163067819f700",
+        "deploymentRefs": [
+          "base:0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b"
+        ],
+        "label": "XSGD Base MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064941,
+        "sources": [
+          {
+            "label": "XSGD Base token",
+            "url": "https://base.blockscout.com/address/0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b?tab=contract"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50064941, masterMinter() returned 0x64e23625304278fe7501701f857163067819f700. This issuer-controlled contract can configure or remove Base token minters and raise their allowances."
+      },
+      {
+        "chain": "base",
+        "address": "0xda4a35d931376daaacf45e25d25b06ff00ab8c66",
+        "deploymentRefs": [
+          "base:0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b"
+        ],
+        "label": "XSGD Base token owner",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064941,
+        "sources": [
+          {
+            "label": "XSGD Base token",
+            "url": "https://base.blockscout.com/address/0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b?tab=contract"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50064941, owner() returned 0xda4a35d931376daaacf45e25d25b06ff00ab8c66. The token owner can replace the MasterMinter and other privileged issuance roles."
+      },
+      {
+        "chain": "base",
+        "address": "0x9f3b5feafc89b4fcb8c1c8bf70dc5ee5bb261cc9",
+        "deploymentRefs": [
+          "base:0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b"
+        ],
+        "label": "XSGD Base proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064941,
+        "sources": [
+          {
+            "label": "XSGD Base proxy admin",
+            "url": "https://base.blockscout.com/address/0x9f3b5feafc89b4fcb8c1c8bf70dc5ee5bb261cc9?tab=contract"
+          },
+          {
+            "label": "XSGD Base token",
+            "url": "https://base.blockscout.com/address/0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b?tab=contract"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50064941, the proxy resolved implementation 0xcff17e464626adef615ffc1ecdb1661f1ed1ca16 and admin 0x9f3b5feafc89b4fcb8c1c8bf70dc5ee5bb261cc9. The admin is a contract; its signer set was not resolved from the available verified explorer metadata, and it can replace mint and access-control logic without a recorded delay."
+      },
+      {
         "chain": "solana",
         "address": "5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj",
+        "deploymentRefs": [
+          "solana:71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy"
+        ],
         "label": "StraitsX Solana mint authority",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -283,8 +769,8 @@
         "threshold": 3,
         "signerCount": 10,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 438047701,
+        "observedAt": "2026-08-16",
+        "observedBlock": 439728047,
         "sources": [
           {
             "label": "Solana mainnet RPC",
@@ -295,7 +781,82 @@
             "url": "https://github.com/solana-program/token/blob/c58d674b4280f4d1a6246b43685fc7fa428a51c3/interface/src/state.rs#L182-L209"
           }
         ],
-        "evidence": "At finalized Solana slot 438047701, the XSGD mint 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy had this address as both mint and freeze authority. The initialized SPL Token multisig decoded as 3-of-10."
+        "evidence": "At finalized Solana slot 439728047, the XSGD mint 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy had this address as both mint and freeze authority. The initialized SPL Token multisig decoded as 3-of-10."
+      },
+      {
+        "chain": "hedera",
+        "deploymentRefs": [
+          "hedera:0.0.1985922"
+        ],
+        "label": "StraitsX Hedera XSGD supply key",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Hedera Mirror Node XSGD token metadata",
+            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
+          },
+          {
+            "label": "Hedera XSGD token",
+            "url": "https://hashscan.io/mainnet/token/0.0.1985922"
+          }
+        ],
+        "evidence": "Hedera Mirror Node metadata for HTS token 0.0.1985922 reports an encoded supply key with a 2-of-5 threshold. That supply key is the direct native issuance authority for Hedera XSGD; the individual key identities were not exposed as a simple address in the reviewed metadata."
+      },
+      {
+        "chain": "hedera",
+        "deploymentRefs": [
+          "hedera:0.0.1985922"
+        ],
+        "label": "StraitsX Hedera XSGD admin key",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 7,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Hedera Mirror Node XSGD token metadata",
+            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
+          },
+          {
+            "label": "Hedera XSGD token",
+            "url": "https://hashscan.io/mainnet/token/0.0.1985922"
+          }
+        ],
+        "evidence": "Hedera Mirror Node metadata for HTS token 0.0.1985922 reports an encoded 2-of-7 admin key. This issuer-controlled key can replace the supply key and other issuance controls; the individual key identities were not exposed as a simple address in the reviewed metadata."
+      },
+      {
+        "chain": "xrpl",
+        "address": "rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw",
+        "deploymentRefs": [
+          "xrpl:XSGD.rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw"
+        ],
+        "label": "StraitsX XRPL XSGD issuing account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "observedAt": "2026-08-16",
+        "observedBlock": 106342527,
+        "sources": [
+          {
+            "label": "XRPL validated account read",
+            "url": "https://xrplcluster.com"
+          },
+          {
+            "label": "XRPL XSGD issuer",
+            "url": "https://livenet.xrpl.org/accounts/rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw"
+          }
+        ],
+        "evidence": "XRPL validated ledger 106342527 identifies rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw as the live issuing account for the XSGD.rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw issued asset. The issuer account is the native issuance authority; no separate issuer operational control was verified for authoring."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -333,9 +894,9 @@
           "url": "https://eservices.mas.gov.sg/fid/institution?term=StraitsX"
         }
       ],
-      "evidence": "Fresh reads at Ethereum block 25712169 resolved the legacy Zeppelinos proxy implementation and 2-of-5 admin multisig, the current 3-of-5 owner and MasterMinter Safes, and two still-active downstream minters: a 2-of-7 legacy multisig capped at 131,860,242.08 XSGD and a 2-of-8 Safe capped at 155,860,695.35 XSGD. Both allowances are administrator-raiseable, and the proxy admin can replace mint logic without delay, so the aggregate economic cap is unbounded. Finalized Solana slot 438047701 reconfirmed a 3-of-10 SPL Token multisig as both mint and freeze authority. The StraitsX archive publishes independent reserve examinations on a semi-monthly cadence; the reviewed May 31, 2026 report fully reconciles reserve assets to tokens. The MAS directory identifies the exact issuer, StraitsX SGD Issuance Pte. Ltd., as a Major Payment Institution.",
+      "evidence": "Fresh fixed-block reads on 2026-08-16 cover all eight authored native deployments. Ethereum block 25770602 retains the legacy Zeppelinos proxy, MasterMinter, owner, and two active minter surfaces; Polygon block 92142756 has one configured 200,000,000 XSGD minter; Arbitrum block 495281539 has one configured 200,000,000 XSGD minter; Avalanche block 92979593 has configured 200,000,000 and 20,000,000 XSGD minters; and Base block 50064941 has one configured 200,000,000 XSGD minter. The four omitted EVM event replays found no MinterRemoved events in the reviewed token logs. The EVM MasterMinter and owner controls can reconfigure native minters, and the five proxy admins can replace mint logic without a recorded delay, so the aggregate economic cap remains unbounded. Finalized Solana slot 439728047 reports a 3-of-10 SPL Token multisig as mint and freeze authority; Hedera Mirror Node metadata reports a 2-of-5 supply key and 2-of-7 admin key; and XRPL validated ledger 106342527 identifies the live XSGD issuing account. The StraitsX archive publishes independent reserve examinations on a semi-monthly cadence, and the MAS directory identifies StraitsX SGD Issuance Pte. Ltd. as a Major Payment Institution. Signer sets for the Arbitrum, Avalanche, and Base proxy-admin contracts and the exact Hedera/XRPL operational key identities remain unresolved; those gaps are recorded on the affected controls and do not change the verified native deployment scope.",
       "reviewer": "OpenAI Codex C05 control and access review",
-      "reviewedAt": "2026-08-08"
+      "reviewedAt": "2026-08-16"
     }
   }
 }

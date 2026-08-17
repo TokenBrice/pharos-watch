@@ -18,16 +18,20 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "bUSD0 inherits USD0's multichain route surface. Usual documents USD0 and USUAL deployments across Ethereum, Arbitrum, Base, and BNB Chain with Chainlink CCIP and LayerZero supporting unified liquidity, so the bridge route is scored as an external validated-network dependency.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "bUSD0 has a reviewed Ethereum native bond-wrapper route and a distinct Ethereum-to-Arbitrum LayerZero V2 burn/mint representation route. The Ethereum L1OFTAdapter locks/releases canonical bUSD0, while the Arbitrum OFTMintAndBurnAdapter is the authenticated local token minter/burner. Adapter owners, endpoint peers, representation-token upgrades, and the LayerZero validation boundary are scored here; inherited USD0 routes are not substituted for bUSD0 evidence.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex busd0-usual mint/bridge boundary review",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
-        "name": "Chainlink CCIP / LayerZero for Usual",
-        "url": "https://docs.usual.money/",
-        "note": "Usual's documentation names CCIP and LayerZero as cross-chain infrastructure for USD0 and USUAL."
+        "name": "LayerZero V2 / Usual bUSD0 adapters",
+        "slug": "layerzero",
+        "url": "https://tech.usual.money/smart-contracts/contract-deployments",
+        "bridgeTypes": [
+          "oft"
+        ],
+        "note": "Usual's deployment directory identifies the Ethereum bUSD0 L1OFTAdapter and Arbitrum bUSD0 OFTMintAndBurnAdapter; current endpoint and peer reads establish the route."
       }
     ],
     "sources": [
@@ -38,38 +42,313 @@
       {
         "label": "bUSD0 docs",
         "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"
+      },
+      {
+        "label": "Usual contract deployments",
+        "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+      },
+      {
+        "label": "LayerZero V2 overview",
+        "url": "https://docs.layerzero.network/v2/get-started/overview"
       }
     ],
     "routes": [
       {
         "id": "ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Usual bUSD0 native bond wrapper / LayerZero V2 L1OFTAdapter",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x6e9d65ec80d69b1f508560bc7aea5003db1f7fb7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xd155d91009cbe9b0204b06ce1b62bf1d793d3111",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:ethereum:0x6e9d65ec80d69b1f508560bc7aea5003db1f7fb7"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed at Ethereum block 25771035 on 2026-08-16: Ethereum is the primary bUSD0 bond-leg deployment and its local issuance is the locked-USD0 wrapper path. The canonical-side LayerZero L1OFTAdapter at 0xd155d91009cbe9b0204b06ce1b62bf1d793d3111 is immutable, uses endpoint 0x1a44076050125825900e736c501f859c50fe728c, and locks/releases canonical bUSD0; its peer for endpoint ID 30110 is the Arbitrum adapter. This route is native issuance, while the adapter's transfer-rail controls are separately authored below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771035,
+        "sources": [
+          {
+            "label": "Usual bUSD0 factsheet",
+            "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+          },
+          {
+            "label": "Usual contract deployments",
+            "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+          },
+          {
+            "label": "Ethereum bUSD0 LayerZero adapter",
+            "url": "https://etherscan.io/address/0xd155d91009cbe9b0204b06ce1b62bf1d793d3111"
+          },
+          {
+            "label": "LayerZero V2 overview",
+            "url": "https://docs.layerzero.network/v2/get-started/overview"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero V2 / Usual bUSD0 OFTMintAndBurnAdapter",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd155d91009cbe9b0204b06ce1b62bf1d793d3111",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-dvns",
+          "contract:ethereum:0xd155d91009cbe9b0204b06ce1b62bf1d793d3111",
+          "contract:arbitrum:0xd155d91009cbe9b0204b06ce1b62bf1d793d3111",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:arbitrum:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
+          "contract:arbitrum:0x583823069903ae1f55623401bea173efa2873ffa",
+          "safe:arbitrum:0x192482bdb33b670ac7da705cef9e98c93abeec9a",
+          "safe:arbitrum:0xab81dfc22d7be807efd0944c9c975cbbbaea7683"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed at Arbitrum block 495301927 on 2026-08-16: the official deployment directory labels the local route OFTMintAndBurnAdapter 0xd155d91009cbe9b0204b06ce1b62bf1d793d3111. Its LayerZero endpoint is 0x1a44076050125825900e736c501f859c50fe728c, its peer for endpoint ID 30101 is the Ethereum adapter, and the route burns/mints the Arbitrum bUSD0 representation against the Ethereum lock/release side. eth_call mint(address,uint256) succeeded from the adapter and reverted from an unrelated EOA, so local token-level bridge mint authority is recorded as Bridge Risk. Current DVN/ULN configuration and numeric rate limits remain an evidence gap.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 495301927,
+        "sources": [
+          {
+            "label": "Usual bUSD0 factsheet",
+            "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+          },
+          {
+            "label": "Usual contract deployments",
+            "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+          },
+          {
+            "label": "Arbitrum bUSD0 proxy",
+            "url": "https://arbiscan.io/address/0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f"
+          },
+          {
+            "label": "Arbitrum bUSD0 LayerZero adapter",
+            "url": "https://arbiscan.io/address/0xd155d91009cbe9b0204b06ce1b62bf1d793d3111"
+          },
+          {
+            "label": "LayerZero V2 overview",
+            "url": "https://docs.layerzero.network/v2/get-started/overview"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "busd0-ethereum-layerzero-adapter-owner",
+        "label": "bUSD0 Ethereum LayerZero L1OFTAdapter owner Safe",
+        "routeRefs": [
+          "ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+        ],
+        "capabilities": [
+          "admin",
+          "escrow",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x6e9d65ec80d69b1f508560bc7aea5003db1f7fb7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xd155d91009cbe9b0204b06ce1b62bf1d793d3111",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:ethereum:0x6e9d65ec80d69b1f508560bc7aea5003db1f7fb7"
+        ],
+        "authorityType": "safe",
+        "threshold": 8,
+        "signerCount": 15,
+        "safe": {
+          "threshold": 8,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "The immutable Ethereum L1OFTAdapter locks/releases canonical bUSD0 for the LayerZero route; it is not a second native bUSD0 issuer.",
+          "trustedPeerOrRemote": "At Ethereum block 25771035, endpoint 0x1a44076050125825900e736c501f859c50fe728c reported the Arbitrum adapter as the peer for endpoint ID 30110.",
+          "rateLimits": "The current LayerZero DVN/ULN configuration and numeric adapter rate limits were not independently decoded in this pass.",
+          "pausersAdminsUpgraders": "The adapter is immutable with no EIP-1967 implementation or admin slot; its owner Safe administers the adapter's bridge configuration. The Ethereum bUSD0 wrapper ProxyAdmin is a separate Mint Authority control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771035,
+        "sources": [
+          {
+            "label": "Usual contract deployments",
+            "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+          },
+          {
+            "label": "Ethereum bUSD0 LayerZero adapter",
+            "url": "https://etherscan.io/address/0xd155d91009cbe9b0204b06ce1b62bf1d793d3111"
+          },
+          {
+            "label": "LayerZero V2 overview",
+            "url": "https://docs.layerzero.network/v2/get-started/overview"
+          }
+        ],
+        "evidence": "At Ethereum block 25771035, the immutable L1OFTAdapter 0xd155d91009cbe9b0204b06ce1b62bf1d793d3111 held the canonical bUSD0 token, used LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, and was owned by 0x6e9d65ec80d69b1f508560bc7aea5003db1f7fb7, observed as an 8-of-15 Safe. The adapter peer bound endpoint ID 30110 to the Arbitrum adapter. Safe module/guard state and current DVN/rate-limit values remain unverified."
+      },
+      {
+        "id": "busd0-arbitrum-layerzero-adapter-owner",
+        "label": "bUSD0 Arbitrum LayerZero OFTMintAndBurnAdapter owner Safe",
+        "routeRefs": [
+          "arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x192482bdb33b670ac7da705cef9e98c93abeec9a",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-dvns",
+          "contract:arbitrum:0xd155d91009cbe9b0204b06ce1b62bf1d793d3111",
+          "contract:arbitrum:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:arbitrum:0x192482bdb33b670ac7da705cef9e98c93abeec9a"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 9,
+        "safe": {
+          "threshold": 5,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495301927, the adapter used LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c and its peer for endpoint ID 30101 was the Ethereum adapter.",
+          "rateLimits": "The current LayerZero DVN/ULN configuration and numeric adapter rate limits were not independently decoded in this pass.",
+          "pausersAdminsUpgraders": "The immutable Arbitrum OFTMintAndBurnAdapter is owned by this Safe for bridge configuration; the adapter's authenticated token mint/burn entry point and the representation-token ProxyAdmin are recorded as separate controls."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495301927,
+        "sources": [
+          {
+            "label": "Usual contract deployments",
+            "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+          },
+          {
+            "label": "Arbitrum bUSD0 LayerZero adapter",
+            "url": "https://arbiscan.io/address/0xd155d91009cbe9b0204b06ce1b62bf1d793d3111"
+          },
+          {
+            "label": "LayerZero V2 overview",
+            "url": "https://docs.layerzero.network/v2/get-started/overview"
+          }
+        ],
+        "evidence": "At Arbitrum block 495301927, the immutable OFTMintAndBurnAdapter 0xd155d91009cbe9b0204b06ce1b62bf1d793d3111 used the reviewed LayerZero endpoint and Ethereum peer and was owned by Safe 0x192482bdb33b670ac7da705cef9e98c93abeec9a, observed as 5-of-9. The distinct Arbitrum representation-token ProxyAdmin owner Safe is not collapsed into this adapter-owner control."
+      },
+      {
+        "id": "busd0-arbitrum-representation-adapter-minter",
+        "label": "bUSD0 Arbitrum representation adapter mint/burn authority",
+        "routeRefs": [
+          "arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd155d91009cbe9b0204b06ce1b62bf1d793d3111",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0xd155d91009cbe9b0204b06ce1b62bf1d793d3111",
+          "contract:arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Arbitrum adapter is an authenticated token-level mint/burn caller. No independent token-level aggregate or per-call cap was evidenced; the documented route is supply-conserving only when Ethereum lock/release, Arbitrum burn/mint accounting, peer validation, and LayerZero validation remain correct.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The adapter's LayerZero peer is the Ethereum adapter for endpoint ID 30101; peer and endpoint administration is separately scored under the adapter-owner Safe.",
+          "onchainAmountBounds": "At Arbitrum block 495301927, mint(address,uint256) returned successfully when called from the local adapter 0xd155d91009cbe9b0204b06ce1b62bf1d793d3111 and reverted from 0x0000000000000000000000000000000000000001. This proves authenticated representation mint authority; the route-level lock/release plus burn/mint conservation is not an independent native mint bound.",
+          "pausersAdminsUpgraders": "The representation token accepts the reviewed adapter as its privileged mint caller. Representation-token upgrade administration is separately recorded under the Arbitrum ProxyAdmin owner Safe."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495301927,
+        "sources": [
+          {
+            "label": "Arbitrum bUSD0 proxy",
+            "url": "https://arbiscan.io/address/0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f"
+          },
+          {
+            "label": "Arbitrum bUSD0 LayerZero adapter",
+            "url": "https://arbiscan.io/address/0xd155d91009cbe9b0204b06ce1b62bf1d793d3111"
+          },
+          {
+            "label": "Usual contract deployments",
+            "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+          }
+        ],
+        "evidence": "At Arbitrum block 495301927, eth_call to the bUSD0 representation's mint(address,uint256) succeeded from the local OFTMintAndBurnAdapter 0xd155d91009cbe9b0204b06ce1b62bf1d793d3111 and reverted from unrelated EOA 0x0000000000000000000000000000000000000001. This local token-level bridge mint/burn capability is representation risk and is intentionally absent from Mint Authority."
+      },
+      {
+        "id": "busd0-arbitrum-representation-proxy-admin-safe",
+        "label": "bUSD0 Arbitrum representation ProxyAdmin owner Safe",
+        "routeRefs": [
+          "arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xab81dfc22d7be807efd0944c9c975cbbbaea7683",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
+          "contract:arbitrum:0x583823069903ae1f55623401bea173efa2873ffa",
+          "safe:arbitrum:0xab81dfc22d7be807efd0944c9c975cbbbaea7683"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 9,
+        "safe": {
+          "threshold": 5,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Arbitrum bUSD0 ProxyAdmin can replace the representation-token implementation, so it can change the local bridge mint/burn authorization and any representation cap or pause constraints. This is not native Ethereum issuance authority.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Arbitrum block 495301927, the representation token proxy used ProxyAdmin 0x583823069903ae1f55623401bea173efa2873ffa, whose owner Safe 0xab81dfc22d7be807efd0944c9c975cbbbaea7683 was observed as 5-of-9. A completed ProxyAdmin upgrade can replace mint-critical representation logic.",
+          "caps": "No independent representation-token cap or upgrade delay was evidenced in this pass; any cap or authentication constraint introduced by the current implementation remains upgrade-dependent."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495301927,
+        "sources": [
+          {
+            "label": "Arbitrum bUSD0 proxy",
+            "url": "https://arbiscan.io/address/0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f"
+          },
+          {
+            "label": "Arbitrum bUSD0 ProxyAdmin",
+            "url": "https://arbiscan.io/address/0x583823069903ae1f55623401bea173efa2873ffa"
+          },
+          {
+            "label": "Arbitrum representation ProxyAdmin owner Safe",
+            "url": "https://arbiscan.io/address/0xab81dfc22d7be807efd0944c9c975cbbbaea7683"
+          }
+        ],
+        "evidence": "At Arbitrum block 495301927, bUSD0 representation proxy 0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f resolved to implementation 0x1eacc08c0a4a059d1567a587ed9d0a52eac2a88f and ProxyAdmin 0x583823069903ae1f55623401bea173efa2873ffa. ProxyAdmin.owner() returned Safe 0xab81dfc22d7be807efd0944c9c975cbbbaea7683, observed as 5-of-9. This bridge-route upgrade domain remains separate from the Ethereum wrapper ProxyAdmin in Mint Authority."
       }
     ]
   }

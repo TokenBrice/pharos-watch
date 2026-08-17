@@ -4,13 +4,47 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "USDH is designed by Native Markets and issued by Bridge Building, Inc. (a Stripe company, FinCEN MSB); the HyperEVM ERC-20 proxy uses AccessControl with one MINTER_ROLE holder (EOA) and one DEFAULT_ADMIN (EOA), both confirmed at HyperEVM block 37547275.",
+    "summary": "USDH has one canonical native issuance deployment on HyperEVM. Bridge Building, Inc. controls issuer-direct minting through the USDH MINTER_ROLE and reserve-ledger handler, while two DEFAULT_ADMIN_ROLE EOAs can authorize minters, raise the on-chain cap, and authorize UUPS upgrades. The HyperCore HIP-1 asset is a linked representation of this deployment and is excluded from Mint Authority.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "hyperevm:0x111111a1a0667d36bd57c0a9f569b98057111111"
+      ],
+      "proxyAddresses": [
+        "0x111111a1a0667d36bd57c0a9f569b98057111111"
+      ],
+      "implementationAddresses": [
+        "0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9"
+      ],
+      "adminAddresses": [
+        "0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9",
+        "0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USDH HyperEVM DEFAULT_ADMIN_ROLE EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9",
+      "observedAt": "2026-08-16",
+      "observedBlock": 43375036,
+      "sources": [
+        {
+          "label": "USDH HyperEVM proxy source",
+          "url": "https://hyperevmscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111#code"
+        },
+        {
+          "label": "USDH HyperEVM implementation source",
+          "url": "https://hyperevmscan.io/address/0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9#code"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Bridge (Stripe) issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "hyperevm:0x111111a1a0667d36bd57c0a9f569b98057111111"
+        ],
         "canRaiseCap": "unknown",
         "evidence": "Bridge Building, Inc. operates the 1:1 mint/redeem for USDH against high-quality liquid reserves; supply is created by the issuer backend rather than any permissionless or user-collateralized route.",
         "sources": [
@@ -21,41 +55,178 @@
         ]
       },
       {
-        "label": "USDH HyperEVM MINTER_ROLE holder",
+        "label": "USDH HyperEVM MINTER_ROLE EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "chain": "hyperevm",
         "address": "0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e",
-        "canRaiseCap": "unknown",
-        "evidence": "At HyperEVM block 37547275, MINTER_ROLE (getRoleMember index 0) on the USDH proxy 0x111111a1a0667d36bd57c0a9f569b98057111111 returned 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e; eth_getCode returned no bytecode (EOA confirmed). DEFAULT_ADMIN holder is EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 (also EOA, eth_getCode=0x). Proxy impl slot = 0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9.",
+        "deploymentRefs": [
+          "hyperevm:0x111111a1a0667d36bd57c0a9f569b98057111111"
+        ],
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 43375036,
+        "evidence": "At HyperEVM block 43375036, MINTER_ROLE on the USDH proxy had EOA member 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e. The verified implementation requires MINTER_ROLE, approved recipients, and totalSupply + amount <= getMaxSupply(); the separate DEFAULT_ADMIN_ROLE controls setMaxSupply and upgrade authorization.",
         "sources": [
           {
-            "label": "USDH HyperEVM contract",
-            "url": "https://hypurrscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111"
+            "label": "USDH HyperEVM proxy source",
+            "url": "https://hyperevmscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111#code"
+          },
+          {
+            "label": "USDH HyperEVM implementation source",
+            "url": "https://hyperevmscan.io/address/0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9#code"
+          }
+        ]
+      },
+      {
+        "label": "USDH ReserveLedgerBackedHandler MINTER_ROLE",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "hyperevm",
+        "address": "0x6fb239a92d3a7b2b9898c13cdedd2bc26e323ec2",
+        "deploymentRefs": [
+          "hyperevm:0x111111a1a0667d36bd57c0a9f569b98057111111"
+        ],
+        "canRaiseCap": false,
+        "capDescription": "The USDH contract enforced totalSupply + amount <= getMaxSupply(), observed at 250,000,000 USDH on 2026-08-16; the handler cannot change that cap.",
+        "failureDomainKeys": [
+          "contract:hyperevm:0x6fb239a92d3a7b2b9898c13cdedd2bc26e323ec2"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 43375036,
+        "evidence": "The verified ReserveLedgerBackedHandler is a USDH MINTER_ROLE member and implements the issuer-native reserve-ledger flow: it mints reserve-ledger tokens into its reserve store and calls the USDH contract mint function; burning reverses that flow. It is native issuer accounting, not a cross-chain bridge. Its exact TokenAuthority allowance and transaction mint-limit values remain unverified.",
+        "sources": [
+          {
+            "label": "ReserveLedgerBackedHandler source",
+            "url": "https://hyperevmscan.io/address/0x6fb239a92d3a7b2b9898c13cdedd2bc26e323ec2#code"
+          },
+          {
+            "label": "USDH HyperEVM implementation source",
+            "url": "https://hyperevmscan.io/address/0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9#code"
+          }
+        ]
+      },
+      {
+        "label": "USDH HyperEVM DEFAULT_ADMIN_ROLE EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "hyperevm",
+        "address": "0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9",
+        "deploymentRefs": [
+          "hyperevm:0x111111a1a0667d36bd57c0a9f569b98057111111"
+        ],
+        "canRaiseCap": true,
+        "capDescription": "DEFAULT_ADMIN_ROLE can setMaxSupply; getMaxSupply() was 250,000,000 USDH at the observation block, so the cap is raiseable.",
+        "failureDomainKeys": [
+          "eoa:hyperevm:0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 43375036,
+        "evidence": "At HyperEVM block 43375036, EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 held DEFAULT_ADMIN_ROLE on the USDH proxy. The verified implementation makes administration able to authorize MINTER_ROLE members, setMaxSupply, and authorize the UUPS upgrade path; no delay was observed.",
+        "sources": [
+          {
+            "label": "USDH HyperEVM proxy source",
+            "url": "https://hyperevmscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111#code"
+          },
+          {
+            "label": "USDH HyperEVM implementation source",
+            "url": "https://hyperevmscan.io/address/0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9#code"
+          }
+        ]
+      },
+      {
+        "label": "USDH HyperEVM DEFAULT_ADMIN_ROLE EOA 0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "hyperevm",
+        "address": "0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+        "deploymentRefs": [
+          "hyperevm:0x111111a1a0667d36bd57c0a9f569b98057111111"
+        ],
+        "canRaiseCap": true,
+        "capDescription": "DEFAULT_ADMIN_ROLE can setMaxSupply; getMaxSupply() was 250,000,000 USDH at the observation block, so the cap is raiseable.",
+        "failureDomainKeys": [
+          "eoa:hyperevm:0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 43375036,
+        "evidence": "At HyperEVM block 43375036, EOA 0x79c6631fa15cda38777fb9dd7a6348baee794a4e held DEFAULT_ADMIN_ROLE on the USDH proxy. The verified implementation makes administration able to authorize MINTER_ROLE members, setMaxSupply, and authorize the UUPS upgrade path; no delay was observed.",
+        "sources": [
+          {
+            "label": "USDH HyperEVM proxy source",
+            "url": "https://hyperevmscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111#code"
+          },
+          {
+            "label": "USDH HyperEVM implementation source",
+            "url": "https://hyperevmscan.io/address/0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9#code"
+          }
+        ]
+      },
+      {
+        "label": "USDH TokenAuthority handler registry",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "hyperevm",
+        "address": "0xd457960ad4a14ab3dd984cb5fb161664afcb7821",
+        "deploymentRefs": [
+          "hyperevm:0x111111a1a0667d36bd57c0a9f569b98057111111"
+        ],
+        "canRaiseCap": "unknown",
+        "capDescription": "TokenAuthority authorizes registered stablecoin handlers and their limits; the USDH-specific allowance and transaction mint-limit values were not independently decoded.",
+        "failureDomainKeys": [
+          "contract:hyperevm:0xd457960ad4a14ab3dd984cb5fb161664afcb7821"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 43375036,
+        "evidence": "The verified TokenAuthority is the issuer control plane for registered stablecoin handlers and limits, including the USDH ReserveLedgerBackedHandler. It belongs to the native issuer path and is not a bridge adapter or cross-chain representation controller.",
+        "sources": [
+          {
+            "label": "TokenAuthority source",
+            "url": "https://hyperevmscan.io/address/0xd457960ad4a14ab3dd984cb5fb161664afcb7821#code"
+          },
+          {
+            "label": "ReserveLedgerBackedHandler source",
+            "url": "https://hyperevmscan.io/address/0x6fb239a92d3a7b2b9898c13cdedd2bc26e323ec2#code"
           }
         ]
       }
     ],
-    "economicCapSemantics": "unbounded",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At HyperEVM block 37547275: MINTER_ROLE count=1, member=EOA 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e (eth_getCode=0x); DEFAULT_ADMIN=EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 (eth_getCode=0x); proxy impl=0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9. HyperCore tokenId 0x54e00a5988577cb0b0c9ab0cb6ef7f4b remains an issuer-controlled HyperCore asset; the on-chain EVM surface is fully confirmed. Issuer-controlled 1:1 mint/redeem through Bridge against HQLA with monthly BPM LLP attestations. Economic-posture fields reviewed 2026-08-15: issuer EOAs control uncapped mint authority, BPM LLP reconciles reserves monthly, and the compliance record establishes no product-specific prudential authorization.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At HyperEVM block 43375036 on 2026-08-16, the canonical USDH proxy had MINTER_ROLE members EOA 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e and ReserveLedgerBackedHandler 0x6fb239a92d3a7b2b9898c13cdedd2bc26e323ec2. DEFAULT_ADMIN_ROLE had EOAs 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 and 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. The verified UUPS implementation was 0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9, the observed getMaxSupply() was 250,000,000 USDH, and no upgrade delay was observed. Bridge Building's reserve-ledger handler is native issuance; HyperCore token index 360 is a linked representation and is not global Mint Authority. Monthly BPM LLP attestations support periodic reconciliation, while no product-specific prudential authorization was verified.",
+      "reviewer": "Codex mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
-          "label": "USDH reserves",
-          "url": "https://usdh.com/reserves"
+          "label": "USDH documentation",
+          "url": "https://docs.usdh.com/"
         },
         {
-          "label": "USDH docs",
-          "url": "https://docs.usdh.com"
+          "label": "USDH minting documentation",
+          "url": "https://docs.usdh.com/usdh/minting"
         },
         {
-          "label": "USDH HyperEVM contract",
-          "url": "https://hypurrscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111"
+          "label": "USDH HyperEVM proxy source",
+          "url": "https://hyperevmscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111#code"
+        },
+        {
+          "label": "USDH HyperEVM implementation source",
+          "url": "https://hyperevmscan.io/address/0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9#code"
+        },
+        {
+          "label": "ReserveLedgerBackedHandler source",
+          "url": "https://hyperevmscan.io/address/0x6fb239a92d3a7b2b9898c13cdedd2bc26e323ec2#code"
+        },
+        {
+          "label": "TokenAuthority source",
+          "url": "https://hyperevmscan.io/address/0xd457960ad4a14ab3dd984cb5fb161664afcb7821#code"
         }
       ]
     }

@@ -76,7 +76,7 @@ Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain va
 | gnosis | `0x4ECaBa5870353805a9F068101A40E0f32ed605C6` | 6 |
 | pulsechain | `0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f` | 6 |
 | moonriver | `0xB44a9B6905aF7c801311e8F4E76932ee959c663C` | 6 |
-| xdc | `0xD4B5f10D61916Bd6E0860144a91Ac658dE8a1437` | 6 |
+| xdc | `0xd4b5f10d61916bd6e0860144a91ac658de8a1437` | 6 |
 | taiko | `0x2DEF195713CF4a606B49D07E520e22C17899a736` | 6 |
 | flow | `0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8` | 6 |
 | sei | `0x9151434b16b9763660705744891fa906f660ecc5` | 6 |

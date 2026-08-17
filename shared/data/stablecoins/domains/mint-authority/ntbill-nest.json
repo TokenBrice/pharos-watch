@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "verified",
-    "summary": "nTBILL is a Nest vault share on the Nucleus/BoringVault architecture; the permissioned Teller mints/burns shares when users deposit pUSD at vault NAV, while the Nest-controlled Manager directs Treasury-fund allocation. Both Teller and Manager are owned by a Nest 3-of-6 Safe.",
+    "confidence": "manual-review",
+    "summary": "nTBILL has reviewed native issuance on Ethereum, Plume, and BNB Chain through NestVault deposit entrypoints plus the still-authorized Ethereum Teller path. The shared Nest admin contract controls the issuance authority and the upgradeable NestVault proxies; Arbitrum has live code but no current issuer-confirmed native mint path and remains unresolved.",
     "controls": [
       {
         "label": "Nest Treasury Vault Teller (issuance/redemption)",
@@ -13,6 +13,9 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "address": "0x1492062b3ae7996c71f87a2b390b6b82afea0c59",
+        "deploymentRefs": [
+          "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
         "canRaiseCap": "unknown",
         "sources": [
           {
@@ -23,28 +26,15 @@
         "evidence": "At Ethereum block 25295096, owner() on the Teller returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982, confirmed as a 3-of-6 Gnosis Safe (v1.3.0+L2) via Safe API. In the Nest/Nucleus BoringVault model the Teller is the only contract that mints and burns vault receipt tokens."
       },
       {
-        "label": "Nest Treasury Vault Manager (strategy/admin)",
-        "role": "minter-admin",
-        "authorityType": "contract",
-        "directMintAbility": "can-authorize",
-        "chain": "ethereum",
-        "address": "0xf713a353f38d2e90245b94c1b004c10ab3a34857",
-        "canRaiseCap": "unknown",
-        "sources": [
-          {
-            "label": "Nest smart contracts (Manager address)",
-            "url": "https://docs.nest.credit/developers/smart-contracts"
-          }
-        ],
-        "evidence": "At Ethereum block 25295096, owner() on the Manager returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982, the same 3-of-6 Safe that owns the Teller. The Manager governs vault strategy and sits in the admin path over BoringVault/Teller issuance."
-      },
-      {
         "label": "Nest 3-of-6 Safe (Teller and Manager owner)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982",
+        "deploymentRefs": [
+          "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
         "canRaiseCap": "unknown",
         "threshold": 3,
         "signerCount": 6,
@@ -72,32 +62,210 @@
             "url": "https://etherscan.io/address/0x1492062b3ae7996c71f87a2b390b6b82afea0c59#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25295096, owner() on both Teller and Manager returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982. Safe API confirmed: 3-of-6 threshold, version 1.3.0+L2, no modules, no guard."
+        "evidence": "At Ethereum block 25295096, owner() on the Teller returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982. Safe API confirmed: 3-of-6 threshold, version 1.3.0+L2, no modules, no guard. The Manager remains an authored historical deployment but current RolesAuthority canCall(manager, nTBILL, manage(address,bytes,uint256)) returned false at the current review block, so it is not treated as a current mint controller."
+      },
+      {
+        "label": "Nest nTBILL Ethereum USDC NestVault direct mint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12",
+        "deploymentRefs": [
+          "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "canRaiseCap": "unknown",
+        "capDescription": "At Ethereum block 25770319, maxDeposit(address) returned uint256.max for a probe address; Nest's current integration guide routes deposits through this NestVault.",
+        "failureDomainKeys": [
+          "protocol:nest-shared-admin"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770319,
+        "sources": [
+          {
+            "label": "Nest nTBILL integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+          },
+          {
+            "label": "Ethereum nTBILL NestVault",
+            "url": "https://etherscan.io/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12#code"
+          }
+        ],
+        "evidence": "Nest's current nTBILL guide identifies the Ethereum USDC NestVault as the native deposit entrypoint. At Ethereum block 25770319, the NestVault owner() was 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, its authority() was 0x0a4f939b5d51157c58ba053275eaf77a782b4996, RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true, and maxDeposit(address) returned uint256.max."
+      },
+      {
+        "label": "Nest nTBILL Plume USDC NestVault direct mint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "plume",
+        "address": "0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12",
+        "deploymentRefs": [
+          "plume:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "canRaiseCap": "unknown",
+        "capDescription": "At Plume block 87675658, maxDeposit(address) returned uint256.max for a probe address; Nest's current integration guide routes deposits through this NestVault.",
+        "failureDomainKeys": [
+          "protocol:nest-shared-admin"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 87675658,
+        "sources": [
+          {
+            "label": "Nest smart-contract registry",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "Plume nTBILL NestVault",
+            "url": "https://explorer.plume.org/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12?tab=contract"
+          }
+        ],
+        "evidence": "Nest's current registry and nTBILL guide list the Plume USDC NestVault as a native issuance entrypoint. At Plume block 87675658, the NestVault owner() was 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, its authority() was 0x0a4f939b5d51157c58ba053275eaf77a782b4996, RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true, and maxDeposit(address) returned uint256.max."
+      },
+      {
+        "label": "Nest nTBILL BNB Chain USDT NestVault direct mint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x109df814e265cb62a1b366a4c0450b0a7af38a0c",
+        "deploymentRefs": [
+          "bsc:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "canRaiseCap": "unknown",
+        "capDescription": "At BSC block 116344431, maxDeposit(address) returned uint256.max for a probe address; Nest's current integration guide routes USDT deposits through this NestVault.",
+        "failureDomainKeys": [
+          "protocol:nest-shared-admin"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116344431,
+        "sources": [
+          {
+            "label": "Nest smart-contract registry",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "BNB Chain nTBILL NestVault",
+            "url": "https://bscscan.com/address/0x109df814e265cb62a1b366a4c0450b0a7af38a0c#code"
+          }
+        ],
+        "evidence": "Nest's current registry and nTBILL guide list the BNB Chain USDT NestVault as a native issuance entrypoint. At BSC block 116344431, the NestVault owner() was 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, its authority() was 0x0a4f939b5d51157c58ba053275eaf77a782b4996, RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true, and maxDeposit(address) returned uint256.max."
+      },
+      {
+        "label": "Nest nTBILL shared admin contract (all EVM deployments)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "deploymentRefs": [
+          "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+          "plume:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+          "bsc:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "protocol:nest-shared-admin"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770319,
+        "sources": [
+          {
+            "label": "Nest nTBILL integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+          },
+          {
+            "label": "Nest nTBILL smart-contract registry",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "At Ethereum block 25770319, Plume block 87675658, and BSC block 116344431, the nTBILL share and each current NestVault returned owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; the shared RolesAuthority 0x0a4f939b5d51157c58ba053275eaf77a782b4996 returned the same owner on all three chains. The owner can replace the share/vault authority, so this is a common native-mint authorization domain even though the current economic cap reads remain unbounded."
+      },
+      {
+        "label": "Nest nTBILL shared ProxyAdmin owner (all EVM deployments)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "deploymentRefs": [
+          "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+          "plume:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+          "bsc:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+        ],
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "Transparent ProxyAdmin can replace the current NestVaultOFT implementation on each native EVM route."
+        ],
+        "failureDomainKeys": [
+          "protocol:nest-shared-admin"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770319,
+        "sources": [
+          {
+            "label": "Ethereum nTBILL NestVault proxy",
+            "url": "https://etherscan.io/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12#code"
+          },
+          {
+            "label": "Plume nTBILL NestVault proxy",
+            "url": "https://explorer.plume.org/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12?tab=contract"
+          },
+          {
+            "label": "BNB Chain nTBILL NestVault proxy",
+            "url": "https://bscscan.com/address/0x109df814e265cb62a1b366a4c0450b0a7af38a0c#code"
+          }
+        ],
+        "evidence": "At the current review blocks, the Ethereum and Plume USDC NestVault proxy admin slot returned 0xcec84cac23a659217f10ee2a9476d6c4a8901067 and the BSC USDT NestVault proxy admin slot returned 0xc20142d79cbb882a4f6201f312bf1958610a5ec4; owner() on both ProxyAdmin contracts returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. The implementation slots were 0xec4a9220f3bec8a60e9dc7d9cdc41351f954083a (Ethereum), 0x44ac1b197a07681327499798be27b7a2ebebfc86 (Plume), and 0xee3e8334d90a18589935209f6a9a75b02b6a76d7 (BSC), confirming mutable mint-critical NestVault logic."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579998,
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+        "plume:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+        "bsc:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+      ],
+      "proxyAddresses": [
+        "0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12",
+        "0x109df814e265cb62a1b366a4c0450b0a7af38a0c"
+      ],
+      "implementationAddresses": [
+        "0xec4a9220f3bec8a60e9dc7d9cdc41351f954083a",
+        "0x44ac1b197a07681327499798be27b7a2ebebfc86",
+        "0xee3e8334d90a18589935209f6a9a75b02b6a76d7"
+      ],
+      "adminAddresses": [
+        "0xcec84cac23a659217f10ee2a9476d6c4a8901067",
+        "0xc20142d79cbb882a4f6201f312bf1958610a5ec4"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Nest nTBILL shared ProxyAdmin owner (all EVM deployments)",
+      "observedAt": "2026-08-16",
       "sources": [
         {
-          "label": "nTBILL token contract (Etherscan)",
-          "url": "https://etherscan.io/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9#code"
+          "label": "Nest nTBILL integration guide",
+          "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
         },
         {
-          "label": "Sourcify verified source (BoringVault.sol)",
-          "url": "https://sourcify.dev/server/v2/contract/1/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9?fields=abi,metadata"
+          "label": "Ethereum nTBILL NestVault proxy",
+          "url": "https://etherscan.io/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12#code"
+        },
+        {
+          "label": "Plume nTBILL NestVault proxy",
+          "url": "https://explorer.plume.org/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12?tab=contract"
+        },
+        {
+          "label": "BNB Chain nTBILL NestVault proxy",
+          "url": "https://bscscan.com/address/0x109df814e265cb62a1b366a4c0450b0a7af38a0c#code"
         }
       ]
     },
     "review": {
-      "evidence": "At Ethereum block 25295096: owner() on Teller (0x1492062b) and Manager (0xf713a353) both returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982. Safe API confirmed 3-of-6 Safe, version 1.3.0+L2, modules [], guard zero. All mint-capable surfaces confirmed. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nTBILL supply to portfolio assets was found. Regulation of underlying Treasury products does not prudentially supervise the Nest wrapper issuer. Upgrade-authority follow-up (2026-07-21): the nTBILL token at 0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9 is the exact_match-verified Nucleus BoringVault.sol implementation itself, not a proxy — the EIP-1967 implementation, admin, and beacon storage slots all read zero at Ethereum block 25579998, and its Sourcify ABI has no upgradeTo/upgradeToAndCall entry point. owner() reads the Nest admin contract 0x8fAACdC65de5D78975dF4f9DC4B6548979cEb23A (matching this asset's bridgeRouteRisk finding) and authority() reads 0x0A4F939b5D51157c58bA053275Eaf77a782B4996; these control BoringVault administrative parameters (setAuthority, transferOwnership, setBeforeTransferHook) but cannot swap the vault's deployed bytecode, so mint-critical logic itself is immutable rather than upgradeable. Economic-posture fields reviewed 2026-08-15: the Nest Safe controls the uncapped Teller/Manager issuance path, while issuer NAV and composition data do not reconcile whole supply and no wrapper regulator or independent attestor is evidenced. Wave 2 external verification 2026-08-15: Nest's current vault directory and integration guide add BNB Chain and Solana issuance surfaces but still publish only issuer-operated NAV/composition data, not independent whole-supply reconciliation. Reconciliation review 2026-08-15: Nest's dated Available Vaults snapshot identifies nTBILL as a multi-asset Treasury-fund vault share and its Audits register lists smart-contract audits, but no named third-party report or recurring attestation reconciling total nTBILL liabilities across its EVM and Solana issuance surfaces to the portfolio was found; the available evidence therefore remains insufficient for periodic reconciliation.",
-      "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21); Sol economic-posture batch 2026-08-15; Codex Wave 2 external verification 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Mint Authority is scoped to Nest's native issuance on Ethereum, Plume, and BNB Chain; the Solana CCTP/LayerZero representation is bridge machinery and is reviewed separately. The current Nest registry and nTBILL integration guide identify the three EVM share deployments and their NestVault deposit paths. At Ethereum block 25770319, Plume block 87675658, and BSC block 116344431, the current NestVault owner() was 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, authority() was 0x0a4f939b5d51157c58ba053275eaf77a782b4996, RolesAuthority.canCall(NestVault, nTBILL share, enter(...)) returned true, and maxDeposit(address) returned uint256.max. The Ethereum Teller remains authorized for the share enter path and is retained with its 3-of-6 Safe owner; current canCall(manager, nTBILL, manage(address,bytes,uint256)) returned false, so the historical Manager is not counted as a current mint controller. Arbitrum has live code, owner, and nonzero supply but is omitted from the current issuer registry and has no verified current NestVault mint path, so its route remains unresolved rather than being treated as canonical. The nTBILL BoringVault share implementation remains immutable, but the current NestVault mint-critical contracts are transparent proxies: Ethereum and Plume use proxy admin 0xcec84cac23a659217f10ee2a9476d6c4a8901067 and BSC uses 0xc20142d79cbb882a4f6201f312bf1958610a5ec4; both ProxyAdmin owners read 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. Nest publishes issuer-operated NAV and composition data, but no recurring independent reconciliation of total nTBILL liabilities to the portfolio or prudential supervision of the wrapper issuer was found, so economicCapSemantics remains unbounded, reconciliation remains unknown, and supervision remains none.",
+      "reviewer": "Codex migration FIX-01; Nest external verification 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {
@@ -127,6 +295,26 @@
         {
           "label": "Nest smart-contract audit register",
           "url": "https://docs.nest.credit/security-and-compliance/audits/"
+        },
+        {
+          "label": "Nest nTBILL integration guide",
+          "url": "https://docs.nest.credit/developers/integration-guides/ntbill"
+        },
+        {
+          "label": "Nest cross-chain architecture",
+          "url": "https://docs.nest.credit/about/cross-chain"
+        },
+        {
+          "label": "Ethereum nTBILL NestVault proxy",
+          "url": "https://etherscan.io/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12#code"
+        },
+        {
+          "label": "Plume nTBILL NestVault proxy",
+          "url": "https://explorer.plume.org/address/0x250c2d14ed6376fb392fba1edd2cfd11d2bf7f12?tab=contract"
+        },
+        {
+          "label": "BNB Chain nTBILL NestVault proxy",
+          "url": "https://bscscan.com/address/0x109df814e265cb62a1b366a4c0450b0a7af38a0c#code"
         }
       ]
     }

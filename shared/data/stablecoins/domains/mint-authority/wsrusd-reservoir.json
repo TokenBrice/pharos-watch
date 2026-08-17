@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "bounded-admin",
     "confidence": "verified",
-    "summary": "wsrUSD is a non-upgradeable Savingcoin ERC-4626 wrapper minted by depositing rUSD. Its active MANAGER role is held by Reservoir Safe 0x4E8a4894... (3-of-5), while DEFAULT_ADMIN_ROLE remains with EOA 0xb7570e32... and can grant or revoke MANAGER. Base mint authority is inherited from rUSD.",
+    "summary": "wsrUSD is a non-upgradeable Savingcoin ERC-4626 wrapper on canonical Ethereum, minted only by depositing rUSD. Its active MANAGER role is held by Reservoir Safe 0x4E8a4894... (3-of-5), while DEFAULT_ADMIN_ROLE remains with EOA 0xb7570e32... and can grant or revoke MANAGER. LayerZero OFTs and the Ethereum MyOFTAdapter are bridge machinery recorded separately under Bridge Risk; base mint authority is inherited from rUSD.",
     "inheritedFrom": "rusd-reservoir",
     "upgradeability": {
       "model": "immutable",
@@ -30,6 +30,9 @@
       {
         "chain": "ethereum",
         "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+        "deploymentRefs": [
+          "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+        ],
         "label": "wsrUSD Savingcoin ERC-4626 wrapper (non-upgradeable)",
         "role": "wrapper",
         "authorityType": "contract",
@@ -53,6 +56,9 @@
       {
         "chain": "ethereum",
         "address": "0x4E8a4894275780f571AaD53122e641D9f50Ff04f",
+        "deploymentRefs": [
+          "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+        ],
         "label": "wsrUSD MANAGER role Safe",
         "role": "cap-admin",
         "authorityType": "safe",
@@ -102,6 +108,9 @@
       {
         "chain": "ethereum",
         "address": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "deploymentRefs": [
+          "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+        ],
         "label": "wsrUSD DEFAULT_ADMIN_ROLE EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -146,9 +155,9 @@
           "url": "https://ethereum.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25531314, wsrUSD remains an immutable constructor-deployed Savingcoin ERC-4626 wrapper over rUSD. Reservoir Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f actively holds MANAGER and is 3-of-5 with no enabled modules, while EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 still holds DEFAULT_ADMIN_ROLE and can grant or revoke MANAGER. The wrapper has no privileged net-claim mint surface; base rUSD controls remain tracked on the parent. Re-verified at Ethereum block 25575162 on 2026-07-20: wsrUSD 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 still reads a zero EIP-1967 implementation slot, confirming the wrapper is still the immutable constructor-deployed contract, its asset() still resolves to rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32ded63b25163369d5eb4d8e89e70e5602) is still true, and the MANAGER Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f still returns getThreshold() = 3 over five owners. Economic-control adjudication: the wrapper mints shares only against rUSD actually deposited into it and exposes no privileged net-claim mint entry point, so its own cap is economically bounded; the unbounded issuer discretion sits on the parent rUSD profile, where it is scored. As a pure on-chain ERC-4626 wrapper there is no separate supply-versus-reserve attestation cadence for wsrUSD, and no financial regulator supervises Reservoir.",
-      "reviewer": "owner-triage; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25771270 on 2026-08-16, wsrUSD remains an immutable constructor-deployed Savingcoin ERC-4626 wrapper over rUSD. Reservoir Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f actively holds MANAGER and is 3-of-5 with no enabled modules, while EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 still holds DEFAULT_ADMIN_ROLE and can grant or revoke MANAGER. The wrapper has no privileged net-claim mint surface; base rUSD controls remain tracked on the parent. Its cap is 300,000,000 wsrUSD and its issuance remains rUSD-deposit-backed. The Ethereum MyOFTAdapter and all destination OFT/Solana representation controls are bridge machinery and are scored under Bridge Risk, not as native Mint Authority. Economic-control adjudication: the wrapper mints shares only against rUSD actually deposited into it and exposes no privileged net-claim mint entry point, so its own cap is economically bounded; the unbounded issuer discretion sits on the parent rUSD profile, where it is scored. As a pure on-chain ERC-4626 wrapper there is no separate supply-versus-reserve attestation cadence for wsrUSD, and no financial regulator supervises Reservoir.",
+      "reviewer": "owner-triage; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20); Codex mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     },
     "economicCapSemantics": "bounded",

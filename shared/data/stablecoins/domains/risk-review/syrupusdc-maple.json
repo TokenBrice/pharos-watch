@@ -9,10 +9,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "syrupUSDC moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard in burn-and-mint mode: tokens are burned on the source chain and natively minted on the destination, with no wrapped/lockbox model. Ethereum is canonical; Solana, Arbitrum, and Base are native burn/mint deployments bridged via CCIP (front-ended by Transporter), and users can mint syrupUSDC natively on Solana.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
-    "confidence": "verified",
+    "summary": "Ethereum is the sole canonical syrupUSDC issuance route: the MaplePool ERC-4626 vault mints strategy-vault shares against USDC deposits. Base, Arbitrum, and Solana are Chainlink CCIP CCT burn/mint bridge representations, even where Maple describes them as natively available; their destination token roles, pools, timelocks, canonical-side MapleCCIPReceiver, and Solana mint/freeze authorities are assessed here under Bridge Risk.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos bridge-route re-verification; mint-bridge-boundary migration",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "issuer",
@@ -83,7 +83,7 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
@@ -113,14 +113,14 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x660975730059246a68521a3e2fbd4740173100f5",
         "protocol": "Chainlink CCIP",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
@@ -150,14 +150,14 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
         "protocol": "Chainlink CCIP",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
@@ -187,14 +187,14 @@
         "canonicalChain": "ethereum",
         "contractAddress": "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
         "protocol": "Chainlink CCIP",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
@@ -217,6 +217,456 @@
             "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "syrupusdc-ethereum-ccip-receiver-admin",
+        "label": "Maple Ethereum MapleCCIPReceiver DEFAULT_ADMIN Safe",
+        "routeRefs": [
+          "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+          "base:0x660975730059246a68521a3e2fbd4740173100f5",
+          "arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
+          "solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x02b6a75c5d1f430f0614dc5ac8ad5f9d35fba2c4",
+          "implementation:ethereum:0x23cef2965db19f67a996371f9cb1a2f33d2b4821",
+          "contract:ethereum:0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
+          "safe:ethereum:0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x57d1b1d5271390e161155a4594657facf05ccc7c",
+            "0x8be3eb3c4f748f0ec660b996ef7e1d44f5d89736",
+            "0x4024b08d3ffef9f7bced48c820e53edbc983307b",
+            "0xf5703815842e06ce68940fa64eaa5bf36817d827",
+            "0x7371da5ac817c05547da65a84eacd72d653027af"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The verified MapleCCIPReceiver UUPS implementation fixes the Ethereum CCIP Router at 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D; exact current chain-type and remote-peer configuration was not fully enumerated in this review.",
+          "lockboxOrEscrow": "The canonical-side receiver admin can rescue tokens and withdraw funds from the bridge receiver.",
+          "caps": "The receiver admin can set bridge fees and chain types and enable or disable deposits/redemptions; no independent native syrupUSDC issuance cap is attributed to this bridge receiver.",
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE on MapleCCIPReceiver 0x02B6A75c5D1F430F0614dc5AC8aD5F9D35fbA2c4 is held by the 3-of-5 Safe and can change chain types and fees, enable/disable deposits/redemptions, rescue tokens, withdraw funds, and authorize UUPS upgrades to implementation 0x23CEF2965Db19f67A996371F9Cb1A2F33D2b4821."
+        },
+        "capDescription": "The 3-of-5 Safe administers the canonical-side CCIP receiver and can change bridge fee/chain settings or replace its UUPS implementation; this is transfer-rail administration, not direct native MaplePool share issuance.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The DEFAULT_ADMIN Safe can authorize UUPS upgrades to the MapleCCIPReceiver implementation.",
+          "The receiver can rescue tokens and withdraw funds; exact active remote-peer and route-limit state was not fully enumerated."
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "MapleCCIPReceiver proxy",
+            "url": "https://eth.blockscout.com/address/0x02B6A75c5D1F430F0614dc5AC8aD5F9D35fbA2c4"
+          },
+          {
+            "label": "MapleCCIPReceiver verified implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23CEF2965Db19f67A996371F9Cb1A2F33D2b4821"
+          },
+          {
+            "label": "Maple Ethereum address registry",
+            "url": "https://github.com/maple-labs/address-registry/blob/main/contracts/MapleAddressRegistryETH.sol"
+          }
+        ],
+        "evidence": "Fresh Ethereum review identified MapleCCIPReceiver proxy 0x02B6A75c5D1F430F0614dc5AC8aD5F9D35fbA2c4 with verified UUPS implementation 0x23CEF2965Db19f67A996371F9Cb1A2F33D2b4821 and the fixed Ethereum CCIP Router 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D. RoleGranted logs identify DEFAULT_ADMIN_ROLE account 0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8; the Safe is 3-of-5 with the five owners recorded above and no enabled module. The verified receiver source gives this admin chain-type, fee, deposit/redemption, rescue, withdrawal, and UUPS-upgrade powers."
+      },
+      {
+        "id": "syrupusdc-base-burn-mint-token-pool",
+        "label": "syrupUSDC Base BurnMintTokenPool MINTER/BURNER",
+        "routeRefs": [
+          "base:0x660975730059246a68521a3e2fbd4740173100f5"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xa36955b2bc12aee77ff7519482d16c7b86dbe42a",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x660975730059246a68521a3e2fbd4740173100f5",
+          "contract:base:0xa36955b2bc12aee77ff7519482d16c7b86dbe42a"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Base BurnMintTokenPool holds MINTER_ROLE and BURNER_ROLE on the Base syrupUSDC BurnMintERC20; its Ethereum CCIP selector is 5009297550715157269 and the pool owner governs remote-pool configuration.",
+          "caps": "No aggregate or per-call mint ceiling was evidenced in the reviewed reads; representation capacity is governed by CCIP pool and rate-limit configuration."
+        },
+        "capDescription": "The Base BurnMintTokenPool is the destination token's current MINTER_ROLE and BURNER_ROLE holder for the CCIP burn/mint representation; no independent numeric mint ceiling was evidenced.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067565,
+        "sources": [
+          {
+            "label": "Base syrupUSDC BurnMintERC20 verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x660975730059246a68521a3e2fbd4740173100f5"
+          },
+          {
+            "label": "Base BurnMintTokenPool",
+            "url": "https://basescan.org/address/0xa36955b2bc12aee77ff7519482d16c7b86dbe42a"
+          }
+        ],
+        "evidence": "At Base block 50067565 on 2026-08-16, verified BurnMintERC20 behavior was observed for syrupUSDC and the Base BurnMintTokenPool 0xa36955b2bc12aee77ff7519482d16c7b86dbe42a held the token's current MINTER_ROLE and BURNER_ROLE. This is bridge-representation mint/burn authority, not native MaplePool issuance."
+      },
+      {
+        "id": "syrupusdc-base-ccip-pool-owner-timelock",
+        "label": "syrupUSDC Base BurnMintTokenPool owner RBACTimelock",
+        "routeRefs": [
+          "base:0x660975730059246a68521a3e2fbd4740173100f5"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x7b0328745a01634c32efaf041d91432a075b308d",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0xa36955b2bc12aee77ff7519482d16c7b86dbe42a",
+          "timelock:base:0x7b0328745a01634c32efaf041d91432a075b308d",
+          "contract:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd",
+          "contract:base:0xc842c69d54f83170c42c4d556b4f6b2ca53dd3e8",
+          "contract:base:0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9",
+          "contract:base:0x68c38b653535daaf7e067cbc814cd34e88280cfe"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 10800,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Base pool owner configures the remote pool for Ethereum CCIP selector 5009297550715157269. The reviewed route dependencies are Router 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD and RMN proxy 0xC842c69d54F83170C42C4d556B4F6B2ca53Dd3E8; a complete current remote-pool state dump was not available.",
+          "rateLimits": "The Base pool reports rate-limit admin 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9; current aggregate and per-direction rate-limit values were not fully dumped.",
+          "caps": "The RBACTimelock owner can change pool route and rate-limit configuration after its 10,800-second delay; no complete current route-cap state was evidenced.",
+          "pausersAdminsUpgraders": "The Base BurnMintTokenPool owner is RBACTimelock 0x7b0328745a01634c32efaf041d91432a075b308d with a 10,800-second delay. The token's separate DEFAULT_ADMIN_ROLE is GovernorTimelock 0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b."
+        },
+        "capDescription": "The Base pool owner timelock can change remote-pool, router/RMN, and rate-limit configuration after three hours; the configured ManyChainMultiSig bypasser is recorded below.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "ManyChainMultiSig 0x68c38b653535daAF7E067CBC814cD34E88280CfE is the Base bypasser; its live configuration has 69 signers and a 3-of-3 top quorum group.",
+          "Current remote-pool and rate-limit state was not fully enumerated."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067565,
+        "sources": [
+          {
+            "label": "Base BurnMintTokenPool",
+            "url": "https://basescan.org/address/0xa36955b2bc12aee77ff7519482d16c7b86dbe42a"
+          },
+          {
+            "label": "Base RBACTimelock",
+            "url": "https://base.blockscout.com/address/0x7b0328745a01634c32efaf041d91432a075b308d"
+          },
+          {
+            "label": "Base JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the fresh Base review, the BurnMintTokenPool owner was RBACTimelock 0x7b0328745a01634c32efaf041d91432a075b308d with current delay 10,800 seconds; its Router was 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD, RMN proxy 0xC842c69d54F83170C42C4d556B4F6B2ca53Dd3E8, rate-limit admin 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9, and supported Ethereum selector 5009297550715157269. ManyChainMultiSig bypasser 0x68c38b653535daAF7E067CBC814cD34E88280CfE has 69 signers and a 3-of-3 top quorum group."
+      },
+      {
+        "id": "syrupusdc-base-cct-default-admin-timelock",
+        "label": "syrupUSDC Base CCT DEFAULT_ADMIN GovernorTimelock",
+        "routeRefs": [
+          "base:0x660975730059246a68521a3e2fbd4740173100f5"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x660975730059246a68521a3e2fbd4740173100f5",
+          "timelock:base:0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 86400,
+        "routeChecks": {
+          "caps": "DEFAULT_ADMIN_ROLE can grant or revoke the token's MINTER_ROLE and BURNER_ROLE; no independent numeric token cap was evidenced.",
+          "pausersAdminsUpgraders": "GovernorTimelock 0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b is the current Base token DEFAULT_ADMIN_ROLE holder and its MIN_DELAY() is 86,400 seconds. The verified BurnMintERC20 is not a proxy, so no token implementation upgrade path is attributed here."
+        },
+        "capDescription": "The Base token DEFAULT_ADMIN_ROLE holder can change bridge-role grants after the GovernorTimelock delay; the BurnMintERC20 implementation itself is not upgradeable.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067565,
+        "sources": [
+          {
+            "label": "Base syrupUSDC BurnMintERC20 verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x660975730059246a68521a3e2fbd4740173100f5"
+          },
+          {
+            "label": "Base GovernorTimelock",
+            "url": "https://basescan.org/address/0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b"
+          }
+        ],
+        "evidence": "At Base block 50067565, the token's current DEFAULT_ADMIN_ROLE was GovernorTimelock 0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b. The prior admin 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9 granted DEFAULT_ADMIN_ROLE to GovernorTimelock at Base block 38488177, and the current GovernorTimelock MIN_DELAY() was 86,400 seconds."
+      },
+      {
+        "id": "syrupusdc-base-ccip-rate-limit-admin",
+        "label": "syrupUSDC Base CCIP rate-limit admin",
+        "routeRefs": [
+          "base:0x660975730059246a68521a3e2fbd4740173100f5"
+        ],
+        "capabilities": [
+          "rate-limit"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0xa36955b2bc12aee77ff7519482d16c7b86dbe42a",
+          "contract:base:0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "rateLimits": "The Base BurnMintTokenPool identifies 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9 as rate-limit admin; current limit values were not fully dumped.",
+          "pausersAdminsUpgraders": "The same identity is getCCIPAdmin() on the Base BurnMintERC20. The verified source states that this identity registers with the CCIP token-admin registry and has no other token powers."
+        },
+        "capDescription": "The Base CCIP rate-limit admin can change route throttles; the current aggregate and per-direction values remain an evidence gap.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067565,
+        "sources": [
+          {
+            "label": "Base syrupUSDC BurnMintERC20 verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x660975730059246a68521a3e2fbd4740173100f5"
+          },
+          {
+            "label": "Base BurnMintTokenPool",
+            "url": "https://basescan.org/address/0xa36955b2bc12aee77ff7519482d16c7b86dbe42a"
+          }
+        ],
+        "evidence": "At the fresh Base review, 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9 was the BurnMintTokenPool rate-limit admin and the token's getCCIPAdmin() identity. A live code read confirmed this identity is a contract on Base; the verified BurnMintERC20 source limits its token role to CCIP token-admin registry registration rather than other token powers."
+      },
+      {
+        "id": "syrupusdc-arbitrum-burn-mint-token-pool",
+        "label": "syrupUSDC Arbitrum BurnMintTokenPool MINTER/BURNER",
+        "routeRefs": [
+          "arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x660975730059246a68521a3e2fbd4740173100f5",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
+          "contract:arbitrum:0x660975730059246a68521a3e2fbd4740173100f5"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Arbitrum BurnMintTokenPool holds MINTER_ROLE and BURNER_ROLE on the Arbitrum syrupUSDC BurnMintERC20; its Ethereum CCIP selector is 5009297550715157269 and the pool owner governs remote-pool configuration.",
+          "caps": "No aggregate or per-call mint ceiling was evidenced in the reviewed reads; representation capacity is governed by CCIP pool and rate-limit configuration."
+        },
+        "capDescription": "The Arbitrum BurnMintTokenPool is the destination token's current MINTER_ROLE and BURNER_ROLE holder for the CCIP burn/mint representation; no independent numeric mint ceiling was evidenced.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495302427,
+        "sources": [
+          {
+            "label": "Arbitrum syrupUSDC BurnMintERC20 verified source",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x41ca7586cc1311807b4605fbb748a3b8862b42b5"
+          },
+          {
+            "label": "Arbitrum BurnMintTokenPool verified source",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x660975730059246a68521a3e2fbd4740173100f5"
+          }
+        ],
+        "evidence": "At Arbitrum block 495302427 on 2026-08-16, verified BurnMintERC20 behavior was observed for syrupUSDC and the Arbitrum BurnMintTokenPool 0x660975730059246a68521a3e2fbd4740173100f5 held the token's current MINTER_ROLE and BURNER_ROLE. This is bridge-representation mint/burn authority, not native MaplePool issuance."
+      },
+      {
+        "id": "syrupusdc-arbitrum-ccip-pool-owner-timelock",
+        "label": "syrupUSDC Arbitrum BurnMintTokenPool owner RBACTimelock",
+        "routeRefs": [
+          "arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x8a89770722c84b60ce02989aedb22ac4791f8c7f",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0x660975730059246a68521a3e2fbd4740173100f5",
+          "timelock:arbitrum:0x8a89770722c84b60ce02989aedb22ac4791f8c7f",
+          "contract:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8",
+          "contract:arbitrum:0xc311a21e6fef769344eb1515588b9d535662a145",
+          "contract:arbitrum:0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9",
+          "contract:arbitrum:0xf4c257b5c6c526d56367a602e87b1932d13e67cb"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 10800,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Arbitrum pool owner configures the remote pool for Ethereum CCIP selector 5009297550715157269. The reviewed route dependencies are Router 0x141fa059441e0ca23ce184b6a78bafd2a517dde8 and RMN proxy 0xc311a21e6fef769344eb1515588b9d535662a145; a complete current remote-pool state dump was not available.",
+          "rateLimits": "The Arbitrum pool reports rate-limit admin 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9; current aggregate and per-direction rate-limit values were not fully dumped.",
+          "caps": "The RBACTimelock owner can change pool route and rate-limit configuration after its 10,800-second delay; no complete current route-cap state was evidenced.",
+          "pausersAdminsUpgraders": "The Arbitrum BurnMintTokenPool owner is RBACTimelock 0x8a89770722c84b60ce02989aedb22ac4791f8c7f with a 10,800-second delay. Its constructor admin is EOA 0x88E104D83599DaB09050B4Fe9486B3dFa2d3c0DE, with two proposers and three cancellers; ManyChainMultiSig 0xF4c257b5c6c526d56367A602E87B1932D13e67cb is the configured bypasser."
+        },
+        "capDescription": "The Arbitrum pool owner timelock can change remote-pool, router/RMN, and rate-limit configuration after three hours; the configured ManyChainMultiSig bypasser is recorded below.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "ManyChainMultiSig 0xF4c257b5c6c526d56367A602E87B1932D13e67cb is the Arbitrum bypasser; its live configuration has 69 signers and a 3-of-3 top quorum group.",
+          "The RBACTimelock constructor admin is EOA 0x88E104D83599DaB09050B4Fe9486B3dFa2d3c0DE; current remote-pool and rate-limit state was not fully enumerated."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495302427,
+        "sources": [
+          {
+            "label": "Arbitrum BurnMintTokenPool verified source",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x660975730059246a68521a3e2fbd4740173100f5"
+          },
+          {
+            "label": "Arbitrum RBACTimelock",
+            "url": "https://arbitrum.blockscout.com/address/0x8a89770722c84b60ce02989aedb22ac4791f8c7f"
+          },
+          {
+            "label": "Arbitrum JSON-RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the fresh Arbitrum review, the BurnMintTokenPool owner was RBACTimelock 0x8a89770722c84b60ce02989aedb22ac4791f8c7f with current delay 10,800 seconds; its Router was 0x141fa059441e0ca23ce184b6a78bafd2a517dde8, RMN proxy 0xc311a21e6fef769344eb1515588b9d535662a145, rate-limit admin 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9, and supported Ethereum selector 5009297550715157269. The timelock constructor admin, proposer/canceller assignments, and ManyChainMultiSig bypasser are recorded above."
+      },
+      {
+        "id": "syrupusdc-arbitrum-cct-default-admin-rate-limit",
+        "label": "syrupUSDC Arbitrum CCT DEFAULT_ADMIN and CCIP rate-limit admin",
+        "routeRefs": [
+          "arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
+          "contract:arbitrum:0x660975730059246a68521a3e2fbd4740173100f5",
+          "contract:arbitrum:0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "rateLimits": "The Arbitrum BurnMintTokenPool identifies 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9 as rate-limit admin; current limit values were not fully dumped.",
+          "caps": "The current DEFAULT_ADMIN_ROLE can grant or revoke the token's MINTER_ROLE and BURNER_ROLE; no independent numeric token cap was evidenced.",
+          "pausersAdminsUpgraders": "The Arbitrum token's current DEFAULT_ADMIN_ROLE and getCCIPAdmin() are 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9. The verified BurnMintERC20 is not a proxy; getCCIPAdmin() also registers with the CCIP token-admin registry, while the role holder can administer token roles."
+        },
+        "capDescription": "The Arbitrum CCT administrator can change bridge token role grants and route throttles; the current limit values remain an evidence gap.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495302427,
+        "sources": [
+          {
+            "label": "Arbitrum syrupUSDC BurnMintERC20 verified source",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x41ca7586cc1311807b4605fbb748a3b8862b42b5"
+          },
+          {
+            "label": "Arbitrum BurnMintTokenPool verified source",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x660975730059246a68521a3e2fbd4740173100f5"
+          }
+        ],
+        "evidence": "At Arbitrum block 495302427 on 2026-08-16, 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9 was the current DEFAULT_ADMIN_ROLE and getCCIPAdmin() identity on the CCT token and the BurnMintTokenPool rate-limit admin. A live code read confirmed this identity is a contract on Arbitrum."
+      },
+      {
+        "id": "syrupusdc-solana-ccip-mint-authority",
+        "label": "syrupUSDC Solana SPL mint authority",
+        "routeRefs": [
+          "solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "BL428ZGJqpmWRxJx8G3d52eEgTYyWyHj5suUZERdxk1w",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "mint:solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+          "authority:solana:BL428ZGJqpmWRxJx8G3d52eEgTYyWyHj5suUZERdxk1w"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Solana SPL mint is a CCIP bridge representation; the exact Solana CCIP pool/program, remote peers, and administrative/upgrader identities were not enumerable from the reviewed mint account.",
+          "caps": "The SPL mint authority can create representation supply; no route-level aggregate cap was evidenced from the mint account read."
+        },
+        "capDescription": "The Solana SPL mint authority can mint the CCIP representation; the reviewed account read did not establish an aggregate route cap or the controlling CCIP program configuration.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The exact Solana CCIP pool/program, remote peers, rate limits, and admin/upgrader identities remain an evidence gap."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439740802,
+        "sources": [
+          {
+            "label": "Solana finalized RPC account read",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Maple syrupUSDC Solana expansion",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+          },
+          {
+            "label": "Solana syrupUSDC mint explorer",
+            "url": "https://solscan.io/token/AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439740802 on 2026-08-16, the SPL mint AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj had mintAuthority BL428ZGJqpmWRxJx8G3d52eEgTYyWyHj5suUZERdxk1w. Maple's official Solana announcement describes access as CCIP-powered and bridgeable from Ethereum; the account read did not identify the exact CCIP pool/program or its admin and peer configuration."
+      },
+      {
+        "id": "syrupusdc-solana-ccip-freeze-authority",
+        "label": "syrupUSDC Solana SPL freeze authority",
+        "routeRefs": [
+          "solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj"
+        ],
+        "capabilities": [
+          "pause"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "mint:solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+          "authority:solana:GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Solana SPL freezeAuthority can freeze token accounts for the bridge representation. The exact CCIP program, remote peers, rate limits, and admin/upgrader identities were not enumerable from the reviewed mint account."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439740802,
+        "sources": [
+          {
+            "label": "Solana finalized RPC account read",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Solana syrupUSDC mint explorer",
+            "url": "https://solscan.io/token/AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439740802 on 2026-08-16, the SPL mint freezeAuthority was GoFoFfEDgALWRTw5dSY3VZQSwbFpvBEhDv1sFAWzYpbf. This freeze control is representation risk under Bridge Risk and is not a native MaplePool mint authority."
       }
     ]
   }

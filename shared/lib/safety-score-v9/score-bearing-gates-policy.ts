@@ -52,9 +52,16 @@ const V9ScoreBearingGatesPolicySchema = z
 
 export type V9ScoreBearingGatesPolicy = z.infer<typeof V9ScoreBearingGatesPolicySchema>;
 
-/** Safety Score methodology 9.22: digest-bound gates formerly held as code literals. */
-export const V9_SCORE_BEARING_GATES_POLICY_V922 = V9ScoreBearingGatesPolicySchema.parse({
-  methodologyVersion: "9.22",
+/**
+ * Safety Score methodology 9.23: digest-bound gates formerly held as code literals.
+ *
+ * The gate values are unchanged from 9.22; only the label moves. `methodologyVersion`
+ * is deliberately digest-neutral (see "keeps a gate policy version relabel
+ * digest-neutral"), so this bump republishes provenance under the active version
+ * without rotating the policy semantic digest or moving any score.
+ */
+export const V9_SCORE_BEARING_GATES_POLICY_V923 = V9ScoreBearingGatesPolicySchema.parse({
+  methodologyVersion: "9.23",
   withhold: {
     maxScoreExclusive: 55,
     minimumLimitedPillarCount: 2,

@@ -1190,11 +1190,11 @@
         ]
       },
       {
-        "id": "xdc:0xd4b5f10d61916bd6e0860144a91ac658dE8a1437",
+        "id": "xdc:0xd4b5f10d61916bd6e0860144a91ac658de8a1437",
         "sourceChain": "ethereum",
         "destinationChain": "xdc",
         "canonicalChain": "ethereum",
-        "contractAddress": "0xD4B5f10D61916Bd6E0860144a91Ac658dE8a1437",
+        "contractAddress": "0xd4b5f10d61916bd6e0860144a91ac658de8a1437",
         "protocol": "XDC bridge xUSDT (USDT@xinfin)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",

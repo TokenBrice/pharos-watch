@@ -45,6 +45,9 @@
         "evidence": "At Ethereum block 25,296,225, the JTRSY Tranche token wards are: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f, contract), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e, contract), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, contract). Same ward set as JAAA (shared Centrifuge protocol deployment). Root's ProtocolGuardian routes to the Centrifuge protocol Safe.",
         "chain": "ethereum",
         "address": "0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f",
+        "deploymentRefs": [
+          "ethereum:0x8c213ee79581ff4984583c6a801e5263418c4b86"
+        ],
         "failureDomainKeys": [
           "contract:ethereum:0x7ed48c31f2fdc40d37407cbabf0870b2b688368f"
         ]
@@ -87,11 +90,17 @@
         "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Shared with JAAA — same Centrifuge protocol Safe.",
         "chain": "ethereum",
         "address": "0x9711730060C73Ee7Fcfe1890e8A0993858a7D225",
+        "deploymentRefs": [
+          "ethereum:0x8c213ee79581ff4984583c6a801e5263418c4b86"
+        ],
         "failureDomainKeys": [
           "safe:ethereum:0x9711730060c73ee7fcfe1890e8a0993858a7d225"
         ]
       },
       {
+        "deploymentRefs": [
+          "ethereum:0x8c213ee79581ff4984583c6a801e5263418c4b86"
+        ],
         "label": "Anemoy / Janus Henderson issuer rail",
         "role": "direct-minter",
         "authorityType": "issuer-backend",

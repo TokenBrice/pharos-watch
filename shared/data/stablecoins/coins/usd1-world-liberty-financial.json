@@ -110,6 +110,16 @@
       "chain": "abcore",
       "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
       "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000111111111e910f0f",
+      "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+      "decimals": 18
     }
   ],
   "custodyModel": "institutional-regulated",

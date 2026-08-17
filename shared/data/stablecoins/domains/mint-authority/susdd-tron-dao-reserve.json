@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "sUSDD is an immutable DSR-style savings wrapper (SavingsUsdd, forked from DAI Foundation) over USDD. The contract has no owner, no admin, no proxy — all parameters are immutable (pot, usddJoin set at constructor). Shares are minted/burned only by deposit/withdrawal of USDD. Base USDD mint authority is inherited from reviewed usdd-tron-dao-reserve.",
+    "summary": "sUSDD has independent native issuance on Ethereum and BNB Chain through immutable SavingsUsdd ERC-4626 wrappers. Each wrapper mints shares only against deposits of its chain-local USDD and burns shares on withdrawal; inherited USDD Join and GovActionsProxy authority is enumerated below and remains Mint Authority, not Bridge Risk.",
     "inheritedFrom": "usdd-tron-dao-reserve",
     "upgradeability": {
       "model": "immutable",
@@ -30,6 +30,9 @@
       {
         "chain": "ethereum",
         "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+        "deploymentRefs": [
+          "ethereum:0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+        ],
         "label": "sUSDD Ethereum wrapper (SavingsUsdd, immutable)",
         "role": "wrapper",
         "authorityType": "contract",
@@ -46,24 +49,205 @@
             "url": "https://usdd.io/"
           }
         ],
-        "evidence": "At Ethereum block 25295198, no EIP-1967 proxy slots (impl=0x0, admin=0x0), no owner(), no DEFAULT_ADMIN_ROLE. Source code (Blockscout) confirmed contractName=SavingsUsdd; constructor sets immutable pot and usddJoin; no admin functions. asset() returned USDD 0x4f8e5de400de08b164e7421b3ee387f461becd1a. BSC contract 0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d is same bytecode pattern (22172 bytes, no proxy)."
+        "evidence": "At Ethereum block 25771107, the SavingsUsdd wrapper returned name() = Savings Usdd, symbol() = sUSDD, and asset() = 0x4f8e5de400de08b164e7421b3ee387f461becd1a. Its EIP-1967 implementation slot was zero and owner() reverted. The verified immutable ERC-4626 source has no owner, role admin, pause, or upgrade path; shares mint only against deposited USDD and burn on withdrawal."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+        "deploymentRefs": [
+          "bsc:0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
+        ],
+        "label": "sUSDD BNB Chain wrapper (SavingsUsdd, immutable)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Immutable DSR-style savings wrapper over deposited BNB Chain USDD; no admin, no proxy, no upgrade path. Shares minted/burned only by deposit/withdraw.",
+        "sources": [
+          {
+            "label": "SavingsUsdd source (BSCScan)",
+            "url": "https://bscscan.com/address/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d#code"
+          },
+          {
+            "label": "USDD sUSDD mechanism",
+            "url": "https://docs.usdd.io/susdd-mechanism"
+          }
+        ],
+        "evidence": "At BSC block 116365577, the SavingsUsdd wrapper returned name() = Savings Usdd, symbol() = sUSDD, and asset() = 0x45e51bc23d592eb2dba86da3985299f7895d66ba. Its EIP-1967 implementation slot was zero and owner() reverted. The verified immutable ERC-4626 source has no owner, role admin, pause, or upgrade path; shares mint only against deposited BNB Chain USDD and burn on withdrawal."
       },
       {
         "chain": "ethereum",
         "address": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
-        "label": "Inherited USDD privileged token mint/admin authority",
+        "deploymentRefs": [
+          "ethereum:0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+        ],
+        "controllerAssetId": "usdd-tron-dao-reserve",
+        "label": "Inherited USDD Ethereum Join (active ward / direct minter)",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "directMintAbility": "cap-limited",
+        "capDescription": "UsddJoin.exit first executes vat.move(msg.sender,address(this),ONE*wad) and only then calls usdd.mint. The Join therefore requires pre-existing Vat credit and cannot authorize itself or raise a Vat debt ceiling.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "USDD Etherscan contract source",
-            "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+            "label": "Official USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Sourcify verified Ethereum USDD Join source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x983dfef6d71862d809e239845da5a959492f63b8?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
           }
         ],
-        "evidence": "Inherited from reviewed usdd-tron-dao-reserve mintAuthority. 2026-07-20 (Kimi P2 dc-2): eth_getCode at 0x4f8e5de400de08b164e7421b3ee387f461becd1a returns live bytecode (name 'Usdd Stablecoin', symbol USDD) — the inherited control surface is the upstream USDD token contract itself, so authorityType resolves to contract."
+        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At Ethereum block 25711756, token.wards(Join) returned 1, Join.usdd() returned the tracked token, and Join.live() returned 1. Verified exit() consumes existing Vat credit before minting, and the Join cannot raise system limits or authorize itself."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3dba111255d3888c723242320595588754cf493e",
+        "deploymentRefs": [
+          "ethereum:0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+        ],
+        "controllerAssetId": "usdd-tron-dao-reserve",
+        "label": "Inherited USDD Ethereum GovActionsProxy (governance executor)",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "capDescription": "The DSAuth-controlled executor can call rely to authorize new token or Vat wards, file to raise system ceilings, and customExec for arbitrary system calls. Its Pause delay is zero.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify verified Ethereum GovActionsProxy source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x3dba111255d3888c723242320595588754cf493e?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
+          }
+        ],
+        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At Ethereum block 25711756, authority() returned zero, owner() returned 0x25198d0d111eeac0fb1bd1de826294d9fce84378, and the linked Pause delay was zero. Verified source exposes authenticated rely, file, and customExec paths, so this executor can authorize mint rails rather than only changing parameters."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x25198d0d111eeac0fb1bd1de826294d9fce84378",
+        "deploymentRefs": [
+          "ethereum:0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+        ],
+        "controllerAssetId": "usdd-tron-dao-reserve",
+        "label": "Inherited USDD Ethereum GovActionsProxy owner EOA",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify verified Ethereum GovActionsProxy source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x3dba111255d3888c723242320595588754cf493e?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum owner account",
+            "url": "https://etherscan.io/address/0x25198d0d111eeac0fb1bd1de826294d9fce84378"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
+          }
+        ],
+        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At Ethereum block 25711756, GovActionsProxy.owner() returned this address, authority() returned zero, and eth_getCode returned empty. DSAuth therefore gives this EOA immediate governance paths that can authorize mint rails or remove system limits."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x6b00039d76795fd59baf17e0c9c6d87011e7edac",
+        "deploymentRefs": [
+          "bsc:0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
+        ],
+        "controllerAssetId": "usdd-tron-dao-reserve",
+        "label": "Inherited USDD BSC Join (active ward / direct minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "UsddJoin.exit first executes vat.move(msg.sender,address(this),ONE*wad) and only then calls usdd.mint. The Join therefore requires pre-existing Vat credit and cannot authorize itself or raise a Vat debt ceiling.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Official USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Sourcify verified BSC USDD Join source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x6b00039d76795fd59baf17e0c9c6d87011e7edac?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "BSC observation block 114778869",
+            "url": "https://bscscan.com/block/114778869"
+          }
+        ],
+        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At BSC block 114778869, token.wards(Join) returned 1, Join.usdd() returned the tracked token, and Join.live() returned 1. Verified exit() consumes existing Vat credit before minting, and the Join cannot raise system limits or authorize itself."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x2662e860ea672e4d31df3438114c48511229e60f",
+        "deploymentRefs": [
+          "bsc:0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
+        ],
+        "controllerAssetId": "usdd-tron-dao-reserve",
+        "label": "Inherited USDD BSC GovActionsProxy (governance executor)",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "capDescription": "The DSAuth-controlled executor can call rely to authorize new token or Vat wards, file to raise system ceilings, and customExec for arbitrary system calls. Its Pause delay is zero.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify verified BSC GovActionsProxy source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x2662e860ea672e4d31df3438114c48511229e60f?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "BSC observation block 114778869",
+            "url": "https://bscscan.com/block/114778869"
+          }
+        ],
+        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At BSC block 114778869, authority() returned zero, owner() returned 0x25198d0d111eeac0fb1bd1de826294d9fce84378, and the linked Pause delay was zero. Verified source exposes authenticated rely, file, and customExec paths, so this executor can authorize mint rails rather than only changing parameters."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x25198d0d111eeac0fb1bd1de826294d9fce84378",
+        "deploymentRefs": [
+          "bsc:0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
+        ],
+        "controllerAssetId": "usdd-tron-dao-reserve",
+        "label": "Inherited USDD BSC GovActionsProxy owner EOA",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify verified BSC GovActionsProxy source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x2662e860ea672e4d31df3438114c48511229e60f?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "BSC owner account",
+            "url": "https://bscscan.com/address/0x25198d0d111eeac0fb1bd1de826294d9fce84378"
+          },
+          {
+            "label": "BSC observation block 114778869",
+            "url": "https://bscscan.com/block/114778869"
+          }
+        ],
+        "evidence": "Inherited from reviewed usdd-tron-dao-reserve. At BSC block 114778869, GovActionsProxy.owner() returned this address, authority() returned zero, and eth_getCode returned empty. DSAuth therefore gives this EOA immediate governance paths that can authorize mint rails or remove system limits."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -92,9 +276,9 @@
           "url": "https://docs.usdd.io/system-architecture/susdd-mechanism.md"
         }
       ],
-      "evidence": "Wrapper surface verified at Ethereum block 25295198 and BSC block 103632491: SavingsUsdd is an immutable DAI-Foundation-fork DSR contract with no owner, no proxy, no upgrade path. asset() confirmed USDD 0x4f8e5de... on both chains. Base USDD mint authority tracked under usdd-tron-dao-reserve. Reconciliation review (2026-08-08): USDD 2.0 is a MakerDAO-style on-chain CDP system (Vat, Dog, Clip, Spot, Jug, OSM, PSM, collateral auctions) whose documentation states all collateral backing USDD is held in publicly verifiable smart contracts, and sUSDD is an immutable ERC-4626 wrapper fully redeemable for USDD. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. No prudential regulator and no third-party reserve attestation exist; the documentation's audits section covers smart-contract code only. Economic-posture fields reviewed 2026-08-15: local sUSDD shares are immutably deposit-gated by USDD, with on-chain collateral and no local regulator or independent attestor.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Reviewed 2026-08-16: Ethereum block 25771107 and BSC block 116365577 confirm that both sUSDD deployments are immutable SavingsUsdd ERC-4626 wrappers with no owner, role admin, pause, proxy, or upgrade path. Each wrapper's immutable asset() points to its chain-local native USDD deployment; deposit/mint creates shares only against deposited USDD and withdraw/redeem burns shares. The inherited USDD Join, GovActionsProxy, and owner controls are explicitly enumerated for both chains above and remain native parent issuance authority, not bridge machinery. Reconciliation review remains not-applicable because the mint path creates no off-chain reserve claim; local sUSDD issuance remains deposit-gated with on-chain parent accounting and no prudential regulator or independent attestor.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle); Sol economic-posture batch 2026-08-15; Codex mint-bridge boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

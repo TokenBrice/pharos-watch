@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "All iUSD is minted on Initia by the iusd-vault against AUSD0 deposited into its sticky vault object. AUSD0 is the LayerZero OFT representation of Agora AUSD, so the exact iUSD deployment inherits the local vault, AUSD0 OFT administration, and LayerZero messaging failure domains.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex bridge route curation",
+    "summary": "iUSD is locally minted by the Initia iusd-vault after registered AUSD0 deposits, while AUSD0 is the LayerZero OFT representation of Agora AUSD. The current AUSD0 package owner/admin and LayerZero bridge mint/burn, upgrade, peer, blocklist, pause, and rate-limit surfaces are separately structured here; the local vault remains a final-wrapper failure domain.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration RELOC-01",
     "confidence": "verified",
     "protocols": [
       {
@@ -54,42 +54,105 @@
         "destinationChain": "initia",
         "contractAddress": "0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
         "protocol": "Initia iusd-vault / LayerZero AUSD0 OFT",
-        "issuanceModel": "wrapped-representation",
+        "issuanceModel": "native-issuance",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "global",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Composite route: LayerZero delivers AUSD0 to Initia, then the iusd-vault locks the local AUSD0 representation and mints the exact iUSD contract 1:1.",
+        "reviewNote": "Composite route observed at Initia height 20754353 on 2026-08-16: LayerZero delivers the AUSD0 representation of Agora AUSD to Initia, then the iusd-vault accepts registered AUSD0 and mints the exact iUSD contract 1:1. The local vault controls final wrapper issuance; AUSD0 package and LayerZero administration is separately captured in the route-scoped bridge control.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "initia",
-        "controllerAddress": "0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6",
+        "controllerAddress": "0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d",
         "failureDomainKeys": [
           "contract:initia:0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6",
           "contract:initia:0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2",
           "multisig:initia:0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d",
           "protocol:layerzero-v2"
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 19467576,
+        "observedAt": "2026-08-16",
+        "observedBlock": 20754353,
         "sources": [
+          {
+            "label": "Initia latest block",
+            "url": "https://rest.initia.xyz/cosmos/base/tendermint/v1beta1/blocks/latest"
+          },
           {
             "label": "Initia iusd-vault resources",
             "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
-          },
-          {
-            "label": "Initia iusd-vault modules",
-            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules"
           },
           {
             "label": "Initia AUSD0 OFT resources",
             "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
           },
           {
-            "label": "LayerZero AUSD deployment announcement",
-            "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
+            "label": "Initia AUSD0 OFT package modules",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/modules"
+          },
+          {
+            "label": "LayerZero Aptos/Move OFT standard",
+            "url": "https://docs.layerzero.network/v2/developers/aptos-move/contract-modules/oft"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "iusd-initia-ausd0-layerzero-admin",
+        "label": "AUSD0 LayerZero OFT package/admin multisig",
+        "routeRefs": [
+          "initia:0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "initia",
+        "controllerAddress": "0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d",
+        "failureDomainKeys": [
+          "contract:initia:0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2",
+          "multisig:initia:0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d",
+          "protocol:layerzero-v2"
+        ],
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Initia AUSD0 oft_fa::OftImpl stores mint_ref and burn_ref for metadata 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef; LayerZero burn/mint is supply-conserving only while message validation and upstream AUSD accounting hold.",
+          "trustedPeerOrRemote": "The OAppStore admin and delegate both equal the AUSD0 multisig; its peer table length is 7 at height 20754353. Exact peer keys and EID/address mapping were not decoded, so no single source chain is assigned.",
+          "rateLimits": "oft_impl_config::Config reports an empty rate_limit_by_eid table at height 20754353; no numeric route cap is claimed.",
+          "caps": "The current blocklist is empty and fee bps is 0. No numeric bridge cap was decoded; the package's compatible upgrade surface can change route configuration.",
+          "pausersAdminsUpgraders": "The AUSD0 package ObjectCore.owner is the 3-of-5 AUSD0 multisig. All eight package modules, including oft_fa, oapp_core, and oft_impl_config, are COMPATIBLE; the public ABI exposes peer/delegate, config, send/receive-library, enforced-options, blocklist, rate-limit, fee, and admin-transfer setters."
+        },
+        "capDescription": "The AUSD0 multisig controls the Initia LayerZero OFT representation's bridge mint/burn path and its package, peer/delegate, blocklist, pause/configuration, and rate-limit administration. Current route capacity is unresolved rather than treated as numerically capped because the rate-limit table is empty and peer/security configuration was not fully decoded.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 20754353,
+        "sources": [
+          {
+            "label": "Initia AUSD0 OFT resources",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
+          },
+          {
+            "label": "Initia AUSD0 OFT package modules",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/modules"
+          },
+          {
+            "label": "Initia object-code deployment module ABI",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x838c8daa1ba8b2e01617d4d50620cb5ea98c61a6/modules"
+          },
+          {
+            "label": "LayerZero Aptos/Move OFT standard",
+            "url": "https://docs.layerzero.network/v2/developers/aptos-move/contract-modules/oft"
+          }
+        ],
+        "evidence": "At Initia height 20754353, AUSD0 package object 0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2 had ObjectCore.owner = 0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d. That owner was the native AUSD0 Multisig - Weighted wallet with five weight-10 voting members, one weight-1 proposer, and threshold 30, an effective 3-of-5 quorum. OAppStore.admin and delegate both equal the multisig and its peer table length is 7. oft_fa::OftImpl exposes mint_ref and burn_ref with freeze_fungible_store_enabled=true; oft_impl_config reports an empty blocklist and empty rate_limit_by_eid table, with fee bps 0. All eight package modules are COMPATIBLE, and the public ABI exposes set_peer, remove_peer, set_delegate, set_config, send/receive library setters, set_enforced_options, set_blocklist, set_rate_limit, fee setters, and transfer_admin. Exact peer EID/address mapping, DVN/Executor/library configuration, and numeric caps remain unresolved; no protocol defaults are assumed. These bridge mint/burn and upgrade/admin facts are preserved here rather than compiled as native iUSD Mint Authority."
       }
     ]
   }

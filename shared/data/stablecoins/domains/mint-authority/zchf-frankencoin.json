@@ -28,6 +28,9 @@
       {
         "chain": "ethereum",
         "address": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+        "deploymentRefs": [
+          "ethereum:0xb58e61c3098d85632df34eecfb899a1ed80921cb"
+        ],
         "label": "Frankencoin minter registry",
         "role": "direct-minter",
         "authorityType": "contract",

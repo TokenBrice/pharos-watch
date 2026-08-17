@@ -7,6 +7,9 @@
     "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY. The wiTRY wrapper owner and the underlying iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3-of-5 threshold, no modules, no guard) sharing the same 5 signers, confirming issuer-controlled mint authority.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+      ],
       "proxyAddresses": [
         "0xb492b4afd9658093694cf9452d5c272e8230f3b0"
       ],
@@ -48,6 +51,9 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0x7ac3bb10225a4ef27134bcf54454d545a1738662",
+        "deploymentRefs": [
+          "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+        ],
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": "unknown",
@@ -83,6 +89,9 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "address": "0xbdb430adf64ff1c8201c10221ddb846fa62613b6",
+        "deploymentRefs": [
+          "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+        ],
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": "unknown",

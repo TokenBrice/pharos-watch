@@ -33,6 +33,9 @@
       {
         "chain": "ethereum",
         "address": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
+        "deploymentRefs": [
+          "ethereum:0x6440f144b7e50d6a8439336510312d2f54beb01d"
+        ],
         "label": "BOLD token / registered Liquity branch minters",
         "role": "other",
         "authorityType": "contract",

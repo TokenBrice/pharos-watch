@@ -4,9 +4,14 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "USDX is an issuer-operated UUPS/OFT token on Ethereum, Flare, and Songbird. The active MINTER_ROLE set is two EOAs on Ethereum and one shared EOA on Flare and Songbird; the default admin can grant roles, while a secondary UPGRADE_ADMIN_ROLE EOA is also present on Ethereum and Flare.",
+    "summary": "USDX has independent native issuer issuance on Ethereum, Flare, and Songbird. The active MINTER_ROLE set is two EOAs on Ethereum and one shared EOA on Flare and Songbird; the default admin can grant native roles, while a secondary UPGRADE_ADMIN_ROLE EOA is also present on Ethereum and Flare. Ethereum and Flare's LayerZero OFT bridge machinery is assessed in bridgeRouteRisk and is not duplicated as native mint authority.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+        "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+        "songbird:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+      ],
       "proxyAddresses": [
         "0xf8750b54d86be7ae9e32b4a0c826811198d63313",
         "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
@@ -59,6 +64,9 @@
       {
         "chain": "ethereum",
         "address": "0xf28a91a1fa1f7d59094409a2908cb3754481e6dd",
+        "deploymentRefs": [
+          "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+        ],
         "label": "USDX active MINTER_ROLE EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -83,6 +91,9 @@
       {
         "chain": "ethereum",
         "address": "0x6329218fdb55c65a73313a76c20f1b6f0c169691",
+        "deploymentRefs": [
+          "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+        ],
         "label": "USDX active MINTER_ROLE EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -107,6 +118,11 @@
       {
         "chain": "ethereum",
         "address": "0xb8Ce31ad8bAD26e88Db17e68F695C64f67AD31EB",
+        "deploymentRefs": [
+          "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+          "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+          "songbird:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+        ],
         "label": "USDX default admin / upgrade admin",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -126,6 +142,9 @@
       {
         "chain": "flare",
         "address": "0x6329218fdb55c65a73313a76c20f1b6f0c169691",
+        "deploymentRefs": [
+          "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+        ],
         "label": "USDX active MINTER_ROLE EOA - Flare",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -154,6 +173,9 @@
       {
         "chain": "songbird",
         "address": "0x6329218fdb55c65a73313a76c20f1b6f0c169691",
+        "deploymentRefs": [
+          "songbird:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+        ],
         "label": "USDX active MINTER_ROLE EOA - Songbird",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -182,6 +204,9 @@
       {
         "chain": "ethereum",
         "address": "0x47345bb878501cc204d6e7d13d74ce159f287c55",
+        "deploymentRefs": [
+          "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+        ],
         "label": "USDX secondary UPGRADE_ADMIN_ROLE EOA - Ethereum",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -205,6 +230,9 @@
       {
         "chain": "flare",
         "address": "0x47345bb878501cc204d6e7d13d74ce159f287c55",
+        "deploymentRefs": [
+          "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+        ],
         "label": "USDX secondary UPGRADE_ADMIN_ROLE EOA - Flare",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -248,9 +276,9 @@
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "At Ethereum block 25530752, Flare block 65060282, and Songbird block 127737529, the EIP-1967 implementation slots returned 0xce2d107b..., 0x35151b..., and 0xF34A47..., respectively, while the proxy-admin slot was zero on all three deployments. owner() and hasRole(DEFAULT_ADMIN_ROLE, 0xb8ce31ad...) returned the same default-admin EOA on every deployment. hasRole(MINTER_ROLE, ...) returned true for 0xf28a91a1... and 0x6329218f... on Ethereum, and for 0x6329218f... on Flare and Songbird. hasRole(UPGRADE_ADMIN_ROLE, 0xb8ce31ad...) returned true on all three; 0x47345bb8... also held UPGRADE_ADMIN_ROLE on Ethereum and Flare. Verified source gates mint() with MINTER_ROLE and _authorizeUpgrade with the upgrade-admin path. Follow-up 2026-07-20: (1) The active minter EOAs are Hex Trust operational backend keys that submit mint/burn transactions directly on-chain; issuer documentation (htdigitalassets.com) describes USDX mint/redeem as an issuer-operated process under Hex Trust's licensed custody, and no public source names them as custody-vault or treasury addresses. (2) No on-chain policy or approval-flow constraint exists beyond MINTER_ROLE — the verified implementation exposes no supply ceiling or mint timelock; any custody approval flow is off-chain and not observable. Both questions are answered to the limit of public evidence. Economic-posture fields reviewed 2026-08-15: uncapped issuer minters span three chains, with no dated whole-supply attestation or named product-level prudential supervisor. Re-opened the HT Digital Assets USDX page and Hex Trust materials: they make undated claims about regular reserve attestations, but no dated USDX reserve-attestation artifact or report index was located, so the issuer's outstanding USDX liabilities cannot be confirmed as reconciled against reserves on a recurring cadence.",
-      "reviewer": "P2 mint-free cohort; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 25530752, Flare block 65060282, and Songbird block 127737529, the EIP-1967 implementation slots returned 0xce2d107b..., 0x35151b..., and 0xF34A47..., respectively, while the proxy-admin slot was zero on all three deployments. owner() and hasRole(DEFAULT_ADMIN_ROLE, 0xb8ce31ad...) returned the same default-admin EOA on every deployment. hasRole(MINTER_ROLE, ...) returned true for 0xf28a91a1... and 0x6329218f... on Ethereum, and for 0x6329218f... on Flare and Songbird. hasRole(UPGRADE_ADMIN_ROLE, 0xb8ce31ad...) returned true on all three; 0x47345bb8... also held UPGRADE_ADMIN_ROLE on Ethereum and Flare. Verified source gates mint() with MINTER_ROLE and _authorizeUpgrade with the upgrade-admin path. Ethereum and Flare's separate LayerZero OFT burn/mint, peer/configuration, and OFT upgrade surfaces are reviewed in bridgeRouteRisk and are not counted as native Mint Authority. Follow-up 2026-07-20: (1) The active minter EOAs are Hex Trust operational backend keys that submit mint/burn transactions directly on-chain; issuer documentation (htdigitalassets.com) describes USDX mint/redeem as an issuer-operated process under Hex Trust's licensed custody, and no public source names them as custody-vault or treasury addresses. (2) No on-chain policy or approval-flow constraint exists beyond MINTER_ROLE — the verified implementation exposes no supply ceiling or mint timelock; any custody approval flow is off-chain and not observable. Both questions are answered to the limit of public evidence. Economic-posture fields reviewed 2026-08-15: uncapped issuer minters span three chains, with no dated whole-supply attestation or named product-level prudential supervisor. Re-opened the HT Digital Assets USDX page and Hex Trust materials: they make undated claims about regular reserve attestations, but no dated USDX reserve-attestation artifact or report index was located, so the issuer's outstanding USDX liabilities cannot be confirmed as reconciled against reserves on a recurring cadence.",
+      "reviewer": "P2 mint-free cohort; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Codex mint-bridge boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "unresolvedQuestions": [],
       "disposition": "scoreable"
     }

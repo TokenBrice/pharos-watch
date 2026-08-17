@@ -3,10 +3,15 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "VBILL is a Securitize-administered fund token; its Ethereum implementation exposes issueTokens surfaces gated by owner(). Owner confirmed as EOA 0x59c1eA...76Ee at block 25295081; eth_getCode returns empty (EOA). Issuer-context EOA is expected for enterprise MPC/HSM custody.",
+    "confidence": "manual-review",
+    "summary": "VBILL is a Securitize-administered fund token with issuer-native issuance surfaces on Ethereum, Avalanche, BNB Chain, and Solana. The three EVM DSToken proxies expose owner-gated issueTokens and UUPS upgrade paths controlled by the same EOA 0x59c1eA...76Ee; the Solana Token-2022 mint and freeze authorities are issuer-controlled by BJXUcHs7...cgiK. These are native issuance controls, not Wormhole Guardian or transfer-admin controls. The Solana mint-program upgrade path remains unresolved.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183",
+        "bsc:0x14d72634328c4d03bba184a48081df65f1911279"
+      ],
       "proxyAddresses": [
         "0x2255718832bc9fd3be1caf75084f4803da14ff01",
         "0x7f4546ef315efc65336187fe3765ea779ac90183",
@@ -23,8 +28,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "VBILL token owner EOA",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579746,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770003,
       "sources": [
         {
           "label": "VBILL UUPS implementation source",
@@ -48,12 +53,17 @@
       {
         "chain": "ethereum",
         "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "deploymentRefs": [
+          "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01"
+        ],
         "label": "VBILL Securitize DSToken issuance surface",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770003,
         "sources": [
           {
             "label": "Sourcify DSToken source",
@@ -66,26 +76,135 @@
           {
             "label": "Etherscan VBILL token",
             "url": "https://etherscan.io/address/0x2255718832bc9fd3be1caf75084f4803da14ff01"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
         "evidence": "At Ethereum block 25295081, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (unchanged from block 25166611). Implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156 confirmed. Source identifies issueTokens and issueTokensWithNoCompliance as mint entry points gated by the owner."
       },
       {
+        "chain": "avalanche",
+        "address": "0x7f4546ef315efc65336187fe3765ea779ac90183",
+        "deploymentRefs": [
+          "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183"
+        ],
+        "label": "VBILL Securitize DSToken issuance surface (Avalanche)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92972905,
+        "sources": [
+          {
+            "label": "Avalanche VBILL token",
+            "url": "https://snowscan.xyz/address/0x7f4546ef315efc65336187fe3765ea779ac90183"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "Securitize VanEck Treasury Fund",
+            "url": "https://securitize.io/primary-market/vaneck-vbill"
+          }
+        ],
+        "evidence": "At Avalanche block 92972905, owner() returned the shared EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation slot resolved to 0xc7579a9a4801a805b66742e5bd56a1581705fe0d. The verified Securitize DSToken model exposes owner-gated issueTokens and issueTokensWithNoCompliance, so this is an issuer-native issuance surface rather than a Wormhole controller."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x14d72634328c4d03bba184a48081df65f1911279",
+        "deploymentRefs": [
+          "bsc:0x14d72634328c4d03bba184a48081df65f1911279"
+        ],
+        "label": "VBILL Securitize DSToken issuance surface (BNB Chain)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116336111,
+        "sources": [
+          {
+            "label": "BNB Chain VBILL token",
+            "url": "https://bscscan.com/address/0x14d72634328c4d03bba184a48081df65f1911279"
+          },
+          {
+            "label": "BNB Chain JSON-RPC",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "Securitize VanEck Treasury Fund",
+            "url": "https://securitize.io/primary-market/vaneck-vbill"
+          }
+        ],
+        "evidence": "At BNB Chain block 116336111, owner() returned the shared EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation slot resolved to 0xcd01d1c5c78ad428cd01913d4664c20ed1e61923. The verified Securitize DSToken model exposes owner-gated issueTokens and issueTokensWithNoCompliance, so this is an issuer-native issuance surface rather than a Wormhole controller."
+      },
+      {
+        "chain": "solana",
+        "address": "BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK",
+        "deploymentRefs": [
+          "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
+        ],
+        "label": "VBILL Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439710513,
+        "sources": [
+          {
+            "label": "Solana VBILL Token-2022 mint",
+            "url": "https://solscan.io/account/34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
+          },
+          {
+            "label": "Solana JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Securitize VanEck Treasury Fund",
+            "url": "https://securitize.io/primary-market/vaneck-vbill"
+          }
+        ],
+        "evidence": "At Solana slot 439710513, the VBILL Token-2022 mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1 had mintAuthority and freezeAuthority set to BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK. The authority is issuer-controlled in the reviewed route, but its key-versus-program governance and any upgrade authority remain unresolved."
+      },
+      {
         "chain": "ethereum",
         "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "deploymentRefs": [
+          "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+          "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183",
+          "bsc:0x14d72634328c4d03bba184a48081df65f1911279"
+        ],
         "label": "VBILL token owner EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770003,
         "sources": [
           {
             "label": "Etherscan VBILL owner address",
             "url": "https://etherscan.io/address/0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "BNB Chain JSON-RPC",
+            "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "At Ethereum block 25295081, eth_getCode for 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee returned empty bytecode (confirmed EOA). On-chain model is issuer-operated EOA; off-chain MPC/HSM custody is indistinguishable and does not block verified."
+        "evidence": "At Ethereum block 25770003, Avalanche block 92972905, and BNB Chain block 116336111, owner() returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. The verified Securitize DSToken model gates issueTokens and UUPS authorization through the owner; off-chain MPC/HSM custody is indistinguishable from the EOA read."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -119,9 +238,13 @@
           "url": "https://www.bvifsc.vg/regulated-entities/hatstone-fund-services-limited?page=741"
         }
       ],
-      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. All addressable mint-capable surfaces verified. Evidence challenge completed 2026-07-15: VBILL publishes Securitize-administered daily NAV through RedStone and identifies State Street as custodian, but no dated independent fund supply-to-assets attestation was found. The BVI FSC registry matches VanEck Treasury Fund, Ltd. as a professional fund, so supervision is established while reconciliation remains unknown. Economic-posture fields reviewed 2026-08-15: the issuer owner can mint and upgrade without a delay or firm cap, daily NAV does not reconcile whole multi-chain token supply to fund assets, and the BVI FSC registry names the supervised professional fund product.",
+      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. Re-verified 2026-08-16 at Ethereum block 25770003 (implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156), Avalanche block 92972905 (implementation 0xc7579a9a4801a805b66742e5bd56a1581705fe0d), and BNB Chain block 116336111 (implementation 0xcd01d1c5c78ad428cd01913d4664c20ed1e61923): all three owner() reads returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. At Solana slot 439710513, the Token-2022 mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1 had mintAuthority and freezeAuthority BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK. The Solana mint authority is recorded, but its controlling program or governance and any mint-program upgrade authority remain unresolved. Evidence challenge completed 2026-07-15: VBILL publishes Securitize-administered daily NAV through RedStone and identifies State Street as custodian, but no dated independent fund supply-to-assets attestation was found. The BVI FSC registry matches VanEck Treasury Fund, Ltd. as a professional fund, so supervision is established while reconciliation remains unknown. Economic-posture fields reviewed 2026-08-16: the issuer owner can mint and upgrade without a delay or firm cap across the three EVM deployments, the Solana mint has no reviewed supply cap, daily NAV does not reconcile whole multi-chain token supply to fund assets, and the BVI FSC registry names the supervised professional fund product.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16",
+      "unresolvedQuestions": [
+        "What program or governance controls the Solana VBILL mint authority and any mint-program upgrade path?",
+        "Which VBILL-specific Securitize Wormhole transfer contracts, peers, rate limits, and administrators enforce cross-chain accounting?"
+      ]
     }
   }
 }

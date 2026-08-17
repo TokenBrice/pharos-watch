@@ -158,8 +158,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "CHFm now has a Celo native token and a Monad spoke connected through Mento's Wormhole NTT deployment. The Celo NTT manager locks CHFm for the outbound path while the Monad spoke uses burn/mint, leaving cross-chain supply dependent on Wormhole's external validation network.",
-    "reviewedAt": "2026-07-15",
+    "summary": "Celo is CHFm's native Mento CDP issuance hub. Monad is a CHFmSpoke representation using Wormhole NTT burn/mint, while the Celo-side NTT manager locks native CHFm for the outbound path; these manager and transceiver controls are bridge machinery and do not add a second native mint authority.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
     "protocols": [
@@ -187,6 +187,14 @@
       {
         "label": "Monad RPC",
         "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Mento NTT deployment source",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/deploy/wormhole/DeployNTT.s.sol"
+      },
+      {
+        "label": "Celo RPC",
+        "url": "https://forno.celo.org"
       }
     ],
     "routes": [
@@ -216,22 +224,26 @@
       },
       {
         "id": "monad:0xf64e91ffef7ef43aa314f0bc2ac39f770797990c",
+        "sourceChain": "celo",
         "destinationChain": "monad",
         "canonicalChain": "celo",
         "contractAddress": "0xf64e91ffef7ef43aa314f0bc2ac39f770797990c",
         "protocol": "Mento / Wormhole NTT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "The Monad deployment is the CHFmSpoke representation: the NTT manager points to this token, returns burning mode, and is owned by the Mento Safe at the current observation block.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "monad",
+        "controllerAddress": "0xbbfbe2791722e93f27c5ce80e3725c8dd8d09697",
         "failureDomainKeys": [
           "wormhole:ntt:chfm"
         ],
-        "observedAt": "2026-07-15",
-        "observedBlock": 87876758,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96583399,
         "sources": [
           {
             "label": "Mento contract registry (CHFmSpoke)",
@@ -246,6 +258,142 @@
             "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "chfm-wormhole-ntt-manager",
+        "label": "CHFm Wormhole NTT manager",
+        "routeRefs": [
+          "celo:0xb55a79f398e759e43c95b979163f30ec87ee131d",
+          "monad:0xf64e91ffef7ef43aa314f0bc2ac39f770797990c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "failureDomainKeys": [
+          "wormhole:ntt:chfm",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "threshold": 4,
+          "observedBlock": 75010744,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The official CHFm NTT configuration sets a 200,000 CHFm outbound limit on each leg with matching per-peer inbound limits; the Mento Safe controls the route manager.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "The Celo NTT manager returns the native CHFm token and locking mode; the Monad manager returns the CHFmSpoke token and burning mode.",
+          "trustedPeerOrRemote": "The official NTT configuration pairs the Celo and Monad managers through the Wormhole transceiver.",
+          "attestorQuorum": "The NTT manager returns getThreshold() = 1 and uses one Wormhole transceiver/guardian validation path.",
+          "rateLimits": "The official configuration sets 200,000e18 CHFm outbound on each leg and matching per-peer inbound limits.",
+          "pausersAdminsUpgraders": "Both NTT manager proxies are owned by the Mento Safe; the Monad manager implementation is 0x0fa667eaf4a4956316137bf9b4786812d988dc35 and its proxy-admin slot is zero at block 96583399.",
+          "caps": "Manager ownership and route configuration can change the bridge limits; this is bridge accounting rather than independent native issuance."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96583399,
+        "sources": [
+          {
+            "label": "Mento NTT configuration",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Mento NTT deployment source",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/deploy/wormhole/DeployNTT.s.sol"
+          },
+          {
+            "label": "Celo RPC",
+            "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Celo block 75010744 (2026-08-16), the NTT manager at 0xbbfbe2791722e93f27c5ce80e3725c8dd8d09697 returned token() = 0xb55a79f398e759e43c95b979163f30ec87ee131d, getMode() = 0 (locking), and owner() = the 4-of-6 Mento Safe. At Monad block 96583399, the same manager address returned token() = 0xf64e91ffef7ef43aa314f0bc2ac39f770797990c, getMode() = 1 (burning), and the same owner. The manager is a bridge route controller on both deployments; it does not establish independent Monad liabilities."
+      },
+      {
+        "id": "chfm-wormhole-ntt-transceiver",
+        "label": "CHFm Wormhole NTT transceiver",
+        "routeRefs": [
+          "celo:0xb55a79f398e759e43c95b979163f30ec87ee131d",
+          "monad:0xf64e91ffef7ef43aa314f0bc2ac39f770797990c"
+        ],
+        "capabilities": [
+          "validator",
+          "upgrade",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "failureDomainKeys": [
+          "wormhole:ntt:chfm",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "threshold": 4,
+          "observedBlock": 75010744,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The official NTT configuration binds the Celo locking manager and Monad burning manager to the Wormhole transceiver.",
+          "attestorQuorum": "The NTT manager threshold is 1 and the route relies on one Wormhole transceiver/guardian validation path.",
+          "pausersAdminsUpgraders": "The transceiver is owned by the Mento Safe; its implementation is 0x4abda2f81b54cd48f8ada60ce86b876f25a697f5 and both proxy-admin slots are zero at the Monad observation block."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96583399,
+        "sources": [
+          {
+            "label": "Mento NTT deployment source",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/deploy/wormhole/DeployNTT.s.sol"
+          },
+          {
+            "label": "Mento NTT configuration",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Celo RPC",
+            "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "The deterministic CHFm NTT transceiver proxy is deployed on both Celo and Monad and is owned by the Mento Safe. At the Monad observation block its implementation slot resolves to 0x4abda2f81b54cd48f8ada60ce86b876f25a697f5, while the NTT manager reports one transceiver validation path. This validator, upgrade, admin, and pause exposure is retained under Bridge Risk for the Celo locking and Monad burning route."
       }
     ]
   }

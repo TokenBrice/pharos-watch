@@ -4,55 +4,110 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "CETES is issued by Etherfuse as a NAV-accreting tokenized fund. On Solana the mintAuthority is a 1-of-2 SPL Token-2022 multisig controlled by Etherfuse; on Base/Polygon the owner is a single EOA also holding the proxy admin upgrade path.",
+    "summary": "CETES has native issuer-controlled issuance on Solana and Stellar. Solana Token-2022 minting is held by a 1-of-2 Etherfuse multisig, while the Stellar CETES asset is issued by its classic Stellar issuer account with no authorization gate. Etherfuse's issuer backend supports the native subscription/redemption process; Base, Polygon, and Monad are LayerZero OFT representations whose owner, rate-limit, peer, and proxy-upgrade powers are reviewed separately under Bridge Risk.",
     "controls": [
       {
         "label": "Etherfuse issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f",
+          "stellar:CETES-GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+        ],
         "canRaiseCap": "unknown",
-        "evidence": "Etherfuse mints CETES on KYC'd subscription and burns on redemption at NAV against CETES bonds custodied via INDEVAL; supply creation is issuer-controlled with no permissionless route."
+        "evidence": "Etherfuse mints native Solana Token-2022 and Stellar CETES on KYC'd subscription and burns on redemption at NAV against CETES bonds custodied via INDEVAL; supply creation is issuer-controlled with no permissionless native route. EVM destination minting is LayerZero OFT receive-path behavior and is excluded from this control.",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Etherfuse developer documentation",
+            "url": "https://app.etherfuse.com/legal/dev-docs"
+          },
+          {
+            "label": "Etherfuse Stablebonds API",
+            "url": "https://api.etherfuse.com/lookup/stablebonds"
+          }
+        ]
       },
       {
         "label": "CETES Solana SPL Token-2022 mint authority — 1-of-2 multisig",
         "role": "direct-minter",
         "authorityType": "multisig",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
+        ],
+        "chain": "solana",
+        "address": "A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP",
         "canRaiseCap": true,
         "threshold": 1,
         "signerCount": 2,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Solana mainnet (2026-06-11): getAccountInfo on CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f shows mintAuthority = A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP; getAccountInfo on A6nFyQb... shows it is a Token-2022 SPL multisig with numRequiredSigners=1, numValidSigners=2, signers=[G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc, CB8DiXX5DUEqvc1xA4PAhYMNUVaqW5BGatantgqEHJ4A]. FreezeAuthority is None."
+        "failureDomainKeys": [
+          "eoa:solana:G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc",
+          "eoa:solana:CB8DiXX5DUEqvc1xA4PAhYMNUVaqW5BGatantgqEHJ4A"
+        ],
+        "evidence": "At finalized Solana slot 439724560 on 2026-08-16, CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f returned mint authority A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP. At finalized slot 439725250, that Token-2022 multisig had m=1, n=2, and signers G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc and CB8DiXX5DUEqvc1xA4PAhYMNUVaqW5BGatantgqEHJ4A; no immutable numeric supply cap was verified and FreezeAuthority is None.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439725250,
+        "sources": [
+          {
+            "label": "CETES Solana mint on Solscan",
+            "url": "https://solscan.io/token/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
       },
       {
-        "label": "CETES Base/Polygon owner EOA + proxy admin",
-        "role": "minter-admin",
+        "label": "CETES Stellar issuer account",
+        "role": "direct-minter",
         "authorityType": "eoa",
-        "directMintAbility": "none",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "stellar:CETES-GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+        ],
+        "chain": "stellar",
+        "address": "GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC",
         "canRaiseCap": true,
-        "evidence": "At Base block 47200682 and Polygon (2026-06-11): owner() on 0x834df4c1d8f51be24322e39e4766697be015512f returned 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f on both chains; eth_getCode on that address = 2 bytes (EOA confirmed). EIP-1967 proxy admin slot = 0x322922f0e1675a8e7be2a38b0636a7c184082ca8 (ProxyAdmin contract), whose owner() also returns 0xf0a5e0... (same EOA). EIP-1967 implementation slot = 0xd2acc459fd2a8f2ef7a42bff1e61b8d9dc71b678. The same EOA controls both the token role and the upgrade path."
+        "capDescription": "The classic Stellar CETES asset has no verified immutable numeric supply cap; the issuer account can issue the asset, while auth_required, auth_revocable, and auth_clawback_enabled are all false.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Horizon ledger 63986106, closed 2026-08-16T22:05:15Z, the CETES issuer account had its own weight-1 signer with zero low, medium, and high thresholds. The asset reported auth_required=false, auth_revocable=false, and auth_clawback_enabled=false, confirming a separate native Stellar issuer path rather than a LayerZero representation.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 63986106,
+        "sources": [
+          {
+            "label": "CETES Stellar issuer account",
+            "url": "https://horizon.stellar.org/accounts/GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+          },
+          {
+            "label": "CETES Stellar asset",
+            "url": "https://horizon.stellar.org/assets?asset_code=CETES&asset_issuer=GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Solana: CETES mintAuthority confirmed as 1-of-2 SPL Token-2022 multisig (A6nFyQb...) with 2 Etherfuse-operated signers. Base/Polygon: owner = EOA 0xf0a5e0... (also owns the ProxyAdmin at 0x322922...). The EOA controls both ownership and upgrade rights on EVM chains. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct and upgrade paths are unbounded, and BHR México's monthly assets-and-liabilities examinations reconcile whole supply without a named prudential supervisor.",
+      "evidence": "Solana: at finalized slots 439724560 and 439725250 on 2026-08-16, CETES mintAuthority is the 1-of-2 Token-2022 multisig A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP with the two reviewed signers. Stellar: Horizon ledger 63986106 on 2026-08-16 confirms the native CETES issuer account with a self signer, zero thresholds, and no authorization or clawback gate. The Base, Polygon, and Monad owner/ProxyAdmin path is a LayerZero OFT representation control and is reviewed only under Bridge Risk. Horizon's authorized Stellar balance of 51,721,119.0011752 differs from the Etherfuse API's 69,826,427.500366 Stellar total, so periodic reconciliation remains unresolved for that supply view. Economic posture remains issuer-controlled and unbounded with periodic BHR México examinations and attestation-only supervision, without a named prudential supervisor.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Etherfuse Proof of Reserves",
           "url": "https://app.etherfuse.com/legal/proof-of-reserves"
         },
         {
-          "label": "CETES Base contract",
-          "url": "https://basescan.org/address/0x834df4c1d8f51be24322e39e4766697be015512f"
-        },
-        {
           "label": "CETES Solana mint",
           "url": "https://solscan.io/token/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
+        },
+        {
+          "label": "CETES Stellar issuer account",
+          "url": "https://horizon.stellar.org/accounts/GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
         }
       ]
     }

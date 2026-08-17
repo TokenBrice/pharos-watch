@@ -9,7 +9,8 @@ import { BackToSource } from "@/components/back-to-source";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { ContractDeployments } from "@/components/key-info-card/contract-deployments";
+import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
+import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
 import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
@@ -199,6 +200,7 @@ function DetailSummaryRail({
           <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
         ) : null}
         <TapeForCoinTeaser coinId={viewModel.id} />
+        <KeyLinksCard meta={viewModel.coin} />
       </div>
     </aside>
   );

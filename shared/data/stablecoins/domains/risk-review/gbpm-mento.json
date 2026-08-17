@@ -150,10 +150,10 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "GBPm is part of Mento's local stablecoin system and is documented as available directly on supported chains. No holder-facing bridge or lockbox route was resolved for GBPm, so Pharos treats route risk as native issuance on the relevant chain deployments.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "tier": "external-validated-network",
+    "summary": "GBPm is canonical on Celo and represented on Monad by Mento's Wormhole Native Token Transfer deployment. Celo is the NTT locking hub and Monad is the burning StableTokenSpoke; the NTT Manager, Wormhole Transceiver, peers, limits, pauses, and upgrades are bridge machinery scored here rather than as additional native Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration",
     "confidence": "verified",
     "sources": [
       {
@@ -163,6 +163,30 @@
       {
         "label": "Mento",
         "url": "https://www.mento.org/"
+      },
+      {
+        "label": "Mento MGP-14 deployment proposal",
+        "url": "https://forum.mento.org/t/mgp-14-mento-v3-deployment-phase-1/103"
+      },
+      {
+        "label": "Mento deployment registry",
+        "url": "https://raw.githubusercontent.com/mento-protocol/deployments-v2/main/.treb/addressbook.json"
+      },
+      {
+        "label": "Official GBPm NTT configuration",
+        "url": "https://raw.githubusercontent.com/mento-protocol/deployments-v2/main/script/config/wormhole/NTTConfig.sol"
+      },
+      {
+        "label": "Mento StableTokenSpoke source",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-core/main/contracts/tokens/StableTokenSpoke.sol"
+      },
+      {
+        "label": "Safe Transaction Service - Celo",
+        "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+      },
+      {
+        "label": "Safe Transaction Service - Monad",
+        "url": "https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
       }
     ],
     "routes": [
@@ -171,51 +195,285 @@
         "destinationChain": "celo",
         "canonicalChain": "celo",
         "contractAddress": "0xccf663b1ff11028f0b19058d0f7b674004a40746",
-        "protocol": "Mento issuer-native (Broker mint)",
+        "protocol": "Wormhole Native Token Transfer (NTT) Celo locking hub",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "external-validated-network",
         "semantics": "native-mint",
         "scope": "canonical",
+        "controllerChain": "celo",
+        "controllerAddress": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:celo:0x7895d03ffdeb14a57ef79c21c3ea14dadf2a7c3f",
+          "contract:celo:0xcb55fe41c5437ad6449c2978b061958c1ec1ab5f",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "wormhole-core:celo:0xa321448d90d4e5b0a732867c18ea198e75cac48e"
+        ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Reviewed mintAuthority documents this legacy StableTokenV3 (cGBP) whose mint() is authorized via the Celo Registry Broker, with token owner and proxy admin resolving to the 4/6 Mento Safe 0x58099b74f4aCd642Da77b4b7966b4138ec5ba458. Issuer-native deployment; no bridge control carries the claim.",
+        "reviewNote": "At Celo block 75026011, StableTokenV3 implementation 0x815795c30d0758a297b08cd4e0643620c974c318 is the canonical GBPm issuer and the official MGP-14/NTT configuration marks Celo as the LOCKING hub. NTT Manager 0x7895D03FfDeb14a57eF79c21C3eA14dADf2a7c3f and Wormhole Transceiver 0xcB55fE41C5437Ad6449C2978B061958C1EC1AB5f provide canonical-side lock/release bridge machinery; that route exposure is scored at the external-validated-network tier, while native issuance remains Celo-only.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75026011,
         "sources": [
           {
-            "label": "token on Celoscan",
-            "url": "https://celoscan.io/address/0xccf663b1ff11028f0b19058d0f7b674004a40746"
+            "label": "GBPm Celo token and implementation",
+            "url": "https://celo.blockscout.com/address/0xccf663b1ff11028f0b19058d0f7b674004a40746?tab=contract"
           },
           {
-            "label": "Mento documentation",
-            "url": "https://docs.mento.org/"
+            "label": "Official GBPm NTT configuration",
+            "url": "https://raw.githubusercontent.com/mento-protocol/deployments-v2/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Mento MGP-14 deployment proposal",
+            "url": "https://forum.mento.org/t/mgp-14-mento-v3-deployment-phase-1/103"
+          },
+          {
+            "label": "Celo public RPC",
+            "url": "https://forno.celo.org"
           }
         ]
       },
       {
         "id": "monad:0x39bb4e0a204412bb98e821d25e7d955e69d40fd1",
+        "sourceChain": "celo",
         "destinationChain": "monad",
+        "canonicalChain": "celo",
         "contractAddress": "0x39bb4e0a204412bb98e821d25e7d955e69d40fd1",
-        "protocol": "Mento issuer-native (Broker mint)",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "Wormhole Native Token Transfer (NTT) StableTokenSpoke",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "monad",
+        "controllerAddress": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:monad:0x7895d03ffdeb14a57ef79c21c3ea14dadf2a7c3f",
+          "contract:monad:0xcb55fe41c5437ad6449c2978b061958c1ec1ab5f",
+          "contract:monad:0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea",
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "wormhole-core:monad:0x194b123c5e96b9b2e49763619985790dc241cac0"
+        ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: GBPm on Monad is Mento's own transparent-proxy deployment (implementation 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e, admin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea) whose owner() is the same 4/6 Mento Safe 0x58099b74f4aCd642Da77b4b7966b4138ec5ba458 as on Celo — issuer-operated, not a third-party bridge representation. No bridge control carries the claim.",
+        "reviewNote": "At Monad block 96633798, the GBPm deployment resolves to Mento StableTokenSpoke implementation 0x6A8ff60A89F3f359Fa16F45076d6DD1712B5e62e. The official NTT configuration marks Monad as the BURNING spoke; its NTT Manager 0x7895D03FfDeb14a57eF79c21C3eA14dADf2a7c3f is the live minter and burner, with a reciprocal Celo Manager peer, one enabled Wormhole Transceiver, and nominal 500,000e18 per-direction limits over 86,400 seconds. This is the Wormhole bridge representation of canonical Celo GBPm, not an independent native issuance route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96633798,
         "sources": [
           {
-            "label": "token on Monadexplorer",
-            "url": "https://monadexplorer.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1"
+            "label": "GBPm Monad StableTokenSpoke",
+            "url": "https://monadscan.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1#code"
           },
           {
-            "label": "Mento documentation",
-            "url": "https://docs.mento.org/"
+            "label": "Mento StableTokenSpoke source",
+            "url": "https://raw.githubusercontent.com/mento-protocol/mento-core/main/contracts/tokens/StableTokenSpoke.sol"
+          },
+          {
+            "label": "Official GBPm NTT configuration",
+            "url": "https://raw.githubusercontent.com/mento-protocol/deployments-v2/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "gbpm-celo-ntt-safe",
+        "label": "GBPm Celo NTT Manager and Wormhole Transceiver Safe",
+        "routeRefs": [
+          "celo:0xccf663b1ff11028f0b19058d0f7b674004a40746"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config",
+          "escrow"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:celo:0x7895d03ffdeb14a57ef79c21c3ea14dadf2a7c3f",
+          "contract:celo:0xcb55fe41c5437ad6449c2978b061958c1ec1ab5f",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "wormhole-core:celo:0xa321448d90d4e5b0a732867c18ea198e75cac48e"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1+L2",
+          "observedBlock": 75026011,
+          "source": "safe-api"
+        },
+        "routeChecks": {
+          "lockboxOrEscrow": "At Celo block 75026011, the NTT Manager 0x7895D03FfDeb14a57eF79c21C3eA14dADf2a7c3f is the LOCKING hub-side manager. It locks canonical GBPm for outbound NTT transfers and releases the conserved canonical balance on the return path; this is bridge accounting, not independent native mint authority.",
+          "trustedPeerOrRemote": "The Celo NTT Manager peer points to the Monad NTT Manager at the same address, and the Celo Wormhole Transceiver peer points to the Monad Transceiver at 0xcB55fE41C5437Ad6449C2978B061958C1EC1AB5f. The Celo Transceiver uses Wormhole Core 0xa321448d90d4e5b0a732867c18ea198e75cac48e.",
+          "rateLimits": "The official GBPm NTT configuration sets nominal 500,000e18 limits in each direction with an 86,400-second duration. The Celo NTT Manager threshold is 1 with one enabled Wormhole Transceiver.",
+          "pausersAdminsUpgraders": "The 4-of-6 Safe controls NTT Manager peer, rate-limit, transceiver, threshold, pause, and upgrade operations, and controls the Transceiver peer and implementation. At Celo block 75026011, NTT Manager and Transceiver implementation slots resolve to 0x67850dd0546e785ba81eb7fa4cf4d2f5b393cb0 and 0xdd38eac014c3dbd34ff06f966e9d24b907e992dd, respectively."
+        },
+        "capDescription": "The Celo NTT Manager and Transceiver Safe governs the canonical-side lock/release rail, peers, nominal rate limits, pause, threshold, and upgrade paths. It controls bridge exposure but does not turn the Celo route into a second native issuance deployment.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 75026011,
+        "sources": [
+          {
+            "label": "Official GBPm NTT configuration",
+            "url": "https://raw.githubusercontent.com/mento-protocol/deployments-v2/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Wormhole NTT protocol source",
+            "url": "https://github.com/wormhole-foundation/native-token-transfers"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          },
+          {
+            "label": "Celo public RPC",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 75026011, the official GBPm NTT configuration identified Celo as the LOCKING hub with the NTT Manager 0x7895D03FfDeb14a57eF79c21C3eA14dADf2a7c3f and Wormhole Transceiver 0xcB55fE41C5437Ad6449C2978B061958C1EC1AB5f. Current reads showed the reciprocal Monad peers, threshold 1, one enabled transceiver, nominal 500,000e18 per-direction limits over 86,400 seconds, and implementation slots for both bridge contracts. The local 4-of-6 Mento Safe is the controller of this bridge machinery."
+      },
+      {
+        "id": "gbpm-monad-ntt-safe",
+        "label": "GBPm Monad NTT Manager and Wormhole Transceiver Safe",
+        "routeRefs": [
+          "monad:0x39bb4e0a204412bb98e821d25e7d955e69d40fd1"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:monad:0x7895d03ffdeb14a57ef79c21c3ea14dadf2a7c3f",
+          "contract:monad:0xcb55fe41c5437ad6449c2978b061958c1ec1ab5f",
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "wormhole-core:monad:0x194b123c5e96b9b2e49763619985790dc241cac0"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1+L2",
+          "observedBlock": 96633798,
+          "source": "safe-api"
+        },
+        "routeChecks": {
+          "onchainAmountBounds": "At Monad block 96633798, StableTokenSpoke reports the NTT Manager as the live minter and burner. This burn/mint route is expected representation accounting: conservation depends on the Celo locking hub, reciprocal peers, and the configured limits, not on an independent Monad native-liability path.",
+          "trustedPeerOrRemote": "The Monad NTT Manager peer points to the Celo NTT Manager at the same address, and the Monad Wormhole Transceiver peer points to the Celo Transceiver at 0xcB55fE41C5437Ad6449C2978B061958C1EC1AB5f. The Monad Transceiver uses Wormhole Core 0x194b123c5e96b9b2e49763619985790dc241cac0.",
+          "rateLimits": "The official GBPm NTT configuration sets nominal 500,000e18 limits in each direction with an 86,400-second duration. The Monad NTT Manager threshold is 1 with one enabled Wormhole Transceiver.",
+          "pausersAdminsUpgraders": "The 4-of-6 Safe controls NTT Manager peer, rate-limit, transceiver, threshold, pause, and upgrade operations, and controls the Transceiver peer and implementation. At Monad block 96633798, NTT Manager and Transceiver implementation slots resolve to 0x67850dd0546e785ba81eb7fa4cf4d2f5b393cb0 and 0xdd38eac014c3dbd34ff06f966e9d24b907e992dd, respectively."
+        },
+        "capDescription": "The Monad NTT Manager and Transceiver Safe governs the bridge representation's burn/mint rail, peers, nominal rate limits, pause, threshold, and upgrade paths. The NTT Manager's token roles are bridge capabilities, not Celo native Mint Authority.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96633798,
+        "sources": [
+          {
+            "label": "Official GBPm NTT configuration",
+            "url": "https://raw.githubusercontent.com/mento-protocol/deployments-v2/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Mento StableTokenSpoke source",
+            "url": "https://raw.githubusercontent.com/mento-protocol/mento-core/main/contracts/tokens/StableTokenSpoke.sol"
+          },
+          {
+            "label": "Wormhole NTT protocol source",
+            "url": "https://github.com/wormhole-foundation/native-token-transfers"
+          },
+          {
+            "label": "Safe Transaction Service - Monad",
+            "url": "https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 96633798, GBPm resolved to StableTokenSpoke implementation 0x6A8ff60A89F3f359Fa16F45076d6DD1712B5e62e and the NTT Manager was the live minter and burner. The NTT Manager and Transceiver shared the Celo deployment addresses, reciprocal peers, threshold 1, one enabled transceiver, nominal 500,000e18 per-direction limits over 86,400 seconds, and Safe ownership. The bridge representation is material but route-scoped and externally validated by Wormhole messaging; relayer-specific status getters were unavailable in the deployed Transceiver ABI and were not inferred."
+      },
+      {
+        "id": "gbpm-monad-stabletoken-spoke-proxy-admin",
+        "label": "GBPm Monad StableTokenSpoke ProxyAdmin",
+        "routeRefs": [
+          "monad:0x39bb4e0a204412bb98e821d25e7d955e69d40fd1"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:monad:0x39bb4e0a204412bb98e821d25e7d955e69d40fd1",
+          "contract:monad:0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea",
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Monad block 96633798, the StableTokenSpoke proxy resolved to implementation 0x6A8ff60A89F3f359Fa16F45076d6DD1712B5e62e and ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea. The ProxyAdmin owner is the same 4-of-6 Mento Safe, so this can replace bridge-representation logic; it is not the Celo native mint-authority admin."
+        },
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96633798,
+        "sources": [
+          {
+            "label": "GBPm Monad StableTokenSpoke",
+            "url": "https://monadscan.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1#code"
+          },
+          {
+            "label": "Safe Transaction Service - Monad",
+            "url": "https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 96633798, ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea fronted the StableTokenSpoke representation and was owned by the same 4-of-6 Mento Safe that controls the NTT Manager and Transceiver. Its upgrade power is bridge-side representation risk and has been relocated from Mint Authority."
       }
     ]
   }

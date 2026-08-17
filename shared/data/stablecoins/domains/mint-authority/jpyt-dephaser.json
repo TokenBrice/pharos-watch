@@ -9,6 +9,9 @@
       {
         "chain": "optimism",
         "address": "0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9",
+        "deploymentRefs": [
+          "optimism:0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+        ],
         "label": "JPYT MINTER_ROLE holder — Optimism",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -37,6 +40,9 @@
       {
         "chain": "optimism",
         "address": "0xbdeb54641a23e2716a2978cde3cdeb1aed335479",
+        "deploymentRefs": [
+          "optimism:0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+        ],
         "label": "JPYT DEFAULT_ADMIN_ROLE holder — Optimism",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -57,6 +63,9 @@
       {
         "chain": "base",
         "address": "0x0eab9d66adb8527cd7c0e7e7c1782580431ec276",
+        "deploymentRefs": [
+          "base:0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+        ],
         "label": "JPYT MINTER_ROLE holder — Base",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -77,6 +86,9 @@
       {
         "chain": "base",
         "address": "0x2db58fcae002ae16963f122dd657bb360398c54c",
+        "deploymentRefs": [
+          "base:0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+        ],
         "label": "JPYT DEFAULT_ADMIN_ROLE holder — Base",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -97,6 +109,9 @@
       {
         "chain": "optimism",
         "address": "0x32d55717901ac132049de8a3e82db03b255091e0",
+        "deploymentRefs": [
+          "optimism:0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+        ],
         "label": "JPYT DepositManager upgrade admin — Optimism",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -116,6 +131,9 @@
       {
         "chain": "base",
         "address": "0x5642c7c728b10c0ddb258783e242833871b5352b",
+        "deploymentRefs": [
+          "base:0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+        ],
         "label": "JPYT DepositManager upgrade admin — Base",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -135,6 +153,10 @@
     ],
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "base:0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+        "optimism:0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "JPYT DEFAULT_ADMIN_ROLE holder — Optimism",
       "observedAt": "2026-07-14",

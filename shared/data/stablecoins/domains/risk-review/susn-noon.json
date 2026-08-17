@@ -22,10 +22,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Noon documents Hyperlane interoperability for USN and sUSN. sUSN is native on Ethereum; its zkSync, Sophon, and Starknet deployments are Noon-operated Hyperlane warp tokens that mint only on message delivery against sUSN locked on Ethereum (lock-mint), with owner and mailbox reads verified on-chain.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-    "confidence": "verified",
+    "summary": "Noon documents Ethereum sUSN as the canonical ERC-4626 wrapper and lock chain: sUSN inventory is locked on Ethereum, destination Hyperlane representations mint on accepted messages, and return transfers burn the representation before Ethereum unlocks the original. The zkSync, Sophon, and Starknet deployments are bridge representations, while Ethereum bridge configuration, pause/correction, upgrade, mailbox/ISM, and destination owner controls are scored here separately from native deposit-gated issuance.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "docs",
@@ -59,9 +59,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "sUSN is native on Ethereum: the ERC-4626 wrapper mints only against deposited USN (reviewed mint-authority profile).",
+        "reviewNote": "sUSN is native on Ethereum: the ERC-4626 wrapper mints only against deposited USN. Its cross-chain path separately locks wrapper inventory and unlocks it after accepted Hyperlane messages; those transfer-rail controls are reviewed below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771191,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -70,6 +71,14 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Current sUSN implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=sources,abi,metadata"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum.publicnode.com"
           }
         ]
       },
@@ -86,11 +95,12 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "controllerChain": "zksync",
-        "controllerAddress": "0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
+        "controllerAddress": "0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263",
         "reviewDisposition": "reviewed",
-        "reviewNote": "HypERC20 warp token: owner()=0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263 (contract) and mailbox()=0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e (Hyperlane zkSync mailbox) read on zkSync Era at 2026-07-20; mint executes only on Hyperlane message delivery against sUSN locked on Ethereum.",
+        "reviewNote": "HypERC20 warp token: at zkSync block 71576848 on 2026-08-16, owner()=0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263 (contract), mailbox()=0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, token-level ISM()=0, and LayerZero endpoint()=0xd07c30af3ff30d96bdc9c6044958230eb797ddbf. Mint/burn executes only on accepted Hyperlane message delivery against sUSN locked on Ethereum; the mailbox default ISM validator set was not decoded.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 71576848,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -99,11 +109,17 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "zkSync Era JSON-RPC",
+            "url": "https://mainnet.era.zksync.io"
           }
         ],
         "failureDomainKeys": [
           "protocol:hyperlane-warp-route",
-          "contract:zksync:0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f"
+          "contract:zksync:0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
+          "contract:zksync:0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263",
+          "contract:zksync:0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e"
         ]
       },
       {
@@ -119,11 +135,12 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "controllerChain": "sophon",
-        "controllerAddress": "0xb87dbe27db932bacaaa96478443b6519d52c5004",
+        "controllerAddress": "0x553d36879016ce22977a622804eee76dc0dc88e0",
         "reviewDisposition": "reviewed",
-        "reviewNote": "HypERC20 warp token: owner()=0x553d36879016ce22977a622804eee76dc0dc88e0 (contract) and mailbox()=0x9bbdf86b272d224323136e15594fdce487f40ce7 (Hyperlane Sophon mailbox) read on Sophon at 2026-07-20; mint executes only on Hyperlane message delivery against sUSN locked on Ethereum.",
+        "reviewNote": "HypERC20 warp token: at Sophon block 29641987 on 2026-08-16, owner()=0x553d36879016ce22977a622804eee76dc0dc88e0 (contract), mailbox()=0x9bbdf86b272d224323136e15594fdce487f40ce7, token-level ISM()=0, and LayerZero endpoint()=0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7. Mint/burn executes only on accepted Hyperlane message delivery against sUSN locked on Ethereum; the mailbox default ISM validator set was not decoded.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 29641987,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -132,11 +149,17 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Sophon JSON-RPC",
+            "url": "https://rpc.sophon.xyz"
           }
         ],
         "failureDomainKeys": [
           "protocol:hyperlane-warp-route",
-          "contract:sophon:0xb87dbe27db932bacaaa96478443b6519d52c5004"
+          "contract:sophon:0xb87dbe27db932bacaaa96478443b6519d52c5004",
+          "contract:sophon:0x553d36879016ce22977a622804eee76dc0dc88e0",
+          "contract:sophon:0x9bbdf86b272d224323136e15594fdce487f40ce7"
         ]
       },
       {
@@ -152,11 +175,12 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "controllerChain": "starknet",
-        "controllerAddress": "0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
+        "controllerAddress": "0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072",
         "reviewDisposition": "reviewed",
-        "reviewNote": "starknet_call at 2026-07-20: symbol()=sUSN, owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8 (Hyperlane Starknet mailbox); mint executes only on Hyperlane message delivery against sUSN locked on Ethereum.",
+        "reviewNote": "At Starknet block 13410062 on 2026-08-16, symbol()=sUSN, owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, and token-level ISM()=0; the class hash remained 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d. Mint/burn executes only on accepted Hyperlane message delivery against sUSN locked on Ethereum; the mailbox default ISM validator set was not decoded.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 13410062,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -165,12 +189,234 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Starknet Lava JSON-RPC",
+            "url": "https://rpc.starknet.lava.build"
           }
         ],
         "failureDomainKeys": [
           "protocol:hyperlane-warp-route",
-          "contract:starknet:0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17"
+          "contract:starknet:0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
+          "contract:starknet:0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072",
+          "contract:starknet:0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8"
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "susn-ethereum-hyperlane-lockbox-owner",
+        "label": "Noon sUSN Ethereum lockbox and Hyperlane route Safe",
+        "routeRefs": [
+          "ethereum:0xe24a3dc889621612422a64e6388927901608b91d"
+        ],
+        "capabilities": ["escrow", "upgrade", "admin", "pause", "peer-config"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1ea169ecccf7714e7ba04900e1a3357cca77327f",
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xe24a3dc889621612422a64e6388927901608b91d",
+          "contract:ethereum:0x1908284b50ee152c9f00c8e65a81fc1c4520bd81",
+          "timelock:ethereum:0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f",
+          "contract:ethereum:0xc005dc82818d67af737725bd4bf75435d065d239",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:ethereum:0x1ea169ecccf7714e7ba04900e1a3357cca77327f"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x5eF8aa9cb6b2dEDCd02509058cf99d3d44d023c3",
+            "0xe45Bb0D3cC77702E1310BB621c59c778304A42D0",
+            "0x09CE2d1C37772F7fF666B6447a66a5EBd2833799",
+            "0x0057f25088B450170229D78b5700ED735c7cc722",
+            "0xe8241FACB568E4c880490e8Ab4E015F2572e6976",
+            "0x8B3641db7737ffab752718fcc772161eC09FaD01"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedBlock": 25530462,
+          "observedAt": "2026-07-14",
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "Noon documents Ethereum-to-destination lock-mint and destination-to-Ethereum burn-unlock. At Ethereum block 25771191, the current ERC-4626 cross-chain path locks wrapper inventory on Ethereum and unlocks it only after an accepted Hyperlane message; this is supply-conserving bridge escrow, not independent issuer-native minting.",
+          "trustedPeerOrRemote": "The current implementation exposes owner-authorized Hyperlane mailbox, ISM, and remote-token configuration. The Ethereum mailbox is 0xc005dc82818d67af737725bd4bf75435d065d239, interchainSecurityModule() returns zero so the mailbox default ISM is effective, and the LayerZero Endpoint V2 is 0x1a44076050125825900e736c501f859c50fe728c. The default ISM validator set and quorum were not decoded.",
+          "pausersAdminsUpgraders": "The Noon Safe owns the wrapper and administers the bridge configuration. The current implementation adds pause and a 48-hour stuck-message correction flow. Bridge-critical implementation replacement passes through ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81 and timelock 0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f with a 172800-second delay owned by the same Safe.",
+          "onchainAmountBounds": "Outbound transfers lock existing sUSN wrapper inventory and accepted return messages unlock that inventory; no independent canonical bridge mint path or route-level aggregate limit was verified."
+        },
+        "capDescription": "The Noon Safe controls the Ethereum lockbox's bridge administration, Hyperlane/remote-token configuration, pause and stuck-message correction, while the ProxyAdmin/timelock path can replace bridge-critical logic after 172800 seconds. Native sUSN issuance remains deposit-gated.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
+          "LayerZero Endpoint V2 per-channel peers and configuration were not re-derived."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771191,
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Current sUSN proxy on Etherscan",
+            "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+          },
+          {
+            "label": "Current sUSN implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=sources,abi,metadata"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25771191 on 2026-08-16, the sUSN proxy resolved to implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d, owner() was the Noon 3-of-6 Safe 0x1ea169ecccf7714e7ba04900e1a3357cca77327f, mailbox() was 0xc005dc82818d67af737725bd4bf75435d065d239, interchainSecurityModule() was zero, and LayerZero endpoint() was 0x1a44076050125825900e736c501f859c50fe728c. The verified implementation exposes owner-authorized Hyperlane configuration, remote-token handling, pause, and 48-hour stuck-message correction; ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81 is governed by the 172800-second timelock 0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f. These are bridge-route controls over locked wrapper inventory, while native share issuance remains the deposit-gated Ethereum path in Mint Authority."
+      },
+      {
+        "id": "susn-zksync-hyperlane-representation-owner",
+        "label": "sUSN zkSync Hyperlane representation owner",
+        "routeRefs": [
+          "zksync:0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config"],
+        "controllerChain": "zksync",
+        "controllerAddress": "0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263",
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:zksync:0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
+          "contract:zksync:0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263",
+          "contract:zksync:0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e",
+          "contract:zksync:0xd07c30af3ff30d96bdc9c6044958230eb797ddbf"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At zkSync block 71576848, owner() returned 0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263, mailbox() returned 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, token-level ISM() returned zero, and the LayerZero endpoint was 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
+          "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
+          "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
+        },
+        "capDescription": "The zkSync destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
+          "The owner contract's multisig threshold and upgrade authorization were not independently verified."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 71576848,
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "zkSync Era JSON-RPC",
+            "url": "https://mainnet.era.zksync.io"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "evidence": "At zkSync block 71576848 on 2026-08-16, the sUSN representation owner was contract 0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263, mailbox was 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, token-level ISM() returned zero, and the LayerZero endpoint was 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf. The destination is a Hyperlane representation whose mint/burn path is message-delivery gated against Ethereum-locked sUSN; it is not an independent Noon native issuance deployment."
+      },
+      {
+        "id": "susn-sophon-hyperlane-representation-owner",
+        "label": "sUSN Sophon Hyperlane representation owner",
+        "routeRefs": [
+          "sophon:0xb87dbe27db932bacaaa96478443b6519d52c5004"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config"],
+        "controllerChain": "sophon",
+        "controllerAddress": "0x553d36879016ce22977a622804eee76dc0dc88e0",
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:sophon:0xb87dbe27db932bacaaa96478443b6519d52c5004",
+          "contract:sophon:0x553d36879016ce22977a622804eee76dc0dc88e0",
+          "contract:sophon:0x9bbdf86b272d224323136e15594fdce487f40ce7",
+          "contract:sophon:0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sophon block 29641987, owner() returned 0x553d36879016ce22977a622804eee76dc0dc88e0, mailbox() returned 0x9bbdf86b272d224323136e15594fdce487f40ce7, token-level ISM() returned zero, and the LayerZero endpoint was 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
+          "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
+          "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
+        },
+        "capDescription": "The Sophon destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
+          "The owner contract's multisig threshold and upgrade authorization were not independently verified."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 29641987,
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Sophon JSON-RPC",
+            "url": "https://rpc.sophon.xyz"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "evidence": "At Sophon block 29641987 on 2026-08-16, the sUSN representation owner was contract 0x553d36879016ce22977a622804eee76dc0dc88e0, mailbox was 0x9bbdf86b272d224323136e15594fdce487f40ce7, token-level ISM() returned zero, and the LayerZero endpoint was 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7. The destination is a Hyperlane representation whose mint/burn path is message-delivery gated against Ethereum-locked sUSN; it is not an independent Noon native issuance deployment."
+      },
+      {
+        "id": "susn-starknet-hyperlane-representation-owner",
+        "label": "sUSN Starknet Hyperlane representation owner",
+        "routeRefs": [
+          "starknet:0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config"],
+        "controllerChain": "starknet",
+        "controllerAddress": "0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072",
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:starknet:0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
+          "contract:starknet:0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072",
+          "contract:starknet:0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Starknet block 13410062, owner() returned 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox() returned 0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, token-level ISM() returned zero, and class hash remained 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
+          "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
+          "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
+        },
+        "capDescription": "The Starknet destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
+          "The owner contract's multisig threshold and upgrade authorization were not independently verified."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 13410062,
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Starknet Lava JSON-RPC",
+            "url": "https://rpc.starknet.lava.build"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "evidence": "At Starknet block 13410062 on 2026-08-16, the sUSN representation owner was 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox was 0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, token-level ISM() returned zero, and class hash remained 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d. The destination is a Hyperlane representation whose mint/burn path is message-delivery gated against Ethereum-locked sUSN; it is not an independent Noon native issuance deployment."
       }
     ]
   }

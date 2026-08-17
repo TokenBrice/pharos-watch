@@ -30,29 +30,53 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WCLP is issuer-minted on all six deployments by Ripio's own minter-router contracts (cross-chain router 0x46167cB0... holds MINTER_ROLE on every chain, verified on-chain), with the 4-of-7 Ripio Safe as DEFAULT_ADMIN. No third-party bridge carries the claim; cross-chain movement is issuer-operated burn-mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "summary": "WCLP has six independent native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis; their native MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UUPS upgrade paths remain in Mint Authority. The separate LimitedMinterBridge burn/mint adapter is issuer-operated bridge machinery and is route-scoped here with rate-limit, admin, pause, and bridge-mint capabilities. Celo is an authored deployment with a probable representation-like role graph, but its BridgeDeposit/operator binding remains unresolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration FIX2-20",
     "confidence": "probable",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "manual",
+        "name": "Ripio latam-stables bridge architecture",
+        "url": "https://github.com/ripio/latam-stables",
         "bridgeTypes": [
-          "intent",
-          "liquidity"
-        ]
+          "burn-mint"
+        ],
+        "note": "Ripio's official BridgeDeposit, LimitedMinterBridge, and LimitedMinter sources define issuer-operated burn/mint infrastructure; current BridgeDeposit/operator binding remains unresolved."
       }
     ],
     "sources": [
       {
-        "label": "Ripio local stablecoins",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "label": "Ripio wFIAT product page",
+        "url": "https://www.ripio.com/en/wfiat"
       },
       {
-        "label": "Across on L2BEAT",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "Ripio Celo launch announcement",
+        "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
+      },
+      {
+        "label": "Ripio latam-stables repository",
+        "url": "https://github.com/ripio/latam-stables"
+      },
+      {
+        "label": "Ripio LimitedMinterBridge source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+      },
+      {
+        "label": "Ripio BridgeDeposit source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+      },
+      {
+        "label": "Ripio LimitedMinter source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinter.sol"
+      },
+      {
+        "label": "Ethereum JSON-RPC fixed reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Celo JSON-RPC fixed reads",
+        "url": "https://forno.celo.org"
       }
     ],
     "routes": [
@@ -60,18 +84,19 @@
         "id": "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "destinationChain": "ethereum",
         "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-        "protocol": "Ripio cross-chain minter-router",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "semantics": "native-mint",
         "scope": "canonical",
         "controllerChain": "ethereum",
-        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
         "reviewDisposition": "reviewed",
-        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on ethereum at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "reviewNote": "At Ethereum block 25770539 on 2026-08-16, LatamStable implementation 0x8898786f... exposed issuer EOA 0x466c02e2... with MINTER_ROLE and UPGRADER_ROLE; paused() was false. The deployment creates native WCLP liabilities; LimitedMinterBridge is separately scoped as bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770539,
         "sources": [
           {
             "label": "Ripio WCLP token",
@@ -79,7 +104,10 @@
           }
         ],
         "failureDomainKeys": [
-          "protocol:ripio-minter-router",
+          "protocol:ripio-latam-stable",
+          "contract:ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
           "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
         ]
       },
@@ -87,18 +115,19 @@
         "id": "base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "destinationChain": "base",
         "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-        "protocol": "Ripio cross-chain minter-router",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "semantics": "native-mint",
         "scope": "canonical",
         "controllerChain": "base",
-        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
         "reviewDisposition": "reviewed",
-        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on base at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "reviewNote": "At Base block 50064508 on 2026-08-16, LatamStable implementation 0x8898786f... exposed issuer EOA 0x466c02e2... with MINTER_ROLE and UPGRADER_ROLE; paused() was false. The deployment creates native WCLP liabilities; LimitedMinterBridge is separately scoped as bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064508,
         "sources": [
           {
             "label": "Ripio WCLP token",
@@ -106,7 +135,10 @@
           }
         ],
         "failureDomainKeys": [
-          "protocol:ripio-minter-router",
+          "protocol:ripio-latam-stable",
+          "contract:base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:base:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
           "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
         ]
       },
@@ -114,18 +146,19 @@
         "id": "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "destinationChain": "worldchain",
         "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-        "protocol": "Ripio cross-chain minter-router",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "semantics": "native-mint",
         "scope": "canonical",
         "controllerChain": "worldchain",
-        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
         "reviewDisposition": "reviewed",
-        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on worldchain at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "reviewNote": "At Worldchain block 33791362 on 2026-08-16, LatamStable implementation 0x8898786f... exposed issuer EOA 0x466c02e2... with MINTER_ROLE and UPGRADER_ROLE; paused() was false. The deployment creates native WCLP liabilities; LimitedMinterBridge is separately scoped as bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 33791362,
         "sources": [
           {
             "label": "Ripio WCLP token",
@@ -133,7 +166,10 @@
           }
         ],
         "failureDomainKeys": [
-          "protocol:ripio-minter-router",
+          "protocol:ripio-latam-stable",
+          "contract:worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:worldchain:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
           "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
         ]
       },
@@ -141,18 +177,19 @@
         "id": "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "destinationChain": "bsc",
         "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-        "protocol": "Ripio cross-chain minter-router",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "semantics": "native-mint",
         "scope": "canonical",
         "controllerChain": "bsc",
-        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
         "reviewDisposition": "reviewed",
-        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on bsc at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "reviewNote": "At BSC block 116350307 on 2026-08-16, LatamStable implementation 0x8898786f... exposed issuer EOA 0x466c02e2... with MINTER_ROLE and UPGRADER_ROLE; paused() was false. The deployment creates native WCLP liabilities; LimitedMinterBridge is separately scoped as bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116350307,
         "sources": [
           {
             "label": "Ripio WCLP token",
@@ -160,7 +197,10 @@
           }
         ],
         "failureDomainKeys": [
-          "protocol:ripio-minter-router",
+          "protocol:ripio-latam-stable",
+          "contract:bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:bsc:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
           "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
         ]
       },
@@ -168,18 +208,19 @@
         "id": "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "destinationChain": "polygon",
         "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-        "protocol": "Ripio cross-chain minter-router",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "semantics": "native-mint",
         "scope": "canonical",
         "controllerChain": "polygon",
-        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
         "reviewDisposition": "reviewed",
-        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on polygon at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "reviewNote": "At Polygon block 92142224 on 2026-08-16, LatamStable implementation 0x8898786f... exposed issuer EOA 0x466c02e2... with MINTER_ROLE and UPGRADER_ROLE; paused() was false. The deployment creates native WCLP liabilities; LimitedMinterBridge is separately scoped as bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92142224,
         "sources": [
           {
             "label": "Ripio WCLP token",
@@ -187,7 +228,10 @@
           }
         ],
         "failureDomainKeys": [
-          "protocol:ripio-minter-router",
+          "protocol:ripio-latam-stable",
+          "contract:polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:polygon:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
           "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
         ]
       },
@@ -195,18 +239,19 @@
         "id": "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
         "destinationChain": "gnosis",
         "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-        "protocol": "Ripio cross-chain minter-router",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
+        "protocol": "Ripio LatamStable issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "semantics": "native-mint",
         "scope": "canonical",
         "controllerChain": "gnosis",
-        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
         "reviewDisposition": "reviewed",
-        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on gnosis at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "reviewNote": "At Gnosis block 47761530 on 2026-08-16, LatamStable implementation 0x8898786f... exposed issuer EOA 0x466c02e2... with MINTER_ROLE and UPGRADER_ROLE; paused() was false. The deployment creates native WCLP liabilities; LimitedMinterBridge is separately scoped as bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 47761530,
         "sources": [
           {
             "label": "Ripio WCLP token",
@@ -214,9 +259,104 @@
           }
         ],
         "failureDomainKeys": [
-          "protocol:ripio-minter-router",
+          "protocol:ripio-latam-stable",
+          "contract:gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:gnosis:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
           "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
         ]
+      },
+      {
+        "id": "celo:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "celo",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "Ripio wCLP Celo route under review",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Ripio's Celo launch announcement and current role reads identify this deployment as representation-like, but the BridgeDeposit/operator binding, supported-token state, source-chain burn accounting, destination mint accounting, and pause/admin/upgrade controls remain unresolved; it is not treated as native issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75017603,
+        "sources": [
+          {
+            "label": "Ripio Celo launch announcement",
+            "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
+          },
+          {
+            "label": "Celo wCLP proxy",
+            "url": "https://celo.blockscout.com/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+          },
+          {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "wclp-limited-minter-bridge",
+        "label": "Ripio WCLP LimitedMinterBridge adapter",
+        "routeRefs": [
+          "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge tokenConfigs returned a 76,000,000 wCLP dailyMaxMint on the Ethereum and Celo reads; its source exposes admin-controlled token registration and daily-limit changes, pause, and arbitrary-recipient minting.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The adapter's tokenConfigs dailyMaxMint was 76,000,000 wCLP at the reviewed Ethereum and Celo reads; the source permits an administrator to change token registration and daily limits.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source tokens and an operator fulfills destination minting, but the current BridgeDeposit address, operator binding, supported-token state, and route idempotency were not resolved.",
+          "pausersAdminsUpgraders": "LimitedMinterBridge exposes admin-controlled token registration, pause, daily-limit changes, and arbitrary-recipient mintTo(). Its own MINTER_ROLE member count was zero on all seven current reads, so the active BridgeDeposit/operator and admin execution path remain an evidence gap."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ripio LimitedMinter source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinter.sol"
+          },
+          {
+            "label": "Ripio latam-stables repository",
+            "url": "https://github.com/ripio/latam-stables"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 reads, LimitedMinterBridge 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 held WCLP MINTER_ROLE on the six authored native deployments and Celo. Its own MINTER_ROLE member count was zero on all seven current reads, so the live BridgeDeposit/operator is not established. The verified source nevertheless defines issuer-operated burn/mint, per-token daily limits, admin-controlled registration and limits, pause, and arbitrary-recipient minting; those capabilities remain route-scoped here and are not global native Mint Authority."
       }
     ]
   }

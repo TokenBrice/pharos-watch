@@ -4,7 +4,7 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "ctUSD is an M0-backed extension on Citrea; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
+    "summary": "ctUSD is the canonical Citrea M0-backed extension; its native wrapping routes through the Citrea SwapFacility while inherited base M issuance remains on the Ethereum MinterGateway. The M0 issuance and extension checks below are native liability controls, not bridge machinery. Current M0 Portal configuration does not authorize a direct ctUSD bridge representation, and Bridge Risk retains the reviewed Citrea native route only.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -37,12 +37,6 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing ctUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
-        "routeChecks": {
-          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
-          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
-          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
-          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
-        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -63,7 +57,7 @@
             "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "At Ethereum block 25294742: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin surface; cap governance rests with M0 TTG (POWER token holders)."
+        "evidence": "At Ethereum block 25294742: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin surface; cap governance rests with M0 TTG (POWER token holders). Native issuance checks retained from the legacy routeChecks block: M0 docs describe validator attestations before minting, although this review did not enumerate the live validator threshold; MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint; per-Minter capacity can be changed by M0 TTG governance; and the immutable MinterGateway leaves cap governance with M0 TTG and Registrar governance. These are inherited M-liability controls, not bridge machinery."
       },
       {
         "chain": "citrea",
@@ -73,12 +67,6 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
-        "routeChecks": {
-          "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
-          "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply.",
-          "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
-          "pausersAdminsUpgraders": "Citrea SwapFacility route is documented through M0 extension infrastructure; this review did not independently read a Citrea proxy-admin slot."
-        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -91,7 +79,7 @@
             "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
           }
         ],
-        "evidence": "At Citrea block 8546189: EIP-1967 proxy admin slot on 0xB6807116b3B1B321a390594e31ECD6e0076f6278 returns 0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin contract, same address as Ethereum/Linea). ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe multisig, 3-of-5, owners: 0x8c9b09eb2312311bcabc4069ea2329c734e770cd, 0x028aecb628506ceb931792c89a90d45dec690a67, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0x578ceb2aa7d6a02469450e4121eb4aec827f31cc). Implementation slot: 0xd87c75a92db19fe334fe7812890f893449ff1bda. Note: Citrea has a Safe directly as ProxyAdmin owner (vs TimelockController on Ethereum/Linea), reflecting Citrea's early-stage deployment."
+        "evidence": "At Citrea block 8546189: EIP-1967 proxy admin slot on 0xB6807116b3B1B321a390594e31ECD6e0076f6278 returns 0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin contract, same address as Ethereum/Linea). ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe multisig, 3-of-5, owners: 0x8c9b09eb2312311bcabc4069ea2329c734e770cd, 0x028aecb628506ceb931792c89a90d45dec690a67, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0x578ceb2aa7d6a02469450e4121eb4aec827f31cc). Implementation slot: 0xd87c75a92db19fe334fe7812890f893449ff1bda. Note: Citrea has a Safe directly as ProxyAdmin owner (vs TimelockController on Ethereum/Linea), reflecting Citrea's early-stage deployment. Native extension checks retained from the legacy routeChecks block: SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply; extension minting is bounded by available M-backed wrapper flow and base M supply; the cap follows M supply and can change through the M0 governance/admin path; and the earlier review had not independently read a Citrea proxy-admin slot. These are canonical ctUSD extension issuance checks, not bridge machinery."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -112,9 +100,9 @@
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         }
       ],
-      "evidence": "At Ethereum block 25294742: MinterGateway confirmed immutable non-proxy (Blockscout ContractName=MinterGateway, IsProxy=false). At Citrea block 8546189 (rpc.mainnet.citrea.xyz): SwapFacility EIP-1967 admin slot = 0x0f38d8a5... (ProxyAdmin); ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe 3-of-5 with 5 owners, getOwners() confirmed); implementation = 0xd87c75a9.... Safe has no modules (getModulesPaginated GS105 revert = no modules). All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: Citrea's direct 3-of-5 Safe can replace SwapFacility logic without a timelock, while the current M-backed route has real-time M0 validator reconciliation and no product-specific prudential authorization.",
+      "evidence": "At Ethereum block 25294742: MinterGateway confirmed immutable non-proxy (Blockscout ContractName=MinterGateway, IsProxy=false). At Citrea block 8546189 (rpc.mainnet.citrea.xyz): SwapFacility EIP-1967 admin slot = 0x0f38d8a5... (ProxyAdmin); ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe 3-of-5 with 5 owners, getOwners() confirmed); implementation = 0xd87c75a9.... Safe has no modules (getModulesPaginated GS105 revert = no modules). All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: Citrea's direct 3-of-5 Safe can replace SwapFacility logic without a timelock, while the current M-backed route has real-time M0 validator reconciliation and no product-specific prudential authorization. Boundary migration (2026-08-16): the former routeChecks blocks on MinterGateway and SwapFacility describe inherited M issuance and canonical ctUSD extension wrapping; they are not bridge route checks. Current M0 Portal settings do not authorize a direct ctUSD route, so Bridge Risk retains only the reviewed Citrea native route and no bridge control is required.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16"
     }
   }
 }

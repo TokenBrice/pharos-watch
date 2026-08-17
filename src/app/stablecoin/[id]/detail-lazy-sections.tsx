@@ -76,11 +76,6 @@ export const BlacklistHistorySection = dynamic(
   { loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" /> },
 );
 
-export const KeyInfoCard = dynamic(
-  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.KeyInfoCard),
-  { loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" /> },
-);
-
 export const PegStabilityCard = dynamic(
   () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.PegStabilityCard),
   { loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" /> },

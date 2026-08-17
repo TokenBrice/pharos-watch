@@ -86,6 +86,11 @@
       "chain": "solana",
       "address": "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8",
       "decimals": 6
+    },
+    {
+      "chain": "celo",
+      "address": "0xf6829d7393dae24509eb1e52ee8e572e2e271a4f",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

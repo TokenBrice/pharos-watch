@@ -1,6 +1,6 @@
 {
   "generatedBy": "scripts/maintenance/build-og-editorial.mjs",
-  "methodologyVersion": "9.22",
+  "methodologyVersion": "9.23",
   "fonts": {
     "newsreader": "9e25af908d11add17f0e32bb096f119aea11da11bcc5abd7d896e620aa61081c",
     "geistMono": "a4022744c97e497a45bc1d05e68221104df6829f6cac74552e0fdb03a331c648"
@@ -10,49 +10,49 @@
       "file": "og-editorial-digest.png",
       "kicker": "Daily Digest",
       "title": "Daily Digest",
-      "svgSha256": "3c2e71760ee29bfa02f55a87ebb65ffbd5aa8b6a1d9018b079b796ddb1711b2e",
+      "svgSha256": "a0d019c65fa252a6ecc183a86c4dc668edbaa7ca8c2dff2ba973dcf0bb46795b",
       "pngSha256": "9e903791cbaa7bf7a0264e6955e6a64fb6d631dc80b5d04585813a3cc796a494"
     },
     {
       "file": "og-editorial-depeg.png",
       "kicker": "Depeg Briefing",
       "title": "Depeg Briefing",
-      "svgSha256": "c16fca91c1d5ffe11d7731fd7b3718a43552b2e7791526d32a9008184c0fda1c",
+      "svgSha256": "d95baee643e569d242b71fd1ecb0932cb0413d31ef182ba4a47e4cd6cfb37197",
       "pngSha256": "69596897f2e92b391167141c821097d687df691f1280a3998c7170af158f1a00"
     },
     {
       "file": "og-editorial-methodology.png",
       "kicker": "Methodology",
       "title": "How Pharos grades the peg",
-      "svgSha256": "63e1b6f1467e54a1747cc940f2a4018b7a312ef0e174f07552dfa3f97ccb140f",
+      "svgSha256": "a8264422a8e8b2565233ae0ae0a1cbf6302d9c4565a2b71899dd9641f49e4501",
       "pngSha256": "35abbd82af2de6d6831c5fb3fc4e063526b65c4f379b8f17225a1a9c1597dc3b"
     },
     {
       "file": "og-editorial-cemetery.png",
       "kicker": "Cemetery",
       "title": "A record of failure",
-      "svgSha256": "c45530aa18a4cc36c8d0fb999a6c6a9f2674d7422bbe72c5185501f9a33d5672",
+      "svgSha256": "5b99371ecc6c69a20cbb88c7053e5937728214fd529ebc9f326a351db9260ea5",
       "pngSha256": "027dc22424b4583aa307dd115291bd843e2f53c6f736f1c5a144ad0fe8a703b8"
     },
     {
       "file": "og-editorial-about.png",
       "kicker": "About",
       "title": "About Pharos",
-      "svgSha256": "3147ac1f50cd1f660cc9a972d9be73eae4ca86252c493a249c7af7471a2769be",
+      "svgSha256": "7271a1de1468181753f633398d70e93097933170882f11c04e0c344d41607f12",
       "pngSha256": "c4a351d578f4c39c6834e3ab18881c6013db22129e30ca000b9a04ca6543edba"
     },
     {
       "file": "og-editorial-learn.png",
       "kicker": "Learn",
       "title": "Stablecoin mechanisms",
-      "svgSha256": "5d6d9f73042619d846b1c64cd9863674dbd6d6f131a11e5e209fb050f5a929cc",
+      "svgSha256": "e322577afe70823f3a2c9f670c8cadd2cd11da8ca7fa844bbfc5534fffe67cd6",
       "pngSha256": "84c1cd2c24f4c14a52777046737d117ed36823c0449388365a7eebb83eb4062e"
     },
     {
       "file": "og-editorial-profile.png",
       "kicker": "Stablecoin Profile",
       "title": "Stablecoin Profile",
-      "svgSha256": "ecfeed013575eee52e7f82c57fd4f1dba8e5dc256b9d8db2d44f07ca763b0d39",
+      "svgSha256": "c7e37e4235802a59e17332d804e6211f8005347d26c2b7928de4f57d52b5df8e",
       "pngSha256": "d3f01145e7940aa89698f5b72a58aa11dcb1bd3d5f9f8e02d5b51a343dba5645"
     }
   ]

@@ -29,30 +29,73 @@
     "reviewedAt": "2026-07-30"
   },
   "bridgeRouteRisk": {
-    "tier": "canonical-rollup-bridge",
-    "summary": "USDm is tracked on Celo plus additional chains; candidate evidence points to Celo/canonical bridge infrastructure rather than a separate issuer bridge. The route is scored as canonical bridge exposure with probable confidence.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "tier": "external-validated-network",
+    "summary": "USDm has one canonical native issuance route on Celo. The Celo–Monad Wormhole NTT route is an external validated burn-mint representation; NEAR Allbridge, Ethereum Moss, and Solana Allbridge are external representation routes. Klaytn remains an opaque unresolved route and is not used to infer any controller for the verified routes.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex cusd-celo bridge-route boundary migration",
     "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Celo",
-        "slug": "celo",
-        "url": "https://l2beat.com/interop/protocols/celo",
+        "source": "docs",
+        "name": "Mento Wormhole NTT",
+        "url": "https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol",
         "bridgeTypes": [
-          "canonical"
+          "burn-mint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Allbridge",
+        "url": "https://docs.allbridge.io/",
+        "bridgeTypes": [
+          "lock-mint"
+        ]
+      },
+      {
+        "source": "explorer",
+        "name": "Moss ecUSD",
+        "url": "https://etherscan.io/address/0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a",
+        "bridgeTypes": [
+          "lock-mint"
         ]
       }
     ],
     "sources": [
       {
-        "label": "Mento reserve docs",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+        "label": "Mento NTT Manager source",
+        "url": "https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol"
       },
       {
-        "label": "L2BEAT Celo",
-        "url": "https://l2beat.com/interop/protocols/celo"
+        "label": "Mento NTT deployment registry",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/main/.treb/deployments.json"
+      },
+      {
+        "label": "Celo Forno RPC",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Monad RPC",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "NEAR access-key and upgrade documentation",
+        "url": "https://docs.near.org/protocol/accounts-contracts/access-keys"
+      },
+      {
+        "label": "NEAR contract-upgrade documentation",
+        "url": "https://docs.near.org/smart-contracts/release/upgrade"
+      },
+      {
+        "label": "Ethereum Moss ecUSD",
+        "url": "https://etherscan.io/address/0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a"
+      },
+      {
+        "label": "Solana cUSD mint",
+        "url": "https://solscan.io/token/EwxNF8g9UfmsJVcZFTpL9Hx5MCkoQFoJi6XNWzKf1j8e"
+      },
+      {
+        "label": "Klaytn oCUSD",
+        "url": "https://klaytnscope.com/token/0x08745bee17026ed2e0e39a98f81189b9e14ab1b3"
       }
     ],
     "routes": [
@@ -68,17 +111,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native Mento cUSD on Celo; mint authority is the Mento Broker under the 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 4-of-6 Safe (isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true, per the mint-authority review). DefiLlama records Celo cUSD as issued.",
+        "reviewNote": "At Celo block 75020227, the Mento StableTokenV3 proxy is the sole verified native issuance deployment. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad and ReserveLiquidityStrategy 0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b both return true from isMinter(); the Celo-side NTT Manager minter role is a separate bridge overlay and does not make this route bridge-only.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
         "sources": [
           {
-            "label": "Celo explorer cUSD token",
-            "url": "https://celoscan.io/token/0x765de816845861e75a25fca122bb6898b8b1282a"
+            "label": "Celo USDm verified proxy",
+            "url": "https://celo.blockscout.com/address/0x765de816845861e75a25fca122bb6898b8b1282a"
           },
           {
-            "label": "DefiLlama celo-dollar adapter (per-chain cUSD contracts)",
-            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-dollar/index.ts"
+            "label": "Mento StableTokenV3 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenV3.sol"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
           }
         ]
       },
@@ -95,58 +143,83 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "NEAR cUSD is the Allbridge representation cusd.token.a11bd.near: the token contract mints under Allbridge cross-chain messages and is administered by the a11bd.near account (a plain EOA, no contract code, per the mint-authority review's NEAR RPC reads). Supply is dust in the capture.",
+        "reviewNote": "At finalized NEAR height 211645512 on 2026-08-16, cusd.token.a11bd.near is the Allbridge cUSD representation and has exactly one FullAccess key, ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb. That key can redeploy the representation contract; the route is bridge machinery rather than local Celo issuance. The exact Allbridge message or locking contract that currently mints this representation was not identified from primary sources, so no structured controller is asserted for bridge-mint and the conservative route-derived bridge-mint fallback remains in force.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 211645512,
         "controllerChain": "near",
         "controllerAddress": "cusd.token.a11bd.near",
         "failureDomainKeys": [
           "protocol:allbridge",
-          "contract:near:cusd.token.a11bd.near"
+          "contract:near:cusd.token.a11bd.near",
+          "near-access-key:ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb"
         ],
         "sources": [
           {
-            "label": "NEAR explorer cusd.token.a11bd.near",
-            "url": "https://nearblocks.io/address/cusd.token.a11bd.near"
+            "label": "NEAR RPC",
+            "url": "https://rpc.mainnet.near.org"
           },
           {
-            "label": "DefiLlama celo-dollar adapter (per-chain cUSD contracts)",
-            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-dollar/index.ts"
+            "label": "NEAR access-key semantics",
+            "url": "https://docs.near.org/protocol/accounts-contracts/access-keys"
+          },
+          {
+            "label": "NEAR contract-upgrade semantics",
+            "url": "https://docs.near.org/smart-contracts/release/upgrade"
           }
         ]
       },
       {
         "id": "monad:0xbc69212b8e4d445b2307c9d32dd68e2a4df00115",
+        "sourceChain": "celo",
         "destinationChain": "monad",
         "canonicalChain": "celo",
         "contractAddress": "0xbc69212b8e4d445b2307c9d32dd68e2a4df00115",
-        "protocol": "Mento native issuance on Monad",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
+        "protocol": "Mento Wormhole NTT Celo-to-Monad",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Mento USDm is issued natively on Monad (DefiLlama records Monad cUSD as issued): owner() of the Monad USDm proxy = the same 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (mint-authority review, Monad block 80,612,848). Not a bridge representation.",
+        "reviewNote": "At Celo block 75020227 and Monad block 96614639, NTT Manager 0xa4096343485a44c0f8d05ae6da311c18d63e38bc links the Celo source token to this Monad destination, with Wormhole chain IDs 14 and 48 and reciprocal manager peers. It is in burning mode with threshold 1 and a 86400-second rate-limit duration; its registered transceiver is 0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b and both owners are the 4-of-6 Mento Safe. Monad uses StableTokenSpoke implementation 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e with ProxyAdmin 0x97b239f52f773944dead5250db57322b05875ef5. Inbound settlement burns on the source and mints the destination representation, so Monad is not a second native Mento liability path.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96614639,
+        "controllerChain": "monad",
+        "controllerAddress": "0xa4096343485a44c0f8d05ae6da311c18d63e38bc",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:celo:0xa4096343485a44c0f8d05ae6da311c18d63e38bc",
+          "contract:monad:0xa4096343485a44c0f8d05ae6da311c18d63e38bc",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
         "sources": [
           {
-            "label": "Monad explorer USDm token",
-            "url": "https://monadscan.com/token/0xbc69212b8e4d445b2307c9d32dd68e2a4df00115"
+            "label": "Mento NTT Manager source",
+            "url": "https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol"
           },
           {
-            "label": "DefiLlama celo-dollar adapter (per-chain cUSD contracts)",
-            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-dollar/index.ts"
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Mento NTT deployment registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/.treb/deployments.json"
           }
         ]
       },
       {
-        "id": "ethereum:0x9b9e2de4cb4ca479943f36dfffc72c7253bb1f66a",
+        "id": "ethereum:0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a",
         "sourceChain": "celo",
         "destinationChain": "ethereum",
         "canonicalChain": "celo",
-        "contractAddress": "0x9b9E2De4cB4ca479943F36DfFc72c7253bb1f66a",
+        "contractAddress": "0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a",
         "protocol": "Moss bridge ecUSD",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
@@ -154,9 +227,10 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Ethereum cUSD supply is split across three bridged variants: moss ecUSD 0x9b9E2De4cB4ca479943F36DfFc72c7253bb1f66a (totalSupply $1.85M, the largest), Optics cUSD 0xd8F3208c045DD69D27938346275165998359D8fF ($615k, owner = Optics BridgeRouter 0x4fc16de11deac71e8b2db539d82d93be4b486892), and wCUSD 0xad3E3Fc59dff318BecEaAb7D00EB4F68b1EcF195 ($157k). This row records the dominant variant: minter() on ecUSD = 0x9719d81c506c95f92caf970851b22afc88aee574, a 1,581-byte Moss bridge minter contract (owner 0x4195530d44c96875199fb03525dcb0f22e151f97), read 2026-07-20.",
+        "reviewNote": "At Ethereum block 25770879 on 2026-08-16, the Moss ecUSD representation minter() returned 0x9719d81c506c95f92caf970851b22afc88aee574, whose owner() returned Moss owner 0x4195530d44c96875199fb03525dcb0f22e151f97. The route's observed supply was 1,851.66171930037933658; this is Ethereum-side bridge mint authority, not native Celo issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770879,
         "controllerChain": "ethereum",
         "controllerAddress": "0x9719d81c506c95f92caf970851b22afc88aee574",
         "failureDomainKeys": [
@@ -166,12 +240,12 @@
         ],
         "sources": [
           {
-            "label": "Etherscan ecUSD token",
-            "url": "https://etherscan.io/token/0x9b9E2De4cB4ca479943F36DfFc72c7253bb1f66a"
+            "label": "Etherscan Moss ecUSD token",
+            "url": "https://etherscan.io/address/0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a"
           },
           {
-            "label": "DefiLlama celo-dollar adapter (per-chain cUSD contracts)",
-            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-dollar/index.ts"
+            "label": "Ethereum JSON-RPC observation",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
@@ -188,9 +262,10 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Solana cUSD is the Allbridge SPL token (9 decimals, supply 28,172,442,622,415 raw, read 2026-07-20 via Solana RPC) with mintAuthority CYEFQXzQM6E5P8ZrXgS7XMSwU3CiqHMMyACX4zuaA2Z4 — a program-derived Solana account (owned by the System Program, no executable code) consistent with Allbridge's program mint authority; DefiLlama labels this deployment 'allbridge'.",
+        "reviewNote": "At finalized Solana slot 439735675 on 2026-08-16, this 9-decimal Allbridge-style SPL mint had mintAuthority CYEFQXzQM6E5P8ZrXgS7XMSwU3CiqHMMyACX4zuaA2Z4 and no freeze authority. The route is a bridge representation with current supply 28,172.342808346, not a native Celo issuance path.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439735675,
         "controllerChain": "solana",
         "controllerAddress": "CYEFQXzQM6E5P8ZrXgS7XMSwU3CiqHMMyACX4zuaA2Z4",
         "failureDomainKeys": [
@@ -199,12 +274,12 @@
         ],
         "sources": [
           {
-            "label": "Solana explorer cUSD token",
+            "label": "Solscan cUSD token",
             "url": "https://solscan.io/token/EwxNF8g9UfmsJVcZFTpL9Hx5MCkoQFoJi6XNWzKf1j8e"
           },
           {
-            "label": "DefiLlama celo-dollar adapter (per-chain cUSD contracts)",
-            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-dollar/index.ts"
+            "label": "Solana JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ]
       },
@@ -221,19 +296,385 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Klaytn cUSD is the Orbit Bridge representation 'Orbit Bridge Klaytn CUSD' (totalSupply $5.52 dust, read 2026-07-20). The token exposes no enumerable minter or owner views and Orbit Bridge has been defunct since its December 2023 exploit, so the mint authority cannot be honestly established; the route stays unresolved.",
+        "reviewNote": "At Klaytn block 224722493 on 2026-08-16, the Orbit Bridge oCUSD representation had supply 5.52022037288, but owner(), minter(), and isMinter(address) probes reverted. Orbit Bridge has been defunct since its December 2023 exploit; the exact residual controller and route state remain unresolved, so no controller is inferred by analogy.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 224722493,
         "sources": [
           {
-            "label": "Klaytn explorer oCUSD token",
+            "label": "Klaytnscope oCUSD token",
             "url": "https://klaytnscope.com/token/0x08745bee17026ed2e0e39a98f81189b9e14ab1b3"
           },
           {
-            "label": "DefiLlama celo-dollar adapter (per-chain cUSD contracts)",
+            "label": "DefiLlama celo-dollar adapter",
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-dollar/index.ts"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "cusd-celo-monad-ntt-manager",
+        "label": "Mento Celo/Monad NTT Manager burn-mint route",
+        "routeRefs": [
+          "celo:0x765de816845861e75a25fca122bb6898b8b1282a",
+          "monad:0xbc69212b8e4d445b2307c9d32dd68e2a4df00115"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0xa4096343485a44c0f8d05ae6da311c18d63e38bc",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:celo:0xa4096343485a44c0f8d05ae6da311c18d63e38bc",
+          "contract:monad:0xa4096343485a44c0f8d05ae6da311c18d63e38bc",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Celo block 75020227 and Monad block 96614639, Wormhole chain IDs 14 and 48 are paired to the same NTT Manager address 0xa4096343485a44c0f8d05ae6da311c18d63e38bc on the opposite chain.",
+          "rateLimits": "The manager reports a 86400-second rate-limit duration and threshold 1 in burning mode; its owner-controlled configuration is a route-level bridge bound rather than a native supply cap.",
+          "pausersAdminsUpgraders": "owner() on both NTT Manager deployments returns the 4-of-6 Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458.",
+          "onchainAmountBounds": "The NTT source settles inbound messages by burning on the source and minting the destination representation. This is bridge accounting and external message validation, not independent native issuance."
+        },
+        "capDescription": "The NTT Manager controls the Celo-to-Monad burn-mint rail, peer pairing, and route rate-limit configuration; destination minting is scoped to inbound NTT settlement.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared Mento Safe controls NTT manager ownership and can alter peer or rate-limit configuration; Wormhole guardian/DVN and transceiver validation remain separate route dependencies."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
+        "sources": [
+          {
+            "label": "Mento NTT Manager source",
+            "url": "https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Celo block 75020227 and Monad block 96614639, NTT Manager 0xa4096343485a44c0f8d05ae6da311c18d63e38bc returned the Celo and Monad token addresses, reciprocal peers for Wormhole chain IDs 14 and 48, getMode() = 1, getThreshold() = 1, and a 86400-second rate-limit duration. The registered transceiver was 0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b and owner() on both managers was the Mento Safe. The manager's inbound settlement invokes destination token minting only for the cross-chain message path, so its bridge capability is retained here rather than scored as native Celo authority."
+      },
+      {
+        "id": "cusd-celo-monad-ntt-transceiver",
+        "label": "Mento Celo/Monad NTT transceiver validation path",
+        "routeRefs": [
+          "celo:0x765de816845861e75a25fca122bb6898b8b1282a",
+          "monad:0xbc69212b8e4d445b2307c9d32dd68e2a4df00115"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:celo:0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b",
+          "contract:monad:0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The same transceiver 0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b is registered on the Celo and Monad NTT Managers for this paired route.",
+          "signingModel": "The route is classified as externally validated through Wormhole NTT. The current Wormhole guardian/DVN configuration and transceiver-level message-validation details were not independently decoded in this review."
+        },
+        "capDescription": "The registered NTT transceiver is part of the external message-validation path for the Celo-to-Monad burn-mint representation.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "Guardian/DVN and transceiver-level validation configuration remain an explicit evidence gap."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
+        "sources": [
+          {
+            "label": "Mento NTT Manager source",
+            "url": "https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol"
+          },
+          {
+            "label": "Mento NTT deployment registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/.treb/deployments.json"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Celo block 75020227 and Monad block 96614639, the NTT Manager on each chain reported registered transceiver 0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b. This transceiver remains a separate validator failure domain for the external burn-mint route; its guardian/DVN configuration was not independently decoded."
+      },
+      {
+        "id": "cusd-celo-ntt-owner-safe",
+        "label": "Mento Safe — Celo NTT bridge configuration owner",
+        "routeRefs": [
+          "celo:0x765de816845861e75a25fca122bb6898b8b1282a"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "failureDomainKeys": [
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "contract:celo:0xa4096343485a44c0f8d05ae6da311c18d63e38bc",
+          "contract:celo:0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb1074d0f9e54763e073c7fdb25b622b4326327cb",
+            "0x95be2b73d313768d3b2dfeeca3213ed0a6434060",
+            "0x66b94446f5ff3f0d8673c1f502a298b50ba2f0ce",
+            "0x6dec25d7be9bf6c6fc302977629f2e801e98611c",
+            "0x7a678c8f9e8a7ac08c8c6f34d38126f3219958f2",
+            "0x628ffa32ab958c5b9ce74d8b81d73f335c3776b0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1+L2",
+          "observedBlock": 75020227,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Safe owns the Celo NTT Manager and can govern the paired route's peer configuration.",
+          "rateLimits": "The Safe is the NTT Manager owner for the Celo-side route and can change route-level rate-limit configuration.",
+          "pausersAdminsUpgraders": "At Celo block 75020227, the current Safe read returned six owners, threshold 4, and no enabled modules; the current SafeL2 ABI did not expose a guard getter."
+        },
+        "capDescription": "This Safe controls Celo-side NTT administration, peer configuration, and rate-limit settings; its native token-owner powers remain separately authored in Mint Authority.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The same Safe is also the native Celo token owner and Monad representation owner; those capabilities are split by module and route."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
+        "sources": [
+          {
+            "label": "Mento Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Mento NTT deployment registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/.treb/deployments.json"
+          }
+        ],
+        "evidence": "At Celo block 75020227, the Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458 was the owner of the Celo NTT Manager and registered transceiver. Safe reads returned six owners, threshold 4, and no enabled modules; no current guard value is claimed because the reviewed SafeL2 ABI did not expose a guard getter. This control preserves the Safe's bridge-administration failure domain without moving its native Celo token-owner capability out of Mint Authority."
+      },
+      {
+        "id": "cusd-monad-ntt-owner-safe",
+        "label": "Mento Safe — Monad NTT and representation owner",
+        "routeRefs": [
+          "monad:0xbc69212b8e4d445b2307c9d32dd68e2a4df00115"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "failureDomainKeys": [
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "contract:monad:0xa4096343485a44c0f8d05ae6da311c18d63e38bc",
+          "contract:monad:0x40f8650acd6ca771a822b6d8da71b46b0bde4c1b",
+          "proxy-admin:monad:0x97b239f52f773944dead5250db57322b05875ef5"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb1074d0f9e54763e073c7fdb25b622b4326327cb",
+            "0x95be2b73d313768d3b2dfeeca3213ed0a6434060",
+            "0x66b94446f5ff3f0d8673c1f502a298b50ba2f0ce",
+            "0x6dec25d7be9bf6c6fc302977629f2e801e98611c",
+            "0x7a678c8f9e8a7ac08c8c6f34d38126f3219958f2",
+            "0x628ffa32ab958c5b9ce74d8b81d73f335c3776b0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1+L2",
+          "observedBlock": 96614639,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Safe owns the Monad NTT Manager and can govern the paired route's peer configuration.",
+          "rateLimits": "The Safe is the NTT Manager owner for the Monad-side route and can change route-level rate-limit configuration.",
+          "pausersAdminsUpgraders": "The Safe also owns the Monad representation's ProxyAdmin 0x97b239f52f773944dead5250db57322b05875ef5 and can administer bridge-representation upgrades."
+        },
+        "capDescription": "This Safe controls Monad-side NTT administration and representation ownership; its bridge capabilities are scoped to the Monad representation and are not native Celo mint authority.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The Safe can administer NTT configuration and the Monad StableTokenSpoke upgrade path; Wormhole message validation remains a separate route dependency."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 96614639,
+        "sources": [
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Mento Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          },
+          {
+            "label": "Mento NTT deployment registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/.treb/deployments.json"
+          }
+        ],
+        "evidence": "At Monad block 96614639, the Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458 owned the Monad NTT Manager, registered transceiver, and Monad StableTokenSpoke ProxyAdmin. The Safe copy returned six owners and threshold 4; no current guard value is claimed because the reviewed SafeL2 ABI did not expose a guard getter. This bridge control is separate from the Safe's canonical Celo token-owner control in Mint Authority."
+      },
+      {
+        "id": "cusd-ethereum-moss-minter",
+        "label": "Moss Ethereum ecUSD bridge minter",
+        "routeRefs": [
+          "ethereum:0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x9719d81c506c95f92caf970851b22afc88aee574",
+        "failureDomainKeys": [
+          "protocol:moss-bridge",
+          "contract:ethereum:0x9719d81c506c95f92caf970851b22afc88aee574",
+          "protocol:celo-optics-bridge"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "onchainAmountBounds": "The current observation confirms the ecUSD bridge minter and representation supply, but route-level lock/release conservation was not independently re-established in this pass."
+        },
+        "capDescription": "The Moss minter can create the Ethereum ecUSD bridge representation; no independent immutable mint ceiling was evidenced.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "Moss owner 0x4195530d44c96875199fb03525dcb0f22e151f97 controls the observed minter contract."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770879,
+        "sources": [
+          {
+            "label": "Etherscan Moss ecUSD token",
+            "url": "https://etherscan.io/address/0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a"
+          },
+          {
+            "label": "Ethereum JSON-RPC observation",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770879, the catalogued Moss ecUSD contract 0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a returned minter() = 0x9719d81c506c95f92caf970851b22afc88aee574. That minter's owner() returned Moss owner 0x4195530d44c96875199fb03525dcb0f22e151f97, and total supply was 1,851.66171930037933658. The minter is a bridge representation control and is retained under Bridge Risk."
+      },
+      {
+        "id": "cusd-solana-allbridge-mint-authority",
+        "label": "Allbridge Solana cUSD SPL mint authority",
+        "routeRefs": [
+          "solana:EwxNF8g9UfmsJVcZFTpL9Hx5MCkoQFoJi6XNWzKf1j8e"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "CYEFQXzQM6E5P8ZrXgS7XMSwU3CiqHMMyACX4zuaA2Z4",
+        "failureDomainKeys": [
+          "protocol:allbridge",
+          "contract:solana:CYEFQXzQM6E5P8ZrXgS7XMSwU3CiqHMMyACX4zuaA2Z4"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "onchainAmountBounds": "The SPL mint authority is route-scoped to the Allbridge representation; no independent route-level supply-conservation proof was re-established in this pass."
+        },
+        "capDescription": "The Allbridge-style SPL mint authority can mint the Solana cUSD representation; no freeze authority was present at the observation slot.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The current mint authority is a program-derived Solana account; the governing Allbridge program/configuration was not independently decoded here."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439735675,
+        "sources": [
+          {
+            "label": "Solscan cUSD token",
+            "url": "https://solscan.io/token/EwxNF8g9UfmsJVcZFTpL9Hx5MCkoQFoJi6XNWzKf1j8e"
+          },
+          {
+            "label": "Solana JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439735675, the SPL mint EwxNF8g9UfmsJVcZFTpL9Hx5MCkoQFoJi6XNWzKf1j8e had mintAuthority CYEFQXzQM6E5P8ZrXgS7XMSwU3CiqHMMyACX4zuaA2Z4, no freeze authority, and 9 decimals. The current mint authority and representation supply are bridge-route facts, not Celo native mint authority."
+      },
+      {
+        "id": "cusd-monad-spoke-proxy-admin",
+        "label": "Monad StableTokenSpoke ProxyAdmin upgrade path",
+        "routeRefs": [
+          "monad:0xbc69212b8e4d445b2307c9d32dd68e2a4df00115"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x97b239f52f773944dead5250db57322b05875ef5",
+        "failureDomainKeys": [
+          "proxy-admin:monad:0x97b239f52f773944dead5250db57322b05875ef5",
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+          "contract:monad:0xbc69212b8e4d445b2307c9d32dd68e2a4df00115"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Monad block 96614639, the StableTokenSpoke proxy used implementation 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e and EIP-1967 ProxyAdmin 0x97b239f52f773944dead5250db57322b05875ef5; ProxyAdmin.owner() returned the Mento Safe.",
+          "onchainAmountBounds": "StableTokenSpoke minting is reached through the inbound NTT burn-mint settlement path, so replacing this implementation changes bridge-representation logic rather than creating a second native Celo liability path."
+        },
+        "capDescription": "The Monad ProxyAdmin can replace the StableTokenSpoke bridge-representation logic, including its destination mint path; it does not establish independent native Mento issuance on Monad.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The ProxyAdmin owner is the shared Mento Safe; Wormhole NTT validation and peer/rate-limit configuration remain separate controls."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 96614639,
+        "sources": [
+          {
+            "label": "Monad USDm StableTokenSpoke",
+            "url": "https://monadscan.com/address/0xbc69212b8e4d445b2307c9d32dd68e2a4df00115"
+          },
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Mento NTT Manager source",
+            "url": "https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol"
+          }
+        ],
+        "evidence": "At Monad block 96614639, the representation proxy 0xbc69212b8e4d445b2307c9d32dd68e2a4df00115 resolved to StableTokenSpoke implementation 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e and ProxyAdmin 0x97b239f52f773944dead5250db57322b05875ef5. ProxyAdmin.owner() was the 4-of-6 Mento Safe, and NTTManager was an active token minter in burning mode. This upgrade control is therefore scored under Bridge Risk for the Monad representation."
       }
     ]
   }

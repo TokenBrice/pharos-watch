@@ -7,6 +7,12 @@
     "summary": "TUSD has four independently mintable issuer-native deployments. Ethereum uses a 2/3 Safe, BSC and Avalanche use chain-local 2/3 Safes with the same three owners, and Tron uses a single native account. Each final owner can bypass the configured mint pools and approvals, replace the mint key, and immediately upgrade both the token and controller proxies.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "avalanche:0x1c20e891bab6b1727d14da358fae2984ed9b59eb",
+        "bsc:0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9",
+        "ethereum:0x0000000000085d4780b73119b644ae5ecd22b376",
+        "tron:TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4"
+      ],
       "proxyAddresses": [
         "0x0000000000085d4780b73119b644ae5ecd22b376",
         "0x0000000000075efbee23fe2de1bd0b7690883cc9",
@@ -70,6 +76,12 @@
     },
     "controls": [
       {
+        "deploymentRefs": [
+          "avalanche:0x1c20e891bab6b1727d14da358fae2984ed9b59eb",
+          "bsc:0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9",
+          "ethereum:0x0000000000085d4780b73119b644ae5ecd22b376",
+          "tron:TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4"
+        ],
         "label": "TUSD issuer-native owner authority set",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -103,6 +115,9 @@
       {
         "chain": "tron",
         "address": "TTYymuCMsVEGpGKasgVowppBufuvDGnXaY",
+        "deploymentRefs": [
+          "tron:TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4"
+        ],
         "label": "Tron TUSD controller owner and proxy-admin account",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -133,6 +148,9 @@
       {
         "chain": "ethereum",
         "address": "0x93fde11c8107127a80ce95100df611790e4413c9",
+        "deploymentRefs": [
+          "ethereum:0x0000000000085d4780b73119b644ae5ecd22b376"
+        ],
         "label": "Ethereum TUSD controller owner and proxy-admin Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -186,6 +204,9 @@
       {
         "chain": "bsc",
         "address": "0x48261f89e4d0b70632e0f46f20124b7da27d5885",
+        "deploymentRefs": [
+          "bsc:0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9"
+        ],
         "label": "BSC TUSD controller owner and proxy-admin Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -239,6 +260,9 @@
       {
         "chain": "avalanche",
         "address": "0x17189844773712e89954cf01b71f724d473bdbb1",
+        "deploymentRefs": [
+          "avalanche:0x1c20e891bab6b1727d14da358fae2984ed9b59eb"
+        ],
         "label": "Avalanche TUSD controller owner and proxy-admin Safe",
         "role": "direct-minter",
         "authorityType": "safe",

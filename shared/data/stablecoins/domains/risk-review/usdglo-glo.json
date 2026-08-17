@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDGLO has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement, but on-chain reads on 2026-07-20 confirm all seven deployments are issuer-native (identical GloDollarV3 CREATE2 proxies on six EVM chains and a native Stellar asset); the tokens themselves are minted by the Brale issuer backend, not by the Across route.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "summary": "USDGLO has seven reviewed native-issuance routes: identical GloDollarV3 CREATE2 proxies on six EVM chains and a native Stellar asset. Across is only a generic intent/liquidity framework reference; no USDGLO-specific bridge representation, adapter, lockbox/escrow, peer, validator/DVN, destination minter, or bridge-admin control is evidenced, and the tokens are minted by the Brale issuer backend rather than by an Across route. The issuer-native-burn-mint tier is retained for this reviewed issuer-native multichain deployment set and does not move native mint authority into Bridge Risk.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); mint-bridge-boundary migration 2026-08-16",
     "confidence": "verified",
     "protocols": [
       {

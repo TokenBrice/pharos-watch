@@ -187,19 +187,19 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
     // The 2026-08-08 control review resolved DUSD's two open mint-authority
     // questions, so the compiled control status is `known` and the loss-control
     // fact no longer carries `wrapper-local-controls-partial-review`. What it
-    // carries instead is one risk signal per curated control — the five
-    // `mint-meta:dusd-dialectic:<index>:<digest>` keys, whose controls array is
-    // unchanged by that review — so the fact is now an exhaustive read of the
+    // carries instead is one risk signal per curated control — five
+    // `mint-meta:dusd-dialectic:<digest>` keys derived from control identity
+    // rather than array position — so the fact is an exhaustive read of the
     // control set rather than a partial one.
     expect(wrapper.facts.lossAbsorptionEmergencyControls).toMatchObject({
       disposition: "reviewed",
       assessment: "high",
       signals: expect.arrayContaining([
-        "non-claim-control:mint-meta:dusd-dialectic:0:0753a29722c02f5eb3f2",
-        "unbounded-claim-control:mint-meta:dusd-dialectic:1:53c5cf56b4e8d9e0facf",
-        "unbounded-claim-control:mint-meta:dusd-dialectic:2:8a504a683206276bfc65",
-        "unbounded-claim-control:mint-meta:dusd-dialectic:3:1e5d1009d534d5ffa1b9",
-        "unbounded-claim-control:mint-meta:dusd-dialectic:4:307f52514a8019019079",
+        "non-claim-control:mint-meta:dusd-dialectic:4f72410f15f4ab33173b",
+        "unbounded-claim-control:mint-meta:dusd-dialectic:31eba9035ce4e8c7925a",
+        "unbounded-claim-control:mint-meta:dusd-dialectic:698be001dc2d297ffcee",
+        "unbounded-claim-control:mint-meta:dusd-dialectic:8931251fb8e32aae6dfe",
+        "unbounded-claim-control:mint-meta:dusd-dialectic:9178c2c9b995cf1511b7",
         "strategy-vault-holder-loss-controls-reviewed",
       ]),
     });

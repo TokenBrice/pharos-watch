@@ -30,9 +30,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "xDAI is a native Gnosis gas balance, not an ERC-20 deployment: USDS enters the canonical Gnosis xDAI Foreign Bridge on Ethereum, a 4-of-7 validator network authorizes the Home Bridge to mint native xDAI through the block reward contract, and the reverse path burns xDAI before USDS is unlocked. This global bridge-representation route has no exact token-contract row to join; WXDAI is only a traded wrapper and is intentionally excluded from canonical supply matching.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex bridge route review",
+    "summary": "xDAI is a native Gnosis gas balance, not an ERC-20 deployment. Ethereum USDS is escrowed in the Foreign Bridge and relayed through the BridgeRouter; a 4-of-7 validator network authorizes the Home Bridge to credit native xDAI through BlockReward, while the reverse path burns xDAI against the bridge's minted-minus-burned accounting before USDS is released. The route is externally validated and governance-administered: current Ethereum and Gnosis bridge limits are explicit, both validator-management contracts are 4-of-7, chain-local 8-of-15 Safes control bridge administration and proxy upgrades, and no contract-enforced timelock was observed. WXDAI remains only a same-chain traded wrapper and is excluded from canonical supply matching.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -40,9 +40,20 @@
         "name": "Gnosis xDAI Bridge",
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
         "bridgeTypes": [
-          "lockAndMint"
+          "lockAndMint",
+          "external-validated-network"
         ],
-        "note": "Canonical Gnosis-native, global-scope bridge representation secured by a 4-of-7 validator network; native xDAI has no ERC-20 contract address for a deployment-row join."
+        "note": "Canonical Gnosis-native route secured by a 4-of-7 validator network; the reviewed deployment row is WXDAI 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d, a same-chain wrapped representation rather than the native xDAI supply surface."
+      },
+      {
+        "source": "issuer",
+        "name": "Gnosis tokenbridge-contracts xDAI bridge implementation",
+        "url": "https://github.com/gnosischain/tokenbridge-contracts/tree/xdaibridge",
+        "bridgeTypes": [
+          "lockAndMint",
+          "burnAndRelease"
+        ],
+        "note": "The verified bridge implementation binds Ethereum USDS escrow, validator affirmations, Gnosis BlockReward native crediting, and reverse native-burn accounting."
       }
     ],
     "sources": [
@@ -55,12 +66,597 @@
         "url": "https://docs.gnosischain.com/bridges/management/validators"
       },
       {
+        "label": "Gnosis bridge management and governance",
+        "url": "https://docs.gnosischain.com/bridges/management/"
+      },
+      {
+        "label": "Official USDS migration specification",
+        "url": "https://github.com/gnosischain/tokenbridge-contracts/blob/52afd25b05f1afa3347f2f18595748b2149df6aa/USDSMigration.md"
+      },
+      {
+        "label": "Current xDAI bridge deployment source branch",
+        "url": "https://github.com/gnosischain/tokenbridge-contracts/tree/xdaibridge"
+      },
+      {
         "label": "Ethereum xDAI Foreign Bridge",
         "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
       },
       {
         "label": "Gnosis xDAI Home Bridge",
         "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
+      },
+      {
+        "label": "Ethereum BridgeRouter",
+        "url": "https://etherscan.io/address/0x9a873656c19Efecbfb4f9FAb5B7acdeAb466a0B0"
+      },
+      {
+        "label": "Gnosis USDSDepositContract",
+        "url": "https://gnosis.blockscout.com/address/0x5C183C8A49aBA6e31049997a56D75600E27FF8c9"
+      },
+      {
+        "label": "Ethereum validator-management contract",
+        "url": "https://etherscan.io/address/0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E"
+      },
+      {
+        "label": "Gnosis validator-management contract",
+        "url": "https://gnosis.blockscout.com/address/0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D"
+      },
+      {
+        "label": "Gnosis BlockReward contract",
+        "url": "https://gnosis.blockscout.com/address/0x481c034c6d9441db23Ea48De68BCAe812C5d39bA"
+      },
+      {
+        "label": "Ethereum bridge governance Safe",
+        "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6/"
+      },
+      {
+        "label": "Gnosis bridge governance Safe",
+        "url": "https://api.safe.global/tx-service/gno/api/v1/safes/0x7a48Dac683DA91e4faa5aB13D91AB5fd170875bd/"
+      },
+      {
+        "label": "Ethereum JSON-RPC current reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Gnosis JSON-RPC current reads",
+        "url": "https://gnosis-rpc.publicnode.com"
+      }
+    ],
+    "routes": [
+      {
+        "id": "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+        "sourceChain": "ethereum",
+        "destinationChain": "gnosis",
+        "canonicalChain": "gnosis",
+        "contractAddress": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+        "representationId": "gnosis-wxdai",
+        "protocol": "Gnosis xDAI Bridge (USDS lock / native xDAI mint-burn / WXDAI wrapper)",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed deployment route: Ethereum USDS is locked by the canonical xDAI Foreign Bridge, validator affirmations authorize native Gnosis xDAI credit through Home Bridge and BlockReward, and reverse xDAI burn accounting precedes USDS release. WXDAI 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is the verified same-chain wrapper deployment represented by this route; it is not an independent native issuer.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge",
+          "contract:ethereum:0x4aa42145aa6e4bf72e164c9bbc74fbd3788045016",
+          "contract:gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6",
+          "safe:gnosis:0x7a48dac683da91e4faa5ab13d91ab5fd170875bd"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Gnosis xDAI bridge docs",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+          },
+          {
+            "label": "Official USDS migration specification",
+            "url": "https://github.com/gnosischain/tokenbridge-contracts/blob/52afd25b05f1afa3347f2f18595748b2149df6aa/USDSMigration.md"
+          },
+          {
+            "label": "Ethereum current bridge reads at block 25770912",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Gnosis current bridge reads at block 47762411",
+            "url": "https://gnosis-rpc.publicnode.com"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "xdai-ethereum-foreign-bridge",
+        "label": "xDAI Ethereum Foreign Bridge proxy",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "escrow",
+          "rate-limit",
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge",
+          "contract:ethereum:0x4aa42145aa6e4bf72e164c9bbc74fbd3788045016",
+          "contract:ethereum:0x257bdd093cab1bd39ebf837dcb60f33d031d7d49",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25770912, Foreign Bridge daiToken() returned USDS 0xdC035D45d973E3EC169d2276DDab16f1e407384F and the bridge held 998,621.672371476557011372 USDS. The bridge's sUSDS-backed setup means this is an escrow observation, not a complete collateral reconciliation.",
+          "trustedPeerOrRemote": "The Foreign Bridge implementation() returned 0x257bDD093Cab1Bd39eBF837dCB60f33d031d7d49 and validator contract 0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E; its route is the Ethereum ingress to the Gnosis Home Bridge.",
+          "rateLimits": "At Ethereum block 25770912, dailyLimit() returned 10,000,000e18, maxPerTx() returned 9,999,999e18, and requiredBlockConfirmations() returned 20.",
+          "caps": "The Foreign Bridge has explicit daily and per-transaction execution boundaries, while its owner can change those limits and the validator set.",
+          "pausersAdminsUpgraders": "This custom/EternalStorage proxy returned proxyOwner() and owner() = 0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6. The proxy owner can replace the bridge implementation; no contract-enforced timelock was observed."
+        },
+        "capDescription": "The Foreign Bridge locks inbound Ethereum USDS for the xDAI route and enforces the observed daily and per-transaction limits; governance can raise or replace those bridge constraints.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770912,
+        "sources": [
+          {
+            "label": "Ethereum xDAI Foreign Bridge",
+            "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
+          },
+          {
+            "label": "Current xDAI bridge deployment source branch",
+            "url": "https://github.com/gnosischain/tokenbridge-contracts/tree/xdaibridge"
+          },
+          {
+            "label": "Ethereum JSON-RPC current reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770912, the Foreign Bridge implementation was 0x257bDD093Cab1Bd39eBF837dCB60f33d031d7d49, proxyOwner() and owner() were the 8-of-15 Ethereum governance Safe, daiToken() was USDS, and current limits were 10,000,000e18 daily and 9,999,999e18 per transaction. This is bridge escrow and administration, not independent native xDAI issuance."
+      },
+      {
+        "id": "xdai-gnosis-home-bridge",
+        "label": "xDAI Gnosis Home Bridge proxy",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge",
+          "contract:gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+          "contract:gnosis:0xe6998b0c03d3cb9ee8c04f266e573c7fa8782846",
+          "safe:gnosis:0x7a48dac683da91e4faa5ab13d91ab5fd170875bd"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Home Bridge credits native xDAI through BlockReward after validator affirmation. Its reverse nativeTransfer path burns xDAI and emits the USDS or DAI release request; when the sender is the USDSDepositContract, the reverse token is USDS.",
+          "trustedPeerOrRemote": "At Gnosis block 47762411, Home Bridge implementation() returned 0xe6998b0C03D3cb9ee8C04f266e573c7Fa8782846, validatorContract() returned 0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D, and blockRewardContract() returned 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA.",
+          "attestorQuorum": "The Gnosis validator-management contract returned requiredSignatures() = 4 and validatorCount() = 7 at the reviewed block.",
+          "signingModel": "Validators observe Foreign Bridge deposit events and submit Home Bridge affirmations; withdrawals collect 4-of-7 signatures before execution on Ethereum.",
+          "rateLimits": "At Gnosis block 47762411, dailyLimit() returned 10,000,000e18 + 1 wei, maxPerTx() returned 10,000,000e18, and requiredBlockConfirmations() returned 20.",
+          "caps": "Home Bridge execution is bounded by its daily and per-transaction limits and by total minted native xDAI minus total burnt coins; the governance Safe can change the limits and validator membership.",
+          "pausersAdminsUpgraders": "Home Bridge proxyOwner() and owner() returned the 8-of-15 Gnosis governance Safe. The custom/EternalStorage proxy owner can replace the implementation; no contract-enforced timelock was observed.",
+          "onchainAmountBounds": "The Home Bridge nativeTransfer path requires the burned value to be no greater than total minted by the bridge minus total burnt coins, and affirmation execution adds native xDAI through BlockReward only after validator checks."
+        },
+        "capDescription": "The Home Bridge supplies the bridge's native xDAI mint and burn accounting with explicit current limits and a minted-minus-burnt bound; governance can raise or replace those route constraints.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762411,
+        "sources": [
+          {
+            "label": "Gnosis xDAI Home Bridge",
+            "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
+          },
+          {
+            "label": "Gnosis xDAI bridge docs",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+          },
+          {
+            "label": "Current xDAI bridge deployment source branch",
+            "url": "https://github.com/gnosischain/tokenbridge-contracts/tree/xdaibridge"
+          },
+          {
+            "label": "Gnosis JSON-RPC current reads",
+            "url": "https://gnosis-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Gnosis block 47762411, the Home Bridge resolved to implementation 0xe6998b0C03D3cb9ee8C04f266e573c7Fa8782846, validator contract 0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D, and BlockReward 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA. It returned 4-of-7 validator settings and the current 10,000,000e18 + 1 wei daily limit, 10,000,000e18 per-transaction limit, and 20 confirmations."
+      },
+      {
+        "id": "xdai-ethereum-validator-management",
+        "label": "xDAI Ethereum bridge validator-management contract",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "validator",
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge-validator-network",
+          "contract:ethereum:0xe1579debdd2df16ebdb9db8694391fa74eea201e",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6"
+        ],
+        "authorityType": "multisig",
+        "threshold": 4,
+        "signerCount": 7,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Four of seven bridge validators authorize the Foreign/Home route, but the validator quorum cannot raise the bridge's governance-set daily or per-transaction limits.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Ethereum validator-management contract serves the Foreign Bridge route and is paired with the Gnosis Home Bridge validator-management contract for the xDAI path.",
+          "attestorQuorum": "At Ethereum block 25770912, requiredSignatures() returned 4 and validatorCount() returned 7.",
+          "signingModel": "Validators observe Foreign Bridge deposit events and submit Home Bridge affirmations; withdrawals collect 4-of-7 signatures before anyone executes them on Ethereum.",
+          "rateLimits": "The paired bridge route enforces daily and per-transaction boundaries; the validator quorum cannot change them.",
+          "caps": "The validator quorum is bounded by current bridge limits, while the separately reviewed governance Safe can change limits and validator membership.",
+          "pausersAdminsUpgraders": "The validator-management owner is the 8-of-15 Ethereum governance Safe; validator administration and bridge upgrades are separate governance powers."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770912,
+        "sources": [
+          {
+            "label": "Gnosis bridge validator docs",
+            "url": "https://docs.gnosischain.com/bridges/management/validators"
+          },
+          {
+            "label": "Ethereum validator-management contract",
+            "url": "https://etherscan.io/address/0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E"
+          },
+          {
+            "label": "Ethereum JSON-RPC current reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770912, validator-management contract 0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E returned requiredSignatures = 4, validatorCount = 7, and owner = 0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6. This quorum validates the bridge route and is not an independent native xDAI issuer."
+      },
+      {
+        "id": "xdai-gnosis-validator-management",
+        "label": "xDAI Gnosis bridge validator-management contract",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "validator",
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge-validator-network",
+          "contract:gnosis:0xb289f0e6fbdff8eee340498a56e1787b303f1b6d",
+          "safe:gnosis:0x7a48dac683da91e4faa5ab13d91ab5fd170875bd"
+        ],
+        "authorityType": "multisig",
+        "threshold": 4,
+        "signerCount": 7,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Four of seven bridge validators can authorize Home Bridge execution, but the validator quorum cannot raise the bridge's governance-set daily or per-transaction limits.",
+        "routeChecks": {
+          "lockboxOrEscrow": "USDS is escrowed through Ethereum Foreign Bridge 0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016 and BridgeRouter 0x9a873656c19Efecbfb4f9FAb5B7acdeAb466a0B0; Foreign Bridge daiToken() returned USDS 0xdC035D45d973E3EC169d2276DDab16f1e407384F.",
+          "trustedPeerOrRemote": "The Gnosis Home Bridge is 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6 and its blockRewardContract() is 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA, which records native xDAI mint recipients after affirmation.",
+          "attestorQuorum": "At Gnosis block 47762411, requiredSignatures() returned 4 and validatorCount() returned 7.",
+          "signingModel": "Validators observe Foreign Bridge deposit events and submit Home Bridge affirmations; withdrawals collect 4-of-7 signatures before anyone executes them on Ethereum.",
+          "rateLimits": "At Gnosis block 47762411, dailyLimit() returned 10,000,000e18 + 1 wei, maxPerTx() returned 10,000,000e18, and requiredBlockConfirmations() returned 20.",
+          "caps": "The validator quorum is bounded by current bridge limits, while the separately reviewed Gnosis governance Safe can change limits and validator membership.",
+          "pausersAdminsUpgraders": "The Gnosis validator-management owner and Home Bridge proxy owner are the 8-of-15 Gnosis governance Safe."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762411,
+        "sources": [
+          {
+            "label": "Gnosis bridge validator docs",
+            "url": "https://docs.gnosischain.com/bridges/management/validators"
+          },
+          {
+            "label": "Gnosis validator-management contract",
+            "url": "https://gnosis.blockscout.com/address/0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D"
+          },
+          {
+            "label": "Gnosis JSON-RPC current reads",
+            "url": "https://gnosis-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Gnosis block 47762411, Home Bridge validatorContract() returned 0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D and blockRewardContract() returned 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA. The validator contract returned requiredSignatures = 4, validatorCount = 7, and owner = 0x7a48Dac683DA91e4faa5aB13D91AB5fd170875bd."
+      },
+      {
+        "id": "xdai-gnosis-block-reward",
+        "label": "xDAI Gnosis BlockReward native-credit hook",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x481c034c6d9441db23Ea48De68BCAe812C5d39bA",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge",
+          "contract:gnosis:0x481c034c6d9441db23ea48de68bcae812c5d39ba"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Gnosis Home Bridge calls BlockReward.addExtraReceiver after validator-affirmed execution; this is the consensus-mediated native xDAI credit hook for the reviewed route.",
+          "onchainAmountBounds": "Home Bridge affirmation and reverse nativeTransfer accounting use the bridge's minted-total-minus-burnt-coins invariant around BlockReward credits."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762411,
+        "sources": [
+          {
+            "label": "Gnosis BlockReward contract",
+            "url": "https://gnosis.blockscout.com/address/0x481c034c6d9441db23Ea48De68BCAe812C5d39bA"
+          },
+          {
+            "label": "Gnosis xDAI bridge deployment source",
+            "url": "https://github.com/gnosischain/tokenbridge-contracts/tree/xdaibridge"
+          },
+          {
+            "label": "Gnosis JSON-RPC current reads",
+            "url": "https://gnosis-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Gnosis block 47762411, the Home Bridge blockRewardContract() returned 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA. The official bridge implementation identifies BlockReward.addExtraReceiver as the native-credit hook after validator affirmation, so this is bridge machinery rather than independent issuer mint authority."
+      },
+      {
+        "id": "xdai-ethereum-bridge-router",
+        "label": "xDAI Ethereum BridgeRouter",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x9a873656c19Efecbfb4f9FAb5B7acdeAb466a0B0",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge",
+          "contract:ethereum:0x9a873656c19efecbfb4f9fab5b7acdeab466a0b0",
+          "contract:ethereum:0x74899961224538e423effd1a0fff3346adf3f4c56",
+          "contract:ethereum:0xd7e65a32bed4ce8cc57ec188f2bbb8016dc4b1cd",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The BridgeRouter accepts USDS, temporarily holds it, approves the configured xDAI Foreign Bridge route, and calls relayTokens; the route also exposes the reverse executeSignatures entry point.",
+          "trustedPeerOrRemote": "The router's USDS route is the xDAI Foreign Bridge 0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016; its native route therefore joins the Ethereum escrow and Gnosis Home Bridge path.",
+          "pausersAdminsUpgraders": "The BridgeRouter is an EIP-1967 transparent proxy with implementation 0x74899961224538E423eFfD1A0Ff3346adf3F4C56 and ProxyAdmin 0xd7e65a32bed4ce8cc57ec188f2bbb8016dc4b1cd. The ProxyAdmin is owned by the Ethereum 8-of-15 governance Safe; no contract-enforced timelock was observed."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770912,
+        "sources": [
+          {
+            "label": "Ethereum BridgeRouter",
+            "url": "https://etherscan.io/address/0x9a873656c19Efecbfb4f9FAb5B7acdeAb466a0B0"
+          },
+          {
+            "label": "Gnosis xDAI bridge deployment source",
+            "url": "https://github.com/gnosischain/tokenbridge-contracts/tree/xdaibridge"
+          },
+          {
+            "label": "Ethereum JSON-RPC current reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770912, BridgeRouter 0x9a873656c19Efecbfb4f9FAb5B7acdeAb466a0B0 was the post-USDS relay entry point. Its verified implementation routes USDS into the xDAI Foreign Bridge and exposes the bridge claim relay; the current implementation was 0x74899961224538E423eFfD1A0Ff3346adf3F4C56 behind ProxyAdmin 0xd7e65a32bed4ce8cc57ec188f2bbb8016dc4b1cd."
+      },
+      {
+        "id": "xdai-ethereum-bridge-router-proxy-admin",
+        "label": "xDAI Ethereum BridgeRouter ProxyAdmin",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd7e65a32bed4ce8cc57ec188f2bbb8016dc4b1cd",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge-governance",
+          "contract:ethereum:0xd7e65a32bed4ce8cc57ec188f2bbb8016dc4b1cd",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The BridgeRouter ProxyAdmin controls replacement of implementation 0x74899961224538E423eFfD1A0Ff3346adf3F4C56 for the Ethereum relay route, and its owner is the 8-of-15 Ethereum governance Safe. No contract-enforced timelock was observed."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770912,
+        "sources": [
+          {
+            "label": "Ethereum BridgeRouter",
+            "url": "https://etherscan.io/address/0x9a873656c19Efecbfb4f9FAb5B7acdeAb466a0B0"
+          },
+          {
+            "label": "Ethereum JSON-RPC current reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770912, BridgeRouter implementation slot 0x74899961224538E423eFfD1A0Ff3346adf3F4C56 resolved through ProxyAdmin 0xd7e65a32bed4ce8cc57ec188f2bbb8016dc4b1cd. Proxy replacement is bridge-route upgrade authority, not native xDAI issuance authority."
+      },
+      {
+        "id": "xdai-gnosis-usds-deposit-contract",
+        "label": "xDAI Gnosis USDSDepositContract reverse-path ingress",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x5C183C8A49aBA6e31049997a56D75600E27FF8c9",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge",
+          "contract:gnosis:0x5c183c8a49aba6e31049997a56d75600e27ff8c9"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Gnosis USDSDepositContract is live code on the reverse xDAI-to-USDS path; Home Bridge nativeTransfer recognizes it as the USDS sender so the post-burn release request names USDS rather than DAI.",
+          "trustedPeerOrRemote": "The contract is the Gnosis-side ingress/egress component joined to Home Bridge 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6 and the Ethereum Foreign Bridge USDS escrow."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762411,
+        "sources": [
+          {
+            "label": "Gnosis USDSDepositContract",
+            "url": "https://gnosis.blockscout.com/address/0x5C183C8A49aBA6e31049997a56D75600E27FF8c9"
+          },
+          {
+            "label": "Gnosis xDAI bridge deployment source",
+            "url": "https://github.com/gnosischain/tokenbridge-contracts/tree/xdaibridge"
+          },
+          {
+            "label": "Gnosis JSON-RPC current reads",
+            "url": "https://gnosis-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the current Gnosis review head represented by block 47762411, the USDSDepositContract 0x5C183C8A49aBA6e31049997a56D75600E27FF8c9 is live. It is reverse bridge ingress/egress machinery for xDAI burn and USDS release, not an independent xDAI mint authority."
+      },
+      {
+        "id": "xdai-ethereum-bridge-governance-safe",
+        "label": "xDAI Ethereum bridge governance Safe",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "validator",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge-governance",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6",
+          "contract:ethereum:0x4aa42145aa6e4bf72e164c9bbc74fbd3788045016",
+          "contract:ethereum:0xe1579debdd2df16ebdb9db8694391fa74eea201e",
+          "contract:ethereum:0xd7e65a32bed4ce8cc57ec188f2bbb8016dc4b1cd"
+        ],
+        "authorityType": "safe",
+        "threshold": 8,
+        "signerCount": 15,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "threshold": 8,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedAt": "2026-08-16",
+          "observedBlock": 25530288,
+          "source": "safe-api"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "This Safe owns the Ethereum Foreign Bridge proxy 0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016 and Ethereum validator-management contract 0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E; it also owns BridgeRouter ProxyAdmin 0xd7e65a32bed4ce8cc57ec188f2bbb8016dc4b1cd.",
+          "caps": "Bridge governance can change daily and per-transaction limits and replace the validator set.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770912, Foreign Bridge proxyOwner() and validator-management owner() returned this Safe, and the BridgeRouter ProxyAdmin owner also resolved to it. The Safe can replace bridge implementations and no contract-enforced timelock was observed."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770912,
+        "sources": [
+          {
+            "label": "Ethereum xDAI Foreign Bridge",
+            "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
+          },
+          {
+            "label": "Ethereum validator-management contract",
+            "url": "https://etherscan.io/address/0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E"
+          },
+          {
+            "label": "Ethereum bridge governance Safe API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6/"
+          },
+          {
+            "label": "Ethereum JSON-RPC current reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Current Ethereum bridge owner reads at block 25770912 identify 0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6 as Foreign Bridge and validator-management owner. Safe API reads on 2026-08-16 report threshold 8, 15 owners, no enabled modules, zero guard, and Safe v1.3.0. This 8-of-15 Safe governs bridge validators, limits, and upgrade surfaces; it is retained as Bridge Risk rather than native xDAI Mint Authority."
+      },
+      {
+        "id": "xdai-gnosis-bridge-governance-safe",
+        "label": "xDAI Gnosis bridge governance Safe",
+        "routeRefs": [
+          "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "validator",
+          "rate-limit"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x7a48Dac683DA91e4faa5aB13D91AB5fd170875bd",
+        "failureDomainKeys": [
+          "protocol:gnosis-xdai-bridge-governance",
+          "safe:gnosis:0x7a48dac683da91e4faa5ab13d91ab5fd170875bd",
+          "contract:gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+          "contract:gnosis:0xb289f0e6fbdf8eee340498a56e1787b303f1b6d"
+        ],
+        "authorityType": "safe",
+        "threshold": 8,
+        "signerCount": 15,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0+L2",
+          "threshold": 8,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
+          "observedAt": "2026-08-16",
+          "observedBlock": 47196992,
+          "source": "safe-api"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "This Safe owns the Gnosis Home Bridge proxy 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6 and Gnosis validator-management contract 0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D.",
+          "caps": "Bridge governance can change daily and per-transaction limits and replace the validator set.",
+          "pausersAdminsUpgraders": "At Gnosis block 47762411, Home Bridge proxyOwner() and validator-management owner() returned this Safe. The Safe can replace the Home Bridge implementation and no contract-enforced timelock was observed."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762411,
+        "sources": [
+          {
+            "label": "Gnosis xDAI Home Bridge",
+            "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
+          },
+          {
+            "label": "Gnosis validator-management contract",
+            "url": "https://gnosis.blockscout.com/address/0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D"
+          },
+          {
+            "label": "Gnosis bridge governance Safe API",
+            "url": "https://api.safe.global/tx-service/gno/api/v1/safes/0x7a48Dac683DA91e4faa5aB13D91AB5fd170875bd/"
+          },
+          {
+            "label": "Gnosis JSON-RPC current reads",
+            "url": "https://gnosis-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Current Gnosis bridge owner reads at block 47762411 identify 0x7a48Dac683DA91e4faa5aB13D91AB5fd170875bd as Home Bridge and validator-management owner. Safe API reads on 2026-08-16 report threshold 8, 15 owners, no enabled modules, zero guard, and Safe v1.3.0+L2. This 8-of-15 Safe governs bridge validators, limits, and upgrades; it is retained as Bridge Risk rather than native xDAI Mint Authority."
       }
     ]
   }

@@ -60,30 +60,52 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "mRe7YIELD is a Midas liquid yield token with multichain distribution, and the workflow candidate identifies Across as the material route surface. Because Across is an intent/liquidity framework, the route is reviewed as liquidity-route risk. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native; Etherlink row confirmed uniform Midas deployment; Starknet row remains unresolved (non-EVM).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "probable",
+    "tier": "canonical-rollup-bridge",
+    "summary": "Ethereum and Etherlink are reviewed as Midas issuer-native issuance, while the tracked Starknet address is a canonical StarkGate lock-mint representation of Ethereum mRe7YIELD. StarkGate's Ethereum MultiBridge escrows the canonical token and its Starknet bridge L1 handler mints the mapped Starknet token; the route's Starknet governance account and zero-delay bridge/token upgrade paths are authored below. The generic Across liquidity/intent listing is not treated as a material mRe7YIELD route.",
+    "reviewedAt": "2026-08-17",
+    "reviewer": "Codex Mint/Bridge boundary migration RELOC-10",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "docs",
+        "name": "StarkGate",
+        "slug": "starkgate",
+        "url": "https://docs.starknet.io/learn/protocol/starkgate",
         "bridgeTypes": [
-          "intent",
-          "liquidity"
-        ]
+          "canonical-rollup",
+          "lock-mint"
+        ],
+        "note": "Starknet's protocol documentation describes ERC20 escrow/deposit on L1, L2 representation minting, and withdrawal burn/release semantics."
       }
     ],
     "sources": [
       {
-        "label": "Midas ecosystem",
-        "url": "https://midas.app/ecosystem"
+        "label": "Midas smart-contract directory",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
       },
       {
-        "label": "Across on L2BEAT",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "Midas mRe7YIELD product documentation",
+        "url": "https://docs.midas.app/tokens/mre7yield"
+      },
+      {
+        "label": "StarkGate protocol documentation",
+        "url": "https://docs.starknet.io/learn/protocol/starkgate"
+      },
+      {
+        "label": "Starknet chain contract addresses",
+        "url": "https://docs.starknet.io/learn/cheatsheets/chain-info"
+      },
+      {
+        "label": "mRe7YIELD StarkGate deposit transaction",
+        "url": "https://etherscan.io/tx/0x56b9ff858cffd1376827ca5954e0f6d932071d924a256330fffa368bea8b1532"
+      },
+      {
+        "label": "mRe7YIELD StarkGate L2 delivery transaction",
+        "url": "https://starkscan.co/tx/0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8"
+      },
+      {
+        "label": "Starknet publication describing native mRe7YIELD deployment",
+        "url": "https://www.starknet.io/blog/bitcoin-defi-domain/"
       }
     ],
     "routes": [
@@ -116,62 +138,199 @@
         "id": "etherlink:0x733d504435a49fc8c4e9759e756c2846c92f0160",
         "destinationChain": "etherlink",
         "contractAddress": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
-        "protocol": "Midas multichain deployment (uniform proxy admin)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Midas mRe7YIELD native issuance on Etherlink",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals on Etherlink; EIP-1967 admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac matches the Ethereum deployment admin (uniform Midas multichain deployment). The token contract executes mint.",
+        "reviewNote": "Midas's official smart-contract directory lists an mRe7YIELD token and issuance vault on Etherlink. At Etherlink block 51161116 on 2026-08-16, the chain-local vault and shared EOA retained M_RE7_MINT_OPERATOR_ROLE, confirming an issuer-native mint path rather than a conserved bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "etherlink",
-        "controllerAddress": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
-        "failureDomainKeys": [
-          "protocol:midas-multichain",
-          "contract:etherlink:0x733d504435a49fc8c4e9759e756c2846c92f0160"
-        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 51161116,
         "sources": [
           {
-            "label": "Midas",
-            "url": "https://midas.app/"
+            "label": "Midas smart-contract directory",
+            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+          },
+          {
+            "label": "Etherlink mRe7YIELD proxy",
+            "url": "https://explorer.etherlink.com/address/0x733d504435a49fc8c4e9759e756c2846c92f0160"
           }
         ]
       },
       {
         "id": "starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+        "sourceChain": "ethereum",
         "destinationChain": "starknet",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-        "protocol": "Midas multichain deployment (uniform proxy admin)",
+        "protocol": "StarkGate mRe7YIELD canonical rollup bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
         "scope": "peripheral",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Starknet 2026-07-20 (starknet_call, block 12067807): name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals, totalSupply 175,676.21 tokens. getClassHashAt returns class 0x05ffbcfeb50d200a0677c48a129a11245a3fc519d1d98d76882d1c9a1b19c6ed with get_upgrade_delay() = 0, matching the 2026-07-13 mintAuthority review: the single-key OpenZeppelin governance account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c holds class-replacement power. Same uniform Midas multichain deployment pattern as the reviewed Etherlink route — the token contract executes mint; no third-party bridge is in the path.",
-        "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "starknet",
-        "controllerAddress": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-        "failureDomainKeys": [
-          "protocol:midas-multichain",
-          "contract:starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
-        ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 12067807,
+        "controllerAddress": "0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Starknet block 13408053 on 2026-08-17, the StarkGate L2 bridge 0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256 returned get_l1_bridge() = 0xf5b6ee2caeb6769659f6c091d209dfdca3f69eb, get_l1_token(mRe7YIELD) = Ethereum 0x87c9053c819bb28e0d73d33059e1b3da80afb0cf, and get_l2_token(Ethereum mRe7YIELD) = this Starknet address. The Ethereum transaction 0x56b9ff858cffd1376827ca5954e0f6d932071d924a256330fffa368bea8b1532 escrowed 0.01 mRe7YIELD in the L1 bridge on 2025-09-10; its accepted L1_HANDLER delivery 0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8 at Starknet block 2105929 called the L2 bridge and emitted a zero-address mint Transfer from this token. The token class exposes permissioned_mint/permissioned_burn but no L1 handler because the separate StarkGate bridge invokes it. An earlier Starknet publication described the deployment as native; the fixed bridge mapping and transfer receipt are decisive, while Midas's public directory still omits the Starknet address and supply policy.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-17",
+        "observedBlock": 13408053,
         "sources": [
           {
-            "label": "Midas",
-            "url": "https://midas.app/"
+            "label": "StarkGate protocol documentation",
+            "url": "https://docs.starknet.io/learn/protocol/starkgate"
           },
           {
-            "label": "mRe7YIELD on Starkscan (verified 2026-07-20)",
+            "label": "Starknet chain contract addresses",
+            "url": "https://docs.starknet.io/learn/cheatsheets/chain-info"
+          },
+          {
+            "label": "StarkGate L2 bridge contract",
+            "url": "https://starkscan.co/contract/0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256"
+          },
+          {
+            "label": "Starknet publication describing native mRe7YIELD deployment",
+            "url": "https://www.starknet.io/blog/bitcoin-defi-domain/"
+          },
+          {
+            "label": "mRe7YIELD on Starkscan",
             "url": "https://starkscan.co/contract/0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+          },
+          {
+            "label": "mRe7YIELD StarkGate deposit transaction",
+            "url": "https://etherscan.io/tx/0x56b9ff858cffd1376827ca5954e0f6d932071d924a256330fffa368bea8b1532"
+          },
+          {
+            "label": "mRe7YIELD StarkGate L2 delivery transaction",
+            "url": "https://starkscan.co/tx/0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8"
+          },
+          {
+            "label": "Starknet fixed-block RPC",
+            "url": "https://rpc.starknet.lava.build"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "starkgate-mre7yield-l2-bridge",
+        "label": "StarkGate mRe7YIELD Starknet bridge contract",
+        "routeRefs": [
+          "starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "starknet",
+        "controllerAddress": "0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256",
+        "failureDomainKeys": [
+          "protocol:starkgate",
+          "contract:starknet:0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256",
+          "bridge:ethereum:0xf5b6ee2caeb6769659f6c091d209dfdca3f69eb",
+          "contract:starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Ethereum StarkGate MultiBridge 0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb received 0.01 mRe7YIELD in transaction 0x56b9ff858cffd1376827ca5954e0f6d932071d924a256330fffa368bea8b1532. The accepted Starknet L1_HANDLER transaction 0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8 emitted the corresponding zero-address mint Transfer from the Starknet representation.",
+          "trustedPeerOrRemote": "At Starknet block 13408053, get_l1_bridge() returned 0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb, get_l1_token(0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc) returned Ethereum mRe7YIELD 0x87c9053c819bb28e0d73d33059e1b3da80afb0cf, and get_l2_token(0x87c9053c819bb28e0d73d33059e1b3da80afb0cf) returned the tracked Starknet token.",
+          "rateLimits": "At Starknet block 13408053, get_remaining_withdrawal_quota(Ethereum mRe7YIELD) returned max-u128 low and high limbs; no restrictive withdrawal quota was observed. The bridge class exposes withdrawal-limit enable/disable functions, with administration covered by the separate StarkGate governance control.",
+          "pausersAdminsUpgraders": "The L2 bridge class hash was 0x65d7265ac12b330bc42737281a9b73af17bd904d477779a014874d118c4ddbf at block 13408053 and exposes L1 handlers, withdrawal, token mapping, role, and replaceability surfaces. Its upgrade and administration domain is separately named below."
+        },
+        "capDescription": "The StarkGate L2 bridge is the reviewed executable that receives the accepted L1 message, burns the Starknet representation on withdrawal, and mints it on an Ethereum-escrowed deposit. No independent bridge supply cap was identified; the observed withdrawal quota was max-u128.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "The Ethereum StarkGate MultiBridge escrow and Starknet bridge governance are separate protocol domains.",
+          "The Starknet token class can change the permissioned mint/burn behavior through its separately governed upgrade path."
+        ],
+        "observedAt": "2026-08-17",
+        "observedBlock": 13408053,
+        "sources": [
+          {
+            "label": "StarkGate protocol documentation",
+            "url": "https://docs.starknet.io/learn/protocol/starkgate"
+          },
+          {
+            "label": "StarkGate L2 bridge contract",
+            "url": "https://starkscan.co/contract/0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256"
+          },
+          {
+            "label": "Ethereum StarkGate MultiBridge",
+            "url": "https://etherscan.io/address/0xf5b6ee2caeb6769659f6c091d209dfdca3f69eb"
+          },
+          {
+            "label": "mRe7YIELD StarkGate deposit transaction",
+            "url": "https://etherscan.io/tx/0x56b9ff858cffd1376827ca5954e0f6d932071d924a256330fffa368bea8b1532"
+          },
+          {
+            "label": "mRe7YIELD StarkGate L2 delivery transaction",
+            "url": "https://starkscan.co/tx/0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8"
+          }
+        ],
+        "evidence": "At Starknet block 13408053, the verified StarkGate bridge mapped Ethereum mRe7YIELD 0x87c9053c819bb28e0d73d33059e1b3da80afb0cf to the tracked Starknet token and returned the Ethereum L1 bridge 0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb. The fixed Ethereum deposit and accepted Starknet L1_HANDLER delivery prove the lock-mint transfer rail and identify this contract as the bridge minter/burner."
+      },
+      {
+        "id": "mre7yield-starknet-token-governance",
+        "label": "mRe7YIELD Starknet token and StarkGate governance account",
+        "routeRefs": [
+          "starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "upgrade",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "starknet",
+        "controllerAddress": "0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c",
+        "failureDomainKeys": [
+          "protocol:starkgate",
+          "contract:starknet:0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256",
+          "contract:starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+          "starknet:0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c"
+        ],
+        "authorityType": "contract",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Starknet block 13408053, the bridge returned get_l1_bridge() = 0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb, the mRe7YIELD L1/L2 mapping above, and get_l2_token_governance() = 0x03103066e6c7037ba947ea9a7b5b8d110ae7f3d631fa5849435d0dc1fc5ef785. On the bridge, account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c returned true for is_app_governor and is_governance_admin.",
+          "rateLimits": "The bridge exposes enable_withdrawal_limit, disable_withdrawal_limit, and quota views; at block 13408053 the mRe7YIELD withdrawal quota was max-u128. The governance account is the reviewed StarkGate administration domain for these route settings.",
+          "pausersAdminsUpgraders": "At Starknet block 13408053, the StarkGate bridge returned get_upgrade_delay() = 0 and account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c was true for is_app_governor, is_governance_admin, and is_security_admin. The mRe7YIELD token class 0x05ffbcfeb50d200a0677c48a129a11245a3fc519d1d98d76882d1c9a1b19c6ed also exposes replace_to(), returned get_upgrade_delay() = 0, and returned true for is_governance_admin(account)."
+        },
+        "capDescription": "The relocated Starknet governance control can administer the StarkGate bridge roles and route settings and can replace the representation token class with zero delay. Class replacement can alter permissioned mint/burn behavior or any representation cap; it is bridge-representation authority, not native EVM issuance authority.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The L1 StarkGate MultiBridge escrow and its Ethereum-side protocol governance are separate from this Starknet account.",
+          "The StarkGate token-governance account 0x03103066e6c7037ba947ea9a7b5b8d110ae7f3d631fa5849435d0dc1fc5ef785 is a separate account returned by get_l2_token_governance()."
+        ],
+        "observedAt": "2026-08-17",
+        "observedBlock": 13408053,
+        "sources": [
+          {
+            "label": "StarkGate L2 bridge contract",
+            "url": "https://starkscan.co/contract/0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256"
+          },
+          {
+            "label": "mRe7YIELD on Starkscan",
+            "url": "https://starkscan.co/contract/0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+          },
+          {
+            "label": "Starknet mRe7YIELD governance account",
+            "url": "https://starkscan.co/contract/0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c"
+          },
+          {
+            "label": "Starknet fixed-block RPC",
+            "url": "https://rpc.starknet.lava.build"
+          }
+        ],
+        "evidence": "This control relocates the prior Mint Authority Starknet class-replacement evidence. At block 13408053, the governance account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c was the mRe7YIELD token's governance admin; the token and the StarkGate bridge both reported zero upgrade delay. The bridge roles additionally identified the same account as app governor, governance admin, and security admin, so the zero-delay representation-upgrade and bridge-administration facts remain scoreable here."
       }
     ]
   }

@@ -4,9 +4,13 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits. On-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both tokens are direct immutable deployments with no proxy or other mint-logic upgrade path.",
+    "summary": "A7A5 has two canonical native issuance deployments, on Ethereum and Tron. Old Vector LLC's minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits; on-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both native tokens are direct immutable deployments with no proxy or other mint-logic upgrade path. Ethereum wA7A5 is a same-chain parent-backed representation and is excluded from Mint Authority; its lock/mint route is reviewed under Bridge Risk.",
     "upgradeability": {
       "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+        "tron:TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ"
+      ],
       "implementationAddresses": [
         "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
         "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ"
@@ -31,6 +35,10 @@
     "controls": [
       {
         "label": "Old Vector LLC issuance backend",
+        "deploymentRefs": [
+          "ethereum:0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+          "tron:TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ"
+        ],
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
@@ -41,6 +49,9 @@
         "chain": "ethereum",
         "address": "0x7d2d47e441915ff9c2d5a6e4a7aadd5e02722e29",
         "label": "A7A5 ETH token owner (custom 3-of-5 multisig)",
+        "deploymentRefs": [
+          "ethereum:0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9"
+        ],
         "role": "minter-admin",
         "authorityType": "multisig",
         "directMintAbility": "direct",
@@ -54,6 +65,9 @@
         "chain": "tron",
         "address": "TML1DbrPXYDDwatGxw66iEwECnXCG54uJy",
         "label": "A7A5 Tron token owner (3-of-5 multisig)",
+        "deploymentRefs": [
+          "tron:TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ"
+        ],
         "role": "minter-admin",
         "authorityType": "multisig",
         "directMintAbility": "direct",
@@ -68,9 +82,9 @@
     "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25526129 (2026-07-13), the A7A5 token owner remains the custom 3-of-5 multisig with the same five EOA owners. The verified Ethereum source declares owner, compliance, and accountant as constructor-set immutable values, exposes no upgrade function, and the implementation and beacon slots are zero. On Tron, the independently deployed A7A5 runtime exposes the same direct token interface; Tronscan reports it fully verified and non-proxy, and opcode inspection of the 12,955-byte executable region found no DELEGATECALL, CALLCODE, or SELFDESTRUCT path. The Tron owner was previously confirmed at block 83506136 as a 3-of-5 multisig with five EOA owners. The issuer-backend control cannot be independently confirmed from chain state, but both addressable on-chain mint surfaces and both immutable token runtimes are resolved. Mint-tier review (2026-07-15): No credible recurring independent reconciliation was located: Old Vector LLC publishes issuer-controlled transparency and an ad hoc reserve document, without a named independent attestor, stable cadence, or current liability reconciliation. Kyrgyz Finnadzor virtual-asset registration for Old Vector LLC is VASP/issuance status, not prudential reserve supervision. Economic-posture fields reviewed 2026-08-15: issuer-controlled multisigs can mint without a firm cap, no recurring whole-supply attestation is evidenced, and no prudential product supervisor is named. Wave 2 external review 2026-08-15: Kreston's 4 July 2025 report independently reconciles Ethereum and Tron supply to reserves, establishing attestation-only supervision, but no second dated report was found to prove a recurring cadence.",
-      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 25526129 (2026-07-13), the A7A5 token owner remains the custom 3-of-5 multisig with the same five EOA owners. The verified Ethereum source declares owner, compliance, and accountant as constructor-set immutable values, exposes no upgrade function, and the implementation and beacon slots are zero. On Tron, the independently deployed A7A5 runtime exposes the same direct token interface; Tronscan reports it fully verified and non-proxy, and opcode inspection of the 12,955-byte executable region found no DELEGATECALL, CALLCODE, or SELFDESTRUCT path. The Tron owner was previously confirmed at block 83506136 as a 3-of-5 multisig with five EOA owners. The issuer-backend control cannot be independently confirmed from chain state, but both addressable on-chain mint surfaces and both immutable token runtimes are resolved. Mint-tier review (2026-07-15): No credible recurring independent reconciliation was located: Old Vector LLC publishes issuer-controlled transparency and an ad hoc reserve document, without a named independent attestor, stable cadence, or current liability reconciliation. Kyrgyz Finnadzor virtual-asset registration for Old Vector LLC is VASP/issuance status, not prudential reserve supervision. Economic-posture fields reviewed 2026-08-15: issuer-controlled multisigs can mint without a firm cap, no recurring whole-supply attestation is evidenced, and no prudential product supervisor is named. Wave 2 external review 2026-08-15: Kreston's 4 July 2025 report independently reconciles Ethereum and Tron supply to reserves, establishing attestation-only supervision, but no second dated report was found to prove a recurring cadence. Boundary review 2026-08-16: Ethereum wA7A5 is a same-chain parent-backed wrapper, not a native issuance deployment; its conserved lock/mint route is authored under Bridge Risk. The proposed CEX transfer route between Ethereum and Tron remains unverified.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15; mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "A7A5 ETH token Blockscout",

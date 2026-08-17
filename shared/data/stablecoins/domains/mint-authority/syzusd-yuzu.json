@@ -2,37 +2,33 @@
   "id": "syzusd-yuzu",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "probable",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
     "inheritedFrom": "yzusd-yuzu",
-    "summary": "syzUSD is Yuzu's staking wrapper of yzUSD; local shares are bounded by deposited or bridged yzUSD, while each chain-local transparent proxy can have its wrapper logic replaced by its observed ProxyAdmin owner. Durable yzUSD mint authority is represented by the exact parent dependency rather than duplicated as a local issuer minter.",
+    "summary": "syzUSD is Yuzu's staking wrapper of yzUSD. Plasma is the only reviewed native issuance deployment: its current ERC-4626 share accounting is bounded by deposited yzUSD, while the Plasma ProxyAdmin owner Safe can replace that wrapper logic without a separate delay. Ethereum and Monad are bridge representations and their adapter/bridge upgrade surfaces are assessed under Bridge Risk; durable yzUSD mint authority remains represented by the exact parent dependency rather than duplicated as a local issuer minter.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+      ],
       "proxyAddresses": [
-        "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
-        "0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+        "0xc8a8df9b210243c55d31c73090f067ad0a1bf6"
       ],
       "implementationAddresses": [
-        "0xa3982582016375a0b25cb7d572379d3d49e5e9c8",
-        "0xe536b80e7f859e72ad095d769da1da45b7312d53"
+        "0xa3982582016375a0b25cb7d572379d3d49e5e9c8"
       ],
       "adminAddresses": [
         "0x7392751a860a51694231c7a0b4a9c853f8169cf0",
-        "0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331",
-        "0xa2a9700407934e913c840556b3d29f19cf6f203d",
-        "0xd32ab76a165f1a716986ba8c58344e3df4397f5e"
+        "0xa2a9700407934e913c840556b3d29f19cf6f203d"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Yuzu Monad ProxyAdmin 12-hour timelock",
-      "observedAt": "2026-08-08",
+      "controlRef": "Yuzu Plasma ProxyAdmin owner Safe (4-of-5)",
+      "observedAt": "2026-08-16",
+      "observedBlock": 29981334,
       "sources": [
         {
           "label": "syzUSD vault on Plasmascan",
           "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
-        },
-        {
-          "label": "syzUSD vault on Monadexplorer",
-          "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
         }
       ]
     },
@@ -44,6 +40,9 @@
         "directMintAbility": "none",
         "chain": "plasma",
         "address": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "deploymentRefs": [
+          "plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -63,6 +62,9 @@
         "directMintAbility": "upgrade-only",
         "chain": "plasma",
         "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+        "deploymentRefs": [
+          "plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+        ],
         "canRaiseCap": true,
         "threshold": 4,
         "signerCount": 5,
@@ -94,35 +96,15 @@
           }
         ],
         "evidence": "At Plasma block 29275684 on 2026-08-08, the vault ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 still reported this 4-of-5 Safe as owner. Direct Safe reads returned version 1.4.1, the listed five owners, no enabled modules, zero guard and fallback handler, and master copy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762. The Safe can replace the Plasma vault implementation without a separate on-chain delay."
-      },
-      {
-        "label": "Yuzu Monad ProxyAdmin 12-hour timelock",
-        "role": "proxy-admin",
-        "authorityType": "timelock",
-        "directMintAbility": "upgrade-only",
-        "chain": "monad",
-        "address": "0xd32ab76a165f1a716986ba8c58344e3df4397f5e",
-        "canRaiseCap": true,
-        "timelockDelaySec": 43200,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 94284390,
-        "sources": [
-          {
-            "label": "syzUSD vault on Monadexplorer",
-            "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
-          }
-        ],
-        "evidence": "At Monad block 94284390 on 2026-08-08, the vault ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 still returned this contract as owner, and getMinDelay() returned 43,200 seconds. Safe, Ownable, and module probes reverted, while the standard timelock delay selector succeeded. This immediate 12-hour TimelockController is the authority that can replace the Monad wrapper implementation."
       }
     ],
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "unknown",
     "review": {
-      "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is a serial wrapper over yzUSD: the local share-accounting route cannot create durable parent supply, and yzUSD control is carried by the exact parent dependency. A duplicate local issuer-backend control was removed because it incorrectly made the wrapper look like a second issuer mint path. Fresh reads on 2026-08-08 reconfirmed the Plasma proxy implementation/admin and asset at block 29275787, classified its admin owner as a 4-of-5 Safe with no modules or guard at block 29275684, and reconfirmed the Monad proxy/admin at block 94284684. The previously unclassified Monad ProxyAdmin owner returned getMinDelay() = 43,200 seconds at block 94284390, identifying the immediate upgrade controller as a 12-hour timelock. Plasma vault owner() remains EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 and Monad owner() remains EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae; these operational owners do not create base yzUSD supply.",
-      "reviewer": "OpenAI Codex C04 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is a serial wrapper over yzUSD: the local Plasma share-accounting route cannot create durable parent supply, and yzUSD control is carried by the exact parent dependency. Plasma is the only reviewed native-issuance route. At Plasma block 29981334 on 2026-08-16, proxy 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 resolves to implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8, ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, and asset() yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc; the ProxyAdmin owner is the reviewed 4-of-5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d with no enabled modules or guard, so a completed Safe action can replace the current deposit-bounded wrapper logic without a separate delay. Ethereum 0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12 and Monad 0x484be0540ad49f351eaa04eeb35df0f937d4e73f are bridge-representation candidates; their bridge upgrade/admin surfaces are excluded from this native review and retained in Bridge Risk. No local issuer minter is duplicated from parent yzUSD.",
+      "reviewer": "OpenAI Codex syzUSD bridge-boundary correction",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {
@@ -138,16 +120,8 @@
           "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
         },
         {
-          "label": "syzUSD vault on Monadexplorer",
-          "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
-        },
-        {
           "label": "Plasma public RPC",
           "url": "https://rpc.plasma.to"
-        },
-        {
-          "label": "Monad public RPC",
-          "url": "https://rpc.monad.xyz"
         }
       ]
     }

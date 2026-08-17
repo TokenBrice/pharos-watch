@@ -1,83 +1,69 @@
 {
   "id": "gusd-gate",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA interim register and scope page — ART/EMT issuer registers reviewed; no Gate/GUSD entry found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Gate GUSD product page — GUSD is a principal-protected flexible-term investment product with returns, not a fixed-par payment token",
-        "url": "https://www.gate.com/staking/GUSD"
-      },
-      {
-        "label": "ESMA MiCA Article 3 definitions — EMT and ART scope",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
-      }
-    ]
-  },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "Gate USD (GUSD) is explicitly characterized by Gate as an investment certificate with an appreciation attribute backed by U.S. Treasury RWA assets, not as a payment stablecoin. Users mint GUSD 1:1 with USDT/USDC and receive principal plus accrued interest upon redemption — a return-above-par design inconsistent with GENIUS Act payment stablecoin definition (redeemable at par, designed as medium of payment/settlement). Gate.io also lists the United States as a Restricted Location in its Terms of Service, further removing this token from GENIUS Act payment-stablecoin reach. The issuing entity operates from the Cayman Islands.",
+      "summary": "Gate markets GUSD as a principal-protected yield product, but it is also fixed at a 1:1 subscription and redemption rate, transferable, tradable, and usable as collateral. Public materials do not identify the legal issuer or instrument terms needed to determine whether GUSD is a GENIUS payment stablecoin or an excluded security or investment product.",
       "references": [
         {
-          "label": "Gate GUSD launch press release (Chainwire/Gate, Aug 29 2025)",
-          "url": "https://chainwire.org/2025/08/29/gate-launches-gusd-a-stable-investment-backed-by-real-world-assets/",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2025-08-29",
-          "accessedAt": "2026-06-07"
+          "label": "GENIUS Act statutory text — payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-17"
         },
         {
-          "label": "CoinGecko: What Is Gate's GUSD?",
-          "url": "https://www.coingecko.com/learn/what-is-gusd-gate-stablecoin",
-          "sourceKind": "news",
-          "accessedAt": "2026-06-07"
-        },
-        {
-          "label": "Gate.io User Agreement (Restricted Locations — includes United States)",
-          "url": "https://www.gate.io/user-agreement",
+          "label": "Gate GUSD current product page",
+          "url": "https://www.gate.com/staking/USDT?isDebtType=1&pid=33",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-08-17"
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "issuerEntity": "Gate Technology Inc. (Cayman Islands)",
-    "issuerDomicile": "Cayman Islands",
-    "foreignExceptionStatus": "not-applicable",
-    "daspOfferSaleStatus": "not-applicable",
-    "notes": "Gate explicitly brands GUSD as an investment certificate with an appreciation attribute, not a medium of exchange. Upon redemption users receive principal plus compounded interest — a return-above-par mechanism incompatible with the GENIUS Act payment stablecoin definition (par redemption, payment/settlement function). Gate.io lists the US as a Restricted Location. No GENIUS Act pathway assessed.",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "daspOfferSaleStatus": "unknown",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "The public GUSD materials reviewed do not name the token's legal issuer or issuer domicile, and Gate's corporate overview does not establish which Gate entity owes the GUSD obligation. Gate's exchange proof-of-reserves reports customer and platform GUSD holdings rather than the backing assets, so it is not treated as a GENIUS reserve disclosure or monthly token-backing attestation. Gate operates regional businesses including Gate US, but the reviewed sources do not establish whether GUSD is offered or sold in the United States. MiCA remains unassessed because neither the responsible issuer and token classification nor an EU offer or admission-to-trading record was established.",
     "references": [
       {
-        "label": "Gate GUSD product page",
-        "url": "https://www.gate.com/gusd",
+        "label": "Gate GUSD current product page",
+        "url": "https://www.gate.com/staking/USDT?isDebtType=1&pid=33",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-17"
       },
       {
-        "label": "Gate GUSD mint and redeem guide",
-        "url": "https://www.gate.com/blog/how-to-mint-and-redeem-gate-gusd",
+        "label": "Gate GUSD minting and RWA help article",
+        "url": "https://www.gate.com/help/lend/staking/46831",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-06-11",
+        "accessedAt": "2026-08-17"
       },
       {
-        "label": "Gate GUSD launch press release (Chainwire, Aug 29 2025)",
-        "url": "https://chainwire.org/2025/08/29/gate-launches-gusd-a-stable-investment-backed-by-real-world-assets/",
+        "label": "Gate exchange proof-of-reserves page",
+        "url": "https://www.gate.com/proof-of-reserves",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2025-08-29",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-17"
       },
       {
-        "label": "CoinGecko: What Is Gate's GUSD?",
-        "url": "https://www.coingecko.com/learn/what-is-gusd-gate-stablecoin",
-        "sourceKind": "news",
-        "accessedAt": "2026-06-07"
+        "label": "Gate corporate overview",
+        "url": "https://www.gate.com/about-us",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-17"
+      },
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-17"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-08-17"
   }
 }

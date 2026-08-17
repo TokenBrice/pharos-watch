@@ -64,6 +64,11 @@
       "decimals": 5
     },
     {
+      "chain": "etherlink",
+      "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+      "decimals": 5
+    },
+    {
       "chain": "starknet",
       "address": "0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d",
       "decimals": 5

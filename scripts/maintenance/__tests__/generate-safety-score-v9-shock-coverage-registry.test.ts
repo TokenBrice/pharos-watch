@@ -15,8 +15,19 @@ import {
 
 const REPO_ROOT = resolve(import.meta.dirname, "../../..");
 
+// This case reads, schema-parses, and hashes every committed shock-coverage journal.
+// The corpus grows with each capture — the 2026-08-17 refresh alone added roughly
+// 38k lines — so the default 5s budget is exceeded on CI runners while still passing
+// locally. The assertion is a whole-corpus projection proof, so narrowing its input
+// would weaken it; give it an explicit budget instead, as the other whole-registry
+// V9 suites do.
+const SHOCK_COVERAGE_REGISTRY_TEST_TIMEOUT_MS = 60_000;
+
 describe("Safety Score v9 shock-coverage measurement registry", () => {
-  it("is current and exactly projects every shock-coverage journal", () => {
+  it(
+    "is current and exactly projects every shock-coverage journal",
+    { timeout: SHOCK_COVERAGE_REGISTRY_TEST_TIMEOUT_MS },
+    () => {
     const journalPaths = collectShockCoverageJournalPaths(REPO_ROOT);
     const registry = buildShockCoverageMeasurementRegistry(REPO_ROOT);
     const rendered = renderShockCoverageMeasurementRegistry(registry);
@@ -97,5 +108,6 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
     const july17 = registry.measurements.filter((measurement) => measurement.block.timestampUnix === 1784279255);
     expect(capture9.map((measurement) => measurement.assetId)).toEqual(["bold-liquity", "lusd-liquity"]);
     expect(july17.map((measurement) => measurement.assetId)).toEqual(["bold-liquity", "lusd-liquity"]);
-  });
+    },
+  );
 });

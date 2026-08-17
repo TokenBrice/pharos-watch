@@ -108,6 +108,22 @@ function formatUint256Hex(value: bigint): string {
   return `0x${value.toString(16).padStart(64, "0")}`;
 }
 
+function useSingleDeploymentSparkSupplyFixture(): string {
+  const source = psiEligibleMocks.defaultMetaEntries.find(([id]) => id === "susdt-spark")?.[1];
+  if (!source) throw new Error("Missing susdt-spark source metadata for supply fallback fixture");
+
+  const fixtureId = "fixture-spark-savings-usdt";
+  const contracts = source.contracts?.filter((contract) => contract.chain === "ethereum") ?? [];
+  if (contracts.length !== 1) {
+    throw new Error(`Expected one Ethereum contract in Spark supply fallback fixture, got ${contracts.length}`);
+  }
+  const fixture = { ...source, id: fixtureId, contracts } as PsiEligibleCoin;
+  psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, fixture);
+  psiEligibleMocks.metaById.clear();
+  psiEligibleMocks.metaById.set(fixtureId, fixture);
+  return fixtureId;
+}
+
 describe("handleBackfillSupplyHistory", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -457,10 +473,11 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("falls back to historical on-chain totalSupply when CoinGecko market caps are all zero", async () => {
-    // Simulates a brand-new CG-only coin: CoinGecko returns valid prices but market_caps=0
-    // and circulating_supply=0 (upstream data not yet populated). Backfill should replay
-    // on-chain totalSupply per historical day and compute mcap = supply × price.
+    // Simulates a brand-new single-deployment CG-only coin: CoinGecko returns valid prices
+    // but market_caps=0 and circulating_supply=0 (upstream data not yet populated).
+    // Backfill should replay on-chain totalSupply per historical day and compute mcap = supply × price.
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const fixtureId = useSingleDeploymentSparkSupplyFixture();
 
     const ts1 = 1_775_692_800_000; // CG returns ms timestamps
     const ts2 = 1_775_779_200_000; // +1 day
@@ -522,7 +539,7 @@ describe("handleBackfillSupplyHistory", () => {
       ],
     ]);
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db: makeDb(capturedStatements), url: makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-10"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-10", {
+    const res = await handleBackfillSupplyHistoryTrusted({ db: makeDb(capturedStatements), url: makeApiUrl(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`), request: makeApiRequest(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`, {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
@@ -543,7 +560,7 @@ describe("handleBackfillSupplyHistory", () => {
     );
     expect(inserts).toHaveLength(2);
     // 1,000,000 tokens × $1.0002 ≈ 1,000,200
-    expect(inserts[0].args[0]).toBe("susdt-spark");
+    expect(inserts[0].args[0]).toBe(fixtureId);
     expect(inserts[0].args[2] as number).toBeCloseTo(1_000_200, -1);
     expect(inserts[0].args[3] as number).toBeCloseTo(1.0002, 4);
     expect(inserts[1].args[2] as number).toBeCloseTo(1_101_210, -1);
@@ -552,6 +569,7 @@ describe("handleBackfillSupplyHistory", () => {
 
   it("repairs partial CoinGecko market-cap gaps with historical on-chain totalSupply", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const fixtureId = useSingleDeploymentSparkSupplyFixture();
 
     const ts1 = 1_775_692_800_000;
     const ts2 = 1_775_779_200_000;
@@ -607,7 +625,7 @@ describe("handleBackfillSupplyHistory", () => {
       ],
     ]);
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db: makeDb(capturedStatements), url: makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-10"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-10", {
+    const res = await handleBackfillSupplyHistoryTrusted({ db: makeDb(capturedStatements), url: makeApiUrl(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`), request: makeApiRequest(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`, {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
@@ -627,8 +645,8 @@ describe("handleBackfillSupplyHistory", () => {
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
     expect(inserts).toHaveLength(2);
-    expect(inserts[0].args).toEqual(["susdt-spark", Math.floor(ts1 / 1000 / 86_400) * 86_400, 1_234_567, 1.0002]);
-    expect(inserts[1].args[0]).toBe("susdt-spark");
+    expect(inserts[0].args).toEqual([fixtureId, Math.floor(ts1 / 1000 / 86_400) * 86_400, 1_234_567, 1.0002]);
+    expect(inserts[1].args[0]).toBe(fixtureId);
     expect(inserts[1].args[1]).toBe(Math.floor(ts2 / 1000 / 86_400) * 86_400);
     expect(inserts[1].args[2] as number).toBeCloseTo(1_101_210, -1);
     expect(inserts[1].args[3] as number).toBeCloseTo(1.0011, 4);

@@ -4,23 +4,35 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "tGBP uses transparent proxies on five EVM chains and a standard SPL Token mint on Solana. EOA 0xAF4fCE...595C0 controls EVM minting and four live ProxyAdmin paths; Avalanche's ProxyAdmin is self-owned. Solana minting is controlled by a 1-of-2 SPL multisig.",
+    "summary": "tGBP uses issuer-deployed StableTokenV1OFT proxies on seven EVM chains and a standard SPL Token mint on Solana; all eight authored deployments are reviewed native-issuance routes. EOA 0xAF4fCE...595C0 can directly mint and burn on every EVM deployment and controls issuer-owned ProxyAdmin paths on Ethereum, Base, BSC, Polygon, Arbitrum, and Gnosis; Avalanche's ProxyAdmin is self-owned and not externally controlled. Solana minting is controlled by a 1-of-2 SPL multisig. LayerZero OFT burn/mint transfer machinery is scored separately in Bridge Risk and does not change this native issuance scope.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "base:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "bsc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+      ],
       "proxyAddresses": [
-        "0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "0x1f34490f8e8e776ffc547b39b864364035eaf44f"
       ],
       "implementationAddresses": [
         "0x94321d80d3c5cdac63b75f723ae64ca7f94be547",
         "0xc608f7750b91f2e655ce7702bce3d30b8504abf2",
-        "0xe6ef973354f65cefd3c3ab499712441a78e1eb9f"
+        "0xe6ef973354f65cefd3c3ab499712441a78e1eb9f",
+        "0x394b60848b51672260f4644d007aaf7e01a481a6"
       ],
       "adminAddresses": [
-        "0x666b8f67969a22a4015d6d523d8671ee714b114f"
+        "0x666b8f67969a22a4015d6d523d8671ee714b114f",
+        "0xe7dc79cd19c604ed5846cbae6ed4401ed92a23d4"
       ],
       "canChangeMintLogic": true,
       "controlRef": "StableTokenV1OFT owner (mint/burn + upgrade authority)",
-      "observedAt": "2026-07-14",
+      "observedAt": "2026-08-16",
       "sources": [
         {
           "label": "Ethereum tGBP token",
@@ -43,6 +55,14 @@
           "url": "https://snowscan.xyz/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
         },
         {
+          "label": "Arbitrum tGBP token",
+          "url": "https://arbiscan.io/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Gnosis tGBP token",
+          "url": "https://gnosisscan.io/address/0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+        },
+        {
           "label": "Solana tGBP mint",
           "url": "https://explorer.solana.com/address/2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
         }
@@ -56,9 +76,18 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "address": "0xAF4fCE2984Fb307a368f3Ff01f900909956595C0",
+        "deploymentRefs": [
+          "ethereum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "base:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "bsc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Current RPC reads on 2026-07-14 returned this EOA from owner() on Ethereum block 25530550, Base block 48619375, BSC block 109930595, Polygon block 90215403, and Avalanche block 90285011. All five deployments are transparent proxies using ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f. The ProxyAdmin owner is this EOA on Ethereum, Base, BSC, and Polygon; Avalanche's ProxyAdmin instead returns itself as owner, leaving that chain's implementation replacement path inaccessible through an external owner.",
+        "evidence": "Current RPC reads on 2026-08-16 returned this EOA from owner() on Ethereum block 25771292, Base block 50069042, BSC block 116370461, Polygon block 92148275, Avalanche block 92987083, Arbitrum block 495314108, and Gnosis block 47763307. All seven deployments are transparent proxies. ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f is owned by this EOA on Ethereum, Base, BSC, Polygon, and Arbitrum; Gnosis uses ProxyAdmin 0xe7dc79cd19c604ed5846cbae6ed4401ed92a23d4, also owned by this EOA. Avalanche's ProxyAdmin instead returns itself as owner, leaving that chain's implementation replacement path inaccessible through an external owner. The direct owner-only mint/burn path remains present on all seven EVM deployments.",
         "sources": [
           {
             "label": "OpenZeppelin tGBP audit",
@@ -93,6 +122,9 @@
         "role": "direct-minter",
         "authorityType": "multisig",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
+        ],
         "threshold": 1,
         "signerCount": 2,
         "canRaiseCap": "unknown",
@@ -107,16 +139,16 @@
             "url": "https://explorer.solana.com/address/3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs"
           }
         ],
-        "evidence": "A finalized Solana RPC read on 2026-07-14 decoded the tGBP mint as an initialized standard SPL Token mint with this address as both mint and freeze authority. The authority account decoded as an initialized 1-of-2 SPL Token multisig."
+        "evidence": "A finalized Solana RPC read on 2026-08-16 at slot 439747729 decoded the tGBP mint as an initialized standard SPL Token mint with this address as both mint and freeze authority. The authority account decoded as an initialized 1-of-2 SPL Token multisig; its signers are the LayerZero OFT Store and an additional issuer signer, so the native mint control is retained here while the Store's bridge capability is scored separately in Bridge Risk."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Current RPC reads on 2026-07-14 covered every tracked deployment. Ethereum, Base, BSC, Polygon, and Avalanche use transparent proxies at the common token address. Their implementations resolve to 0x94321d80... on Ethereum, 0xc608f775... on Base/BSC/Avalanche, and 0xe6ef9733... on Polygon. ProxyAdmin 0x666b8f... is owned by the reviewed EOA on four chains and self-owned on Avalanche. The Solana deployment is a standard immutable SPL Token mint controlled by a 1-of-2 multisig. The reviewed EOA therefore retains immediate mint-logic replacement on four EVM deployments, while Avalanche and Solana expose no external code-replacement authority. Mint-tier review (2026-07-15): Andersen LLP performs monthly independent agreed-upon procedures; the latest report covers 2026-06-30 and was published 2026-07-14, reconciling tGBP liabilities to reserve bank balances. FCA records match BCP Technologies Ltd only as a registered cryptoasset business, and the issuer states tGBP is not e-money and lacks FSCS coverage, so no prudential issuer supervision is credited. Economic-posture fields reviewed 2026-08-15: unbounded EVM owner and Solana multisig mint paths; monthly Andersen full-liability reconciliation exists without prudential product supervision.",
-      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Current RPC reads on 2026-08-16 covered every tracked deployment. Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum, and Gnosis use transparent proxies at the authored token addresses. Implementations resolve to 0x94321d80... on Ethereum, 0xc608f775... on Base/BSC/Avalanche/Arbitrum, 0xe6ef9733... on Polygon, and 0x394b6084... on Gnosis. ProxyAdmin 0x666b8f... is owned by the reviewed EOA on Ethereum, Base, BSC, Polygon, and Arbitrum; Gnosis uses a separate ProxyAdmin 0xe7dc79... owned by the same EOA; Avalanche's ProxyAdmin is self-owned and not externally controlled. The Solana deployment is a standard SPL Token mint controlled by a 1-of-2 multisig whose LayerZero OFT Store signer is assessed separately in Bridge Risk. All eight authored routes therefore remain native issuance routes; LayerZero burn/mint peers, DVNs, executors, and the Solana OFT program are bridge machinery, not additional native minters. Mint-tier review (2026-08-16): Andersen LLP performs monthly independent agreed-upon procedures; the latest report covers 2026-06-30 and was published 2026-07-14, reconciling tGBP liabilities to reserve bank balances. FCA records match BCP Technologies Ltd only as a registered cryptoasset business, and the issuer states tGBP is not e-money and lacks FSCS coverage, so no prudential issuer supervision is credited. Economic-posture fields remain unbounded EVM owner and Solana multisig mint paths; monthly Andersen full-liability reconciliation exists without prudential product supervision.",
+      "reviewer": "Codex mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "OpenZeppelin tGBP audit",

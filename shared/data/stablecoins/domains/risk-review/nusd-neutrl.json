@@ -50,5 +50,224 @@
         "url": "https://docs.neutrl.finance/protocol-design/nusd"
       }
     ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Ethereum NUSD is the sole native issuance deployment. Native NUSD is locked in the LayerZero OFTAdapter and represented by OFT_NUSD on Arbitrum and Plasma; adapter rate limits, pause, peer, Safe, and LayerZero validation controls are Bridge Risk and are not native Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero V2 OFTAdapter",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart",
+        "bridgeTypes": ["lock-mint", "external-messaging"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Neutrl deployed addresses",
+        "url": "https://docs.neutrl.finance/resources-and-ecosystem/addresses"
+      },
+      {
+        "label": "Ethereum NUSD OFTAdapter verified source",
+        "url": "https://etherscan.io/address/0x8E14D37b56b3d17E0f3ABC3b36aa304868F3476b#code"
+      },
+      {
+        "label": "Arbitrum NUSD deployment",
+        "url": "https://arbiscan.io/address/0xe556aba6fe6036275ec1f87eda296be72c811bce#code"
+      },
+      {
+        "label": "Plasma NUSD OFT_NUSD verified source",
+        "url": "https://plasmascan.to/address/0xe556aba6fe6036275ec1f87eda296be72c811bce#code"
+      },
+      {
+        "label": "Safe Ethereum state",
+        "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xcCdA7b3eaD40C897e0BefAD4d9cB8e55Cf5A70D2/"
+      },
+      {
+        "label": "LayerZero deployment and OFT documentation",
+        "url": "https://docs.layerzero.network/v2/deployments/chains/ethereum"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xe556aba6fe6036275ec1f87eda296be72c811bce",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
+        "protocol": "Neutrl native issuance (Router/AssetReserve/StableMinter)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Ethereum is the sole native issuance deployment: Router deposits collateral into AssetReserve and delegates to StableMinter, which calls NUSD.mint() under MINTER_ROLE. Arbitrum and Plasma are LayerZero OFT_NUSD representations reviewed separately.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770368,
+        "sources": [
+          {
+            "label": "NUSD verified Ethereum source",
+            "url": "https://etherscan.io/address/0xe556aba6fe6036275ec1f87eda296be72c811bce#code"
+          },
+          {
+            "label": "StableMinter verified source",
+            "url": "https://etherscan.io/address/0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D#code"
+          },
+          {
+            "label": "Router verified source",
+            "url": "https://etherscan.io/address/0xa052883ebEe7354FC2Aa0f9c727E657FdeCa744a#code"
+          },
+          {
+            "label": "Neutrl minting documentation",
+            "url": "https://docs.neutrl.finance/protocol-mechanics/minting"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xe556aba6fe6036275ec1f87eda296be72c811bce",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
+        "protocol": "LayerZero OFT_NUSD",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arbitrum block 495272137, endpoint() returned the local LayerZero V2 endpoint, owner() returned the shared Safe, and peers(30101) returned the Ethereum OFTAdapter. The verified OFT_NUSD representation has no native Router/StableMinter path.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xccda7b3ead40c897e0befad4d9cb8e55cf5a70d2",
+        "failureDomainKeys": [
+          "contract:arbitrum:0xe556aba6fe6036275ec1f87eda296be72c811bce",
+          "safe:arbitrum:0xccda7b3ead40c897e0befad4d9cb8e55cf5a70d2",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "protocol:layerzero-dvns"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495272137,
+        "sources": [
+          {
+            "label": "Arbitrum NUSD deployment",
+            "url": "https://arbiscan.io/address/0xe556aba6fe6036275ec1f87eda296be72c811bce#code"
+          },
+          {
+            "label": "Arbitrum fixed-block RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0xe556aba6fe6036275ec1f87eda296be72c811bce",
+        "sourceChain": "ethereum",
+        "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
+        "protocol": "LayerZero OFT_NUSD",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Plasma block 29976262, endpoint() returned the local LayerZero V2 endpoint, owner() returned the shared Safe, and peers(30101) returned the Ethereum OFTAdapter. PlasmaScan verifies the OFT_NUSD representation, which has no native Router/StableMinter path.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "plasma",
+        "controllerAddress": "0xccda7b3ead40c897e0befad4d9cb8e55cf5a70d2",
+        "failureDomainKeys": [
+          "contract:plasma:0xe556aba6fe6036275ec1f87eda296be72c811bce",
+          "safe:plasma:0xccda7b3ead40c897e0befad4d9cb8e55cf5a70d2",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "protocol:layerzero-dvns"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 29976262,
+        "sources": [
+          {
+            "label": "Plasma NUSD OFT_NUSD verified source",
+            "url": "https://plasmascan.to/address/0xe556aba6fe6036275ec1f87eda296be72c811bce#code"
+          },
+          {
+            "label": "Plasma fixed-block RPC",
+            "url": "https://rpc.plasma.to"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "nusd-layerzero-shared-safe",
+        "label": "NUSD LayerZero adapter and OFT shared Safe",
+        "routeRefs": [
+          "arbitrum:0xe556aba6fe6036275ec1f87eda296be72c811bce",
+          "plasma:0xe556aba6fe6036275ec1f87eda296be72c811bce"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config", "rate-limit", "pause"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xccda7b3ead40c897e0befad4d9cb8e55cf5a70d2",
+        "failureDomainKeys": [
+          "safe:ethereum:0xccda7b3ead40c897e0befad4d9cb8e55cf5a70d2",
+          "contract:ethereum:0x8e14d37b56b3d17e0f3abc3b36aa304868f3476b",
+          "contract:arbitrum:0xe556aba6fe6036275ec1f87eda296be72c811bce",
+          "contract:plasma:0xe556aba6fe6036275ec1f87eda296be72c811bce",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 4,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xDE7259AB94cd04Cd5f855b15368Bf0549Eeb1504",
+            "0x52450F974138114B13D5AF82c3a39f33E6a4be73",
+            "0xB94D1d4ed2386b52912f5EE9468Cbe0FC414bA0b",
+            "0xe3f2cBB5e8B5Cb1BD7F373a83C1d8295214560b3"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770368, the adapter peers for EID 30110 (Arbitrum) and EID 30383 (Plasma) were the destination OFT_NUSD address. Reverse reads at Arbitrum block 495272137 and Plasma block 29976262 returned the Ethereum adapter at EID 30101. The Safe can change adapter and destination peer/delegate settings.",
+          "rateLimits": "At the reviewed current reads, each Ethereum adapter route had a 1,000,000 NUSD limit over a 3,600-second window with small nonzero in-flight amounts. The verified wrapper lets its owner change limits up to the 50,000,000 NUSD MAX_LIMIT.",
+          "pausersAdminsUpgraders": "The shared 2-of-4 Safe owns the Ethereum adapter and both destination OFT_NUSD deployments, can add or remove pausers, and can pause or unpause the route. Destination OFT mint/burn is gated by LayerZero Endpoint validation and the configured peer; the destination representations do not hold the issuer MINTER_ROLE."
+        },
+        "capDescription": "The Safe controls bridge mint/burn administration, peers, rate limits, and pause for the Ethereum NUSD OFTAdapter and Arbitrum/Plasma OFT_NUSD representations. This is bridge-route authority, not independent native NUSD issuance; the adapter's 1,000,000 NUSD/hour route limits are raiseable by the Safe up to MAX_LIMIT.",
+        "canRaiseCap": true,
+        "bypassSurfaces": ["LayerZero Endpoint V2, ULN, DVN, and Executor governance is external to the Neutrl Safe and remains a separate protocol failure domain."],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771068,
+        "sources": [
+          {
+            "label": "Safe Ethereum state",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xcCdA7b3eaD40C897e0BefAD4d9cB8e55Cf5A70D2/"
+          },
+          {
+            "label": "Ethereum NUSD OFTAdapter verified source",
+            "url": "https://etherscan.io/address/0x8E14D37b56b3d17E0f3ABC3b36aa304868F3476b#code"
+          },
+          {
+            "label": "LayerZero deployment and OFT documentation",
+            "url": "https://docs.layerzero.network/v2/deployments/chains/ethereum"
+          }
+        ],
+        "evidence": "At Ethereum block 25770368 (2026-08-16 21:46:45 UTC), the NUSD OFTAdapter had LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c and peers for EIDs 30110 (Arbitrum) and 30383 (Plasma). At Arbitrum block 495272137 and Plasma block 29976262, the local OFT_NUSD endpoint and owner() were verified and peers(30101) returned the Ethereum adapter. The adapter's rate-limited _debit transfers native NUSD into the adapter and _credit releases the conserved token on a valid LayerZero receive; it is not native mint authority. Current route reads showed a 1,000,000 NUSD/3,600-second limit per destination with a 50,000,000 NUSD MAX_LIMIT. The shared Safe 0xcCdA7b3eaD40C897e0BefAD4d9cB8e55Cf5A70D2 is 2-of-4 with four owners, no modules, guard, or module guard. At Ethereum block 25771068, both routes used SendUln302 and ReceiveUln302, with 15 source confirmations and four required DVNs: Deutsche Telekom 0x373a6e5c0c4e89e24819f00aa37ea370917aaff4, Horizen Labs 0x380275805876ff19055ea900cdb2b46a94ecf20d, Canary 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd, and Nethermind 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5. The Executor was 0x173272739Bd7Aa6e4e214714048a9fE699453059 with a 10,000-byte max message size. LayerZero protocol defaults and DVN administration remain external to the Safe."
+      }
+    ]
   }
 }

@@ -7,6 +7,9 @@
     "summary": "EURCV Ethereum mint is restricted to SG-FORGE's immutable registrar EOA. The token is a UUPS SmartCoin V4 proxy: the immutable technical EOA executes upgrades only after the registrar has authorized the candidate implementation; there is no separate proxy-admin slot.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
+      ],
       "proxyAddresses": [
         "0x5f7827fDeb7c20b443265Fc2F40845B715385fF2"
       ],
@@ -35,6 +38,9 @@
       {
         "chain": "ethereum",
         "address": "0x7dE0bbdfCd4A6a956F149bEFcca30D6B5Bc5DA69",
+        "deploymentRefs": [
+          "ethereum:0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
+        ],
         "label": "EURCV SmartCoin registrar and direct minter",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -57,6 +63,9 @@
       {
         "chain": "ethereum",
         "address": "0x54124a6834AF252a0f9ac7F478001aa500428955",
+        "deploymentRefs": [
+          "ethereum:0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
+        ],
         "label": "EURCV SmartCoin technical upgrade executor",
         "role": "proxy-admin",
         "authorityType": "eoa",

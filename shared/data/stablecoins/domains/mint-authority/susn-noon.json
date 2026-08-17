@@ -4,15 +4,18 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "sUSN is Noon's staking wrapper over USN. Shares mint against deposited USN and inherit the reviewed MinterHandlerV2 and 3-of-6 Noon admin Safe. The Ethereum wrapper is a transparent proxy whose ProxyAdmin is governed by a 48-hour timelock owned by that Safe.",
+    "summary": "Mint Authority covers only canonical Ethereum sUSN issuance and its inherited USN collateral dependency. Shares mint against deposited USN; the reviewed MinterHandlerV2 and 3-of-6 Noon admin Safe bound the inherited collateral path, while the Ethereum wrapper is a transparent proxy whose ProxyAdmin is governed by a 48-hour timelock owned by that Safe. Cross-chain lock/unlock, Hyperlane messaging, destination representations, and bridge administration are scored only under bridgeRouteRisk.",
     "inheritedFrom": "usn-noon",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xe24a3dc889621612422a64e6388927901608b91d"
+      ],
       "proxyAddresses": [
         "0xe24a3dc889621612422a64e6388927901608b91d"
       ],
       "implementationAddresses": [
-        "0xd1ffb6a6a42c86b931b2a6d388d1f25c1c775b34"
+        "0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d"
       ],
       "adminAddresses": [
         "0x1908284b50ee152c9f00c8e65a81fc1c4520bd81",
@@ -21,12 +24,16 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "sUSN Ethereum upgrade timelock",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530817,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25771191,
       "sources": [
         {
           "label": "sUSN proxy on Etherscan",
           "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+        },
+        {
+          "label": "Current sUSN implementation source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=sources,abi,metadata"
         },
         {
           "label": "Noon upgrade timelock source",
@@ -38,14 +45,17 @@
       {
         "chain": "ethereum",
         "address": "0xe24a3dc889621612422a64e6388927901608b91d",
+        "deploymentRefs": [
+          "ethereum:0xe24a3dc889621612422a64e6388927901608b91d"
+        ],
         "label": "Noon sUSN transparent proxy",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530817,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771191,
         "capDescription": "Transparent proxy; upgrade path: ProxyAdmin (0x1908284b) → owner 0xe5e412c → owner Safe 0x1ea169. Wrapper owner() also returns the same 3/6 Safe.",
         "sources": [
           {
@@ -57,11 +67,14 @@
             "url": "https://docs.noon.capital/"
           }
         ],
-        "evidence": "At Ethereum block 25530817, the wrapper implementation slot returned 0xd1ffb6...5b34 and the admin slot returned ProxyAdmin 0x190828...bd81. The wrapper itself has no separate privileged base-USN mint path; its supply is issued through the staking deposit flow."
+        "evidence": "At Ethereum block 25771191, the wrapper implementation slot returned 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d and the admin slot returned ProxyAdmin 0x190828...bd81. The current verified implementation adds PausableUpgradeable and a 48-hour stuck-message correction flow; those cross-chain transfer-rail surfaces are separately scored under bridgeRouteRisk. The wrapper itself has no separate privileged base-USN mint path; its native supply is issued through the staking deposit flow."
       },
       {
         "chain": "ethereum",
         "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
+        "deploymentRefs": [
+          "ethereum:0xe24a3dc889621612422a64e6388927901608b91d"
+        ],
         "label": "Inherited USN MinterHandlerV2",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -82,6 +95,9 @@
       {
         "chain": "ethereum",
         "address": "0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f",
+        "deploymentRefs": [
+          "ethereum:0xe24a3dc889621612422a64e6388927901608b91d"
+        ],
         "label": "Inherited Noon admin Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -120,6 +136,9 @@
       {
         "chain": "ethereum",
         "address": "0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F",
+        "deploymentRefs": [
+          "ethereum:0xe24a3dc889621612422a64e6388927901608b91d"
+        ],
         "label": "sUSN Ethereum upgrade timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
@@ -155,6 +174,10 @@
           "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d"
         },
         {
+          "label": "Current sUSN implementation source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=sources,abi,metadata"
+        },
+        {
           "label": "Noon docs",
           "url": "https://docs.noon.capital/"
         },
@@ -163,9 +186,9 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
         }
       ],
-      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-6 admin Safe. At Ethereum block 25530817, its transparent proxy resolved to implementation 0xd1ffb6...5b34 and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths. Economic-posture fields reviewed 2026-08-15: local sUSN supply is deposit-gated, mint-logic replacement is enforced through the 48-hour timelock, and live ERC-4626 accounting covers all wrapper shares through Accountable without a named prudential supervisor.",
-      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-6 admin Safe. At Ethereum block 25771191, its transparent proxy resolved to current implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. The current implementation adds PausableUpgradeable and a 48-hour stuck-message correction flow; these cross-chain transfer-rail capabilities are reviewed under bridgeRouteRisk and are not independent issuer mint paths. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths. Local sUSN supply is deposit-gated, mint-logic replacement is enforced through the 48-hour timelock, and live ERC-4626 accounting covers all wrapper shares through Accountable without a named prudential supervisor.",
+      "reviewer": "Codex mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

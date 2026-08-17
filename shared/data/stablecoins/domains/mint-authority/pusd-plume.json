@@ -37,6 +37,9 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "deploymentRefs": [
+          "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+        ],
         "canRaiseCap": true,
         "observedAt": "2026-07-14",
         "observedBlock": 25531116,
@@ -83,6 +86,9 @@
         "directMintAbility": "direct",
         "chain": "plume",
         "address": "0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d",
+        "deploymentRefs": [
+          "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
         "observedAt": "2026-07-14",

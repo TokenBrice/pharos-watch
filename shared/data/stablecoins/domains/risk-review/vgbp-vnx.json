@@ -18,18 +18,22 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "VGBP has issuer-controlled deployments across its listed chains, and the reviewed mint-authority data resolves direct VNX issuer minting on Base. No separate bridge, lockbox, or liquidity route was resolved, so Pharos treats current route risk as native issuance on supported chains.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "VGBP is natively issued on Base, Celo, and Solana through VNX-controlled VNXCToken and SPL mint authorities. The reviewed Base and Celo proxy, VNXManager, and VNXProxyAdmin sources, plus the Solana SPL mint, expose no on-chain bridge machinery, so there are no bridge controls or representation routes in Bridge Risk. VNX's historical platform \"bridging services\" were an undocumented off-chain operational path and withdrawals ended after June 30, 2026; its exact historical semantics and common-mode controls remain unresolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex VNX mint-bridge boundary review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "VNX platform docs",
-        "url": "https://vnx.gitbook.io/vnx-platform/"
+        "label": "VNX supported blockchains notice",
+        "url": "https://vnx.li/strategic-focus-on-supported-blockchains/"
       },
       {
-        "label": "VNX",
-        "url": "https://vnx.li/"
+        "label": "VNX exchange-operations suspension and bridging notice",
+        "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
+      },
+      {
+        "label": "VNX EVM smart-contract repository",
+        "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/tree/947c79a7/contracts"
       }
     ],
     "routes": [
@@ -37,46 +41,79 @@
         "id": "base:0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
         "destinationChain": "base",
         "contractAddress": "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VGBP deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native issuer deployment. At Base block 50066430 on 2026-08-16, the transparent VNXCToken proxy resolved to VNX-controlled native minting through its chain-local VNXManager; no OFT, messaging, lockbox, escrow, peer, validator, or remote-supply accounting path was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066430,
+        "sources": [
+          {
+            "label": "Base verified VGBP proxy",
+            "url": "https://base.blockscout.com/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411"
+          },
+          {
+            "label": "Base live JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ]
       },
       {
         "id": "celo:0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
         "destinationChain": "celo",
         "contractAddress": "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VGBP deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native issuer deployment. At Celo block 75021637 on 2026-08-16, the transparent VNXCToken proxy resolved to VNX-controlled native minting through its chain-local VNXManager; no OFT, messaging, lockbox, escrow, peer, validator, or remote-supply accounting path was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 75021637,
+        "sources": [
+          {
+            "label": "Celo verified VGBP proxy",
+            "url": "https://celo.blockscout.com/address/0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f"
+          },
+          {
+            "label": "Celo live JSON-RPC",
+            "url": "https://forno.celo.org"
+          }
+        ]
       },
       {
         "id": "solana:5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1",
         "destinationChain": "solana",
         "contractAddress": "5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VGBP deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native SPL Token mint. At finalized Solana slot 439735891 on 2026-08-16, the mint authority was the reviewed VNX-controlled System Program account; no bridge program, peer, validator, or remote-supply accounting path was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 439735891,
+        "sources": [
+          {
+            "label": "Solana VGBP mint",
+            "url": "https://explorer.solana.com/address/5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
       }
     ]
   }

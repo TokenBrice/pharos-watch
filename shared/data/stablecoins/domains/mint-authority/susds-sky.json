@@ -4,28 +4,21 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS. Vault share minting is backed by deposited USDS and inherits reviewed USDS_JOIN plus Sky governance authority for base supply.",
+    "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS and is natively issued only by the Ethereum vault. Vault share minting is backed by deposited USDS and inherits reviewed USDS_JOIN plus Sky governance authority for base supply; Base, Optimism, and Arbitrum bridge representation administration is scored separately under bridgeRouteRisk.",
     "inheritedFrom": "usds-sky",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+      ],
       "proxyAddresses": [
-        "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-        "0x5875eee11cf8398102fdad704c9e96607675467a",
-        "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
-        "0xddb46999f8891663a8f2828d25298f70416d7610"
+        "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
       ],
       "implementationAddresses": [
-        "0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0",
-        "0x5aee6b37d6e31860804575aee3e2f368a0a428e7"
+        "0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
       ],
       "adminAddresses": [
-        "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
-        "0x36b072ed8afe665e3aa6daba79decbec63752b22",
-        "0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255",
-        "0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7",
-        "0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
-        "0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6",
-        "0x13f7f24ca959359a4d710d32c715d4bce273c793"
+        "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB"
       ],
       "canChangeMintLogic": true,
       "delaySec": 172800,
@@ -51,6 +44,9 @@
       {
         "chain": "ethereum",
         "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "deploymentRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        ],
         "label": "Sky Savings USDS vault",
         "role": "wrapper",
         "authorityType": "contract",
@@ -72,6 +68,9 @@
       {
         "chain": "ethereum",
         "address": "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB",
+        "deploymentRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        ],
         "label": "Inherited USDS_JOIN token adapter",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -90,6 +89,9 @@
       {
         "chain": "ethereum",
         "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "deploymentRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        ],
         "label": "Inherited Sky Pause Proxy governance executor",
         "role": "governor",
         "authorityType": "dao-governor",
@@ -125,9 +127,9 @@
           "url": "https://developers.skyeco.com/protocol/tokens/susds/"
         }
       ],
-      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance. At Ethereum block 25295174: EIP-1967 admin slot = 0x0 (no external proxy admin), impl slot = 0x4e7991e5 (UUPS), wards(MakerDAO PauseProxy)=1. Upgrade authority is Sky governance via the wards mechanism. Wrapper has no privileged mint surface. Economic-posture fields reviewed 2026-08-15: local shares remain deposit-gated and changing wrapper mint logic requires Sky's enforced two-day Pause, with no separate wrapper reconciliation cadence or named supervisor.",
+      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance, and only the Ethereum deployment is treated as native issuance. The Base, Optimism, and Arbitrum deployments are SkyLink bridge representations; their bridge token wards, governance relays, and UUPS implementation authorities are reviewed in bridgeRouteRisk rather than counted here. At Ethereum block 25295174: EIP-1967 admin slot = 0x0 (no external proxy admin), impl slot = 0x4e7991e5 (UUPS), wards(MakerDAO PauseProxy)=1. Upgrade authority is Sky governance via the wards mechanism. Wrapper has no privileged mint surface. Economic-posture fields reviewed 2026-08-15: local shares remain deposit-gated and changing wrapper mint logic requires Sky's enforced two-day Pause, with no separate wrapper reconciliation cadence or named supervisor.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16"
     }
   }
 }

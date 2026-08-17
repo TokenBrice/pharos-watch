@@ -11,6 +11,10 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "ethereum:0x09fd37d9aa613789c517e76df1c53aece2b60df4",
+          "plasma:0xef7b1a03e0897c33b63159e38d779e3970c0e2fc"
+        ],
         "capDescription": "Mint bounded per branch by collateral ratio and Liquity-v2-style redemption/liquidation; users set their own interest rate. Mint is gated to registered BorrowerOperations addresses set at initialization.",
         "canRaiseCap": false,
         "evidence": "At Ethereum block 25295272: BoldToken proxy (0x09fd37d9...) at EIP-1967 impl 0xa5ae6f43... Source confirms: mint() restricted to BorrowerOperations, ActivePool, or CCIP pools via _requireCallerIsBOorAPorCCIP(). BorrowerOperations addresses are set via CollateralRegistry (0x5e159fac...) at initialization; owner renounced in setCollateralRegistry() call. Follow-up 2026-07-20: Ebisu branch BorrowerOperations contracts verified with live bytecode — Ethereum branches 0x026cf854..., 0x116d3842..., 0x66283665... and Plasma branches 0x061010c0..., 0x2291cbed..., 0x3b338fe0..., 0x3f97c24a..., 0x458d3c3b... (deployment addresses from the Ebisu app configuration; CollateralRegistry 0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7 shared).",
@@ -38,6 +42,9 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0x09fd37d9aa613789c517e76df1c53aece2b60df4"
+        ],
         "threshold": 2,
         "signerCount": 3,
         "modulesOrGuardsStatus": "none-detected",
@@ -78,9 +85,9 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295272: BoldToken (ebUSD) is an ERC1967Proxy (0x09fd37d9...) with impl BoldToken (0xa5ae6f43...). Source-confirmed: setCollateralRegistry() renounces ownership (owner()=0x0 at slot 101). Upgrade admin is Gnosis Safe 2/3 (0x25b85831..., 3 EOA owners, no modules, Safe 1.3.0) gated by 7-day on-chain UPGRADE_TIMELOCK in EbisuUpgradeableV2. No pending upgrade (pendingImplementation=0x0). ccipTokenPoolsLocked=true. Mint is CDP-only via BorrowerOperations addresses set at init and unreachable without an upgrade through the 7-day timelock. Economic-posture fields reviewed 2026-08-15: collateral-gated CDP issuance can be changed only through the enforced seven-day upgrade timelock, requires no off-chain reconciliation, and has no supervisor or attestor.",
+      "evidence": "At Ethereum block 25295272: BoldToken (ebUSD) is an ERC1967Proxy (0x09fd37d9...) with impl BoldToken (0xa5ae6f43...). Source-confirmed: setCollateralRegistry() renounces ownership (owner()=0x0 at slot 101). Upgrade admin is Gnosis Safe 2/3 (0x25b85831..., 3 EOA owners, no modules, Safe 1.3.0) gated by 7-day on-chain UPGRADE_TIMELOCK in EbisuUpgradeableV2. No pending upgrade (pendingImplementation=0x0). ccipTokenPoolsLocked=true; the CCIP pool path is therefore a locked native-token guard, not an active bridge mint route. Mint is CDP-only via BorrowerOperations addresses set at init and unreachable without an upgrade through the 7-day timelock. LayerZero OFT adapters are transfer machinery reviewed separately under Bridge Risk and do not replace the native CDP controls. Economic-posture fields reviewed 2026-08-15: collateral-gated CDP issuance can be changed only through the enforced seven-day upgrade timelock, requires no off-chain reconciliation, and has no supervisor or attestor.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Liquity Friendly Fork Program",
@@ -99,6 +106,9 @@
     "upgradeability": {
       "model": "custom",
       "canChangeMintLogic": true,
+      "deploymentRefs": [
+        "ethereum:0x09fd37d9aa613789c517e76df1c53aece2b60df4"
+      ],
       "delaySec": 604800,
       "controlRef": "Ebisu Gnosis Safe (EbisuUpgradeable admin, 7-day timelock)",
       "observedAt": "2026-06-11",

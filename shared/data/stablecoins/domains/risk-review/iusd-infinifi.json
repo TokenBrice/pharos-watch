@@ -54,9 +54,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "infiniFi publishes an Ethereum iUSD ReceiptToken, a direct LayerZero OFT on BNB Chain, and a Tempo TIP-20 iUSD with an OFT Adapter. The Tempo adapter's lock/unlock side is the weakest documented durable cross-chain route, so the profile uses external-lock-mint. The issuer-listed Plasma address is excluded because pinned on-chain metadata identifies it as iUSDT rather than iUSD.",
-    "reviewedAt": "2026-07-15",
-    "reviewer": "Codex bridge route review",
+    "summary": "infiniFi's Ethereum ReceiptToken is the only canonical native-issuance route. BNB's InfiniFiOFT is a LayerZero burn/mint representation, while Tempo's TIP-20 IUSD and OFT Adapter are a lock/mint representation; their bridge contracts, issuer Safe administration, DVN/peer configuration, and Outland portal reconciliation are assessed here rather than in Mint Authority. The Tempo route remains the weakest documented durable route, so the profile uses external-lock-mint. The issuer-listed Plasma address is excluded because pinned on-chain metadata identifies it as iUSDT rather than iUSD.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; RELOC-07 mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -114,7 +114,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-15",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
         "sources": [
           {
             "label": "infiniFi ReceiptToken documentation",
@@ -132,22 +133,29 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x60b14ec49874af1ba471685cb11132101aebdf09",
         "protocol": "LayerZero OFT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Ethereum is the canonical ReceiptToken deployment. BNB's InfiniFiOFT is a LayerZero burn/mint representation whose _debit() burns on the source and _credit() mints on the destination; it is not an independent native collateral-liability domain.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
-          "layerzero:oft:iusd"
+          "protocol:layerzero-oft",
+          "protocol:layerzero-dvns",
+          "contract:bsc:0x60b14ec49874af1ba471685cb11132101aebdf09"
         ],
-        "observedAt": "2026-07-15",
-        "observedBlock": 110098130,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116365334,
         "sources": [
           {
             "label": "infiniFi contract addresses (BNB iUSD OFT)",
             "url": "https://docs.infinifi.xyz/dev-docs/contracts.md"
+          },
+          {
+            "label": "BNB verified InfiniFiOFT source",
+            "url": "https://bscscan.com/address/0x60B14ec49874Af1BA471685cb11132101aeBdF09#code"
           },
           {
             "label": "LayerZero OFT reference",
@@ -161,18 +169,21 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x20c000000000000000000000ab02d39df30bd17e",
         "protocol": "LayerZero OFT Adapter",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Tempo TIP-20 IUSD is a representation paired with the LayerZero OFT Adapter. The adapter's token() read returns the TIP-20 address and its ISSUER_ROLE membership read is true; the route is lock/mint bridge machinery, not an independent infiniFi Core collateral-liability domain.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
-          "layerzero:oft:iusd"
+          "protocol:layerzero-oft",
+          "protocol:layerzero-dvns",
+          "contract:tempo:0xfa339b5a3ad03fd9ff048f574636b60d0fc7538a"
         ],
-        "observedAt": "2026-07-15",
-        "observedBlock": 30063878,
+        "observedAt": "2026-08-16",
+        "observedBlock": 35115025,
         "sources": [
           {
             "label": "infiniFi contract addresses (Tempo TIP-20 iUSD and OFT Adapter)",
@@ -185,8 +196,404 @@
           {
             "label": "Tempo RPC",
             "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Tempo verified IUSD OFT Adapter",
+            "url": "https://explore.tempo.xyz/address/0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "iusd-ethereum-oft-adapter-owner-safe",
+        "label": "IUSD Ethereum OFT Adapter owner Safe",
+        "routeRefs": [
+          "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x80608f852d152024c0a2087b16939235fec2400c",
+        "failureDomainKeys": [
+          "contract:ethereum:0xdd1cb2e1aa483e1d94e3e22e70cfbb634fcb3005",
+          "safe:ethereum:0x80608f852d152024c0a2087b16939235fec2400c",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 8,
+        "safe": {
+          "owners": [
+            "0xcc30e7d9dfbc29613e2a1e272cd624afc3abe1e9",
+            "0x7a823623b18335a9c1284ac45315fe89972fd421",
+            "0xdadb38219425c761dd0f3a4d684fc36f533af7bd",
+            "0xa9bdbeb17c81677cb1830b74b1832c16ec5cef61",
+            "0x6dfa1a32604088eb969242aaffb92420f78373f6",
+            "0xd53ffb2db125015ab4d461bad3fa959ef1a1e685",
+            "0xfd4691dfa327adb0d6f3c7b4224b3cc881d4f6fa",
+            "0x383965940c950008a4b67bfaa477fdf6ac91a7f7"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25771089,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Ethereum InfiniFiOFTAdapter is a standard LayerZero OFTAdapter that locks the canonical ReceiptToken on source transfers and unlocks/credits it on the destination; this is bridge accounting, not independent native issuance.",
+          "trustedPeerOrRemote": "At Ethereum block 25771089, peers(30102) was the BNB OFT 0x60b14ec49874af1ba471685cb11132101aebdf09 and peers(30410) was the Tempo adapter 0xfa339b5a3ad03fd9ff048f574636b60d0fc7538a. The infiniFi Safe was owner() and the LayerZero endpoint delegate.",
+          "attestorQuorum": "The Ethereum send/receive ULN configurations used five required DVNs, no optional DVNs, 15 send confirmations and 20 receive confirmations. The BNB path required 0x6559ee34d85a88317bf0bfe307444116c631b670, 0x373a6e5c0c4e89e24819f00aa37ea370917aaff4, 0x380275805876ff19055ea900cdb2b46a94ecf20d, 0x58249a2ec05c1978bf21df1f5ec1847e42455cf4, and 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd; the Tempo path used the first, third, 0x38654142f5e672ae86a1b21523aafc765e6a1e08, and fifth addresses. Send library was 0xbb2ea70c9e858123480642cf96acbcce1372dce1, receive library 0xc02ab410f0734efa3f14628780e6e695156024c2, executor 0x173272739bd7aa6e4e214714048a9fe699453059, and maximum message size 10,000 bytes.",
+          "rateLimits": "No adapter-specific aggregate or per-route rate limit was enumerated in the reviewed fixed-block reads; LayerZero peer, DVN, confirmation, and executor configuration remain the route validation surfaces.",
+          "pausersAdminsUpgraders": "At Ethereum block 25771089, the adapter owner and endpoint delegate were the infiniFi Safe. The owner-controlled peer and delegate configuration is bridge administration; no adapter upgrade authority was separately evidenced. Token policy and pause powers remain owned by their other risk modules."
+        },
+        "capDescription": "The Safe administers the canonical-side lock/unlock adapter and its LayerZero peer/delegate path; the route's representation mint/burn remains dependent on LayerZero validation and canonical ReceiptToken escrow accounting.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
+        "sources": [
+          {
+            "label": "Ethereum verified InfiniFiOFTAdapter",
+            "url": "https://etherscan.io/address/0xdd1cb2e1aa483e1d94e3e22e70cfbb634fcb3005#code"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block reads",
+            "url": "https://ethereum.publicnode.com/"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Ethereum block 25771089 on 2026-08-16, InfiniFiOFTAdapter 0xdd1cb2e1aa483e1d94e3e22e70cfbb634fcb3005 wrapped ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, owner() and the endpoint delegate were Safe 0x80608f852d152024c0a2087b16939235fec2400c, and peers bound the route to the BNB OFT and Tempo adapter. The adapter's lock/unlock path and owner-controlled LayerZero validation surfaces are preserved as Bridge Risk rather than compiled into native Mint Authority."
+      },
+      {
+        "id": "iusd-bsc-oft-bridge-contract",
+        "label": "IUSD BNB InfiniFiOFT bridge contract",
+        "routeRefs": [
+          "bsc:0x60b14ec49874af1ba471685cb11132101aebdf09"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x60b14ec49874af1ba471685cb11132101aebdf09",
+        "failureDomainKeys": [
+          "contract:bsc:0x60b14ec49874af1ba471685cb11132101aebdf09",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At BNB block 116365166, the InfiniFiOFT peer for Ethereum EID 30101 was the Ethereum OFTAdapter 0xdd1cb2e1aa483e1d94e3e22e70cfbb634fcb3005; endpoint() was 0x1a44076050125825900e736c501f859c50fe728c and owner() was the infiniFi Safe.",
+          "attestorQuorum": "At BNB block 116365166, the send library was 0x9f8c645f2d0b2159767bd6e0839de4be49e823de, receive library was 0xb217266c3a98c8b2709ee26836c98cf12f6ccec1, five required DVNs were configured, send confirmations were 20, receive confirmations were 15, and executor was 0x3ebd570ed38b1b3b4bc886999fcf507e9d584859. Required DVNs were 0x247624e2143504730aec22912ed41f092498bef2, 0x2c7185f5b0976397d9eb5c19d639d4005e6708f2, 0x439264fb87581a70bb6d7befd16b636521b0ad2d, 0xf0a5c5306adbfd4e3dfd5d4b148b451c411d3878, and 0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda.",
+          "rateLimits": "No aggregate or per-call OFT mint ceiling was identified in the reviewed InfiniFiOFT source; destination supply is bounded by the LayerZero message and peer/DVN validation path rather than native collateral accounting.",
+          "pausersAdminsUpgraders": "The verified BNB InfiniFiOFT is a standard LayerZero OFT: _debit() burns source tokens and _credit() mints destination tokens. The owner and endpoint delegate are the infiniFi Safe; no independent native issuance path exists on BNB."
+        },
+        "capDescription": "The BNB route is a burn/mint representation with no independently verified native collateral cap; route-level issuance depends on LayerZero peer and DVN validation.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116365334,
+        "sources": [
+          {
+            "label": "BNB verified InfiniFiOFT source",
+            "url": "https://bscscan.com/address/0x60B14ec49874Af1BA471685cb11132101aeBdF09#code"
+          },
+          {
+            "label": "BNB JSON-RPC fixed-block reads",
+            "url": "https://bsc-rpc.publicnode.com/"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At BNB block 116365334 on 2026-08-16, InfiniFiOFT 0x60b14ec49874af1ba471685cb11132101aebdf09 had owner() = 0x80608f852d152024c0a2087b16939235fec2400c, endpoint() = 0x1a44076050125825900e736c501f859c50fe728c, token() equal to itself, and totalSupply() = 0. Its verified LayerZero OFT source burns on source and mints on destination, so this bridge capability remains scoreable here and is not treated as canonical Mint Authority."
+      },
+      {
+        "id": "iusd-bsc-oft-owner-safe",
+        "label": "IUSD BNB InfiniFiOFT owner Safe",
+        "routeRefs": [
+          "bsc:0x60b14ec49874af1ba471685cb11132101aebdf09"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x80608f852d152024c0a2087b16939235fec2400c",
+        "failureDomainKeys": [
+          "safe:bsc:0x80608f852d152024c0a2087b16939235fec2400c",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 8,
+        "safe": {
+          "owners": [
+            "0xcc30e7d9dfbc29613e2a1e272cd624afc3abe1e9",
+            "0x7a823623b18335a9c1284ac45315fe89972fd421",
+            "0xdadb38219425c761dd0f3a4d684fc36f533af7bd",
+            "0xa9bdbeb17c81677cb1830b74b1832c16ec5cef61",
+            "0x6dfa1a32604088eb969242aaffb92420f78373f6",
+            "0xd53ffb2db125015ab4d461bad3fa959ef1a1e685",
+            "0xfd4691dfa327adb0d6f3c7b4224b3cc881d4f6fa",
+            "0x383965940c950008a4b67bfaa477fdf6ac91a7f7"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25771089,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At BNB block 116365166, owner() and the endpoint delegate were the infiniFi Safe; the owner-controlled peer for Ethereum EID 30101 was the canonical Ethereum OFTAdapter.",
+          "pausersAdminsUpgraders": "The 4-of-8 infiniFi Safe administers the BNB OFT's bridge configuration and endpoint delegate. Its current Safe topology was read at Ethereum block 25771089; representation-side module and guard state was not independently refreshed."
+        },
+        "capDescription": "The issuer Safe is a common-mode BNB bridge administration domain and can change the OFT's peer/delegate configuration; it is not the canonical ReceiptToken minter.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116365166,
+        "sources": [
+          {
+            "label": "BNB verified InfiniFiOFT source",
+            "url": "https://bscscan.com/address/0x60B14ec49874Af1BA471685cb11132101aeBdF09#code"
+          },
+          {
+            "label": "BNB JSON-RPC fixed-block reads",
+            "url": "https://bsc-rpc.publicnode.com/"
+          },
+          {
+            "label": "infiniFi admin Safe",
+            "url": "https://app.safe.global/home?safe=eth:0x80608f852d152024c0a2087b16939235fec2400c"
+          }
+        ],
+        "evidence": "At BNB block 116365166, the InfiniFiOFT owner and LayerZero endpoint delegate resolved to infiniFi Safe 0x80608f852d152024c0a2087b16939235fec2400c. The Safe's current Ethereum read is 4-of-8 with no enabled modules; representation-chain Safe modules, guards, and complete signer state remain an evidence gap."
+      },
+      {
+        "id": "iusd-tempo-tip20-issuer-adapter",
+        "label": "IUSD Tempo TIP-20 issuer OFT Adapter",
+        "routeRefs": [
+          "tempo:0x20c000000000000000000000ab02d39df30bd17e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "tempo",
+        "controllerAddress": "0xfa339b5a3ad03fd9ff048f574636b60d0fc7538a",
+        "failureDomainKeys": [
+          "contract:tempo:0xfa339b5a3ad03fd9ff048f574636b60d0fc7538a",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Tempo OFT Adapter is the LayerZero transfer rail paired with TIP-20 IUSD; the route is lock/mint representation machinery rather than an infiniFi Core deposit path.",
+          "trustedPeerOrRemote": "At Tempo block 35115025, the adapter peer for Ethereum EID 30101 was the Ethereum OFTAdapter 0xdd1cb2e1aa483e1d94e3e22e70cfbb634fcb3005; endpoint() was 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c.",
+          "attestorQuorum": "At Tempo block 35115025, the send library was 0x572863d9247e52026e0892d9cd2e519b41edb73c, receive library was 0x0b6f08c2d39421acb49c99abce82050e356171e5, four required DVNs were configured, send confirmations were 20, receive confirmations were 15, and executor was 0xf851abca1d0fd1df8eaba6de466a102996b7d7b2. Required DVNs were 0x71b71db3639f3b3cf07f447581b9390f31963ad7, 0x97faa2a9c9bf8b4082b175a5b894ce6bac6697a8, 0xb30b5b27cb23356de1d3100e0e120d481da97b1f, and 0xf5771acc42f3321d7193748fa0f656470bf737f2.",
+          "rateLimits": "No aggregate or per-call adapter issuer ceiling was identified in the reviewed fixed-block reads; route-level issuance depends on LayerZero peer and DVN validation.",
+          "pausersAdminsUpgraders": "The Tempo TIP-20 ISSUER_ROLE membership read returned true for adapter 0xfa339b5a3ad03fd9ff048f574636b60d0fc7538a. The adapter owner was the infiniFi Safe; token policy and pause administration remain separately reviewed under the Tempo TIP-20 risk surface."
+        },
+        "capDescription": "The adapter can issue the Tempo TIP-20 representation and participate in its lock/mint route; no independent native collateral cap is evidenced for the Tempo deployment.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 35115025,
+        "sources": [
+          {
+            "label": "Tempo verified IUSD OFT Adapter",
+            "url": "https://explore.tempo.xyz/address/0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A"
+          },
+          {
+            "label": "Tempo IUSD TIP-20",
+            "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000AB02D39df30bd17E"
+          },
+          {
+            "label": "Tempo JSON-RPC fixed-block reads",
+            "url": "https://rpc.tempo.xyz/"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Tempo block 35115025 on 2026-08-16, adapter 0xfa339b5a3ad03fd9ff048f574636b60d0fc7538a returned token() = TIP-20 IUSD 0x20c000000000000000000000ab02d39df30bd17e, owner() = infiniFi Safe 0x80608f852d152024c0a2087b16939235fec2400c, and the Ethereum peer was the canonical OFTAdapter. The direct ISSUER_ROLE read confirmed the adapter can issue the representation; this bridge capability is retained under Bridge Risk."
+      },
+      {
+        "id": "iusd-tempo-oft-adapter-owner-safe",
+        "label": "IUSD Tempo OFT Adapter owner Safe",
+        "routeRefs": [
+          "tempo:0x20c000000000000000000000ab02d39df30bd17e"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "tempo",
+        "controllerAddress": "0x80608f852d152024c0a2087b16939235fec2400c",
+        "failureDomainKeys": [
+          "safe:tempo:0x80608f852d152024c0a2087b16939235fec2400c",
+          "protocol:layerzero-peers",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 8,
+        "safe": {
+          "owners": [
+            "0xcc30e7d9dfbc29613e2a1e272cd624afc3abe1e9",
+            "0x7a823623b18335a9c1284ac45315fe89972fd421",
+            "0xdadb38219425c761dd0f3a4d684fc36f533af7bd",
+            "0xa9bdbeb17c81677cb1830b74b1832c16ec5cef61",
+            "0x6dfa1a32604088eb969242aaffb92420f78373f6",
+            "0xd53ffb2db125015ab4d461bad3fa959ef1a1e685",
+            "0xfd4691dfa327adb0d6f3c7b4224b3cc881d4f6fa",
+            "0x383965940c950008a4b67bfaa477fdf6ac91a7f7"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25771089,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Tempo block 35115025, the adapter peer for Ethereum EID 30101 was the canonical Ethereum OFTAdapter; the infiniFi Safe was owner() and the LayerZero endpoint delegate.",
+          "pausersAdminsUpgraders": "The 4-of-8 infiniFi Safe administers the Tempo adapter's bridge configuration and endpoint delegate. The TIP-20 DEFAULT_ADMIN_ROLE and transfer-policy/pause powers remain in the separate blacklistability review and are not double-counted here."
+        },
+        "capDescription": "The issuer Safe is a common-mode Tempo bridge administration domain and can change adapter peer/delegate configuration; it is not the canonical ReceiptToken minter.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 35115025,
+        "sources": [
+          {
+            "label": "Tempo verified IUSD OFT Adapter",
+            "url": "https://explore.tempo.xyz/address/0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A"
+          },
+          {
+            "label": "Tempo JSON-RPC fixed-block reads",
+            "url": "https://rpc.tempo.xyz/"
+          },
+          {
+            "label": "infiniFi admin Safe",
+            "url": "https://app.safe.global/home?safe=eth:0x80608f852d152024c0a2087b16939235fec2400c"
+          }
+        ],
+        "evidence": "At Tempo block 35115025, the IUSD OFT Adapter owner and LayerZero endpoint delegate resolved to infiniFi Safe 0x80608f852d152024c0a2087b16939235fec2400c. The Safe's current Ethereum read is 4-of-8 with no enabled modules; Tempo-side module and guard state remains an evidence gap."
+      },
+      {
+        "id": "iusd-ethereum-outland-vault-portal-mirror",
+        "label": "IUSD Ethereum OutlandVault portal mirror",
+        "routeRefs": [
+          "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf0d0f1fdee5595628de17b37e4134a5bac4441c3",
+        "failureDomainKeys": [
+          "contract:ethereum:0xf0d0f1fdee5595628de17b37e4134a5bac4441c3",
+          "contract:ethereum:0x13025f34c1ec2a16bf68f3a3c4e986a3e85ced61",
+          "protocol:outland-portal",
+          "contract:ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "Verified OutlandVault source describes a portal-controlled cross-chain vault with portalDeposit, portalWithdraw, portalBridgeWithdraw, and share/liquidity synchronization functions; the route is canonical-side bridge accounting.",
+          "trustedPeerOrRemote": "Core OUTLAND_PORTAL was PortalHub 0x13025f34c1ec2a16bf68f3a3c4e986a3e85ced61 at the reviewed Ethereum block. The destination outpost addresses and complete message/authentication path were not fully reconstructed.",
+          "onchainAmountBounds": "OutlandVault reconciliation compares portal-reported receipt-token and siUSD supplies and can call ReceiptToken.mint() when reported remote supply exceeds the Ethereum-side amount, mirroring remote supply. A complete conservation invariant and reconciliation cadence for every outpost were not established.",
+          "pausersAdminsUpgraders": "At Ethereum block 25771089, OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3 was the fifth current RECEIPT_TOKEN_MINTER. Its verified cross-chain portal reconciliation capability is retained here and excluded from native Mint Authority posture."
+        },
+        "capDescription": "OutlandVault can mint/burn canonical IUSD through portal reconciliation to mirror remote supply; destination authentication, outpost inventory, and a complete conservation bound remain unresolved.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
+        "sources": [
+          {
+            "label": "Ethereum verified OutlandVault",
+            "url": "https://eth.blockscout.com/address/0xf0d0f1fdee5595628de17b37e4134a5bac4441c3#code"
+          },
+          {
+            "label": "infiniFi Core verified source",
+            "url": "https://eth.blockscout.com/address/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block reads",
+            "url": "https://ethereum.publicnode.com/"
+          }
+        ],
+        "evidence": "At Ethereum block 25771089 on 2026-08-16, Core role enumeration listed OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3 as a fifth RECEIPT_TOKEN_MINTER. The verified source exposes portalUpdate and portalBridgeWithdraw reconciliation paths that compare remote receipt-token/siUSD supplies and call ReceiptToken.mint() to mirror remote supply. The finding did not fully reconstruct destination outposts, message authentication, or reconciliation cadence, so the route remains adverse and conservatively unresolved on supply conservation."
+      },
+      {
+        "id": "iusd-ethereum-outland-portalhub",
+        "label": "IUSD Ethereum Outland PortalHub OUTLAND_PORTAL",
+        "routeRefs": [
+          "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x13025f34c1ec2a16bf68f3a3c4e986a3e85ced61",
+        "failureDomainKeys": [
+          "contract:ethereum:0x13025f34c1ec2a16bf68f3a3c4e986a3e85ced61",
+          "contract:ethereum:0xf0d0f1fdee5595628de17b37e4134a5bac4441c3",
+          "protocol:outland-portal"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25771089, Core OUTLAND_PORTAL was held by PortalHub 0x13025f34c1ec2a16bf68f3a3c4e986a3e85ced61, authorizing the portal-controlled OutlandVault path. Destination outpost addresses and the complete message/authentication path remain an evidence gap.",
+          "onchainAmountBounds": "PortalHub is part of the path by which OutlandVault portalUpdate reconciliation can mirror remote receipt-token and siUSD supplies into canonical IUSD; the available source does not prove a complete conservation invariant for every outpost.",
+          "pausersAdminsUpgraders": "The PortalHub OUTLAND_PORTAL relationship is bridge administration and cross-chain authorization, not an additional ordinary native minter. It is recorded separately so the Outland bridge controller is not lost from scoring."
+        },
+        "capDescription": "PortalHub is the reviewed portal authorization domain for OutlandVault's canonical-side bridge mint/burn reconciliation; route authentication and destination conservation remain unresolved.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
+        "sources": [
+          {
+            "label": "infiniFi Core verified source",
+            "url": "https://eth.blockscout.com/address/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+          },
+          {
+            "label": "infiniFi Outland portal inventory",
+            "url": "https://docs.infinifi.xyz/dev-docs/contracts.md"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block reads",
+            "url": "https://ethereum.publicnode.com/"
+          }
+        ],
+        "evidence": "At Ethereum block 25771089, Core's OUTLAND_PORTAL role holder was PortalHub 0x13025f34c1ec2a16bf68f3a3c4e986a3e85ced61, while OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3 held the fifth RECEIPT_TOKEN_MINTER role. This controller relationship is preserved as Bridge Risk; the complete portal message/authentication and outpost supply-conservation evidence remains unresolved."
       }
     ]
   }

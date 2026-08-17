@@ -1239,8 +1239,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDXL is minted natively on HyperEVM through HypurrFi's CDP facilitators, and the Hyperliquid row is the USDXL HyperCore spot token deployed by the same Last team (deployer is an owner of the HyperEVM 2/2 proxy-admin Safe). Cross-chain movement between HyperEVM and HyperCore uses the platform-native Core/EVM system-address link operated by the issuer; the L2BEAT-reviewed Hyperliquid USDC deposit bridge does not carry USDXL, so reviewed risk is issuer-native burn/mint.",
-    "reviewedAt": "2026-07-20",
+    "summary": "USDXL is minted natively on HyperEVM through HypurrFi's CDP facilitators. The HyperCore row is a platform-native, system-address-linked representation: official HIP-1 and Core/EVM transfer documentation require the EVM system address to hold the corresponding EVM supply and describe reflection between Core and EVM, so HyperCore is not independent native mint authority. No third-party USDXL bridge minter, DVN, validator set, or rate-limit contract was identified; the reviewed platform route retains the issuer-native-burn-mint tier.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "sources": [
@@ -1255,6 +1255,18 @@
       {
         "label": "HypurrFi USDXL docs",
         "url": "https://docs.hypurrfi.com/products/usdxl"
+      },
+      {
+        "label": "Hyperliquid HIP-1 native token standard",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-1-native-token-standard"
+      },
+      {
+        "label": "HyperCore <> HyperEVM transfers",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers"
+      },
+      {
+        "label": "Hyperliquid tokenDetails API",
+        "url": "https://api.hyperliquid.xyz/info"
       }
     ],
     "routes": [
@@ -1270,9 +1282,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Home chain: USDXL is minted natively by HypurrFi CDP facilitators (GHO-style, role set frozen; see mint-authority profile). Re-verified at HyperEVM block 40928582 on 2026-07-20: transparent proxy, EIP-1967 impl 0xce23355599cdbe5dca05186c5d9d5b37d959b27f, admin Safe 0xf050623d497be7ea6653fd205a537d10300b4c6e with getThreshold()=2 and getOwners()=[0x67a6d918c3adfc36b047a8684491481114f6b3a6, 0xae04ce2f38377b3cc7273231cfafcbe1ca831545], name()='Last USD'. No bridge minter on this chain.",
+        "reviewNote": "Home chain: USDXL is minted natively by HypurrFi CDP facilitators (GHO-style, role set frozen; see mint-authority profile). Re-verified at HyperEVM block 43367163 on 2026-08-16: transparent proxy implementation slot returns 0xce23355599cdbe5dca05186c5d9d5b37d959b27f, with the reviewed immutable-admin Safe 0xf050623d497be7ea6653fd205a537d10300b4c6e as upgrade authority. No third-party bridge minter on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 43367163,
         "sources": [
           {
             "label": "USDXL token proxy on HyperEVM Blockscout",
@@ -1285,20 +1298,28 @@
         "destinationChain": "hyperliquid",
         "canonicalChain": "hyperevm",
         "contractAddress": "0xf448c3cad413cdf0feb1746d7b057967",
-        "protocol": "Last HyperCore native issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "protocol": "Hyperliquid Core/EVM linked representation (HIP-1 system address)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
         "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "semantics": "other",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "HyperCore native spot asset read via api.hyperliquid.xyz/info tokenDetails on 2026-07-20: name 'USDXL', deployer 0x67a6d918c3adfc36b047a8684491481114f6b3a6 (an owner of the HyperEVM 2/2 proxy-admin Safe re-verified at HyperEVM block 40928582), deployTime 2025-03-22, genesis balance held by system address 0x20000000000000000000000000000000000000ef. The same Last team controls both sides; movement between HyperEVM and HyperCore uses the platform-native Core/EVM link, not the L2BEAT-reviewed Hyperliquid USDC deposit bridge and no third-party bridge minter.",
+        "reviewNote": "HyperCore tokenDetails for token 0xf448c3cad413cdf0feb1746d7b057967 at 2026-08-16 20:39 UTC reports name 'USDXL', maxSupply 88000000000.0, deployer 0x67a6d918c3adfc36b047a8684491481114f6b3a6, and genesis balance entirely at system address 0x20000000000000000000000000000000000000ef; futureEmissions is 0.0 and blacklistUsers is empty. Official HIP-1 and Core/EVM transfer documentation require the EVM system address to hold the corresponding EVM supply and describe transfers to that address as reflecting between Core and EVM. This is a platform-native, supply-conserving representation rather than independent native mint authority; no third-party USDXL bridge minter, DVN, validator, or rate-limit contract was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Hyperliquid info API (tokenDetails)",
             "url": "https://api.hyperliquid.xyz/info"
+          },
+          {
+            "label": "Hyperliquid HIP-1 native token standard",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-1-native-token-standard"
+          },
+          {
+            "label": "HyperCore <> HyperEVM transfers",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers"
           }
         ]
       }

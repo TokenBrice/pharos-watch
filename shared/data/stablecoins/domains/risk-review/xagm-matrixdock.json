@@ -8,11 +8,24 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "XAGm is tracked on Ethereum and Sui, and Matrixdock says the Sui deployment is natively issued rather than a wrapped bridge asset. The deployment model is corrected to native-multichain and the route is scored as issuer-native mint/redeem exposure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-    "confidence": "verified",
+    "tier": "external-validated-network",
+    "summary": "XAGm has independent native issuer-liability deployments on Ethereum and Sui; those native mint controls remain in Mint Authority. Its active cross-chain transfer overlay is LayerZero V2: the Ethereum MTokenMessenger burns source XAGm and can mint destination XAGm, while the Sui messenger state exposes the XAGm MessengerCap and peer/admin capabilities. This is an external-validated-network bridge tier; unresolved DVN/executor, Sui peer-byte, and route-limit reads remain explicit.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex mint-bridge boundary migration; xagm-matrixdock 2026-08-16",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero V2 XAGm messenger overlay",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/developers/sui/oft/overview",
+        "bridgeTypes": [
+          "external-validated-network",
+          "burnAndMint"
+        ],
+        "note": "The Ethereum MTokenMessenger and Sui messenger_oapp package form a bidirectional LayerZero V2 transfer overlay between native Ethereum and Sui XAGm deployments; native issuance remains separately classified in Mint Authority."
+      }
+    ],
     "sources": [
       {
         "label": "Matrixdock XAGm on Sui announcement",
@@ -21,6 +34,26 @@
       {
         "label": "Matrixdock XAGm",
         "url": "https://www.matrixdock.com/xagm"
+      },
+      {
+        "label": "Verified Ethereum MTokenMessenger proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd389f627c30f5125cd1a36d51d71f3794102a899"
+      },
+      {
+        "label": "Verified Ethereum MTokenMessenger implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x815cd16c1e3a8e1e0e9fc2fc5bcba5d48e7d6f76"
+      },
+      {
+        "label": "Sui XAGm messenger state",
+        "url": "https://suiscan.xyz/mainnet/object/0xe49200201636d6b4f5256946f3fe3feec67babce3bb676a68b5cfa5e4527b86b"
+      },
+      {
+        "label": "Sui XAGm messenger package",
+        "url": "https://suiscan.xyz/mainnet/object/0x13775274fb7db2351b9ba471ff0c1a12f1beca757b54b9308533cb518a5177fa"
+      },
+      {
+        "label": "LayerZero official Sui EID documentation",
+        "url": "https://docs.layerzero.network/v2/developers/sui/oft/overview"
       }
     ],
     "routes": [
@@ -58,7 +91,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native XAGM issuance on sui: the Sui coin package 0x64bddec0...::xagm::XAGM serves Matrixdock's own CoinMetadata 'Matrixdock Silver' (id 0xd50657ed786b220c4bcf558cdd0ef94be77b3cf2e097642e544a58e4fb5f85cf, total supply 32,994.33 XAGM, verified via Sui RPC 2026-07-20); no bridge representation.",
+        "reviewNote": "Native XAGM issuance on sui: the Sui coin package 0x64bddec0...::xagm::XAGM serves Matrixdock's own CoinMetadata 'Matrixdock Silver' (id 0xd50657ed786b220c4bcf558cdd0ef94be77b3cf2e097642e544a58e4fb5f85cf, total supply 32,994.33 XAGM, verified via Sui RPC 2026-07-20); the LayerZero messenger is a transfer overlay between this native route and Ethereum, not a replacement representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -67,6 +100,126 @@
             "url": "https://blockscout.com/search?q=0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "xagm-ethereum-layerzero-messenger-owner",
+        "label": "Matrixdock Ethereum XAGm LayerZero MTokenMessenger owner",
+        "routeRefs": [
+          "ethereum:0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+          "sui:0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb573c94260582f0715fc477928b04a2708dd36d7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xd389f627c30f5125cd1a36d51d71f3794102a899",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "eoa:ethereum:0xb573c94260582f0715fc477928b04a2708dd36d7"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 14400,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25771140, the MTokenMessenger proxy at 0xd389f627c30f5125cd1a36d51d71f3794102a899 had a LayerZero PeerSet for EID 30378 with peer 0x13775274fb7db2351b9ba471ff0c1a12f1beca757b54b9308533cb518a5177fa, the immutable Sui messenger_oapp package; LayerZero's official Sui documentation identifies EID 30378 as Sui mainnet. The reverse Sui messenger state read at checkpoint 311499433 has an EID 30101 entry for Ethereum.",
+          "attestorQuorum": "The route uses LayerZero V2 Endpoint 0x1a44076050125825900e736c501f859c50fe728c as an external validation domain. The exact XAGm DVN set, executor, confirmations, and enforced receive options were not independently enumerated.",
+          "rateLimits": "No XAGm-specific aggregate, per-route, or enforced bridge limit was independently enumerated from the messenger or endpoint configuration; no favorable rate-limit bound is assumed.",
+          "pausersAdminsUpgraders": "At Ethereum block 25771140, the verified messenger proxy resolved to implementation 0x815cd16c1e3a8e1e0e9fc2fc5bcba5d48e7d6f76; owner() returned 0xb573c94260582f0715fc477928b04a2708dd36d7, delay() was 14,400 seconds, lzPaused() was false, and no upgrade was pending. Verified MTokenMessenger source exposes owner-controlled peer, delegate, LayerZero pause/configuration, and delayed implementation-replacement surfaces.",
+          "onchainAmountBounds": "The verified MToken source makes ccSendToken messenger-only and burns the source balance; ccReceiveToken mints on the destination without checking that destination's local mintBudget. The messenger also moves mint budget between chains, so route conservation depends on LayerZero validation and peer configuration rather than a local destination cap."
+        },
+        "capDescription": "The Ethereum MTokenMessenger is Matrixdock's LayerZero/CCIP transfer rail: it can burn source XAGm and mint destination XAGm, while its owner controls peers, pause, delegate/configuration, and delayed implementation replacement. This is bridge-route authority, not native mint authority.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "ccReceiveToken does not check destination mintBudget, so bridge minting is not bounded by the destination's local mint-budget field."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771140,
+        "sources": [
+          {
+            "label": "Verified Ethereum MTokenMessenger proxy",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd389f627c30f5125cd1a36d51d71f3794102a899"
+          },
+          {
+            "label": "Verified Ethereum MTokenMessenger implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x815cd16c1e3a8e1e0e9fc2fc5bcba5d48e7d6f76"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero official Sui EID documentation",
+            "url": "https://docs.layerzero.network/v2/developers/sui/oft/overview"
+          }
+        ],
+        "evidence": "At Ethereum block 25771140 (2026-08-16), the XAGm MTokenMessenger proxy resolved to implementation 0x815cd16c1e3a8e1e0e9fc2fc5bcba5d48e7d6f76, owner() returned 0xb573c94260582f0715fc477928b04a2708dd36d7, ccClient() returned the XAGm proxy, getRouter() returned Chainlink CCIP Router 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, endpoint() returned LayerZero V2 Endpoint 0x1a44076050125825900e736c501f859c50fe728c, delay() was 14,400 seconds, lzPaused() was false, and no upgrade was pending. PeerSet history recorded the Sui package peer for EID 30378. The verified source exposes messenger-only burn/mint and budget-transfer paths plus owner-controlled peer, pause, delegate, and upgrade surfaces; exact endpoint DVN/executor/confirmation and route-limit state remains unresolved."
+      },
+      {
+        "id": "xagm-sui-layerzero-messenger-owner",
+        "label": "Matrixdock Sui XAGm LayerZero messenger State owner",
+        "routeRefs": [
+          "ethereum:0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+          "sui:0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "sui",
+        "controllerAddress": "0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "package:sui:0x13775274fb7db2351b9ba471ff0c1a12f1beca757b54b9308533cb518a5177fa",
+          "contract:sui:0xe49200201636d6b4f5256946f3fe3feec67babce3bb676a68b5cfa5e4527b86b",
+          "eoa:sui:0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sui checkpoint 311499433, messenger_oapp State 0xe49200201636d6b4f5256946f3fe3feec67babce3bb676a68b5cfa5e4527b86b had an eid_to_addr_len table containing EID 30101 with value 20, corroborating the Ethereum reverse pathway. The exact Sui peer bytes and send/receive library were not independently enumerated; the Ethereum-side PeerSet binds EID 30378 to the Sui messenger package.",
+          "attestorQuorum": "The Sui messenger participates in the LayerZero V2 external validation path, but the XAGm-specific DVN set, executor, confirmations, and enforced receive options were not independently enumerated.",
+          "rateLimits": "The current Sui messenger route-limit configuration was not independently enumerated, so no favorable aggregate or per-route bound is assumed.",
+          "pausersAdminsUpgraders": "At Sui checkpoint 311499433, shared messenger_oapp State 0xe49200201636d6b4f5256946f3fe3feec67babce3bb676a68b5cfa5e4527b86b reported owner 0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8, paused = false, an active MToken MessengerCap, and OApp admin/call capabilities. The State owner therefore controls the Sui-side bridge administration and pause surface; no separate Sui package-upgrade authority is claimed here.",
+          "onchainAmountBounds": "The active MToken MessengerCap and Sui messenger state provide the destination-side transfer rail for XAGm. The route's burn/mint conservation depends on LayerZero message validation, peer configuration, and the unresolved Sui endpoint parameters; this overlay does not reclassify the Sui XAGM coin type as a bridge representation."
+        },
+        "capDescription": "The Sui messenger State holds the XAGm MessengerCap plus OApp admin/call capabilities and participates in the LayerZero transfer rail. Its owner controls Sui-side bridge administration and pause; this is bridge-route machinery overlaying the native Sui XAGM issuance route.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "Current Sui peer bytes, send/receive library, DVN/executor/confirmation settings, and route-limit configuration were not independently enumerated."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 311499433,
+        "sources": [
+          {
+            "label": "Sui XAGm messenger state",
+            "url": "https://suiscan.xyz/mainnet/object/0xe49200201636d6b4f5256946f3fe3feec67babce3bb676a68b5cfa5e4527b86b"
+          },
+          {
+            "label": "Sui XAGm messenger package",
+            "url": "https://suiscan.xyz/mainnet/object/0x13775274fb7db2351b9ba471ff0c1a12f1beca757b54b9308533cb518a5177fa"
+          },
+          {
+            "label": "Sui PublicNode JSON-RPC",
+            "url": "https://sui-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero official Sui EID documentation",
+            "url": "https://docs.layerzero.network/v2/developers/sui/oft/overview"
+          }
+        ],
+        "evidence": "At Sui checkpoint 311499433, shared messenger_oapp State 0xe49200201636d6b4f5256946f3fe3feec67babce3bb676a68b5cfa5e4527b86b (version 957778428) reported owner 0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8, paused = false, an active XAGm MToken MessengerCap, OApp AdminCap, OApp CallCap, and an eid_to_addr_len table entry 30101 => 20. This is the Sui-side LayerZero bridge authority for the native XAGM route. Exact Sui peer bytes, send/receive library, DVN/executor/confirmation, enforced-option, and rate-limit reads remain open evidence gaps rather than favorable assumptions."
       }
     ]
   }

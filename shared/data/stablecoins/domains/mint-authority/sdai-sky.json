@@ -21,6 +21,9 @@
       {
         "chain": "ethereum",
         "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
+        "deploymentRefs": [
+          "ethereum:0x83f20f44975d03b1b09e64809b757c47f942beea"
+        ],
         "label": "sDAI ERC-4626 wrapper",
         "role": "wrapper",
         "authorityType": "contract",

@@ -9,10 +9,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "A7A5's issuer publishes exact Ethereum and Tron contracts and describes issuance on both networks. No independent bridge or active CEX-based bridge was evidenced, so both routes are treated as issuer-native minting.",
-    "reviewedAt": "2026-07-15",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "A7A5 has issuer-native issuance on Ethereum and Tron, and those native routes remain issuer-native minting. The verified Ethereum wA7A5 wrapper is a same-chain, parent-backed lock-mint representation: wrap() mints and invokes the parent A7A5 transferFrom in the same transaction, while unwrap() burns wA7A5 before returning parent A7A5, so its verified route-level invariant is supply-conserving and tiered single-chain-or-native. The roadmap's proposed CEX bridge between the native chains remains unverified; no current controller, custody accounting, or burn-before-credit invariant was identified.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; mint-bridge-boundary migration",
+    "confidence": "verified",
     "sources": [
       {
         "label": "A7A5 token contracts",
@@ -25,6 +25,14 @@
       {
         "label": "A7A5 Ethereum verified source",
         "url": "https://eth.blockscout.com/address/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9?tab=contract"
+      },
+      {
+        "label": "A7A5 wA7A5 wrapper mechanics",
+        "url": "https://docs.a7a5.io/a7a5-token/wa7a5.md"
+      },
+      {
+        "label": "A7A5 wA7A5 verified source",
+        "url": "https://eth.blockscout.com/address/0xF442fF10b8deF89514560A66C0AD28777094636a?tab=contract"
       }
     ],
     "routes": [
@@ -76,6 +84,39 @@
           {
             "label": "A7A5 Tron verified contract code",
             "url": "https://tronscan.org/#/contract/TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ/code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xf442ff10b8def89514560a66c0ad28777094636a",
+        "sourceChain": "ethereum",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf442ff10b8def89514560a66c0ad28777094636a",
+        "representationId": "wA7A5",
+        "protocol": "A7A5 wA7A5 wrapper",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "canonical",
+        "riskTier": "single-chain-or-native",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified current wA7A5 wrapper: its immutable parent is A7A5 at Ethereum 0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9; wrap() mints and invokes parent A7A5 transferFrom in the same transaction, and unwrap() burns wA7A5 before returning parent A7A5. This same-chain route is parent-backed and supply-conserving under the verified wrapper invariant, with no external validator or cross-chain bridge controller.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770648,
+        "sources": [
+          {
+            "label": "A7A5 token contracts",
+            "url": "https://docs.a7a5.io/a7a5-token/token-contracts.md"
+          },
+          {
+            "label": "A7A5 wA7A5 wrapper mechanics",
+            "url": "https://docs.a7a5.io/a7a5-token/wa7a5.md"
+          },
+          {
+            "label": "A7A5 wA7A5 verified source",
+            "url": "https://eth.blockscout.com/address/0xF442fF10b8deF89514560A66C0AD28777094636a?tab=contract"
           }
         ]
       }

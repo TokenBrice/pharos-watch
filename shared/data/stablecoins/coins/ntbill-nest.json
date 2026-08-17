@@ -64,6 +64,16 @@
       "chain": "arbitrum",
       "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
       "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

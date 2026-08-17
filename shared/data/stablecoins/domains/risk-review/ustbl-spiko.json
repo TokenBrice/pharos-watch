@@ -14,10 +14,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USTBL is one of Spiko's tokenized fund shares deployed across multiple chains. Spiko announced Chainlink CCIP as its interoperability standard for compliance-aware cross-chain transfers, so Pharos scores the route as external validated-network exposure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-    "confidence": "verified",
+    "summary": "USTBL has seven independently native canonical deployments on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet. Spiko announced Chainlink CCIP for compliance-aware cross-chain movement, so Pharos retains provisional external-validated-network exposure; however, no production CCIP adapter or token pool, lane, peer, rate limit, or bridge controller is identified in the reviewed primary sources. Native PermissionManager and issuer mint controls remain in Mint Authority, and the unresolved CCIP machinery remains a Bridge Risk evidence gap rather than a Mint Authority control.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "docs",
@@ -58,8 +58,8 @@
         "reviewNote": "Verified on arbitrum at block 485687744: USTBL token 0x021289588cd81dc1ac87ea91e91607eef68303f5 (symbol USTBL) exposes authority() = Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge. The Arbitrum authority contract is itself an EIP-1967 proxy whose implementation is the same PermissionManager code as the Ethereum deployment (verified 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "sourceChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "observedBlock": 485687744,
         "sources": [
           {
@@ -114,8 +114,8 @@
         "reviewNote": "Verified on polygon at block 90538678: USTBL token 0xe4880249745eac5f1ed9d8f7df844792d560e750 (symbol USTBL) exposes authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
         "observedBlock": 90538678,
         "sources": [
           {
@@ -142,8 +142,8 @@
         "reviewNote": "Verified on base at block 48861834: USTBL token 0xe4880249745eac5f1ed9d8f7df844792d560e750 (symbol USTBL) exposes authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "sourceChain": "base",
+        "canonicalChain": "base",
         "observedBlock": 48861834,
         "sources": [
           {
@@ -170,8 +170,8 @@
         "reviewNote": "Verified on etherlink at block 48759315: USTBL token 0xe4880249745eac5f1ed9d8f7df844792d560e750 (symbol USTBL) exposes authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "sourceChain": "etherlink",
+        "canonicalChain": "etherlink",
         "observedBlock": 48759315,
         "sources": [
           {
@@ -198,8 +198,8 @@
         "reviewNote": "Spiko's stellar-contracts repository (spiko-tech/stellar-contracts, address/production.json) lists USTBL at Soroban contract CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO with the Spiko PermissionManager at CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M. Contract existence verified via stellar.expert (created 2025-10-01, matching Spiko's October 2025 Stellar launch).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "sourceChain": "stellar",
+        "canonicalChain": "stellar",
         "sources": [
           {
             "label": "Spiko stellar-contracts production addresses",
@@ -225,8 +225,8 @@
         "reviewNote": "Verified on Starknet 2026-07-20 (starknet_call): token 0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6 reports name()='Spiko US T-Bills Money Market Fund', symbol()='USTBL', decimals()=5, and owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d. Spiko's native Starknet deployment; the owner account's internal signer set is not enumerable via the public RPC.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "sourceChain": "starknet",
+        "canonicalChain": "starknet",
         "sources": [
           {
             "label": "Spiko USTBL",

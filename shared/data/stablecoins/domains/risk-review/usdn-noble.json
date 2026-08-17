@@ -9,25 +9,27 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Noble documents USDN issuance through M0 Portal infrastructure backed by Wormhole NTT. The route locks M on Ethereum and transmits value to Noble, so it is reviewed as an external lock/mint route.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "summary": "Noble USDN is M0's M representation, not an independently issued Noble-native liability. The reviewed Ethereum-to-Noble route locks M in the M0 Portal and delivers Wormhole NTT messages before the Noble dollar module credits and rebases uusdn; Portal, owner Safe, pauser, peer/transceiver, and Noble module administration are route-scoped here rather than counted as native Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration usdn-noble",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
-        "name": "M0 M Portal",
-        "url": "https://docs.m0.org/home/technical-documentations/m-portal/underlying/",
+        "name": "M0 M Portal / Wormhole NTT",
+        "url": "https://docs.m0.org/protocol/m-portals",
         "bridgeTypes": [
           "wormholeNtt",
           "lockRelease",
-          "mintBurn"
+          "mintBurn",
+          "nativeTokenTransfer",
+          "lockAndMint"
         ]
       },
       {
         "source": "docs",
-        "name": "Wormhole NTT",
-        "url": "https://wormhole.com/products/native-token-transfers",
+        "name": "Noble USDN architecture",
+        "url": "https://docs.noble.xyz/learn/usdn/architecture/",
         "bridgeTypes": [
           "nativeTokenTransfer",
           "lockAndMint"
@@ -44,8 +46,48 @@
         "url": "https://docs.m0.org/home/technical-documentations/m-portal/underlying/"
       },
       {
+        "label": "M0 M Portal documentation",
+        "url": "https://docs.m0.org/protocol/m-portals"
+      },
+      {
         "label": "Wormhole NTT",
         "url": "https://wormhole.com/products/native-token-transfers"
+      },
+      {
+        "label": "M0 Noble Portal proxy",
+        "url": "https://eth.blockscout.com/address/0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+      },
+      {
+        "label": "M0 Noble Portal current implementation",
+        "url": "https://eth.blockscout.com/address/0x697e272e6cfea154e2dfdfec8d99d5ef9213d731"
+      },
+      {
+        "label": "Portal owner Safe",
+        "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x7176665e336e8692e9b265aB6290934C93F99cCf/"
+      },
+      {
+        "label": "Ethereum public RPC fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Noble portal owner",
+        "url": "https://api.noble.xyz/noble/dollar/portal/v1/owner"
+      },
+      {
+        "label": "Noble portal paused state",
+        "url": "https://api.noble.xyz/noble/dollar/portal/v1/paused"
+      },
+      {
+        "label": "Noble portal peers",
+        "url": "https://api.noble.xyz/noble/dollar/portal/v1/peers"
+      },
+      {
+        "label": "Noble portal destination tokens",
+        "url": "https://api.noble.xyz/noble/dollar/portal/v1/destination_tokens/2"
+      },
+      {
+        "label": "Noble USDN bank supply",
+        "url": "https://api.noble.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=uusdn"
       }
     ],
     "routes": [
@@ -53,38 +95,263 @@
         "id": "noble:uusdn",
         "sourceChain": "ethereum",
         "destinationChain": "noble",
-        "canonicalChain": "noble",
+        "canonicalChain": "ethereum",
         "contractAddress": "uusdn",
-        "protocol": "M0 Portal (Wormhole NTT)",
+        "protocol": "M0 M Portal (Wormhole NTT) / Noble Dollar module",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "USDN on Noble is issued through the M0 Portal on Ethereum (0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16): base-M is managed on Ethereum by the immutable MinterGateway and value moves to Noble over Wormhole NTT (mint-authority review, Ethereum block 25531314; portal owner = 2-of-2 Safe 0x7176665e336e8692e9b265aB6290934C93F99cCf). uusdn supply on Noble reads 3,257,952,868,363 uusdn (~$3.26M) via Noble LCD 2026-07-20.",
+        "reviewNote": "At Ethereum block 25770978 (2026-08-16T23:40:35Z), the M0 Noble Portal proxy 0x83Ae82Bd4054e815fb7b189c39d9ce670369ea16 returned mToken() = 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, isPaused() = false, one NTT transceiver 0xc7dd372c39e38bf11451ab4a8427b4ae38cef644, owner() = 0x7176665e336e8692e9b265aB6290934C93F99cCf, and getPeer(4009) = 0x2e859506ba229c183f8985d54fe7210923fb9bca with token decimals 6. The proxy implementation slot held 0x697e272e6cfea154e2dfdfec8d99d5ef9213d731 and the EIP-1967 admin slot was zero. At Noble height 57134592 (2026-08-16T23:38:36Z), the reciprocal portal query returned manager 0x83ae82bd4054e815fb7b189c39d9ce670369ea16 and the same transceiver for Wormhole peer 2; the portal was unpaused with nonce 683 and its owner was the separate Noble authority noble13am065qmk680w86wya4u9refhnssqwcvgs0sfk. The destination-token query returned M 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b and Wrapped M 0x437cc33344a0b27a429f795ff6b469c72698b291. Current bank supply was 2,277,413,473,026 uusdn; this is a route observation, not a second supply figure. The route remains an external lock/mint representation of M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770978,
         "controllerChain": "ethereum",
-        "controllerAddress": "0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16",
+        "controllerAddress": "0x83Ae82Bd4054e815fb7b189C39D9CE670369ea16",
         "failureDomainKeys": [
           "protocol:wormhole-ntt",
-          "contract:ethereum:0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+          "contract:ethereum:0x83ae82bd4054e815fb7b189c39d9ce670369ea16",
+          "safe:ethereum:0x7176665e336e8692e9b265ab6290934c93f99ccf",
+          "eoa:ethereum:0x811a34a0f924834b8d79b05e53c7b9e1305a8b35",
+          "contract:noble:0x83ae82bd4054e815fb7b189c39d9ce670369ea16",
+          "module-owner:noble:noble13am065qmk680w86wya4u9refhnssqwcvgs0sfk"
         ],
         "sources": [
+          {
+            "label": "Noble USDN architecture",
+            "url": "https://docs.noble.xyz/learn/usdn/architecture/"
+          },
           {
             "label": "M0 M Portal docs",
             "url": "https://docs.m0.org/home/technical-documentations/m-portal/underlying/"
           },
           {
-            "label": "Noble LCD uusdn supply (2026-07-20)",
-            "url": "https://noble-api.polkachu.com/cosmos/bank/v1beta1/supply/by_denom?denom=uusdn"
+            "label": "M0 Noble Portal proxy",
+            "url": "https://eth.blockscout.com/address/0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+          },
+          {
+            "label": "M0 Noble Portal current implementation",
+            "url": "https://eth.blockscout.com/address/0x697e272e6cfea154e2dfdfec8d99d5ef9213d731"
+          },
+          {
+            "label": "Portal owner Safe",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x7176665e336e8692e9b265aB6290934C93F99cCf/"
+          },
+          {
+            "label": "Ethereum public RPC fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Noble portal peers",
+            "url": "https://api.noble.xyz/noble/dollar/portal/v1/peers"
+          },
+          {
+            "label": "Noble portal destination tokens",
+            "url": "https://api.noble.xyz/noble/dollar/portal/v1/destination_tokens/2"
+          },
+          {
+            "label": "Noble USDN bank supply",
+            "url": "https://api.noble.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=uusdn"
           },
           {
             "label": "Wormhole NTT",
             "url": "https://wormhole.com/products/native-token-transfers"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdn-noble-ethereum-portal",
+        "label": "M0 Noble Portal Ethereum bridge manager",
+        "routeRefs": [
+          "noble:uusdn"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "escrow",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x83Ae82Bd4054e815fb7b189C39D9CE670369ea16",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:ethereum:0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "Ethereum-side M is locked by the Portal before the Wormhole NTT message reaches Noble; the corresponding uusdn credit is route-level representation accounting, not independent native USDN issuance.",
+          "trustedPeerOrRemote": "At Ethereum block 25770978, getPeer(4009) returned 0x2e859506ba229c183f8985d54fe7210923fb9bca with token decimals 6 and one transceiver 0xc7dd372c39e38bf11451ab4a8427b4ae38cef644. Noble height 57134592 returned the reciprocal manager 0x83ae82bd4054e815fb7b189c39d9ce670369ea16 and the same transceiver for Wormhole peer 2.",
+          "caps": "The route is bounded by the M lock/base-supply and message path rather than an immutable token-level cap; current USDN supply is a route observation, not a native mint cap.",
+          "pausersAdminsUpgraders": "The Portal was unpaused at the observation block; the route pauser is 0x811a34a0f924834b8d79b05e53c7b9e1305a8b35. The owner Safe's implementation-upgrade authority is represented separately below."
+        },
+        "capDescription": "The Ethereum-side M0 Portal locks M and manages the validated Wormhole NTT path that permits the Noble USDN representation to be credited; its effective capacity follows route and base-M accounting.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770978,
+        "sources": [
+          {
+            "label": "M0 Noble Portal proxy",
+            "url": "https://eth.blockscout.com/address/0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+          },
+          {
+            "label": "M0 Noble Portal current implementation",
+            "url": "https://eth.blockscout.com/address/0x697e272e6cfea154e2dfdfec8d99d5ef9213d731"
+          },
+          {
+            "label": "Ethereum public RPC fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Noble portal peers",
+            "url": "https://api.noble.xyz/noble/dollar/portal/v1/peers"
+          }
+        ],
+        "evidence": "At Ethereum block 25770978 (2026-08-16T23:40:35Z), Portal 0x83Ae82Bd4054e815fb7b189C39D9CE670369ea16 returned mToken() = 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, isPaused() = false, one NTT transceiver 0xc7dd372c39e38bf11451ab4a8427b4ae38cef644, owner() = 0x7176665e336e8692e9b265aB6290934C93F99cCf, and peer 4009 = 0x2e859506ba229c183f8985d54fe7210923fb9bca. The current implementation slot was 0x697e272e6cfea154e2dfdfec8d99d5ef9213d731 and the EIP-1967 admin slot was zero. The Noble-side API at height 57134592 confirmed the reciprocal manager/transceiver relationship and an unpaused portal."
+      },
+      {
+        "id": "usdn-noble-ethereum-portal-owner-safe",
+        "label": "M0 Noble Portal owner Safe upgrade control",
+        "routeRefs": [
+          "noble:uusdn"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x7176665e336e8692e9b265aB6290934C93F99cCf",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:ethereum:0x83ae82bd4054e815fb7b189c39d9ce670369ea16",
+          "safe:ethereum:0x7176665e336e8692e9b265ab6290934c93f99ccf"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 2,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xb4518ae2F26ed79648C32734E0fC1F91bBF76459",
+            "0xDAB03eA17203d786588b9217ccC30664e7294Bd2"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25770978,
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Ethereum block 25770978, the Portal implementation was 0x697e272e6cfea154e2dfdfec8d99d5ef9213d731 with a zero EIP-1967 admin slot and owner Safe 0x7176665e336e8692e9b265aB6290934C93F99cCf. The Safe is the owner-controlled bridge upgrade/admin domain; no timelock was evidenced."
+        },
+        "bypassSurfaces": [
+          "The owner Safe can replace Portal mint-critical logic without a timelock."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770978,
+        "sources": [
+          {
+            "label": "Portal owner Safe on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x7176665e336e8692e9b265aB6290934C93F99cCf"
+          },
+          {
+            "label": "Safe Transaction Service Portal owner",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x7176665e336e8692e9b265aB6290934C93F99cCf/"
+          },
+          {
+            "label": "M0 Noble Portal current implementation",
+            "url": "https://eth.blockscout.com/address/0x697e272e6cfea154e2dfdfec8d99d5ef9213d731"
+          },
+          {
+            "label": "Ethereum public RPC fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770978, Portal owner() returned 0x7176665e336e8692e9b265aB6290934C93F99cCf. The current Safe configuration is 2-of-2 with owners 0xb4518ae2F26ed79648C32734E0fC1F91bBF76459 and 0xDAB03eA17203d786588b9217ccC30664e7294Bd2, no enabled modules, and zero guard and module guard. The Portal implementation delegates upgrade authority to this Safe and no timelock was observed."
+      },
+      {
+        "id": "usdn-noble-ethereum-portal-pauser",
+        "label": "M0 Noble Portal pauser",
+        "routeRefs": [
+          "noble:uusdn"
+        ],
+        "capabilities": [
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x811a34a0f924834b8d79b05e53c7b9e1305a8b35",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:ethereum:0x83ae82bd4054e815fb7b189c39d9ce670369ea16",
+          "eoa:ethereum:0x811a34a0f924834b8d79b05e53c7b9e1305a8b35"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770978,
+        "sources": [
+          {
+            "label": "M0 Noble Portal proxy",
+            "url": "https://eth.blockscout.com/address/0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+          },
+          {
+            "label": "Ethereum public RPC fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770978, the Portal route was unpaused and its current pauser was 0x811a34a0f924834b8d79b05e53c7b9e1305a8b35. This immediate pause domain is distinct from the Portal owner Safe and from Noble's module-side owner."
+      },
+      {
+        "id": "usdn-noble-portal-module-owner",
+        "label": "Noble USDN portal module owner",
+        "routeRefs": [
+          "noble:uusdn"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "noble",
+        "controllerAddress": "noble13am065qmk680w86wya4u9refhnssqwcvgs0sfk",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:noble:0x83ae82bd4054e815fb7b189c39d9ce670369ea16",
+          "module-owner:noble:noble13am065qmk680w86wya4u9refhnssqwcvgs0sfk"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Noble height 57134592, the portal peers endpoint returned Wormhole peer 2 with transceiver 0xc7dd372c39e38bf11451ab4a8427b4ae38cef644 and manager 0x83ae82bd4054e815fb7b189c39d9ce670369ea16; the destination-token query returned M and Wrapped M identifiers for the route.",
+          "pausersAdminsUpgraders": "The Noble portal owner query returned noble13am065qmk680w86wya4u9refhnssqwcvgs0sfk and the Noble portal was unpaused. This is a separate Noble-chain module authority; its key-management relationship to the Ethereum Portal owner Safe was not established and is not inferred."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 57134592,
+        "sources": [
+          {
+            "label": "Noble portal owner",
+            "url": "https://api.noble.xyz/noble/dollar/portal/v1/owner"
+          },
+          {
+            "label": "Noble portal paused state",
+            "url": "https://api.noble.xyz/noble/dollar/portal/v1/paused"
+          },
+          {
+            "label": "Noble portal peers",
+            "url": "https://api.noble.xyz/noble/dollar/portal/v1/peers"
+          },
+          {
+            "label": "Noble portal destination tokens",
+            "url": "https://api.noble.xyz/noble/dollar/portal/v1/destination_tokens/2"
+          }
+        ],
+        "evidence": "At Noble height 57134592 (2026-08-16T23:38:36Z), the portal owner was noble13am065qmk680w86wya4u9refhnssqwcvgs0sfk, the portal was unpaused, and the live peer/manager/transceiver configuration matched the Ethereum-side route. This owner is recorded as Noble module administration only and is not merged with the Ethereum Portal owner Safe or M0 TTG governance."
       }
     ]
   }

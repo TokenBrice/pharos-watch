@@ -7,6 +7,9 @@
     "summary": "USDC is issuer-minted by Circle; Ethereum USDC uses a MinterAdmin contract for minter management, an EOA token owner, and a separate EOA proxy admin. All addressable controls were rechecked at block 25711753.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      ],
       "proxyAddresses": [
         "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       ],
@@ -40,6 +43,9 @@
       {
         "chain": "ethereum",
         "address": "0xe982615d461dd5cd06575bbea87624fda4e3de17",
+        "deploymentRefs": [
+          "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
         "label": "Ethereum USDC MasterMinter (MinterAdmin)",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -71,6 +77,9 @@
       {
         "chain": "ethereum",
         "address": "0xfcb19e6a322b27c06842a71e8c725399f049ae3a",
+        "deploymentRefs": [
+          "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
         "label": "Ethereum USDC token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -95,6 +104,9 @@
         "label": "Ethereum USDC proxy admin",
         "chain": "ethereum",
         "address": "0x807a96288a1a408dbc13de2b1d087d10356395d2",
+        "deploymentRefs": [
+          "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",

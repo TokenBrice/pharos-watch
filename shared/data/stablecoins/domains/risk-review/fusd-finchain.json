@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "FinChain's existing on-chain review identifies CCIP bridge pools among the FUSD minter set, and the issuer documents multichain FUSD deployments. Because cross-chain supply movement depends on Chainlink CCIP messaging/pools, FUSD is scored as external-validated-network.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "summary": "FUSD has four independently stateful, issuer-native deployments on Ethereum, Avalanche, Sonic, and Monad. Chainlink CCIP BurnMintTokenPools and TokenBridgeSender provide additional cross-chain burn/mint and transfer machinery; their route-scoped controls remain separate from native Mint Authority. The external CCIP messaging and pool validation path, plus shared FinChain EOA and ProxyAdmin failure domains, keep the overall bridge tier at external-validated-network.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex C09 mint-bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -35,8 +35,28 @@
         "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
       },
       {
+        "label": "FinChain FUSD bridge documentation",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/bridge"
+      },
+      {
         "label": "Chainlink CCIP",
         "url": "https://chain.link/cross-chain"
+      },
+      {
+        "label": "Ethereum RPC fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Avalanche C-Chain RPC fixed-block reads",
+        "url": "https://avalanche-c-chain-rpc.publicnode.com"
+      },
+      {
+        "label": "Sonic RPC fixed-block reads",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "Monad mainnet RPC fixed-block reads",
+        "url": "https://rpc.monad.xyz"
       }
     ],
     "routes": [
@@ -45,111 +65,419 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "protocol": "FinChain native issuance",
+        "protocol": "FinChain native issuance with Chainlink CCIP bridge machinery",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native FUSD on Ethereum: 2,739-byte EIP-1967 proxy (impl 0x27d2f80fdb8102044897d006c921645c8da92de0, admin = ProxyAdmin 0x29A48097055d6779e6832355680B7C7bF0D43C53). Mint authority is FinChain's mint proxy 0x561bc4f174e04d057c9ce7ae763bc18be7fa3107 plus bridge senders (mint-authority review, read 2026-07-20).",
+        "reviewNote": "At Ethereum block 25770551, the same-address FUSDGateway is a live token MINTER_ROLE member and its DEFAULT_ADMIN can select the destination-zero local mint branch. The local FUSD deployment is issuer-native; CCIP pools and TokenBridgeSender are separate bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770551,
         "sources": [
           {
-            "label": "Etherscan FUSD token",
+            "label": "Ethereum FUSD token",
             "url": "https://etherscan.io/token/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          },
+          {
+            "label": "Ethereum RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
       {
         "id": "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "sourceChain": "ethereum",
         "destinationChain": "avalanche",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "protocol": "Chainlink CCIP BurnMint pool",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "FinChain native issuance with Chainlink CCIP bridge machinery",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "FUSD on avalanche is minted by Chainlink CCIP BurnMint token pools: getRoleMember enumeration (MINTER_ROLE, read 2026-07-20) lists 0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1, 0xc73a36ec9950530256c051b3740412a067f64589 (15,818-byte CCIP pool contracts), alongside the shared FinChain mint proxy 0x561bc4f174e04d057c9ce7ae763bc18be7fa3107 and TokenBridgeSender 0x2f36c915af812ff06742468f206030fcad4c4242. The same CCIP pool owner families (0x914d7fec…, 0xc61f22aa…) operate the pools on every chain.",
+        "reviewNote": "At Avalanche block 92978950, the same-address FUSDGateway is a live token MINTER_ROLE member and its DEFAULT_ADMIN can select the destination-zero local mint branch. The local FUSD deployment is issuer-native; CCIP pools and TokenBridgeSender are separate bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "controllerChain": "avalanche",
-        "controllerAddress": "0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1",
-        "failureDomainKeys": [
-          "protocol:chainlink-ccip",
-          "contract:avalanche:0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1",
-          "contract:avalanche:0xc73a36ec9950530256c051b3740412a067f64589"
-        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92978950,
         "sources": [
           {
-            "label": "FinChain",
-            "url": "https://finchain.com/"
+            "label": "Avalanche C-Chain RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
           }
         ]
       },
       {
         "id": "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "sourceChain": "ethereum",
         "destinationChain": "sonic",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "sonic",
         "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "protocol": "Chainlink CCIP BurnMint pool",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "FinChain native issuance with Chainlink CCIP bridge machinery",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "FUSD on sonic is minted by Chainlink CCIP BurnMint token pools: getRoleMember enumeration (MINTER_ROLE, read 2026-07-20) lists 0xb074559749d57991708f403673c577d6967d2c2f, 0xff5d2c5b907ed4c88cee5b0cf1d280e4df3176fd (15,818-byte CCIP pool contracts), alongside the shared FinChain mint proxy 0x561bc4f174e04d057c9ce7ae763bc18be7fa3107 and TokenBridgeSender 0x2f36c915af812ff06742468f206030fcad4c4242. The same CCIP pool owner families (0x914d7fec…, 0xc61f22aa…) operate the pools on every chain.",
+        "reviewNote": "At Sonic block 77632056, the same-address FUSDGateway is a live token MINTER_ROLE member and its DEFAULT_ADMIN can select the destination-zero local mint branch. The local FUSD deployment is issuer-native; CCIP pools and TokenBridgeSender are separate bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "controllerChain": "sonic",
-        "controllerAddress": "0xb074559749d57991708f403673c577d6967d2c2f",
-        "failureDomainKeys": [
-          "protocol:chainlink-ccip",
-          "contract:sonic:0xb074559749d57991708f403673c577d6967d2c2f",
-          "contract:sonic:0xff5d2c5b907ed4c88cee5b0cf1d280e4df3176fd"
-        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 77632056,
         "sources": [
           {
-            "label": "FinChain",
-            "url": "https://finchain.com/"
+            "label": "Sonic RPC",
+            "url": "https://rpc.soniclabs.com"
           }
         ]
       },
       {
         "id": "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "sourceChain": "ethereum",
         "destinationChain": "monad",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "monad",
         "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "protocol": "Chainlink CCIP BurnMint pool",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "FinChain native issuance with Chainlink CCIP bridge machinery",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "FUSD on monad is minted by Chainlink CCIP BurnMint token pools: getRoleMember enumeration (MINTER_ROLE, read 2026-07-20) lists 0xb496894fd559d7c923477246e384e7463c69060e (15,818-byte CCIP pool contracts), alongside the shared FinChain mint proxy 0x561bc4f174e04d057c9ce7ae763bc18be7fa3107 and TokenBridgeSender 0x2f36c915af812ff06742468f206030fcad4c4242. The same CCIP pool owner families (0x914d7fec…, 0xc61f22aa…) operate the pools on every chain.",
+        "reviewNote": "At Monad block 96606403, the same-address FUSDGateway is a live token MINTER_ROLE member and its DEFAULT_ADMIN can select the destination-zero local mint branch. The local FUSD deployment is issuer-native; CCIP pools and TokenBridgeSender are separate bridge machinery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96606403,
+        "sources": [
+          {
+            "label": "Monad mainnet RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "fusd-token-bridge-sender",
+        "label": "FUSD TokenBridgeSender cross-chain transfer proxy",
+        "routeRefs": [
+          "ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-burn"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x2f36c915af812ff06742468f206030fcad4c4242",
+        "failureDomainKeys": [
+          "protocol:finchain-cross-chain",
+          "contract:multichain:0x2f36c915af812ff06742468f206030fcad4c4242"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The current TokenBridgeSender implementation transfers or burns already supplied FUSD through supported custom or CCIP destinations; it is bridge transfer machinery rather than an independent native issuance path.",
+          "pausersAdminsUpgraders": "The proxy remains a token MINTER_ROLE holder, but the verified implementation contains no FUSD.mint call. The shared zero-delay ProxyAdmin can replace it with mint-capable bridge logic; that upgrade-mediated contingency remains in Mint Authority upgradeability."
+        },
+        "capDescription": "Current sender logic has no FUSD mint call; the nominal token MINTER_ROLE becomes mint-relevant only if the shared ProxyAdmin replaces the implementation.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770580,
+        "sources": [
+          {
+            "label": "Blockscout-verified TokenBridgeSender implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdce4393ea8de3bbe54c4700e40d710f501448b04"
+          },
+          {
+            "label": "Ethereum RPC proxy read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the current proxy reads on Ethereum block 25770580, Avalanche block 92979277, Sonic block 77632253, and Monad block 96607753, the same-address TokenBridgeSender proxy was a token MINTER_ROLE member on every local FUSD token. Its verified implementation only transfers or burns supplied bridge tokens and never calls FUSD.mint. The nominal mint role therefore remains bridge-route evidence with an upgrade-mediated contingency, while current native mint authority stays in the gateway and token-admin controls."
+      },
+      {
+        "id": "fusd-ethereum-ccip-pool-chainlink",
+        "label": "FUSD Ethereum CCIP BurnMintTokenPool Chainlink-owned",
+        "routeRefs": [
+          "ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x425da70e6fde7d5e7f9bd11898fc6c65bfda96c5",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x425da70e6fde7d5e7f9bd11898fc6c65bfda96c5",
+          "contract:ethereum:0x914d7fec6aac8cd542e72bca78b30650d45643d7"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At the observed block the pool's releaseOrMint path validates the Chainlink router, configured remote pool/token, RMN state, allowlist, and inbound message route; remote pool/token inventory for every selector was not fully decoded in this review.",
+          "rateLimits": "At Ethereum block 25770565, getRateLimitAdmin() returned the zero address. The pool enforces inbound and outbound rate limits, and its owner contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7 is the administrator capable of route-limit changes; its signer/control threshold was not resolved.",
+          "pausersAdminsUpgraders": "The pool owner is the Chainlink contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7. No Safe threshold or signer identity is inferred for that contract."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits; the pool owner can reconfigure or raise route limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770565,
+        "sources": [
+          {
+            "label": "Ethereum FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          },
+          {
+            "label": "Ethereum RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770565, this CCIP pool was a live FUSD token MINTER_ROLE holder. Its owner was the Chainlink contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7, its local token was FUSD 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, its router was 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, and getRateLimitAdmin() returned zero. The earlier pinned observation at block 25712369 found supportedChains empty, so it was an authorized but inactive route at that observation; no signer threshold is assigned to the current contract owner."
+      },
+      {
+        "id": "fusd-ethereum-ccip-pool-finchain",
+        "label": "FUSD Ethereum CCIP BurnMintTokenPool FinChain-owned",
+        "routeRefs": [
+          "ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x91febcfb698cc2e653f7e053205a347957f325d1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x91febcfb698cc2e653f7e053205a347957f325d1",
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At the observed block the pool's releaseOrMint path validates the Chainlink router, configured remote pool/token, RMN state, allowlist, and inbound message route; remote pool/token inventory for every selector was not fully decoded in this review.",
+          "rateLimits": "At Ethereum block 25770565, getRateLimitAdmin() returned the zero address. The pool enforces inbound and outbound rate limits, and FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215 can raise or reconfigure its route limits.",
+          "pausersAdminsUpgraders": "The pool owner is the shared FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, which is also the common token/gateway admin and ProxyAdmin owner."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, but the shared FinChain owner can reconfigure or raise those route limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770565,
+        "sources": [
+          {
+            "label": "Ethereum FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          },
+          {
+            "label": "Ethereum RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770565, this CCIP pool was a live FUSD token MINTER_ROLE holder. Its owner was FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, its local token was FUSD 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, its router was 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, and getRateLimitAdmin() returned zero. It served three configured selectors at the observation and the shared EOA can raise route limits."
+      },
+      {
+        "id": "fusd-avalanche-ccip-pool-chainlink",
+        "label": "FUSD Avalanche CCIP BurnMintTokenPool Chainlink-owned",
+        "routeRefs": [
+          "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1",
+          "contract:avalanche:0x914d7fec6aac8cd542e72bca78b30650d45643d7"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At the observed block the pool's releaseOrMint path validates the Chainlink router, configured remote pool/token, RMN state, allowlist, and inbound message route; remote pool/token inventory for every selector was not fully decoded in this review.",
+          "rateLimits": "At Avalanche block 92979119, getRateLimitAdmin() returned the zero address. The pool enforces route rate limits, and owner contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7 is the administrator capable of route-limit changes; its signer/control threshold was not resolved.",
+          "pausersAdminsUpgraders": "The pool owner is the Chainlink contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7. No Safe threshold or signer identity is inferred for that contract."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits; the pool owner can reconfigure or raise route limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92979119,
+        "sources": [
+          {
+            "label": "Avalanche C-Chain RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Avalanche block 92979119, this CCIP pool was a live FUSD token MINTER_ROLE holder. Its owner was the Chainlink contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7, its local token was FUSD 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, its router was 0xf4c7e640eda248ef95972845a62bdc74237805db, and getRateLimitAdmin() returned zero. The runtime family matches the reviewed Chainlink FUSDBurnMintTokenPool route; no signer threshold is assigned to the contract owner."
+      },
+      {
+        "id": "fusd-avalanche-ccip-pool-finchain",
+        "label": "FUSD Avalanche CCIP BurnMintTokenPool FinChain-owned",
+        "routeRefs": [
+          "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xc73a36ec9950530256c051b3740412a067f64589",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xc73a36ec9950530256c051b3740412a067f64589",
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At the observed block the pool's releaseOrMint path validates the Chainlink router, configured remote pool/token, RMN state, allowlist, and inbound message route; remote pool/token inventory for every selector was not fully decoded in this review.",
+          "rateLimits": "At Avalanche block 92979119, getRateLimitAdmin() returned the zero address. The pool enforces route rate limits, and FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215 can raise or reconfigure its route limits.",
+          "pausersAdminsUpgraders": "The pool owner is the shared FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, which is also the common token/gateway admin and ProxyAdmin owner."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, but the shared FinChain owner can reconfigure or raise those route limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92979119,
+        "sources": [
+          {
+            "label": "Avalanche C-Chain RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Avalanche block 92979119, this CCIP pool was a live FUSD token MINTER_ROLE holder. Its owner was FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, its local token was FUSD 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, its router was 0xf4c7e640eda248ef95972845a62bdc74237805db, and getRateLimitAdmin() returned zero. The pool mints only through validated inbound CCIP routes and rate limits that its owner can raise."
+      },
+      {
+        "id": "fusd-sonic-ccip-pool-chainlink",
+        "label": "FUSD Sonic CCIP BurnMintTokenPool Chainlink-owned",
+        "routeRefs": [
+          "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0xb074559749d57991708f403673c577d6967d2c2f",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sonic:0xb074559749d57991708f403673c577d6967d2c2f",
+          "contract:sonic:0x914d7fec6aac8cd542e72bca78b30650d45643d7"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At the observed block the pool's releaseOrMint path validates the Chainlink router, configured remote pool/token, RMN state, allowlist, and inbound message route; remote pool/token inventory for every selector was not fully decoded in this review.",
+          "rateLimits": "At Sonic block 77632253, getRateLimitAdmin() returned the zero address. The pool enforces route rate limits, and owner contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7 is the administrator capable of route-limit changes; its signer/control threshold was not resolved.",
+          "pausersAdminsUpgraders": "The pool owner is the Chainlink contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7. No Safe threshold or signer identity is inferred for that contract."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits; the pool owner can reconfigure or raise route limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 77632253,
+        "sources": [
+          {
+            "label": "Sonic RPC",
+            "url": "https://rpc.soniclabs.com"
+          }
+        ],
+        "evidence": "At Sonic block 77632253, this CCIP pool was a live FUSD token MINTER_ROLE holder. Its owner was the Chainlink contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7, its local token was FUSD 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, its router was 0xb4e1ff7882474bb93042be9ad5e1fa387949b860, and getRateLimitAdmin() returned zero. The runtime family matches the reviewed Chainlink CCIP pool; no signer threshold is assigned to the contract owner."
+      },
+      {
+        "id": "fusd-sonic-ccip-pool-finchain",
+        "label": "FUSD Sonic CCIP BurnMintTokenPool FinChain-owned",
+        "routeRefs": [
+          "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0xff5d2c5b907ed4c88cee5b0cf1d280e4df3176fd",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sonic:0xff5d2c5b907ed4c88cee5b0cf1d280e4df3176fd",
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At the observed block the pool's releaseOrMint path validates the Chainlink router, configured remote pool/token, RMN state, allowlist, and inbound message route; remote pool/token inventory for every selector was not fully decoded in this review.",
+          "rateLimits": "At Sonic block 77632253, getRateLimitAdmin() returned the zero address. The pool enforces route rate limits, and FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215 can raise or reconfigure its route limits.",
+          "pausersAdminsUpgraders": "The pool owner is the shared FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, which is also the common token/gateway admin and ProxyAdmin owner."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, but the shared FinChain owner can reconfigure or raise those route limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 77632253,
+        "sources": [
+          {
+            "label": "Sonic RPC",
+            "url": "https://rpc.soniclabs.com"
+          }
+        ],
+        "evidence": "At Sonic block 77632253, this CCIP pool was a live FUSD token MINTER_ROLE holder. Its owner was FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, its local token was FUSD 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, its router was 0xb4e1ff7882474bb93042be9ad5e1fa387949b860, and getRateLimitAdmin() returned zero. Mint is restricted to authenticated inbound CCIP routes and configurable rate limits."
+      },
+      {
+        "id": "fusd-monad-ccip-pool-finchain",
+        "label": "FUSD Monad CCIP BurnMintTokenPool FinChain-owned",
+        "routeRefs": [
+          "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
         "controllerChain": "monad",
         "controllerAddress": "0xb496894fd559d7c923477246e384e7463c69060e",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
-          "contract:monad:0xb496894fd559d7c923477246e384e7463c69060e"
+          "contract:monad:0xb496894fd559d7c923477246e384e7463c69060e",
+          "eoa:finchain:0xc61f22aa3a6469f4f90994421f4570459217c215"
         ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At the observed block the pool's releaseOrMint path validates the Chainlink router, configured remote pool/token, RMN state, allowlist, and inbound message route; remote pool/token inventory for every selector was not fully decoded in this review.",
+          "rateLimits": "At Monad block 96607753, getRateLimitAdmin() returned the zero address. The pool enforces route rate limits, and FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215 can raise or reconfigure its route limits.",
+          "pausersAdminsUpgraders": "The pool owner is the shared FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, which is also the common token/gateway admin and ProxyAdmin owner."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, but the shared FinChain owner can reconfigure or raise those route limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96607753,
         "sources": [
           {
-            "label": "FinChain",
-            "url": "https://finchain.com/"
+            "label": "Monad mainnet RPC",
+            "url": "https://rpc.monad.xyz"
           }
-        ]
+        ],
+        "evidence": "At Monad block 96607753, this CCIP pool was a live FUSD token MINTER_ROLE holder. Its owner was FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, its local token was FUSD 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, its router was 0x33566fe5976aaa420f3d5c64996641fc3858cadb, and getRateLimitAdmin() returned zero. It follows the FUSD CCIP BurnMintTokenPool route model, so mint is inbound-route and rate-limit constrained while its owner can raise limits."
       }
     ]
   }

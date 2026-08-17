@@ -5,7 +5,7 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
-    "summary": "AA_FalconXUSDC is a direct IdleCDOTranche token whose shares are minted exclusively by IdleCDO 0x433d5b17... against USDC deposits. The IdleCDO mint logic is a transparent proxy controlled by an 86,400-second timelock; the tranche has no independent proxy or privileged mint key. Base USDC supply is inherited from Circle.",
+    "summary": "AA_FalconXUSDC is a native Ethereum IdleCDOTranche token whose shares are minted exclusively by IdleCDO 0x433d5b17... against USDC deposits. The IdleCDO mint logic is a transparent proxy controlled by an 86,400-second timelock; the tranche has no independent proxy or privileged mint key. Base USDC supply is inherited from Circle, and no bridge representation or bridge-only administrator is identified for this product.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -105,11 +105,6 @@
         "failureDomainKeys": [
           "ethereum:0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814"
         ],
-        "routeChecks": {
-          "signingModel": "The sole current proposer is Idle Finance Safe 0xfb3bd022..., threshold 3 of 8; the original deployer no longer holds PROPOSER_ROLE.",
-          "rateLimits": "getMinDelay() returned 86,400 seconds. ProxyAdmin ownership points directly to this timelock, so implementation changes must traverse that queue.",
-          "pausersAdminsUpgraders": "The Safe remains proposer, canceller, executor, and timelock admin; one Safe module is enabled, but execution of a scheduled upgrade remains subject to the timelock's minimum delay."
-        },
         "sources": [
           {
             "label": "Idle Finance upgrade timelock",
@@ -124,7 +119,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25526837, ProxyAdmin owner() returned this timelock and getMinDelay() returned 86,400 seconds. Current role reads showed the 3/8 Idle Finance Safe as proposer, canceller, and executor, while the original deployer's proposer role was revoked."
+        "evidence": "At Ethereum block 25526837, ProxyAdmin owner() returned this timelock and getMinDelay() returned 86,400 seconds. Current role reads showed the 3/8 Idle Finance Safe as proposer, canceller, and executor, while the original deployer's proposer role was revoked. Native timelock checks preserved from the former routeChecks block: the sole current proposer is Idle Finance Safe 0xfb3bd022..., threshold 3 of 8; the original deployer no longer holds PROPOSER_ROLE. getMinDelay() returned 86,400 seconds. ProxyAdmin ownership points directly to this timelock, so implementation changes must traverse that queue. The Safe remains proposer, canceller, executor, and timelock admin; one Safe module is enabled, but execution of a scheduled upgrade remains subject to the timelock's minimum delay."
       },
       {
         "label": "Inherited USDC (Circle) issuer mint path",
@@ -146,9 +141,9 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25526837, AA_FalconXUSDC minter() still returned IdleCDO 0x433d5b175.... The direct tranche had zero EIP-1967 implementation, admin, and beacon slots. IdleCDO's transparent proxy had implementation 0xdd596250..., ProxyAdmin 0x9438904a..., and ProxyAdmin owner timelock 0xda86e15d... with an 86,400-second minimum delay. Economic-cap review completed 2026-07-15: tranche shares are minted only by the IdleCDO against deposited USDC. Changing that deposit-bound mint logic requires the independently enforced 86,400-second upgrade timelock, so the economic cap is raiseable rather than unbounded. No exact product-level prudential supervisor was identified. M-2 evidence binding 2026-08-08: reconciliation continuous is the deposit-bound mint itself - fixed-block simulations (Ethereum 25526837) prove tranche shares are minted only by the IdleCDO against deposited USDC, so supply reconciles against vault collateral by construction; changing that binding requires the sourced 86,400-second timelock.",
+      "evidence": "Mint/bridge boundary review completed 2026-08-16: AA_FalconXUSDC has one verified native Ethereum tranche deployment and no bridge/OFT/endpoint/peer machinery, so its native issuance controls remain exclusively in Mint Authority and no Bridge Risk route is fabricated. At Ethereum block 25526837, AA_FalconXUSDC minter() still returned IdleCDO 0x433d5b175.... The direct tranche had zero EIP-1967 implementation, admin, and beacon slots. IdleCDO's transparent proxy had implementation 0xdd596250..., ProxyAdmin 0x9438904a..., and ProxyAdmin owner timelock 0xda86e15d... with an 86,400-second minimum delay. Economic-cap review completed 2026-07-15: tranche shares are minted only by the IdleCDO against deposited USDC. Changing that deposit-bound mint logic requires the independently enforced 86,400-second upgrade timelock, so the economic cap is raiseable rather than unbounded. No exact product-level prudential supervisor was identified. M-2 evidence binding 2026-08-08: reconciliation continuous is the deposit-bound mint itself - fixed-block simulations (Ethereum 25526837) prove tranche shares are minted only by the IdleCDO against deposited USDC, so supply reconciles against vault collateral by construction; changing that binding requires the sourced 86,400-second timelock.",
       "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {

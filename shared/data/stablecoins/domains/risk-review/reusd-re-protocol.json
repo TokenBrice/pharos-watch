@@ -96,18 +96,22 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "reUSD is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "reUSD has one native Ethereum issuance route and eight Chainlink CCIP burn/mint representation routes. The canonical-side CCIP BurnWithFromMintTokenPool is bridge machinery: it holds the Ethereum token MINTER_ROLE but can mint only through validated CCIP releaseOrMint flow and configured remote-chain lanes/rate limits. Its governance Safe owner, CCIP router/RMN validation path, peer mappings, rate limits, and emergency curse gate are represented below; the native InsuranceCapitalLayer remains the only collateral-backed native minter.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex FIX-05 reUSD bridge-boundary migration",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "issuer",
-        "name": "reUSD issuer-operated multichain issuance",
+        "source": "docs",
+        "name": "Chainlink CCIP reUSD burn/mint pools",
+        "slug": "chainlink-ccip",
+        "url": "https://docs.chain.link/ccip/concepts",
         "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
+          "burnAndMint",
+          "external-validated-network"
+        ],
+        "note": "The Ethereum canonical-side pool and eight destination pools use Chainlink CCIP validated burn/mint routes. Native Ethereum collateral-backed issuance remains separately classified as native-issuance."
       }
     ],
     "sources": [
@@ -132,11 +136,19 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native reUSD on Ethereum: minted by the InsuranceCapitalLayer MINTER_ROLE holder and InstantRedemption module per the verified mint-authority review; a Chainlink CCIP BurnWithFromMintTokenPool 2.0.0 (0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465, per TokenAdminRegistry.getPool) also holds burn/mint rights for cross-chain supply.",
+        "reviewNote": "Native reUSD on Ethereum is minted by the collateral-backed InsuranceCapitalLayer; InstantRedemption retains a non-calling MINTER_ROLE assignment. The separate Chainlink CCIP BurnWithFromMintTokenPool 2.0.0 at 0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465 is canonical-side bridge machinery and is assessed in bridge controls below, not as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+          "safe:ethereum:0x8eec10616802ef639ca55c98ac856553fadefbad",
+          "rmn:ethereum:0x411de17f12d1a34ecc7f45f49844626267c75e81"
+        ],
+        "observedAt": "2026-08-16",
         "canonicalChain": "ethereum",
-        "observedBlock": 25570987,
+        "observedBlock": 25770134,
         "sources": [
           {
             "label": "Re Protocol docs",
@@ -145,6 +157,18 @@
           {
             "label": "reUSD on Etherscan",
             "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+          },
+          {
+            "label": "reUSD Ethereum CCIP pool",
+            "url": "https://eth.blockscout.com/address/0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465"
+          },
+          {
+            "label": "Chainlink CCIP concepts",
+            "url": "https://docs.chain.link/ccip/concepts"
+          },
+          {
+            "label": "Ethereum fixed-block RPC reads",
+            "url": "https://eth.blockscout.com/api/eth-rpc"
           }
         ]
       },
@@ -417,6 +441,118 @@
             "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000e09a4cfec804f102"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "reusd-ethereum-ccip-pool-owner",
+        "label": "reUSD Ethereum CCIP pool governance Safe owner",
+        "routeRefs": [
+          "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+          "safe:ethereum:0x8eec10616802ef639ca55c98ac856553fadefbad"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x2a3ef2fed07d025b8b1f07d99c77471d11529db9",
+            "0x28d8af3cf7286bdc34ae80cb90093dfa4dbb0020",
+            "0x7dd97c12abd41c53b4f2b3df6b872753f9dabcaa",
+            "0x1f76cc0ef4605f57478f3044e703af6b0c57a297",
+            "0x0ae4eeaffda174f84c84c22f03a28f3aab02fbdc"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedAt": "2026-08-16",
+          "observedBlock": 25770134,
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "BurnWithFromMintTokenPool burns reUSD held by the pool on outbound transfers and mints only from releaseOrMint after CCIP validation; this is conserved bridge supply machinery, not a reserve lockbox or independent native collateral path.",
+          "trustedPeerOrRemote": "At Ethereum block 25770134, the verified pool exposed 12 supported CCIP chain selectors and a non-empty getRemotePools() mapping for each selector. The mappings include the authored Avalanche, Arbitrum, Base, BSC, Ink, Plasma, Katana, and Tempo representation lanes; getRemoteToken() mappings and getRemotePools() are owner-controlled through the verified addRemotePool/removeRemotePool/applyChainUpdates surfaces.",
+          "attestorQuorum": "The verified BurnWithFromMintTokenPool routes releaseOrMint through the Chainlink CCIP router 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d and RMN proxy 0x411de17f12d1a34ecc7f45f49844626267c75e81. The RMN implementation's isCursed() read was false at block 25770134, so no global emergency curse was active at observation time.",
+          "rateLimits": "At block 25770134, getCurrentRateLimiterState() returned the same enabled outbound bucket for all 12 supported selectors: capacity 1000000000000000000000000 and rate 277777777777777777777; every inbound bucket was disabled. The pool also exposes owner-controlled setRateLimitConfig() and dynamic rate-limit administration. The pool's getDynamicConfig() returned rateLimitAdmin = 0 and feeAdmin = 0, leaving no separately identified non-owner admin in the observed configuration.",
+          "pausersAdminsUpgraders": "The Ethereum pool has deployed verified BurnWithFromMintTokenPool code, is not an EIP-1967 proxy, and exposes no pool-local pause or upgrade function. The 3-of-5 governance Safe 0x8eec10616802ef639ca55c98ac856553fadefbad owns the pool and controls its remote-pool, rate-limit, finality, hook, and dynamic configuration surfaces. Emergency halting is represented by the separate RMN curse control below; the RMNProxy owner read was 0x44835bbba9d40deda9b64858095ecfb2693c9449 and its ARM implementation was 0x0b047953451a207743fb62541b21199b95190602."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770134,
+        "sources": [
+          {
+            "label": "Verified reUSD BurnWithFromMintTokenPool",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465"
+          },
+          {
+            "label": "Ethereum fixed-block RPC reads",
+            "url": "https://eth.blockscout.com/api/eth-rpc"
+          },
+          {
+            "label": "reUSD governance Safe",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x8eec10616802Ef639CA55c98ac856553fAdEfBaD/"
+          },
+          {
+            "label": "Chainlink CCIP concepts",
+            "url": "https://docs.chain.link/ccip/concepts"
+          }
+        ],
+        "evidence": "At Ethereum block 25770134, the pool owner() read returned governance Safe 0x8eec10616802ef639ca55c98ac856553fadefbad, typeAndVersion() returned BurnWithFromMintTokenPool 2.0.0, getToken() returned native reUSD 0x5086bf358635b81d8c47c66d1c8b9e567db70c72, and getDynamicConfig() returned Chainlink Router 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d with zero separate rate-limit and fee admins. The verified non-proxy ABI exposes releaseOrMint/lockOrBurn plus owner-administered remote-pool, rate-limit, finality, hook, and dynamic-config methods. Fixed-block reads returned 12 supported CCIP selectors, a non-empty remote-pool mapping for every selector, and the authored destination pool identities; all 12 selectors had an enabled outbound bucket with capacity 1000000000000000000000000 and rate 277777777777777777777, while all inbound buckets were disabled. The pool's RMN proxy was 0x411de17f12d1a34ecc7f45f49844626267c75e81, whose ARM implementation was 0x0b047953451a207743fb62541b21199b95190602 and whose isCursed() read was false."
+      },
+      {
+        "id": "reusd-ethereum-ccip-rmn-emergency",
+        "label": "reUSD Ethereum CCIP RMN emergency curse gate",
+        "routeRefs": [
+          "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        ],
+        "capabilities": [
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x411de17f12d1a34ecc7f45f49844626267c75e81",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "rmn:ethereum:0x411de17f12d1a34ecc7f45f49844626267c75e81",
+          "contract:ethereum:0x0b047953451a207743fb62541b21199b95190602"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The pool has no local pause function; Chainlink's RMN emergency curse gate is reached through RMNProxy fallback. At block 25770134 the RMN implementation returned isCursed() = false. The ARMProxy owner was 0x44835bbba9d40deda9b64858095ecfb2693c9449 and getARM() returned 0x0b047953451a207743fb62541b21199b95190602; this emergency/admin identity is kept separate from the reUSD governance Safe's pool configuration authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770134,
+        "sources": [
+          {
+            "label": "Chainlink RMNProxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x411de17f12d1a34ecc7f45f49844626267c75e81"
+          },
+          {
+            "label": "Chainlink RMN source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0b047953451a207743fb62541b21199b95190602"
+          },
+          {
+            "label": "Ethereum fixed-block RPC reads",
+            "url": "https://eth.blockscout.com/api/eth-rpc"
+          }
+        ],
+        "evidence": "The CCIP pool's getRmnProxy() returned 0x411de17f12d1a34ecc7f45f49844626267c75e81 at block 25770134. RMNProxy getARM() returned 0x0b047953451a207743fb62541b21199b95190602, and the ARM implementation's isCursed() returned false. The pool-local ABI has no pause method, so this validated emergency curse gate is the scoreable pause/emergency surface for the canonical-side CCIP route."
       }
     ]
   }

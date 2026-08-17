@@ -4,9 +4,16 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "CADC is issued by Loon through issuer-controlled owner/masterMinter Safes. All five EVM tokens are upgradeable legacy ZeppelinOS FiatTokenProxy deployments: Ethereum, Polygon, Arbitrum, and Base share a 1-of-1 proxy-admin Safe, while Linea is immediately upgradeable by a single EOA. The Solana mint remains separately owned by the SPL Token program.",
+    "summary": "CADC is issued by Loon through issuer-controlled owner/masterMinter Safes. All five EVM tokens are upgradeable legacy ZeppelinOS FiatTokenProxy deployments: Ethereum, Polygon, Arbitrum, and Base share a 1-of-1 proxy-admin Safe, while Linea is immediately upgradeable by a single EOA. The Solana SPL mint has a separate direct-minter control for its live mint authority.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef",
+        "polygon:0x9de41aff9f55219d5bf4359f167d1d0c772a396d",
+        "arbitrum:0x2b28e826b55e399f4d4699b85f68666ac51e6f70",
+        "base:0x043eb4b75d0805c43d7c834902e335621983cf03",
+        "linea:0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6"
+      ],
       "proxyAddresses": [
         "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef",
         "0x9de41aff9f55219d5bf4359f167d1d0c772a396d",
@@ -79,6 +86,13 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": true,
+        "deploymentRefs": [
+          "ethereum:0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef",
+          "polygon:0x9de41aff9f55219d5bf4359f167d1d0c772a396d",
+          "arbitrum:0x2b28e826b55e399f4d4699b85f68666ac51e6f70",
+          "base:0x043eb4b75d0805c43d7c834902e335621983cf03",
+          "linea:0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6"
+        ],
         "failureDomainKeys": [
           "issuer:loon-finance"
         ],
@@ -120,6 +134,9 @@
         "evidence": "At Ethereum block 25295003: owner() and masterMinter() on 0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef both returned 0x3e30d340c83d068d632e11b5a30507ce973d7700. eth_getCode = 344 bytes. getOwners() returned 3 addresses; threshold() = 2; getModulesPaginated = empty; guard slot = 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 (CompatibilityFallbackHandler); storage slot 0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Safe 1.3.0 singleton).",
         "chain": "ethereum",
         "address": "0x3e30d340c83d068d632e11b5a30507ce973d7700",
+        "deploymentRefs": [
+          "ethereum:0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef"
+        ],
         "observedAt": "2026-07-20"
       },
       {
@@ -148,6 +165,10 @@
         "evidence": "At Base block 47200682: owner() on 0x043eb4b75d0805c43d7c834902e335621983cf03 returned 0x3de3405801f7f6a2fe348a365e07dc4f83c7a6a8. getOwners() = same 3 signers; threshold() = 2; modules = empty; guard slot = 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99; slot 0 = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 (Safe L2 1.4.1 singleton). CADC Linea (0xa0b18e...) returns same Safe address.",
         "chain": "base",
         "address": "0x3de3405801f7f6a2fe348a365e07dc4f83c7a6a8",
+        "deploymentRefs": [
+          "base:0x043eb4b75d0805c43d7c834902e335621983cf03",
+          "linea:0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6"
+        ],
         "observedAt": "2026-07-20",
         "failureDomainKeys": [
           "base:0x3de3405801f7f6a2fe348a365e07dc4f83c7a6a8",
@@ -180,6 +201,9 @@
         "evidence": "Polygon owner() on 0x9de41aff... = 0x9bba7ae7276e352387211384de6f87491162a19c; Arbitrum owner() on 0x2b28e826... = 0xf78280429f296f44fa2e222bec2e877afff9ac35. Both return identical 3-signer set, threshold 2, guard 0xf48f2b2d..., slot 0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Safe L2 1.3.0 singleton).",
         "chain": "polygon",
         "address": "0x9bba7ae7276e352387211384de6f87491162a19c",
+        "deploymentRefs": [
+          "polygon:0x9de41aff9f55219d5bf4359f167d1d0c772a396d"
+        ],
         "observedAt": "2026-07-20"
       },
       {
@@ -208,10 +232,19 @@
         "evidence": "Arbitrum owner() on 0x2b28e826b55e399f4d4699b85f68666ac51e6f70 = 0xf78280429f296f44fa2e222bec2e877afff9ac35 (read 2026-07-20); identical 3-signer set, threshold 2, guard 0xf48f2b2d…, slot 0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Safe L2 1.3.0 singleton).",
         "chain": "arbitrum",
         "address": "0xf78280429f296f44fa2e222bec2e877afff9ac35",
+        "deploymentRefs": [
+          "arbitrum:0x2b28e826b55e399f4d4699b85f68666ac51e6f70"
+        ],
         "observedAt": "2026-07-20"
       },
       {
         "address": "0x616c831464c2ef872fd0d1b7bff7973c3a91ae12",
+        "deploymentRefs": [
+          "ethereum:0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef",
+          "polygon:0x9de41aff9f55219d5bf4359f167d1d0c772a396d",
+          "arbitrum:0x2b28e826b55e399f4d4699b85f68666ac51e6f70",
+          "base:0x043eb4b75d0805c43d7c834902e335621983cf03"
+        ],
         "label": "CADC Ethereum/Polygon/Arbitrum/Base legacy proxy-admin Safe (1/1)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -263,6 +296,9 @@
       {
         "chain": "linea",
         "address": "0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9",
+        "deploymentRefs": [
+          "linea:0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6"
+        ],
         "label": "CADC Linea legacy proxy admin EOA",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -283,15 +319,40 @@
           }
         ],
         "evidence": "At Linea block 31369755, the legacy ZeppelinOS admin slot on CADC resolved directly to 0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9 and eth_getCode returned 0x. This single EOA can replace the implementation immediately and is therefore the weakest deployment-wide upgrade authority."
+      },
+      {
+        "chain": "solana",
+        "address": "5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw",
+        "label": "CADC Solana SPL mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7"
+        ],
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 439727154,
+        "sources": [
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Paytrie CADC address FAQ",
+            "url": "https://faq.paytrie.com/en/help/what-is-the-cadc-address"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439727154, getAccountInfo(jsonParsed) for CADC mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 returned mintAuthority 5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw and freezeAuthority CwAYsAH3HpJSFvmxUCxd3sExavu9TeEvz49zruhei6w4. The live SPL mint authority is the native CADC direct-issuance controller; no contract-level cap or timelock is described in the reviewed source."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner Safes can raise mint allowances, while a 1-of-1 Safe or EOA can immediately replace proxy logic; monthly independent reserve reconciliation exists without prudential issuer supervision.",
+      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is now explicitly represented by the Solana direct-minter control; it is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner Safes can raise mint allowances, while a 1-of-1 Safe or EOA can immediately replace proxy logic; monthly independent reserve reconciliation exists without prudential issuer supervision.",
       "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Loon Finance",

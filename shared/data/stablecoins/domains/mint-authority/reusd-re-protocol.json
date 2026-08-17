@@ -4,9 +4,12 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "reUSD currently grants MINTER_ROLE to a collateral-deposit layer, an immutable redemption contract with no mint call, and a CCIP burn/mint pool. A two-day TimelockController holds the live UUPS upgrader role, but both it and a 3-of-5 Safe hold token DEFAULT_ADMIN_ROLE; the Safe can immediately authorize new minters or upgraders.",
+    "summary": "Native Ethereum reUSD issuance is held by the collateral-backed InsuranceCapitalLayer; the immutable redemption contract retains a non-callable MINTER_ROLE assignment but has no ShareToken mint call. A two-day TimelockController holds the live UUPS upgrader role, while both it and a 3-of-5 Safe hold token DEFAULT_ADMIN_ROLE; the Safe can immediately authorize new native minters or upgraders. Chainlink CCIP pool authority is reviewed separately under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+      ],
       "proxyAddresses": [
         "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
       ],
@@ -40,6 +43,9 @@
       {
         "chain": "ethereum",
         "address": "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+        "deploymentRefs": [
+          "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        ],
         "label": "reUSD InsuranceCapitalLayer MINTER_ROLE holder",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -60,6 +66,9 @@
       {
         "chain": "ethereum",
         "address": "0xa31deebb3680a3007120e74bcbdf4df36f042a40",
+        "deploymentRefs": [
+          "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        ],
         "label": "reUSD InstantRedemption MINTER_ROLE holder",
         "role": "other",
         "authorityType": "contract",
@@ -78,27 +87,10 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
-        "label": "reUSD CCIP burn/mint pool",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The verified BurnWithFromMintTokenPool can mint only through validated CCIP releaseOrMint messages and configured remote-chain rate limits; its owner is the reviewed reUSD Safe.",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
-        "sources": [
-          {
-            "label": "reUSD CCIP BurnWithFromMintTokenPool",
-            "url": "https://etherscan.io/address/0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465#code"
-          }
-        ],
-        "evidence": "The complete role-event history and hasRole() confirm this pool holds reUSD MINTER_ROLE at Ethereum block 25712112. Verified pool source mints in _releaseOrMint() after CCIP validation. owner() returned Safe 0x8eec10616802ef639ca55c98ac856553fadefbad."
-      },
-      {
-        "chain": "ethereum",
         "address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+        "deploymentRefs": [
+          "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        ],
         "label": "reUSD token admin and UUPS upgrader timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
@@ -123,6 +115,9 @@
       {
         "chain": "ethereum",
         "address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+        "deploymentRefs": [
+          "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        ],
         "label": "reUSD governance Safe (token DEFAULT_ADMIN)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -198,9 +193,9 @@
           "url": "https://www.thenetworkfirm.com/proof-of-reserves"
         }
       ],
-      "evidence": "A complete Blockscout RoleGranted/RoleRevoked replay through Ethereum block 25712112, followed by direct hasRole() checks, found three live MINTER_ROLE holders, two DEFAULT_ADMIN_ROLE holders, and one current UPGRADER_ROLE holder. This corrects the prior sole-admin claim: both timelock 0x69ddea332723cf5407151aaf68b9b076557fca93 and Safe 0x8eec10616802ef639ca55c98ac856553fadefbad hold DEFAULT_ADMIN_ROLE. Although the timelock's current upgrade actions wait 172800 seconds, the 3-of-5 Safe can immediately grant itself or another address MINTER_ROLE or UPGRADER_ROLE. Verified implementations establish each current minter's callable behavior. The Network Firm attests the off-chain Regulation-114 trust/reinsurance balances daily and publishes the result to a live Chainlink proof-of-reserve feed, so supply is continuously reconciled. The reinsurer Cover Re SPC is CIMA-licensed, but the reUSD token issuer itself is an unregulated foundation, so supervision remains attestation-only. The permissioned minter's encoding-derived cap does not bound issuance against reserves, so economic cap semantics remain unbounded.",
-      "reviewer": "OpenAI Codex C03 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "A complete Blockscout RoleGranted/RoleRevoked replay through Ethereum block 25712112, followed by direct hasRole() checks, found the live native InsuranceCapitalLayer MINTER_ROLE holder, the non-calling InstantRedemption role assignment, two DEFAULT_ADMIN_ROLE holders, and one current UPGRADER_ROLE holder. The Ethereum CCIP pool is excluded from this native set because its MINTER_ROLE is exercised only through validated cross-chain releaseOrMint machinery and is recorded under Bridge Risk. Both timelock 0x69ddea332723cf5407151aaf68b9b076557fca93 and Safe 0x8eec10616802ef639ca55c98ac856553fadefbad hold DEFAULT_ADMIN_ROLE. Although the timelock's current upgrade actions wait 172800 seconds, the 3-of-5 Safe can immediately grant itself or another address native MINTER_ROLE or UPGRADER_ROLE. Verified implementations establish the native minter's collateral-backed callable behavior and the redemption contract's absence of a ShareToken mint call. The Network Firm attests the off-chain Regulation-114 trust/reinsurance balances daily and publishes the result to a live Chainlink proof-of-reserve feed, so supply is continuously reconciled. The reinsurer Cover Re SPC is CIMA-licensed, but the reUSD token issuer itself is an unregulated foundation, so supervision remains attestation-only. The native permissioned minter's encoding-derived cap does not bound issuance against reserves, so economic cap semantics remain unbounded.",
+      "reviewer": "Codex FIX-05 reUSD mint-authority migration",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

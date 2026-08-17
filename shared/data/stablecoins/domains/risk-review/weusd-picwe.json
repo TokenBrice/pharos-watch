@@ -74,9 +74,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WEUSD moves cross-chain via PicWe's own issuer-operated burn-on-source / mint-on-destination route. PicWe's cross-chain-transfer docs state \"Source chain burns, target chain mints\" over a self-built native bridge (\"No Wormhole. No LayerZero. No third-party risk\") with PicWe-operated keepers signing and verifying every cross-chain message. On-chain this is confirmed: the EVM token (identical CREATE2 address 0xdd73... on bsc/base/arbitrum/plume) is a plain ERC20 + AccessControl with no LayerZero/Wormhole/OFT interface, so cross-chain mints flow purely through MINTER_ROLE held by a PicWe admin EOA plus the mint/redeem contract, and on Movement through the weusd_cross_chain_gas cross_mint_role_contract relayer (batchMintWeUSDCrossChain). The durable supply path is therefore issuer-native burn/mint, not an external validated network, canonical bridge, or liquidity route. Trust posture is weak: keeper validation has no published external attestation or audit, control keys are concentrated PicWe EOAs with no multisig/timelock, and the token trades off-peg (~$0.91) under disputed backing.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "summary": "WEUSD's bridge overlay is PicWe's own issuer-native burn-on-source / mint-on-destination route, distinct from the five deployments' independent native issuance assessed under Mint Authority. PicWe's cross-chain-transfer docs state that the source chain burns and the target chain mints through a self-built route with PicWe-operated keepers; no Wormhole, LayerZero, CCIP, canonical-rollup, or external validator network was found. Structured controls now cover the four EVM Cross-Chain contracts, the common PicWe admin EOA, the reviewed Base role-hash holder, the Movement cross-chain relayer, and the Movement package publisher's bridge-module upgrade authority. Keeper quorum, role semantics, replay protection, and complete operator membership remain unverified; the route has no verified independent prudential limit or third-party attestation.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Mint/bridge boundary migration 2026-08-16",
     "confidence": "verified",
     "protocols": [
       {
@@ -86,7 +86,7 @@
         "bridgeTypes": [
           "issuer-native-burn-mint"
         ],
-        "note": "Self-built burn-on-source/mint-on-destination relayer; docs explicitly disclaim LayerZero/Wormhole/CCIP; signed-and-verified messages executed by PicWe keepers/operators."
+        "note": "Self-built burn-on-source/mint-on-destination relayer; docs explicitly disclaim LayerZero/Wormhole/CCIP; signed-and-verified messages are executed by PicWe keepers/operators. Current EVM and Movement controller observations are structured in bridgeRouteRisk.controls."
       },
       {
         "source": "explorer",
@@ -95,7 +95,7 @@
         "bridgeTypes": [
           "issuer-native-burn-mint"
         ],
-        "note": "cross_mint_role_contract = 0x86e5136... (active PicWe relayer EOA) gates destination minting on Movement; EVM side uses MINTER_ROLE on identical CREATE2 token 0xdd73... held by PicWe admin EOA + mint/redeem contract 0x5D54...."
+        "note": "Movement cross_mint_role_contract = 0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3 is the active relayer EOA gating batchMintWeUSDCrossChain. EVM destination minting is controlled by the four non-proxy Cross-Chain contracts at 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd; the stale 0x5D54... address is not a live controller."
       }
     ],
     "sources": [
@@ -114,6 +114,42 @@
       {
         "label": "BscScan WEUSD token contract (identical CREATE2 EVM address, AccessControl MINTER_ROLE)",
         "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
+      },
+      {
+        "label": "Base Cross-Chain contract role observations",
+        "url": "https://base.blockscout.com/address/0x4b3495391ebb170af31185aed7bb4dfa903ed1fd"
+      },
+      {
+        "label": "Base Cross-Chain RoleGranted logs",
+        "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x4b3495391ebb170af31185aed7bb4dfa903ed1fd&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+      },
+      {
+        "label": "Arbitrum Cross-Chain RoleGranted logs",
+        "url": "https://arbitrum.blockscout.com/api?module=logs&action=getLogs&address=0x4b3495391ebb170af31185aed7bb4dfa903ed1fd&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+      },
+      {
+        "label": "BSC Cross-Chain fixed-block RPC observation",
+        "url": "https://bsc-rpc.publicnode.com"
+      },
+      {
+        "label": "Base Cross-Chain fixed-block RPC observation",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "Arbitrum Cross-Chain fixed-block RPC observation",
+        "url": "https://arbitrum-one.publicnode.com"
+      },
+      {
+        "label": "Plume Cross-Chain fixed-block RPC observation",
+        "url": "https://rpc.plume.org"
+      },
+      {
+        "label": "Movement WEUSD mint/redeem module ABI",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
+      },
+      {
+        "label": "Movement WEUSD cross-chain module ABI",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_cross_chain_gas"
       }
     ],
     "routes": [
@@ -129,17 +165,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native WEUSD issuance on bsc: the PicWe_USDC (WEUSD) token exposes AccessControl role getters with PicWe-operated keeper minting (PicWe's own burn/mint route, no third-party bridge, per PicWe docs).",
+        "reviewNote": "Native WEUSD issuance on bsc remains a Mint Authority fact: the local token has PicWe admin EOA 0xc12233455beac4e094a5de022be692a264c0c0bc and the local Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd as MINTER_ROLE holders. The separate issuer-native bridge overlay is represented by bridgeRouteRisk.controls weusd-bsc-cross-chain-contract and weusd-evm-admin-common-domain; role reads were fixed at BSC block 116362149 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116362149,
         "sources": [
           {
             "label": "PicWe cross-chain transfer docs",
-            "url": "https://docs.picwe.org/"
+            "url": "https://docs.picwe.org/cross-chain-transfer"
           },
           {
-            "label": "WEUSD on bsc explorer (probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+            "label": "WEUSD on BSC fixed-block role/code observation 2026-08-16",
+            "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
           }
         ]
       },
@@ -155,17 +192,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native WEUSD issuance on base: the PicWe_USDC (WEUSD) token exposes AccessControl role getters with PicWe-operated keeper minting (PicWe's own burn/mint route, no third-party bridge, per PicWe docs).",
+        "reviewNote": "Native WEUSD issuance on base remains a Mint Authority fact: the local token has PicWe admin EOA 0xc12233455beac4e094a5de022be692a264c0c0bc and the local Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd as MINTER_ROLE holders. The separate issuer-native bridge overlay is represented by bridgeRouteRisk.controls weusd-base-cross-chain-contract, weusd-evm-admin-common-domain, and weusd-base-role-hash-holder; role reads were fixed at Base block 50067179 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067179,
         "sources": [
           {
             "label": "PicWe cross-chain transfer docs",
-            "url": "https://docs.picwe.org/"
+            "url": "https://docs.picwe.org/cross-chain-transfer"
           },
           {
-            "label": "WEUSD on base explorer (probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+            "label": "WEUSD on Base fixed-block role/code observation 2026-08-16",
+            "url": "https://base.blockscout.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
           }
         ]
       },
@@ -181,17 +219,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native WEUSD issuance on arbitrum: the PicWe_USDC (WEUSD) token exposes AccessControl role getters with PicWe-operated keeper minting (PicWe's own burn/mint route, no third-party bridge, per PicWe docs).",
+        "reviewNote": "Native WEUSD issuance on arbitrum remains a Mint Authority fact: the local token has PicWe admin EOA 0xc12233455beac4e094a5de022be692a264c0c0bc and the local Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd as MINTER_ROLE holders. The separate issuer-native bridge overlay is represented by bridgeRouteRisk.controls weusd-arbitrum-cross-chain-contract and weusd-evm-admin-common-domain; role reads were fixed at Arbitrum block 495300024 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495300024,
         "sources": [
           {
             "label": "PicWe cross-chain transfer docs",
-            "url": "https://docs.picwe.org/"
+            "url": "https://docs.picwe.org/cross-chain-transfer"
           },
           {
-            "label": "WEUSD on arbitrum explorer (probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+            "label": "WEUSD on Arbitrum fixed-block role/code observation 2026-08-16",
+            "url": "https://arbiscan.io/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
           }
         ]
       },
@@ -207,17 +246,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native WEUSD issuance on plume: the PicWe_USDC (WEUSD) token exposes AccessControl role getters with PicWe-operated keeper minting (PicWe's own burn/mint route, no third-party bridge, per PicWe docs).",
+        "reviewNote": "Native WEUSD issuance on plume remains a Mint Authority fact: the local token has PicWe admin EOA 0xc12233455beac4e094a5de022be692a264c0c0bc and the local Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd as MINTER_ROLE holders. The separate issuer-native bridge overlay is represented by bridgeRouteRisk.controls weusd-plume-cross-chain-contract and weusd-evm-admin-common-domain; role reads were fixed at Plume block 87694882 on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 87694882,
         "sources": [
           {
             "label": "PicWe cross-chain transfer docs",
-            "url": "https://docs.picwe.org/"
+            "url": "https://docs.picwe.org/cross-chain-transfer"
           },
           {
-            "label": "WEUSD on plume explorer (probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+            "label": "WEUSD on Plume fixed-block role/code observation 2026-08-16",
+            "url": "https://rpc.plume.org"
           }
         ]
       },
@@ -233,19 +273,295 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native WEUSD issuance on movement: the account hosts PicWe's own weusd_mint_redeem::MintState and weusd_cross_chain_gas::GlobalManage Move resources (verified on-chain 2026-07-20), PicWe's issuer-operated mint/redeem infrastructure.",
+        "reviewNote": "Native WEUSD issuance on movement remains a Mint Authority fact: the account hosts PicWe's local weusd_mint_redeem::MintState and weusd_cross_chain_gas::GlobalManage resources. The bridge overlay is distinct and is represented by bridgeRouteRisk.controls weusd-movement-cross-chain-relayer and weusd-movement-package-publisher-bridge; Movement package and reserve/deficit reads were fixed at block height 85281248 (ledger version 196018785) on 2026-08-16.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 85281248,
         "sources": [
           {
             "label": "PicWe cross-chain transfer docs",
-            "url": "https://docs.picwe.org/"
+            "url": "https://docs.picwe.org/cross-chain-transfer"
           },
           {
-            "label": "WEUSD on movement explorer (probed 2026-07-20)",
-            "url": "https://blockscout.com/search?q=0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
+            "label": "Movement WEUSD fixed-ledger package/resource observation 2026-08-16",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "weusd-bsc-cross-chain-contract",
+        "label": "PicWe BSC Cross-Chain bridge contract",
+        "routeRefs": [
+          "bsc:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause"],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+        "failureDomainKeys": [
+          "contract:bsc:0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+          "protocol:picwe-issuer-native-burn-mint"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "caps": "No aggregate or per-call bridge mint ceiling was verified; the Cross-Chain contract is a live MINTER_ROLE holder on the local WEUSD token.",
+          "pausersAdminsUpgraders": "At BSC block 116362149, paused() returned false and the contract had zero EIP-1967 implementation and admin slots.",
+          "signingModel": "PicWe documents signed and verified keeper messages, but the Cross-Chain source and complete keeper/quorum implementation were not publicly verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116362149,
+        "sources": [
+          {
+            "label": "BSC Cross-Chain fixed-block RPC observation",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "PicWe cross-chain transfer documentation",
+            "url": "https://docs.picwe.org/cross-chain-transfer"
+          }
+        ],
+        "evidence": "At BSC block 116362149, Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd had live bytecode, paused() returned false, and the contract held MINTER_ROLE on the local WEUSD deployment. The contract is not an EIP-1967 proxy. PicWe's official route is source-burn/target-mint with keeper-signed messages; public explorer source did not establish the exact keeper quorum, replay protection, or internal rate-limit implementation."
+      },
+      {
+        "id": "weusd-base-cross-chain-contract",
+        "label": "PicWe Base Cross-Chain bridge contract",
+        "routeRefs": [
+          "base:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause"],
+        "controllerChain": "base",
+        "controllerAddress": "0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+        "failureDomainKeys": [
+          "contract:base:0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+          "protocol:picwe-issuer-native-burn-mint"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "caps": "No aggregate or per-call bridge mint ceiling was verified; the Cross-Chain contract is a live MINTER_ROLE holder on the local WEUSD token.",
+          "pausersAdminsUpgraders": "At Base block 50067179, paused() returned false and the contract had zero EIP-1967 implementation and admin slots.",
+          "signingModel": "PicWe documents signed and verified keeper messages, but the Cross-Chain source and complete keeper/quorum implementation were not publicly verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067179,
+        "sources": [
+          {
+            "label": "Base Cross-Chain contract record",
+            "url": "https://base.blockscout.com/address/0x4b3495391ebb170af31185aed7bb4dfa903ed1fd"
+          },
+          {
+            "label": "Base Cross-Chain fixed-block RPC observation",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50067179, Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd had live bytecode, paused() returned false, and the contract held MINTER_ROLE on the local WEUSD deployment. DEFAULT_ADMIN_ROLE was held by PicWe EOA 0xc12233455beac4e094a5de022be692a264c0c0bc; role hash 0x41de7ae3becaf069074d499ebcbd36df88385ba1e2946870f7e4674aecd43704 was held by 0xe430946cb1b1c221e30fb9798668599120d4c585. The role hashes' semantic names and complete keeper set remain unverified."
+      },
+      {
+        "id": "weusd-arbitrum-cross-chain-contract",
+        "label": "PicWe Arbitrum Cross-Chain bridge contract",
+        "routeRefs": [
+          "arbitrum:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause"],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+        "failureDomainKeys": [
+          "contract:arbitrum:0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+          "protocol:picwe-issuer-native-burn-mint"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "caps": "No aggregate or per-call bridge mint ceiling was verified; the Cross-Chain contract is a live MINTER_ROLE holder on the local WEUSD token.",
+          "pausersAdminsUpgraders": "At Arbitrum block 495300024, paused() returned false and the contract had zero EIP-1967 implementation and admin slots.",
+          "signingModel": "PicWe documents signed and verified keeper messages, but the Cross-Chain source and complete keeper/quorum implementation were not publicly verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495300024,
+        "sources": [
+          {
+            "label": "Arbitrum Cross-Chain fixed-block RPC observation",
+            "url": "https://arbitrum-one.publicnode.com"
+          },
+          {
+            "label": "Arbitrum Cross-Chain RoleGranted logs",
+            "url": "https://arbitrum.blockscout.com/api?module=logs&action=getLogs&address=0x4b3495391ebb170af31185aed7bb4dfa903ed1fd&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "At Arbitrum block 495300024, Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd had live bytecode, paused() returned false, and the contract held MINTER_ROLE on the local WEUSD deployment. The contract is not an EIP-1967 proxy. The route is issuer-operated source-burn/target-mint; exact role semantics, keeper quorum, replay protection, and internal limits were not independently verified from public source."
+      },
+      {
+        "id": "weusd-plume-cross-chain-contract",
+        "label": "PicWe Plume Cross-Chain bridge contract",
+        "routeRefs": [
+          "plume:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause"],
+        "controllerChain": "plume",
+        "controllerAddress": "0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+        "failureDomainKeys": [
+          "contract:plume:0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+          "protocol:picwe-issuer-native-burn-mint"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "caps": "No aggregate or per-call bridge mint ceiling was verified; the Cross-Chain contract is a live MINTER_ROLE holder on the local WEUSD token.",
+          "pausersAdminsUpgraders": "At Plume block 87694882, paused() returned false and the contract had zero EIP-1967 implementation and admin slots.",
+          "signingModel": "PicWe documents signed and verified keeper messages, but the Cross-Chain source and complete keeper/quorum implementation were not publicly verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 87694882,
+        "sources": [
+          {
+            "label": "Plume Cross-Chain fixed-block RPC observation",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "PicWe cross-chain transfer documentation",
+            "url": "https://docs.picwe.org/cross-chain-transfer"
+          }
+        ],
+        "evidence": "At Plume block 87694882, Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd had live bytecode, paused() returned false, and the contract held MINTER_ROLE on the local WEUSD deployment. The contract is not an EIP-1967 proxy. Public source did not establish the exact keeper quorum, replay protection, or internal rate-limit implementation for this issuer-native route."
+      },
+      {
+        "id": "weusd-evm-admin-common-domain",
+        "label": "PicWe EVM Cross-Chain DEFAULT_ADMIN and role-admin EOA",
+        "routeRefs": [
+          "bsc:0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+          "base:0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+          "arbitrum:0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+          "plume:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+        ],
+        "capabilities": ["admin"],
+        "controllerChain": "base",
+        "controllerAddress": "0xc12233455beac4e094a5de022be692a264c0c0bc",
+        "failureDomainKeys": [
+          "eoa:picwe:0xc12233455beac4e094a5de022be692a264c0c0bc",
+          "protocol:picwe-issuer-native-burn-mint"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 50067179, PicWe EOA 0xc12233455beac4e094a5de022be692a264c0c0bc held DEFAULT_ADMIN_ROLE on the Cross-Chain contract; DEFAULT_ADMIN_ROLE was the administrator for both observed non-default roles and could grant or replace their holders."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067179,
+        "sources": [
+          {
+            "label": "Base Cross-Chain RoleGranted logs",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x4b3495391ebb170af31185aed7bb4dfa903ed1fd&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Base Cross-Chain fixed-block RPC observation",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the reviewed Base block, this EOA held DEFAULT_ADMIN_ROLE on the Cross-Chain contract and was the administrator able to grant or replace the observed bridge roles. The same EOA also held MINTER_ROLE on the four EVM WEUSD tokens, but that native issuance capability remains separately authored in Mint Authority; this Bridge Risk control covers only the EVM bridge contract's administrative failure domain. No multisig or timelock was found."
+      },
+      {
+        "id": "weusd-base-role-hash-holder",
+        "label": "PicWe Base Cross-Chain role-hash holder",
+        "routeRefs": [
+          "base:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+        ],
+        "capabilities": ["bridge-mint"],
+        "controllerChain": "base",
+        "controllerAddress": "0xe430946cb1b1c221e30fb9798668599120d4c585",
+        "failureDomainKeys": [
+          "eoa:base:0xe430946cb1b1c221e30fb9798668599120d4c585",
+          "contract:base:0x4b3495391ebb170af31185aed7bb4dfa903ed1fd",
+          "protocol:picwe-issuer-native-burn-mint"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "unsupportedReason": "The Cross-Chain contract is not publicly source-verified; the semantic name of role hash 0x41de7ae3becaf069074d499ebcbd36df88385ba1e2946870f7e4674aecd43704 and the complete keeper/operator set could not be independently established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067179,
+        "sources": [
+          {
+            "label": "Base Cross-Chain contract role observations",
+            "url": "https://base.blockscout.com/address/0x4b3495391ebb170af31185aed7bb4dfa903ed1fd"
+          },
+          {
+            "label": "Base Cross-Chain RoleGranted logs",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x4b3495391ebb170af31185aed7bb4dfa903ed1fd&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "At Base block 50067179, EOA 0xe430946cb1b1c221e30fb9798668599120d4c585 held role hash 0x41de7ae3becaf069074d499ebcbd36df88385ba1e2946870f7e4674aecd43704 on the live Cross-Chain contract. Public getter selector 0x37174202 returned this role hash, and DEFAULT_ADMIN_ROLE was its administrator. The exact role name and function surface are unverified; the control preserves the observed bridge role-holder failure domain without promoting an unsupported semantic label."
+      },
+      {
+        "id": "weusd-movement-cross-chain-relayer",
+        "label": "PicWe Movement cross-chain mint relayer",
+        "routeRefs": [
+          "movement:0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
+        ],
+        "capabilities": ["bridge-mint"],
+        "controllerChain": "movement",
+        "controllerAddress": "0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3",
+        "failureDomainKeys": [
+          "eoa:movement:0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3",
+          "protocol:picwe-issuer-native-burn-mint"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "caps": "No independent per-relayer mint ceiling was verified. At ledger version 196018785 / block height 85281248, cross_chain_reserves was 16637901559 and cross_chain_deficit was zero.",
+          "onchainAmountBounds": "The Movement bridge module exposes explicit cross-chain reserve and deficit accounting; the observed zero deficit indicates conservation at the observation point but is not an external attestation of the route."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 85281248,
+        "sources": [
+          {
+            "label": "Movement current WEUSD resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+          },
+          {
+            "label": "Movement WEUSD cross-chain module ABI",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_cross_chain_gas"
+          }
+        ],
+        "evidence": "At Movement ledger version 196018785 / block height 85281248, weusd_cross_chain_gas::GlobalManage.cross_mint_role_contract pointed to active EOA 0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3, whose account had sequence number 142. batchMintWeUSDCrossChain is gated on this address. This relayer is bridge-only; native Movement mint authority remains with the package's local mint/redeem path and publisher. The same read showed cross_chain_reserves 16637901559 and cross_chain_deficit zero."
+      },
+      {
+        "id": "weusd-movement-package-publisher-bridge",
+        "label": "PicWe Movement package publisher bridge-module authority",
+        "routeRefs": [
+          "movement:0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
+        ],
+        "capabilities": ["upgrade", "admin"],
+        "controllerChain": "movement",
+        "controllerAddress": "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6",
+        "failureDomainKeys": [
+          "eoa:movement:0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6",
+          "package:movement:picwe",
+          "protocol:picwe-issuer-native-burn-mint"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Movement ledger version 196018785 / block height 85281248, package picwe was at upgrade_number 0 with compatible upgrade policy 1 and no on-chain timelock; the publisher can replace compatible bridge-module code."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 85281248,
+        "sources": [
+          {
+            "label": "Movement WEUSD package registry",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+          },
+          {
+            "label": "Movement WEUSD cross-chain module ABI",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_cross_chain_gas"
+          },
+          {
+            "label": "Aptos package upgrade documentation",
+            "url": "https://legacy.aptos.dev/move/move-on-aptos/modules-on-aptos/"
+          }
+        ],
+        "evidence": "The Movement publisher EOA 0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6 controls the PicWe package containing weusd_cross_chain_gas. At ledger version 196018785 / block height 85281248, the package had compatible upgrade policy 1 and no on-chain timelock, so this publisher can replace bridge-module logic. The same EOA is separately retained in Mint Authority for native weusd_mint_redeem mint-critical logic; this Bridge Risk control covers the bridge-module upgrade and administration failure domain."
       }
     ]
   }

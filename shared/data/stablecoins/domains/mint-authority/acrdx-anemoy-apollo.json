@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225). On Plume and Monad, the same Spoke is the sole ward (Root not deployed separately on those chains — consistent with Centrifuge cross-chain architecture).",
+    "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. Native issuance is scoped to the Ethereum Centrifuge ShareToken, where the Spoke and BalanceSheet mint and burn under the Root's ward administration. The Root is governed by the Centrifuge ProtocolGuardian backed by a 4/9 Safe multisig.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -31,6 +31,9 @@
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        ],
         "canRaiseCap": "unknown",
         "evidence": "Permissioned fund-share issuance: Anemoy (through Centrifuge) mints ACRDX against KYC-gated NAV subscriptions and burns on redemption; transfers are restricted to whitelisted holders. No permissionless mint route.",
         "sources": [
@@ -46,8 +49,11 @@
         "authorityType": "contract",
         "address": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        ],
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 25295029, wards(0xec3582...) on the ACRDX ShareToken (0x9477...4a74f) returned 1. At Plume block 74211635, wards(0xec3582...) on the Plume ShareToken (0x9477...4a74f) returned 1. At Monad block 80740709, wards(0xec3582...) on the Monad ShareToken (0x2fabf1...3245) returned 1 and eth_getCode confirmed the Spoke is deployed there. Blockscout identifies this as the Centrifuge Spoke contract — the on-chain contract that calls mint()/burn() for cross-chain subscriptions/redemptions.",
+        "evidence": "At Ethereum block 25769985, wards(0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab) on the canonical ACRDX ShareToken (0x9477724bb54ad5417de8baff29e59df3fb4da74f) returned 1. The Centrifuge Spoke is the Ethereum contract that calls mint() and burn() for issuer-side, KYC-gated NAV subscriptions and redemptions; this control is scoped to the canonical Ethereum deployment.",
         "sources": [
           {
             "label": "Ethereum Blockscout ACRDX ShareToken",
@@ -60,13 +66,16 @@
         ]
       },
       {
-        "label": "ACRDX Ethereum/Plume Root ward (protocol admin)",
+        "label": "ACRDX Ethereum Root ward (canonical protocol admin)",
         "role": "minter-admin",
         "authorityType": "contract",
         "address": "0x7ed48c31f2fdc40d37407cbabf0870b2b688368f",
         "directMintAbility": "none",
+        "deploymentRefs": [
+          "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        ],
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295029, wards(0x7ed48c31...) on the ACRDX ShareToken returned 1. At Plume block 74211635, wards(0x7ed48c31...) on the Plume ShareToken also returned 1. Blockscout identifies this as the Centrifuge Root contract. Root controls the rely/deny of all wards on the token. Note: Root ward returns 0 on Monad (0x2fabf1...3245) — Monad deployment uses Spoke-only ward architecture; the Spoke itself is the sole warded contract there.",
+        "evidence": "At Ethereum block 25769985, wards(0x7ed48c31f2fdc40d37407cbabf0870b2b688368f) on the canonical ACRDX ShareToken returned 1. The Centrifuge Root controls rely/deny of the canonical Ethereum wards, so its authority is retained here only for native Ethereum issuance.",
         "sources": [
           {
             "label": "Ethereum Blockscout Centrifuge Root",
@@ -79,6 +88,9 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "address": "0x9711730060c73ee7fcfe1890e8a0993858a7d225",
+        "deploymentRefs": [
+          "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        ],
         "threshold": 4,
         "signerCount": 9,
         "modulesOrGuardsStatus": "none-detected",
@@ -104,7 +116,7 @@
           "observedBlock": 25295029,
           "source": "onchain"
         },
-        "evidence": "The Centrifuge ProtocolGuardian (0xceb7...35c6) has a safe() function that returns 0x9711730060c73ee7fcfe1890e8a0993858a7d225. This Safe is a 4/9 Gnosis Safe v1.4.1 (masterCopy slot 0 = 0x41675c09...). getOwners() returned 9 addresses; threshold (slot 4) = 4; getModulesPaginated returned empty modules; guard (slot 6) = 0. ProtocolGuardian is warded on Root (wards(0xceb7...) = 1 at block 25295029).",
+        "evidence": "The Centrifuge ProtocolGuardian (0xceb7ed5d5b3bad3088f6a1697738b60d829635c6) has a safe() function that returns 0x9711730060c73ee7fcfe1890e8a0993858a7d225. At Ethereum block 25769985, ProtocolGuardian is warded on the canonical Root. The Safe is 4-of-9; the authored on-chain inspection recorded 9 owners, no enabled modules, and no guard at block 25295029. Its authority is retained here only to administer canonical Ethereum issuance wards.",
         "sources": [
           {
             "label": "Ethereum Blockscout ProtocolGuardian",
@@ -144,9 +156,9 @@
           "url": "https://www.bvifsc.vg/regulated-entities/anemoy-asset-management-limited"
         }
       ],
-      "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25295029: ShareToken wards = Root (0x7ed4), Spoke (0xec35), BalanceSheet (0x12a1); Root governed by ProtocolGuardian (0xceb7) which holds a 4/9 Gnosis Safe v1.4.1 (0x9711...7d225, no modules, no guard). Plume confirmed at block 74211635 (rpc.plume.org): wards(Spoke) = 1, wards(Root) = 1 on ShareToken 0x9477...4a74f. Monad confirmed at block 80740709 (rpc.monad.xyz): wards(Spoke) = 1 on ShareToken 0x2fabf1...3245; Root ward = 0 on Monad (Monad uses Spoke-only ward layout, consistent with Centrifuge cross-chain architecture where Root may not be deployed per spoke chain). Economic-control evidence reviewed 2026-07-15: Chronicle Proof of Asset continuously verifies ACRDX asset and NAV data from the fund administrator. The BVI FSC registry matches Anemoy Capital SPC Limited, the exact current professional-fund issuer. Economic-posture fields reviewed 2026-08-15: Centrifuge wards can mint and the Root-controlled 4-of-9 Safe can replace wards without a timelock; Chronicle continuously verifies NAV and the BVI FSC supervises the exact fund issuer.",
+      "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25769985: the canonical ShareToken wards include Root (0x7ed48c31f2fdc40d37407cbabf0870b2b688368f), Spoke (0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab), and BalanceSheet; Root is governed by ProtocolGuardian (0xceb7ed5d5b3bad3088f6a1697738b60d829635c6), backed by a 4-of-9 Safe with no enabled modules or guard in the authored inspection at block 25295029. Chronicle Proof of Asset continuously verifies ACRDX asset and NAV data from the fund administrator. The BVI FSC registry matches Anemoy Capital SPC Limited, the exact current professional-fund issuer. Economic-posture fields reviewed 2026-08-16: canonical Centrifuge wards can mint, the Root-controlled Safe can replace wards without a timelock, Chronicle continuously verifies NAV, and the BVI FSC supervises the exact fund issuer.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16"
     }
   }
 }

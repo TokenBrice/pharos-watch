@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "JUSD is an ownerless Frankencoin fork on Citrea. owner() reverts and there is no EIP-1967 proxy admin. mint() is gated to registered minters, but an accepted minter can mint an unrestricted amount; qualified JUICE pool-share holders can veto proposed minters during the application period.",
+    "summary": "JUSD is an ownerless Frankencoin fork with native issuance on Citrea. owner() reverts and there is no EIP-1967 proxy admin. mint() is gated to registered minters, but an accepted minter can mint an unrestricted amount; qualified JUICE pool-share holders can veto proposed minters during the application period. The four canonical-side StablecoinBridge routes are separately assessed under Bridge Risk: their lock/mint paths are route-capped and supply-conserving, but do not bound the token-level accepted-minter path.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -28,6 +28,9 @@
       {
         "chain": "citrea",
         "address": "0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+        "deploymentRefs": [
+          "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
         "label": "JUSD accepted-minter authorization registry",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -55,6 +58,9 @@
       {
         "chain": "citrea",
         "address": "0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
+        "deploymentRefs": [
+          "citrea:0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        ],
         "label": "JUICE pool-share holder veto governance",
         "role": "governor",
         "authorityType": "dao-governor",
@@ -81,9 +87,9 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "The pinned JuiceDollar source and CitreaScan verified deployed source make minting contingent on the token's registered minters mapping, but an accepted minter's mint() call has no numeric amount cap. Equity-qualified pool-share holders can veto candidates only during minter application. At Citrea block 9984927, the token's owner() call reverted, reserve() returned Equity 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4, and EIP-1967 implementation and admin slots were zero. The two reviewed control addresses therefore identify the authorization registry and its governance veto, with no proxy upgrade path. Economic-posture fields reviewed 2026-08-15: accepted minters can mint without a numeric bound, and no recurring whole-supply reconciliation or named prudential supervisor covers every minter path. Reconciliation research 2026-08-15: JuiceDollar's official documentation describes on-chain collateralized positions and 1:1 stablecoin bridges, but also exposes a minter-only mint() without reserve; no dated recurring whole-supply liability-to-collateral reconciliation was found, and the official site says protocol control was lost with a new minter becoming active after 2026-08-10.",
+      "evidence": "The pinned JuiceDollar source and CitreaScan verified deployed source make native minting contingent on the token's registered minters mapping, but an accepted minter's mint() call has no numeric amount cap. Equity-qualified pool-share holders can veto candidates only during minter application. At Citrea block 9984927, the token's owner() call reverted, reserve() returned Equity 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4, and EIP-1967 implementation and admin slots were zero. The two reviewed control addresses therefore identify the authorization registry and its governance veto, with no proxy upgrade path. The four canonical-side StablecoinBridge contracts are separately reviewed under Bridge Risk: each locks an external Citrea stablecoin before minting JUSD, burns JUSD before releasing that source asset, and has its own immutable limit and horizon; these route-level bounds do not replace or constrain the token-level unrestricted accepted-minter path. Economic-posture fields reviewed 2026-08-16: accepted minters can mint without a numeric bound, and no recurring whole-supply reconciliation or named prudential supervisor covers every minter path. Reconciliation research 2026-08-15: JuiceDollar's official documentation describes on-chain collateralized positions and 1:1 stablecoin bridges, but also exposes a minter-only mint() without reserve; no dated recurring whole-supply liability-to-collateral reconciliation was found, and the official site says protocol control was lost with a new minter becoming active after 2026-08-10.",
       "reviewer": "Codex Safety Score V9 data research; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "JuiceDollar token source (pinned commit)",

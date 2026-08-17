@@ -451,10 +451,10 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "PHT is natively CDP-minted on Ethereum (DaiJoin sole warded minter; Vat ceiling immutable at 250M PHT with no live ward). Polygon and Tron deployments are the issuer's own LayerZero OFTs (owners verified on-chain) using burn-mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "tier": "opaque-or-unknown",
+    "summary": "PHT's canonical Ethereum CDP issuance is separated from its LayerZero bridge machinery. The Ethereum MyOFTAdapter wraps the canonical PHT token and is controlled by the same EOA that owns the Polygon UUPS OFT; Polygon is a verified LayerZero representation with no resolved timelock or multisig for implementation replacement. APACX identifies Tron as a bridged PhtOFT, but its runtime, endpoint, peer, delegate, and mint/burn semantics remain unverified. Polygon and Ethereum peer configuration is asymmetric, so no single conserved route is proven and the aggregate bridge tier remains opaque-or-unknown.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); FIX2-17 boundary migration",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -495,17 +495,17 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "PHT on Ethereum is natively CDP-minted: the DaiJoin adapter 0x4bd328FD071b03e157d0a89dE199d9E005D71057 is the sole warded minter on the token (wards=1 verified at 2026-07-20).",
+        "reviewNote": "PHT on Ethereum is the canonical native-issuance deployment. The DaiJoin adapter 0x4bd328fd071b03e157d0a89de199d9e005d71057 is warded on PHT (wards=1), and the live Maker-style Vat path supplies collateral/debt-ceiling-bounded issuance; canonical-side bridge adapter powers are reviewed separately below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "APACX PHT",
-            "url": "https://apacx.com/"
+            "label": "APACX Ethereum contract addresses",
+            "url": "https://docs.apacx.io/technical-references/contract-addresses.md"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "Ethereum PHT Blockscout",
+            "url": "https://eth.blockscout.com/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077"
           }
         ]
       },
@@ -514,15 +514,15 @@
         "destinationChain": "polygon",
         "contractAddress": "0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
         "protocol": "APACX issuer-deployed LayerZero OFT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "external-validated-network",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "opaque-or-unknown",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xc6F1cfA1b5840E5aFe56F7B7eF3c52c3bcDa06C5 verified on Polygon at 2026-07-20; the issuer's own OFT burns/mints PHT across deployments.",
+        "reviewNote": "APACX identifies Polygon as a PHT bridge representation. At Polygon block 92141033, the proxy resolved to exact implementation 0x98210a4b34eafd668838108c99ad13a2b4340618 with LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5 can replace the OFT logic through UUPS without a resolved timelock or multisig. Polygon points to the Ethereum adapter, but the adapter's Polygon EID peer is zero, so a currently usable bilateral route is not fully proven.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "failureDomainKeys": [
@@ -530,12 +530,16 @@
         ],
         "sources": [
           {
-            "label": "APACX PHT",
-            "url": "https://apacx.com/"
+            "label": "APACX mint, redeem, and bridge guide",
+            "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "Polygon PHT proxy Blockscout",
+            "url": "https://polygon.blockscout.com/address/0xe75220cb014dfb2d354bb59be26d7458bb8d0706"
+          },
+          {
+            "label": "Polygon PHT implementation Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/137/0x98210a4b34eafd668838108c99ad13a2b4340618?fields=sources,compilation,abi"
           }
         ]
       },
@@ -544,15 +548,15 @@
         "destinationChain": "tron",
         "contractAddress": "TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
         "protocol": "APACX issuer-deployed LayerZero OFT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "external-validated-network",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "opaque-or-unknown",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Tron OFT owner() = TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4 verified via trongrid triggerconstantcontract at 2026-07-20 (hex fb99a0af49941ec1ca2fc726be1e287f4c70f5ee); the issuer's own OFT burns/mints PHT across deployments.",
+        "reviewNote": "APACX identifies Ethereum↔Tron PHT movement through LayerZero, so Tron is treated as a bridge representation sourced from canonical Ethereum. At Tron block 85415139, Tronscan identified TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs as an unverified, non-proxy PhtOFT and owner() returned TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4. The current endpoint, peer, delegate, lzReceive mint behavior, send burn behavior, and any hidden owner-controlled upgrade/direct-mint path remain unresolved; the route stays opaque-or-unknown rather than receiving a favorable verified tier.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "failureDomainKeys": [
@@ -560,14 +564,156 @@
         ],
         "sources": [
           {
-            "label": "APACX PHT",
-            "url": "https://apacx.com/"
+            "label": "APACX mint, redeem, and bridge guide",
+            "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "Tronscan PHT contract metadata",
+            "url": "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+          },
+          {
+            "label": "TronGrid constant-contract API",
+            "url": "https://api.trongrid.io/wallet/triggerconstantcontract"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "pht-ethereum-oft-adapter-owner",
+        "label": "APACX PHT Ethereum LayerZero OFT adapter owner",
+        "routeRefs": [
+          "ethereum:0xbe370ad45d44eb45174c4ec60b88839fef32c077"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x567a173bb4baf009d13222759330c1a84b667bd2",
+          "eoa:ethereum:0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "MyOFTAdapter inherits LayerZero OFTAdapter and returns the canonical PHT token; its source-side debit and destination credit are bridge accounting, not a second native PHT issuer.",
+          "trustedPeerOrRemote": "At Ethereum block 25770390, peers(30420) returned 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe and peers(30109) returned zero. Polygon currently points to this adapter at EID 30101, so the Ethereum/Polygon peer state is asymmetric; the owner can change peers and the LayerZero delegate.",
+          "pausersAdminsUpgraders": "The adapter endpoint is LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() is 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Owner-controlled peer/delegate and route-configuration powers are bridge administration; no adapter implementation-upgrade authority was separately evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770390,
+        "sources": [
+          {
+            "label": "Ethereum PHT OFT adapter Blockscout",
+            "url": "https://eth.blockscout.com/address/0x567a173bb4baf009d13222759330c1a84b667bd2"
+          },
+          {
+            "label": "APACX mint, redeem, and bridge guide",
+            "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md"
+          },
+          {
+            "label": "Ethereum public RPC fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770390, MyOFTAdapter 0x567a173bb4baf009d13222759330c1a84b667bd2 returned the canonical PHT token and LayerZero EndpointV2, owner() returned 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5, peers(30420) returned 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe, and peers(30109) returned zero. The owner therefore controls the canonical-side bridge mesh, while the route's current bilateral authentication remains unresolved."
+      },
+      {
+        "id": "pht-polygon-oft-owner",
+        "label": "APACX PHT Polygon PhtOFTUpgradeable owner",
+        "routeRefs": [
+          "polygon:0xe75220cb014dfb2d354bb59be26d7458bb8d0706"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:polygon:0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
+          "eoa:polygon:0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Polygon block 92141033, peers(30101) pointed to Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2, peers(30420) pointed to 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe, and peers(30109) was zero. The owner controls peer and LayerZero delegate configuration; the Ethereum adapter's Polygon EID peer was also zero at the reviewed read.",
+          "pausersAdminsUpgraders": "The proxy resolved to implementation 0x98210a4b34eafd668838108c99ad13a2b4340618 with admin slot zero. The implementation exposes UUPS upgradeToAndCall, and owner() is 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5; no timelock or multisig was resolved.",
+          "unsupportedReason": "The deployment is strongly identified as an OFT representation, but the asymmetric Ethereum/Polygon peer state prevents treating the currently usable route as fully verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141033,
+        "sources": [
+          {
+            "label": "Polygon PHT proxy Blockscout",
+            "url": "https://polygon.blockscout.com/address/0xe75220cb014dfb2d354bb59be26d7458bb8d0706"
+          },
+          {
+            "label": "Polygon PHT implementation Sourcify",
+            "url": "https://sourcify.dev/server/v2/contract/137/0x98210a4b34eafd668838108c99ad13a2b4340618?fields=sources,compilation,abi"
+          },
+          {
+            "label": "Polygon public RPC fixed-block reads",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92141033, PHT proxy 0xe75220cb014dfb2d354bb59be26d7458bb8d0706 returned owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5, implementation 0x98210a4b34eafd668838108c99ad13a2b4340618, token() equal to the proxy, and LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. The owner can replace the bridge representation logic without a resolved delay or multisig and can alter peer/delegate configuration."
+      },
+      {
+        "id": "pht-tron-oft-owner",
+        "label": "APACX PHT Tron PhtOFT owner",
+        "routeRefs": [
+          "tron:TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "tron",
+        "controllerAddress": "TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:tron:TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
+          "eoa:tron:TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Tronscan exposes owner-controlled setPeer and setDelegate selectors, but the unverified runtime does not establish whether lzReceive can mint, send burns, an endpoint or current peer exists, or an owner-controlled direct-mint/upgrade path is present.",
+        "routeChecks": {
+          "lockboxOrEscrow": "APACX identifies Ethereum↔Tron movement through LayerZero OFT, but the unverified Tron runtime does not prove a supply-conserving burn/mint invariant or a lockbox.",
+          "trustedPeerOrRemote": "At Tron block 85415139, the owner was verified, but the current peer, endpoint, delegate, and authenticated remote configuration were not resolved; the method map alone is not evidence of a usable route.",
+          "pausersAdminsUpgraders": "Tronscan reports a non-proxy, unverified PhtOFT with owner-only setPeer and setDelegate selectors. Hidden upgrade, pause, fallback, or direct-mint paths cannot be ruled out from selector metadata."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 85415139,
+        "sources": [
+          {
+            "label": "Tronscan PHT contract metadata",
+            "url": "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+          },
+          {
+            "label": "TronGrid constant-contract API",
+            "url": "https://api.trongrid.io/wallet/triggerconstantcontract"
+          },
+          {
+            "label": "APACX mint, redeem, and bridge guide",
+            "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md"
+          }
+        ],
+        "evidence": "At Tron block 85415139, TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs returned totalSupply()=44,489,605.678905 and owner()=0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee, corresponding to TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4. Tronscan reports name=PhtOFT, is_proxy=false, verify_status=0, and selectors including send, lzReceive, setPeer, and setDelegate. The exact bridge mint/burn, endpoint, peer, delegate, upgrade, and direct-mint semantics remain unresolved."
       }
     ]
   }

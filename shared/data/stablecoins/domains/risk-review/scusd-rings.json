@@ -34,19 +34,19 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "scUSD is reviewed as a Sonic/Ethereum Rings asset whose architecture includes cross-chain components: underlying capital is bridged through the Sonic bridge and vault shares can be bridged through LayerZero. Because holder-facing supply can depend on bridge/vault-share routing, Pharos scores the route as external lock/mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "summary": "scUSD has canonical native-issuance BoringVault share deployments on both Ethereum and Sonic. The dual-use LayerZeroTellers bridge shares by burning source shares with vault.exit() and entering zero-asset shares on the destination; Bridge Risk therefore scores issuer-operated burn/mint subject to peer, endpoint, DVN, executor, and route-administration controls. This is not external lock/mint or independent issuance on a representation chain.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration; verified finding 2026-08-16",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
         "name": "LayerZero",
-        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oapp-reference",
         "bridgeTypes": [
-          "oft",
           "external-messaging"
-        ]
+        ],
+        "note": "scUSD uses issuer-operated LayerZeroTeller burn/mint messaging rather than an independent OFT representation deployment."
       }
     ],
     "sources": [
@@ -61,6 +61,22 @@
       {
         "label": "LayerZero OFT technical reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "Ethereum LayerZeroTeller verified source",
+        "url": "https://etherscan.io/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+      },
+      {
+        "label": "Sonic LayerZeroTeller verified source",
+        "url": "https://sonicscan.org/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+      },
+      {
+        "label": "LayerZero deployed contracts",
+        "url": "https://docs.layerzero.network/v2/deployments/deployed-contracts"
+      },
+      {
+        "label": "Ethereum and Sonic fixed-block RPC reads",
+        "url": "https://ethereum-rpc.publicnode.com/"
       }
     ],
     "routes": [
@@ -68,16 +84,17 @@
         "id": "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
         "destinationChain": "ethereum",
         "contractAddress": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
-        "protocol": "Veda BoringVault native share mint (LayerZeroTeller)",
+        "protocol": "Veda BoringVault native share mint with dual-use LayerZeroTeller",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: non-proxy BoringVault receipt token with owner() = 0x0; the reviewed mintAuthority identifies the sole external mint authority as the authorized LayerZeroTeller 0x358CFACf00d0b4634849821Bb3D1965b472c776a via RolesAuthority capability reads. Shares are minted natively by the vault system on this chain; no separate bridge representation contract carries the claim.",
+        "reviewNote": "On-chain 2026-08-16 at Ethereum block 25770755: non-proxy BoringVault receipt token with owner() = 0x0; the reviewed mintAuthority identifies the sole external mint authority as the authorized LayerZeroTeller 0x358CFACf00d0b4634849821Bb3D1965b472c776a via RolesAuthority capability reads. Shares are minted natively through this chain's collateral-gated deposit/enter path. The same teller is canonical-side LayerZero burn/mint machinery, separately authored in bridgeRouteRisk.controls; this deployment is not a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770755,
         "sources": [
           {
             "label": "scUSD token on Etherscan",
@@ -93,16 +110,17 @@
         "id": "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
         "destinationChain": "sonic",
         "contractAddress": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
-        "protocol": "Veda BoringVault native share mint (LayerZeroTeller)",
+        "protocol": "Veda BoringVault native share mint with dual-use LayerZeroTeller",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: non-proxy BoringVault receipt token with owner() = 0x0; the reviewed mintAuthority identifies the sole external mint authority as the authorized LayerZeroTeller 0x358CFACf00d0b4634849821Bb3D1965b472c776a via RolesAuthority capability reads. Shares are minted natively by the vault system on this chain; no separate bridge representation contract carries the claim.",
+        "reviewNote": "On-chain 2026-08-16 at Sonic block 77633175: non-proxy BoringVault receipt token with owner() = 0x0; the reviewed mintAuthority identifies the sole external mint authority as the authorized LayerZeroTeller 0x358CFACf00d0b4634849821Bb3D1965b472c776a via RolesAuthority capability reads. Shares are minted natively through this chain's collateral-gated deposit/enter path. The same teller is canonical-side LayerZero burn/mint machinery, separately authored in bridgeRouteRisk.controls; this deployment is not a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 77633175,
         "sources": [
           {
             "label": "scUSD token on Sonicscan",
@@ -113,6 +131,424 @@
             "url": "https://docs.rings.money/"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "scusd-ethereum-layerzero-teller-bridge",
+        "label": "Ethereum scUSD LayerZeroTeller dual-use bridge",
+        "routeRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x358cfacf00d0b4634849821bb3d1965b472c776a",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x358cfacf00d0b4634849821bb3d1965b472c776a",
+          "contract:ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "contract:sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "endpoint:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "endpoint:sonic:0x6f475642a6e85809b1c36fa62763669b1b48dd5b"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), bridge()/_bridge() calls vault.exit(..., msg.sender, shareAmount), burning or escrowing source shares before the LayerZero message; the destination _completeMessageReceive() calls vault.enter(..., m.to, m.shareAmount) with zero asset amount. The route is supply-conserving only if source burn, peer, endpoint, validation, and destination execution all hold.",
+          "trustedPeerOrRemote": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), remote LayerZero EID 30332 (Sonic) was configured with peers(30332) equal to the bytes32-encoded Sonic teller address; idToChains(30332) allowed messages in and out with a 100,000 gas limit. endpoint() was LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c and the teller endpoint delegate read was zero.",
+          "attestorQuorum": "At the same fixed Ethereum observation, the send library was 0xbb2ea70c9e858123480642cf96acbcce1372dce1, the receive library was 0xc02ab410f0734efa3f14628780e6e695156024c2, the route required 32 confirmations, and required DVNs were 0x589dedbd617e0cbcb916a9223f4d1300c294236b and 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5.",
+          "rateLimits": "The encoded share amount is uint96 and no separate route-level economic cap was found. This bridge accounting is distinct from the native Accountant exchange-rate bounds in Mint Authority.",
+          "pausersAdminsUpgraders": "At the fixed Ethereum observation, isPaused() was false, but inbound receive does not use the teller's ordinary isPaused() check, so outbound pause is not evidence that inbound bridge minting is disabled. The teller is authorized through the shared RolesAuthority; route administration and its Safe/Timelock path are separate Bridge Risk controls."
+        },
+        "capDescription": "The Ethereum teller burns or escrows source scUSD shares and can complete a validated cross-chain return by entering zero-asset shares on Sonic. It has no separately identified route-level economic cap; conservation depends on the source exit, configured peer, LayerZero endpoint validation, and destination execution.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770755,
+        "sources": [
+          {
+            "label": "Ethereum LayerZeroTeller verified source",
+            "url": "https://etherscan.io/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+          },
+          {
+            "label": "Ethereum scUSD BoringVault verified source",
+            "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+          },
+          {
+            "label": "LayerZero OApp technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oapp-reference"
+          },
+          {
+            "label": "Ethereum fixed-block RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com/"
+          }
+        ],
+        "evidence": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), the verified LayerZeroTeller source and live configuration showed source share exit through vault.exit(), remote EID 30332, the configured bytes32 Sonic teller peer, bidirectional idToChains permission, 100,000 gas, Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, the recorded send/receive libraries, 32 confirmations, and two required DVNs. The teller's destination receive path enters shares with zero asset amount. This is issuer-operated bridge burn/mint machinery, not an independent native mint route or external lock/mint representation."
+      },
+      {
+        "id": "scusd-sonic-layerzero-teller-bridge",
+        "label": "Sonic scUSD LayerZeroTeller dual-use bridge",
+        "routeRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x358cfacf00d0b4634849821bb3d1965b472c776a",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sonic:0x358cfacf00d0b4634849821bb3d1965b472c776a",
+          "contract:ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "contract:sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "endpoint:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "endpoint:sonic:0x6f475642a6e85809b1c36fa62763669b1b48dd5b"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), bridge()/_bridge() calls vault.exit(..., msg.sender, shareAmount), burning or escrowing source shares before the LayerZero message; the destination _completeMessageReceive() calls vault.enter(..., m.to, m.shareAmount) with zero asset amount. The route is supply-conserving only if source burn, peer, endpoint, validation, and destination execution all hold.",
+          "trustedPeerOrRemote": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), remote LayerZero EID 30101 (Ethereum) was configured with peers(30101) equal to the bytes32-encoded Ethereum teller address; idToChains(30101) allowed messages in and out with a 100,000 gas limit. endpoint() was LayerZero Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and the teller endpoint delegate read was zero.",
+          "attestorQuorum": "At the same fixed Sonic observation, the send library was 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7, the receive library was 0xe1844c5d63a9543023008d332bd3d2e6f1fe1043, the route required 64 send confirmations and 32 receive confirmations, and required DVNs were 0x5aaefdf9db6e0f7d27fa3b6ee099edb33da029e and 0x282b3386571f7f794450d5789911a9804fa346b4.",
+          "rateLimits": "The encoded share amount is uint96 and no separate route-level economic cap was found. This bridge accounting is distinct from the native Accountant exchange-rate bounds in Mint Authority.",
+          "pausersAdminsUpgraders": "At the fixed Sonic observation, isPaused() was false, but inbound receive does not use the teller's ordinary isPaused() check, so outbound pause is not evidence that inbound bridge minting is disabled. The teller is authorized through the shared RolesAuthority; route administration and its Safe/Timelock path are separate Bridge Risk controls."
+        },
+        "capDescription": "The Sonic teller burns or escrows source scUSD shares and can complete a validated cross-chain return by entering zero-asset shares on Ethereum. It has no separately identified route-level economic cap; conservation depends on the source exit, configured peer, LayerZero endpoint validation, and destination execution.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 77633175,
+        "sources": [
+          {
+            "label": "Sonic LayerZeroTeller verified source",
+            "url": "https://sonicscan.org/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+          },
+          {
+            "label": "Sonic scUSD BoringVault verified source",
+            "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+          },
+          {
+            "label": "LayerZero OApp technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oapp-reference"
+          },
+          {
+            "label": "Sonic fixed-block RPC reads",
+            "url": "https://rpc.soniclabs.com/"
+          }
+        ],
+        "evidence": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), the verified LayerZeroTeller source and live configuration showed source share exit through vault.exit(), remote EID 30101, the configured bytes32 Ethereum teller peer, bidirectional idToChains permission, 100,000 gas, Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, the recorded send/receive libraries, 64/32 confirmations, and two required DVNs. The Sonic endpoint application executor was 0x4208d6e27538189bb48e603d6123a94b8abe0a0b with a 10,000-byte maximum message size. The teller's destination receive path enters shares with zero asset amount. This is issuer-operated bridge burn/mint machinery, not an independent native mint route or external lock/mint representation."
+      },
+      {
+        "id": "scusd-ethereum-rolesauthority-bridge-admin",
+        "label": "Ethereum scUSD RolesAuthority bridge administration",
+        "routeRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "roles-authority:ethereum:0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348",
+          "timelock:ethereum:0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc",
+          "contract:ethereum:0x358cfacf00d0b4634849821bb3d1965b472c776a"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), the Ethereum LayerZeroTeller was authorized through RolesAuthority for the cross-chain application. Its remote EID 30332 peer was the bytes32-encoded Sonic teller address, and idToChains(30332) allowed messages in and out with a 100,000 gas limit.",
+          "pausersAdminsUpgraders": "The Ethereum RolesAuthority is owned by the one-day TimelockController at 0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc. The Safe proposer, timelock, and RolesAuthority path administers the teller's bridge-related permissions; the teller endpoint delegate was zero, leaving exact Endpoint ULN/DVN administration unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770755,
+        "sources": [
+          {
+            "label": "Ethereum scUSD RolesAuthority",
+            "url": "https://etherscan.io/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+          },
+          {
+            "label": "Ethereum scUSD TimelockController",
+            "url": "https://etherscan.io/address/0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc"
+          },
+          {
+            "label": "Ethereum LayerZeroTeller verified source",
+            "url": "https://etherscan.io/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), the Ethereum teller's authority() returned RolesAuthority 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348, and the reviewed governance path records the one-day TimelockController as its owner. This control is the route-scoped bridge administration surface; the teller's collateral-gated native deposit capability remains in Mint Authority."
+      },
+      {
+        "id": "scusd-sonic-rolesauthority-bridge-admin",
+        "label": "Sonic scUSD RolesAuthority bridge administration",
+        "routeRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "roles-authority:sonic:0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348",
+          "timelock:sonic:0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc",
+          "contract:sonic:0x358cfacf00d0b4634849821bb3d1965b472c776a"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), the Sonic LayerZeroTeller was authorized through RolesAuthority for the cross-chain application. Its remote EID 30101 peer was the bytes32-encoded Ethereum teller address, and idToChains(30101) allowed messages in and out with a 100,000 gas limit.",
+          "pausersAdminsUpgraders": "The Sonic RolesAuthority is owned by the one-day TimelockController at 0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc. The Safe proposer, timelock, and RolesAuthority path administers the teller's bridge-related permissions; the teller endpoint delegate was zero, leaving exact Endpoint ULN/DVN administration unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 77633175,
+        "sources": [
+          {
+            "label": "Sonic scUSD RolesAuthority",
+            "url": "https://sonicscan.org/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+          },
+          {
+            "label": "Sonic scUSD TimelockController",
+            "url": "https://sonicscan.org/address/0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc"
+          },
+          {
+            "label": "Sonic LayerZeroTeller verified source",
+            "url": "https://sonicscan.org/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+          }
+        ],
+        "evidence": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), the Sonic teller's authority() returned RolesAuthority 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348, and the reviewed governance path records the one-day TimelockController as its owner. This control is the route-scoped bridge administration surface; the teller's collateral-gated native deposit capability remains in Mint Authority."
+      },
+      {
+        "id": "scusd-ethereum-governance-bridge-admin",
+        "label": "Ethereum scUSD governance Safe and Timelock bridge administration",
+        "routeRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb77d74f032cfe55190325474e061052685ceccc0",
+        "failureDomainKeys": [
+          "safe:ethereum:0xb77d74f032cfe55190325474e061052685ceccc0",
+          "timelock:ethereum:0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc",
+          "roles-authority:ethereum:0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348",
+          "protocol:layerzero-v2"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 86400,
+        "safe": {
+          "owners": [
+            "0x3AE790AF0C4d5A248B3509cD4a1dC052E89d2e66",
+            "0x8fb0b2cF20B7178C11F01592936dd063Fe244C9a",
+            "0xa0c28511CaA67eC91a9B76287e2Db47939A66d36",
+            "0x4d5eb3827bde5183a627eB996AF75Ef56Bb9ab9a",
+            "0xf35dEE924F483Bc234F09cbfbc8B4488fD06be20",
+            "0x3dF8cc3923b55a92d992d9A3F119d3923f960986"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedAt": "2026-07-13",
+          "observedBlock": 25526164,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Ethereum 4/6 Safe is the proposer for the one-day TimelockController that owns RolesAuthority, which administers the Ethereum teller's bridge-related permissions, including the peer-configured Ethereum-to-Sonic route.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), the route remained governed through the Safe proposer -> one-day TimelockController -> RolesAuthority path. The Safe observation records six owners, no enabled modules, and zero guard/module guard; the current endpoint delegate(teller) read was zero, so exact Endpoint ULN/DVN administration remains unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770755,
+        "sources": [
+          {
+            "label": "Ethereum governance Safe",
+            "url": "https://etherscan.io/address/0xb77d74f032cfe55190325474e061052685ceccc0"
+          },
+          {
+            "label": "Ethereum scUSD TimelockController",
+            "url": "https://etherscan.io/address/0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc"
+          },
+          {
+            "label": "Ethereum scUSD RolesAuthority",
+            "url": "https://etherscan.io/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+          }
+        ],
+        "evidence": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), the Ethereum 4-of-6 Veda/Paladin Safe 0xB77d74f032CfE55190325474E061052685CEccc0 remained the TimelockController proposer; the one-day Timelock owned RolesAuthority 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348, which authorizes the LayerZeroTeller. The Safe's 2026-07-13 fixed observation records the six owners, no modules, and zero guard/module guard. This is bridge-route administration and does not replace the native collateral-gated mint control."
+      },
+      {
+        "id": "scusd-sonic-governance-bridge-admin",
+        "label": "Sonic scUSD governance Safe and Timelock bridge administration",
+        "routeRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x948dd9351d3721489fe7a4530c55849cf0b4735d",
+        "failureDomainKeys": [
+          "safe:sonic:0x948dd9351d3721489fe7a4530c55849cf0b4735d",
+          "timelock:sonic:0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc",
+          "roles-authority:sonic:0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348",
+          "protocol:layerzero-v2"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 86400,
+        "safe": {
+          "owners": [
+            "0x3AE790AF0C4d5A248B3509cD4a1dC052E89d2e66",
+            "0x8fb0b2cF20B7178C11F01592936dd063Fe244C9a",
+            "0xa0c28511CaA67eC91a9B76287e2Db47939A66d36",
+            "0x4d5eb3827bde5183a627eB996AF75Ef56Bb9ab9a",
+            "0xf35dEE924F483Bc234F09cbfbc8B4488fD06be20",
+            "0x3dF8cc3923b55a92d992d9A3F119d3923f960986"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedAt": "2026-07-13",
+          "observedBlock": 75897805,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Sonic 4/6 Safe is the proposer for the one-day TimelockController that owns RolesAuthority, which administers the Sonic teller's bridge-related permissions, including the peer-configured Sonic-to-Ethereum route.",
+          "pausersAdminsUpgraders": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), the route remained governed through the Safe proposer -> one-day TimelockController -> RolesAuthority path. The Safe observation records six owners, no enabled modules, and zero guard/module guard; the current endpoint delegate(teller) read was zero, so exact Endpoint ULN/DVN administration remains unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 77633175,
+        "sources": [
+          {
+            "label": "Sonic governance Safe",
+            "url": "https://sonicscan.org/address/0x948dd9351d3721489fe7a4530c55849cf0b4735d"
+          },
+          {
+            "label": "Sonic scUSD TimelockController",
+            "url": "https://sonicscan.org/address/0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc"
+          },
+          {
+            "label": "Sonic scUSD RolesAuthority",
+            "url": "https://sonicscan.org/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+          }
+        ],
+        "evidence": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), the Sonic 4-of-6 Veda/Paladin Safe 0x948dd9351D3721489Fe7A4530C55849cF0b4735D remained the TimelockController proposer; the one-day Timelock owned RolesAuthority 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348, which authorizes the LayerZeroTeller. The Safe's 2026-07-13 fixed observation records the six owners, no modules, and zero guard/module guard. This is bridge-route administration and does not replace the native collateral-gated mint control."
+      },
+      {
+        "id": "scusd-ethereum-layerzero-validation",
+        "label": "Ethereum LayerZero Endpoint validation for scUSD movement",
+        "routeRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "protocol:layerzero-dvns",
+          "protocol:layerzero-executor"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), the endpoint was 0x1a44076050125825900e736c501f859c50fe728c, the teller delegate read was zero, and the application peer for remote EID 30332 was the bytes32-encoded Sonic teller address. Endpoint ULN/DVN administration is an unresolved external failure domain beyond the issuer Safe path.",
+          "attestorQuorum": "The Ethereum application route used send library 0xbb2ea70c9e858123480642cf96acbcce1372dce1, receive library 0xc02ab410f0734efa3f14628780e6e695156024c2, 32 confirmations, and required DVNs 0x589dedbd617e0cbcb916a9223f4d1300c294236b and 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5.",
+          "pausersAdminsUpgraders": "The endpoint delegate for the teller was zero at the fixed observation. The exact administrative authority for Endpoint ULN/DVN configuration was not resolved, and no provider names are assigned to the DVN addresses."
+        },
+        "bypassSurfaces": [
+          "Endpoint ULN/DVN administration and LayerZero protocol governance are external to the Rings Safe/Timelock path; the fixed teller delegate read was zero."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770755,
+        "sources": [
+          {
+            "label": "LayerZero deployed contracts",
+            "url": "https://docs.layerzero.network/v2/deployments/deployed-contracts"
+          },
+          {
+            "label": "LayerZero OApp technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oapp-reference"
+          },
+          {
+            "label": "Ethereum fixed-block RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com/"
+          }
+        ],
+        "evidence": "At Ethereum block 25770755 (2026-08-16 22:55:47 UTC), the application endpoint was LayerZero V2 0x1a44076050125825900e736c501f859c50fe728c, the teller delegate read was zero, and the configured Ethereum-to-Sonic path required two DVNs with 32 confirmations. The exact endpoint ULN/DVN administrator remains unresolved; this external validation dependency is retained as Bridge Risk rather than treated as native mint authority."
+      },
+      {
+        "id": "scusd-sonic-layerzero-validation",
+        "label": "Sonic LayerZero Endpoint validation for scUSD movement",
+        "routeRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:sonic:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "protocol:layerzero-dvns",
+          "protocol:layerzero-executor"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), the endpoint was 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, the teller delegate read was zero, and the application peer for remote EID 30101 was the bytes32-encoded Ethereum teller address. Endpoint ULN/DVN administration is an unresolved external failure domain beyond the issuer Safe path.",
+          "attestorQuorum": "The Sonic application route used send library 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7, receive library 0xe1844c5d63a9543023008d332bd3d2e6f1fe1043, 64 send confirmations, 32 receive confirmations, and required DVNs 0x5aaefdf9db6e0f7d27fa3b6ee099edb33da029e and 0x282b3386571f7f794450d5789911a9804fa346b4. The application executor was 0x4208d6e27538189bb48e603d6123a94b8abe0a0b with a 10,000-byte maximum message size.",
+          "pausersAdminsUpgraders": "The endpoint delegate for the teller was zero at the fixed observation. The exact administrative authority for Endpoint ULN/DVN configuration was not resolved, and no provider names are assigned to the DVN addresses."
+        },
+        "bypassSurfaces": [
+          "Endpoint ULN/DVN administration and LayerZero protocol governance are external to the Rings Safe/Timelock path; the fixed teller delegate read was zero."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 77633175,
+        "sources": [
+          {
+            "label": "LayerZero deployed contracts",
+            "url": "https://docs.layerzero.network/v2/deployments/deployed-contracts"
+          },
+          {
+            "label": "LayerZero OApp technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oapp-reference"
+          },
+          {
+            "label": "Sonic fixed-block RPC reads",
+            "url": "https://rpc.soniclabs.com/"
+          }
+        ],
+        "evidence": "At Sonic block 77633175 (2026-08-16 22:55:55 UTC), the application endpoint was LayerZero V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, the teller delegate read was zero, and the configured Sonic-to-Ethereum path required two DVNs with 64/32 send/receive confirmations. The endpoint application executor was 0x4208d6e27538189bb48e603d6123a94b8abe0a0b with a 10,000-byte maximum message size. The exact endpoint ULN/DVN administrator remains unresolved; this external validation dependency is retained as Bridge Risk rather than treated as native mint authority."
       }
     ]
   }

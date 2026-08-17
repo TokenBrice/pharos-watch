@@ -4,21 +4,32 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDon (ETH) is an ERC1967 proxy (impl=USDon contract with AccessControlEnumerable); ProxyAdmin (0x5244…) is owned by a TimelockController (2h delay, 0x3715…); MINTER_ROLE held by GMTokenManager (0x2c15…) and a 3-of-6 Safe (0x7607…); DEFAULT_ADMIN = Timelock. BSC is structurally equivalent.",
+    "summary": "USDon has three issuer-native issuance surfaces. Ethereum and BNB Chain use separate upgradeable AccessControlEnumerable proxies with chain-local GMTokenManager and Safe MINTER_ROLE holders plus 2-hour Timelock-controlled admin/upgrade paths; Solana uses an Ondo Global Markets program with a Token-2022 mint-authority PDA, role-gated mint_usdon, pause/config authorities, and a separately governed BPF upgrade authority. These native controls are reviewed per deployment and are not bridge controls.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xace8e719899f6e91831b18ae746c9a965c2119f1",
+        "bsc:0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6"
+      ],
       "proxyAddresses": [
-        "0xace8e719899f6e91831b18ae746c9a965c2119f1"
+        "0xace8e719899f6e91831b18ae746c9a965c2119f1",
+        "0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6"
       ],
       "adminAddresses": [
         "0x5244a3d8e6534d253c11b9459a4c4c6d3b2361dd",
-        "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+        "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1",
+        "0x005793c2c4c966a0d261d60ffcba4269fa72bdc2",
+        "0x8860bbfc7a83e4788a981f4e9f30878331413b26"
+      ],
+      "implementationAddresses": [
+        "0x267e11bb559f5d392e498cdd0e2342057031a2cf",
+        "0x7655539c985743c3d29aff4c8ae2730f9360f7a6"
       ],
       "canChangeMintLogic": true,
       "delaySec": 7200,
       "controlRef": "TimelockController ProxyAdmin owner (Ethereum)",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25295047,
+      "observedAt": "2026-08-16",
+      "observedBlock": 116343980,
       "sources": [
         {
           "label": "USDon ProxyAdmin on Etherscan",
@@ -27,6 +38,26 @@
         {
           "label": "USDon TimelockController on Etherscan",
           "url": "https://etherscan.io/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+        },
+        {
+          "label": "USDon BNB proxy on BscScan",
+          "url": "https://bscscan.com/address/0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6#code"
+        },
+        {
+          "label": "USDon BNB implementation on BscScan",
+          "url": "https://bscscan.com/address/0x7655539c985743c3d29aff4c8ae2730f9360f7a6#code"
+        },
+        {
+          "label": "USDon BNB ProxyAdmin on BscScan",
+          "url": "https://bscscan.com/address/0x005793c2c4c966a0d261d60ffcba4269fa72bdc2#code"
+        },
+        {
+          "label": "USDon BNB TimelockController on BscScan",
+          "url": "https://bscscan.com/address/0x8860bbfc7a83e4788a981f4e9f30878331413b26#code"
+        },
+        {
+          "label": "BNB Chain RPC",
+          "url": "https://bsc-dataseed.binance.org"
         }
       ]
     },
@@ -36,6 +67,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0xace8e719899f6e91831b18ae746c9a965c2119f1"
+        ],
         "chain": "ethereum",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
@@ -53,6 +87,9 @@
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0xace8e719899f6e91831b18ae746c9a965c2119f1"
+        ],
         "chain": "ethereum",
         "canRaiseCap": true,
         "threshold": 3,
@@ -89,6 +126,9 @@
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0xace8e719899f6e91831b18ae746c9a965c2119f1"
+        ],
         "chain": "ethereum",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
@@ -104,15 +144,195 @@
           }
         ],
         "address": "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+      },
+      {
+        "label": "GMTokenManager (BNB MINTER_ROLE[0])",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "bsc:0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6"
+        ],
+        "chain": "bsc",
+        "address": "0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BNB USDon MINTER_ROLE is held by GMTokenManager and a separate Safe; no fixed whole-supply cap is exposed by the reviewed role-gated mint path.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116343980,
+        "sources": [
+          {
+            "label": "Ondo BNB GMTokenManager",
+            "url": "https://bscscan.com/address/0x91f8Aff3738825e8eB16FC6f6b1A7A4647bDB299#code"
+          },
+          {
+            "label": "USDon BNB token",
+            "url": "https://bscscan.com/address/0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6#code"
+          },
+          {
+            "label": "Ondo contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          }
+        ],
+        "evidence": "At BNB block 116343980, MINTER_ROLE() on USDon returned 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6 and getRoleMember(MINTER_ROLE, 0) returned GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299. The role count was 2 and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE (bytes32 zero)."
+      },
+      {
+        "label": "Ondo Safe 3-of-6 (BNB MINTER_ROLE[1])",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "bsc:0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6"
+        ],
+        "chain": "bsc",
+        "address": "0x4d25d4790b4ec8b40605da55509479047a3d4728",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xe2cbb2fd440133946cd5171f675e1075570c5cae",
+            "0x5cd1e413ec933114c52f00545261ce00fd1b037c",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15",
+            "0xdb8441d6adb9f69af1c339a685e1e26c3c3816d",
+            "0xd16e51667cd56b5d03b2acdd8567088fc5cdd579",
+            "0x61eac1f1c50c501af35a48d6ab7c42c24b399536"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 116343980,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116343980,
+        "sources": [
+          {
+            "label": "BNB USDon MINTER_ROLE Safe",
+            "url": "https://bscscan.com/address/0x4d25d4790b4ec8b40605da55509479047a3d4728#code"
+          },
+          {
+            "label": "BNB RPC",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "At BNB block 116343980, getRoleMember(MINTER_ROLE, 1) returned Safe 0x4d25d4790b4ec8b40605da55509479047a3d4728. The Safe returned threshold 3, six owners, an empty getModulesPaginated() result, and zero GuardManager storage; its SafeL2 singleton was 0x29fcb43b46531bca003ddc8fcb67ffe91900c762."
+      },
+      {
+        "label": "BNB USDon TimelockController DEFAULT_ADMIN",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "bsc:0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6"
+        ],
+        "chain": "bsc",
+        "address": "0x8860bbfc7a83e4788a981f4e9f30878331413b26",
+        "canRaiseCap": true,
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116343980,
+        "sources": [
+          {
+            "label": "BNB USDon TimelockController",
+            "url": "https://bscscan.com/address/0x8860bbfc7a83e4788a981f4e9f30878331413b26#code"
+          },
+          {
+            "label": "BNB USDon ProxyAdmin",
+            "url": "https://bscscan.com/address/0x005793c2c4c966a0d261d60ffcba4269fa72bdc2#code"
+          },
+          {
+            "label": "BNB RPC",
+            "url": "https://bsc-dataseed.binance.org"
+          }
+        ],
+        "evidence": "At BNB block 116343980, the USDon proxy's EIP-1967 implementation was 0x7655539c985743c3d29aff4c8ae2730f9360f7a6 and admin was ProxyAdmin 0x005793c2c4c966a0d261d60ffcba4269fa72bdc2. ProxyAdmin.owner() returned TimelockController 0x8860bbfc7a83e4788a981f4e9f30878331413b26, which was the sole DEFAULT_ADMIN_ROLE member on USDon and reported getMinDelay() = 7200 seconds. Its PROPOSER_ROLE member was 0xa307e57ca7f9712af3557af8c5624bef214aa913; EXECUTOR_ROLE members were 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 and 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b."
+      },
+      {
+        "label": "Ondo Global Markets Solana USDon mint authority PDA",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo"
+        ],
+        "chain": "solana",
+        "address": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Solana mint_usdon instruction enforces a fixed 10,000,000-token-per-call maximum, but repeated role-authorized calls have no whole-supply cap in the reviewed program source.",
+        "bypassSurfaces": [
+          "Token-2022 freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK",
+          "Token-2022 pausable/config, metadata, scaled-UI, confidential-transfer, and transfer-hook authorities all point to the mint authority PDA",
+          "MinterRoleUSDon/AdminRoleUSDon role accounts and GuardianUSDon governance"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439720646,
+        "sources": [
+          {
+            "label": "Ondo contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Ondo Solana USDon mint instruction source",
+            "url": "https://github.com/ondoprotocol/global-markets-solana/blob/main/programs/ondo-gm/src/instructions/usdon_admin_operations.rs"
+          },
+          {
+            "label": "Ondo Solana role definitions",
+            "url": "https://github.com/ondoprotocol/global-markets-solana/blob/main/programs/ondo-gm/src/state/roles.rs"
+          },
+          {
+            "label": "Solana RPC",
+            "url": "https://solana.publicnode.com"
+          }
+        ],
+        "evidence": "At Solana context slot 439720646, the Token-2022 USDon mint had supply 14081454964506309, mint authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, and freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK. The scaledUiAmountConfig, metadataPointer, pausableConfig (paused=false), confidentialTransferMint, transferHook, and tokenMetadata authorities all returned the mint authority PDA. Ondo's verified program source requires MinterRoleUSDon or AdminRoleUSDon for mint_usdon, caps each call at MAX_MINT_AMOUNT = 10,000,000 tokens, and makes USDon role grant/revoke GuardianUSDon-gated; the generic grant_role path is upgrade-authority-gated."
+      },
+      {
+        "label": "Ondo Global Markets Solana BPF upgrade authority",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "solana:ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo"
+        ],
+        "chain": "solana",
+        "address": "9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "bypassSurfaces": [
+          "Can replace Ondo Global Markets program logic and alter role, mint, pause, or configuration checks"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439720621,
+        "sources": [
+          {
+            "label": "Ondo Solana role-operation source",
+            "url": "https://github.com/ondoprotocol/global-markets-solana/blob/main/programs/ondo-gm/src/instructions/role_operations.rs"
+          },
+          {
+            "label": "Ondo Global Markets Solana program",
+            "url": "https://github.com/ondoprotocol/global-markets-solana/blob/main/programs/ondo-gm/src/lib.rs"
+          },
+          {
+            "label": "Solana RPC",
+            "url": "https://solana.publicnode.com"
+          }
+        ],
+        "evidence": "At Solana context slot 439720621, the Ondo Global Markets program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm resolved to ProgramData F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU, whose upgrade_authority_address was 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. The authority account was a non-executable System-owned account. Verified source constrains generic grant_role and revoke_role to the current BPF upgrade authority, so this authority can replace program logic and establish or revoke role accounts."
       }
     ],
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "economicCapSemantics": "unbounded",
     "review": {
-      "evidence": "At Ethereum block 25295047 and BSC block 103630432 (2026-06-11): USDon ETH proxy (0xace8…) has EIP-1967 ProxyAdmin=0x5244… owned by TimelockController 0x3715… (2h delay). Token MINTER_ROLE has 2 holders: GMTokenManager (0x2c15…) and 3-of-6 Ondo Safe (0x7607…, no modules). DEFAULT_ADMIN = Timelock; Timelock PROPOSER = 4-of-7 Safe, EXECUTOR = 1-of-8 Safe + EOA. BSC structurally equivalent: MINTER_ROLE[0]=GMTokenManager(0x91f8…), MINTER_ROLE[1]=contract, DEFAULT_ADMIN=0x8860… (contract). Impl (USDon) confirmed on Blockscout. Regulation S restricts U.S.-person minting; no permissionless mint path. USDon is issued by Ondo Global Markets (BVI) Limited; Ondo's Trust & Transparency page scopes its only third-party feed (Ankura Trust) to tokenized-stock holdings, not USDon's brokerage cash, and no dated independent report of USDon's specific cash reserve was found, so reconciliation is unknown. Ondo's own disclaimer states the issuer and tokens are not registered or licensed by the BVI FSC, SEC, CFTC or any financial regulator, so supervision is none.. Economic-posture fields reviewed 2026-08-15: direct minters have no firm economic cap, and no USDon-specific recurring reserve reconciliation, prudential supervisor, or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: Ondo documents daily collateral reports reviewed by Ankura, monthly reconciliation, and annual audits; recurring dated Ankura reports enumerate USDon outstanding across Ethereum, BNB Chain, and Solana within total platform liabilities and reconcile those liabilities to reviewed brokerage assets.",
+      "evidence": "USDon has three independently reviewed native issuance surfaces, not one global mint control and not a bridge-only mint path. Ethereum block 25295047 recorded GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c, a 3-of-6 Safe 0x7607c08928bdbab77f88872b49667dcb877524db, and TimelockController 0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 controlling MINTER_ROLE, DEFAULT_ADMIN, and the ProxyAdmin upgrade path with a 7200-second delay. At BNB block 116343980, the separate USDon proxy implementation was 0x7655539c985743c3d29aff4c8ae2730f9360f7a6, ProxyAdmin 0x005793c2c4c966a0d261d60ffcba4269fa72bdc2 was owned by TimelockController 0x8860bbfc7a83e4788a981f4e9f30878331413b26, MINTER_ROLE holders were GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 and Safe 0x4d25d4790b4ec8b40605da55509479047a3d4728, and the BNB Safe was 3-of-6 with no modules or guard. At Solana slots 439720646/439720621, Token-2022 USDon supply was nonzero with mint authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK, paused=false, and the Ondo program upgrade authority was 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. Ondo's source requires USDon mint roles and caps each admin mint call at 10,000,000 tokens, while role grants are GuardianUSDon- or upgrade-authority-governed. Regulation S restricts U.S.-person minting; no permissionless mint path is evidenced. USDon is issued by Ondo Global Markets (BVI) Limited. Economic-posture fields reviewed 2026-08-16: direct minters have no firm whole-supply economic cap, and the owner/admin escape paths remain outside any user collateral gate. Wave 2 external research reviewed 2026-08-15: Ondo documents daily collateral reports reviewed by Ankura, monthly reconciliation, and annual audits; recurring dated Ankura reports enumerate USDon outstanding across Ethereum, BNB Chain, and Solana within total platform liabilities and reconcile those liabilities to reviewed brokerage assets.",
       "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Ondo GM trust and transparency",
@@ -137,6 +357,18 @@
         {
           "label": "Ankura daily collateral report, 2026-06-30",
           "url": "https://bin.bnbstatic.com/images/web3-data/public/token/ondo/pdf/daily-2026-06-30.pdf"
+        },
+        {
+          "label": "USDon BNB token and implementation",
+          "url": "https://bscscan.com/address/0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6#code"
+        },
+        {
+          "label": "Ondo Global Markets Solana source",
+          "url": "https://github.com/ondoprotocol/global-markets-solana"
+        },
+        {
+          "label": "USDon Solana Token-2022 mint",
+          "url": "https://solscan.io/token/ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo"
         }
       ]
     }

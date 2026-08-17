@@ -50,9 +50,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "VNDC is issued natively and independently on each chain by Jade Labs via owner/whitelist-controlled mint and redeem - the Ethereum contract (VNDCToken, Solidity 0.4.11) uses owner issue()/burn(), and the BSC and Polygon contracts (both TokenVNDC, Solidity 0.8.18, byte-identical source) use mintWhitelist()/withdrawWhitelist(). None of the three deployments contain any OFT, LayerZero/CCIP/Wormhole/Axelar/Hyperlane messaging, lockbox, or bridge interface, and the addresses differ per chain (ruling out a deterministic-CREATE2 omnichain standard). The Polygon deployment is independent issuer mint, not a Polygon PoS bridge-minted token (no deposit/childChainManager/DEPOSITOR_ROLE). Cross-network movement is handled off-chain through the ONUS/VNDC Hub app (redeem on source, reissue on destination), with no autonomous on-chain bridge carrying the durable supply, so this is native multichain issuance rather than an opaque bridge route.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "summary": "VNDC is reviewed as three independent native issuance routes by Jade Labs: Ethereum's legacy VNDCToken uses owner-only issue()/burn(), while the BSC and Polygon TokenVNDC deployments use local whitelist-and-collateral mintWhitelist()/withdrawWhitelist() paths. Each authored route is canonical to its own chain and no route is a bridge representation. None of the three verified deployments contains OFT, LayerZero/CCIP/Wormhole/Axelar/Hyperlane messaging, lockbox, escrow, bridge peer, validator/DVN, or rate-limit machinery; cross-network movement is handled off-chain through the ONUS/VNDC Hub app. No bridge controller or bridgeRouteRisk control is therefore authored. The current-product link between the legacy Ethereum deployment and VNDC 2.0 remains an evidence gap in Mint Authority, not bridge risk.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration",
     "confidence": "verified",
     "sources": [
       {
@@ -80,47 +80,80 @@
       {
         "id": "ethereum:0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Jade Labs/VNDC issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770655,
+        "sources": [
+          {
+            "label": "Ethereum VNDCToken verified source",
+            "url": "https://etherscan.io/address/0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de#code"
+          },
+          {
+            "label": "Ethereum public JSON-RPC used for owner/code/paused reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
       },
       {
         "id": "polygon:0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa",
         "destinationChain": "polygon",
+        "canonicalChain": "polygon",
         "contractAddress": "0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Jade Labs/VNDC issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-08-16",
+        "observedBlock": 92143560,
+        "sources": [
+          {
+            "label": "Polygon TokenVNDC verified source",
+            "url": "https://polygonscan.com/address/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa#code"
+          },
+          {
+            "label": "Polygon Bor public JSON-RPC used for current-live reads",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ]
       },
       {
         "id": "bsc:0xa276dc434a366c62ef010585b3885d0c85154389",
         "destinationChain": "bsc",
+        "canonicalChain": "bsc",
         "contractAddress": "0xa276dc434a366c62ef010585b3885d0c85154389",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Jade Labs/VNDC issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-08-16",
+        "observedBlock": 116354795,
+        "sources": [
+          {
+            "label": "BSC TokenVNDC verified source",
+            "url": "https://bscscan.com/address/0xa276dc434a366c62ef010585b3885d0c85154389#code"
+          },
+          {
+            "label": "BSC public JSON-RPC used for current-live reads",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ]
       }
     ]
   }

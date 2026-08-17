@@ -174,9 +174,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "MUSD is canonically issued on Mezo (Liquity-style CDP minting through BorrowerOperations, token owner is the Mezo 5-of-9 Safe). Cross-chain MUSD runs on Wormhole NTT v1.1.0 with Mezo as the locking hub and Ethereum and Base as burning spokes: all three chains carry the same canonical MUSD token contract at 0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186, and spoke mint/burn authority sits with the Wormhole NTT managers attested by the guardian network, so the cross-chain route is an external validated network in burn-mint mode, not a wrapped representation.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "summary": "MUSD is natively issued only on Mezo through Liquity-style BTC-backed CDP and interest paths. Wormhole NTT v1.1.0 makes Mezo the locking hub and Ethereum and Base conserved burn-mint representations: their NTT managers can mint only from guardian-attested burns, while the shared 5-of-9 Safe administers token and manager roles, upgrades, pauses, peers, and route limits. The one-transceiver/threshold-1 Wormhole attestation path and all manager controls are assessed here as external-validated bridge risk, not native issuance.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route boundary correction 2026-08-16",
     "confidence": "verified",
     "protocols": [
       {
@@ -188,7 +188,7 @@
           "burnAndMint",
           "lockAndUnlock"
         ],
-        "note": "Mezo is the NTT locking hub (manager mode()=0, holds bridged-out MUSD); Ethereum and Base are burning spokes (manager mode()=1). Deployment topology from the issuer's ntt-bridge-musd-mainnet deployment.json, each leg re-verified on-chain 2026-07-20."
+        "note": "Mezo is the NTT locking hub (manager mode()=0, holds bridged-out MUSD); Ethereum and Base are burning spokes (manager mode()=1). Deployment topology from the issuer's ntt-bridge-musd-mainnet deployment.json, with each manager, peer, transceiver, rate-limit, and owner path re-verified on-chain 2026-08-16."
       }
     ],
     "sources": [
@@ -222,9 +222,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical home chain. On-chain reads via Mezo RPC (2026-07-20): token owner() = 0x98D8899c3030741925BE630C710A98B57F397C7a, a 171-byte Safe proxy whose getThreshold()=5 and getOwners()=9 on Ethereum; mintList(BorrowerOperations 0x44b1bac67dDA612a41a58AAf779143B181dEe031)=true, the Liquity CDP mint route. The Wormhole NTT manager 0x7efb386675d75280D39Aae42964A6776DE0ee0bD reads token()=MUSD and mode()=0 (locking hub) and held 1,164,649.25 MUSD of locked bridged-out supply at query time.",
+        "reviewNote": "Canonical home chain. On-chain reads via Mezo RPC (2026-08-16, block 11179505): token owner() = 0x98D8899c3030741925BE630C710A98B57F397C7a, a 171-byte Safe proxy whose getThreshold()=5 and getOwners()=9 on Ethereum; mintList(BorrowerOperations 0x44b1bac67dDA612a41a58AAf779143B181dEe031)=true and mintList(InterestRateManager 0x4a453700d157717Fe02fB62E7700ED7845048285)=true, the native Liquity-style CDP and accrued-interest routes. The Wormhole NTT manager 0x7efb386675d75280D39Aae42964A6776DE0ee0bD reads token()=MUSD and mode()=0 (locking hub); its escrow, peers, transceiver, rate limits, and owner controls are assessed in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Mezo MUSD contracts",
@@ -246,15 +246,15 @@
         "canonicalChain": "mezo",
         "contractAddress": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
         "protocol": "Wormhole NTT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Same canonical MUSD token bytecode as Mezo (6436 bytes). An eth_getLogs scan for MintListAddressAdded from the token's deployment block 22467780 through 25571115 returned exactly one entry, at block 22973966, adding 0x5293158bf7a81ED05418DA497a80F7e6DBF4477E; mintList(that address)=true. That contract is the Wormhole NTT manager (209-byte proxy): token()=MUSD, mode()=1 (burning spoke), matching the issuer's ntt-bridge-musd-mainnet deployment.json. No LayerZero endpoint() surface. Mint/burn on Ethereum is gated by guardian-attested NTT messages; token owner is the same Mezo 5-of-9 Safe as on Mezo.",
+        "reviewNote": "Burning-spoke representation. At Ethereum block 25770834 (2026-08-16), mintList(0x5293158bf7a81ED05418DA497a80F7e6DBF4477E)=true on the MUSD deployment; the 209-byte Wormhole NTT manager reads token()=MUSD and mode()=1 (burning), matching the issuer's ntt-bridge-musd-mainnet deployment.json. It mints only from conserved guardian-attested NTT burn messages and is not an independent Ethereum-native MUSD liability system. The token owner is the same Mezo 5-of-9 Safe; manager upgrade, pause, peer, transceiver, and rate-limit controls are structured below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Mezo Wormhole announcement",
@@ -276,15 +276,15 @@
         "canonicalChain": "mezo",
         "contractAddress": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
         "protocol": "Wormhole NTT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Same canonical MUSD token bytecode as Mezo (6436 bytes). On-chain reads via Base RPC (2026-07-20): mintList(0x3EB418BdBE95b4b9cf465ecfBD8424685ACD1Bc1)=true; that contract is the Wormhole NTT manager (209-byte proxy) with token()=MUSD and mode()=1 (burning spoke), matching the issuer's ntt-bridge-musd-mainnet deployment.json. Token owner is the same Mezo 5-of-9 Safe as on Mezo and Ethereum.",
+        "reviewNote": "Burning-spoke representation. At Base block 50066278 (2026-08-16), mintList(0x3EB418BdBE95b4b9cf465ecfBD8424685ACD1Bc1)=true on the MUSD deployment; the 209-byte Wormhole NTT manager reads token()=MUSD and mode()=1 (burning), matching the issuer's ntt-bridge-musd-mainnet deployment.json. It mints only from conserved guardian-attested NTT burn messages and is not an independent Base-native MUSD liability system. The token owner is the same Mezo 5-of-9 Safe; manager upgrade, pause, peer, transceiver, and rate-limit controls are structured below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
@@ -295,6 +295,252 @@
             "url": "https://basescan.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "meusd-mezo-ntt-manager",
+        "label": "MUSD Mezo Wormhole NTT locking-hub manager",
+        "routeRefs": [
+          "mezo:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        ],
+        "capabilities": [
+          "escrow",
+          "rate-limit"
+        ],
+        "controllerChain": "mezo",
+        "controllerAddress": "0x7efb386675d75280D39Aae42964A6776DE0ee0bD",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:mezo:0x7efb386675d75280d39aae42964a6776de0ee0bd"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Mezo manager is the Wormhole NTT locking hub (mode/getMode=0) and holds MUSD locked when supply leaves Mezo; reverse transfers burn MUSD on Ethereum or Base and unlock the conserved amount on Mezo.",
+          "trustedPeerOrRemote": "At Mezo block 11179505, peers bind Wormhole chain 2 Ethereum to 0x5293158bf7a81ED05418DA497a80F7e6DBF4477E and chain 30 Base to 0x3EB418BdBE95b4b9cf465ecfBD8424685ACD1Bc1.",
+          "rateLimits": "The official manifest sets 10,000,000 MUSD inbound per peer and uint64.max-scaled outbound capacity (184467440737.09551615 MUSD); current Mezo capacities matched those configured values. These are route limits, not a global supply cap."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 11179505,
+        "sources": [
+          {
+            "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+            "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+          },
+          {
+            "label": "Mezo mainnet RPC",
+            "url": "https://jsonrpc-mezo.boar.network"
+          },
+          {
+            "label": "Wormhole NTT ManagerBase.sol",
+            "url": "https://github.com/wormhole-foundation/native-token-transfers/blob/main/evm/src/NttManager/ManagerBase.sol"
+          }
+        ],
+        "evidence": "At Mezo block 11179505 on 2026-08-16, manager 0x7efb386675d75280D39Aae42964A6776DE0ee0bD returned token()=MUSD and mode/getMode()=0 (locking), with one enabled transceiver 0x62DEeaFEe06c7442A21c93edeDc79A0cb5791C83, owner Safe 0x98D8899c3030741925BE630C710A98B57F397C7a, and manager pauser 0x40C7b9612B394212394EA860cACd0e176CA4Ae5B. The current implementation slot was 0xd0cbe9be1ab548eb93e5557649b236305874d4d0; EIP-1967 admin and beacon slots were zero. The manager is canonical-side bridge escrow and route-limit machinery, not an independent native minter."
+      },
+      {
+        "id": "meusd-ethereum-ntt-manager",
+        "label": "MUSD Ethereum Wormhole NTT burning-spoke manager",
+        "routeRefs": [
+          "ethereum:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x5293158bf7a81ED05418DA497a80F7e6DBF4477E",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:ethereum:0x5293158bf7a81ed05418da497a80f7e6dbf4477e"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "Ethereum is a Wormhole NTT burning spoke: outbound transfers burn MUSD and inbound transfers mint only against conserved guardian-attested NTT burn messages; no independent collateral lockbox backs the spoke.",
+          "trustedPeerOrRemote": "At Ethereum block 25770834, peers bind Wormhole chain 50 Mezo to 0x7efb386675d75280D39Aae42964A6776DE0ee0bD and chain 30 Base to 0x3EB418BdBE95b4b9cf465ecfBD8424685ACD1Bc1.",
+          "attestorQuorum": "The manager has one enabled transceiver 0x147379A0174780570D07d70a14FB244EE5f2D786 and an NTT attestation threshold of 1; one external Wormhole transceiver/Guardian attestation is sufficient for message approval.",
+          "rateLimits": "The official manifest sets 10,000,000 MUSD inbound per peer and uint64.max-scaled outbound capacity (184467440737.09551615 MUSD); current Ethereum capacities matched those configured values. These are route limits, not a global supply cap.",
+          "pausersAdminsUpgraders": "The manager owner is the shared 5-of-9 Safe. Its owner-only upgrade, peer, transceiver, threshold, and rate-limit controls, and its owner/pauser pause paths, are structured in the shared Safe control below; the manager pauser is 0x40C7b9612B394212394EA860cACd0e176CA4Ae5B."
+        },
+        "capDescription": "The NTT manager can burn source MUSD and mint the conserved destination representation after Wormhole validation; its inbound and outbound route limits reset and are not a global supply cap.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770834,
+        "sources": [
+          {
+            "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+            "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+          },
+          {
+            "label": "Ethereum MUSD token",
+            "url": "https://etherscan.io/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+          },
+          {
+            "label": "Wormhole NTT ManagerBase.sol",
+            "url": "https://github.com/wormhole-foundation/native-token-transfers/blob/main/evm/src/NttManager/ManagerBase.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25770834 on 2026-08-16, the MUSD mintList contained 0x5293158bf7a81ED05418DA497a80F7e6DBF4477E, whose 209-byte proxy returned token()=MUSD and mode/getMode()=1 (burning). The earlier eth_getLogs scan from deployment block 22467780 through block 25571115 found exactly one MintListAddressAdded event, at block 22973966, adding this manager; the current mintList read remains true. The manager had one enabled transceiver 0x147379A0174780570D07d70a14FB244EE5f2D786, owner Safe 0x98D8899c3030741925BE630C710A98B57F397C7a, and manager pauser 0x40C7b9612B394212394EA860cACd0e176CA4Ae5B. Its current implementation slot was 0x075108f275ed81c9cfc01065e6e50ceea81d6363; EIP-1967 admin and beacon slots were zero. No LayerZero endpoint() surface exists on the reviewed deployments. This is a Wormhole NTT bridge representation, not independent Ethereum-native issuance."
+      },
+      {
+        "id": "meusd-base-ntt-manager",
+        "label": "MUSD Base Wormhole NTT burning-spoke manager",
+        "routeRefs": [
+          "base:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x3EB418BdBE95b4b9cf465ecfBD8424685ACD1Bc1",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:base:0x3eb418bdbe95b4b9cf465ecfbd8424685acd1bc1"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "Base is a Wormhole NTT burning spoke: outbound transfers burn MUSD and inbound transfers mint only against conserved guardian-attested NTT burn messages; no independent collateral lockbox backs the spoke.",
+          "trustedPeerOrRemote": "At Base block 50066278, peers bind Wormhole chain 50 Mezo to 0x7efb386675d75280D39Aae42964A6776DE0ee0bD and chain 2 Ethereum to 0x5293158bf7a81ED05418DA497a80F7e6DBF4477E.",
+          "attestorQuorum": "The manager has one enabled transceiver 0x15C465E7dF34f8cA06FDCae0569206cEDf3f4467 and an NTT attestation threshold of 1; one external Wormhole transceiver/Guardian attestation is sufficient for message approval.",
+          "rateLimits": "The official manifest sets 10,000,000 MUSD inbound per peer and uint64.max-scaled outbound capacity (184467440737.09551615 MUSD); current Base capacities matched those configured values. These are route limits, not a global supply cap.",
+          "pausersAdminsUpgraders": "The manager owner is the shared 5-of-9 Safe. Its owner-only upgrade, peer, transceiver, threshold, and rate-limit controls, and its owner/pauser pause paths, are structured in the shared Safe control below; the manager pauser is 0x40C7b9612B394212394EA860cACd0e176CA4Ae5B."
+        },
+        "capDescription": "The NTT manager can burn source MUSD and mint the conserved destination representation after Wormhole validation; its inbound and outbound route limits reset and are not a global supply cap.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066278,
+        "sources": [
+          {
+            "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+            "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+          },
+          {
+            "label": "Base MUSD token",
+            "url": "https://basescan.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+          },
+          {
+            "label": "Wormhole NTT ManagerBase.sol",
+            "url": "https://github.com/wormhole-foundation/native-token-transfers/blob/main/evm/src/NttManager/ManagerBase.sol"
+          }
+        ],
+        "evidence": "At Base block 50066278 on 2026-08-16, the MUSD mintList contained 0x3EB418BdBE95b4b9cf465ecfBD8424685ACD1Bc1, whose 209-byte proxy returned token()=MUSD and mode/getMode()=1 (burning). The manager had one enabled transceiver 0x15C465E7dF34f8cA06FDCae0569206cEDf3f4467, owner Safe 0x98D8899c3030741925BE630C710A98B57F397C7a, and manager pauser 0x40C7b9612B394212394EA860cACd0e176CA4Ae5B. Its current implementation slot was 0x7d61512edc44dba19ea9758e9f383547cec38366; EIP-1967 admin and beacon slots were zero. This is a Wormhole NTT bridge representation, not independent Base-native issuance."
+      },
+      {
+        "id": "meusd-ntt-owner-safe",
+        "label": "MUSD token and Wormhole NTT owner Safe",
+        "routeRefs": [
+          "mezo:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+          "ethereum:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+          "base:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "upgrade",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "mezo",
+        "controllerAddress": "0x98D8899c3030741925BE630C710A98B57F397C7a",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "safe:mezo:0x98d8899c3030741925be630c710a98b57f397c7a"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 9,
+        "safe": {
+          "source": "onchain",
+          "threshold": 5,
+          "owners": [
+            "0x3f9bb00672ad7254eba4be9fe65860ce298a3ab8",
+            "0x7f043ff8b5ce02e543ee83fcdec94944d24ebd5d",
+            "0x930b76784c1fb86335ab174dfe321b44ea0adfda",
+            "0xabb0c40dbc7ff3455087888c87217064ad10a944",
+            "0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85",
+            "0x696ba87e3ef864335a9e30ae4653b516fb93a1ab",
+            "0x91149ef9449bd1068346b6098ebb9624c2d3e849",
+            "0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4",
+            "0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
+          ],
+          "enabledModules": [],
+          "observedBlock": 25770834,
+          "observedAt": "2026-08-16"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The shared Safe owns the three NTT managers and can set their peers and transceivers. The reviewed peers are Mezo↔Ethereum (Wormhole chains 50↔2), Mezo↔Base (50↔30), and the corresponding Ethereum↔Base bindings.",
+          "attestorQuorum": "Each manager currently has one enabled Wormhole transceiver and an attestation threshold of 1; the Safe can change the configured transceiver and threshold.",
+          "rateLimits": "The owner can set inbound and outbound NTT limits. The official manifest and current reads show 10,000,000 MUSD inbound per peer and uint64.max-scaled outbound capacity (184467440737.09551615 MUSD) on all three managers; these are route controls, not a global supply cap.",
+          "pausersAdminsUpgraders": "The Safe owns MUSD and each NTT manager. It can upgrade each manager through its owner-only upgrade path, set peers/transceivers/thresholds/limits, transfer ownership, and pause managers; each manager also has pauser 0x40C7b9612B394212394EA860cACd0e176CA4Ae5B. The MUSD token deployments are immutable, and their EIP-1967 implementation/admin/beacon slots are zero."
+        },
+        "capDescription": "The shared Safe can administer mintList on each MUSD deployment and can change NTT bridge managers, peers, transceivers, limits, and pause state. Its arbitrary-minter authority over canonical Mezo issuance is retained only in Mint Authority; this control records the same Safe's bridge scope over the three NTT routes.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770834,
+        "sources": [
+          {
+            "label": "MUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+          },
+          {
+            "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+            "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+          },
+          {
+            "label": "Wormhole NTT ManagerBase.sol",
+            "url": "https://github.com/wormhole-foundation/native-token-transfers/blob/main/evm/src/NttManager/ManagerBase.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25770834 on 2026-08-16, owner() of the MUSD deployment was 0x98D8899c3030741925BE630C710A98B57F397C7a on Ethereum, Base, and Mezo; the owner is a 5-of-9 Safe with the 9 listed owners. The same Safe owns all three Wormhole NTT managers. Empty Safe module pagination was observed, but getGuard() reverted, so guard status remains unresolved and is recorded as unknown. This shared controller's bridge administration is scored here; the canonical Mezo arbitrary-minter surface remains separately represented in Mint Authority."
+      },
+      {
+        "id": "meusd-wormhole-transceiver-guardian-validation",
+        "label": "MUSD Wormhole transceiver Guardian attestation domain",
+        "routeRefs": [
+          "mezo:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+          "ethereum:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+          "base:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        ],
+        "capabilities": [
+          "validator",
+          "pause"
+        ],
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "protocol:wormhole-transceiver",
+          "protocol:wormhole-guardian-set"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "attestorQuorum": "The Mezo, Ethereum, and Base managers each currently have one enabled Wormhole transceiver with NTT attestation threshold 1: 0x62DEeaFEe06c7442A21c93edeDc79A0cb5791C83, 0x147379A0174780570D07d70a14FB244EE5f2D786, and 0x15C465E7dF34f8cA06FDCae0569206cEDf3f4467. A single enabled transceiver/Guardian attestation is therefore sufficient for message approval on each route.",
+          "signingModel": "Inbound spoke minting is based on external Wormhole Guardian-attested NTT messages, while outbound spoke transfers burn MUSD and the Mezo hub releases the conserved locked amount. The off-chain Guardian signer roster and operational quorum were not independently enumerated in this review.",
+          "trustedPeerOrRemote": "The deployed NTT managers bind the reviewed Mezo, Ethereum, and Base peers; the owner Safe can change those peer and transceiver bindings.",
+          "pausersAdminsUpgraders": "The deployment manifest records transceiver pauser 0x123694886DBf5Ac94DDA07135349534536D14cAf on each chain. Manager pauser 0x40C7b9612B394212394EA860cACd0e176CA4Ae5B is recorded on the manager controls; the external Guardian validation domain remains a common-mode dependency for all three routes."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770834,
+        "sources": [
+          {
+            "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+            "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+          },
+          {
+            "label": "Wormhole NTT",
+            "url": "https://wormhole.com/products/native-token-transfers"
+          },
+          {
+            "label": "Wormhole security model and Guardian governance",
+            "url": "https://wormhole.com/docs/protocol/security/"
+          }
+        ],
+        "evidence": "The current official NTT manifest and live manager reads identify one enabled transceiver per chain—Mezo 0x62DEeaFEe06c7442A21c93edeDc79A0cb5791C83, Ethereum 0x147379A0174780570D07d70a14FB244EE5f2D786, and Base 0x15C465E7dF34f8cA06FDCae0569206cEDf3f4467—with threshold 1 on each manager. The manifest identifies transceiver pauser 0x123694886DBf5Ac94DDA07135349534536D14cAf on every chain. The external Wormhole Guardian signer roster and operational quorum were not independently enumerated, so that common failure domain remains explicit rather than inferred away."
       }
     ]
   }

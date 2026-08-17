@@ -7,6 +7,10 @@
     "summary": "ftUSD on both Ethereum and Sonic is controlled by the same self-controlled, no-timelock 3-of-5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the upgradeable minter contract (0x56c5892b). Ethereum has a Safe Allowance Module with a bounded native-asset allowance; it has no reviewed ftUSD minter call path. Sonic reports no enabled module.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+        "sonic:0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+      ],
       "proxyAddresses": [
         "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9"
       ],
@@ -40,6 +44,9 @@
       {
         "chain": "ethereum",
         "address": "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9",
+        "deploymentRefs": [
+          "ethereum:0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+        ],
         "label": "ftUSD minter contract",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -61,6 +68,9 @@
       {
         "chain": "ethereum",
         "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
+        "deploymentRefs": [
+          "ethereum:0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+        ],
         "label": "ftUSD token owner / masterMinter",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -105,6 +115,9 @@
       {
         "chain": "sonic",
         "address": "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9",
+        "deploymentRefs": [
+          "sonic:0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+        ],
         "label": "ftUSD minter contract",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -126,6 +139,9 @@
       {
         "chain": "sonic",
         "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
+        "deploymentRefs": [
+          "sonic:0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+        ],
         "label": "ftUSD token owner / masterMinter",
         "role": "minter-admin",
         "authorityType": "safe",

@@ -4,23 +4,34 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "PYUSD is issuer-minted through three SupplyControl-listed Ethereum controllers with rolling limits. At block 25711753, a Paxos EOA controlled the controller list and limits, token administration, and SupplyControl upgrades, while a separate EOA controlled token-proxy upgrades; these administrator paths make the asset-level issuance bound raiseable without an on-chain ceiling.",
+    "summary": "PYUSD has four genuinely native issuance surfaces: Ethereum, Arbitrum, Solana, and Stellar. Ethereum and Arbitrum use Paxos SupplyControl-listed issuer controllers with rolling limits and administrator paths that can change controllers, caps, SupplyControl, and token logic; Solana uses a Paxos-controlled 1-of-4 Token-2022 mint multisig, while Stellar uses the Paxos issuer account without an observed protocol supply cap. LayerZero OFTWrapper ingress/egress is bridge machinery reviewed separately under Bridge Risk and is not counted as native Mint Authority.",
     "upgradeability": {
-      "model": "transparent-proxy",
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+        "arbitrum:0x46850ad61c2b7d64d08c9c754f45254596696984"
+      ],
       "proxyAddresses": [
-        "0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+        "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+        "0x31d9bdea6f104606c954f8fe6ba614f1bd347ec3",
+        "0x46850ad61c2b7d64d08c9c754f45254596696984",
+        "0x19ed5c631edd34ac776368c377a855c42bc1876a"
       ],
       "implementationAddresses": [
-        "0x8c35caa5fd5bdc64b6b11344ad57594a3676256a"
+        "0x8c35caa5fd5bdc64b6b11344ad57594a3676256a",
+        "0xfab5891ed867a1195303251912013b92c4fc3a1d",
+        "0x9ce23fc2c05034a878411ebbf926664670f1c831",
+        "0xb071515976bcfc69ca1f57babbb8f974b2c6867e"
       ],
       "adminAddresses": [
-        "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c"
+        "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
+        "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "PYUSD token proxy admin",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25711753,
+      "controlRef": "PYUSD token and SupplyControl administrator",
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770471,
       "sources": [
         {
           "label": "Paxos PYUSD upgradeability documentation",
@@ -33,6 +44,14 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Arbitrum PYUSD verified proxy",
+          "url": "https://arbitrum.blockscout.com/address/0x46850ad61c2b7d64d08c9c754f45254596696984?tab=contract"
+        },
+        {
+          "label": "Arbitrum PublicNode RPC",
+          "url": "https://arb1.arbitrum.io/rpc"
         }
       ]
     },
@@ -61,43 +80,14 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xa2c323fe5a74adffad2bf3e007e36bb029606444",
-        "label": "PYUSD OFTWrapper supply controller",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "capDescription": "Rolling capacity 560,000,000 PYUSD with a 6,482 PYUSD-per-second refill at block 25711753.",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711753,
-        "sources": [
-          {
-            "label": "Paxos PYUSD contract documentation",
-            "url": "https://github.com/paxosglobal/pyusd-contract"
-          },
-          {
-            "label": "PYUSD SupplyControl verified proxy",
-            "url": "https://eth.blockscout.com/address/0x31d9bdea6f104606c954f8fe6ba614f1bd347ec3?tab=contract"
-          },
-          {
-            "label": "PYUSD OFTWrapper verified contract",
-            "url": "https://eth.blockscout.com/address/0xa2c323fe5a74adffad2bf3e007e36bb029606444?tab=contract"
-          },
-          {
-            "label": "Ethereum PublicNode RPC",
-            "url": "https://ethereum-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At Ethereum block 25711753, SupplyControl listed this verified OFTWrapper as an active supply controller. Its controller configuration had a 560,000,000 PYUSD rolling capacity and a 6,482 PYUSD-per-second refill. The wrapper can call token mint subject to SupplyControl checks but cannot change its own configured capacity."
-      },
-      {
-        "chain": "ethereum",
         "address": "0x2fb074fa59c9294c71246825c1c9a0c7782d41a4",
         "label": "PYUSD allowlisted supply controller 0x2fb0",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+        ],
         "capDescription": "Rolling capacity 1,000,000,000 PYUSD with a 277,777.777777 PYUSD-per-second refill; the mint-recipient whitelist contains only this controller.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
@@ -130,6 +120,9 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+        ],
         "capDescription": "Rolling capacity 500,000,000 PYUSD with a 138,888 PYUSD-per-second refill; the mint-recipient whitelist contains 0x264bd8291fae1d75db2c5f573b07faa6715997b5.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
@@ -162,6 +155,9 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -193,6 +189,9 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -220,6 +219,9 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -239,6 +241,175 @@
           }
         ],
         "evidence": "At Ethereum block 25711753, the org.zeppelinos.proxy.admin slot resolved to this EOA and the implementation slot resolved to 0x8c35caa5fd5bdc64b6b11344ad57594a3676256a. Paxos documents that this AdminUpgradeabilityProxy admin can replace the implementation through upgradeTo or upgradeToAndCall."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x2fb074fa59c9294c71246825c1c9a0c7782d41a4",
+        "label": "PYUSD Arbitrum allowlisted supply controller 0x2fb0",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "arbitrum:0x46850ad61c2b7d64d08c9c754f45254596696984"
+        ],
+        "capDescription": "Arbitrum SupplyControl applies this controller's rolling capacity and mint-recipient whitelist; the numeric Arbitrum capacity was not independently re-read in this finding.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495275061,
+        "sources": [
+          {
+            "label": "Arbitrum PYUSD verified proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x46850ad61c2b7d64d08c9c754f45254596696984?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Arbitrum block 495275061, this EOA held SUPPLY_CONTROLLER_ROLE on the current PYUSD SupplyControl 0x19ed5c631edd34ac776368c377a855c42bc1876. Its mint calls remain subject to SupplyControl's rolling-capacity and recipient-policy checks, and the EOA did not hold the manager role that can change those controls."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7",
+        "label": "PYUSD Arbitrum allowlisted supply controller 0xf845",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "arbitrum:0x46850ad61c2b7d64d08c9c754f45254596696984"
+        ],
+        "capDescription": "Arbitrum SupplyControl applies this controller's rolling capacity and mint-recipient whitelist; the numeric Arbitrum capacity was not independently re-read in this finding.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495275061,
+        "sources": [
+          {
+            "label": "Arbitrum PYUSD verified proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x46850ad61c2b7d64d08c9c754f45254596696984?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Arbitrum block 495275061, this EOA held SUPPLY_CONTROLLER_ROLE on the current PYUSD SupplyControl 0x19ed5c631edd34ac776368c377a855c42bc1876. Its mint calls remain subject to SupplyControl's rolling-capacity and recipient-policy checks, and the EOA did not hold the manager role that can change those controls."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "label": "PYUSD Arbitrum token and SupplyControl administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "arbitrum:0x46850ad61c2b7d64d08c9c754f45254596696984"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495275061,
+        "sources": [
+          {
+            "label": "Arbitrum PYUSD verified proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x46850ad61c2b7d64d08c9c754f45254596696984?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Paxos SupplyControl specification",
+            "url": "https://github.com/paxosglobal/paxos-token-contracts/blob/c58720109f3cd3e8bf8bd8dbd090ddc257081da5/contracts/SupplyControl.sol"
+          }
+        ],
+        "evidence": "At Arbitrum block 495275061, this Paxos EOA held SUPPLY_CONTROLLER_MANAGER_ROLE on SupplyControl 0x19ed5c631edd34ac776368c377a855c42bc1876 and could add or remove the two issuer controllers and change their capacity and recipient policies. It also remained the PYUSD proxy owner/default administrator."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
+        "label": "PYUSD Arbitrum token and SupplyControl proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "arbitrum:0x46850ad61c2b7d64d08c9c754f45254596696984"
+        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495275061,
+        "sources": [
+          {
+            "label": "Arbitrum PYUSD verified proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x46850ad61c2b7d64d08c9c754f45254596696984?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Arbitrum block 495275061, the PYUSD proxy implementation was 0x9ce23fc2c05034a878411ebbf926664670f1c831 and its legacy proxy-admin slot resolved to this EOA. The current SupplyControl 0x19ed5c631edd34ac776368c377a855c42bc1876 used this EOA as DEFAULT_ADMIN_ROLE and its implementation was 0xb071515976bcfc69ca1f57babbb8f974b2c6867e; the former implementation 0xfab5891ed867a1195303251912013b92c4fc3a1d retains a stale SUPPLY_CONTROLLER_ROLE grant that remains an explicit anomaly, not an active EOA mint control."
+      },
+      {
+        "chain": "solana",
+        "address": "8Jornc27vtAYPkwDzsVgLQchAYyC8nD7aCNPCDV8Qk2",
+        "label": "PYUSD Solana Token-2022 mint authority multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"
+        ],
+        "threshold": 1,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "No economic supply cap is exposed by the Token-2022 mint account; the current mint authority is the 1-of-4 multisig.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 417773444,
+        "sources": [
+          {
+            "label": "PYUSD Solana mint",
+            "url": "https://solscan.io/token/2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"
+          },
+          {
+            "label": "PayPal PYUSD Solana whitepaper",
+            "url": "https://www.paypalobjects.com/devdoc/community/PYUSD-Solana-White-Paper.pdf"
+          },
+          {
+            "label": "Solana finalized JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana finalized slot 439722870 / block height 417773444, the Token-2022 PYUSD mint had mint authority 8Jornc27vtAYPkwDzsVgLQchAYyC8nD7aCNPCDV8Qk2. The multisig had four valid signers — 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk, 3QaqDJS5angcPhW1HsMbB74vJbzWNcy1r5bwtATUro7d, BfWsvypxRvQ4KUhyJ2gLeFEkhRx3LgfkVahXMj6Kz3LN, and AuVW19qwit2bxZqcspGZLsbq2ZiqosvryTNXE8UZSeGh — with one required signer."
+      },
+      {
+        "chain": "stellar",
+        "address": "GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5",
+        "label": "PYUSD Stellar issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "stellar:PYUSD-GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The classic Stellar PYUSD asset has no verified numeric protocol supply cap; the issuer account is the native asset-creation authority.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 63985979,
+        "sources": [
+          {
+            "label": "PYUSD Stellar issuer account",
+            "url": "https://horizon.stellar.org/accounts/GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5"
+          },
+          {
+            "label": "PayPal PYUSD Stellar whitepaper",
+            "url": "https://www.paypalobjects.com/ppdevdocs/PYUSD%20on%20Stellar%20Whitepaper%20V3.pdf"
+          }
+        ],
+        "evidence": "At Stellar ledger 63985979, Horizon identified the PYUSD issuer as GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5 with one self signer of weight 1. The issuer account had active revocable authorization and clawback flags and remains the native PYUSD asset-creation authority; no issuer-defined supply cap was observed."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -273,11 +444,23 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Arbitrum PYUSD verified proxy",
+          "url": "https://arbitrum.blockscout.com/address/0x46850ad61c2b7d64d08c9c754f45254596696984?tab=contract"
+        },
+        {
+          "label": "PYUSD Solana mint",
+          "url": "https://solscan.io/token/2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"
+        },
+        {
+          "label": "PYUSD Stellar issuer account",
+          "url": "https://horizon.stellar.org/accounts/GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5"
         }
       ],
-      "evidence": "At block 25711753, the token delegated mint admission to SupplyControl, which listed three current controllers with explicit rolling capacities. The manager EOA can change those capacities, authorize controllers, replace SupplyControl, and upgrade its UUPS implementation; a separate EOA can upgrade the token implementation. The resolved 2025 incident is bound to the primary mint and burn transactions and Paxos's statement. KPMG's monthly PYUSD examination reconciles reserve assets and token liabilities, supporting periodic reconciliation, while the cited OCC and NYDFS records support prudential supervision of the issuer path.",
-      "reviewer": "OpenAI Codex C01 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "PYUSD has four reviewed native issuance surfaces. At Ethereum block 25770471, Paxos controls the token and SupplyControl administrator path while two issuer EOAs remain rolling-capacity-limited SupplyControl controllers; the Ethereum OFTWrapper is bridge ingress/egress and is excluded from Mint Authority. At Arbitrum block 495275061, the same two issuer EOAs held SUPPLY_CONTROLLER_ROLE, Paxos held SUPPLY_CONTROLLER_MANAGER_ROLE, the token implementation was 0x9ce23fc2c05034a878411ebbf926664670f1c831, and current SupplyControl 0x19ed5c631edd34ac776368c377a855c42bc1876 used implementation 0xb071515976bcfc69ca1f57babbb8f974b2c6867e; the former implementation's stale role grant remains an explicit anomaly. At Solana finalized block height 417773444, the Token-2022 PYUSD mint authority was a 1-of-4 Paxos-controlled multisig. At Stellar ledger 63985979, the Paxos issuer account was the native asset authority with no observed numeric supply cap. The resolved 2025 incident remains bound to the primary mint and burn transactions and Paxos's statement. KPMG's monthly PYUSD examination reconciles reserve assets and token liabilities, supporting periodic reconciliation, while OCC and NYDFS records support prudential supervision of the issuer path.",
+      "reviewer": "OpenAI Codex C01 control review; migration FIX2-14",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

@@ -38,9 +38,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "USD3 is issued natively on Ethereum by Reserve Protocol. Its Base deployment is an immutable OptimismMintableERC20 representation whose constructor-set bridge is the canonical Base L2StandardBridge and whose remote token is Ethereum USD3; it is not issuer-native multichain issuance or a liquidity bridge.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge route review",
+    "summary": "USD3 is issued natively on Ethereum by Reserve Protocol. Its Base deployment is an immutable OptimismMintableERC20 representation whose constructor-set bridge is the canonical Base L2 StandardBridge and whose remote token is Ethereum USD3. The route is a canonical OP Stack lock-mint path: L1 escrow and authenticated L1/L2 messenger calls govern representation mint/burn, while both bridge proxies remain upgradeable through their respective ProxyAdmin owner paths. These bridge capabilities are scored here and are excluded from native Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex USD3 canonical bridge-route correction",
     "confidence": "verified",
     "sources": [
       {
@@ -91,16 +91,24 @@
         "semantics": "lock-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Base block 48622147, the verified OptimismMintableERC20 returned BRIDGE() = 0x4200000000000000000000000000000000000010 and REMOTE_TOKEN() = Ethereum USD3 0x0d86883FAf4FfD7aEb116390af37746F45b6F378. This is the canonical Base lock/mint representation.",
+        "reviewNote": "At Base block 50063991 on 2026-08-16, the verified OptimismMintableERC20 0xefb97aaf77993922ac4be4da8fbc9a2425322677 returned BRIDGE() = 0x4200000000000000000000000000000000000010 and REMOTE_TOKEN() = Ethereum USD3 0x0d86883faf4ffd7aeb116390af37746f45b6f378. The Base L2 StandardBridge returned OTHER_BRIDGE() = Ethereum L1 StandardBridge 0x3154cf16ccdb4c6d922629664174b904d80f2c35 and messenger() = Base L2 CrossDomainMessenger 0x4200000000000000000000000000000000000007; its implementation is 0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30010 and its ProxyAdmin is 0x4200000000000000000000000000000000000018, whose current owner path returned 0x8cc51c3008b3f03fe483b28b8db90e19cf076a6d. The L1 StandardBridge returned l2TokenBridge() = 0x4200000000000000000000000000000000000010 and messenger() = 0x866e82a600a1414e583f7f13623f1ac5d58b0afa; its implementation is 0x61525eaacddb97d9184afc205827e6a4fd0bf62a, ProxyAdmin is 0x0475cbcaebd9ce8afa5025828d5b98dfb67e059e, and ProxyAdmin.owner() is 0x7bb41c3008b3f03fe483b28b8db90e19cf07595c. Authenticated cross-domain messages bind the pair, while the L1 bridge escrows Ethereum USD3 and the L2 bridge mints/burns the Base representation. This is the canonical Base lock-mint route, not a second Reserve native minter.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
         "controllerAddress": "0x4200000000000000000000000000000000000010",
         "failureDomainKeys": [
           "protocol:base-standard-bridge",
-          "contract:base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+          "contract:base:0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+          "bridge:base:0x4200000000000000000000000000000000000010",
+          "messenger:base:0x4200000000000000000000000000000000000007",
+          "bridge:ethereum:0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+          "messenger:ethereum:0x866e82a600a1414e583f7f13623f1ac5d58b0afa",
+          "proxy-admin:base:0x4200000000000000000000000000000000000018",
+          "proxy-admin:ethereum:0x0475cbcaebd9ce8afa5025828d5b98dfb67e059e",
+          "owner:base:0x8cc51c3008b3f03fe483b28b8db90e19cf076a6d",
+          "owner:ethereum:0x7bb41c3008b3f03fe483b28b8db90e19cf07595c"
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 48622147,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063991,
         "sources": [
           {
             "label": "USD3 Base OptimismMintableERC20 source",
@@ -109,8 +117,242 @@
           {
             "label": "Base Standard Bridge documentation",
             "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          },
+          {
+            "label": "Optimism StandardBridge source",
+            "url": "https://raw.githubusercontent.com/ethereum-optimism/optimism/develop/packages/contracts-bedrock/src/universal/StandardBridge.sol"
+          },
+          {
+            "label": "Optimism L1StandardBridge source",
+            "url": "https://raw.githubusercontent.com/ethereum-optimism/optimism/develop/packages/contracts-bedrock/src/L1/L1StandardBridge.sol"
+          },
+          {
+            "label": "Ethereum L1 Standard Bridge",
+            "url": "https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "base-usd3-standard-bridge",
+        "label": "Base USD3 / L2 StandardBridge representation mint-burn",
+        "routeRefs": [
+          "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "contract:base:0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+          "bridge:base:0x4200000000000000000000000000000000000010",
+          "messenger:base:0x4200000000000000000000000000000000000007",
+          "bridge:ethereum:0x3154cf16ccdb4c6d922629664174b904d80f2c35"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Ethereum L1 StandardBridge escrows native USD3 on deposit; the Base L2 StandardBridge mints the OptimismMintableERC20 representation on authenticated finalization and burns it on withdrawal.",
+          "trustedPeerOrRemote": "Base USD3 REMOTE_TOKEN() is Ethereum USD3, the L2 StandardBridge OTHER_BRIDGE() is the Ethereum L1 StandardBridge, and finalization requires the authenticated cross-domain messenger path.",
+          "pausersAdminsUpgraders": "The Base L2 StandardBridge implementation is replaceable through ProxyAdmin 0x4200000000000000000000000000000000000018; its current owner path returned 0x8cc51c3008b3f03fe483b28b8db90e19cf07595c at the observation block.",
+          "onchainAmountBounds": "The OP Stack route is supply-conserving at the canonical pair: L1 escrow/release and L2 burn/mint are tied to authenticated cross-domain messages rather than discretionary issuer minting."
+        },
+        "capDescription": "Base USD3 can be minted and burned only as the canonical OP Stack representation through the L2 StandardBridge and authenticated bridge messages; this is not a second Reserve native issuance path.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063991,
+        "sources": [
+          {
+            "label": "USD3 Base OptimismMintableERC20 source",
+            "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+          },
+          {
+            "label": "Base Standard Bridge documentation",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          },
+          {
+            "label": "Optimism StandardBridge source",
+            "url": "https://raw.githubusercontent.com/ethereum-optimism/optimism/develop/packages/contracts-bedrock/src/universal/StandardBridge.sol"
+          }
+        ],
+        "evidence": "At Base block 50063991, USD3 0xefb97aaf77993922ac4be4da8fbc9a2425322677 returned BRIDGE() = 0x4200000000000000000000000000000000000010 and REMOTE_TOKEN() = Ethereum USD3 0x0d86883faf4ffd7aeb116390af37746f45b6f378. The verified Optimism StandardBridge source mints OptimismMintableERC20 tokens only on authenticated finalization and burns them when initiating the return path; the L1 bridge holds the corresponding native token in escrow."
+      },
+      {
+        "id": "base-l2-cross-domain-messenger",
+        "label": "Base L2 CrossDomainMessenger authenticated bridge path",
+        "routeRefs": [
+          "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000007",
+        "failureDomainKeys": [
+          "messenger:base:0x4200000000000000000000000000000000000007",
+          "bridge:ethereum:0x3154cf16ccdb4c6d922629664174b904d80f2c35"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Base L2 StandardBridge accepts a finalized deposit only when xDomainMessageSender() is the paired Ethereum L1 StandardBridge 0x3154cf16ccdb4c6d922629664174b904d80f2c35 through the authenticated messenger.",
+          "signingModel": "The OP Stack messenger authenticates cross-domain messages through the rollup's established messenger/proof path; no separate USD3 issuer signer is identified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063991,
+        "sources": [
+          {
+            "label": "Base Standard Bridge documentation",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          },
+          {
+            "label": "Optimism CrossDomainMessenger source",
+            "url": "https://raw.githubusercontent.com/ethereum-optimism/optimism/develop/packages/contracts-bedrock/src/universal/CrossDomainMessenger.sol"
+          }
+        ],
+        "evidence": "At Base block 50063991, the L2 StandardBridge messenger() read returned 0x4200000000000000000000000000000000000007. The official StandardBridge source requires the authenticated messenger's xDomainMessageSender() to equal the paired other bridge before finalizing a deposit, so this is bridge-message validation rather than native USD3 issuance authority."
+      },
+      {
+        "id": "ethereum-l1-cross-domain-messenger",
+        "label": "Ethereum L1 CrossDomainMessenger authenticated bridge path",
+        "routeRefs": [
+          "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x866e82a600a1414e583f7f13623f1ac5d58b0afa",
+        "failureDomainKeys": [
+          "messenger:ethereum:0x866e82a600a1414e583f7f13623f1ac5d58b0afa",
+          "bridge:base:0x4200000000000000000000000000000000000010"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Ethereum L1 StandardBridge messenger() read returned 0x866e82a600a1414e583f7f13623f1ac5d58b0afa and authenticates the paired Base L2 StandardBridge for the return/finalization path.",
+          "signingModel": "The OP Stack messenger authenticates cross-domain messages through the rollup's established messenger/proof path; no separate USD3 issuer signer is identified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063991,
+        "sources": [
+          {
+            "label": "Optimism CrossDomainMessenger source",
+            "url": "https://raw.githubusercontent.com/ethereum-optimism/optimism/develop/packages/contracts-bedrock/src/universal/CrossDomainMessenger.sol"
+          },
+          {
+            "label": "Ethereum L1 Standard Bridge",
+            "url": "https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35"
+          }
+        ],
+        "evidence": "At Base block 50063991, the paired L1 StandardBridge returned messenger() = 0x866e82a600a1414e583f7f13623f1ac5d58b0afa. The L1 bridge and messenger are the authenticated counterpart to the Base L2 bridge route."
+      },
+      {
+        "id": "ethereum-l1-standard-bridge-escrow",
+        "label": "Ethereum L1 StandardBridge USD3 escrow and release",
+        "routeRefs": [
+          "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+        "failureDomainKeys": [
+          "bridge:ethereum:0x3154cf16ccdb4c6d922629664174b904d80f2c35",
+          "messenger:ethereum:0x866e82a600a1414e583f7f13623f1ac5d58b0afa",
+          "contract:base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "For the L1-native USD3 route, the L1 StandardBridge escrows deposited Ethereum USD3 and releases it on the authenticated return path; the paired Base bridge mints and burns the representation.",
+          "trustedPeerOrRemote": "l2TokenBridge() returned Base L2 StandardBridge 0x4200000000000000000000000000000000000010 and messenger() returned 0x866e82a600a1414e583f7f13623f1ac5d58b0afa.",
+          "pausersAdminsUpgraders": "The L1 StandardBridge implementation is replaceable through ProxyAdmin 0x0475cbcaebd9ce8afa5025828d5b98dfb67e059e, whose owner() returned 0x7bb41c3008b3f03fe483b28b8db90e19cf07595c; the signer/governance policy behind that owner remains unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063991,
+        "sources": [
+          {
+            "label": "Optimism L1StandardBridge source",
+            "url": "https://raw.githubusercontent.com/ethereum-optimism/optimism/develop/packages/contracts-bedrock/src/L1/L1StandardBridge.sol"
+          },
+          {
+            "label": "Ethereum L1 Standard Bridge",
+            "url": "https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35"
+          }
+        ],
+        "evidence": "At Base block 50063991, the L1 StandardBridge counterpart reported l2TokenBridge() = 0x4200000000000000000000000000000000000010 and its bridge implementation was 0x61525eaacddb97d9184afc205827e6a4fd0bf62a. The official L1StandardBridge source defines the escrow/release half of the canonical lock-mint route."
+      },
+      {
+        "id": "base-l2-standard-bridge-proxy-admin",
+        "label": "Base L2 StandardBridge ProxyAdmin upgrade path",
+        "routeRefs": [
+          "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000018",
+        "failureDomainKeys": [
+          "proxy-admin:base:0x4200000000000000000000000000000000000018",
+          "owner:base:0x8cc51c3008b3f03fe483b28b8db90e19cf07595c",
+          "bridge:base:0x4200000000000000000000000000000000000010"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Base L2 StandardBridge implementation slot returned 0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30010 and its proxy admin is 0x4200000000000000000000000000000000000018. The current predeploy owner path returned 0x8cc51c3008b3f03fe483b28b8db90e19cf076a6d; its signer policy is not named in the reviewed evidence."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063991,
+        "sources": [
+          {
+            "label": "Base Standard Bridge documentation",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          },
+          {
+            "label": "Base L2 StandardBridge predeploy",
+            "url": "https://basescan.org/address/0x4200000000000000000000000000000000000010"
+          }
+        ],
+        "evidence": "At Base block 50063991, the L2 StandardBridge implementation and ProxyAdmin predeploy were read from the live proxy slots. The ProxyAdmin owner path returned 0x8cc51c3008b3f03fe483b28b8db90e19cf076a6d, but the operational signer policy behind that address remains an explicit Bridge Risk evidence gap."
+      },
+      {
+        "id": "ethereum-l1-standard-bridge-proxy-admin",
+        "label": "Ethereum L1 StandardBridge ProxyAdmin upgrade path",
+        "routeRefs": [
+          "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x0475cbcaebd9ce8afa5025828d5b98dfb67e059e",
+        "failureDomainKeys": [
+          "proxy-admin:ethereum:0x0475cbcaebd9ce8afa5025828d5b98dfb67e059e",
+          "owner:ethereum:0x7bb41c3008b3f03fe483b28b8db90e19cf07595c",
+          "bridge:ethereum:0x3154cf16ccdb4c6d922629664174b904d80f2c35"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Ethereum L1 StandardBridge implementation is 0x61525eaacddb97d9184afc205827e6a4fd0bf62a and its ProxyAdmin is 0x0475cbcaebd9ce8afa5025828d5b98dfb67e059e. ProxyAdmin.owner() returned 0x7bb41c3008b3f03fe483b28b8db90e19cf07595c; the signer/governance policy behind that owner is not resolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063991,
+        "sources": [
+          {
+            "label": "Ethereum L1 Standard Bridge",
+            "url": "https://etherscan.io/address/0x3154Cf16ccdb4C6d922629664174b904d80F2C35"
+          },
+          {
+            "label": "Base Standard Bridge documentation",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          }
+        ],
+        "evidence": "At Base block 50063991, the paired L1 StandardBridge reported implementation 0x61525eaacddb97d9184afc205827e6a4fd0bf62a, ProxyAdmin 0x0475cbcaebd9ce8afa5025828d5b98dfb67e059e, and ProxyAdmin.owner() = 0x7bb41c3008b3f03fe483b28b8db90e19cf07595c. The bridge upgrade controller is therefore retained under Bridge Risk, with the owner policy unresolved rather than inferred."
       }
     ]
   }

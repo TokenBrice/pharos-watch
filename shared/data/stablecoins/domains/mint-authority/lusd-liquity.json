@@ -24,6 +24,9 @@
       {
         "chain": "ethereum",
         "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "deploymentRefs": [
+          "ethereum:0x5f98805a4e8be255a32880fdec7f6728c6568ba0"
+        ],
         "label": "Liquity v1 BorrowerOperations",
         "role": "other",
         "authorityType": "contract",
@@ -46,6 +49,9 @@
       {
         "chain": "ethereum",
         "address": "0xA39739EF8b0231dBFA0DcdA07d7e29FAabcf4bb2",
+        "deploymentRefs": [
+          "ethereum:0x5f98805a4e8be255a32880fdec7f6728c6568ba0"
+        ],
         "label": "Liquity v1 TroveManager",
         "role": "other",
         "authorityType": "contract",

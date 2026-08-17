@@ -18,8 +18,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "RUSD deploys the same non-upgradeable Circle-style FiatToken (RoyalDollar) on Ethereum, BNB Chain, and Tron, with no cross-chain functions of any kind in the contract — no LayerZero OFT/CCIP/Wormhole/Axelar hooks, only mint/burn governed by MASTERMINTER/MINTER roles (independently confirmed by reading the verified Ethereum and BSC contracts). The identical Eth/BSC address is a deterministic vanity deploy, not an omnichain token standard. Each chain's supply is minted independently by the issuer's per-chain mint authority (Eth/BSC MASTERMINTER 0xc50ebe57; Tron 0x9a0c5f3a), so there is no durable cross-chain token bridge; the \"R-Bridge / RxBridge\" is a hybrid Bank–OTC–Exchange business settlement network, not an on-chain supply route.",
-    "reviewedAt": "2026-06-21",
+    "summary": "All three authored RUSD deployments are reviewed as independent issuer-native canonical issuance routes on Ethereum, BNB Chain, and Tron. The verified RoyalDollar contracts expose local mint/burn and role controls but no bridge endpoint, lockbox, peer, message, validator, or cross-chain supply path; those issuer admins remain exclusively in Mint Authority. R-Bridge / RxBridge is an off-chain or hybrid settlement ecosystem, not an on-chain token bridge.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "Pharos bridge-route re-verification",
     "confidence": "verified",
     "protocols": [
@@ -85,46 +85,90 @@
         "id": "ethereum:0x44bb433d29fe966992a9c812da7f252c9c53f285",
         "destinationChain": "ethereum",
         "contractAddress": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "canonicalChain": "ethereum",
+        "protocol": "RoyalDollar issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified non-proxy RoyalDollar deployment: local mint and burn functions are issuer-controlled, no bridge endpoint or cross-chain supply path is present, and the issuer DEFAULT_ADMIN_ROLE account is covered by Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770558,
+        "sources": [
+          {
+            "label": "RUSD Ethereum verified RoyalDollar contract",
+            "url": "https://eth.blockscout.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285?tab=contract"
+          },
+          {
+            "label": "RUSD Ethereum role history",
+            "url": "https://eth.blockscout.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285?tab=logs"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
       },
       {
         "id": "bsc:0x44bb433d29fe966992a9c812da7f252c9c53f285",
         "destinationChain": "bsc",
         "contractAddress": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "canonicalChain": "bsc",
+        "protocol": "RoyalDollar issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified non-proxy RoyalDollar deployment with bytecode identical to the Ethereum token: local mint and burn functions are issuer-controlled, no bridge endpoint or cross-chain supply path is present, and the issuer DEFAULT_ADMIN_ROLE account is covered by Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-08-16",
+        "observedBlock": 116350808,
+        "sources": [
+          {
+            "label": "RUSD BSC verified RoyalDollar contract",
+            "url": "https://bscscan.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285#code"
+          },
+          {
+            "label": "BSC PublicNode JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ]
       },
       {
         "id": "tron:TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1",
         "destinationChain": "tron",
         "contractAddress": "TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "canonicalChain": "tron",
+        "protocol": "RoyalDollar issuer-native deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tronscan-verified non-proxy RoyalDollar deployment: local mint and burn functions are issuer-controlled, no bridge endpoint or cross-chain supply path is present, and the issuer DEFAULT_ADMIN_ROLE account is covered by Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-08-16",
+        "observedBlock": 85415800,
+        "sources": [
+          {
+            "label": "RUSD Tron verified RoyalDollar contract",
+            "url": "https://tronscan.org/#/contract/TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1/code"
+          },
+          {
+            "label": "Tron contract registry",
+            "url": "https://apilist.tronscanapi.com/api/contract?contract=TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1"
+          },
+          {
+            "label": "TronGrid constant-call RPC",
+            "url": "https://api.trongrid.io/wallet/triggerconstantcontract"
+          }
+        ]
       }
     ]
   }

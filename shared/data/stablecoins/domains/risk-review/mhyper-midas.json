@@ -60,35 +60,60 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "mHYPER has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement. The route is scored as liquidity/intent because execution and available bridge liquidity are material to cross-chain movement.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "tier": "external-validated-network",
+    "summary": "mHYPER's reviewed cross-chain machinery is Midas's LayerZero V2 MidasLzMintBurnOFTAdapter route. Authenticated endpoint and peer checks validate burn/mint messages, but adapter owners can change peers, endpoint delegate/configuration, and rate limits, while representation token minter and upgrade paths remain material Bridge Risk controls.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration; RELOC-09",
     "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "issuer",
+        "name": "Midas LzMintBurnOFTAdapter",
+        "slug": "midas-lz-mint-burn-oft-adapter",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts",
         "bridgeTypes": [
-          "intent",
-          "liquidity"
+          "burn-mint",
+          "LayerZero V2"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero V2",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/get-started/overview",
+        "bridgeTypes": [
+          "external-validated-network"
         ]
       }
     ],
     "sources": [
       {
-        "label": "Midas mHYPER",
-        "url": "https://midas.app/mhyper"
+        "label": "Midas smart-contract directory",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "Ethereum Midas LayerZero adapter",
+        "url": "https://etherscan.io/address/0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0#code"
       },
       {
-        "label": "Across developer docs",
-        "url": "https://docs.across.to/"
+        "label": "Monad Midas LayerZero adapter",
+        "url": "https://explorer.monad.xyz/address/0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df"
+      },
+      {
+        "label": "Plasma Midas LayerZero adapter",
+        "url": "https://plasma-explorer.com/address/0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+      },
+      {
+        "label": "Katana Midas LayerZero adapter",
+        "url": "https://katanascan.com/address/0x0516ded0209874fa9381ee721e8f1bcbe6ec2832"
+      },
+      {
+        "label": "LayerZero V2 overview",
+        "url": "https://docs.layerzero.network/v2/get-started/overview"
+      },
+      {
+        "label": "Katana LayerZero delivery transaction",
+        "url": "https://katanascan.com/tx/0xd48181a695d60b631606609f8316c0fea41241845e7f8eebb25aebc3fdaa603c"
       }
     ],
     "routes": [
@@ -97,20 +122,34 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0x9b5528528656dbc094765e2abb79f293c21191b9",
-        "protocol": "Midas native issuance",
+        "protocol": "Midas native issuance with LayerZero V2 adapter",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native mHYPER: mint authority is the Midas shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 plus deposit-vault minters (mint-authority review). This chain has no LayerZero adapter; supply is minted locally by Midas.",
+        "reviewNote": "Ethereum is a native Midas issuance deployment: the shared operator EOA and Ethereum issuance vault hold M_HYPER_MINT_OPERATOR_ROLE. The canonical-side MidasLzMintBurnOFTAdapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0 is separately reviewed as bridge machinery; it uses LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, with peers EID 30390 = Monad adapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df and EID 30383 = Plasma adapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b, owned by Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770940,
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0",
+          "safe:ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
         "sources": [
           {
-            "label": "Midas",
-            "url": "https://midas.app/"
+            "label": "Midas smart-contract directory",
+            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+          },
+          {
+            "label": "Ethereum mHYPER token",
+            "url": "https://etherscan.io/address/0x9b5528528656dbc094765e2abb79f293c21191b9#code"
+          },
+          {
+            "label": "Ethereum Midas LayerZero adapter",
+            "url": "https://etherscan.io/address/0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0#code"
           }
         ]
       },
@@ -127,28 +166,78 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "mHYPER on monad is minted by the immutable MidasLzMintBurnOFTAdapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df (13,682-byte non-proxy runtime): token() = this deployment and endpoint() = the chain's LayerZero V2 endpoint (read 2026-07-20). The adapter is the OFT mint/burn authority; Midas's shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 also holds the chain's mint operator role.",
+        "reviewNote": "Monad is a LayerZero bridge representation, not an independent native issuance chain. Immutable adapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df (13,682-byte non-proxy runtime) points to endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and peer EID 30101 = Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0. The adapter owner is Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89; it can configure peers, endpoint delegate/configuration, and rate limits. Shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 also holds the representation token mint role at the observation block.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96621994,
         "controllerChain": "monad",
         "controllerAddress": "0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:monad:0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df"
+          "contract:ethereum:0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0",
+          "contract:monad:0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df",
+          "safe:monad:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "access-control:monad:0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f",
+          "proxy-admin:monad:0x6782b34aa276ae2212c937d800dc62bab6f03756"
         ],
         "sources": [
           {
-            "label": "Midas",
-            "url": "https://midas.app/"
+            "label": "Monad mHYPER token",
+            "url": "https://explorer.monad.xyz/address/0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+          },
+          {
+            "label": "Monad Midas LayerZero adapter",
+            "url": "https://explorer.monad.xyz/address/0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df"
+          },
+          {
+            "label": "Midas smart-contract directory",
+            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
           }
         ]
       },
       {
         "id": "plasma:0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
-        "sourceChain": "ethereum",
         "destinationChain": "plasma",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "plasma",
         "contractAddress": "0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
+        "protocol": "Midas native issuance with canonical-side LayerZero V2 adapter",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Plasma is a canonical Midas issuance deployment: the issuer's smart-contract directory lists the Plasma mHYPER token and issuance vault, and shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 holds M_HYPER_MINT_OPERATOR_ROLE at the observation block. The documented Plasma issuance-vault proxy 0xa603cf264adeb8e7f0f063c116929adac2d4286e is currently revoked from that role. Canonical-side adapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b is separately reviewed as Ethereum↔Plasma LayerZero bridge machinery.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 29982696,
+        "failureDomainKeys": [
+          "midas-native:plasma",
+          "access-control:plasma:0x3ea351249daa640f4ababc06b3118f35324fab72",
+          "contract:plasma:0xa603cf264adeb8e7f0f063c116929adac2d4286e",
+          "contract:plasma:0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+        ],
+        "sources": [
+          {
+            "label": "Midas smart-contract directory",
+            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+          },
+          {
+            "label": "Plasma mHYPER token",
+            "url": "https://plasma-explorer.com/address/0xb31bea5c2a43f942a3800558b1aa25978da75f8a"
+          },
+          {
+            "label": "Plasma Midas LayerZero adapter",
+            "url": "https://plasma-explorer.com/address/0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+          }
+        ]
+      },
+      {
+        "id": "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
+        "sourceChain": "ethereum",
+        "destinationChain": "katana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
         "protocol": "Midas LzMintBurnOFTAdapter (LayerZero)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
@@ -156,43 +245,580 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "mHYPER on plasma is minted by the immutable MidasLzMintBurnOFTAdapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b (13,682-byte non-proxy runtime): token() = this deployment and endpoint() = the chain's LayerZero V2 endpoint (read 2026-07-20). The adapter is the OFT mint/burn authority; Midas's shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 also holds the chain's mint operator role.",
+        "reviewNote": "Katana is a LayerZero bridge representation, not an independent native issuance chain. Immutable adapter 0x0516ded0209874fa9381ee721e8f1bcbe6ec2832 points to the Katana token and endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, with peer EID 30101 = Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0. The adapter role was granted at block 30323406, revoked at block 36074971, and is absent at block 40181191; the shared owner Safe and default-admin authorities remain, so the route is paused/revoked rather than structurally incapable of reactivation. A LayerZero execute302 delivery at block 30324545 emitted a Katana mHYPER mint from the Ethereum adapter peer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40181191,
+        "controllerChain": "katana",
+        "controllerAddress": "0x0516ded0209874fa9381ee721e8f1bcbe6ec2832",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0",
+          "contract:katana:0x0516ded0209874fa9381ee721e8f1bcbe6ec2832",
+          "safe:katana:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "access-control:katana:0x980f57b62060824799f23f87d6fa321653b6f069",
+          "proxy-admin:katana:0xa7b637fb74a4582f7820cb481b1fa3d9fd5c9de3"
+        ],
+        "sources": [
+          {
+            "label": "Katana mHYPER token",
+            "url": "https://katanascan.com/address/0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+          },
+          {
+            "label": "Katana Midas LayerZero adapter",
+            "url": "https://katanascan.com/address/0x0516ded0209874fa9381ee721e8f1bcbe6ec2832"
+          },
+          {
+            "label": "Katana LayerZero delivery transaction",
+            "url": "https://katanascan.com/tx/0xd48181a695d60b631606609f8316c0fea41241845e7f8eebb25aebc3fdaa603c"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "mhyper-ethereum-layerzero-adapter",
+        "label": "mHYPER Ethereum LayerZero mint/burn adapter",
+        "routeRefs": [
+          "ethereum:0x9b5528528656dbc094765e2abb79f293c21191b9",
+          "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+          "plasma:0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
+          "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0",
+          "safe:ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero Endpoint V2 accepts the configured Ethereum adapter peers: EID 30390 = Monad adapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df and EID 30383 = Plasma adapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b.",
+          "rateLimits": "The adapter exposes owner-controlled rate-limit configuration; exact aggregate values were not independently decoded in this pass.",
+          "pausersAdminsUpgraders": "Verified adapter runtime is immutable and has no EIP-1967 implementation, admin, or beacon slots. Owner Safe controls peer and endpoint delegate/configuration setters but cannot replace adapter bytecode."
+        },
+        "capDescription": "The adapter burns source-side mHYPER and its authenticated receive path self-only mints the destination representation. Its bridge limits do not create an independent native issuance cap and do not remove the token-level minter paths.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770940,
+        "sources": [
+          {
+            "label": "Ethereum Midas LayerZero adapter",
+            "url": "https://etherscan.io/address/0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0#code"
+          },
+          {
+            "label": "LayerZero V2 overview",
+            "url": "https://docs.layerzero.network/v2/get-started/overview"
+          }
+        ],
+        "evidence": "At Ethereum block 25770940, adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0 was a non-proxy MidasLzMintBurnOFTAdapter with immutable runtime, local token binding, authenticated LayerZero receive checks, and owner-configurable peer and rate-limit machinery. It is canonical-side bridge machinery, not native Mint Authority."
+      },
+      {
+        "id": "mhyper-monad-layerzero-adapter",
+        "label": "mHYPER Monad LayerZero mint/burn adapter",
+        "routeRefs": [
+          "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:monad:0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df",
+          "safe:monad:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero Endpoint V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b authenticates source EID 30101 and peer Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0.",
+          "rateLimits": "The adapter exposes owner-controlled rate-limit configuration; exact aggregate values were not independently decoded in this pass.",
+          "pausersAdminsUpgraders": "The 13,682-byte adapter runtime is immutable and non-proxy. Owner Safe can configure peers and endpoint delegate/configuration, but cannot replace the adapter runtime."
+        },
+        "capDescription": "The adapter is the authenticated Monad representation burn/mint rail. Its route limits constrain transfer flow but do not make the token's separate shared-operator mint role supply-conserving.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96621994,
+        "sources": [
+          {
+            "label": "Monad Midas LayerZero adapter",
+            "url": "https://explorer.monad.xyz/address/0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df"
+          },
+          {
+            "label": "Monad mHYPER token",
+            "url": "https://explorer.monad.xyz/address/0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+          }
+        ],
+        "evidence": "At Monad block 96621994, immutable adapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df was the authenticated local bridge mint/burn machinery for mHYPER and pointed to the Ethereum adapter peer. Its owner Safe and representation-token roles remain separately scoreable Bridge Risk controls."
+      },
+      {
+        "id": "mhyper-plasma-layerzero-adapter",
+        "label": "mHYPER Plasma LayerZero mint/burn adapter",
+        "routeRefs": [
+          "plasma:0xb31bea5c2a43f942a3800558b1aa25978da75f8a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
         "controllerChain": "plasma",
         "controllerAddress": "0x801c551b22dcd0a3e23ff8e6134e662e1837d75b",
         "failureDomainKeys": [
           "protocol:layerzero-oft-v2",
-          "contract:plasma:0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+          "contract:plasma:0x801c551b22dcd0a3e23ff8e6134e662e1837d75b",
+          "safe:plasma:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
         ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero Endpoint V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b authenticates source EID 30101 and peer Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0.",
+          "rateLimits": "The adapter exposes owner-controlled rate-limit configuration; exact aggregate values were not independently decoded in this pass.",
+          "pausersAdminsUpgraders": "The 13,682-byte adapter runtime is immutable and non-proxy. Owner Safe can configure peers and endpoint delegate/configuration, but cannot replace the adapter runtime."
+        },
+        "capDescription": "The adapter is canonical-side Ethereum↔Plasma bridge machinery and its authenticated return path is supply-conserving only when the source-side burn accounting is honored; it is not independent native Mint Authority.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 29982696,
         "sources": [
           {
-            "label": "Midas",
-            "url": "https://midas.app/"
+            "label": "Plasma Midas LayerZero adapter",
+            "url": "https://plasma-explorer.com/address/0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+          },
+          {
+            "label": "Plasma mHYPER token",
+            "url": "https://plasma-explorer.com/address/0xb31bea5c2a43f942a3800558b1aa25978da75f8a"
           }
-        ]
+        ],
+        "evidence": "At Plasma block 29982696, immutable adapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b was the canonical-side LayerZero bridge adapter for the Plasma route. Its bridge mint/burn and peer/rate-limit machinery remains in Bridge Risk while the Plasma token's native issuance remains in Mint Authority."
       },
       {
-        "id": "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
-        "destinationChain": "katana",
-        "canonicalChain": "ethereum",
-        "contractAddress": "0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
-        "protocol": "Midas native issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Native mHYPER: mint authority is the Midas shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 plus deposit-vault minters (mint-authority review). This chain has no LayerZero adapter; supply is minted locally by Midas.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "id": "mhyper-katana-layerzero-adapter",
+        "label": "mHYPER Katana LayerZero mint/burn adapter",
+        "routeRefs": [
+          "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0x0516ded0209874fa9381ee721e8f1bcbe6ec2832",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0",
+          "contract:katana:0x0516ded0209874fa9381ee721e8f1bcbe6ec2832",
+          "safe:katana:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero Endpoint V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b stores source EID 30101 and peer Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0.",
+          "rateLimits": "The current Ethereum-destination rate-limit record is nonzero with an 86400-second window; the adapter owner can change route limits.",
+          "pausersAdminsUpgraders": "The adapter runtime is immutable and non-proxy. Its adapter and token mint roles are currently revoked, but owner and peer configuration remain present for reactivation."
+        },
+        "capDescription": "Katana's adapter is a bridge representation mint/burn rail; its current role revocation pauses the route but does not establish independent native issuance or eliminate the reactivation surface.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 40181191,
         "sources": [
           {
-            "label": "Midas",
-            "url": "https://midas.app/"
+            "label": "Katana Midas LayerZero adapter",
+            "url": "https://katanascan.com/address/0x0516ded0209874fa9381ee721e8f1bcbe6ec2832"
+          },
+          {
+            "label": "Katana LayerZero delivery transaction",
+            "url": "https://katanascan.com/tx/0xd48181a695d60b631606609f8316c0fea41241845e7f8eebb25aebc3fdaa603c"
           }
-        ]
+        ],
+        "evidence": "At Katana block 40181191, adapter 0x0516ded0209874fa9381ee721e8f1bcbe6ec2832 remained deployed with immutable MidasLzMintBurnOFTAdapter runtime, owner Safe, configured Ethereum peer, and a nonzero 86400-second rate-limit record, while its token mint role was revoked. The block 30324545 execute302 delivery from Ethereum peer 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0 emitted a Katana mHYPER mint, proving representation semantics."
+      },
+      {
+        "id": "mhyper-layerzero-adapter-owner-safe",
+        "label": "mHYPER LayerZero adapter owner Safe",
+        "routeRefs": [
+          "ethereum:0x9b5528528656dbc094765e2abb79f293c21191b9",
+          "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+          "plasma:0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
+          "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "safe:ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "safe:monad:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "safe:plasma:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "safe:katana:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        ],
+        "authorityType": "safe",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25527148,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "The shared owner Safe controls peer mappings for the Ethereum, Monad, Plasma, and Katana adapters; each adapter's configured peer is recorded in its route-scoped control.",
+          "rateLimits": "The Safe can change adapter rate limits, including the observed nonzero 86400-second Katana window.",
+          "pausersAdminsUpgraders": "The same 1-of-3 Safe is the owner on all four adapter deployments. The latest owner/threshold reads match; the retained 2026-07-13 module/guard observation showed no enabled modules and a zero guard."
+        },
+        "capDescription": "The Safe can administer the LayerZero transfer rail and raise route limits, but it cannot replace the immutable adapter runtimes; representation token and access-control proxy upgrades are captured in separate route controls.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ethereum Midas LayerZero adapter",
+            "url": "https://etherscan.io/address/0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0#code"
+          },
+          {
+            "label": "Monad Midas LayerZero adapter",
+            "url": "https://explorer.monad.xyz/address/0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df"
+          },
+          {
+            "label": "Plasma Midas LayerZero adapter",
+            "url": "https://plasma-explorer.com/address/0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+          },
+          {
+            "label": "Katana Midas LayerZero adapter",
+            "url": "https://katanascan.com/address/0x0516ded0209874fa9381ee721e8f1bcbe6ec2832"
+          }
+        ],
+        "evidence": "Current reads on 2026-08-16 show Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 as owner of all four MidasLzMintBurnOFTAdapter deployments with 1-of-3 signer configuration. Its peer, endpoint delegate/configuration, and rate-limit administration is Bridge Risk; the same Safe's native DEFAULT_ADMIN and native proxy-admin roles remain separately scoped in Mint Authority."
+      },
+      {
+        "id": "mhyper-monad-representation-operator",
+        "label": "mHYPER Monad representation mint operator EOA",
+        "routeRefs": [
+          "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x5683de280d0c3967fba2f04d707fa1ef5a044e25",
+        "failureDomainKeys": [
+          "eoa:monad:0x5683de280d0c3967fba2f04d707fa1ef5a044e25",
+          "access-control:monad:0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f"
+        ],
+        "authorityType": "eoa",
+        "capDescription": "The shared operator EOA directly holds the Monad representation token's M_HYPER_MINT_OPERATOR_ROLE; no on-chain cap was identified.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96621994,
+        "sources": [
+          {
+            "label": "Monad mHYPER token",
+            "url": "https://explorer.monad.xyz/address/0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+          },
+          {
+            "label": "Monad MidasAccessControl",
+            "url": "https://explorer.monad.xyz/address/0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f"
+          }
+        ],
+        "evidence": "At Monad block 96621994, EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 held the representation token's M_HYPER_MINT_OPERATOR_ROLE and could directly mint mHYPER. This is representation-token bridge risk, not native Ethereum or Plasma issuance authority."
+      },
+      {
+        "id": "mhyper-katana-representation-operator-revoked",
+        "label": "mHYPER Katana representation mint operator EOA (revoked)",
+        "routeRefs": [
+          "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0x5683de280d0c3967fba2f04d707fa1ef5a044e25",
+        "failureDomainKeys": [
+          "eoa:katana:0x5683de280d0c3967fba2f04d707fa1ef5a044e25",
+          "access-control:katana:0x980f57b62060824799f23f87d6fa321653b6f069"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The shared operator role was revoked on Katana at block 39898794 and was absent at block 40181191; shared default-admin controls can reauthorize a representation minter.",
+          "unsupportedReason": "Historical direct-mint authority remains adverse evidence, but no current Katana operator role is assumed."
+        },
+        "capDescription": "The Katana representation operator's direct mint role is currently revoked; the role's historical presence and the route's reauthorization surface remain scoreable Bridge Risk evidence.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40181191,
+        "sources": [
+          {
+            "label": "Katana mHYPER token",
+            "url": "https://katanascan.com/address/0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+          },
+          {
+            "label": "Katana MidasAccessControl",
+            "url": "https://katanascan.com/address/0x980f57b62060824799f23f87d6fa321653b6f069"
+          }
+        ],
+        "evidence": "The shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 held the Katana representation token mint role historically, but the role was revoked at block 39898794 and was absent at block 40181191. The role is retained here as adverse historical bridge evidence rather than being deleted or treated as native issuance."
+      },
+      {
+        "id": "mhyper-monad-representation-default-admin-eoa",
+        "label": "mHYPER Monad representation DEFAULT_ADMIN EOA",
+        "routeRefs": [
+          "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "failureDomainKeys": [
+          "eoa:monad:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+          "access-control:monad:0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE can grant or revoke the Monad representation token's M_HYPER_MINT_OPERATOR_ROLE, including the shared operator EOA and adapter role holders."
+        },
+        "capDescription": "The shared default-admin EOA can authorize or remove representation-token minters and thereby change bridge mint exposure.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96621994,
+        "sources": [
+          {
+            "label": "Monad MidasAccessControl",
+            "url": "https://explorer.monad.xyz/address/0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f"
+          }
+        ],
+        "evidence": "At Monad block 96621994, DEFAULT_ADMIN_ROLE remained held by EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 on the representation deployment's MidasAccessControl, preserving immediate minter reauthorization authority."
+      },
+      {
+        "id": "mhyper-katana-representation-default-admin-eoa",
+        "label": "mHYPER Katana representation DEFAULT_ADMIN EOA",
+        "routeRefs": [
+          "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "failureDomainKeys": [
+          "eoa:katana:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+          "access-control:katana:0x980f57b62060824799f23f87d6fa321653b6f069"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE can reauthorize the revoked Katana representation token minter and adapter roles."
+        },
+        "capDescription": "The shared default-admin EOA retains a direct route to reauthorize Katana representation-token bridge minters despite the current role revocations.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 40181191,
+        "sources": [
+          {
+            "label": "Katana MidasAccessControl",
+            "url": "https://katanascan.com/address/0x980f57b62060824799f23f87d6fa321653b6f069"
+          }
+        ],
+        "evidence": "At Katana block 40181191, EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 remained a DEFAULT_ADMIN_ROLE authority on the representation deployment's MidasAccessControl, so revocation of the shared operator and adapter roles does not eliminate reauthorization risk."
+      },
+      {
+        "id": "mhyper-representation-default-admin-safe",
+        "label": "mHYPER representation DEFAULT_ADMIN Safe",
+        "routeRefs": [
+          "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+          "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "failureDomainKeys": [
+          "safe:monad:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "safe:katana:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "access-control:monad:0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f",
+          "access-control:katana:0x980f57b62060824799f23f87d6fa321653b6f069"
+        ],
+        "authorityType": "safe",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25527148,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The shared 1-of-3 Safe retains DEFAULT_ADMIN_ROLE on the Monad and Katana representation access-control deployments and can reauthorize bridge minters; the retained module/guard observation showed no enabled modules and a zero guard."
+        },
+        "capDescription": "Safe administration can restore or replace representation-token bridge minter roles on the reviewed routes.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Monad MidasAccessControl",
+            "url": "https://explorer.monad.xyz/address/0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f"
+          },
+          {
+            "label": "Katana MidasAccessControl",
+            "url": "https://katanascan.com/address/0x980f57b62060824799f23f87d6fa321653b6f069"
+          }
+        ],
+        "evidence": "The shared Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 remains a DEFAULT_ADMIN_ROLE authority on the Monad and Katana representation access-control proxies. Its 1-of-3 identity is shared with the adapter owner and representation upgrade controls, but this control is limited to minter-role administration."
+      },
+      {
+        "id": "mhyper-monad-representation-upgrade-safe",
+        "label": "mHYPER Monad representation token/access-control upgrade Safe",
+        "routeRefs": [
+          "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "failureDomainKeys": [
+          "safe:monad:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "proxy-admin:monad:0x6782b34aa276ae2212c937d800dc62bab6f03756",
+          "timelock:monad:0xfc8ac00c85cced29304c37727f525860039b852c",
+          "access-control:monad:0x9379dbb132131c0a9e719a4d74e54b8dd0a4a75f"
+        ],
+        "authorityType": "safe",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25527148,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "rateLimits": "The Monad token and access-control proxies use chain-local ProxyAdmin 0x6782b34aa276ae2212c937d800dc62bab6f03756 under timelock 0xfc8ac00c85cced29304c37727f525860039b852c with getMinDelay() = 172800 seconds.",
+          "pausersAdminsUpgraders": "The shared Safe is the sole proposer, executor, and canceller authority on the Monad representation timelock and can replace token or access-control mint-critical logic after the two-day delay."
+        },
+        "capDescription": "A delayed but materially mutable representation-token and access-control upgrade path can replace bridge mint logic or role enforcement.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96621994,
+        "sources": [
+          {
+            "label": "Monad mHYPER token",
+            "url": "https://explorer.monad.xyz/address/0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+          },
+          {
+            "label": "Monad MidasTimelockController",
+            "url": "https://explorer.monad.xyz/address/0xfc8ac00c85cced29304c37727f525860039b852c"
+          }
+        ],
+        "evidence": "At Monad block 96621994, the representation token and MidasAccessControl remained transparent-proxy deployments under ProxyAdmin 0x6782b34aa276ae2212c937d800dc62bab6f03756. The chain-local timelock 0xfc8ac00c85cced29304c37727f525860039b852c returned a 172800-second minimum delay and assigned its control to the shared 1-of-3 Safe."
+      },
+      {
+        "id": "mhyper-katana-representation-upgrade-safe",
+        "label": "mHYPER Katana representation token/access-control upgrade Safe",
+        "routeRefs": [
+          "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "failureDomainKeys": [
+          "safe:katana:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "proxy-admin:katana:0xa7b637fb74a4582f7820cb481b1fa3d9fd5c9de3",
+          "timelock:katana:0x8d0074e92a97b2645f94e4711b08275c15998186",
+          "access-control:katana:0x980f57b62060824799f23f87d6fa321653b6f069"
+        ],
+        "authorityType": "safe",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25527148,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "rateLimits": "The Katana token and access-control proxies use chain-local ProxyAdmin 0xa7b637fb74a4582f7820cb481b1fa3d9fd5c9de3 under timelock 0x8d0074e92a97b2645f94e4711b08275c15998186 with getMinDelay() = 172800 seconds.",
+          "pausersAdminsUpgraders": "The shared Safe is the sole proposer, executor, and canceller authority on the Katana representation timelock and can replace token or access-control mint-critical logic after the two-day delay, even though current bridge minter roles are revoked."
+        },
+        "capDescription": "A delayed but materially mutable representation-token and access-control upgrade path can restore or replace Katana bridge mint logic after the current route pause.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 40181191,
+        "sources": [
+          {
+            "label": "Katana mHYPER token",
+            "url": "https://katanascan.com/address/0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb"
+          },
+          {
+            "label": "Katana MidasTimelockController",
+            "url": "https://katanascan.com/address/0x8d0074e92a97b2645f94e4711b08275c15998186"
+          }
+        ],
+        "evidence": "At Katana block 40181191, the representation token and MidasAccessControl remained transparent-proxy deployments under ProxyAdmin 0xa7b637fb74a4582f7820cb481b1fa3d9fd5c9de3. The chain-local timelock 0x8d0074e92a97b2645f94e4711b08275c15998186 was previously observed with a 172800-second minimum delay and shared Safe authority; current role revocation does not remove this upgrade surface."
       }
     ]
   }

@@ -4,24 +4,32 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "OUSG minting runs through the OUSG_InstantManager (MINTER_ROLE holder) and is governed by a 4-of-7 Ondo Safe (DEFAULT_ADMIN and MINTER_ROLE on the token). The InstantManager's own admin is a separate 3-of-5 Ondo Safe.",
+    "summary": "OUSG native issuance is reviewed across Ethereum, Polygon, Solana, and XRPL. Ethereum has active OUSG_InstantManager and Ondo Safe MINTER_ROLE holders plus their administrators; Polygon's proxy-admin Safe can replace mint logic even with no current MINTER_ROLE holder; Solana's mint authority and the XRPL issuer account can issue OUSG directly. No bridge representation or transfer-rail authority is included in Mint Authority.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+        "polygon:0xba11c5effa33c4d6f8f593cfa394241cfe925811"
+      ],
       "proxyAddresses": [
-        "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92"
+        "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92",
+        "0xba11c5effa33c4d6f8f593cfa394241cfe925811"
       ],
       "implementationAddresses": [
-        "0x1ceb44b6e515abf009e0ccb6ddafd723886cf3ff"
+        "0x1ceb44b6e515abf009e0ccb6ddafd723886cf3ff",
+        "0xf0001671af432f7bb3c3172608265e49722fdbbb"
       ],
       "adminAddresses": [
         "0xba80aa44cc25e85cc30359150dfb1c7d041cf6d5",
-        "0xAEd4caF2E535D964165B4392342F71bac77e8367"
+        "0xAEd4caF2E535D964165B4392342F71bac77e8367",
+        "0xa4d0c86e1186088beebf1f72f2a4aaba92ade0e8",
+        "0x4413073440A568790c1b2b06B47F7D0a443574d0"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Ondo 4-of-7 Safe (OUSG token DEFAULT_ADMIN and MINTER_ROLE[1])",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579746,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770414,
       "sources": [
         {
           "label": "Ondo smart contract addresses",
@@ -34,6 +42,10 @@
         {
           "label": "OUSG ProxyAdmin",
           "url": "https://etherscan.io/address/0xba80aa44cc25e85cc30359150dfb1c7d041cf6d5#readContract"
+        },
+        {
+          "label": "OUSG Polygon token",
+          "url": "https://polygonscan.com/address/0xba11c5effa33c4d6f8f593cfa394241cfe925811"
         }
       ]
     },
@@ -45,6 +57,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x1b19c19393e2d034d8ff31ff34c81252fcbbee92"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -57,7 +72,9 @@
             "url": "https://ondo.finance/ousg"
           }
         ],
-        "evidence": "At Ethereum block 25295096, getRoleMember(MINTER_ROLE, 0) on OUSG token returned 0x93358db73B6cd4b98D89c8F5f230E81a95c2643a (the InstantManager). Ondo docs confirm this contract handles instant buy/redeem."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770414,
+        "evidence": "At Ethereum block 25770414, the OUSG token has two current MINTER_ROLE holders, including 0x93358db73B6cd4b98D89c8F5f230E81a95c2643a (the InstantManager). Ondo docs confirm this contract handles instant buy/redeem."
       },
       {
         "chain": "ethereum",
@@ -66,6 +83,9 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x1b19c19393e2d034d8ff31ff34c81252fcbbee92"
+        ],
         "canRaiseCap": "unknown",
         "threshold": 4,
         "signerCount": 7,
@@ -74,18 +94,18 @@
           "owners": [
             "0x74a4C329AA5a6BFa16bD32BAf37209f4C632173D",
             "0x189D409b807aC1949Fe82c143270992FE9457607",
-            "0xECE6bC29F718085a30b7bC14162B0fad4737e5d0",
+            "0x59702bb067EeAe05aC2C1B8c6F30DffD1cc29893",
             "0x60F030d621a4Ab27DfF024a8e43eB36e2D95FB02",
             "0xaA1E4eef723ceaDd137B3AD39ea540dA4B092f8e",
             "0x020679fF2Bc53758bEbAD1bBe0ab0CF7c1beD241",
-            "0x6A95a204aD4a6842b2f0aE3BBb59f35E85594f46"
+            "0x40482b9538A418cB62B92F14cC13D20092b3DbB4"
           ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
           "version": "1.3.0",
-          "observedBlock": 25295096,
+          "observedBlock": 25770414,
           "source": "safe-api"
         },
         "sources": [
@@ -94,7 +114,9 @@
             "url": "https://etherscan.io/address/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25295096, getRoleMember(MINTER_ROLE, 1) returned 0xAEd4caF2E535D964165B4392342F71bac77e8367 and DEFAULT_ADMIN getRoleMember(0) also returned this address. Safe API confirmed 4-of-7, version 1.3.0, modules [], guard zero."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770414,
+        "evidence": "At Ethereum block 25770414, getRoleMember(MINTER_ROLE, 1) returned 0xAEd4caF2E535D964165B4392342F71bac77e8367 and DEFAULT_ADMIN getRoleMember(0) also returned this address. Safe API confirmed the current 4-of-7 owner set, version 1.3.0, no enabled modules, and zero guard."
       },
       {
         "chain": "ethereum",
@@ -103,6 +125,9 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x1b19c19393e2d034d8ff31ff34c81252fcbbee92"
+        ],
         "canRaiseCap": "unknown",
         "threshold": 3,
         "signerCount": 5,
@@ -120,7 +145,7 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "version": "1.4.1",
-          "observedBlock": 25295096,
+          "observedBlock": 25770414,
           "source": "safe-api"
         },
         "sources": [
@@ -129,7 +154,109 @@
             "url": "https://etherscan.io/address/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25295096, DEFAULT_ADMIN getRoleMember(0) on OUSG_InstantManager returned 0x5AE21c99FC5f1584D8Cb09a298CFFd92B5d178eF. Safe API confirmed 3-of-5, version 1.4.1, modules [], guard zero."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770414,
+        "evidence": "At Ethereum block 25770414, DEFAULT_ADMIN on OUSG_InstantManager resolves to 0x5AE21c99FC5f1584D8Cb09a298CFFd92B5d178eF. Safe API confirmed the current 3-of-5 owner set, version 1.4.1, no enabled modules, and zero guard."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x4413073440A568790c1b2b06B47F7D0a443574d0",
+        "label": "Ondo 3-of-6 Safe (OUSG Polygon ProxyAdmin owner)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "polygon:0xba11c5effa33c4d6f8f593cfa394241cfe925811"
+        ],
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x189D409b807aC1949Fe82c143270992FE9457607",
+            "0x40482b9538A418cB62B92F14cC13D20092b3DbB4",
+            "0x74a4C329AA5a6BFa16bD32BAf37209f4C632173D",
+            "0x6A95a204aD4a6842b2f0aE3BBb59f35E85594f46",
+            "0xaA1E4eef723ceaDd137B3AD39ea540dA4B092f8e",
+            "0x020679fF2Bc53758bEbAD1bBe0ab0CF7c1beD241"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "version": "1.3.0+L2",
+          "observedBlock": 92141177,
+          "source": "safe-api"
+        },
+        "failureDomainKeys": [
+          "safe:polygon:0x4413073440a568790c1b2b06b47f7d0a443574d0"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141177,
+        "sources": [
+          {
+            "label": "OUSG Polygon token and ProxyAdmin",
+            "url": "https://polygonscan.com/address/0xba11c5effa33c4d6f8f593cfa394241cfe925811"
+          },
+          {
+            "label": "Polygon OUSG owner Safe",
+            "url": "https://safe-transaction-polygon.safe.global/api/v1/safes/0x4413073440A568790c1b2b06B47F7D0a443574d0/"
+          }
+        ],
+        "evidence": "At Polygon block 92141177, the OUSG proxy resolves to implementation 0xf0001671af432f7bb3c3172608265e49722fdbbb and EIP-1967 admin 0xa4d0c86e1186088beebf1f72f2a4aaba92ade0e. That ProxyAdmin is owned by the Ondo 3-of-6 Safe 0x4413073440A568790c1b2b06B47F7D0a443574d0; the Safe API confirmed six owners, threshold 3, no enabled modules, and zero guard. The token currently has no MINTER_ROLE holder, but this upgrade path can replace mint logic."
+      },
+      {
+        "chain": "solana",
+        "address": "6ViaRWzv7p56RfP1A9Hxy2ctu9kfE3XL43SxWuq3E4cE",
+        "label": "OUSG Solana mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439722065,
+        "sources": [
+          {
+            "label": "OUSG Solana mint",
+            "url": "https://solscan.io/token/i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc"
+          },
+          {
+            "label": "Ondo OUSG technical documentation",
+            "url": "https://docs.ondo.finance/qualified-access-products/ousg/technical"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439722065, the OUSG SPL mint i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc has mint authority 6ViaRWzv7p56RfP1A9Hxy2ctu9kfE3XL43SxWuq3E4cE and zero reported supply. The mint authority can create native OUSG units; freeze authority remains a separate blacklist/pause control."
+      },
+      {
+        "chain": "xrpl",
+        "address": "rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p",
+        "label": "OUSG XRPL issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "xrpl:4F55534700000000000000000000000000000000.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 106341875,
+        "sources": [
+          {
+            "label": "OUSG XRPL issuer account",
+            "url": "https://livenet.xrpl.org/accounts/rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p"
+          },
+          {
+            "label": "Ondo OUSG technical documentation",
+            "url": "https://docs.ondo.finance/qualified-access-products/ousg/technical"
+          }
+        ],
+        "evidence": "At XRPL validated ledger 106341875, issuer rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p has Domain set to ondo.finance and issues the OUSG currency identified by the XRPL currency code. The issuer account can create native issued-currency units; RequireAuth and AllowTrustLineClawback remain issuer controls in their own module."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -159,9 +286,9 @@
           "url": "https://www.sec.gov/Archives/edgar/data/1974395/000149315225024964/form497ad.htm"
         }
       ],
-      "evidence": "At Ethereum block 25295096: OUSG token MINTER_ROLE has 2 holders: InstantManager (0x93358db7) and a 4-of-7 Ondo Safe (0xAEd4caF2). Safe API confirmed both Safes with threshold/owners/modules/guard. All mint-capable surfaces verified. Economic-control evidence reviewed 2026-07-15: NAV Consulting has direct read-only access, independently calculates OUSG NAV, and publishes full fund financial data daily with up to a three-day lag. The current offering document states that the OUSG fund is not registered under the Investment Company Act; adviser registration does not qualify as product prudential supervision. Economic-posture fields reviewed 2026-08-15: unbounded InstantManager and Safe-administered mint roles; daily independent NAV reporting remains periodic and no product prudential supervision is established.",
+      "evidence": "At Ethereum block 25770414, OUSG token MINTER_ROLE has two holders: OUSG_InstantManager (0x93358db7) and the 4-of-7 Ondo Safe (0xAEd4caF2); the InstantManager's DEFAULT_ADMIN is a separate current 3-of-5 Safe. Ethereum and Polygon transparent-proxy paths can replace mint-critical logic, with the Polygon ProxyAdmin owned by a current 3-of-6 Ondo Safe. Solana's mint authority 6ViaRWzv7p56RfP1A9Hxy2ctu9kfE3XL43SxWuq3E4cE and the XRPL issuer account rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p are additional native issuance authorities. These controls are canonical Mint Authority; no bridge representation authority is counted here. Safe APIs confirmed the current owner sets, thresholds, no enabled modules, and zero guards. Economic-control evidence reviewed 2026-07-15: NAV Consulting has direct read-only access, independently calculates OUSG NAV, and publishes full fund financial data daily with up to a three-day lag. The current offering document states that the OUSG fund is not registered under the Investment Company Act; adviser registration does not qualify as product prudential supervision. Economic-posture fields reviewed 2026-08-16: native minting remains unbounded, daily independent NAV reporting remains periodic, and no product prudential supervision is established.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16"
     }
   }
 }

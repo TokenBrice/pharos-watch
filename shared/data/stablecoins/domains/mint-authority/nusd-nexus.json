@@ -1,12 +1,15 @@
 {
   "id": "nusd-nexus",
   "mintAuthority": {
-    "mintPath": "bridge-or-oft-synthetic",
+    "mintPath": "facilitator-bucket-mint",
     "authorityPosture": "bounded-admin",
     "confidence": "verified",
-    "summary": "NUSD is the Synapse nexus-pool LPToken: mint is restricted to its SwapFlashLoan pool owner, and supply expands when LPs add liquidity. Both token and pool are fixed EIP-1167 clones. The pool is owned by a 2-of-3 Safe with an enabled transfer-only Allowance Module and no guard.",
+    "summary": "NUSD's only native issuance is the Ethereum Synapse nexus-pool LPToken: mint is restricted to its SwapFlashLoan pool owner, and supply expands when LPs add liquidity. Both token and pool are fixed EIP-1167 clones. The pool is owned by a 2-of-3 Safe with an enabled transfer-only Allowance Module and no guard. The twelve non-Ethereum SynapseERC20 deployments are bridge representations and are assessed under Bridge Risk.",
     "upgradeability": {
       "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+      ],
       "proxyAddresses": [
         "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f",
         "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
@@ -16,8 +19,8 @@
         "0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-13",
-      "observedBlock": 25527046,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770804,
       "sources": [
         {
           "label": "NUSD LPToken fixed EIP-1167 clone",
@@ -50,14 +53,11 @@
         "canRaiseCap": false,
         "chain": "ethereum",
         "address": "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8",
-        "capDescription": "Only onlyOwner can call mint() on the LPToken; the sole owner is the SwapFlashLoan pool; minting occurs on LP deposit.",
-        "routeChecks": {
-          "lockboxOrEscrow": "NUSD supply expands only when LPs add liquidity to the Synapse nexus SwapFlashLoan pool.",
-          "onchainAmountBounds": "LPToken mint() is onlyOwner and the owner is the SwapFlashLoan pool contract.",
-          "caps": "No independent fixed supply cap; minting is bounded by pool deposit/accounting logic.",
-          "pausersAdminsUpgraders": "Pool ownership is held by the separately reviewed 2-of-3 Safe."
-        },
-        "evidence": "At Ethereum block 25295203: NUSD token Blockscout shows ContractName 'LPToken'; owner() returned 0x1116898…; Blockscout confirms that address as ContractName 'SwapFlashLoan' (Solidity 0.6.12, AGPL-3.0). Pool's own owner() = 0x67f60b0891…",
+        "deploymentRefs": [
+          "ethereum:0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+        ],
+        "capDescription": "Only onlyOwner can call mint() on the LPToken; the sole owner is the SwapFlashLoan pool; minting occurs only when LPs add liquidity. There is no independent fixed supply cap, so the native path is bounded by pool deposit/accounting logic. Pool ownership is held by the separately reviewed 2-of-3 Safe.",
+        "evidence": "At Ethereum block 25770804 (2026-08-16), NUSD token 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f remained the fixed LPToken clone and owner() returned SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8. The LPToken mint() path is onlyOwner and new shares require liquidity deposited into the pool; the pool's owner is the 2-of-3 Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55.",
         "sources": [
           {
             "label": "NUSD LPToken (Blockscout)",
@@ -77,16 +77,15 @@
         "canRaiseCap": false,
         "chain": "ethereum",
         "address": "0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55",
+        "deploymentRefs": [
+          "ethereum:0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+        ],
         "signerCount": 3,
         "threshold": 2,
         "modulesOrGuardsStatus": "present",
-        "routeChecks": {
-          "pausersAdminsUpgraders": "Safe owns the SwapFlashLoan pool that owns the LPToken mint path. Safe v1.3 has an enabled transfer-only Allowance Module and no guard.",
-          "caps": "Safe can administer the pool route, but the reviewed LPToken mint path remains pool-deposit/accounting driven."
-        },
-        "observedAt": "2026-07-13",
-        "observedBlock": 25527046,
-        "evidence": "At Ethereum block 25527046, SwapFlashLoan pool owner() remained Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55. The Safe was 2-of-3 with zero guard and module guard, standard fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4, and enabled Allowance Module 0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134. Six delegates were configured in the module; verified module code limits them to allowance transfers and cannot replace either fixed clone target.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770804,
+        "evidence": "At Ethereum block 25770804 (2026-08-16), SwapFlashLoan pool owner() remained Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55. The Safe was 2-of-3 with zero guard and module guard, standard fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4, and enabled Allowance Module 0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134. Six delegates were configured in the module; verified module code limits them to allowance transfers and cannot replace either fixed clone target. The Safe can administer the pool route, but the reviewed LPToken mint path remains pool-deposit/accounting driven.",
         "safe": {
           "owners": [
             "0xb3dad3c24a861b84fdf380b212662620627d4e15",
@@ -101,8 +100,8 @@
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
-          "observedBlock": 25527046,
-          "observedAt": "2026-07-13",
+          "observedBlock": 25770804,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
         "sources": [
@@ -121,9 +120,9 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25527046, NUSD LPToken 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4 and SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 were 45-byte EIP-1167 runtimes embedding fixed implementations 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3 and 0x5a5fff6f753d7c11a56a52fe47a177a87e431655. All EIP-1967 implementation, admin, and beacon slots were zero on both clones and implementations. Pool ownership remained with the 2-of-3 Safe; its enabled Allowance Module can transfer Safe-held allowances but cannot change either clone target. NUSD is the fixed pool's LP receipt: new shares require liquidity deposited into the immutable SwapFlashLoan clone, and neither the pool owner nor its Safe can replace the LPToken or pool implementation. The direct-mint encoding is therefore economically bounded by deposited pool assets. Economic-posture fields reviewed 2026-08-15: the immutable Ethereum pool remains bounded, but the reviewed reserve reconciliation does not establish coverage for all satellite deployments and no prudential supervisor applies. Wave 2 external verification 2026-08-15: Synapse pool and bridge documentation did not establish aggregate monitoring or independent reconciliation across every satellite NUSD mint path.",
+      "evidence": "At Ethereum block 25770804 (2026-08-16), NUSD LPToken 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4 and SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 were 45-byte EIP-1167 runtimes embedding fixed implementations 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3 and 0x5a5fff6f753d7c11a56a52fe47a177a87e431655. All EIP-1967 implementation, admin, and beacon slots were zero on both clones and implementations. Pool ownership remained with the 2-of-3 Safe; its enabled Allowance Module can transfer Safe-held allowances but cannot change either clone target. NUSD is the fixed pool's LP receipt: new shares require liquidity deposited into the immutable SwapFlashLoan clone, and neither the pool owner nor its Safe can replace the LPToken or pool implementation. The native direct-mint path is therefore economically bounded by deposited pool assets. The twelve non-Ethereum SynapseERC20 deployments are bridge representations with route-scoped MINTER_ROLE controls under Bridge Risk; their bridge role administration is not counted as native Mint Authority. Economic-posture fields reviewed 2026-08-16: the immutable Ethereum pool remains bounded, but the reviewed reserve reconciliation does not establish coverage for all satellite deployments and no prudential supervisor applies. Wave 2 external verification 2026-08-15: Synapse pool and bridge documentation did not establish aggregate monitoring or independent reconciliation across every satellite NUSD mint path.",
       "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15; Codex Wave 2 external verification 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "NUSD LPToken (Blockscout)",

@@ -26,9 +26,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "cUSDO is a wrapped form of USDO and inherits USDO's Chainlink CCIP cross-chain route. The route uses CCIP token-transfer infrastructure and external oracle-network validation rather than a canonical rollup bridge or issuer-only burn/mint rail. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native; BSC/Base rows confirmed as the uniform OpenEden cUSDO deployment; Solana is a natively supported OpenEden Token-2022 deployment.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "summary": "cUSDO has a native Ethereum wrapper and native Solana Token-2022 route, while Base and BSC are peripheral representations built on Chainlink CCIP USDO underneath plus OpenEden cUSDO ERC-4626 wrappers. cUSDO itself has no token-level CCIP pool: Base/BSC bridge mint/burn, rate limits, peers, pool owners, and representation UPGRADE_ROLE/DEFAULT_ADMIN_ROLE/PAUSE_ROLE are scored here. The external-validated-network tier is inherited from USDO's Chainlink CCIP route.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex mint-bridge-boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -38,7 +38,7 @@
         "bridgeTypes": [
           "burnAndMint"
         ],
-        "note": "OpenEden announced USDO interoperability through Chainlink CCIP; cUSDO is the wrapper of USDO."
+        "note": "OpenEden announced USDO interoperability through Chainlink CCIP. The inherited USDO route underlies Base/BSC cUSDO ERC-4626 wrappers; cUSDO itself has no token-level CCIP pool."
       }
     ],
     "sources": [
@@ -85,28 +85,38 @@
         "id": "base:0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
         "destinationChain": "base",
         "contractAddress": "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
-        "protocol": "OpenEden cUSDO multichain deployment",
+        "protocol": "Chainlink CCIP USDO underlying + OpenEden cUSDO ERC-4626 wrapper",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Compounding Open Dollar', symbol cUSDO, 18 decimals on base. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "At Base block 50064620, cUSDO asset() returned Base USDO 0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0. The inherited Chainlink CCIP USDO pool supplies the burn/mint route underneath an OpenEden cUSDO ERC-4626 wrapper; cUSDO itself has no token-level CCIP mint entry point.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "base",
-        "controllerAddress": "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
         "failureDomainKeys": [
-          "protocol:openeden-multichain",
-          "contract:base:0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65"
+          "protocol:chainlink-ccip",
+          "contract:base:0x500d4882938020e939a5666c1b4200873da7efd3",
+          "router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd",
+          "eoa:base:0x5eaff7af80488033bc845709806d5fae5291eb88"
         ],
         "sources": [
           {
             "label": "OpenEden",
             "url": "https://openeden.com/"
+          },
+          {
+            "label": "Base USDO and CCIP pool explorers",
+            "url": "https://base.blockscout.com/address/0x500d4882938020e939a5666c1b4200873da7efd3"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
           }
         ]
       },
@@ -114,28 +124,38 @@
         "id": "bsc:0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
         "destinationChain": "bsc",
         "contractAddress": "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
-        "protocol": "OpenEden cUSDO multichain deployment",
+        "protocol": "Chainlink CCIP USDO underlying + OpenEden cUSDO ERC-4626 wrapper",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Compounding Open Dollar', symbol cUSDO, 18 decimals on bsc. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "At BSC block 116350816, cUSDO asset() returned BSC USDO 0x302e52aff9815b9d1682473dbfb9c74f9b750aa8. The inherited Chainlink CCIP USDO pool supplies the burn/mint route underneath an OpenEden cUSDO ERC-4626 wrapper; cUSDO itself has no token-level CCIP mint entry point.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "bsc",
-        "controllerAddress": "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
         "failureDomainKeys": [
-          "protocol:openeden-multichain",
-          "contract:bsc:0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef"
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x500d4882938020e939a5666c1b4200873da7efd3",
+          "router:bsc:0x34b03cb9086d7d758ac55af71584f81a598759fe",
+          "eoa:bsc:0x5eaff7af80488033bc845709806d5fae5291eb88"
         ],
         "sources": [
           {
             "label": "OpenEden",
             "url": "https://openeden.com/"
+          },
+          {
+            "label": "BSC USDO and CCIP pool explorers",
+            "url": "https://bscscan.com/address/0x500d4882938020e939a5666c1b4200873da7efd3"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
           }
         ]
       },
@@ -168,6 +188,208 @@
             "url": "https://solscan.io/token/BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "cusdo-base-usdo-ccip-pool",
+        "label": "cUSDO Base underlying USDO BurnMintTokenPool 1.5.1",
+        "routeRefs": [
+          "base:0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x500d4882938020e939a5666c1b4200873da7efd3",
+          "router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd",
+          "eoa:base:0x5eaff7af80488033bc845709806d5fae5291eb88"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Base USDO BurnMintTokenPool exposes remote-pool and peer configuration for the Ethereum CCIP lane; returned remote-pool byte arrays were not decoded in this pass.",
+          "rateLimits": "At Base block 50064777, inbound and outbound rate-limit buckets for the Ethereum CCIP selector were enabled. The pool owner EOA can change these route bounds.",
+          "pausersAdminsUpgraders": "The pool reports typeAndVersion() = USDO BurnMintTokenPool 1.5.1, owner() = 0x5eaff7af80488033bc845709806d5fae5291eb88, and router 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd; the owner administers this bridge pool while Chainlink CCIP validation remains an external route dependency.",
+          "onchainAmountBounds": "The inherited USDO CCIP burn/mint path is constrained by CCIP message and source-pool accounting; local cUSDO shares are then minted only against Base USDO in the ERC-4626 wrapper. This is not independent native cUSDO issuance."
+        },
+        "capDescription": "The Base USDO BurnMintTokenPool provides the inherited CCIP burn/mint route. Its enabled inbound and outbound rate limits are bridge controls, not a native cUSDO supply cap.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared OpenEden owner EOA can administer the Base pool's peers and rate limits; CCIP validation and source/destination pool accounting remain route invariants, while cUSDO wrapper administration is separately scoped."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064777,
+        "sources": [
+          {
+            "label": "Base USDO BurnMintTokenPool",
+            "url": "https://base.blockscout.com/address/0x500d4882938020e939a5666c1b4200873da7efd3"
+          },
+          {
+            "label": "Base USDO deployment",
+            "url": "https://basescan.org/address/0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          },
+          {
+            "label": "Base PublicNode JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50064777, pool 0x500d4882938020e939a5666c1b4200873da7efd3 reported typeAndVersion() = USDO BurnMintTokenPool 1.5.1, getToken() = 0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0, owner() = 0x5eaff7af80488033bc845709806d5fae5291eb88, and router 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd. Enabled inbound and outbound rate-limit buckets for the Ethereum CCIP selector were observed. The pool is the inherited USDO bridge route underneath Base cUSDO; cUSDO's local ERC-4626 share accounting is not a token-level CCIP mint path."
+      },
+      {
+        "id": "cusdo-bsc-usdo-ccip-pool",
+        "label": "cUSDO BSC underlying USDO BurnMintTokenPool 1.5.1",
+        "routeRefs": [
+          "bsc:0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x500d4882938020e939a5666c1b4200873da7efd3",
+          "router:bsc:0x34b03cb9086d7d758ac55af71584f81a598759fe",
+          "eoa:bsc:0x5eaff7af80488033bc845709806d5fae5291eb88"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The BSC USDO BurnMintTokenPool exposes remote-pool and peer configuration for the Ethereum CCIP lane; returned remote-pool byte arrays were not decoded in this pass.",
+          "rateLimits": "At BSC block 116351500, inbound and outbound rate-limit buckets for the Ethereum CCIP selector were enabled. The pool owner EOA can change these route bounds.",
+          "pausersAdminsUpgraders": "The pool reports typeAndVersion() = USDO BurnMintTokenPool 1.5.1, owner() = 0x5eaff7af80488033bc845709806d5fae5291eb88, and router 0x34b03cb9086d7d758ac55af71584f81a598759fe; the owner administers this bridge pool while Chainlink CCIP validation remains an external route dependency.",
+          "onchainAmountBounds": "The inherited USDO CCIP burn/mint path is constrained by CCIP message and source-pool accounting; local cUSDO shares are then minted only against BSC USDO in the ERC-4626 wrapper. This is not independent native cUSDO issuance."
+        },
+        "capDescription": "The BSC USDO BurnMintTokenPool provides the inherited CCIP burn/mint route. Its enabled inbound and outbound rate limits are bridge controls, not a native cUSDO supply cap.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared OpenEden owner EOA can administer the BSC pool's peers and rate limits; CCIP validation and source/destination pool accounting remain route invariants, while cUSDO wrapper administration is separately scoped."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116351500,
+        "sources": [
+          {
+            "label": "BNB Smart Chain USDO BurnMintTokenPool",
+            "url": "https://bscscan.com/address/0x500d4882938020e939a5666c1b4200873da7efd3"
+          },
+          {
+            "label": "BSC USDO deployment",
+            "url": "https://bscscan.com/address/0x302e52aff9815b9d1682473dbfb9c74f9b750aa8"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          },
+          {
+            "label": "BSC PublicNode JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BSC block 116351500, pool 0x500d4882938020e939a5666c1b4200873da7efd3 reported typeAndVersion() = USDO BurnMintTokenPool 1.5.1, getToken() = 0x302e52aff9815b9d1682473dbfb9c74f9b750aa8, owner() = 0x5eaff7af80488033bc845709806d5fae5291eb88, and router 0x34b03cb9086d7d758ac55af71584f81a598759fe. Enabled inbound and outbound rate-limit buckets for the Ethereum CCIP selector were observed. The pool is the inherited USDO bridge route underneath BSC cUSDO; cUSDO's local ERC-4626 share accounting is not a token-level CCIP mint path."
+      },
+      {
+        "id": "cusdo-base-representation-admin",
+        "label": "OpenEden cUSDO Base representation UPGRADE_ROLE/DEFAULT_ADMIN_ROLE/PAUSE_ROLE EOA",
+        "routeRefs": [
+          "base:0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+        "failureDomainKeys": [
+          "protocol:openeden-cusdo",
+          "contract:base:0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+          "eoa:base:0x5eaff7af80488033bc845709806d5fae5291eb88"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 50064777, this no-bytecode EOA held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on the Base cUSDO wrapper. Verified cUSDO source makes UUPS _authorizeUpgrade() require UPGRADE_ROLE; no timelock was observed. These are representation-token controls, not native cUSDO mint authority."
+        },
+        "capDescription": "The shared OpenEden EOA can replace Base cUSDO wrapper logic or pause/administer the representation immediately; this does not itself create Base USDO supply.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064777,
+        "sources": [
+          {
+            "label": "Base cUSDO verified implementation",
+            "url": "https://base.blockscout.com/address/0xc9c0479cd63ffd5e116430189a9eb6550617f287"
+          },
+          {
+            "label": "Base PublicNode JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "OpenEden cUSDO deployment registry",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          }
+        ],
+        "evidence": "At Base block 50064777, 0x5eaff7af80488033bc845709806d5fae5291eb88 had no bytecode and held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on Base cUSDO. The verified UUPS wrapper requires UPGRADE_ROLE for _authorizeUpgrade() and no timelock was observed. This control governs the Base representation only; Ethereum native wrapper upgrade authority remains in Mint Authority."
+      },
+      {
+        "id": "cusdo-bsc-representation-admin",
+        "label": "OpenEden cUSDO BSC representation UPGRADE_ROLE/DEFAULT_ADMIN_ROLE/PAUSE_ROLE EOA",
+        "routeRefs": [
+          "bsc:0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+        "failureDomainKeys": [
+          "protocol:openeden-cusdo",
+          "contract:bsc:0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+          "eoa:bsc:0x5eaff7af80488033bc845709806d5fae5291eb88"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At BSC block 116351500, this no-bytecode EOA held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on the BSC cUSDO wrapper. Verified cUSDO source makes UUPS _authorizeUpgrade() require UPGRADE_ROLE; no timelock was observed. These are representation-token controls, not native cUSDO mint authority."
+        },
+        "capDescription": "The shared OpenEden EOA can replace BSC cUSDO wrapper logic or pause/administer the representation immediately; this does not itself create BSC USDO supply.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116351500,
+        "sources": [
+          {
+            "label": "BSC cUSDO proxy",
+            "url": "https://bscscan.com/address/0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef"
+          },
+          {
+            "label": "BSC PublicNode JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "OpenEden cUSDO deployment registry",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          }
+        ],
+        "evidence": "At BSC block 116351500, 0x5eaff7af80488033bc845709806d5fae5291eb88 had no bytecode and held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on BSC cUSDO. The verified UUPS wrapper requires UPGRADE_ROLE for _authorizeUpgrade() and no timelock was observed. This control governs the BSC representation only; Ethereum native wrapper upgrade authority remains in Mint Authority."
       }
     ]
   }

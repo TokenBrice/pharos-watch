@@ -50,6 +50,11 @@
       "chain": "soneium",
       "address": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
       "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

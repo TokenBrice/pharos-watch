@@ -7,6 +7,9 @@
     "summary": "BRZ Ethereum owner and masterMinter are both a 2-of-3 Gnosis Safe (0xaf24/0x2c64, proxy to singleton 0xd9db). Proxy admin (0x478e) is also owned by the same Safe. Non-Ethereum chain owners are issuer-context EOAs or 2-of-3 Safes. Solana mint authority is a system-program wallet. All controls corroborate Transfero centralized issuance.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
+      ],
       "proxyAddresses": [
         "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
       ],
@@ -33,6 +36,17 @@
         "role": "direct-minter",
         "authorityType": "safe",
         "address": "0xaf24edebf7fdaed86d839be018647ba6279b9d7a",
+        "deploymentRefs": [
+          "arbitrum:0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
+          "avalanche:0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
+          "base:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+          "bsc:0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
+          "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+          "gnosis:0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
+          "optimism:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+          "polygon:0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
+          "solana:FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "threshold": 2,
@@ -65,6 +79,17 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "0x01455c3b57e40223352a53c9897643273ad78a57",
+        "deploymentRefs": [
+          "arbitrum:0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
+          "avalanche:0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
+          "base:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+          "bsc:0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
+          "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+          "gnosis:0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
+          "optimism:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+          "polygon:0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
+          "solana:FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
@@ -81,6 +106,17 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "ACvei6oQMQSP2GqGnTmPrrcfgwPWEcVkoospHtdYhk7D",
+        "deploymentRefs": [
+          "arbitrum:0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
+          "avalanche:0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
+          "base:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+          "bsc:0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
+          "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+          "gnosis:0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
+          "optimism:0xe9185ee218cae427af7b9764a011bb89fea761b4",
+          "polygon:0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
+          "solana:FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",

@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "UKTBL is natively issued by Spiko on its declared deployments, while Chainlink CCIP token pools hold group-2 UKTBL mint authority on Ethereum, Polygon, Base, and Arbitrum; Etherlink's current UKTBL group-2 set has no CCIP pool. This establishes an external validated-network transfer rail, although this review did not capture the current lane-by-lane rate-limit values.",
-    "reviewedAt": "2026-07-26",
-    "reviewer": "OpenAI Codex CTRL-uktbl-spiko CCIP control correction",
+    "summary": "UKTBL is natively issued by Spiko on all seven reviewed deployments. Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 contracts on Ethereum, Polygon, Base, and Arbitrum provide the transfer rail's burn/mint return paths; their common EOA owner controls peer and rate-limit configuration. Etherlink has no current UKTBL CCIP pool. This supports the external-validated-network tier, while exact lane-by-lane remote-pool, OffRamp/RMN, rate-limit, pause, and upgrade observations remain pending.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex RELOC-12 uktbl-spiko migration",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -204,6 +204,252 @@
             "url": "https://stellar.expert/explorer/public/contract/CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "uktbl-ethereum-ccip-pool",
+        "label": "Chainlink CCIP UKTBL BurnWithFromMintTokenPool (Ethereum)",
+        "routeRefs": [
+          "ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb114e0e00622ffe5800004a98c8e01cd2c0c393b",
+        "failureDomainKeys": [
+          "contract:ethereum:0xb114e0e00622ffe5800004a98c8e01cd2c0c393b"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Chainlink CCIP OffRamp/source-pool validation and configured remote pools govern the burn/mint return path; exact lane-by-lane remote-pool and OffRamp/RMN observations remain pending.",
+          "rateLimits": "Current per-lane CCIP rate-limit values were not captured; this pool's mint selector is a CCIP transfer-rail return path, not independent native issuance.",
+          "pausersAdminsUpgraders": "The pool's CCIP execution path can mint and burn local UKTBL; pool administration is attributed to the common owner EOA in the shared bridge control."
+        },
+        "capDescription": "BurnWithFromMintTokenPool 1.6.1 provides CCIP burn/mint transfer-rail capability for the local Ethereum UKTBL; the pool is not a separate native-liability issuer.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770834,
+        "sources": [
+          {
+            "label": "Ethereum UKTBL CCIP pool",
+            "url": "https://eth.blockscout.com/address/0xb114e0e00622ffe5800004a98c8e01cd2c0c393b"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          },
+          {
+            "label": "Chainlink TokenPool source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/tree/develop/contracts/src/v0.8/ccip/pools"
+          }
+        ],
+        "evidence": "At Ethereum block 25770834, getToken() returned local UKTBL 0xf695df6c0f3bb45918a7a82e83348fc59517734e, typeAndVersion() returned BurnWithFromMintTokenPool 1.6.1, owner() returned 0xed608cf38968c0ba09676843d90b33dd59dd7375, and PermissionManager.canCall(pool, localUKTBL, mint) was true. CCIP burn/mint accounting and external validation make this bridge-route machinery rather than independent native issuance."
+      },
+      {
+        "id": "uktbl-polygon-ccip-pool",
+        "label": "Chainlink CCIP UKTBL BurnWithFromMintTokenPool (Polygon)",
+        "routeRefs": [
+          "polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x7ba5d85d9f7460fcaf514ae2553296905cb91423",
+        "failureDomainKeys": [
+          "contract:polygon:0x7ba5d85d9f7460fcaf514ae2553296905cb91423"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Chainlink CCIP OffRamp/source-pool validation and configured remote pools govern the burn/mint return path; exact lane-by-lane remote-pool and OffRamp/RMN observations remain pending.",
+          "rateLimits": "Current per-lane CCIP rate-limit values were not captured; this pool's mint selector is a CCIP transfer-rail return path, not independent native issuance.",
+          "pausersAdminsUpgraders": "The pool's CCIP execution path can mint and burn local UKTBL; pool administration is attributed to the common owner EOA in the shared bridge control."
+        },
+        "capDescription": "BurnWithFromMintTokenPool 1.6.1 provides CCIP burn/mint transfer-rail capability for the local Polygon UKTBL; the pool is not a separate native-liability issuer.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92144617,
+        "sources": [
+          {
+            "label": "Polygon UKTBL CCIP pool",
+            "url": "https://polygonscan.com/address/0x7ba5d85d9f7460fcaf514ae2553296905cb91423"
+          },
+          {
+            "label": "Polygon JSON-RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          },
+          {
+            "label": "Chainlink TokenPool source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/tree/develop/contracts/src/v0.8/ccip/pools"
+          }
+        ],
+        "evidence": "At Polygon block 92144617, getToken() returned local UKTBL 0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d, typeAndVersion() returned BurnWithFromMintTokenPool 1.6.1, owner() returned 0xed608cf38968c0ba09676843d90b33dd59dd7375, and PermissionManager.canCall(pool, localUKTBL, mint) was true. The current type is BurnWithFromMintTokenPool 1.6.1; the prior BurnMintTokenPool label was stale."
+      },
+      {
+        "id": "uktbl-base-ccip-pool",
+        "label": "Chainlink CCIP UKTBL BurnWithFromMintTokenPool (Base)",
+        "routeRefs": [
+          "base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xd88110bf8bac4f5315c340a841dd2898f9d8e8b9",
+        "failureDomainKeys": [
+          "contract:base:0xd88110bf8bac4f5315c340a841dd2898f9d8e8b9"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Chainlink CCIP OffRamp/source-pool validation and configured remote pools govern the burn/mint return path; exact lane-by-lane remote-pool and OffRamp/RMN observations remain pending.",
+          "rateLimits": "Current per-lane CCIP rate-limit values were not captured; this pool's mint selector is a CCIP transfer-rail return path, not independent native issuance.",
+          "pausersAdminsUpgraders": "The pool's CCIP execution path can mint and burn local UKTBL; pool administration is attributed to the common owner EOA in the shared bridge control."
+        },
+        "capDescription": "BurnWithFromMintTokenPool 1.6.1 provides CCIP burn/mint transfer-rail capability for the local Base UKTBL; the pool is not a separate native-liability issuer.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066323,
+        "sources": [
+          {
+            "label": "Base UKTBL CCIP pool",
+            "url": "https://basescan.org/address/0xd88110bf8bac4f5315c340a841dd2898f9d8e8b9"
+          },
+          {
+            "label": "Base JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          },
+          {
+            "label": "Chainlink TokenPool source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/tree/develop/contracts/src/v0.8/ccip/pools"
+          }
+        ],
+        "evidence": "At Base block 50066323, getToken() returned local UKTBL 0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068, typeAndVersion() returned BurnWithFromMintTokenPool 1.6.1, owner() returned 0xed608cf38968c0ba09676843d90b33dd59dd7375, and PermissionManager.canCall(pool, localUKTBL, mint) was true. CCIP burn/mint accounting and external validation make this bridge-route machinery rather than independent native issuance."
+      },
+      {
+        "id": "uktbl-arbitrum-ccip-pool",
+        "label": "Chainlink CCIP UKTBL BurnWithFromMintTokenPool (Arbitrum)",
+        "routeRefs": [
+          "arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x7ba5d85d9f7460fcaf514ae2553296905cb91423",
+        "failureDomainKeys": [
+          "contract:arbitrum:0x7ba5d85d9f7460fcaf514ae2553296905cb91423"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Chainlink CCIP OffRamp/source-pool validation and configured remote pools govern the burn/mint return path; exact lane-by-lane remote-pool and OffRamp/RMN observations remain pending.",
+          "rateLimits": "Current per-lane CCIP rate-limit values were not captured; this pool's mint selector is a CCIP transfer-rail return path, not independent native issuance.",
+          "pausersAdminsUpgraders": "The pool's CCIP execution path can mint and burn local UKTBL; pool administration is attributed to the common owner EOA in the shared bridge control."
+        },
+        "capDescription": "BurnWithFromMintTokenPool 1.6.1 provides CCIP burn/mint transfer-rail capability for the local Arbitrum UKTBL; the pool is not a separate native-liability issuer.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495292872,
+        "sources": [
+          {
+            "label": "Arbitrum UKTBL CCIP pool",
+            "url": "https://arbitrum.blockscout.com/address/0x7ba5d85d9f7460fcaf514ae2553296905cb91423"
+          },
+          {
+            "label": "Arbitrum JSON-RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Chainlink CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          },
+          {
+            "label": "Chainlink TokenPool source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/tree/develop/contracts/src/v0.8/ccip/pools"
+          }
+        ],
+        "evidence": "At Arbitrum block 495292872, getToken() returned local UKTBL 0x903d5990119bc799423e9c25c56518ba7dd19474, typeAndVersion() returned BurnWithFromMintTokenPool 1.6.1, owner() returned 0xed608cf38968c0ba09676843d90b33dd59dd7375, and PermissionManager.canCall(pool, localUKTBL, mint) was true. CCIP burn/mint accounting and external validation make this bridge-route machinery rather than independent native issuance."
+      },
+      {
+        "id": "uktbl-ccip-pool-owner",
+        "label": "Spiko UKTBL CCIP token-pool owner EOA",
+        "routeRefs": [
+          "ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+          "polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+          "base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+          "arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "rate-limit"
+        ],
+        "controllerAddress": "0xed608cf38968c0ba09676843d90b33dd59dd7375",
+        "failureDomainKeys": [
+          "eoa:0xed608cf38968c0ba09676843d90b33dd59dd7375"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "This common EOA owns the four reviewed pools and can change router and remote-pool configuration; exact lane-by-lane mappings and OffRamp/RMN state remain pending.",
+          "rateLimits": "The common EOA can change chain rate-limiter configuration; current per-lane values were not captured.",
+          "pausersAdminsUpgraders": "eth_getCode for the common owner returned 0x on Ethereum, Polygon, Base, and Arbitrum, so the controller is an EOA rather than a Safe."
+        },
+        "capDescription": "Owner of the four identified UKTBL CCIP pools; can change router, remote-pool, and rate-limit configuration, so CCIP rate limits are not an immutable aggregate issuance cap.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770834,
+        "sources": [
+          {
+            "label": "Ethereum UKTBL CCIP pool",
+            "url": "https://eth.blockscout.com/address/0xb114e0e00622ffe5800004a98c8e01cd2c0c393b"
+          },
+          {
+            "label": "Polygon UKTBL CCIP pool",
+            "url": "https://polygonscan.com/address/0x7ba5d85d9f7460fcaf514ae2553296905cb91423"
+          },
+          {
+            "label": "Base UKTBL CCIP pool",
+            "url": "https://basescan.org/address/0xd88110bf8bac4f5315c340a841dd2898f9d8e8b9"
+          },
+          {
+            "label": "Arbitrum UKTBL CCIP pool",
+            "url": "https://arbitrum.blockscout.com/address/0x7ba5d85d9f7460fcaf514ae2553296905cb91423"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Polygon JSON-RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Base JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Arbitrum JSON-RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Ethereum block 25770834, Polygon block 92144617, Base block 50066323, and Arbitrum block 495292872, the four UKTBL CCIP pools reported this common owner EOA. eth_getCode for the owner returned 0x on all four chains. The owner-controlled router, remote-pool, and chain-rate-limiter surfaces are bridge administration and remain scoreable here rather than in native Mint Authority."
       }
     ]
   }

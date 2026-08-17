@@ -26,19 +26,135 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "IST is native to the Agoric/Inter Protocol stack and appears on Osmosis through Cosmos ecosystem routing rather than a reviewed EVM bridge. No material third-party bridge route was resolved, so the profile is native/single-chain for scoring.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "issuer-native-lock-mint",
+    "summary": "IST is natively issued by Inter Protocol on Agoric. The authored Osmosis ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5 denomination is a live ICS-20 voucher: outbound transfers escrow native uist on Agoric and mint the Osmosis representation, while returns burn the voucher and release source-side escrow. This supply-conserving route is Bridge Risk, not native Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex bridge route review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Inter Protocol docs",
         "url": "https://docs.inter.trade/"
       },
       {
-        "label": "Inter Protocol analytics",
-        "url": "https://analytics.inter.trade/"
+        "label": "Inter Protocol FAQ",
+        "url": "https://docs.inter.trade/frequently-asked-questions-faq"
+      },
+      {
+        "label": "Agoric IBC channel-1",
+        "url": "https://main.api.agoric.net/ibc/core/channel/v1/channels/channel-1/ports/transfer"
+      },
+      {
+        "label": "Osmosis IBC channel-320",
+        "url": "https://lcd.osmosis.zone/ibc/core/channel/v1/channels/channel-320/ports/transfer"
+      },
+      {
+        "label": "Osmosis IST IBC denom trace",
+        "url": "https://lcd.osmosis.zone/ibc/apps/transfer/v1/denom_traces/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5"
+      },
+      {
+        "label": "IBC transfer application documentation",
+        "url": "https://ibc.cosmos.network/v8/apps/transfer/overview"
+      }
+    ],
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "IBC/ICS-20",
+        "url": "https://ibc.cosmos.network/v8/apps/transfer/overview",
+        "bridgeTypes": [
+          "lock-mint"
+        ],
+        "note": "ICS-20 escrows the source denomination and mints a destination voucher; a valid return packet burns the voucher and releases the source-side escrow."
+      }
+    ],
+    "routes": [
+      {
+        "id": "agoric:uist",
+        "destinationChain": "agoric",
+        "canonicalChain": "agoric",
+        "contractAddress": "uist",
+        "protocol": "Inter Protocol native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The Agoric uist denomination is the canonical native IST issuance route. Official Inter Protocol documentation describes vault and PSM minting on Agoric; live Agoric state at block 26894424 on 2026-08-16 mapped uist to the IST issuer and reported nonzero native supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 26894424,
+        "sources": [
+          {
+            "label": "Inter Protocol docs",
+            "url": "https://docs.inter.trade/"
+          },
+          {
+            "label": "Agoric vbank asset mapping",
+            "url": "https://main.api.agoric.net/agoric/vstorage/data/published.agoricNames.vbankAsset"
+          },
+          {
+            "label": "Agoric native uist supply",
+            "url": "https://main.api.agoric.net/cosmos/bank/v1beta1/supply/by_denom?denom=uist"
+          }
+        ]
+      },
+      {
+        "id": "osmosis:ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
+        "sourceChain": "agoric",
+        "destinationChain": "osmosis",
+        "canonicalChain": "agoric",
+        "contractAddress": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
+        "representationId": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
+        "protocol": "IBC/ICS-20",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Current live observations on 2026-08-16 verify Agoric transfer/channel-1 ↔ Osmosis transfer/channel-320, both open and using ics20-1. The Osmosis denom trace is transfer/channel-320 with base_denom uist; Agoric proof height 26894423 and Osmosis proof height 68657005 show the reciprocal channel pair. Native uist is escrowed on Agoric for outbound packets and the Osmosis voucher is minted; return packets burn the voucher and release the source escrow. Osmosis block 68657074 reported 63877932209 micro-IST of the authored voucher.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 68657074,
+        "failureDomainKeys": [
+          "agoric-consensus",
+          "osmosis-consensus",
+          "ibc-client-07-tendermint-1",
+          "ibc-client-07-tendermint-2109",
+          "ibc-relayers"
+        ],
+        "sources": [
+          {
+            "label": "Agoric IBC channel-1",
+            "url": "https://main.api.agoric.net/ibc/core/channel/v1/channels/channel-1/ports/transfer"
+          },
+          {
+            "label": "Osmosis IBC channel-320",
+            "url": "https://lcd.osmosis.zone/ibc/core/channel/v1/channels/channel-320/ports/transfer"
+          },
+          {
+            "label": "Osmosis IBC denom trace",
+            "url": "https://lcd.osmosis.zone/ibc/apps/transfer/v1/denom_traces/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5"
+          },
+          {
+            "label": "Agoric IBC client state",
+            "url": "https://main.api.agoric.net/ibc/core/channel/v1/channels/channel-1/ports/transfer/client_state"
+          },
+          {
+            "label": "Osmosis IBC client state",
+            "url": "https://lcd.osmosis.zone/ibc/core/channel/v1/channels/channel-320/ports/transfer/client_state"
+          },
+          {
+            "label": "Osmosis IST voucher supply",
+            "url": "https://lcd.osmosis.zone/cosmos/bank/v1beta1/supply/by_denom?denom=ibc%2F92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5"
+          },
+          {
+            "label": "IBC transfer application documentation",
+            "url": "https://ibc.cosmos.network/v8/apps/transfer/overview"
+          }
+        ]
       }
     ]
   }

@@ -4,9 +4,18 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "SPKCC mints are gated by Spiko's PermissionManager on every EVM deployment: mint() requires ADMIN group 0 or daily-operator group 2, and group 0 alone can grant group 2 and replace both the token and the PermissionManager implementation. The group-0 holder is a 3-of-6 Safe on Ethereum, Arbitrum, Polygon and Base. Starknet is owned by a 3-of-5 multisig account; the Soroban deployment's owner and WASM-upgrade authority is a single ed25519 key. No deployment encodes a supply cap and no path carries a timelock.",
+    "summary": "SPKCC has issuer-native mint authority on seven deployments: Spiko's PermissionManager gates mint() on Ethereum, Polygon, Arbitrum, Base and Etherlink, while Starknet uses a 3-of-5 multisig owner and Stellar uses a single ed25519 owner. EVM group 0 can grant the daily-operator group and replace both the token and PermissionManager implementation; Etherlink's group-0 holder is an unbounded single-key EOA. No deployment encodes a supply cap and no path carries a timelock.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "polygon:0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "arbitrum:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+        "base:0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "etherlink:0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "starknet:0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d",
+        "stellar:CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
+      ],
       "proxyAddresses": [
         "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
         "0x344278aff344d6fb960705dc18a4912221608472",
@@ -18,12 +27,14 @@
       "implementationAddresses": [
         "0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74",
         "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e",
-        "0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+        "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"
       ],
       "adminAddresses": [
         "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
         "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
-        "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9"
+        "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "0xed608cf38968c0ba09676843d90b33dd59dd7375"
       ],
       "canChangeMintLogic": true,
       "controlRef": "Spiko ADMIN group Safe (Ethereum and Base)",
@@ -44,6 +55,12 @@
       {
         "chain": "ethereum",
         "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "deploymentRefs": [
+          "ethereum:0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+          "polygon:0x903d5990119bc799423e9c25c56518ba7dd19474",
+          "arbitrum:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+          "base:0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+        ],
         "label": "SPKCC token (UUPS proxy, mint restricted to PermissionManager groups 0 and 2)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -68,8 +85,47 @@
         "evidence": "Ethereum EIP-1967 impl slot = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 (Token.sol); authority() = PermissionManager proxy 0x344278aff344d6fb960705dc18a4912221608472; getRequirements(token, mint(address,uint256) 0x40c10f19) = 0x05 = groups {0, 2}. The same shape was re-read on 2026-07-20 on Arbitrum (token 0x99f70a0e1786402a6796c6b0aa997ef340a5c6da, impl 0xa0769f7a8fc65e47de93797b4e21c073c117fc80, authority 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a, block 485916291), Polygon (token 0x903d5990119bc799423e9c25c56518ba7dd19474, impl 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, authority 0x344278aff344d6fb960705dc18a4912221608472, block 90573534) and Base (token 0xf695df6c0f3bb45918a7a82e83348fc59517734e, same impl and authority, block 48887968). Every EVM deployment returns getRequirements(mint) = {0,2}. The token itself carries no supply cap; issuance is gated only by group membership."
       },
       {
+        "chain": "etherlink",
+        "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "deploymentRefs": [
+          "etherlink:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        ],
+        "label": "SPKCC Etherlink token (UUPS proxy, mint restricted to PermissionManager groups 0 and 2)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 51158914,
+        "failureDomainKeys": [
+          "contract:spiko-token-permissionmanager"
+        ],
+        "sources": [
+          {
+            "label": "Spiko contracts Etherlink deployment cache",
+            "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/.cache-42793.json"
+          },
+          {
+            "label": "Etherlink SPKCC explorer",
+            "url": "https://explorer.etherlink.com/address/0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+          },
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          }
+        ],
+        "evidence": "The official chain-42793 deployment cache identifies SPKCC at 0x4f33acf823e6eeb697180d553ce0c710124c8d59 and its PermissionManager at 0x344278aff344d6fb960705dc18a4912221608472. At Etherlink block 51158914, the proxy returned symbol() = SPKCC, authority() = that PermissionManager and EIP-1967 implementation = 0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068. Verified Spiko Token.sol applies PermissionManager-gated mint semantics; this deployment has no encoded supply cap."
+      },
+      {
         "chain": "ethereum",
         "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "deploymentRefs": [
+          "ethereum:0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+          "polygon:0x903d5990119bc799423e9c25c56518ba7dd19474",
+          "arbitrum:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+          "base:0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+        ],
         "label": "Spiko PermissionManager (ERC1967 proxy) - shared authority policy",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -90,8 +146,41 @@
         "evidence": "ERC1967 impl = 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e. ADMIN() = 0 and PUBLIC() = 255. getGroupAdmins(0) = 0x01 (group 0 administers itself) and getGroupAdmins(2) = 0x01, so the ADMIN group alone can add or remove the daily-operator minter group. getRequirements(token, upgradeToAndCall 0x4f1ef286) = 0x01 and getRequirements(permissionManager, upgradeToAndCall) = 0x01: the ADMIN group alone can replace both the token and the PermissionManager implementation. On Arbitrum the deployment uses proxy 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a with the same implementation bytecode; Polygon and Base reuse the 0x3442...8472 address."
       },
       {
+        "chain": "etherlink",
+        "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "deploymentRefs": [
+          "etherlink:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        ],
+        "label": "Spiko Etherlink PermissionManager (ERC1967 proxy) - shared authority policy",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 51158914,
+        "failureDomainKeys": [
+          "contract:spiko-token-permissionmanager"
+        ],
+        "sources": [
+          {
+            "label": "Spiko contracts Etherlink deployment cache",
+            "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/.cache-42793.json"
+          },
+          {
+            "label": "Sourcify Spiko PermissionManager source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+          }
+        ],
+        "evidence": "At Etherlink block 51158914, PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 has group 0 ADMIN authority; the current holder 0xed608cf38968c0ba09676843d90b33dd59dd7375 has no contract code and is an EOA. PermissionManager.sol defines group 0 as the administrator able to authorize minters and replace the token or PermissionManager implementation, so Etherlink has no encoded supply cap or timelock on this path."
+      },
+      {
         "chain": "ethereum",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": [
+          "ethereum:0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+          "base:0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+        ],
         "label": "Spiko ADMIN group Safe (Ethereum and Base)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -132,6 +221,9 @@
       {
         "chain": "arbitrum",
         "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "deploymentRefs": [
+          "arbitrum:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da"
+        ],
         "label": "Spiko ADMIN group Safe (Arbitrum)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -172,6 +264,9 @@
       {
         "chain": "polygon",
         "address": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "deploymentRefs": [
+          "polygon:0x903d5990119bc799423e9c25c56518ba7dd19474"
+        ],
         "label": "Spiko ADMIN group Safe (Polygon)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -210,8 +305,40 @@
         "evidence": "Full GroupAdded/GroupRemoved replay from block 0 on the Polygon PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (2182 additions, 213 removals) resolves group 0 to exactly one address, 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9, confirmed by getGroups() = 0x8000...0001. Read at block 90573650: Safe v1.4.1, getThreshold() = 3, getOwners() = 6 signers, singleton 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762, no guard, no enabled modules. Group 2 (minters) holds 6 addresses."
       },
       {
+        "chain": "etherlink",
+        "address": "0xed608cf38968c0ba09676843d90b33dd59dd7375",
+        "deploymentRefs": [
+          "etherlink:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        ],
+        "label": "Spiko Etherlink ADMIN group EOA (single key)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 51158914,
+        "failureDomainKeys": [
+          "etherlink:0xed608cf38968c0ba09676843d90b33dd59dd7375"
+        ],
+        "sources": [
+          {
+            "label": "Etherlink SPKCC explorer",
+            "url": "https://explorer.etherlink.com/address/0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+          },
+          {
+            "label": "Spiko contracts Etherlink deployment cache",
+            "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/.cache-42793.json"
+          }
+        ],
+        "evidence": "At Etherlink block 51158914, PermissionManager group 0 for SPKCC resolves to 0xed608cf38968c0ba09676843d90b33dd59dd7375 with the ADMIN mask. eth_getCode for that address returned 0x, so the Etherlink group-0 authority is a single EOA key with no Safe, multisig or timelock protection; it can authorize minters and replace mint-critical implementations through the PermissionManager."
+      },
+      {
         "chain": "starknet",
         "address": "0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d",
+        "deploymentRefs": [
+          "starknet:0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d"
+        ],
         "label": "Spiko SPKCC Starknet owner multisig",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -235,6 +362,9 @@
       {
         "chain": "stellar",
         "address": "GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
+        "deploymentRefs": [
+          "stellar:CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
+        ],
         "label": "Spiko SPKCC Soroban owner key (single ed25519 signer)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -280,6 +410,14 @@
           "url": "https://stellar.expert/explorer/public/contract/CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
         },
         {
+          "label": "Spiko contracts Etherlink deployment cache",
+          "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/.cache-42793.json"
+        },
+        {
+          "label": "Etherlink SPKCC explorer",
+          "url": "https://explorer.etherlink.com/address/0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        },
+        {
           "label": "SPIKO Digital Assets Cash and Carry Fund prospectus, 1 Feb 2026: daily D+1 NAV by CACEIS, ACPR-licensed depositary, PwC statutory auditor, AMF GP-11000029 manager",
           "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
         },
@@ -288,9 +426,9 @@
           "url": "https://object-api.infra.data.gouv.fr/amf/LISTESSGP/export_od_listesgp_20260807094500_20260807101000.csv"
         }
       ],
-      "evidence": "2026-07-20 cross-chain enumeration closed the three questions the 2026-07-20 P2 pass left open. Arbitrum: full GroupAdded/GroupRemoved replay on PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a resolves ADMIN group 0 to the single Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e (3-of-6, v1.4.1, no guard, no modules) and getRequirements(token, upgradeToAndCall) = group {0}. Polygon: the same replay on 0x344278aff344d6fb960705dc18a4912221608472 resolves group 0 to the Safe 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9 (3-of-6); Base resolves to the Ethereum Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea. Starknet: owner() = 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d, a multisig account with get_threshold() = 3 over 5 signers. Stellar: the Soroban instance-storage Owner is the ed25519 account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, a single-key account per Horizon. The complete mint and upgrade surface is therefore enumerated on all six deployments. Reconciliation cadence and prudential supervision were not established by these chain reads and remain unknown. Reconciliation review (2026-08-08): the fund prospectus supersedes the product-page claims the 2026-07-15 pass could not qualify. The prospectus (1 Feb 2026) appoints CACEIS Fund Administration as fund accountant striking the NAV daily on a D+1 basis, with CACEIS Bank (ACPR banking licence 18129) as independent depositary safeguarding assets and monitoring cash flows, and PricewaterhouseCoopers Audit as statutory auditor - a recurring independent reconciliation with a named administrator. Supervision is prudential through the manager rather than the vehicle: Twenty First Capital SAS holds AMF portfolio-management authorisation GP-11000029, confirmed live in the AMF's own published SGP register export. The prospectus states the FPS itself is not AMF-authorised, so the prudential hook is the AIFM, depositary and distributor.",
+      "evidence": "2026-08-16 cross-chain enumeration added Etherlink to the existing six native deployments. Arbitrum: full GroupAdded/GroupRemoved replay on PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a resolves ADMIN group 0 to the single Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e (3-of-6, v1.4.1, no guard, no modules) and getRequirements(token, upgradeToAndCall) = group {0}. Polygon: the same replay on 0x344278aff344d6fb960705dc18a4912221608472 resolves group 0 to the Safe 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9 (3-of-6); Base resolves to the Ethereum Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea. Etherlink: the official chain-42793 deployment cache lists SPKCC at 0x4f33acf823e6eeb697180d553ce0c710124c8d59; at block 51158914 its authority is 0x344278aff344d6fb960705dc18a4912221608472, its UUPS implementation is 0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068, and group 0 resolves to the code-less EOA 0xed608cf38968c0ba09676843d90b33dd59dd7375. Starknet: owner() = 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d, a multisig account with get_threshold() = 3 over 5 signers. Stellar: the Soroban instance-storage Owner is the ed25519 account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, a single-key account per Horizon. The complete mint and upgrade surface is therefore enumerated on all seven native deployments. Reconciliation cadence and prudential supervision were not established by these chain reads and remain unknown. Reconciliation review (2026-08-08): the fund prospectus supersedes the product-page claims the 2026-07-15 pass could not qualify. The prospectus (1 Feb 2026) appoints CACEIS Fund Administration as fund accountant striking the NAV daily on a D+1 basis, with CACEIS Bank (ACPR banking licence 18129) as independent depositary safeguarding assets, and PricewaterhouseCoopers Audit as statutory auditor - a recurring independent reconciliation with a named administrator. Supervision is prudential through the manager rather than the vehicle: Twenty First Capital SAS holds AMF portfolio-management authorisation GP-11000029, confirmed live in the AMF's own published SGP register export. The prospectus states the FPS itself is not AMF-authorised, so the prudential hook is the AIFM, depositary and distributor.",
       "reviewer": "Phase 3 cur-2 cross-chain mint-authority enumeration",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

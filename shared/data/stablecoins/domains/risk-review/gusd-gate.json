@@ -2,9 +2,22 @@
   "id": "gusd-gate",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: GUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Ethereum Gate GUSD UUPS proxy",
+        "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5#code"
+      },
+      {
+        "label": "Ethereum Gate GUSD implementation runtime",
+        "url": "https://etherscan.io/address/0xc181faf98a90993bba78af4a9d5dde37d3dbadaf#code"
+      },
+      {
+        "label": "Gate GUSD proxy creation and role initialization",
+        "url": "https://eth.blockscout.com/tx/0x29a769ce1021f37980833f27bef76e94f07e10a1a91eb1edf5398121c59de1d4"
+      }
+    ],
+    "evidence": "At Ethereum block 25774700, the proxy implementation remained 0xc181faf98a90993bba78af4a9d5dde37d3dbadaf. Its runtime exposes blockUser(address), unblockUser(address), freeze(address,uint256), blocked(address), frozen(address), pause(), and unpause(), alongside AccessControl role checks. The no-delay upgrader can also replace the token logic. GUSD therefore has direct holder-restriction capability; this result does not rely on an inference from centralized metadata.",
+    "reviewer": "OpenAI Codex GUSD publication review",
+    "reviewedAt": "2026-08-17"
   }
 }

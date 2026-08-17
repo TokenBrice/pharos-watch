@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "nOPAL is listed across issuer-controlled deployments and Nest docs do not expose a separate public bridge topology. The reviewed route is issuer-native multichain issuance with probable confidence pending more explicit chain-route documentation.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "summary": "nOPAL has three reviewed independent native-issuance routes on Ethereum, Plume, and BSC. Nest's current registry and fixed-block supply reads establish three live native liability surfaces; the Plume and BSC rows retain Ethereum as the issuer's primary reference but are canonical native issuance, not peripheral bridge representations. No separate public bridge topology, OFT, lockbox, adapter, or destination-token mint role was identified.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); FIX2-09 Mint/Bridge boundary migration 2026-08-16",
     "confidence": "verified",
     "sources": [
       {
@@ -26,6 +26,10 @@
       {
         "label": "Nest website",
         "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Nest current vault registry API",
+        "url": "https://api.nest.credit/v1/vaults"
       }
     ],
     "routes": [
@@ -41,9 +45,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a — a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
+        "reviewNote": "Independent native nOPAL issuance on Ethereum, not a bridge representation. At Ethereum block 25770421 on 2026-08-16, totalSupply() was 19,094,202.277440; owner() is the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. The current 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 owns the Teller and Manager and is the Timelock proposer/canceller; no public bridge route was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770421,
         "sources": [
           {
             "label": "Nest Protocol",
@@ -61,11 +66,12 @@
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a — a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
+        "reviewNote": "Independent native nOPAL issuance on Plume, not a bridge representation. At Plume block 87678480 on 2026-08-16, totalSupply() was 12,981,544.220067; owner() is the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and current owner()/vault() reads verify the same Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b and Manager 0xea452b14fc86847182f8dd0486206eb56dda0393. The current 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 is the Timelock proposer/canceller. Ethereum remains the issuer's primary reference only; this route is canonical native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 87678480,
         "sources": [
           {
             "label": "Nest Protocol",
@@ -83,11 +89,12 @@
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a — a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
+        "reviewNote": "Independent native nOPAL issuance on BSC, not a bridge representation. At BSC block 116347230 on 2026-08-16, totalSupply() was 13,997,699.499774; owner() is the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and current owner()/vault() reads verify the same Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b and Manager 0xea452b14fc86847182f8dd0486206eb56dda0393. The current 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 is the Timelock proposer/canceller. Ethereum remains the issuer's primary reference only; this route is canonical native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116347230,
         "sources": [
           {
             "label": "Nest Protocol",

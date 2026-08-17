@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "apxUSD moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard. Row-level on-chain verification on 2026-07-20 confirmed the per-chain surfaces: Ethereum is the native home deployment (ApxUSD.sol, minted natively via the reviewed MinterV0/AccessManager path; no getCCIPPool or LayerZero endpoint() surface on the token), with the CCIP Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 locking Ethereum supply. Base (token getCCIPPool() = BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2) and BNB Chain (getCCIPPool() = BurnMintTokenPool 0xFD957D7E27D239da5455b82303b2F618f73a9C49) are CCIP burn/mint representations; both pools return their chain's token from getToken(), are owned by the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2, and carry identical 13813-byte bytecode. No LayerZero endpoint() surface was found on any deployment.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "summary": "apxUSD uses Chainlink CCIP with Ethereum as the only native issuance deployment and Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 as the canonical escrow. Base and BNB Chain are Burn/Mint bridge representations whose pool-gated mint/burn, pool-owner administration, rate-limit and peer configuration, token upgrades, pool rotation, destination caps, and pause controls are all Bridge Risk; none are counted as native Mint Authority. Current route evidence identifies the Apyx 3-of-6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 as the common owner, with Chainlink CCIP as the external validation domain. Current numeric CCIP rate limits and live remote-peer/RMN validator settings remain an evidence gap.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Codex mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -72,8 +72,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25570877,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770543,
         "canonicalChain": "ethereum",
         "sources": [
           {
@@ -89,7 +89,7 @@
             "url": "https://etherscan.io/address/0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5"
           }
         ],
-        "reviewNote": "On-chain reads 2026-07-20 (Ethereum block 25570877): the apxUSD token has no getCCIPPool() and no LayerZero endpoint() surface (both calls revert), matching the home-chain ApxUSD.sol whose primary issuance runs through the reviewed MinterV0/AccessManager mint path (mint-authority review 2026-07-13, verified). The Chainlink CCIP directory lists Ethereum pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 as a Lock/Release lockbox, which escrows but never mints this deployment. Native issuance."
+        "reviewNote": "On-chain reads 2026-08-16 (Ethereum blocks 25770531 and 25770543): the apxUSD token has no getCCIPPool() and no LayerZero endpoint() surface (both calls revert), matching the home-chain ApxUSD.sol whose primary issuance runs through the reviewed MinterV0/AccessManager path (Mint Authority review 2026-08-16, verified). The Chainlink CCIP directory lists Ethereum pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 as a Lock/Release lockbox owned by the Apyx Safe; it escrows but never mints this deployment. Native Ethereum issuance remains in Mint Authority, while the lockbox owner and escrow controls are Bridge Risk."
       },
       {
         "id": "base:0xd993935e13851dd7517af10687ec7e5022127228",
@@ -102,10 +102,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads 2026-07-20 (Base block 48862198): the bridged apxUSD token's getCCIPPool() returns Chainlink CCIP BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2; the pool's getToken() returns this token and owner() returns the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 (pool bytecode 13813 bytes). The token has no LayerZero endpoint() surface. Mint/burn is gated to the CCIP pool per the verified BridgedApyxToken source, so CCIP mints this representation against the Ethereum Lock/Release lockbox.",
+        "reviewNote": "On-chain reads 2026-08-16 (Base block 50064463): the bridged apxUSD token's getCCIPPool() returns Chainlink CCIP BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2; the pool's getToken() returns this token and owner() returns the Apyx 3-of-6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. The token has no LayerZero endpoint() surface. Mint/burn is gated to the CCIP pool per the verified BridgedApyxToken source, so CCIP mints this bridge representation against the Ethereum Lock/Release lockbox; pool, token-admin, cap, pause, and pool-rotation facts are Bridge Risk rather than native Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 48862198,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064463,
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "base",
@@ -140,10 +140,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads 2026-07-20 (BSC block 111009463): the bridged apxUSD token's getCCIPPool() returns Chainlink CCIP BurnMintTokenPool 0xFD957D7E27D239da5455b82303b2F618f73a9C49; the pool's getToken() returns this token and owner() returns the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 (pool bytecode 13813 bytes, identical to the Base pool). The token has no LayerZero endpoint() surface. Mint/burn is gated to the CCIP pool per the verified BridgedApyxToken source, so CCIP mints this representation against the Ethereum Lock/Release lockbox.",
+        "reviewNote": "On-chain reads 2026-08-16 (BSC block 116350114): the bridged apxUSD token's getCCIPPool() returns Chainlink CCIP BurnMintTokenPool 0xFD957D7E27D239da5455b82303b2F618f73a9C49; the pool's getToken() returns this token and owner() returns the Apyx 3-of-6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. The token has no LayerZero endpoint() surface. Mint/burn is gated to the CCIP pool per the verified BridgedApyxToken source, so CCIP mints this bridge representation against the Ethereum Lock/Release lockbox; pool, token-admin, cap, pause, and pool-rotation facts are Bridge Risk rather than native Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 111009463,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116350114,
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "bsc",
@@ -166,6 +166,344 @@
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "apxusd-ethereum-ccip-lock-release-owner",
+        "label": "apxUSD Ethereum CCIP Lock/Release pool owner Safe",
+        "routeRefs": [
+          "ethereum:0x98a878b1cd98131b271883b390f68d2c90674665"
+        ],
+        "capabilities": [
+          "admin",
+          "escrow",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x0e9ca42bc60be25f9a67f52173067cc0bb405bb5",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
+            "0x5db416bcfc1a8b5b921f55c1e078d1f39194e99f",
+            "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
+            "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
+            "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25770543,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25770543, LockReleaseTokenPool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 was deployed and owner() returned the Apyx 3-of-6 Safe; the pool escrows canonical Ethereum apxUSD for CCIP and does not mint the native token.",
+          "trustedPeerOrRemote": "The Chainlink CCIP directory identifies Ethereum as the Lock/Release home route. Remote-pool, router/off-ramp, and RMN validator configuration was not independently replayed.",
+          "rateLimits": "The pool owner is the reviewed route administrator for CCIP rate-limit configuration; current numeric rate limits were not independently replayed.",
+          "pausersAdminsUpgraders": "The Safe owns the Ethereum Lock/Release pool and its bridge administration. Native apxUSD mint authority remains the separate Ethereum AccessManager/MinterV0 path in Mint Authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770543,
+        "sources": [
+          {
+            "label": "Chainlink CCIP Directory - apxUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          },
+          {
+            "label": "apxUSD Ethereum Lock/Release pool on Etherscan",
+            "url": "https://etherscan.io/address/0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5"
+          },
+          {
+            "label": "Apyx 3-of-6 Safe on Etherscan",
+            "url": "https://etherscan.io/address/0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+          }
+        ],
+        "evidence": "At Ethereum block 25770543 on 2026-08-16, LockReleaseTokenPool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 was live and owner() returned 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. The pool is the CCIP escrow/administration surface; native issuance is separately bounded by the reviewed Ethereum ApxUSD.sol/MinterV0/AccessManager path."
+      },
+      {
+        "id": "apxusd-base-ccip-burn-mint-owner",
+        "label": "apxUSD Base CCIP BurnMintTokenPool owner Safe",
+        "routeRefs": [
+          "base:0xd993935e13851dd7517af10687ec7e5022127228"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x49b577e70fd22b482aaa94c3799f41f3443c24b2",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
+            "0x5db416bcfc1a8b5b921f55c1e078d1f39194e99f",
+            "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
+            "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
+            "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 50064463,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50064463, apxUSD.getCCIPPool() returned BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2; getToken() returned the authored Base token and owner() returned the Apyx Safe. Remote-peer and RMN validator configuration was not independently replayed.",
+          "rateLimits": "The pool owner Safe administers the Base CCIP pool's rate-limit and peer configuration; current numeric rate limits were not independently replayed.",
+          "caps": "The pool cannot raise the Base representation cap; the current destination cap is 100,000,000 apxUSD and is governed separately by the Base AccessManager/Safe control.",
+          "pausersAdminsUpgraders": "The verified BridgedApyxToken source gates destination mint(), burn(), and burnFrom() to this CCIP pool. The owner Safe is the pool-admin failure domain; token upgrade, cap, pause, and pool-rotation roles are separately recorded below as Bridge Risk."
+        },
+        "capDescription": "Base destination representation cap: 100,000,000 apxUSD; the BurnMintTokenPool owner cannot raise it.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064463,
+        "sources": [
+          {
+            "label": "Chainlink CCIP Directory - apxUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          },
+          {
+            "label": "apxUSD Base token on BaseScan",
+            "url": "https://basescan.org/address/0xd993935e13851dd7517af10687ec7e5022127228"
+          },
+          {
+            "label": "apxUSD Base BurnMintTokenPool on BaseScan",
+            "url": "https://basescan.org/address/0x49b577E70Fd22B482aaA94c3799F41f3443C24B2"
+          },
+          {
+            "label": "Apyx BridgedApyxToken source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          }
+        ],
+        "evidence": "At Base block 50064463 on 2026-08-16, getCCIPPool() returned 0x49b577e70fd22b482aaa94c3799f41f3443c24b2, the pool's getToken() returned the authored Base representation, and owner() returned the Apyx 3-of-6 Safe. The verified token source makes this pool the only caller of destination mint(), burn(), and burnFrom(); this is bridge-representation risk, not native Ethereum mint authority."
+      },
+      {
+        "id": "apxusd-bsc-ccip-burn-mint-owner",
+        "label": "apxUSD BSC CCIP BurnMintTokenPool owner Safe",
+        "routeRefs": [
+          "bsc:0x6b3788fd6604bbf03c5378d24e57bb334baad4af"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0xfd957d7e27d239da5455b82303b2f618f73a9c49",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
+            "0x5db416bcfc1a8b5b921f55c1e078d1f39194e99f",
+            "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
+            "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
+            "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 116350114,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At BSC block 116350114, apxUSD.getCCIPPool() returned BurnMintTokenPool 0xfd957d7e27d239da5455b82303b2f618f73a9c49; getToken() returned the authored BSC token and owner() returned the Apyx Safe. Remote-peer and RMN validator configuration was not independently replayed.",
+          "rateLimits": "The pool owner Safe administers the BSC CCIP pool's rate-limit and peer configuration; current numeric rate limits were not independently replayed.",
+          "caps": "The pool cannot raise the BSC representation cap; the current destination cap is 200,000,000 apxUSD and is governed separately by the BSC AccessManager/Safe control.",
+          "pausersAdminsUpgraders": "The verified BridgedApyxToken source gates destination mint(), burn(), and burnFrom() to this CCIP pool. The owner Safe is the pool-admin failure domain; token upgrade, cap, pause, and pool-rotation roles are separately recorded below as Bridge Risk."
+        },
+        "capDescription": "BSC destination representation cap: 200,000,000 apxUSD; the BurnMintTokenPool owner cannot raise it.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116350114,
+        "sources": [
+          {
+            "label": "Chainlink CCIP Directory - apxUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          },
+          {
+            "label": "apxUSD BNB Chain token on BscScan",
+            "url": "https://bscscan.com/address/0x6b3788fd6604bbf03c5378d24e57bb334baad4af"
+          },
+          {
+            "label": "apxUSD BNB Chain BurnMintTokenPool on BscScan",
+            "url": "https://bscscan.com/address/0xFD957d7e27d239da5455b82303b2f618f73a9c49"
+          },
+          {
+            "label": "Apyx BridgedApyxToken source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          }
+        ],
+        "evidence": "At BSC block 116350114 on 2026-08-16, getCCIPPool() returned 0xfd957d7e27d239da5455b82303b2f618f73a9c49, the pool's getToken() returned the authored BSC representation, and owner() returned the Apyx 3-of-6 Safe. The verified token source makes this pool the only caller of destination mint(), burn(), and burnFrom(); this is bridge-representation risk, not native Ethereum mint authority."
+      },
+      {
+        "id": "apxusd-base-representation-access-manager",
+        "label": "apxUSD Base representation AccessManager and Apyx Safe",
+        "routeRefs": [
+          "base:0xd993935e13851dd7517af10687ec7e5022127228"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x8afde6a90d2396a64eb97e8e69e7548289f78a1d",
+          "contract:base:0xd993935e13851dd7517af10687ec7e5022127228",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
+            "0x5db416bcfc1a8b5b921f55c1e078d1f39194e99f",
+            "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
+            "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
+            "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 50064463,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d governs representation pool and admin rotation; the CCIP pool remains a separate bridge-mint/burn control. Remote-peer and RMN validator configuration was not independently replayed.",
+          "caps": "The Base representation cap is 100,000,000 apxUSD; Safe-held role 24 changes it after a 259,200-second delay. This cap is bridge-route administration, not native Ethereum issuance.",
+          "pausersAdminsUpgraders": "Safe-held role 25 governs setCCIPPool, setCCIPAdmin, and UUPS upgrade with a 604,800-second delay; pause and unpause are AccessManager-gated. These are representation-token controls."
+        },
+        "capDescription": "Base representation cap: 100,000,000 apxUSD; Safe-held role 24 can raise it after three days.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064463,
+        "sources": [
+          {
+            "label": "Base apxUSD AccessManager on BaseScan",
+            "url": "https://basescan.org/address/0x8afde6a90d2396a64eb97e8e69e7548289f78a1d"
+          },
+          {
+            "label": "apxUSD Base token on BaseScan",
+            "url": "https://basescan.org/address/0xd993935e13851dd7517af10687ec7e5022127228"
+          },
+          {
+            "label": "Apyx 3-of-6 Safe on Etherscan",
+            "url": "https://etherscan.io/address/0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+          }
+        ],
+        "evidence": "At Base block 50064463 on 2026-08-16, the representation token resolved to implementation 0x0330964e5d42e2d88438bc17b2c26373efd4330a, AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d, and CCIP pool 0x49b577e70fd22b482aaa94c3799f41f3443c24b2. The reviewed AccessManager role map places setCCIPPool, setCCIPAdmin, cap, pause, and UUPS controls under the Safe with the recorded delays; these facts remain Bridge Risk and are not native minter controls."
+      },
+      {
+        "id": "apxusd-bsc-representation-access-manager",
+        "label": "apxUSD BSC representation AccessManager and Apyx Safe",
+        "routeRefs": [
+          "bsc:0x6b3788fd6604bbf03c5378d24e57bb334baad4af"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x5f48866016eb8735a2ea450e66314828bdde6edc",
+          "contract:bsc:0x6b3788fd6604bbf03c5378d24e57bb334baad4af",
+          "safe:apyx:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
+            "0x5db416bcfc1a8b5b921f55c1e078d1f39194e99f",
+            "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
+            "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
+            "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 116350114,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "AccessManager 0x5f48866016eb8735a2ea450e66314828bdde6edc governs representation pool and admin rotation; the CCIP pool remains a separate bridge-mint/burn control. Remote-peer and RMN validator configuration was not independently replayed.",
+          "caps": "The BSC representation cap is 200,000,000 apxUSD; the reviewed BSC Safe-held AccessManager path can change it immediately. This cap is bridge-route administration, not native Ethereum issuance.",
+          "pausersAdminsUpgraders": "BSC upgradeToAndCall(), pool/admin rotation, cap, and pause controls resolve to Safe-held role 0 with the current zero-second upgrade delay. These are representation-token controls."
+        },
+        "capDescription": "BSC representation cap: 200,000,000 apxUSD; the Safe-held AccessManager path can raise it immediately.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116350114,
+        "sources": [
+          {
+            "label": "BSC apxUSD AccessManager on BscScan",
+            "url": "https://bscscan.com/address/0x5f48866016eb8735a2ea450e66314828bdde6edc"
+          },
+          {
+            "label": "apxUSD BNB Chain token on BscScan",
+            "url": "https://bscscan.com/address/0x6b3788fd6604bbf03c5378d24e57bb334baad4af"
+          },
+          {
+            "label": "Apyx 3-of-6 Safe on Etherscan",
+            "url": "https://etherscan.io/address/0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+          }
+        ],
+        "evidence": "At BSC block 116350114 on 2026-08-16, the representation token resolved to implementation 0xf9c8235b5f0389eadc33d76767ddde73cfa5961b, AccessManager 0x5f48866016eb8735a2ea450e66314828bdde6edc, and CCIP pool 0xfd957d7e27d239da5455b82303b2f618f73a9c49. The reviewed AccessManager role map places representation upgrade, pool/admin rotation, cap, and pause controls under the Safe-held immediate role; these facts remain Bridge Risk and are not native minter controls."
       }
     ]
   }

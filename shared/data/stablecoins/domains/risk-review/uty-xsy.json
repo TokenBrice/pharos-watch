@@ -77,9 +77,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "UTY moves cross-chain via LayerZero's OFT standard in a hub-and-spoke design: Base is the hub holding the canonical UTY/yUTY ERC-7540 vault token, where a ShareOFTAdapter lockbox LOCKS tokens sent cross-chain (not burned); Avalanche and Katana are spoke chains where UTY is a mint/burn OFT against the locked hub balance. Each pathway is verified by at least 2 independent LayerZero DVNs (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind). On-chain confirmed: Base 0xBA515304... is the ERC4626/7540 vault; Avalanche 0xBA515304... (same CREATE2 address) is a LayerZero OFT spoke. Note: the registry's older Avalanche address 0xdbc5192a... is a separate legacy native-mint deployment, distinct from the live OFT spoke.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "summary": "UTY uses LayerZero OFT in a Base hub-and-spoke design. Base is the sole native issuance chain: the ShareOFTAdapter at 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1 locks canonical UTY on outbound transfers and unlocks it on valid return, while Avalanche and Katana mint/burn OFT representations against that locked balance. Current heads show the spoke supplies equal the adapter's locked balance. Bridge owner/upgrade, peer, lockbox, and send-side ULN/DVN controls are route-scoped below; the bridge tier remains external-lock-mint.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -91,7 +91,7 @@
           "oft-adapter-lockbox",
           "oft-mint-burn"
         ],
-        "note": "Base ShareOFTAdapter locks the canonical UTY vault token; Avalanche/Katana spoke OFTs mint/burn. Threshold of >=2 independent DVNs per pathway (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind)."
+        "note": "Base ShareOFTAdapter locks the canonical UTY vault token; Avalanche/Katana spoke OFTs mint/burn. Current send-side ULN reads at 2026-08-16 require 4 DVNs Base→Avalanche, 2 Base→Katana, 4 Avalanche→Base, and 2 Katana→Base; all four configurations have zero optional DVNs. The Base→Avalanche provider shorthand in older YieldPoint prose is stale relative to these live reads."
       }
     ],
     "sources": [
@@ -110,6 +110,26 @@
       {
         "label": "YieldPoint docs - contract addresses (Base ShareOFTAdapter 0xC6fE7C50...; UTY 0xBA515304... across Base/Avalanche/Katana)",
         "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+      },
+      {
+        "label": "Base ShareOFTAdapter lockbox",
+        "url": "https://base.blockscout.com/address/0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1"
+      },
+      {
+        "label": "Base UTY proxy and verified implementation",
+        "url": "https://base.blockscout.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      },
+      {
+        "label": "Base current Safe owner",
+        "url": "https://base.blockscout.com/address/0xb237eb3c71a0f351bd121b0c467248473fbc2cca"
+      },
+      {
+        "label": "LayerZero V2 DVN documentation",
+        "url": "https://docs.layerzero.network/v2/deployments/dvn-addresses"
+      },
+      {
+        "label": "LayerZero current address book",
+        "url": "https://raw.githubusercontent.com/LayerZero-Labs/lz-address-book/main/src/generated/LZAddresses.sol"
       }
     ],
     "routes": [
@@ -126,7 +146,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the UTY token on avalanche returns the LayerZero endpoint 0x1a44076050125825900e736c501f859c50fE728c, so this deployment is the Unity OFT spoke and the OFT contract itself is the mint/burn authority for the representation (locks against the Base ShareOFTAdapter hub 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1).",
+        "reviewNote": "At Avalanche block 92981600 on 2026-08-16, the tracked UTY deployment resolved to OFT implementation 0x79fc5fd276c03aaa8418871ce3a5c5767a0241ef; endpoint() returned LayerZero V2 0x1a44076050125825900e736c501f859c50fe728c, token() returned itself, approvalRequired() was false, and peers(30184) returned the Base ShareOFTAdapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1. This is a bridge mint/burn representation against the Base lockbox, not a native issuer.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "avalanche",
         "controllerAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
@@ -134,15 +154,20 @@
           "protocol:layerzero-v2",
           "contract:avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92981600,
         "sources": [
           {
-            "label": "UTY on avalanche explorer (endpoint() probed 2026-07-20)",
+            "label": "Avalanche UTY contract",
             "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
           },
           {
-            "label": "LayerZero on L2BEAT",
-            "url": "https://l2beat.com/interop/protocols/layerzero"
+            "label": "Avalanche public JSON-RPC current head",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          },
+          {
+            "label": "YieldPoint bridge operations",
+            "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
           }
         ]
       },
@@ -158,19 +183,24 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical UTY hub on Base: the ShareOFTAdapter lockbox 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1 returns token() = this UTY and owner() = the XSY operator 0xa695bb4b9a86daf0581233031f273697135e3016 (verified on-chain 2026-07-20; the Avalanche OFT's peers(30184) points back to this adapter), so Base hosts the canonical token that OFT spokes lock against.",
+        "reviewNote": "At Base block 50066315 on 2026-08-16, the tracked UTY deployment resolved to the verified UUPS implementation 0xf2f6e1a62d3d1f0efb01c28e485f1dc8b173ce2b, asset() returned Base USDC, and the vault exposed collateralized deposit()/mint(). The Base ShareOFTAdapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1 returned token() = this UTY, approvalRequired() = true, and peers for EIDs 30106 and 30375 equal to the Avalanche and Katana spoke tokens. Base is the native hub; its adapter is bridge lockbox machinery, not a second native minter.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "UTY on Basescan (lockbox probed 2026-07-20)",
-            "url": "https://basescan.org/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+            "label": "Base UTY proxy and verified implementation",
+            "url": "https://base.blockscout.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
           },
           {
-            "label": "XSY Unity docs",
-            "url": "https://docs.xsy.fi/"
+            "label": "Base ShareOFTAdapter lockbox",
+            "url": "https://base.blockscout.com/address/0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1"
+          },
+          {
+            "label": "Base public JSON-RPC current head",
+            "url": "https://mainnet.base.org"
           }
-        ]
+        ],
+        "observedBlock": 50066315
       },
       {
         "id": "katana:0xba515304d8153c4b162dc79f867e152df9c127eb",
@@ -185,7 +215,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the UTY token on katana returns the LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, so this deployment is the Unity OFT spoke and the OFT contract itself is the mint/burn authority for the representation (locks against the Base ShareOFTAdapter hub 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1).",
+        "reviewNote": "At Katana block 40178663 on 2026-08-16, the tracked UTY deployment resolved to OFT implementation 0x4ef498786e9c7dd58ccdd04e8ed0aebd1c764f72; endpoint() returned LayerZero V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, token() returned itself, approvalRequired() was false, and peers(30184) returned the Base ShareOFTAdapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1. This is a bridge mint/burn representation against the Base lockbox, not a native issuer.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "katana",
         "controllerAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
@@ -193,17 +223,382 @@
           "protocol:layerzero-v2",
           "contract:katana:0xba515304d8153c4b162dc79f867e152df9c127eb"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40178663,
         "sources": [
           {
-            "label": "UTY on katana explorer (endpoint() probed 2026-07-20)",
+            "label": "Katana UTY contract",
             "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
           },
           {
-            "label": "LayerZero on L2BEAT",
-            "url": "https://l2beat.com/interop/protocols/layerzero"
+            "label": "Katana public JSON-RPC current head",
+            "url": "https://rpc.katana.network"
+          },
+          {
+            "label": "YieldPoint bridge operations",
+            "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "uty-base-shareoft-adapter-lockbox",
+        "label": "UTY Base ShareOFTAdapter lockbox",
+        "routeRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "katana:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capabilities": ["escrow", "peer-config"],
+        "controllerChain": "base",
+        "controllerAddress": "0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:base:0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1",
+          "safe:base:0xb237eb3c71a0f351bd121b0c467248473fbc2cca",
+          "uty-cross-chain-owner"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Base block 50066315, the ShareOFTAdapter returned token() = the canonical Base UTY and approvalRequired() = true. It locks UTY on outbound bridge transfers and unlocks the conserved token on a validated return path.",
+          "trustedPeerOrRemote": "At the Base observation, adapter peers for EIDs 30106 and 30375 returned the Avalanche and Katana same-address UTY OFT spokes; the reverse spoke reads returned this adapter for EID 30184.",
+          "pausersAdminsUpgraders": "The Base adapter is a UUPS bridge lockbox owned by Safe 0xb237eb3c71a0f351bd121b0c467248473fbc2cca; its current implementation is 0x8b6d04b43b908c5deaa7637c29ab0fbe6e00cc7d and no contract-enforced timelock was observed."
+        },
+        "capDescription": "The adapter is the Base lockbox for the external bridge route. Its current balance of 3,465,913.785601 UTY matched the approximately 2,265,992.785601 Avalanche and 1,199,921.000000 Katana spoke supplies, subject to the LayerZero peer and message-validation invariant.",
+        "bypassSurfaces": [
+          "LayerZero Endpoint V2, ULN, DVN, Executor, and adapter upgrade governance remain separate bridge failure domains."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
+        "sources": [
+          {
+            "label": "Base ShareOFTAdapter lockbox",
+            "url": "https://base.blockscout.com/address/0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1"
+          },
+          {
+            "label": "Base public JSON-RPC current head",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "YieldPoint tokens and fees",
+            "url": "https://docs.yieldpoint.io/protocol/architecture/tokens-and-fees"
+          }
+        ],
+        "evidence": "YieldPoint documents the Base ShareOFTAdapter as a lockbox that locks canonical UTY on outbound transfers and unlocks it on return. At Base block 50066315 its balance was 3,465,913.785601 UTY; Avalanche and Katana spoke totalSupply() reads were approximately 2,265,992.785601 and 1,199,921.000000 UTY, matching the locked balance. The adapter therefore carries bridge escrow and peer risk, not independent native mint authority."
+      },
+      {
+        "id": "uty-avalanche-oft-spoke",
+        "label": "UTY Avalanche LayerZero OFT spoke",
+        "routeRefs": [
+          "avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "peer-config"],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "safe:base:0xb237eb3c71a0f351bd121b0c467248473fbc2cca",
+          "uty-cross-chain-owner"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Avalanche block 92981600, endpoint() returned LayerZero V2 0x1a44076050125825900e736c501f859c50fe728c, token() returned itself, approvalRequired() was false, and peers(30184) returned the Base ShareOFTAdapter."
+        },
+        "capDescription": "The Avalanche OFT burns the representation on departure and mints it on a validated LayerZero arrival. This is route-scoped bridge representation authority against the Base lockbox, not independent native UTY issuance.",
+        "bypassSurfaces": [
+          "The OFT peer, endpoint, ULN, DVN, and Executor validation path is an external bridge failure domain."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92981600,
+        "sources": [
+          {
+            "label": "Avalanche UTY contract",
+            "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+          },
+          {
+            "label": "Avalanche public JSON-RPC current head",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          },
+          {
+            "label": "YieldPoint bridge operations",
+            "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
+          }
+        ],
+        "evidence": "At Avalanche block 92981600, the tracked UTY proxy used implementation 0x79fc5fd276c03aaa8418871ce3a5c5767a0241ef, LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, token() = self, approvalRequired() = false, and peers(30184) = Base ShareOFTAdapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1. YieldPoint identifies Avalanche as a mint/burn OFT spoke."
+      },
+      {
+        "id": "uty-katana-oft-spoke",
+        "label": "UTY Katana LayerZero OFT spoke",
+        "routeRefs": [
+          "katana:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "peer-config"],
+        "controllerChain": "katana",
+        "controllerAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:katana:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "safe:base:0xb237eb3c71a0f351bd121b0c467248473fbc2cca",
+          "uty-cross-chain-owner"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Katana block 40178663, endpoint() returned LayerZero V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, token() returned itself, approvalRequired() was false, and peers(30184) returned the Base ShareOFTAdapter."
+        },
+        "capDescription": "The Katana OFT burns the representation on departure and mints it on a validated LayerZero arrival. This is route-scoped bridge representation authority against the Base lockbox, not independent native UTY issuance.",
+        "bypassSurfaces": [
+          "The OFT peer, endpoint, ULN, DVN, and Executor validation path is an external bridge failure domain."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 40178663,
+        "sources": [
+          {
+            "label": "Katana UTY contract",
+            "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+          },
+          {
+            "label": "Katana public JSON-RPC current head",
+            "url": "https://rpc.katana.network"
+          },
+          {
+            "label": "YieldPoint bridge operations",
+            "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
+          }
+        ],
+        "evidence": "At Katana block 40178663, the tracked UTY proxy used implementation 0x4ef498786e9c7dd58ccdd04e8ed0aebd1c764f72, LayerZero V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, token() = self, approvalRequired() = false, and peers(30184) = Base ShareOFTAdapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1. YieldPoint identifies Katana as a mint/burn OFT spoke."
+      },
+      {
+        "id": "uty-bridge-common-safe",
+        "label": "UTY common bridge owner Safe",
+        "routeRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "katana:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capabilities": ["admin", "upgrade", "peer-config"],
+        "controllerChain": "base",
+        "controllerAddress": "0xb237eb3c71a0f351bd121b0c467248473fbc2cca",
+        "failureDomainKeys": [
+          "safe:base:0xb237eb3c71a0f351bd121b0c467248473fbc2cca",
+          "contract:base:0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1",
+          "contract:avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "contract:katana:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "protocol:layerzero-v2",
+          "uty-cross-chain-owner"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "SafeL2",
+          "owners": [
+            "0xa695bb4b9a86daf0581233031f273697135e3016",
+            "0x738742d0e1681f6e2d5d0aa41a13149d655c6f2c",
+            "0x64e7e86717a1e2f4caf556e431275296593ab742",
+            "0xd2d18094b2f45448816010342dfc05788f1d3211"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedAt": "2026-08-16",
+          "observedBlock": 50066315,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The common Safe owns the Base adapter and both spoke proxies whose current peer reads bind Base EID 30184 to the adapter and Base EIDs 30106/30375 to the spokes; the Safe can change those bridge peer settings through the route contracts.",
+          "pausersAdminsUpgraders": "At Base block 50066315, Avalanche block 92981600, and Katana block 40178663, owner() on the adapter and both UUPS spokes returned the same Safe. The Safe can replace bridge-critical adapter/OFT implementations and administer the route without a contract-enforced timelock."
+        },
+        "capDescription": "The current 3-of-4 Safe is the common bridge administration and upgrade failure domain for the Base ShareOFTAdapter and both spoke OFTs. Its bridge powers are separate from its native Base vault mint authority.",
+        "bypassSurfaces": [
+          "LayerZero Endpoint V2, ULN, DVN, and Executor governance remains external to the YieldPoint Safe and is recorded in the directional validator controls."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
+        "sources": [
+          {
+            "label": "Base current Safe owner",
+            "url": "https://base.blockscout.com/address/0xb237eb3c71a0f351bd121b0c467248473fbc2cca"
+          },
+          {
+            "label": "Base ShareOFTAdapter lockbox",
+            "url": "https://base.blockscout.com/address/0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1"
+          },
+          {
+            "label": "YieldPoint contract addresses",
+            "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+          }
+        ],
+        "evidence": "At current heads on Base block 50066315, Avalanche block 92981600, and Katana block 40178663, the Base ShareOFTAdapter and both tracked UTY proxies returned owner() = Safe 0xb237eb3c71a0f351bd121b0c467248473fbc2cca. Safe reads showed threshold 3 of 4 owners, no enabled modules, and the zero guard. The adapter implementation was 0x8b6d04b43b908c5deaa7637c29ab0fbe6e00cc7d, the Avalanche spoke implementation was 0x79fc5fd276c03aaa8418871ce3a5c5767a0241ef, and the Katana spoke implementation was 0x4ef498786e9c7dd58ccdd04e8ed0aebd1c764f72; none had an observed timelock."
+      },
+      {
+        "id": "uty-base-avalanche-send-uln",
+        "label": "UTY Base-to-Avalanche LayerZero send ULN",
+        "routeRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capabilities": ["validator"],
+        "controllerChain": "base",
+        "controllerAddress": "0xb5320b0b3a13cc860893e2bd79fcd7e13484dda2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-dvns",
+          "send-library:base:0xb5320b0b3a13cc860893e2bd79fcd7e13484dda2"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "attestorQuorum": "At Base block 50066315, the Base adapter-to-Avalanche send-side ULN used library 0xb5320b0b3a13cc860893e2bd79fcd7e13484dda2, required 10 source confirmations, and required four DVNs: 0x554833698ae0fb22ecc90b01222903fd62ca4b47, 0x9e059a54699a285714207b43b055483e78faac25, 0xa7b5189bca84cd304d8553977c7c614329750d99, and 0xcd37ca043f8479064e10635020c65ffc005d36f6. Optional DVNs were zero."
+        },
+        "bypassSurfaces": [
+          "Receive-side getConfig values and Executor settings were not separately pinned in this pass; endpoint, ULN, DVN, and Executor governance remain external."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
+        "sources": [
+          {
+            "label": "Base public JSON-RPC current head",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "LayerZero V2 DVN documentation",
+            "url": "https://docs.layerzero.network/v2/deployments/dvn-addresses"
+          },
+          {
+            "label": "LayerZero current address book",
+            "url": "https://raw.githubusercontent.com/LayerZero-Labs/lz-address-book/main/src/generated/LZAddresses.sol"
+          }
+        ],
+        "evidence": "The live Base send-side ULN read at block 50066315 required 10 confirmations and four DVNs for the Base adapter to Avalanche path, with no optional DVNs. This validator stack bounds the reviewed message path only as observed; receive-side settings and Executor configuration remain an explicit evidence gap."
+      },
+      {
+        "id": "uty-base-katana-send-uln",
+        "label": "UTY Base-to-Katana LayerZero send ULN",
+        "routeRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "katana:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capabilities": ["validator"],
+        "controllerChain": "base",
+        "controllerAddress": "0xb5320b0b3a13cc860893e2bd79fcd7e13484dda2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-dvns",
+          "send-library:base:0xb5320b0b3a13cc860893e2bd79fcd7e13484dda2"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "attestorQuorum": "At Base block 50066315, the Base adapter-to-Katana send-side ULN used library 0xb5320b0b3a13cc860893e2bd79fcd7e13484dda2, required 10 source confirmations, and required two DVNs: 0x9e059a54699a285714207b43b055483e78faac25 and 0xcd37ca043f8479064e10635020c65ffc005d36f6. Optional DVNs were zero."
+        },
+        "bypassSurfaces": [
+          "Receive-side getConfig values and Executor settings were not separately pinned in this pass; endpoint, ULN, DVN, and Executor governance remain external."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
+        "sources": [
+          {
+            "label": "Base public JSON-RPC current head",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "LayerZero V2 DVN documentation",
+            "url": "https://docs.layerzero.network/v2/deployments/dvn-addresses"
+          },
+          {
+            "label": "LayerZero current address book",
+            "url": "https://raw.githubusercontent.com/LayerZero-Labs/lz-address-book/main/src/generated/LZAddresses.sol"
+          }
+        ],
+        "evidence": "The live Base send-side ULN read at block 50066315 required 10 confirmations and two DVNs for the Base adapter to Katana path, with no optional DVNs. This validator stack bounds the reviewed message path only as observed; receive-side settings and Executor configuration remain an explicit evidence gap."
+      },
+      {
+        "id": "uty-avalanche-base-send-uln",
+        "label": "UTY Avalanche-to-Base LayerZero send ULN",
+        "routeRefs": [
+          "avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capabilities": ["validator"],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x197d1333dea5fe0d6600e9b396c7f1b1cfcc558a",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-dvns",
+          "send-library:avalanche:0x197d1333dea5fe0d6600e9b396c7f1b1cfcc558a"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "attestorQuorum": "At Avalanche block 92981600, the Avalanche-to-Base send-side ULN used library 0x197d1333dea5fe0d6600e9b396c7f1b1cfcc558a, required 12 source confirmations, and required four DVNs: 0x07c05eab7716acb6f83ebf6268f8eecda8892ba1, 0x962f502a63f5fbeb44dc9ab932122648e8352959, 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, and 0xcc49e6fca014c77e1eb604351cc1e08c84511760. Optional DVNs were zero."
+        },
+        "bypassSurfaces": [
+          "Receive-side getConfig values and Executor settings were not separately pinned in this pass; endpoint, ULN, DVN, and Executor governance remain external."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92981600,
+        "sources": [
+          {
+            "label": "Avalanche public JSON-RPC current head",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 DVN documentation",
+            "url": "https://docs.layerzero.network/v2/deployments/dvn-addresses"
+          },
+          {
+            "label": "LayerZero current address book",
+            "url": "https://raw.githubusercontent.com/LayerZero-Labs/lz-address-book/main/src/generated/LZAddresses.sol"
+          }
+        ],
+        "evidence": "The live Avalanche send-side ULN read at block 92981600 required 12 confirmations and four DVNs for the Avalanche spoke to Base path, with no optional DVNs. This validator stack bounds the reviewed message path only as observed; receive-side settings and Executor configuration remain an explicit evidence gap."
+      },
+      {
+        "id": "uty-katana-base-send-uln",
+        "label": "UTY Katana-to-Base LayerZero send ULN",
+        "routeRefs": [
+          "katana:0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capabilities": ["validator"],
+        "controllerChain": "katana",
+        "controllerAddress": "0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-dvns",
+          "send-library:katana:0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "attestorQuorum": "At Katana block 40178663, the Katana-to-Base send-side ULN used library 0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7, required 10 source confirmations, and required two DVNs: 0x282b3386571f7f794450d5789911a9804fa346b4 and 0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7. Optional DVNs were zero."
+        },
+        "bypassSurfaces": [
+          "Receive-side getConfig values and Executor settings were not separately pinned in this pass; endpoint, ULN, DVN, and Executor governance remain external."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 40178663,
+        "sources": [
+          {
+            "label": "Katana public JSON-RPC current head",
+            "url": "https://rpc.katana.network"
+          },
+          {
+            "label": "LayerZero V2 DVN documentation",
+            "url": "https://docs.layerzero.network/v2/deployments/dvn-addresses"
+          },
+          {
+            "label": "LayerZero current address book",
+            "url": "https://raw.githubusercontent.com/LayerZero-Labs/lz-address-book/main/src/generated/LZAddresses.sol"
+          }
+        ],
+        "evidence": "The live Katana send-side ULN read at block 40178663 required 10 confirmations and two DVNs for the Katana spoke to Base path, with no optional DVNs. This validator stack bounds the reviewed message path only as observed; receive-side settings and Executor configuration remain an explicit evidence gap."
       }
     ]
   }

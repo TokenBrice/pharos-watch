@@ -4,9 +4,17 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "WPEN is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "summary": "WPEN has six reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Native Mint Authority retains the shared issuer EOA's direct MINTER_ROLE and UUPS UPGRADER_ROLE, the Ripio Safe's DEFAULT_ADMIN_ROLE, and the Ethereum-only LimitedMinter; the separate LimitedMinterBridge and BridgeDeposit cross-chain rail is assessed under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+      ],
       "proxyAddresses": [
         "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
       ],
@@ -18,7 +26,7 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Ripio shared WPEN admin and MINTER_ROLE holder (EOA)",
-      "observedAt": "2026-07-14",
+      "observedAt": "2026-08-16",
       "sources": [
         {
           "label": "Verified WPEN LatamStable implementation",
@@ -34,6 +42,14 @@
       {
         "chain": "multichain",
         "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "deploymentRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
         "label": "Ripio shared WPEN admin and MINTER_ROLE holder (EOA)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -45,6 +61,14 @@
       {
         "chain": "ethereum",
         "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+          "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
         "label": "Ripio WPEN Safe multisig (DEFAULT_ADMIN_ROLE)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -76,6 +100,9 @@
       {
         "chain": "ethereum",
         "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+        "deploymentRefs": [
+          "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+        ],
         "label": "Ripio WPEN Ethereum minter-router contract",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -83,17 +110,6 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WPEN token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
-      },
-      {
-        "chain": "multichain",
-        "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
-        "label": "Ripio WPEN cross-chain minter-router contract",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WPEN token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -118,9 +134,9 @@
           "url": "https://www.ripio.com/en/wfiat"
         }
       ],
-      "evidence": "All mint-capable role holders were verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain. On 2026-07-14 all six deployments had the same 163-byte ERC-1967 proxy runtime, implementation 0x9d6266a9...7969, and zero transparent-proxy admin slot. The verified LatamStable implementation gates upgradeToAndCall with UPGRADER_ROLE, and hasRole(UPGRADER_ROLE, 0x466c02e2...247b) returned true on all six chains. Economic-posture fields reviewed 2026-08-15: the issuer EOA can mint and upgrade without an independent delay, while no wPEN-specific recurring whole-supply attestation or prudential authorization is evidenced. Wave 2 external review 2026-08-15 retained reconciliation as unknown after Ripio's wFIAT, local-stablecoin, security/PoR, and whitepaper materials yielded no wPEN-specific assets-and-liabilities report covering all six deployments. Codex wave 1 review 2026-08-15: the current Ripio wFIAT releases page lists wPEN as a product and records its first mint and dashboard updates, but no dated wPEN reserve certification or recurring liability-to-reserve reconciliation; no prudential supervisor is named.",
+      "evidence": "Native mint-capable role holders were verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain. On 2026-08-16 the six native deployments resolved to implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969; the issuer EOA 0x466c02e2...247b held DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on each deployment, the Ripio Safe held DEFAULT_ADMIN_ROLE, and the Ethereum-only LimitedMinter remained a local issuer minter. The cross-chain LimitedMinterBridge and BridgeDeposit burn/mint rail is intentionally excluded from this native assessment and is recorded under Bridge Risk. The issuer EOA can mint and upgrade without an independent delay, while no wPEN-specific recurring whole-supply attestation or prudential authorization is evidenced. Wave 2 external review 2026-08-15 retained reconciliation as unknown after Ripio's wFIAT, local-stablecoin, security/PoR, and whitepaper materials yielded no wPEN-specific assets-and-liabilities report covering all six deployments. Codex wave 1 review 2026-08-15: the current Ripio wFIAT releases page lists wPEN as a product and records its first mint and dashboard updates, but no dated wPEN reserve certification or recurring liability-to-reserve reconciliation; no prudential supervisor is named.",
       "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16"
     }
   }
 }

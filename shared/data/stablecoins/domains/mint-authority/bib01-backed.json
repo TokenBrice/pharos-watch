@@ -4,9 +4,18 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "bIB01 has independently mintable native transparent proxies on seven chains. Three chain-group Safe authorities can mint without an on-chain cap, while every chain-local token owner and ProxyAdmin owner resolves to the same separate zero-delay 2-of-3 EOA signer set.",
+    "summary": "bIB01 has independently mintable native transparent proxies on seven chains. Three chain-group Safe authorities can mint without an on-chain cap, while every chain-local token owner and ProxyAdmin owner resolves to the same separate zero-delay 2-of-3 EOA signer set. CCIP receiver custody, router, allowlist, and external message-validation controls are assessed separately in Bridge Risk.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "base:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "bsc:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "polygon:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "arbitrum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "gnosis:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "avalanche:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+      ],
       "proxyAddresses": [
         "0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
       ],
@@ -39,6 +48,10 @@
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "gnosis:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+        ],
         "canRaiseCap": true,
         "capDescription": "No on-chain mint cap; the configured minter may mint an arbitrary uint256 amount.",
         "threshold": 2,
@@ -86,6 +99,9 @@
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "base:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+        ],
         "canRaiseCap": true,
         "capDescription": "No on-chain mint cap; the configured minter may mint an arbitrary uint256 amount.",
         "threshold": 3,
@@ -130,6 +146,12 @@
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "polygon:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "bsc:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "arbitrum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "avalanche:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+        ],
         "canRaiseCap": true,
         "capDescription": "No on-chain mint cap; the configured minter may mint an arbitrary uint256 amount.",
         "threshold": 3,
@@ -177,6 +199,15 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "base:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "bsc:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "polygon:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "arbitrum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "gnosis:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "avalanche:0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+        ],
         "canRaiseCap": true,
         "threshold": 2,
         "signerCount": 3,
@@ -255,9 +286,9 @@
           "url": "https://www.mfsa.mt/wp-content/uploads/2025/06/Backed-Assets-JE-Limited-Registration-Document-dated-08-May-2025.pdf"
         }
       ],
-      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bIB01 deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions. Economic-control evidence reviewed 2026-07-15: The Network Firm obtains custody data directly and Chainlink refreshes Backed proof-of-reserve values every 24 hours or after a material deviation. The Jersey registration document expressly does not confer regulated status on Backed Assets (JE) Limited, so the recurring reconciliation has no qualifying prudential supervisor. Economic-posture fields reviewed 2026-08-15: chain-local Safes can mint without a cap and a separate issuer-controlled Safe can immediately replace minters or proxy logic; recurring independent proof-of-reserve reporting exists without prudential issuer supervision.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bIB01 deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions. Economic-control evidence reviewed 2026-07-15: The Network Firm obtains custody data directly and Chainlink refreshes Backed proof-of-reserve values every 24 hours or after a material deviation. The Jersey registration document expressly does not confer regulated status on Backed Assets (JE) Limited, so the recurring reconciliation has no qualifying prudential supervisor. Economic-posture fields reviewed 2026-08-15: chain-local Safes can mint without a cap and a separate issuer-controlled Safe can immediately replace minters or proxy logic; recurring independent proof-of-reserve reporting exists without prudential issuer supervision. Boundary review on 2026-08-16 re-read minter() at Ethereum block 25771155, Base 50068223, BSC 116366815, Polygon 92147178, Arbitrum 495307577, Gnosis 47762982, and Avalanche 92985600; the seven calls returned the documented chain-local issuer Safes. These seven direct mint paths remain native issuance. The six-chain BackedCCIPReceiver custody/CCIP transfer rail contains no bIB01 mint or burn path and is represented separately in bridgeRouteRisk.controls.",
+      "reviewer": "Codex mint-bridge-boundary migration; bib01-backed verified finding",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

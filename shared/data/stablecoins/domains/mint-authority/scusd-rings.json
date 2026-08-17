@@ -2,9 +2,9 @@
   "id": "scusd-rings",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
-    "summary": "scUSD is a Veda BoringVault receipt token on Ethereum and Sonic. Each immutable vault authorizes the same-address LayerZeroTeller, while a chain-specific 4/6 Veda/Paladin Safe controls role grants through a one-day TimelockController and RolesAuthority.",
+    "summary": "scUSD has two independent canonical native-issuance domains on Ethereum and Sonic. Each immutable Veda BoringVault authorizes its same-chain LayerZeroTeller for collateral-gated deposit/enter share issuance, while a chain-specific 4/6 Veda/Paladin Safe controls role grants through a one-day TimelockController and RolesAuthority. The teller is dual-use: its LayerZero share burn/mint route is assessed separately in Bridge Risk.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -37,6 +37,9 @@
       {
         "chain": "ethereum",
         "address": "0xB77d74f032CfE55190325474E061052685CEccc0",
+        "deploymentRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
         "label": "Ethereum Veda/Paladin governance Safe (4/6)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -85,7 +88,10 @@
       {
         "chain": "ethereum",
         "address": "0x358CFACf00d0b4634849821Bb3D1965b472c776a",
-        "label": "Ethereum scUSD LayerZeroTeller",
+        "deploymentRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "label": "Ethereum scUSD LayerZeroTeller (dual-use: native deposit and bridge)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -107,6 +113,9 @@
       {
         "chain": "sonic",
         "address": "0x948dd9351D3721489Fe7A4530C55849cF0b4735D",
+        "deploymentRefs": [
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
         "label": "Sonic Veda/Paladin governance Safe (4/6)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -155,7 +164,10 @@
       {
         "chain": "sonic",
         "address": "0x358CFACf00d0b4634849821Bb3D1965b472c776a",
-        "label": "Sonic scUSD LayerZeroTeller",
+        "deploymentRefs": [
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
+        "label": "Sonic scUSD LayerZeroTeller (dual-use: native deposit and bridge)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -177,6 +189,9 @@
       {
         "chain": "ethereum",
         "address": "0x8D3e2ede20B3Bbe781C88Bdaf472E1e265f38Db8",
+        "deploymentRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
         "label": "Ethereum scUSD Accountant rate updater Safe A (2/4)",
         "role": "other",
         "authorityType": "safe",
@@ -184,10 +199,7 @@
         "threshold": 2,
         "signerCount": 4,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; this is not a hard mint cap.",
-        "routeChecks": {
-          "rateLimits": "At block 25526164: exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, isPaused=false."
-        },
+        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; at block 25526164, exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, and isPaused=false. This is not a hard mint cap.",
         "safe": {
           "version": "1.4.1",
           "threshold": 2,
@@ -227,6 +239,9 @@
       {
         "chain": "ethereum",
         "address": "0x7Ad69d482b56062b6e76D6e645FC5bFCB97C93b5",
+        "deploymentRefs": [
+          "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
         "label": "Ethereum scUSD Accountant rate updater Safe B (2/3)",
         "role": "other",
         "authorityType": "safe",
@@ -234,10 +249,7 @@
         "threshold": 2,
         "signerCount": 3,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; this is not a hard mint cap.",
-        "routeChecks": {
-          "rateLimits": "At block 25526164: exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, isPaused=false."
-        },
+        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; at block 25526164, exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, and isPaused=false. This is not a hard mint cap.",
         "safe": {
           "version": "1.4.1",
           "threshold": 2,
@@ -276,6 +288,9 @@
       {
         "chain": "sonic",
         "address": "0xB26AEb430b5Bf6Be55763b42095E82DB9a1838B8",
+        "deploymentRefs": [
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
         "label": "Sonic scUSD Accountant rate updater Safe A (2/4)",
         "role": "other",
         "authorityType": "safe",
@@ -283,10 +298,7 @@
         "threshold": 2,
         "signerCount": 4,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; this is not a hard mint cap.",
-        "routeChecks": {
-          "rateLimits": "At block 75897805: exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, isPaused=false."
-        },
+        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; at block 75897805, exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, and isPaused=false. This is not a hard mint cap.",
         "safe": {
           "version": "1.4.1",
           "threshold": 2,
@@ -326,6 +338,9 @@
       {
         "chain": "sonic",
         "address": "0xE89CeE9837e6Fce3b1Ebd8E1C779b76fd6E20136",
+        "deploymentRefs": [
+          "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+        ],
         "label": "Sonic scUSD Accountant rate updater Safe B (2/4)",
         "role": "other",
         "authorityType": "safe",
@@ -333,10 +348,7 @@
         "threshold": 2,
         "signerCount": 4,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; this is not a hard mint cap.",
-        "routeChecks": {
-          "rateLimits": "At block 75897805: exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, isPaused=false."
-        },
+        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; at block 75897805, exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, and isPaused=false. This is not a hard mint cap.",
         "safe": {
           "version": "1.4.1",
           "threshold": 2,
@@ -400,9 +412,9 @@
           "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
         }
       ],
-      "evidence": "At Ethereum block 25526164 and Sonic block 75897805, current RolesAuthority capabilities and complete role histories resolved the sole direct BoringVault enter caller, both chain-specific governance Safes, and all four Accountant role-11 rate updater Safes. Safe thresholds, owners, modules, guards, fallback handlers, and master copies were read onchain. The deployed BoringVault and LayerZeroTeller contracts are immutable non-proxy deployments. Reconciliation review (2026-08-08): deposited stablecoins are locked 1:1 in an Ethereum Veda BoringVault and deployed only into on-chain lending and staking protocols, with the strategy whitelist explicitly limited to audited protocols above $100M TVL and backing addresses disclosed across three Ethereum and three Sonic vaults. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. The only third-party work is smart-contract auditing (Spearbit, 0xMacro, OpenZeppelin), and no regulator appears anywhere in the stack. Economic-posture fields reviewed 2026-08-15: bounded immutable vault-share issuance remains collateral-gated; the on-chain-only claim is not applicable to reserve reconciliation and has no regulator or attestor.",
-      "reviewer": "Codex mint-authority review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 25526164 and Sonic block 75897805, current RolesAuthority capabilities and complete role histories resolved the sole direct BoringVault enter caller, both chain-specific governance Safes, and all four Accountant role-11 rate updater Safes. Safe thresholds, owners, modules, guards, fallback handlers, and master copies were read onchain. The deployed BoringVault and LayerZeroTeller contracts are immutable non-proxy deployments. The native deposit() path enters each chain's collateral-gated BoringVault share accounting; the same LayerZeroTeller's cross-chain vault.exit()/zero-asset vault.enter() path is separately scored under Bridge Risk and is not a native unbounded-mint observation. Reconciliation review (2026-08-08): deposited stablecoins are locked 1:1 in an Ethereum Veda BoringVault and deployed only into on-chain lending and staking protocols, with the strategy whitelist explicitly limited to audited protocols above $100M TVL and backing addresses disclosed across three Ethereum and three Sonic vaults. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. The only third-party work is smart-contract auditing (Spearbit, 0xMacro, OpenZeppelin), and no regulator appears anywhere in the stack. Economic-posture fields reviewed 2026-08-16: bounded immutable vault-share issuance remains collateral-gated; the on-chain-only claim is not applicable to reserve reconciliation and has no regulator or attestor.",
+      "reviewer": "Codex mint-authority review; mint-bridge boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

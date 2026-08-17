@@ -9,6 +9,9 @@
       {
         "chain": "ethereum",
         "address": "0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403",
+        "deploymentRefs": [
+          "ethereum:0x6d57b2e05f26c26b549231c866bdd39779e4a488"
+        ],
         "label": "VNXAU Ethereum direct minter 0x7b0c...9403",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -36,6 +39,9 @@
       {
         "chain": "ethereum",
         "address": "0xcdb3867935247049e87c38ea270edd305d84c9ae",
+        "deploymentRefs": [
+          "ethereum:0x6d57b2e05f26c26b549231c866bdd39779e4a488"
+        ],
         "label": "VNXAU Ethereum VNXManager",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -69,6 +75,9 @@
       {
         "chain": "ethereum",
         "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "deploymentRefs": [
+          "ethereum:0x6d57b2e05f26c26b549231c866bdd39779e4a488"
+        ],
         "label": "VNXAU Ethereum direct minter 0xacc5...311a",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -96,6 +105,9 @@
       {
         "chain": "ethereum",
         "address": "0x45a149f42ff0b77d148d05904dd7577df36a545a",
+        "deploymentRefs": [
+          "ethereum:0x6d57b2e05f26c26b549231c866bdd39779e4a488"
+        ],
         "label": "VNXAU Ethereum direct minter 0x45a1...545a",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -123,6 +135,9 @@
       {
         "chain": "base",
         "address": "0xc4c917fda20fc2f39c629c809c4c3662a8cf7d9d",
+        "deploymentRefs": [
+          "base:0xac3fe22294beaed9d1fd752323a6d06d12ff3098"
+        ],
         "label": "VNXAU Base VNXManager",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -156,6 +171,9 @@
       {
         "chain": "base",
         "address": "0xd63052e09af164cef57695d3b96043ea848b051f",
+        "deploymentRefs": [
+          "base:0xac3fe22294beaed9d1fd752323a6d06d12ff3098"
+        ],
         "label": "VNXAU Base direct minter 0xd630...051f",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -183,6 +201,9 @@
       {
         "chain": "base",
         "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "deploymentRefs": [
+          "base:0xac3fe22294beaed9d1fd752323a6d06d12ff3098"
+        ],
         "label": "VNXAU Base direct minter 0xacc5...311a",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -210,6 +231,9 @@
       {
         "chain": "base",
         "address": "0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+        "deploymentRefs": [
+          "base:0xac3fe22294beaed9d1fd752323a6d06d12ff3098"
+        ],
         "label": "VNXAU Base direct minter 0xb65a...09c6",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -237,6 +261,9 @@
       {
         "chain": "polygon",
         "address": "0xbbe070a5f848b532fd4c9ceee77f66867fb70172",
+        "deploymentRefs": [
+          "polygon:0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400"
+        ],
         "label": "VNXAU Polygon VNXManager",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -270,6 +297,9 @@
       {
         "chain": "polygon",
         "address": "0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403",
+        "deploymentRefs": [
+          "polygon:0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400"
+        ],
         "label": "VNXAU Polygon direct minter 0x7b0c...9403",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -297,6 +327,9 @@
       {
         "chain": "polygon",
         "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "deploymentRefs": [
+          "polygon:0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400"
+        ],
         "label": "VNXAU Polygon direct minter 0xacc5...311a",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -324,6 +357,9 @@
       {
         "chain": "etherlink",
         "address": "0x36526b007def3a3efa5a197afe86caf65ec1b9a5",
+        "deploymentRefs": [
+          "etherlink:0x93f5475da60143c50e8be3fed10c143b0cf8b9e9"
+        ],
         "label": "VNXAU Etherlink VNXManager",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -357,6 +393,9 @@
       {
         "chain": "etherlink",
         "address": "0x21f5727b19051a0a483f05ce3c379202daa559c1",
+        "deploymentRefs": [
+          "etherlink:0x93f5475da60143c50e8be3fed10c143b0cf8b9e9"
+        ],
         "label": "VNXAU Etherlink direct minter 0x21f5...59c1",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -384,6 +423,9 @@
       {
         "chain": "etherlink",
         "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "deploymentRefs": [
+          "etherlink:0x93f5475da60143c50e8be3fed10c143b0cf8b9e9"
+        ],
         "label": "VNXAU Etherlink direct minter 0xacc5...311a",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -411,6 +453,9 @@
       {
         "chain": "etherlink",
         "address": "0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+        "deploymentRefs": [
+          "etherlink:0x93f5475da60143c50e8be3fed10c143b0cf8b9e9"
+        ],
         "label": "VNXAU Etherlink direct minter 0xb65a...09c6",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -438,6 +483,9 @@
       {
         "chain": "solana",
         "address": "51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY",
+        "deploymentRefs": [
+          "solana:9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R"
+        ],
         "label": "VNXAU Solana mint and freeze authority",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -472,6 +520,9 @@
       {
         "chain": "tezos",
         "address": "tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3",
+        "deploymentRefs": [
+          "tezos:KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv"
+        ],
         "label": "VNXAU Tezos owner and role-0 minter",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -506,6 +557,9 @@
       {
         "chain": "tezos",
         "address": "tz1cHbzZQwRiThsmCjSPodiv9SWoHEtnciWH",
+        "deploymentRefs": [
+          "tezos:KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv"
+        ],
         "label": "VNXAU Tezos role-0 minter",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -537,6 +591,9 @@
       {
         "chain": "stellar",
         "address": "GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
+        "deploymentRefs": [
+          "stellar:VNXAU-GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
+        ],
         "label": "VNXAU Stellar issuer master signer",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -566,6 +623,15 @@
         "evidence": "At Stellar ledger 63463325 (hash abd18d4cad6e6a0baf1bd42f9f95f4657fae28ac2a773a98a2a7640438730a1), the issuer state had last changed at ledger 62809173 and therefore was unchanged at the exact cutoff. Low, medium, and high thresholds were 0; the sole signer was the master key with weight 1, producing an effective 1-of-1 control because Stellar still requires account authorization. AUTH_REQUIRED was false, AUTH_REVOCABLE true, AUTH_IMMUTABLE false, and AUTH_CLAWBACK_ENABLED true. Off-chain MPC/HSM custody is unknown."
       },
       {
+        "deploymentRefs": [
+          "base:0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
+          "ethereum:0x6d57b2e05f26c26b549231c866bdd39779e4a488",
+          "etherlink:0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
+          "polygon:0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
+          "solana:9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
+          "stellar:VNXAU-GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
+          "tezos:KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv"
+        ],
         "label": "VNXAU deployment-wide upgrade authorities",
         "role": "proxy-admin",
         "authorityType": "issuer-backend",
@@ -678,6 +744,13 @@
     },
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "base:0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
+        "ethereum:0x6d57b2e05f26c26b549231c866bdd39779e4a488",
+        "etherlink:0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
+        "polygon:0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
+        "tezos:KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv"
+      ],
       "proxyAddresses": [
         "0x6d57b2e05f26c26b549231c866bdd39779e4a488",
         "0xac3fe22294beaed9d1fd752323a6d06d12ff3098",

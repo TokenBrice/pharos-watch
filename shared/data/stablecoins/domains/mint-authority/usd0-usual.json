@@ -7,6 +7,9 @@
     "summary": "USD0 issuance runs through Usual's RWA/custody-backed DaoCollateral contract, which holds USD0_MINT on RegistryAccess; separate 8-of-15 Safes control role grants and the transparent-proxy upgrade path.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5"
+      ],
       "proxyAddresses": [
         "0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5",
         "0xde6e1F680C4816446C8D515989E2358636A38b04",
@@ -49,6 +52,9 @@
       {
         "chain": "ethereum",
         "address": "0xde6e1F680C4816446C8D515989E2358636A38b04",
+        "deploymentRefs": [
+          "ethereum:0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5"
+        ],
         "label": "Usual DaoCollateral",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -67,6 +73,9 @@
       {
         "chain": "ethereum",
         "address": "0x6e9d65eC80D69b1f508560Bc7aeA5003db1f7FB7",
+        "deploymentRefs": [
+          "ethereum:0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5"
+        ],
         "label": "Usual RegistryAccess DEFAULT_ADMIN (role-granting Safe)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -112,6 +121,9 @@
       {
         "chain": "ethereum",
         "address": "0xaaDa24358620d4638a2eE8788244c6F4b197Ca16",
+        "deploymentRefs": [
+          "ethereum:0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5"
+        ],
         "label": "Usual ProxyAdmin owner (upgrade Safe)",
         "role": "proxy-admin",
         "authorityType": "safe",

@@ -4,23 +4,44 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "msUSD is minted in Metronome Synth by depositing crypto collateral (75-85% CF); upgrade authority over the token proxy is controlled by a 3-of-5 Gnosis Safe (no modules, no timelock).",
+    "summary": "All five authored msUSD deployments are native Metronome Synth liabilities. Registered Pool/DebtToken collateral paths mint locally behind each chain's 3-of-5 PoolRegistry governor Safe; each SyntheticToken and its local ProxyAdmin are separately upgradeable, while the LayerZero ProxyOFT caller is scored as bridge machinery rather than native issuance.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+        "optimism:0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
+        "base:0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
+        "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
+        "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234"
+      ],
       "proxyAddresses": [
-        "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+        "0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
+        "0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
+        "0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
+        "0x29ad7fe4516909b9e498b5a65339e54791293234"
       ],
       "implementationAddresses": [
-        "0x206b88b20d9b2709153ab596add007b21124eb26"
+        "0x206b88b20d9b2709153ab596add007b21124eb26",
+        "0xe8f4d8cf2cc7fd70d048b6188bc1d17e6a58245e",
+        "0xb0bb44f501fc5d45861086a49361df21164bf644",
+        "0x952a7dfa706806f1d744ff150dd231c0616e33d1",
+        "0x68c87ff1ce2630a180294b211d755e416a681245"
       ],
       "adminAddresses": [
         "0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc",
-        "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+        "0xc44f15dde7b39da0e687a86b3201b4c8e8ce8cc3",
+        "0xf3f1b456fb3a61d96024dfbb8ef9be510b689ba6",
+        "0x51bc603a29bef7181e9866ed27beaae215865761",
+        "0xd7c751fa32590451548b100c4f6442f062c9bc8e",
+        "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33",
+        "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "0x468f87db090bc61c690cd86430b5407675b99242"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Metronome DAO multisig (3-of-5 Gnosis Safe)",
-      "observedAt": "2026-08-11",
-      "observedBlock": 25734737,
+      "controlRef": "Metronome Ethereum SyntheticToken ProxyAdmin owner",
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770052,
       "sources": [
         {
           "label": "msUSD token on Etherscan",
@@ -36,24 +57,34 @@
       {
         "chain": "ethereum",
         "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+        "deploymentRefs": [
+          "ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        ],
         "label": "msUSD token proxy (EIP-1967, OZ TransparentUpgradeableProxy)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "msUSD is minted only against deposited collateral within Metronome Synth pools at governance-set collateral factors (75-85%); supply is bounded by collateralized debt with no off-protocol issuer minter and no direct redemption.",
+        "capDescription": "Native msUSD minting is accepted from registered Pool/DebtToken collateral paths (and the configured AMO auxiliary path) under governance-set collateral factors; the separate ProxyOFT caller is bridge issuance and is scored under Bridge Risk. There is no direct redemption and no off-protocol issuer minter in the native path.",
         "sources": [
           {
             "label": "msUSD token on Etherscan",
             "url": "https://etherscan.io/address/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+          },
+          {
+            "label": "Metronome SyntheticToken source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/SyntheticToken.sol"
           }
         ],
-        "evidence": "At Ethereum block 25,290,617, EIP-1967 slots confirmed: implementation = 0xd8a7ceccecbeded9f5350f4ca8faf55ab92f3390, proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin)."
+        "evidence": "Current EIP-1967 reads on 2026-08-16 confirmed the five native SyntheticToken proxy/implementation/admin triples: Ethereum 0xab5e.../0x206b.../0x2fa8... at block 25770052, Optimism 0x9dab.../0xe8f4.../0xc44f... at block 155656872, Base 0x5267.../0xb0bb.../0xf3f1... at block 50061586, Hemi 0x3ea2.../0x952a.../0x51bc... at block 5087156, and Plasma 0x29ad.../0x68c8.../0xd7c7... at block 29972043. The verified SyntheticToken source gates native mint() to registered Pool/DebtToken paths; ProxyOFT minting is a separate bridge capability."
       },
       {
         "chain": "ethereum",
         "address": "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33",
+        "deploymentRefs": [
+          "ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        ],
         "label": "Metronome DAO multisig (3-of-5 Gnosis Safe)",
         "role": "governor",
         "authorityType": "safe",
@@ -84,16 +115,448 @@
             "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
           }
         ],
-        "evidence": "ProxyAdmin owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33. Safe API confirmed Gnosis Safe v1.3.0, 3-of-5, nonce 365, no modules, no guard at block 25,290,617."
+        "evidence": "Ethereum PoolRegistry 0x11eaD85C679eAF528c9C1FE094bF538Db880048A governor() and the SyntheticToken ProxyAdmin owner resolve to this 3-of-5 Safe. Current chain reads found five owners, no enabled modules, zero guard, and no timelock; the governor controls native pool registration, collateral parameters, token activation, and total-supply caps. Bridge caps and ProxyOFT configuration are separately scored under Bridge Risk."
+      },
+      {
+        "chain": "optimism",
+        "address": "0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
+        "deploymentRefs": [
+          "optimism:0x9dabae7274d28a45f0b65bf8ed201a5731492ca0"
+        ],
+        "label": "msUSD Optimism SyntheticToken proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Registered Optimism Pool/DebtToken collateral paths mint native msUSD under local collateral factors. The Optimism ProxyOFT is a separate bridge caller and is excluded from native Mint Authority posture.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155656872,
+        "sources": [
+          {
+            "label": "msUSD Optimism deployment",
+            "url": "https://optimistic.etherscan.io/address/0x9dabae7274d28a45f0b65bf8ed201a5731492ca0"
+          },
+          {
+            "label": "Metronome SyntheticToken source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/SyntheticToken.sol"
+          }
+        ],
+        "evidence": "At Optimism block 155656872, the EIP-1967 SyntheticToken proxy resolved to implementation 0xe8f4d8cf2cc7fd70d048b6188bc1d17e6a58245e and ProxyAdmin 0xc44f15dde7b39da0e687a86b3201b4c8e8ce8cc3. The verified implementation gates native mint() to registered Pool/DebtToken paths; ProxyOFT minting is separately scored as bridge machinery."
+      },
+      {
+        "chain": "base",
+        "address": "0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
+        "deploymentRefs": [
+          "base:0x526728dbc96689597f85ae4cd716d4f7fccbae9d"
+        ],
+        "label": "msUSD Base SyntheticToken proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Registered Base Pool/DebtToken collateral paths mint native msUSD under local collateral factors. The Base ProxyOFT is a separate bridge caller and is excluded from native Mint Authority posture.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50061586,
+        "sources": [
+          {
+            "label": "msUSD Base deployment",
+            "url": "https://basescan.org/address/0x526728dbc96689597f85ae4cd716d4f7fccbae9d"
+          },
+          {
+            "label": "Metronome SyntheticToken source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/SyntheticToken.sol"
+          }
+        ],
+        "evidence": "At Base block 50061586, the EIP-1967 SyntheticToken proxy resolved to implementation 0xb0bb44f501fc5d45861086a49361df21164bf644 and ProxyAdmin 0xf3f1b456fb3a61d96024dfbb8ef9be510b689ba6. The verified implementation gates native mint() to registered Pool/DebtToken paths; ProxyOFT minting is separately scored as bridge machinery."
+      },
+      {
+        "chain": "hemi",
+        "address": "0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
+        "deploymentRefs": [
+          "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad"
+        ],
+        "label": "msUSD Hemi SyntheticToken proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Registered Hemi Pool/DebtToken collateral paths mint native msUSD under local collateral factors. The Hemi ProxyOFT is a separate bridge caller and is excluded from native Mint Authority posture.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 5087156,
+        "sources": [
+          {
+            "label": "msUSD Hemi deployment",
+            "url": "https://explorer.hemi.xyz/address/0x3ea24e3727a85a479e29e02cc70e792936fbbcad"
+          },
+          {
+            "label": "Metronome SyntheticToken source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/SyntheticToken.sol"
+          }
+        ],
+        "evidence": "At Hemi block 5087156, the EIP-1967 SyntheticToken proxy resolved to implementation 0x952a7dfa706806f1d744ff150dd231c0616e33d1 and ProxyAdmin 0x51bc603a29bef7181e9866ed27beaae215865761. The verified implementation gates native mint() to registered Pool/DebtToken paths; ProxyOFT minting is separately scored as bridge machinery."
+      },
+      {
+        "chain": "plasma",
+        "address": "0x29ad7fe4516909b9e498b5a65339e54791293234",
+        "deploymentRefs": [
+          "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234"
+        ],
+        "label": "msUSD Plasma SyntheticToken proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Plasma SyntheticToken is an authored native deployment, but its current PoolRegistry has no registered collateral pool in the reviewed graph; native Pool/DebtToken minting therefore remains a governed capability distinct from the active bridge and AMO paths.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 29972043,
+        "sources": [
+          {
+            "label": "msUSD Plasma deployment",
+            "url": "https://plasmascan.to/address/0x29ad7fe4516909b9e498b5a65339e54791293234"
+          },
+          {
+            "label": "Metronome SyntheticToken source",
+            "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/SyntheticToken.sol"
+          }
+        ],
+        "evidence": "At Plasma block 29972043, the EIP-1967 SyntheticToken proxy resolved to implementation 0x68c87ff1ce2630a180294b211d755e416a681245 and ProxyAdmin 0xd7c751fa32590451548b100c4f6442f062c9bc8e. The current PoolRegistry graph has no registered collateral pool; active bridge and AMO capabilities remain separate from native Pool/DebtToken issuance."
+      },
+      {
+        "chain": "optimism",
+        "address": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "deploymentRefs": [
+          "optimism:0x9dabae7274d28a45f0b65bf8ed201a5731492ca0"
+        ],
+        "label": "Metronome Optimism PoolRegistry governor Safe (3-of-5)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 155656872,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 155656872,
+        "sources": [
+          {
+            "label": "Optimism PoolRegistry",
+            "url": "https://optimism.blockscout.com/address/0xe7C65eAEb1Ca920f0DB73cDFb4915Dd31472a6a1?tab=contract"
+          },
+          {
+            "label": "Optimism governor Safe",
+            "url": "https://optimistic.etherscan.io/address/0xe01df4ac1e1e57266900e62c37f12c986495a618"
+          }
+        ],
+        "evidence": "The Optimism PoolRegistry 0xe7C65eAEb1Ca920f0DB73cDFb4915Dd31472a6a1 returns governor 0xe01df4ac1e1e57266900e62c37f12c986495a618. Current Safe reads show a 3-of-5 Safe with five owners, no enabled modules, zero guard, and no timelock."
+      },
+      {
+        "chain": "base",
+        "address": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "deploymentRefs": [
+          "base:0x526728dbc96689597f85ae4cd716d4f7fccbae9d"
+        ],
+        "label": "Metronome Base PoolRegistry governor Safe (3-of-5)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 50061586,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50061586,
+        "sources": [
+          {
+            "label": "Base PoolRegistry",
+            "url": "https://base.blockscout.com/address/0x4372A2b9304296c06197a823f25Cf03119d2Fd82?tab=contract"
+          },
+          {
+            "label": "Base governor Safe",
+            "url": "https://basescan.org/address/0xe01df4ac1e1e57266900e62c37f12c986495a618"
+          }
+        ],
+        "evidence": "The Base PoolRegistry 0x4372A2b9304296c06197a823f25Cf03119d2Fd82 returns governor 0xe01df4ac1e1e57266900e62c37f12c986495a618. Current Safe reads show a 3-of-5 Safe with five owners, no enabled modules, zero guard, and no timelock."
+      },
+      {
+        "chain": "hemi",
+        "address": "0x468f87db090bc61c690cd86430b5407675b99242",
+        "deploymentRefs": [
+          "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad"
+        ],
+        "label": "Metronome Hemi PoolRegistry governor Safe (3-of-5)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 5087156,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 5087156,
+        "sources": [
+          {
+            "label": "Hemi PoolRegistry",
+            "url": "https://explorer.hemi.xyz/address/0xDBd9Cfb0b54C08E75085f8c8844E8054d13Bd39a?tab=contract"
+          },
+          {
+            "label": "Hemi governor Safe",
+            "url": "https://explorer.hemi.xyz/address/0x468f87db090bc61c690cd86430b5407675b99242"
+          }
+        ],
+        "evidence": "The Hemi PoolRegistry 0xDBd9Cfb0b54C08E75085f8c8844E8054d13Bd39a returns governor 0x468f87db090bc61c690cd86430b5407675b99242. Current Safe reads show a 3-of-5 Safe with five owners, no enabled modules, zero guard, and no timelock."
+      },
+      {
+        "chain": "plasma",
+        "address": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "deploymentRefs": [
+          "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234"
+        ],
+        "label": "Metronome Plasma PoolRegistry governor Safe (3-of-5)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 29972043,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 29972043,
+        "sources": [
+          {
+            "label": "Plasma PoolRegistry",
+            "url": "https://plasmascan.to/address/0x1c1c67E52942F4dd20a7262a9d17eA2A2e16Acf3"
+          },
+          {
+            "label": "Plasma governor Safe",
+            "url": "https://plasmascan.to/address/0xe01df4ac1e1e57266900e62c37f12c986495a618"
+          }
+        ],
+        "evidence": "The Plasma PoolRegistry 0x1c1c67E52942F4dd20a7262a9d17eA2A2e16Acf3 returns governor 0xe01df4ac1e1e57266900e62c37f12c986495a618. Current Safe reads show a 3-of-5 Safe with five owners, no enabled modules, zero guard, and no timelock; no registered Plasma collateral pool was found in the reviewed graph."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33",
+        "deploymentRefs": [
+          "ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        ],
+        "label": "Metronome Ethereum SyntheticToken ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25770052,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770052,
+        "sources": [
+          {
+            "label": "Ethereum SyntheticToken ProxyAdmin",
+            "url": "https://etherscan.io/address/0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc"
+          },
+          {
+            "label": "Metronome Ethereum governor Safe",
+            "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+          }
+        ],
+        "evidence": "At Ethereum block 25770052, SyntheticToken ProxyAdmin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc owner() returned 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33."
+      },
+      {
+        "chain": "optimism",
+        "address": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "deploymentRefs": [
+          "optimism:0x9dabae7274d28a45f0b65bf8ed201a5731492ca0"
+        ],
+        "label": "Metronome Optimism SyntheticToken ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 155656872,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 155656872,
+        "sources": [
+          {
+            "label": "Optimism SyntheticToken ProxyAdmin",
+            "url": "https://optimistic.etherscan.io/address/0xc44f15dde7b39da0e687a86b3201b4c8e8ce8cc3"
+          },
+          {
+            "label": "Metronome Optimism governor Safe",
+            "url": "https://optimistic.etherscan.io/address/0xe01df4ac1e1e57266900e62c37f12c986495a618"
+          }
+        ],
+        "evidence": "At Optimism block 155656872, SyntheticToken ProxyAdmin 0xc44f15dde7b39da0e687a86b3201b4c8e8ce8cc3 owner() returned 0xe01df4ac1e1e57266900e62c37f12c986495a618."
+      },
+      {
+        "chain": "base",
+        "address": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "deploymentRefs": [
+          "base:0x526728dbc96689597f85ae4cd716d4f7fccbae9d"
+        ],
+        "label": "Metronome Base SyntheticToken ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 50061586,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50061586,
+        "sources": [
+          {
+            "label": "Base SyntheticToken ProxyAdmin",
+            "url": "https://basescan.org/address/0xf3f1b456fb3a61d96024dfbb8ef9be510b689ba6"
+          },
+          {
+            "label": "Metronome Base governor Safe",
+            "url": "https://basescan.org/address/0xe01df4ac1e1e57266900e62c37f12c986495a618"
+          }
+        ],
+        "evidence": "At Base block 50061586, SyntheticToken ProxyAdmin 0xf3f1b456fb3a61d96024dfbb8ef9be510b689ba6 owner() returned 0xe01df4ac1e1e57266900e62c37f12c986495a618."
+      },
+      {
+        "chain": "hemi",
+        "address": "0x468f87db090bc61c690cd86430b5407675b99242",
+        "deploymentRefs": [
+          "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad"
+        ],
+        "label": "Metronome Hemi SyntheticToken ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 5087156,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 5087156,
+        "sources": [
+          {
+            "label": "Hemi SyntheticToken ProxyAdmin",
+            "url": "https://explorer.hemi.xyz/address/0x51bc603a29bef7181e9866ed27beaae215865761"
+          },
+          {
+            "label": "Metronome Hemi governor Safe",
+            "url": "https://explorer.hemi.xyz/address/0x468f87db090bc61c690cd86430b5407675b99242"
+          }
+        ],
+        "evidence": "At Hemi block 5087156, SyntheticToken ProxyAdmin 0x51bc603a29bef7181e9866ed27beaae215865761 owner() returned 0x468f87db090bc61c690cd86430b5407675b99242."
+      },
+      {
+        "chain": "plasma",
+        "address": "0xe01df4ac1e1e57266900e62c37f12c986495a618",
+        "deploymentRefs": [
+          "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234"
+        ],
+        "label": "Metronome Plasma SyntheticToken ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 29972043,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 29972043,
+        "sources": [
+          {
+            "label": "Plasma SyntheticToken ProxyAdmin",
+            "url": "https://plasmascan.to/address/0xd7c751fa32590451548b100c4f6442f062c9bc8e"
+          },
+          {
+            "label": "Metronome Plasma governor Safe",
+            "url": "https://plasmascan.to/address/0xe01df4ac1e1e57266900e62c37f12c986495a618"
+          }
+        ],
+        "evidence": "At Plasma block 29972043, SyntheticToken ProxyAdmin 0xd7c751fa32590451548b100c4f6442f062c9bc8e owner() returned 0xe01df4ac1e1e57266900e62c37f12c986495a618."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) → owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain. Economic-posture fields reviewed 2026-08-15: the undelayed Metronome Safe can change mint logic or collateral parameters, and the disclosed unbacked synth-swap float prevents whole-supply reconciliation; no prudential supervisor or independent attestor is identified. Wave 2 external review 2026-08-15: Metronome's current pool, cap, liquidation, marketplace, and underbacking disclosures do not publish an independent recurring reconciliation of total msUSD supply to msUSD-attributed debt and collateral. Sol reconciliation adjudication 2026-08-15: the undelayed mint-logic authority and disclosed unbacked synth-swap float place supply outside the ordinary collateral/debt math; without a recurring whole-supply reconciliation, the applicable reconciliation verdict remains unknown. No prudential supervisor is identified.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Current reads across Ethereum, Optimism, Base, Hemi, and Plasma confirm separate SyntheticToken proxies, local PoolRegistry contracts, and local ProxyAdmin owners. Each local governor is a 3-of-5 Safe with five owners, no enabled modules, zero guard, and no timelock in the reviewed state. The governors can change native pool registration/collateral parameters and token activation/total-supply caps; local ProxyAdmins can change native mint logic. The separate LayerZero ProxyOFT peer, destination, pause, bridge-cap, and bridge-upgrade controls are scored only under bridgeRouteRisk and do not expand native posture. Economic-posture fields remain adverse: the undelayed mint-logic authority and disclosed unbacked synth-swap float prevent whole-supply reconciliation; no prudential supervisor or independent attestor is identified.",
+      "reviewer": "Codex migration FIX-01; Metronome five-chain external verification 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Metronome Synth docs",
@@ -114,6 +577,10 @@
         {
           "label": "Metronome Synth marketplace",
           "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/synth-marketplace"
+        },
+        {
+          "label": "Metronome SyntheticToken source",
+          "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-public/main/contracts/SyntheticToken.sol"
         }
       ]
     }

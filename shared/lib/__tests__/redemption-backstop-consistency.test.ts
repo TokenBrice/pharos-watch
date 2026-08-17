@@ -260,7 +260,7 @@ describe("redemption backstop config consistency", () => {
   it("expanded shared configs receive per-coin reviewed docs instead of shared first-id docs", () => {
     const expectedPrimaryUrls = new Map([
       ["a7a5-old-vector", "https://www.a7a5.io/"],
-      ["gusd-gate", "https://www.gate.com/gusd"],
+      ["gusd-gate", "https://www.gate.com/staking/USDT?isDebtType=1&pid=33"],
       ["usyc-hashnote", "https://usyc.hashnote.com/"],
       ["zarp-zarp", "https://www.zarpstablecoin.com/"],
       ["cetes-etherfuse", "https://app.etherfuse.com/legal/proof-of-reserves"],

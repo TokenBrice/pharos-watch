@@ -59,6 +59,11 @@
       "chain": "monad",
       "address": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
       "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

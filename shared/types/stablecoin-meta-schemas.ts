@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type {
   BlacklistabilityReview,
+  BridgeRouteControl,
   BridgeRouteDeployment,
   BridgeRouteProtocolEvidence,
   BridgeRouteRiskProfile,
@@ -21,6 +22,7 @@ import type {
   MicaProfile,
   MintAuthorityControl,
   MintAuthorityDirectMintAbility,
+  MintAuthorityNoLocalIssuanceException,
   MintAuthorityProfile,
   MintAuthorityReview,
   MintAuthorityRouteChecks,
@@ -33,6 +35,7 @@ import {
   ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
   BRIDGE_ROUTE_CLASS_VALUES,
+  BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES,
   BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES,
   BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES,
   BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES,
@@ -66,6 +69,7 @@ import {
   MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES,
   MINT_AUTHORITY_MINT_PATH_VALUES,
   MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES,
+  MINT_AUTHORITY_NO_LOCAL_ISSUANCE_KIND_VALUES,
   MINT_AUTHORITY_POSTURE_VALUES,
   MINT_AUTHORITY_RECONCILIATION_VALUES,
   MINT_AUTHORITY_SAFE_SOURCE_VALUES,
@@ -133,6 +137,22 @@ const StrictIsoDateSchema = z.string().refine(isValidIsoDate, {
   message: "Expected YYYY-MM-DD",
 });
 const ReviewDateSchema = StrictIsoDateSchema;
+
+// Shape only. `shared/types` must not import `shared/lib`, so the canonical-form
+// check stays with the single normalizer: `validateMintBridgeOwnership()` raises
+// `non-normalized-deployment-ref` for an id that parses but is not already
+// normalized, and it runs in the merged catalog schema, `check:stablecoin-data`,
+// and the V9 compiler defence. Duplicating `normalizeDeploymentId` here would
+// create a second normalization authority, which the authoring contract forbids.
+const DeploymentIdSchema = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9-]*:\S+$/, "Expected a chain:contractAddress deployment ID");
+const DeploymentRefsSchema = z
+  .array(DeploymentIdSchema)
+  .min(1)
+  .refine((refs) => new Set(refs).size === refs.length, {
+    message: "deploymentRefs must be unique",
+  });
 
 export const FuzzyDateSchema = z.string().refine(
   (value) => {
@@ -570,6 +590,7 @@ export const BridgeRouteRiskProfileSchema: z.ZodType<BridgeRouteRiskProfile> = z
     sourceFreeRationale: z.string().min(1).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     routes: z.array(BridgeRouteDeploymentSchema).min(1).optional(),
+    controls: z.array(z.lazy(() => BridgeRouteControlSchema)).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
@@ -594,6 +615,19 @@ export const BridgeRouteRiskProfileSchema: z.ZodType<BridgeRouteRiskProfile> = z
         });
       }
       routeIds.add(route.id);
+    }
+
+    const controlIds = new Set<string>();
+    for (let index = 0; index < (profile.controls ?? []).length; index += 1) {
+      const control = profile.controls![index]!;
+      if (controlIds.has(control.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `duplicate bridge control id ${control.id}`,
+          path: ["controls", index, "id"],
+        });
+      }
+      controlIds.add(control.id);
     }
   });
 
@@ -847,10 +881,61 @@ const MintAuthorityKeyCustodyAttestationSchema: z.ZodType<NonNullable<MintAuthor
     })
     .strict();
 
+const MintAuthorityNoLocalIssuanceExceptionSchema: z.ZodType<MintAuthorityNoLocalIssuanceException> = z
+  .object({
+    kind: z.enum(MINT_AUTHORITY_NO_LOCAL_ISSUANCE_KIND_VALUES),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    rationale: z.string().min(1),
+    sources: z.array(StablecoinLinkSchema).min(1).optional(),
+  })
+  .strict();
+
+const BridgeRouteControlSchema: z.ZodType<BridgeRouteControl> = z
+  .object({
+    // Kebab-case without a nested quantifier: `^[a-z0-9]+(?:-[a-z0-9]+)*$` accepts
+    // the same ids but trips security/detect-unsafe-regex. The character-class
+    // match plus explicit boundary checks are linear in the input length.
+    id: z
+      .string()
+      .regex(/^[a-z0-9-]+$/, "Expected a kebab-case bridge control id")
+      .refine((value) => !value.startsWith("-") && !value.endsWith("-") && !value.includes("--"), {
+        message: "Expected a kebab-case bridge control id",
+      }),
+    label: z.string().min(1),
+    routeRefs: z.array(DeploymentIdSchema).min(1),
+    capabilities: z
+      .array(z.enum(BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES))
+      .min(1)
+      .refine((capabilities) => new Set(capabilities).size === capabilities.length, {
+        message: "bridge control capabilities must be unique",
+      }),
+    controllerChain: z.string().min(1).optional(),
+    controllerAddress: z.string().min(1).optional(),
+    failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
+    authorityType: z.enum(MINT_AUTHORITY_TYPE_VALUES),
+    threshold: PositiveIntegerSchema.optional(),
+    signerCount: PositiveIntegerSchema.optional(),
+    timelockDelaySec: z.number().finite().int().min(0).optional(),
+    safe: MintAuthoritySafeStateSchema.optional(),
+    modulesOrGuardsStatus: z.enum(MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES).optional(),
+    keyCustodyAttestation: MintAuthorityKeyCustodyAttestationSchema.optional(),
+    routeChecks: MintAuthorityRouteChecksSchema.optional(),
+    capDescription: z.string().min(1).optional(),
+    canRaiseCap: z.union([z.boolean(), z.literal("unknown")]).optional(),
+    bypassSurfaces: z.array(z.string().min(1)).optional(),
+    observedAt: ReviewDateSchema.optional(),
+    observedBlock: PositiveIntegerSchema.optional(),
+    sources: z.array(StablecoinLinkSchema).min(1).optional(),
+    evidence: z.string().min(12).optional(),
+  })
+  .strict();
+
 const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z
   .object({
     chain: z.string().min(1).optional(),
     address: z.string().min(1).optional(),
+    deploymentRefs: DeploymentRefsSchema.optional(),
     controllerAssetId: z.string().min(1).optional(),
     label: z.string().min(1),
     role: z.enum(MINT_AUTHORITY_CONTROL_ROLE_VALUES),
@@ -920,6 +1005,7 @@ const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z
     reviewedAt: ReviewDateSchema,
     disposition: z.enum(["scoreable", "unresolved"]).optional(),
     unresolvedQuestions: z.array(z.string().min(1)).optional(),
+    noLocalIssuance: MintAuthorityNoLocalIssuanceExceptionSchema.optional(),
   })
   .strict()
   .superRefine((review, ctx) => {
@@ -977,6 +1063,7 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
     upgradeability: z
       .object({
         model: z.enum(MINT_AUTHORITY_UPGRADE_MODEL_VALUES),
+        deploymentRefs: DeploymentRefsSchema.optional(),
         proxyAddresses: z.array(z.string().min(1)).min(1).optional(),
         implementationAddresses: z.array(z.string().min(1)).min(1).optional(),
         adminAddresses: z.array(z.string().min(1)).min(1).optional(),

@@ -57,9 +57,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDRIF is native to Rootstock (a RIF/DOC-collateralized CDP stablecoin launched Sep 2023, contract 0x3a15461d..., a plain ERC-20 with no cross-chain code). Its sole cross-chain supply path is a LayerZero OFT route: a dedicated OFT Adapter (lockbox) on Rootstock (0xb2ee5502...) locks native USDRIF and a burn/mint OFT representation (the verified \"MyOFT\" contract 0x8eef5ed..., Endpoint V2) is minted on Arbitrum. On-chain checks confirm the lockbox (adapter token()=native USDRIF, approvalRequired=true) holds ~61,268 USDRIF locked, matching the Arbitrum OFT supply 1:1, and the OFT is peered only to Rootstock (EID 30333). Because the durable route is a third-party LayerZero OFT Adapter/lockbox control surface, it is classified external-lock-mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "summary": "USDRIF is native to Rootstock (contract 0x3a15461d..., a RIF/DOC-collateralized CDP token with no cross-chain code). Its cross-chain supply path is a LayerZero OFT route: Rootstock adapter 0xb2ee5502... locks native USDRIF and the verified Arbitrum MyOFT 0x8eef5ed... mints a destination representation; reverse transfer burns the OFT and releases the lockbox balance. At Arbitrum block 495273150 on 2026-08-16, OFT supply was 39,908.153457 USDRIF and the Rootstock adapter held exactly 39,908.153457 native USDRIF, with endpoint 0x1a44076050125825900e736c501f859c50fe728c and the Rootstock peer configured. Rootstock adapter owner 0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128 and Arbitrum OFT owner/delegate Safe 0xb2395eaaeb03fb1f46647c423378b24f2e906305 are explicit bridge failure domains; native Rootstock issuance remains Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Codex mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -116,9 +116,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: native USDRIF token on Rootstock whose governor() resolves to the MoC Governor 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08; USDRIF is minted natively against overcollateralized RIF/DOC via the RIF On Chain protocol. No bridge control carries the claim.",
+        "reviewNote": "On-chain 2026-08-16 at Rootstock block 9157327: native USDRIF token whose governor() resolves to MoC Governor 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08; USDRIF is minted natively against overcollateralized RIF/DOC via the RIF On Chain protocol. Native issuance remains in Mint Authority; the Rootstock adapter lockbox is assessed separately under Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 9157327,
         "sources": [
           {
             "label": "USDRIF token on Rootstock explorer",
@@ -139,19 +140,22 @@
         "protocol": "LayerZero OFT (via Rootstock OFT adapter lockbox)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "external-validated-network",
+        "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: this USDRIF deployment is a LayerZero OFT (endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner/delegate 0xb2395eaaeb03fb1f46647c423378b24f2e906305) minted against native USDRIF locked in the Rootstock OFT adapter 0xb2ee5502... (adapter token() = native USDRIF, approvalRequired = true, ~61k USDRIF locked matching OFT supply 1:1, peered only to Rootstock EID 30333). Mint authority is the OFT contract itself on verified LayerZero messages.",
+        "reviewNote": "On-chain 2026-08-16 at Arbitrum block 495273150: this USDRIF deployment is a LayerZero OFT (endpoint() = 0x1a44076050125825900e736c501f859c50fe728c, owner/delegate = Arbitrum Safe 0xb2395eaaeb03fb1f46647c423378b24f2e906305) with Rootstock EID 30333 peer set to adapter 0xb2ee550266533dc9c989e43bfe7aab6203ee2c7b. The Rootstock adapter's token() is native USDRIF and approvalRequired() is true; adapter-held native supply and Arbitrum OFT totalSupply both equal 39,908.153457 at review. LayerZero message-path mint/burn is bridge capability, while adapter-owner and OFT-owner controls are explicit Bridge Risk controls.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arbitrum",
         "controllerAddress": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
         "failureDomainKeys": [
           "protocol:layerzero-oft",
-          "contract:arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+          "contract:arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+          "multisig:rootstock:0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128",
+          "safe:arbitrum:0xb2395eaaeb03fb1f46647c423378b24f2e906305"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495273150,
         "sources": [
           {
             "label": "USDRIF token on Arbiscan",
@@ -162,6 +166,161 @@
             "url": "https://rifonchain.com/"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdrif-arbitrum-oft-message-path",
+        "label": "USDRIF Arbitrum LayerZero OFT message-path mint/burn",
+        "routeRefs": [
+          "arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+          "multisig:rootstock:0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128",
+          "safe:arbitrum:0xb2395eaaeb03fb1f46647c423378b24f2e906305"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495273150, endpoint() returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c and the Rootstock EID 30333 peer returned the Rootstock OFT adapter 0xb2ee550266533dc9c989e43bfe7aab6203ee2c7b.",
+          "lockboxOrEscrow": "The Rootstock adapter token() returned canonical USDRIF and approvalRequired() returned true; the adapter lockbox and Arbitrum OFT supply each measured 39,908.153457 USDRIF at the 2026-08-16 review.",
+          "onchainAmountBounds": "The lock-mint route is supply-conserving when LayerZero messaging and the adapter accounting operate correctly: destination OFT mint follows source lock, and reverse transfer burns the OFT before source release.",
+          "pausersAdminsUpgraders": "The OFT itself mints and burns only on the verified LayerZero message path. Its owner/delegate Safe and the Rootstock adapter owner are separate bridge-admin controls; neither is a native Rootstock minter."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495273150,
+        "sources": [
+          {
+            "label": "USDRIF Arbitrum OFT on Arbiscan",
+            "url": "https://arbiscan.io/address/0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+          },
+          {
+            "label": "Arbitrum block 495273150",
+            "url": "https://arbiscan.io/block/495273150"
+          },
+          {
+            "label": "LayerZero/Stargate OFT Adapter lockbox documentation",
+            "url": "https://docs.stargate.finance/primitives/routes/oft"
+          }
+        ],
+        "evidence": "At Arbitrum block 495273150 on 2026-08-16, USDRIF OFT 0x8eef5ed361c6823156d936209e23a8e0349e5c61 returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c and the Rootstock peer 0xb2ee550266533dc9c989e43bfe7aab6203ee2c7b for EID 30333. Its totalSupply was 39,908.153457 USDRIF, exactly matching native USDRIF held by the Rootstock adapter; this is bridge lock/mint accounting rather than independent native issuance."
+      },
+      {
+        "id": "usdrif-rootstock-adapter-owner",
+        "label": "USDRIF Rootstock LayerZero OFT adapter owner multisig",
+        "routeRefs": [
+          "arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+        ],
+        "capabilities": [
+          "admin",
+          "escrow",
+          "peer-config"
+        ],
+        "controllerChain": "rootstock",
+        "controllerAddress": "0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "multisig:rootstock:0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128",
+          "safe:arbitrum:0xb2395eaaeb03fb1f46647c423378b24f2e906305"
+        ],
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "The owner controls Rootstock OFT adapter 0xb2ee550266533dc9c989e43bfe7aab6203ee2c7b, whose token() is canonical USDRIF and approvalRequired() is true; it locks native USDRIF and cannot create native Rootstock supply by itself.",
+          "trustedPeerOrRemote": "At the current Rootstock read, the adapter's Arbitrum peer is the authored OFT 0x8eef5ed361c6823156d936209e23a8e0349e5c61. The owner can change LayerZero peers and delegate configuration.",
+          "pausersAdminsUpgraders": "The adapter owner can change delegate, enforced options, inspector, and pre-crime settings. The pinned Rootstock block 9077990 observation recorded this owner as a 3-of-4 legacy multisig with no Safe modules or guard."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 9157327,
+        "sources": [
+          {
+            "label": "Rootstock USDRIF LayerZero adapter",
+            "url": "https://rootstock.blockscout.com/address/0xb2eE550266533DC9c989E43BfE7aAb6203ee2C7b"
+          },
+          {
+            "label": "Rootstock adapter-owner multisig",
+            "url": "https://rootstock.blockscout.com/address/0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128"
+          },
+          {
+            "label": "Rootstock block 9157327",
+            "url": "https://rootstock.blockscout.com/block/9157327"
+          },
+          {
+            "label": "Rootstock block 9077990 multisig topology",
+            "url": "https://rootstock.blockscout.com/block/9077990"
+          }
+        ],
+        "evidence": "At Rootstock block 9157327 on 2026-08-16, adapter 0xb2ee550266533dc9c989e43bfe7aab6203ee2c7b returned token() = 0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37, approvalRequired() = true, endpoint() = 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa, Arbitrum peer = 0x8eef5ed361c6823156d936209e23a8e0349e5c61, and owner() = 0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128. The pinned block 9077990 read confirmed the owner's 3-of-4 legacy multisig topology."
+      },
+      {
+        "id": "usdrif-arbitrum-oft-owner-safe",
+        "label": "USDRIF Arbitrum LayerZero OFT owner/delegate Safe",
+        "routeRefs": [
+          "arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xb2395eaaeb03fb1f46647c423378b24f2e906305",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "multisig:rootstock:0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128",
+          "safe:arbitrum:0xb2395eaaeb03fb1f46647c423378b24f2e906305"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 4,
+        "safe": {
+          "version": "1.4.1+L2",
+          "owners": [
+            "0x43a74B73B0363D7883E1a402427F4E302a7F4712",
+            "0x454b5D455aD71Df0fF00A1e0F189b05186800C6C",
+            "0xA46bC6E8dbaDD408A3f27378c1288168BfD1E605",
+            "0xe4822F07C1d988A8f2F53D1817f7e8848897b67A"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedBlock": 495273150,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495273150, the OFT owner/delegate was 0xb2395eaaeb03fb1f46647c423378b24f2e906305; this Safe can change the LayerZero peer and delegate configuration for the representation route.",
+          "pausersAdminsUpgraders": "The Safe controls the OFT owner surface but cannot directly create Rootstock native USDRIF or bypass the LayerZero message path. Current Safe service data reports four owners, threshold 2, no enabled modules, zero guard, version 1.4.1+L2, and master copy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495273150,
+        "sources": [
+          {
+            "label": "USDRIF Arbitrum OFT on Arbiscan",
+            "url": "https://arbiscan.io/address/0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+          },
+          {
+            "label": "USDRIF OFT owner Safe transaction service",
+            "url": "https://api.safe.global/tx-service/arb1/api/v1/safes/0xb2395Eaaeb03fb1F46647C423378B24f2E906305/"
+          },
+          {
+            "label": "Arbitrum block 495273150",
+            "url": "https://arbiscan.io/block/495273150"
+          }
+        ],
+        "evidence": "At Arbitrum block 495273150 on 2026-08-16, the OFT returned owner/delegate 0xb2395eaaeb03fb1f46647c423378b24f2e906305 and endpoint 0x1a44076050125825900e736c501f859c50fe728c. Current Safe service data reports four owners, threshold 2, no enabled modules, zero guard, version 1.4.1+L2, and master copy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762. This is bridge administration for the Arbitrum representation, not native Rootstock mint authority."
       }
     ]
   }

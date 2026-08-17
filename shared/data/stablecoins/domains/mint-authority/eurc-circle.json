@@ -4,11 +4,14 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "EURC has seven independently mintable native deployments. Ethereum, Base, Avalanche, World Chain, and Cronos use Circle FiatTokenV2_2 custom proxies with chain-local MasterMinter, token-owner, and proxy-admin controls. Solana and Stellar each use a 2-of-4 issuer multisig. Every EVM mint or upgrade path has zero on-chain delay and a code-empty single-account authority; off-chain custody behind those accounts is unknown.",
+    "summary": "EURC has seven independently mintable native deployments. Ethereum, Base, Avalanche, World Chain, and Cronos use Circle FiatTokenV2_2 custom proxies with chain-local MasterMinter, token-owner, and proxy-admin controls. Solana and Stellar each use a 2-of-4 issuer multisig. Every EVM mint or upgrade path has zero on-chain delay and a code-empty single-account authority; off-chain custody behind those accounts is unknown. Polygon, Sonic, Tempo, and Cardano are bridge representations and are excluded from Mint Authority; Cronos remains native on-chain despite its omission from Circle's current public EURC contract list.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x02398771fd1db790ef2b656ca3bcb3075f27a72c",
+        "deploymentRefs": [
+          "ethereum:0x1abaea1f7c830bd89acc67ec4af516284b1bc33c"
+        ],
         "label": "Ethereum EURC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -41,6 +44,9 @@
       {
         "chain": "ethereum",
         "address": "0x3101386a38bef8b79e49f12dea12938a30e8af96",
+        "deploymentRefs": [
+          "ethereum:0x1abaea1f7c830bd89acc67ec4af516284b1bc33c"
+        ],
         "label": "Ethereum EURC token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -71,6 +77,9 @@
       {
         "chain": "base",
         "address": "0x114b64a8bf7bf0ab2a8a64a3e348307bd568726e",
+        "deploymentRefs": [
+          "base:0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42"
+        ],
         "label": "Base EURC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -103,6 +112,9 @@
       {
         "chain": "base",
         "address": "0xc25a042ae1a6350f4236139150ea6eff4f7d9b51",
+        "deploymentRefs": [
+          "base:0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42"
+        ],
         "label": "Base EURC token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -133,6 +145,9 @@
       {
         "chain": "avalanche",
         "address": "0x48f0d284ba4dd0b3a9b72a10b13c94b43f0cadf0",
+        "deploymentRefs": [
+          "avalanche:0xc891eb4cbdeff6e073e859e987815ed1505c2acd"
+        ],
         "label": "Avalanche EURC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -165,6 +180,9 @@
       {
         "chain": "avalanche",
         "address": "0x7edf6545cb9b29bf89e911487888bae8b0c58e0f",
+        "deploymentRefs": [
+          "avalanche:0xc891eb4cbdeff6e073e859e987815ed1505c2acd"
+        ],
         "label": "Avalanche EURC token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -195,6 +213,9 @@
       {
         "chain": "worldchain",
         "address": "0x97820edc2c2fb07b0f1309b9523a2232507c3fce",
+        "deploymentRefs": [
+          "worldchain:0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b"
+        ],
         "label": "World Chain EURC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -227,6 +248,9 @@
       {
         "chain": "worldchain",
         "address": "0x6d2e0adc8251244e33220dbd8dea20186ad8537d",
+        "deploymentRefs": [
+          "worldchain:0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b"
+        ],
         "label": "World Chain EURC token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -257,6 +281,9 @@
       {
         "chain": "cronos",
         "address": "0x39fba46699f2e93fbe6bd2df6c9c91b523b40455",
+        "deploymentRefs": [
+          "cronos:0xa6de01a2d62c6b5f3525d768f34d276652c554c8"
+        ],
         "label": "Cronos EURC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -289,6 +316,9 @@
       {
         "chain": "cronos",
         "address": "0x192e362b2810f604e0618b5033d26f3b85e05af9",
+        "deploymentRefs": [
+          "cronos:0xa6de01a2d62c6b5f3525d768f34d276652c554c8"
+        ],
         "label": "Cronos EURC token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -319,6 +349,9 @@
       {
         "chain": "solana",
         "address": "Hy9168u7b2Toujh8SJKtKK8DWbyaBbXPzxm337R4o4XY",
+        "deploymentRefs": [
+          "solana:HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr"
+        ],
         "label": "Solana EURC mint-authority multisig",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -353,6 +386,9 @@
       {
         "chain": "stellar",
         "address": "GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
+        "deploymentRefs": [
+          "stellar:EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2"
+        ],
         "label": "Stellar EURC issuer multisig",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -382,6 +418,13 @@
       },
       {
         "label": "EURC deployment-wide EVM proxy admins",
+        "deploymentRefs": [
+          "ethereum:0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+          "base:0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          "avalanche:0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+          "worldchain:0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b",
+          "cronos:0xa6de01a2d62c6b5f3525d768f34d276652c554c8"
+        ],
         "role": "proxy-admin",
         "authorityType": "issuer-backend",
         "directMintAbility": "upgrade-only",
@@ -482,13 +525,20 @@
           "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         }
       ],
-      "evidence": "Exact-cutoff state at 2026-07-13T20:34:40Z was reconstructed from Ethereum block 25526129, Base block 48592766, Avalanche block 90233120, World Chain block 32319620, Cronos block 82569750, finalized Solana slot 432714278, and Stellar ledger 63463325. EVM token roles, MasterMinter managers and owners, custom proxy slots, and code status were checked. At fresh Ethereum block 25712128 on 2026-08-08, masterMinter, token owner, and blacklister remained 0x02398771fd1db790ef2b656ca3bcb3075f27a72c, 0x3101386a38bef8b79e49f12dea12938a30e8af96, and 0x601c97ed567253bf09a51998d53c5aa73290bd73. All seven native issuance deployments and mint-critical replacement paths remain represented; Polygon, Sonic, Tempo, and Cardano are separately reviewed bridge representations. Circle Internet Financial Europe SAS is an ACPR-authorised Electronic Money Institution issuing EURC as a MiCA electronic-money token, and Deloitte publishes monthly reserve-to-supply attestations. Circle's self-controlled no-timelock raise authority is economically unbounded; reconciliation is periodic and supervision prudential. No public mint-authority incident was identified in the reviewed primary sources.",
-      "reviewer": "Codex EURC exact-envelope audit; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-08-08",
+      "evidence": "Current native-route review on 2026-08-16 rechecked the seven authored native issuance deployments: Ethereum block 25770830, Base block 50066257, Avalanche block 92981952, World Chain block 33793117, Cronos block 88620633, finalized Solana slot 439732481, and Stellar ledger 63986693. The five EVM FiatToken proxies retain their chain-local MasterMinter, token-owner, and custom proxy-admin mint-critical paths; Solana retains a 2-of-4 mint-authority multisig and Stellar retains a 2-of-4 issuer. All Mint Authority deploymentRefs resolve only to these reviewed native routes. Polygon, Sonic, Tempo, and Cardano are separately reviewed representations and are excluded from canonical Mint Authority. Cronos is live native Circle FiatToken issuance on-chain, although Circle's current public EURC contract list omits it and that support-status gap remains open. Circle Internet Financial Europe SAS is an ACPR-authorised Electronic Money Institution issuing EURC as a MiCA electronic-money token, and Deloitte publishes monthly reserve-to-supply attestations. Circle's self-controlled no-timelock raise authority is economically unbounded; reconciliation is periodic and supervision prudential. No public mint-authority incident was identified in the reviewed primary sources.",
+      "reviewer": "Codex EURC mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     },
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+        "base:0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+        "avalanche:0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+        "worldchain:0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b",
+        "cronos:0xa6de01a2d62c6b5f3525d768f34d276652c554c8"
+      ],
       "proxyAddresses": [
         "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
         "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",

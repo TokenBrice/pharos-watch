@@ -18,16 +18,16 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "JPYC v1 legacy deployments on Polygon and Gnosis use third-party bridge rails from Ethereum rather than purely issuer-native multichain issuance. The reviewed durable route is Polygon PoS plus Gnosis OmniBridge lock/mint exposure for the non-Ethereum contracts.",
-    "reviewedAt": "2026-06-30",
-    "reviewer": "Codex static correction review",
-    "confidence": "probable",
+    "summary": "JPYC v1 has one native owner-only issuance route on Ethereum. Polygon PoS and Gnosis OmniBridge are lock/mint representations: their destination bridge mint and burn paths, escrow or mediator accounting, message and peer configuration, proxy upgrades, bridge administrators, and validator or checkpoint machinery are assessed here rather than in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration; verified JPYC v1 finding",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
         "name": "Polygon PoS Bridge",
         "slug": "polygon-pos",
-        "url": "https://docs.polygon.technology/pos/how-to/bridging/ethereum-polygon/portal-ui",
+        "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer",
         "bridgeTypes": [
           "lockAndMint"
         ]
@@ -36,7 +36,7 @@
         "source": "docs",
         "name": "Gnosis OmniBridge",
         "slug": "gnosis-omnibridge",
-        "url": "https://docs.gnosischain.com/bridges/OmniBridge/",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge",
         "bridgeTypes": [
           "lockAndMint"
         ]
@@ -44,12 +44,625 @@
     ],
     "sources": [
       {
-        "label": "JPYC site",
-        "url": "https://jpyc.jp/"
+        "label": "JPYC prepaid issuance termination notice",
+        "url": "https://corporate.jpyc.co.jp/news/posts/prepaid-important-notice"
       },
       {
-        "label": "JPYC SDK docs",
-        "url": "https://jpyc-support.freshdesk.com/support/solutions/articles/70000675847-jpyc-sdk%EF%BC%88english%EF%BC%89"
+        "label": "Official JPYC v1 source",
+        "url": "https://github.com/jcam1/jpyc/blob/2fdca9ad7456a890b20ae45910ae8d3350ff0d72/jpyc.sol"
+      },
+      {
+        "label": "Polygon PoS bridge portal source",
+        "url": "https://github.com/maticnetwork/pos-portal"
+      },
+      {
+        "label": "Gnosis OmniBridge source",
+        "url": "https://github.com/omni/omnibridge"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x2370f9d504c7a6e775bf6e14b3f12846b594cd53",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2370f9d504c7a6e775bf6e14b3f12846b594cd53",
+        "protocol": "JPYC v1 native ERC-20 issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25770969, the official JPYC v1 source and live contract state identify this direct ERC-20 as the only native issuance deployment: owner-only mint(address,uint256) remains technically live, the owner EOA is 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152, and EIP-1967 implementation and admin slots are zero. Polygon and Gnosis are mapped bridge representations reviewed separately below.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770969,
+        "sources": [
+          {
+            "label": "Ethereum JPYC v1 contract",
+            "url": "https://etherscan.io/address/0x2370f9d504c7a6e775bf6e14b3f12846b594cd53"
+          },
+          {
+            "label": "Official JPYC v1 source",
+            "url": "https://github.com/jcam1/jpyc/blob/2fdca9ad7456a890b20ae45910ae8d3350ff0d72/jpyc.sol"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c",
+        "protocol": "Polygon PoS Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25770969, RootChainManagerProxy 0xa0c68c638235ee32657e8f720a23cec1bfc77c77 resolved to implementation 0xf0235dca8fb0d3999685724dcbb9dd00c5d62dfa, rootToChildToken(JPYC) mapped to this Polygon token, tokenToType(JPYC) was keccak256(ERC20), typeToPredicate(ERC20) was ERC20PredicateProxy 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf, and childChainManagerAddress() was 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa. At Polygon block 92145902, the token resolved to UChildERC20 implementation 0x4350806aa2508a44aab4cb87a0eece362d882f11; its sole DEPOSITOR_ROLE member was ChildChainManagerProxy and DEFAULT_ADMIN_ROLE had no members. The route is supply-conserving when operated correctly: the root token is locked in the ERC20 predicate, state-sync calls destination deposit() to mint, withdrawals burn child tokens, and checkpoint proof unlocks the root balance. Root mapping and proxy governance, ChildChainManager and state-sync, token-proxy upgrade authority, and checkpoint machinery remain bridge failure domains.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "polygon",
+        "controllerAddress": "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:ethereum:0xa0c68c638235ee32657e8f720a23cec1bfc77c77",
+          "contract:ethereum:0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+          "contract:polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c",
+          "safe:ethereum:0xfa7d2a996ac6350f4b56c043112da0366a59b74c",
+          "timelock:ethereum:0xcaf0aa768a3ae1297df20072419db8bb8b5c8cef",
+          "protocol:polygon-pos-checkpoint-validators"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92145902,
+        "sources": [
+          {
+            "label": "Polygon JPYC bridge token",
+            "url": "https://polygon.blockscout.com/address/0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+          },
+          {
+            "label": "Polygon PoS portal source",
+            "url": "https://github.com/maticnetwork/pos-portal"
+          },
+          {
+            "label": "Polygon PoS state-transfer documentation",
+            "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer"
+          },
+          {
+            "label": "Polygon PoS governance and upgradeability",
+            "url": "https://forum.polygon.technology/t/pip-54-reassign-upgradeability-rights-of-polygon-pos-contracts-to-protocol-council/20350"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0x417602f4fbdd471a431ae29fb5fe0a681964c11b",
+        "sourceChain": "ethereum",
+        "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x417602f4fbdd471a431ae29fb5fe0a681964c11b",
+        "protocol": "Gnosis OmniBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Gnosis block 47762624, the JPYC token resolved to PermittableToken implementation 0xf8d1677c8a0c961938bf2f9adc3f3cfda759a9d9; its EIP-1967 admin slot was zero, and verified TokenProxy storage identified Home OmniBridge 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d as both owner and bridgeContract. Home bridgedTokenAddress(Ethereum JPYC) and Foreign foreignTokenAddress(Gnosis JPYC) mapped these deployments, and isTokenRegistered was true. The bridge token's owner-only mint is mediator-controlled and finishMinting() reverts in this image, so token-level minting is uncapped while route-level issuance depends on AMB messages, a four-of-seven validator quorum, mediator accounting, and execution limits. The reviewed Home mediator daily limit was 10^18 CGO and max-per-transaction was 10^9 CGO; the Foreign mediator, mediator owners, AMB proxies, and validator management remain bridge controls.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0x417602f4fbdd471a431ae29fb5fe0a681964c11b",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d",
+          "contract:ethereum:0x88ad09518695c6c3712ac10a214be5109a655671",
+          "safe:gnosis:0x7a48dac683da91e4faa5ab13d91ab5fd170875bd",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6",
+          "validator:gnosis:0xa280fed8d7cad9a76c8b50ca5c33c2534ffa5008",
+          "validator:ethereum:0xed84a648b3c51432ad0fd1c2cd2c45677e9d4064",
+          "amb:gnosis:0x75df5af045d91108662d8080fd1fefad6aa0bb59",
+          "amb:ethereum:0x4c36d2919e407f0cc2ee3c993ccf8ac26d9ce64e"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762624,
+        "sources": [
+          {
+            "label": "Gnosis JPYC bridge token",
+            "url": "https://gnosis.blockscout.com/address/0x417602f4fbdd471a431ae29fb5fe0a681964c11b"
+          },
+          {
+            "label": "Gnosis Home OmniBridge",
+            "url": "https://gnosis.blockscout.com/address/0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+          },
+          {
+            "label": "Ethereum Foreign OmniBridge",
+            "url": "https://etherscan.io/address/0x88ad09518695c6c3712ac10a214be5109a655671"
+          },
+          {
+            "label": "Gnosis OmniBridge documentation",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          },
+          {
+            "label": "Gnosis OmniBridge source",
+            "url": "https://github.com/omni/omnibridge"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "jpyc-polygon-child-chain-manager-depositor",
+        "label": "JPYC Polygon ChildChainManager DEPOSITOR_ROLE",
+        "routeRefs": [
+          "polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+          "contract:polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": "unknown",
+        "capDescription": "The UChildERC20 destination mint path has no independently verified token cap; route-level supply conservation depends on the Polygon PoS lock, state-sync, burn, and checkpoint-unlock sequence.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "RootChainManager state-sync calls the Polygon ChildChainManagerProxy, whose sole DEPOSITOR_ROLE member was the manager proxy; STATE_SYNCER_ROLE was held by the Polygon state-sync system address 0x0000000000000000000000000000000000001001.",
+          "onchainAmountBounds": "Ethereum JPYC is locked in the ERC20 predicate before child deposit() minting; withdrawals burn child tokens and unlock the root predicate balance after checkpoint proof.",
+          "pausersAdminsUpgraders": "At Polygon block 92145902, the destination UChildERC20 implementation was 0x4350806aa2508a44aab4cb87a0eece362d882f11, DEPOSITOR_ROLE had only ChildChainManagerProxy, and DEFAULT_ADMIN_ROLE had zero members."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92145902,
+        "sources": [
+          {
+            "label": "Polygon JPYC bridge token",
+            "url": "https://polygon.blockscout.com/address/0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+          },
+          {
+            "label": "Polygon PoS portal source",
+            "url": "https://github.com/maticnetwork/pos-portal"
+          }
+        ],
+        "evidence": "At Polygon block 92145902, the JPYC UChildERC20 implementation exposed deposit() minting gated by DEPOSITOR_ROLE; its sole member was ChildChainManagerProxy 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa and DEFAULT_ADMIN_ROLE had no members. This is the destination bridge mint path, not native JPYC issuance."
+      },
+      {
+        "id": "jpyc-polygon-token-proxy-owner",
+        "label": "JPYC Polygon UChildERC20 token proxy owner multisig",
+        "routeRefs": [
+          "polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c",
+          "multisig:polygon:0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f",
+          "safe:polygon:0x3a635c48836e7c0b9aeb378640b0bfd516985cf5"
+        ],
+        "authorityType": "multisig",
+        "threshold": 1,
+        "signerCount": 1,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "capDescription": "The legacy MultiSigWalletWithDailyLimit token-proxy owner can replace the UChildERC20 implementation and thereby alter destination mint, burn, and bridge-admin behavior; required() was 1 and no daily limit was configured.",
+        "bypassSurfaces": [
+          "destination token proxy implementation replacement"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92145902,
+        "sources": [
+          {
+            "label": "Polygon JPYC bridge token",
+            "url": "https://polygon.blockscout.com/address/0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+          },
+          {
+            "label": "Polygon PoS portal source",
+            "url": "https://github.com/maticnetwork/pos-portal"
+          }
+        ],
+        "evidence": "At Polygon block 92145902, the UChildERC20 token proxy owner was legacy MultiSigWalletWithDailyLimit 0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f. required() returned 1, its sole owner was 0x3a635c48836e7c0b9aeb378640b0bfd516985cf5, and no daily limit was configured. This proxy-admin capability remains bridge risk because an implementation replacement can change destination mint and burn behavior."
+      },
+      {
+        "id": "jpyc-polygon-child-chain-manager-admin",
+        "label": "JPYC Polygon ChildChainManager proxy admin Safe",
+        "routeRefs": [
+          "polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x3a635c48836e7c0b9aeb378640b0bfd516985cf5",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+          "safe:polygon:0x3a635c48836e7c0b9aeb378640b0bfd516985cf5"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 92145902,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "The 5-of-9 Safe is ChildChainManager proxy owner and DEFAULT_ADMIN_ROLE/MAPPER_ROLE member; it can change manager implementation and bridge mapping or state-sync administration.",
+        "bypassSurfaces": [
+          "ChildChainManager proxy implementation replacement",
+          "RootChainManager mapping and state-sync administration"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "ChildChainManagerProxy receives RootChainManager state-sync messages; its MAPPER_ROLE and DEFAULT_ADMIN_ROLE member was this Safe, while STATE_SYNCER_ROLE was held by 0x0000000000000000000000000000000000001001.",
+          "pausersAdminsUpgraders": "At Polygon block 92145902, ChildChainManagerProxy resolved to implementation 0xa40fc0782bee28dd2cf8cb4ac2ecdb05c537f1b5, with proxy owner and DEFAULT_ADMIN_ROLE/MAPPER_ROLE member 0x3a635c48836e7c0b9aeb378640b0bfd516985cf5."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92145902,
+        "sources": [
+          {
+            "label": "Polygon PoS portal source",
+            "url": "https://github.com/maticnetwork/pos-portal"
+          },
+          {
+            "label": "Polygon JPYC bridge token",
+            "url": "https://polygon.blockscout.com/address/0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+          }
+        ],
+        "evidence": "At Polygon block 92145902, the current ChildChainManagerProxy resolved to implementation 0xa40fc0782bee28dd2cf8cb4ac2ecdb05c537f1b5, with proxy owner and DEFAULT_ADMIN_ROLE/MAPPER_ROLE member 0x3a635c48836e7c0b9aeb378640b0bfd516985cf5. The Safe was 5-of-9, Safe v1.4.1, with no enabled modules and a zero guard."
+      },
+      {
+        "id": "jpyc-polygon-root-manager-governance-safe",
+        "label": "JPYC Polygon RootChainManager mapping Safe",
+        "routeRefs": [
+          "polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xfa7d2a996ac6350f4b56c043112da0366a59b74c",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:ethereum:0xa0c68c638235ee32657e8f720a23cec1bfc77c77",
+          "safe:ethereum:0xfa7d2a996ac6350f4b56c043112da0366a59b74c"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 5,
+          "observedBlock": 25770969,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "The RootChainManager DEFAULT_ADMIN_ROLE and MAPPER_ROLE Safe controls root-to-child token mapping, predicate selection, and bridge administration for the JPYC route.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770969, rootToChildToken(JPYC) returned Polygon JPYC, tokenToType(JPYC) returned keccak256(ERC20), typeToPredicate(ERC20) returned ERC20PredicateProxy 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf, and childChainManagerAddress() returned 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa.",
+          "onchainAmountBounds": "The ERC20 predicate locks the Ethereum JPYC balance on deposit and releases it only after a Polygon withdrawal checkpoint proof."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770969,
+        "sources": [
+          {
+            "label": "Polygon PoS RootChainManager",
+            "url": "https://etherscan.io/address/0xA0c68C638235ee32657e8f720a23ceC1bfc77C77"
+          },
+          {
+            "label": "Polygon PoS portal source",
+            "url": "https://github.com/maticnetwork/pos-portal"
+          },
+          {
+            "label": "Polygon PoS governance and upgradeability",
+            "url": "https://forum.polygon.technology/t/pip-54-reassign-upgradeability-rights-of-polygon-pos-contracts-to-protocol-council/20350"
+          }
+        ],
+        "evidence": "At Ethereum block 25770969, RootChainManagerProxy 0xa0c68c638235ee32657e8f720a23cec1bfc77c77 had DEFAULT_ADMIN_ROLE and MAPPER_ROLE held by the 5-of-9 Safe 0xfa7d2a996ac6350f4b56c043112da0366a59b74c. That Safe governs the JPYC root-to-child mapping and predicate selection for the Polygon bridge route."
+      },
+      {
+        "id": "jpyc-polygon-predicate-proxy-timelock",
+        "label": "JPYC Polygon RootChainManager and ERC20Predicate proxy timelock",
+        "routeRefs": [
+          "polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xcaf0aa768a3ae1297df20072419db8bb8b5c8cef",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:ethereum:0xa0c68c638235ee32657e8f720a23cec1bfc77c77",
+          "contract:ethereum:0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf",
+          "timelock:ethereum:0xcaf0aa768a3ae1297df20072419db8bb8b5c8cef"
+        ],
+        "authorityType": "timelock",
+        "canRaiseCap": true,
+        "capDescription": "The Polygon PoS proxy owner/timelock can replace RootChainManager and ERC20Predicate proxy implementations, altering lock, burn, checkpoint, and release constraints for the route.",
+        "bypassSurfaces": [
+          "RootChainManager proxy implementation replacement",
+          "ERC20Predicate proxy implementation replacement"
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "ERC20PredicateProxy 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf holds locked Ethereum JPYC and releases it after valid Polygon checkpoint proof.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770969, RootChainManagerProxy resolved to implementation 0xf0235dca8fb0d3999685724dcbb9dd00c5d62dfa and its proxy owner/timelock was 0xcaf0aa768a3ae1297df20072419db8bb8b5c8cef; the ERC20 predicate proxy had the same proxy owner."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770969,
+        "sources": [
+          {
+            "label": "Polygon PoS RootChainManager",
+            "url": "https://etherscan.io/address/0xA0c68C638235ee32657e8f720a23ceC1bfc77C77"
+          },
+          {
+            "label": "Polygon PoS portal source",
+            "url": "https://github.com/maticnetwork/pos-portal"
+          },
+          {
+            "label": "Polygon PoS governance and upgradeability",
+            "url": "https://forum.polygon.technology/t/pip-54-reassign-upgradeability-rights-of-polygon-pos-contracts-to-protocol-council/20350"
+          }
+        ],
+        "evidence": "At Ethereum block 25770969, RootChainManagerProxy 0xa0c68c638235ee32657e8f720a23cec1bfc77c77 resolved to implementation 0xf0235dca8fb0d3999685724dcbb9dd00c5d62dfa and had proxy owner/timelock 0xcaf0aa768a3ae1297df20072419db8bb8b5c8cef. ERC20PredicateProxy 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf had the same proxy owner, so the timelock controls the Polygon lock/withdrawal bridge machinery."
+      },
+      {
+        "id": "jpyc-polygon-checkpoint-validator-network",
+        "label": "Polygon PoS checkpoint and validator proof machinery",
+        "routeRefs": [
+          "polygon:0x6ae7dfc73e0dde2aa99ac063dcf7e8a63265108c"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "protocol:polygon-pos-checkpoint-validators"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "Polygon PoS withdrawals require checkpoint proof before the ERC20 predicate unlocks Ethereum JPYC; this protocol-level review preserves the validator/checkpoint failure domain without assigning an unverified coin-specific validator controller."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92145902,
+        "sources": [
+          {
+            "label": "Polygon PoS state-transfer documentation",
+            "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer"
+          },
+          {
+            "label": "Polygon PoS governance and upgradeability",
+            "url": "https://forum.polygon.technology/t/pip-54-reassign-upgradeability-rights-of-polygon-pos-contracts-to-protocol-council/20350"
+          }
+        ],
+        "evidence": "The Polygon route is supply-conserving only when checkpoint proof and the Polygon PoS validator machinery correctly authorize withdrawals and predicate unlocks. That protocol-level validator failure domain is retained as a structured Bridge Risk control; no separate coin-specific validator contract or controller was attributed in the verified JPYC route evidence."
+      },
+      {
+        "id": "jpyc-gnosis-home-mediator-owner",
+        "label": "JPYC Gnosis Home OmniBridge mediator owner Safe",
+        "routeRefs": [
+          "gnosis:0x417602f4fbdd471a431ae29fb5fe0a681964c11b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x7a48dac683da91e4faa5ab13d91ab5fd170875bd",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d",
+          "contract:gnosis:0x417602f4fbdd471a431ae29fb5fe0a681964c11b",
+          "safe:gnosis:0x7a48dac683da91e4faa5ab13d91ab5fd170875bd",
+          "amb:gnosis:0x75df5af045d91108662d8080fd1fefad6aa0bb59"
+        ],
+        "authorityType": "safe",
+        "threshold": 1,
+        "signerCount": 1,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x583788f490a278db2a8d6d7226264b4985f75678"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "observedBlock": 47762624,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "The Home mediator owner and upgradeability owner can change bridge execution limits and mediator logic; current daily limit was 10^18 CGO and max-per-transaction was 10^9 CGO, while the destination token's mediator mint path has no token-level economic cap.",
+        "bypassSurfaces": [
+          "Home mediator implementation replacement",
+          "AMB message acceptance and validator signatures",
+          "mediator daily and per-transaction limit configuration"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "Home mediator 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d used AMB 0x75df5af045d91108662d8080fd1fefad6aa0bb59 and other mediator 0x88ad09518695c6c3712ac10a214be5109a655671; token owner() and bridgeContract() both resolved to Home OmniBridge.",
+          "rateLimits": "At Gnosis block 47762624, Home mediator daily limit was 10^18 CGO and max-per-transaction was 10^9 CGO in 18-decimal display units, with minimum one base unit.",
+          "attestorQuorum": "Route execution depends on the corresponding four-of-seven OmniBridge validator set and AMB message validation.",
+          "onchainAmountBounds": "The Gnosis Foreign mediator held the same JPYC amount as the Gnosis representation's total supply at the reviewed Ethereum block, consistent with lock/mint accounting; the token-level owner-only mint is not economically capped."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762624,
+        "sources": [
+          {
+            "label": "Gnosis JPYC bridge token",
+            "url": "https://gnosis.blockscout.com/address/0x417602f4fbdd471a431ae29fb5fe0a681964c11b"
+          },
+          {
+            "label": "Gnosis Home OmniBridge",
+            "url": "https://gnosis.blockscout.com/address/0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+          },
+          {
+            "label": "Gnosis bridge management documentation",
+            "url": "https://docs.gnosischain.com/bridges/management/"
+          }
+        ],
+        "evidence": "At Gnosis block 47762624, Home mediator 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d resolved to implementation 0x2dbdcc6cad1a5a11fd6337244407bc06162aaf92, with AMB 0x75df5af045d91108662d8080fd1fefad6aa0bb59 and other mediator 0x88ad09518695c6c3712ac10a214be5109a655671. Its owner and upgradeability owner was the 1-of-1 Safe 0x7a48dac683da91e4faa5ab13d91ab5fd170875bd, whose sole EOA owner was 0x583788f490a278db2a8d6d7226264b4985f75678 and whose module list was empty."
+      },
+      {
+        "id": "jpyc-gnosis-foreign-mediator-owner",
+        "label": "JPYC Ethereum Foreign OmniBridge mediator owner Safe",
+        "routeRefs": [
+          "gnosis:0x417602f4fbdd471a431ae29fb5fe0a681964c11b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x42f38ec5a75accec50054671233dfac9c0e7a3f6",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:ethereum:0x88ad09518695c6c3712ac10a214be5109a655671",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6",
+          "amb:ethereum:0x4c36d2919e407f0cc2ee3c993ccf8ac26d9ce64e"
+        ],
+        "authorityType": "safe",
+        "threshold": 8,
+        "signerCount": 15,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 8,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25770969,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "The 8-of-15 Foreign mediator owner controls mediator upgradeability and peer configuration; an implementation change can alter bridge mint, burn, and message-accounting constraints.",
+        "bypassSurfaces": [
+          "Foreign mediator implementation replacement",
+          "AMB message acceptance and validator signatures"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770969, Foreign mediator 0x88ad09518695c6c3712ac10a214be5109a655671 resolved to implementation 0x8eb3b7d8498a6716904577b2579e1c313d48e347, with AMB 0x4c36d2919e407f0cc2ee3c993ccf8ac26d9ce64e and other mediator Home 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d.",
+          "pausersAdminsUpgraders": "Foreign mediator owner and upgradeability owner was the 8-of-15 Safe 0x42f38ec5a75accec50054671233dfac9c0e7a3f6, with no enabled modules and a zero guard.",
+          "attestorQuorum": "Foreign-side route execution depends on the corresponding four-of-seven validator management contract and AMB message validation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770969,
+        "sources": [
+          {
+            "label": "Ethereum Foreign OmniBridge",
+            "url": "https://etherscan.io/address/0x88ad09518695c6c3712ac10a214be5109a655671"
+          },
+          {
+            "label": "Gnosis OmniBridge source",
+            "url": "https://github.com/omni/omnibridge"
+          },
+          {
+            "label": "Gnosis bridge management documentation",
+            "url": "https://docs.gnosischain.com/bridges/management/"
+          }
+        ],
+        "evidence": "At Ethereum block 25770969, Foreign mediator 0x88ad09518695c6c3712ac10a214be5109a655671 resolved to implementation 0x8eb3b7d8498a6716904577b2579e1c313d48e347, with owner and upgradeability owner the 8-of-15 Safe 0x42f38ec5a75accec50054671233dfac9c0e7a3f6. The Safe had no enabled modules and a zero guard."
+      },
+      {
+        "id": "jpyc-gnosis-home-validator-set",
+        "label": "JPYC Gnosis-side OmniBridge validator management",
+        "routeRefs": [
+          "gnosis:0x417602f4fbdd471a431ae29fb5fe0a681964c11b"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xa280fed8d7cad9a76c8b50ca5c33c2534ffa5008",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "validator:gnosis:0xa280fed8d7cad9a76c8b50ca5c33c2534ffa5008",
+          "safe:gnosis:0x7a48dac683da91e4faa5ab13d91ab5fd170875bd"
+        ],
+        "authorityType": "contract",
+        "threshold": 4,
+        "signerCount": 7,
+        "canRaiseCap": true,
+        "capDescription": "Gnosis Validator Management required four signatures from the seven current validators; its owner was the Home mediator owner Safe and can change the validator set or quorum.",
+        "routeChecks": {
+          "attestorQuorum": "At Gnosis block 47762624, Gnosis Validator Management 0xa280fed8d7cad9a76c8b50ca5c33c2534ffa5008 had seven current validators and required signatures 4. The set was 0x156c0daab0cd73c224a424a781866d35f0f8fade, 0xe9fc29ae64c2923febb615cb016b77af9492ebce, 0xad93bffbc65002cc75ad2d5770d3aaffdefd8d55, 0x4a07b8ae561cc558edd3f1836365ab8e02c52de2, 0xb54b5572f3c4f70ff3cc8f67c19c8cddb838fbaa, 0xcc46a3873bfcaa08a6a946a308bb621535d6e6dd, and 0x258667e543c913264388b33328337257af208a8f."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762624,
+        "sources": [
+          {
+            "label": "Gnosis Validator Management",
+            "url": "https://gnosis.blockscout.com/address/0xA280feD8D7CaD9a76C8b50cA5c33c2534fFa5008"
+          },
+          {
+            "label": "Gnosis bridge management documentation",
+            "url": "https://docs.gnosischain.com/bridges/management/"
+          }
+        ],
+        "evidence": "At Gnosis block 47762624, Gnosis Validator Management 0xa280fed8d7cad9a76c8b50ca5c33c2534ffa5008 had seven current validators and required signatures 4. The validator set and its Home mediator owner relationship are preserved as a separate bridge validator control."
+      },
+      {
+        "id": "jpyc-gnosis-foreign-validator-set",
+        "label": "JPYC Ethereum-side OmniBridge validator management",
+        "routeRefs": [
+          "gnosis:0x417602f4fbdd471a431ae29fb5fe0a681964c11b"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xed84a648b3c51432ad0fd1c2cd2c45677e9d4064",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "validator:ethereum:0xed84a648b3c51432ad0fd1c2cd2c45677e9d4064",
+          "safe:ethereum:0x42f38ec5a75accec50054671233dfac9c0e7a3f6"
+        ],
+        "authorityType": "contract",
+        "threshold": 4,
+        "signerCount": 7,
+        "canRaiseCap": true,
+        "capDescription": "Ethereum Validator Management required four signatures from the seven current validators; its owner was the Foreign mediator owner Safe and can change the validator set or quorum.",
+        "routeChecks": {
+          "attestorQuorum": "At Ethereum block 25770969, Ethereum Validator Management 0xed84a648b3c51432ad0fd1c2cd2c45677e9d4064 had seven current validators and required signatures 4. The set matched the Gnosis-side seven-validator set preserved in the route evidence."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770969,
+        "sources": [
+          {
+            "label": "Ethereum Validator Management",
+            "url": "https://etherscan.io/address/0xed84a648b3c51432ad0fd1c2cd2c45677e9d4064"
+          },
+          {
+            "label": "Gnosis OmniBridge source",
+            "url": "https://github.com/omni/omnibridge"
+          }
+        ],
+        "evidence": "At Ethereum block 25770969, Ethereum Validator Management 0xed84a648b3c51432ad0fd1c2cd2c45677e9d4064 had seven current validators and required signatures 4. The Foreign mediator owner Safe relationship and matching validator set are preserved as a separate bridge validator control."
       }
     ]
   }

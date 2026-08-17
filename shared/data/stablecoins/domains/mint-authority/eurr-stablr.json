@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "EURR issuance is controlled through StablR signer/admin infrastructure with a 1-of-3 owner safe. StablR can mint or pause supply subject to its EMI reserve and redemption obligations.",
+    "summary": "EURR canonical issuance is verified on Ethereum. The owner-controlled mint path remains direct and unbounded, with the May 2026 unauthorized issuance and continued mint/redeem suspension preserved as adverse evidence; the separately listed Solana deployment is unresolved and is not counted as native Mint Authority.",
     "mintIncidents": [
       {
         "date": "2026-05-24",
@@ -30,14 +30,19 @@
       {
         "chain": "ethereum",
         "address": "0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD",
+        "deploymentRefs": [
+          "ethereum:0x50753cfaf86c094925bf976f218d043f8791e408"
+        ],
         "label": "EURR Ethereum owner mint authority",
         "role": "direct-minter",
         "authorityType": "multisig",
         "directMintAbility": "direct",
-        "threshold": 1,
-        "signerCount": 2,
+        "threshold": 2,
+        "signerCount": 3,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770841,
         "sources": [
           {
             "label": "StablR EURR docs",
@@ -46,42 +51,36 @@
           {
             "label": "StablR smart-contract docs",
             "url": "https://docs.stablr.com/docs/smart-contract"
+          },
+          {
+            "label": "Ethereum EURR proxy and verified source",
+            "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
           }
         ],
-        "evidence": "Contract owner is the StablR 1-of-3 safe at 0xbC0bD4dDe5BFc9C490C025caCaDA7b14e529F0D0, with owners 0xC42DAE8545022ba73Ec22c4634C42226B64BcE4B, 0xD30d1C5f02D37AA6161E3aBF14eF96EBb6327040, and 0x324F403916ab80a56B3A61D7d71553262ef56759."
+        "evidence": "At Ethereum block 25770841, owner() returned the custom 2-of-3 multisig 0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD. required() returned 2 and getOwners() returned 0xd8e150c51552ec8e0e82756c7e11ff76751b8afe, 0xea9965a9ab26aa1c31f9612dd16fc52d319ff0c5, and 0xe9c11b87a5dce59a615a5ad662b934012b27914e. The owner-controlled path retains direct mint authority and no token-level economic cap was evidenced."
       },
       {
         "chain": "ethereum",
         "address": "0xA0609c2F05A386D835ae3C01CDA296a5F63878a0",
+        "deploymentRefs": [
+          "ethereum:0x50753cfaf86c094925bf976f218d043f8791e408"
+        ],
         "label": "EURR EIP-1967 proxy admin",
         "role": "proxy-admin",
         "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
-        "threshold": 1,
-        "signerCount": 2,
+        "threshold": 2,
+        "signerCount": 3,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770841,
         "sources": [
           {
             "label": "Ethereum EURR token",
             "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
           }
         ],
-        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166592. required() returned 1 and getOwners() returned 1 owner."
-      },
-      {
-        "label": "EURR Solana mint/freeze authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "StablR EURR docs",
-            "url": "https://docs.stablr.com/docs/what-is-eurr"
-          }
-        ],
-        "evidence": "Solana SPL mint HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ: mintAuthority = aNk7d9zZhAgVw8EuGzV15vgMKmjnbHCxtnozeJb51ij (system-program owned, non-executable wallet); freezeAuthority = AtgugpVoTQcjxjtWgECnSfyThJxBVggSS8WfzVCXNDmV (system-program owned, non-executable wallet). Both are issuer-operated keypair accounts; supply = 0 at time of check."
+        "evidence": "At Ethereum block 25770841, the EIP-1967 admin slot returned this address. required() returned 2 and getOwners() returned 0x881ba97132a35fd885f9091a68ffb3e94f29b90c, 0xac6db6e68252c5c7770245eafb55779cc1629a04, and 0x96b055ba4d3898e253d94e66506a9939b31402ed. No timelock or delay was observed on this current proxy-admin surface."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -96,21 +95,35 @@
         {
           "label": "StablR EURR docs",
           "url": "https://docs.stablr.com/docs/what-is-eurr"
+        },
+        {
+          "label": "Ethereum EURR proxy and verified source",
+          "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
+        },
+        {
+          "label": "StablR 24 June 2026 status update",
+          "url": "https://www.stablr.com/insights/notification-update-24-06-2025"
         }
       ],
-      "evidence": "Ethereum (2026-05-25): owner 0x05Aa2D11B1 as 2/2 multisig, proxy admin 0xA0609c2F as 1/1 multisig. Solana SPL mint (2026-06-11): mintAuthority and freezeAuthority are non-executable system-program-owned wallet accounts (issuer-backend). All addressable mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: issuer-controlled Ethereum and Solana mint paths are unbounded, Grant Thornton quarterly proof of reserve provides periodic reconciliation, and MFSA EMI authorization is prudential supervision.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 25770841 on 2026-08-16, owner() returned the 2-of-3 custom multisig 0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD and the EIP-1967 admin slot returned 0xA0609c2F05A386D835ae3C01CDA296a5F63878a0; the implementation slot returned 0x76e0baef381656d51d733cf9aa60d7bf8017f958. The May 2026 unauthorized issuance and the 24 June update confirming continued mint/redeem suspension remain adverse evidence. Grant Thornton quarterly proof of reserve provides periodic reconciliation and MFSA EMI authorization provides prudential supervision. The Solana SPL mint HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ had supply 0 at finalized slot 439735039; mint authority aNk7d9zZhAgVw8EuGzV15vgMKmjnbHCxtnozeJb51ij and freeze authority AtgugpVoTQcjxjtWgECnSfyThJxBVggSS8WfzVCXNDmV were system-program-owned, non-executable wallets at finalized slot 439735091, but the issuer has not established whether Solana creates independent liabilities or mirrors Ethereum supply. Solana is therefore retained as an unresolved evidence gap and is not compiled as native Mint Authority.",
+      "reviewer": "Codex mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16"
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x50753cfaf86c094925bf976f218d043f8791e408"
+      ],
+      "implementationAddresses": [
+        "0x76e0baef381656d51d733cf9aa60d7bf8017f958"
+      ],
       "adminAddresses": [
         "0xA0609c2F05A386D835ae3C01CDA296a5F63878a0"
       ],
       "canChangeMintLogic": true,
       "controlRef": "EURR EIP-1967 proxy admin",
-      "observedAt": "2026-08-11",
-      "observedBlock": 25734737,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770841,
       "sources": [
         {
           "label": "Ethereum EURR token",

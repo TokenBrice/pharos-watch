@@ -2,15 +2,15 @@
   "id": "gusd-gate",
   "name": "Gate USD",
   "symbol": "GUSD",
-  "oneLiner": "Gate USD is Gate exchange's yield-bearing dollar, minted 1:1 by staking USDT or USDC and backed mostly by short-term T-bills with CEX-managed yield strategies.",
+  "oneLiner": "Gate USD is Gate's account-linked yield product, subscribed 1:1 with USDT, USDC, or USD1; Gate claims Treasury and stablecoin backing and pays daily GUSD.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true
   },
-  "collateral": "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC",
-  "pegMechanism": "1:1 mint by staking USDT or USDC on Gate; upon redemption, users receive USDC equal to principal plus accrued interest; GUSD is yield-bearing — appreciation is baked in at redemption",
+  "collateral": "Gate states that GUSD is backed by tokenized Treasury bills and stablecoins, but publishes no current instrument-level allocation or product-specific reserve reconciliation",
+  "pegMechanism": "Users subscribe 1:1 with USDT, USDC, or USD1 on Gate. Returns accrue from subscription and are distributed daily in GUSD. Gate currently advertises 1:1 redemption into the original subscription asset with no redemption fee; older help materials say fees may vary by redemption mode and market conditions",
   "mechanismArchetype": "tbill",
   "llamaId": "306",
   "detailProvider": "defillama",
@@ -18,24 +18,29 @@
   "cmcSlug": "gusd",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://www.gate.com/gusd",
-    "provider": "Gate exchange-wide zk-Merkle proof-of-reserves (GUSD appears only inside a pooled stablecoin bucket with no per-asset ratio and no named attestor; this is an exchange custody proof of customer assets, not evidence that GUSD issuance is backed by segregated issuer reserves)",
+    "url": "https://www.gate.com/proof-of-reserves",
+    "provider": "Gate exchange-wide zk-Merkle proof-of-reserves publishes customer and platform balances for GUSD, but this demonstrates Gate's custody of customer GUSD tokens rather than identifying or reconciling the assets backing all issued GUSD; no token-backing attestor is named",
     "attestorTier": "none",
     "cadence": "none"
   },
   "links": [
     {
-      "label": "Website",
-      "url": "https://www.gate.com/gusd"
+      "label": "Product",
+      "url": "https://www.gate.com/staking/USDT?isDebtType=1&pid=33"
+    },
+    {
+      "label": "Proof of Reserves",
+      "url": "https://www.gate.com/proof-of-reserves"
+    },
+    {
+      "label": "GateLayer GUSD",
+      "url": "https://www.gatechain.io/docs/GateLayer/Tutorial/X402/"
     },
     {
       "label": "Twitter",
       "url": "https://x.com/Gate"
     }
   ],
-  "jurisdiction": {
-    "country": "Cayman Islands"
-  },
   "contracts": [
     {
       "chain": "ethereum",
@@ -46,16 +51,28 @@
   "custodyModel": "cex",
   "governanceQuality": "single-entity",
   "yieldConfig": {
-    "yieldSource": "Gate USD redemption yield",
+    "yieldSource": "Gate-distributed daily GUSD rewards",
     "yieldType": "governance-set"
   },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Circulating-supply caveat",
+      "message": "Pharos inherits GUSD supply from DefiLlama, whose current series tracks the full Ethereum token supply. Gate subscription figures and CoinGecko circulating supply are lower, so the displayed market cap should not be read as independently reconciled circulating supply."
+    },
+    {
+      "type": "info",
+      "title": "Additional GateLayer representation",
+      "message": "Gate also operates GUSD on GateLayer at 0xece3f96198a5e6b9b2278edbea8d548f66050d1c. Pharos currently tracks contract telemetry only for the Ethereum deployment."
+    }
+  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "gusd-gate",
     "display": {
-      "url": "https://www.gate.com/gusd",
+      "url": "https://www.gate.com/staking/USDT?isDebtType=1&pid=33",
       "label": "Gate USD"
     },
     "inputs": {

@@ -7,6 +7,9 @@
     "summary": "MXNe is issued by Brale across Base (BraleToken ERC1967 proxy), Solana (SPL mint), and Stellar (issuer account); on each chain a single issuer-controlled EOA/keypair holds all mint and admin rights.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "base:0x269cae7dc59803e5c596c95756faeebb6030e0af"
+      ],
       "proxyAddresses": [
         "0x269cae7dc59803e5c596c95756faeebb6030e0af"
       ],
@@ -40,6 +43,9 @@
         "directMintAbility": "direct",
         "chain": "base",
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "deploymentRefs": [
+          "base:0x269cae7dc59803e5c596c95756faeebb6030e0af"
+        ],
         "canRaiseCap": true,
         "evidence": "At Base block 47200644, hasRole(MINTER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) on the BraleToken proxy (0x269cae7dc59803e5c596c95756faeebb6030e0af) returned true. eth_getCode confirms EOA. Same address also holds DEFAULT_ADMIN_ROLE. MINTER_ROLE = keccak256('MINTER_ROLE') = 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6. Contract source confirmed as BraleToken (OpenZeppelin AccessControl + UUPS) via Blockscout."
       },
@@ -50,6 +56,9 @@
         "directMintAbility": "direct",
         "chain": "solana",
         "address": "3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH",
+        "deploymentRefs": [
+          "solana:6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa"
+        ],
         "canRaiseCap": true,
         "evidence": "getAccountInfo on SPL mint 6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa returned mintAuthority=3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH and freezeAuthority=same. That account is owned by System Program and non-executable (regular Solana keypair/EOA)."
       },
@@ -60,6 +69,9 @@
         "directMintAbility": "direct",
         "chain": "stellar",
         "address": "GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+        "deploymentRefs": [
+          "stellar:MXNe-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
+        ],
         "canRaiseCap": true,
         "evidence": "Stellar Horizon: issuer GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR has 1 signer (self, weight=1), all thresholds=0, auth_revocable and auth_clawback_enabled set — standard single-key issuer account."
       }

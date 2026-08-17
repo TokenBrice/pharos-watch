@@ -4,9 +4,16 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USTBL mint and burn are permission-gated on every deployment. On Ethereum, Polygon, Base, Etherlink and Arbitrum a PermissionManager ADMIN group with exactly one 3-of-6 Safe member authorizes minting and can upgrade both the token and the PermissionManager; on Starknet the same authority is a 3-of-5 Argent multisig; on Stellar it is a single-key account that owns both the token and the PermissionManager, which is the weakest control in the set.",
+    "summary": "USTBL has seven independently native issuance deployments on Ethereum, Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar. Mint and burn remain permission-gated on each native deployment: EVM PermissionManager controls, the Starknet 3-of-5 Argent multisig, and the Stellar single-key owner/admin are native issuance controls. Announced CCIP interoperability is reviewed separately in Bridge Risk and is not included in this canonical mint inventory.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "polygon:0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "base:0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "etherlink:0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "arbitrum:0x021289588cd81dc1ac87ea91e91607eef68303f5"
+      ],
       "proxyAddresses": [
         "0xe4880249745eac5f1ed9d8f7df844792d560e750",
         "0x021289588cd81dc1ac87ea91e91607eef68303f5",
@@ -49,6 +56,9 @@
       {
         "chain": "ethereum",
         "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "deploymentRefs": [
+          "ethereum:0xe4880249745eac5f1ed9d8f7df844792d560e750"
+        ],
         "label": "USTBL token restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -72,6 +82,9 @@
       {
         "chain": "ethereum",
         "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "deploymentRefs": [
+          "ethereum:0xe4880249745eac5f1ed9d8f7df844792d560e750"
+        ],
         "label": "Spiko PermissionManager authority contract",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -95,6 +108,9 @@
       {
         "chain": "polygon",
         "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "deploymentRefs": [
+          "polygon:0xe4880249745eac5f1ed9d8f7df844792d560e750"
+        ],
         "label": "USTBL Polygon restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -116,6 +132,9 @@
       {
         "chain": "base",
         "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "deploymentRefs": [
+          "base:0xe4880249745eac5f1ed9d8f7df844792d560e750"
+        ],
         "label": "USTBL Base restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -137,6 +156,9 @@
       {
         "chain": "etherlink",
         "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "deploymentRefs": [
+          "etherlink:0xe4880249745eac5f1ed9d8f7df844792d560e750"
+        ],
         "label": "USTBL Etherlink restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -158,6 +180,9 @@
       {
         "chain": "arbitrum",
         "address": "0x021289588cd81dc1ac87ea91e91607eef68303f5",
+        "deploymentRefs": [
+          "arbitrum:0x021289588cd81dc1ac87ea91e91607eef68303f5"
+        ],
         "label": "USTBL Arbitrum restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -177,6 +202,9 @@
       {
         "chain": "arbitrum",
         "address": "0xa925c217e4c1c82ee721ebd496d3863d5c2d829a",
+        "deploymentRefs": [
+          "arbitrum:0x021289588cd81dc1ac87ea91e91607eef68303f5"
+        ],
         "label": "Spiko PermissionManager authority contract (Arbitrum)",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -200,6 +228,9 @@
       {
         "chain": "ethereum",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": [
+          "ethereum:0xe4880249745eac5f1ed9d8f7df844792d560e750"
+        ],
         "label": "Spiko PermissionManager ADMIN Safe (Ethereum)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -243,6 +274,9 @@
       {
         "chain": "arbitrum",
         "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "deploymentRefs": [
+          "arbitrum:0x021289588cd81dc1ac87ea91e91607eef68303f5"
+        ],
         "label": "Spiko PermissionManager ADMIN Safe (Arbitrum)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -286,6 +320,9 @@
       {
         "chain": "starknet",
         "address": "0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6",
+        "deploymentRefs": [
+          "starknet:0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6"
+        ],
         "label": "USTBL Starknet restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -310,6 +347,9 @@
       {
         "chain": "starknet",
         "address": "0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d",
+        "deploymentRefs": [
+          "starknet:0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6"
+        ],
         "label": "USTBL Starknet owner multisig",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -336,6 +376,9 @@
       {
         "chain": "stellar",
         "address": "CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO",
+        "deploymentRefs": [
+          "stellar:USTBL-CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO"
+        ],
         "label": "USTBL Stellar Soroban restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -363,6 +406,9 @@
       {
         "chain": "stellar",
         "address": "GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
+        "deploymentRefs": [
+          "stellar:USTBL-CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO"
+        ],
         "label": "USTBL Stellar owner and PermissionManager admin account",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -432,9 +478,9 @@
         "url": "https://github.com/spiko-tech/contracts/blob/main/contracts/token/Token.sol"
       }
     ],
-    "evidence": "The three questions the previous review left open are now closed from primary chain reads. Arbitrum: at block 485896559 the PermissionManager mint requirement is mask 0x05, the upgrade requirement for both the token and the PermissionManager is mask 0x01, getGroupAdmins(0) is 0x01, and group-0 membership resolves to the single 3-of-6 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; the six current operator-group members were each confirmed with getGroups(). The same re-read on Ethereum at block 25575138 shows the ADMIN group member is the 3-of-6 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea and that the deploying EOA holds no group, correcting the earlier record that attributed mint and upgrade authority to an issuer EOA. Starknet: at block 12085430 the token owner is Argent multisig 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d with five signers and threshold 3, and that account holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, PAUSER_ROLE and WHITELISTER_ROLE on PermissionManager 0x7c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3 while the deployer holds none. Stellar: the issuer's own production address file names the token and permission-manager contracts, Soroban instance storage at ledger 63567141 gives token Owner and PermissionManager Admin as the same account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, and Horizon shows that account has one signer of weight 1 with all thresholds 0. Supervision stays prudential because Spiko's fund is an AMF-authorized UCITS money-market fund with quarterly independent audit, but the Stellar single-key control is recorded as the weakest authority in the set rather than smoothed into the EVM and Starknet quorums. Economic-posture fields reviewed 2026-08-15: existing unknown cap semantics are preserved; recurring fund reconciliation and AMF prudential supervision remain supported. Wave 2 external verification 2026-08-15: Spiko's official Token.sol exposes permission-gated minting with no amount or total-supply cap, so an issuer-controlled EVM mint path makes global economic capacity unbounded.",
-      "reviewer": "V9 Phase 3 curation lane cur-6; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "The seven authored deployments are independently native issuance routes, not representations of a single canonical token: current reads on 2026-08-16 show nonzero local supply and live issuer authority on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet. Arbitrum at block 485896559 has PermissionManager mint requirement mask 0x05, token and PermissionManager upgrade requirement mask 0x01, getGroupAdmins(0) 0x01, and group-0 membership in the single 3-of-6 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; the six current operator-group members were each confirmed with getGroups(). Ethereum at block 25575138 shows the ADMIN group member is the 3-of-6 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea and the deploying EOA holds no group. Starknet at block 13410761 confirms live local supply and owner 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d; the latest detailed role observation at block 12085430 records that Argent multisig's five signers and threshold 3 hold DEFAULT_ADMIN_ROLE, MINTER_ROLE, PAUSER_ROLE, and WHITELISTER_ROLE on PermissionManager 0x7c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3. Stellar current reads at ledger 63987834 confirm a live token and the owner/admin account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H; its latest detailed contract observation at ledger 63567141 records the same single-key account as token Owner and PermissionManager Admin, while Horizon confirms one signer of weight 1 with no quorum. The official Token.sol exposes permission-gated mint/burn without an amount or total-supply cap, so issuer-controlled native economic capacity remains unbounded; periodic fund/NAV reconciliation and AMF/UCITS prudential supervision remain separate annotations. Announced CCIP interoperability is reviewed in Bridge Risk only; no bridge capability is compiled into Mint Authority.",
+      "reviewer": "Codex mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

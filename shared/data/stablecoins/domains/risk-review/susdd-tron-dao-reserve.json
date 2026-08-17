@@ -80,18 +80,19 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "sUSDD is the immutable SavingsUsdd wrapper deployed natively on Ethereum and BNB Chain over natively-issued USDD on each chain (per-chain bytecode diff 2026-07-20; USDD's BNB Chain deployment is native per the official deployment registry). No bridge route carries the claim.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "tier": "single-chain-or-native",
+    "summary": "sUSDD has no bridge route: Ethereum and BNB Chain each host an immutable native SavingsUsdd ERC-4626 wrapper over that chain's native USDD. Deposits mint sUSDD shares and withdrawals burn them; inherited USDD Join and GovActionsProxy issuance controls remain in Mint Authority and are not bridge controls.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle); Codex mint-bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
-        "name": "sUSDD issuer-operated multichain issuance",
+        "name": "sUSDD native SavingsUsdd wrappers",
         "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
+          "nativeIssuance"
+        ],
+        "note": "Ethereum and BNB Chain each host an independent native SavingsUsdd wrapper; no cross-chain bridge route or representation is claimed."
       }
     ],
     "sources": [
@@ -112,7 +113,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical home deployment: sUSDD on Ethereum is the immutable SavingsUsdd wrapper (no proxy, no owner(); bytecode read 2026-07-20) minting sUSDD against USDD deposits.",
+        "reviewNote": "Canonical native deployment: sUSDD on Ethereum is an immutable SavingsUsdd ERC-4626 wrapper with no proxy or owner; it mints sUSDD only against Ethereum USDD deposits and burns shares on withdrawal.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -133,11 +134,11 @@
         "protocol": "USDD Savings (SavingsUsdd)",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native deployment: the BSC sUSDD is the same immutable SavingsUsdd ERC-4626 wrapper (11,085-byte contract, name 'Savings Usdd'; bytecode differs from the Ethereum wrapper only in the embedded per-chain protocol addresses, diffed 2026-07-20) wrapping natively-issued BNB Chain USDD 0x45E51bc23D592EB2DBA86da3985299f7895d66Ba — USDD announced native deployment on BNB Chain (Oct 2025) with the full CDP stack, so no bridge mints this deployment.",
+        "reviewNote": "Canonical native deployment: BNB Chain sUSDD is an immutable SavingsUsdd ERC-4626 wrapper with no proxy or owner; its immutable asset() is natively issued BNB Chain USDD 0x45E51bc23D592EB2DBA86da3985299f7895d66Ba. It mints sUSDD only against local USDD deposits and burns shares on withdrawal; no bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

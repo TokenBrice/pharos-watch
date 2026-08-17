@@ -35,6 +35,7 @@
     "typecheck:worker": "cd worker && npx tsc --noEmit",
     "audit:deps": "npm audit --audit-level=high --omit=dev",
     "audit:mint-authority-review": "tsx scripts/maintenance/generate-mint-authority-review-audit.ts",
+    "audit:mint-bridge-ownership": "tsx scripts/maintenance/generate-mint-bridge-ownership-audit.ts",
     "audit:bridge-route-coverage": "tsx scripts/maintenance/generate-bridge-route-coverage-audit.ts",
     "audit:coverage": "node --import tsx scripts/maintenance/run-coverage-audit.ts",
     "test": "vitest run",

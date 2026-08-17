@@ -6,5 +6,186 @@
     "evidence": "Inferred review retained: EUROe resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "EUROe has six reviewed issuer-native issuance routes: Ethereum, Polygon, Avalanche, Optimism, Arbitrum, and an independent Solana SPL mint. No current OFT/OToken, lockbox, escrow, adapter, peer, validator, or bridge-specific rate-limit machinery was identified at the catalogued token addresses, so no bridge representation is scored. Membrane's historical EUROe Ramp announcement mentions bridging platforms without naming a current route contract, controller, or conserved-supply invariant; Paxos now describes the product as redemption-only. That historical statement remains an explicit evidence gap under Bridge Risk rather than a fabricated route.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Paxos EUROe redemption notice",
+        "url": "https://www.paxos.com/euroe-redemptions"
+      },
+      {
+        "label": "Membrane EUROe Ramp announcement",
+        "url": "https://www.euroe.com/blog/euroe-ramp"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "protocol": "Membrane/Paxos EUROe issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25770838 (2026-08-16T23:12:23Z), the EUROe UUPS proxy uses implementation 0x85c427aa5605c242ff693c1e45b8641a9cb8279d, has active MINTER_ROLE for issuer EOA 0x74424510108a8ad9aa6a5b506048948e6a16706b, and accepts a zero-amount mint simulation from that EOA. This is a native issuer mint path; no bridge representation is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770838,
+        "sources": [
+          {
+            "label": "EUROe Ethereum proxy",
+            "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          },
+          {
+            "label": "Ethereum JSON-RPC observation",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "protocol": "Membrane/Paxos EUROe issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Polygon block 92144619 (2026-08-16T23:12:36Z), the EUROe UUPS proxy uses implementation 0x85c427aa5605c242ff693c1e45b8641a9cb8279d, has active MINTER_ROLE for issuer EOA 0x74424510108a8ad9aa6a5b506048948e6a16706b, and accepts a zero-amount mint simulation from that EOA. The Polygon EOA bytecode probe timed out during the current screen, but the active role read and direct mint simulation support the native issuer classification; no bridge representation is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92144619,
+        "sources": [
+          {
+            "label": "EUROe Polygon proxy",
+            "url": "https://polygonscan.com/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          },
+          {
+            "label": "Polygon JSON-RPC observation",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "protocol": "Membrane/Paxos EUROe issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Avalanche C-Chain block 92982043 (2026-08-16T23:12:39Z), the EUROe UUPS proxy uses implementation 0x85c427aa5605c242ff693c1e45b8641a9cb8279d, has active MINTER_ROLE for issuer EOA 0x74424510108a8ad9aa6a5b506048948e6a16706b, and accepts a zero-amount mint simulation from that EOA. This is a native issuer mint path; no bridge representation is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92982043,
+        "sources": [
+          {
+            "label": "EUROe Avalanche C-Chain proxy",
+            "url": "https://snowtrace.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC observation",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "destinationChain": "optimism",
+        "canonicalChain": "optimism",
+        "contractAddress": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "protocol": "Membrane/Paxos EUROe issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Optimism block 155661593 (2026-08-16T23:12:43Z), the EUROe UUPS proxy uses implementation 0x85c427aa5605c242ff693c1e45b8641a9cb8279d, has active MINTER_ROLE for issuer EOA 0x74424510108a8ad9aa6a5b506048948e6a16706b, and accepts a zero-amount mint simulation from that EOA. This is a native issuer mint path; no bridge representation is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155661593,
+        "sources": [
+          {
+            "label": "EUROe Optimism proxy",
+            "url": "https://optimistic.etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          },
+          {
+            "label": "Optimism JSON-RPC observation",
+            "url": "https://mainnet.optimism.io"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xcf985aba4647a432e60efceeb8054bbd64244305",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0xcf985aba4647a432e60efceeb8054bbd64244305",
+        "protocol": "Membrane/Paxos EUROe issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arbitrum block 495292609 (2026-08-16T23:12:46Z), the EUROe ERC1967 proxy uses implementation 0x64bf35bbe75445ec5fbfb59517c2d6311503c2d3, has active MINTER_ROLE for issuer EOA 0x74424510108a8ad9aa6a5b506048948e6a16706b, and accepts a zero-amount mint simulation from that EOA. This is an independent native issuer mint path; no bridge representation is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495292609,
+        "sources": [
+          {
+            "label": "EUROe Arbitrum proxy",
+            "url": "https://arbiscan.io/token/0xcf985aba4647a432e60efceeb8054bbd64244305"
+          },
+          {
+            "label": "Arbitrum JSON-RPC observation",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ]
+      },
+      {
+        "id": "solana:2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg",
+        "protocol": "Membrane/Paxos EUROe issuer-native SPL mint",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Solana slot 439734038 (2026-08-16T23:09:50Z), the EUROe SPL mint is initialized with 6 decimals, mint authority 8ykETiDvCFHrrPP1X8McwChWFVDHbhz2cJpVEVY5GNAC, and freeze authority 8FyB12RHpTsTMbY7uNrU7SeDXmUpWik8HE1ZSFqzMaQd. Both authority accounts are System Program-owned, non-executable accounts; no SPL multisig threshold, on-chain cap, or timelock was verified. This is an independent native issuance route; no bridge representation is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439734038,
+        "sources": [
+          {
+            "label": "EUROe Solana mint on Solscan",
+            "url": "https://solscan.io/token/2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg"
+          },
+          {
+            "label": "Solana finalized JSON-RPC observation",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      }
+    ]
   }
 }
