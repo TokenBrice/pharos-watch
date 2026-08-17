@@ -135,6 +135,15 @@ function collectAuthoredDeploymentIds(meta: MintBridgeOwnershipMeta, routes: rea
   return ids;
 }
 
+function collectAuthoredContractIds(meta: MintBridgeOwnershipMeta): Set<string> {
+  const ids = new Set<string>();
+  for (const contract of meta.contracts ?? []) {
+    const id = normalizeDeploymentId(`${contract.chain}:${contract.address}`);
+    if (id) ids.add(id);
+  }
+  return ids;
+}
+
 function validateReferenceList({
   refs,
   pathPrefix,
@@ -187,7 +196,14 @@ function validateReferenceList({
     seenRefs.add(normalized);
 
     const route = routeById.get(normalized);
-    if (!route) {
+    // A mint ref may also name an authored contract deployment when the asset has no reviewed route
+    // inventory at all; unrouted single-chain assets have no route row to point at. Bridge control
+    // refs always require a reviewed route, and rule 2 still constrains refs once routes exist.
+    const authoredWithoutRoutes =
+      unknownCode === "unknown-deployment-ref" &&
+      routeById.size === 0 &&
+      collectAuthoredContractIds(meta).has(normalized);
+    if (!route && !authoredWithoutRoutes) {
       addViolation(
         violations,
         seen,
