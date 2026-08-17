@@ -102,6 +102,8 @@ export function DetailRiskContextSections({
               publicationHealth={viewModel.reportCardsResponse.publicationHealth}
               updatedAtMs={viewModel.reportCardUpdatedAt}
               stablecoinName={viewModel.coin.name}
+              stablecoinSymbol={viewModel.coin.symbol}
+              logoSrc={viewModel.logoSrc}
               rightColumn={reservesPanel}
               transferReview={transferReview}
             />
