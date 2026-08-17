@@ -7,11 +7,16 @@ import type {
   MintAuthorityControl,
   MintAuthorityProfile,
 } from "@shared/types/core";
-import { describe, expect, it } from "vitest";
+import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
+import { describe, expect, it, vi } from "vitest";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
+import { adaptBridgeReview } from "../safety-score-v9-extension-bridge";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
-import type { V9ExtensionRegistryMeta } from "../safety-score-v9-extension-shared";
+import {
+  ReviewEvidenceBuilder,
+  type V9ExtensionRegistryMeta,
+} from "../safety-score-v9-extension-shared";
 import {
   makeV9FixedInput,
   v9TestClockSec,
@@ -184,6 +189,89 @@ function controlsFor(
   );
 }
 
+function representationSupplyReview(
+  assetId: string,
+  representationId: string,
+): NonNullable<Parameters<typeof adaptBridgeReview>[1]> {
+  return {
+    selectedBridgeRoutes: [
+      {
+        deploymentRouteKey: v9RepresentationGroupRouteKey(assetId, representationId),
+        supplyUsd: 10_000_000,
+        supplyShare: 1,
+        reviewState: "selected-reviewed",
+        reviewedRouteKind: "controlled",
+      },
+    ],
+    selectedRouteSupplyShare: 1,
+    unknownRouteSupplyShare: 0,
+    unreviewedRouteSupplyShare: 0,
+    failureDomains: [],
+  };
+}
+
+function adaptBridgeFixture(
+  metadata: V9ExtensionRegistryMeta,
+  supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> | null,
+) {
+  const clockSec = 10_000;
+  return adaptBridgeReview(
+    metadata,
+    supplyReview,
+    2,
+    new ReviewEvidenceBuilder(metadata.id, clockSec),
+    clockSec,
+  );
+}
+
+type StructuredOverlayEntryForTest = {
+  overlay: {
+    capSemantics: {
+      kind: string;
+      bound: { amount: number; unit: string } | null;
+    };
+    authority: unknown;
+  };
+};
+
+function withStructuredOverlayMutation<T>(
+  mutate: (entries: StructuredOverlayEntryForTest[]) => void,
+  callback: () => T,
+): T {
+  // The public BridgeRouteControl schema currently emits one bounded shape and
+  // always emits an authority. Mutate only the compiler's intermediate join so
+  // these defensive merge invariants are exercised without changing fixtures
+  // or production behavior.
+  const originalFilter = Array.prototype.filter;
+  let mutated = false;
+  const filterSpy = vi.spyOn(Array.prototype, "filter").mockImplementation(function (callbackFn, thisArg) {
+    const result = originalFilter.call(this, callbackFn, thisArg);
+    if (
+      !mutated &&
+      this.length > 0 &&
+      this.every((entry) => {
+        const candidate = entry as Record<string, unknown>;
+        const overlay = candidate.overlay;
+        return (
+          overlay !== null &&
+          typeof overlay === "object" &&
+          "capSemantics" in overlay &&
+          "authority" in overlay
+        );
+      })
+    ) {
+      mutated = true;
+      mutate(this as StructuredOverlayEntryForTest[]);
+    }
+    return result;
+  });
+  try {
+    return callback();
+  } finally {
+    filterSpy.mockRestore();
+  }
+}
+
 describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
   it("rejects a raw active Mint Authority bridge capability at both enforcement layers", () => {
     const contaminatedMeta = {
@@ -296,6 +384,49 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(bridge!.capabilities).not.toContain("mint");
   });
 
+  it("fails closed on disagreement between structured bridge cap bounds while matching bounds stay bounded", () => {
+    const metadata = meta("fixture-matching-bridge-caps", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        controls: [
+          bridgeControl({
+            id: "bounded-bridge-cap-a",
+            routeRefs: [BASE_ROUTE],
+            canRaiseCap: false,
+          }),
+          bridgeControl({
+            id: "bounded-bridge-cap-b",
+            routeRefs: [BASE_ROUTE],
+            canRaiseCap: false,
+          }),
+        ],
+      }),
+    });
+    const matchingBridge = controlsFor(compileFixture(metadata).compiled, metadata.id).find((control) =>
+      control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
+    );
+
+    expect(matchingBridge).toMatchObject({
+      capSemantics: { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } },
+    });
+
+    const mismatchedBridge = withStructuredOverlayMutation(
+      (entries) => {
+        entries[1]!.overlay.capSemantics = {
+          kind: "bounded",
+          bound: { amount: 2, unit: "supply-fraction" },
+        };
+      },
+      () =>
+        controlsFor(compileFixture(metadata).compiled, metadata.id).find((control) =>
+          control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
+        ),
+    );
+
+    expect(mismatchedBridge).toMatchObject({
+      capSemantics: { kind: "unbounded", bound: null },
+    });
+  });
+
   it("retains intrinsic bridge-mint for a reviewed representation route without structured coverage", () => {
     const metadata = meta("fixture-intrinsic-bridge-mint", {
       bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)]),
@@ -326,6 +457,98 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(() => compileFixture(metadata)).toThrow(
       `Safety Score v9 mint/bridge ownership validation failed for fixture-shadowed-bridge-mint: representation-route-without-bridge-mint at bridgeRouteRisk.routes[0].id: reviewed representation route "${BASE_ROUTE}" is covered by control IDs ["admin-only-shadow"], but none includes "bridge-mint"; name the bridge-mint holder in one of those controls, or stop referencing the route so the conservative route-derived fallback overlay applies`,
+    );
+  });
+
+  it("rejects a structured bridge control that references an unknown route", () => {
+    const unknownRoute = "base:0x4444444444444444444444444444444444444444";
+    const metadata = meta("fixture-unknown-bridge-route", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        controls: [
+          bridgeControl({
+            id: "unknown-route-control",
+            routeRefs: [unknownRoute],
+          }),
+        ],
+      }),
+    });
+
+    expect(() => adaptBridgeFixture(metadata, null)).toThrow(
+      `Safety Score v9 bridge control unknown-route-control for fixture-unknown-bridge-route references unknown route ${unknownRoute}`,
+    );
+  });
+
+  it("synthesizes an unknown bridge authority when covering overlays have no authority", () => {
+    const metadata = meta("fixture-unknown-bridge-authority", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        controls: [
+          bridgeControl({
+            id: "unattributed-bridge-control",
+            routeRefs: [BASE_ROUTE],
+            canRaiseCap: false,
+          }),
+        ],
+      }),
+    });
+    const bridge = withStructuredOverlayMutation(
+      (entries) => {
+        for (const entry of entries) entry.overlay.authority = null;
+      },
+      () =>
+        controlsFor(compileFixture(metadata).compiled, metadata.id).find((control) =>
+          control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
+        ),
+    );
+
+    expect(bridge).toMatchObject({
+      authority: {
+        authorityKey: `bridge-route:${BASE_ROUTE}`,
+        model: "unknown",
+        threshold: null,
+      },
+    });
+  });
+
+  it("compiles a representation group only when every member is reviewed wrapped lock-mint", () => {
+    const representationId = "fixture-wrapped-representation";
+    const acceptingRoute = representationRoute(BASE_ROUTE, {
+      representationId,
+      issuanceModel: "wrapped-representation",
+    });
+    const acceptingMetadata = meta("fixture-accepted-representation-group", {
+      bridgeRouteRisk: bridgeProfile([acceptingRoute]),
+    });
+    const groupRouteKey = v9RepresentationGroupRouteKey(acceptingMetadata.id, representationId);
+    const accepting = adaptBridgeFixture(
+      acceptingMetadata,
+      representationSupplyReview(acceptingMetadata.id, representationId),
+    );
+
+    expect(accepting.controls).toContainEqual(
+      expect.objectContaining({
+        controlKey: expect.stringMatching(/^bridge-group:/),
+        deploymentKey: groupRouteKey,
+        capabilities: ["bridge-mint"],
+      }),
+    );
+
+    const rejectingMetadata = meta("fixture-rejected-representation-group", {
+      bridgeRouteRisk: bridgeProfile([
+        representationRoute(BASE_ROUTE, {
+          representationId,
+          issuanceModel: "wrapped-representation",
+          reviewDisposition: "unreviewed",
+        }),
+      ]),
+    });
+    const rejecting = adaptBridgeFixture(
+      rejectingMetadata,
+      representationSupplyReview(rejectingMetadata.id, representationId),
+    );
+
+    expect(rejecting.controls.some((control) => control.controlKey.startsWith("bridge-group:"))).toBe(false);
+    expect(rejecting.controls).toContainEqual(
+      expect.objectContaining({ deploymentKey: BASE_ROUTE, controlKind: "bridge" }),
     );
   });
 
