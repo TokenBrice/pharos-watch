@@ -14,7 +14,7 @@ import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { deepFreeze } from "./primitives";
 import {
-  V9_SCORE_BEARING_GATES_POLICY_V922,
+  V9_SCORE_BEARING_GATES_POLICY_V923,
   parseV9ScoreBearingGatesPolicy,
   type V9ScoreBearingGatesPolicy,
 } from "./score-bearing-gates-policy";
@@ -141,7 +141,7 @@ export type V9ValidatedPolicyWithScoreBearingGates = V9ValidatedPolicyEnvelope &
 /** Parse, cross-validate, digest, and freeze one explicit methodology policy. */
 export function loadV9MethodologyPolicy(
   rawPolicy: unknown,
-  rawScoreBearingGates: unknown = V9_SCORE_BEARING_GATES_POLICY_V922,
+  rawScoreBearingGates: unknown = V9_SCORE_BEARING_GATES_POLICY_V923,
 ): V9ValidatedPolicyWithScoreBearingGates {
   const basePolicy = V9MethodologyPolicySchema.parse(rawPolicy);
   const scoreBearingGates = parseV9ScoreBearingGatesPolicy(rawScoreBearingGates);

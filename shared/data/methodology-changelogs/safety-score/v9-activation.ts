@@ -11,6 +11,7 @@ export const SAFETY_SCORE_V9_MINT_BRIDGE_SCOPE_BOUNDARY: MethodologyChangelogEnt
     "Active multi-deployment Mint Authority controls and mutable mint-logic upgrade paths name their reviewed native deployments; inherited or external-only products require an explicit reviewed no-local-issuance exception",
     "Bridge mint/burn, adapters, lockboxes or escrow, messaging, peer configuration, limits, upgrades, validators, pause, and administrators are authored as structured route-scoped controls, while conservative route-derived controls remain when structured evidence is absent",
     "The ownership gate blocks active bridge vocabulary in Mint Authority, invalid or non-native deployment references, and duplicate cross-domain bridge capabilities instead of silently filtering them during compilation",
+    "A structured bridge control covering a reviewed bridge- or wrapped-representation route must name that route's bridge-mint holder; otherwise the ownership gate fails closed, because leaving the route unreferenced is what preserves the conservative route-derived mint overlay",
     "USDai's satellite OToken administrator exposure remains scoreable under Bridge Risk but no longer classifies canonical Arbitrum issuance as unbounded-or-compromised; the corrected scope moved USDai from D to B",
     "Pillar weights, bounded aggregation, caps, grade thresholds, and non-bridge Mint Authority scoring are unchanged",
   ],
