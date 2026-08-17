@@ -129,10 +129,10 @@ export function MintAuthorityScoreMethodologySection() {
       versionNote="This lane is closed. Mint risk is versioned in the Safety Score changelog from v9.1 onward; the badge marks the terminal Mint Authority release."
     >
       <p>
-        Mint authority measures how much durable stablecoin supply can be created, authorized, expanded, or routed by
-        privileged actors — issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges,
+        Mint authority measures how much durable stablecoin supply can be created, authorized, or expanded on the
+        deployment or deployments that issue the canonical claim. It follows native minters, cap and proxy admins,
         off-chain attestation systems, backend signers, governance, Safes and multisigs, custodians, and wrapper
-        inheritance.
+        inheritance that can change that native issuance.
       </p>
       <p>
         Pharos scored this twice until methodology v9.1: once as a standalone Mint Authority Score and once inside the
@@ -140,6 +140,13 @@ export function MintAuthorityScoreMethodologySection() {
         resolved exploit for years and the Safety Score forgot it the moment it was resolved. Since v9.1 there is one
         grader. Mint risk is the Safety Score&apos;s Economic Control pillar mint component, and every mint score on the
         site is that component.
+      </p>
+      <p>
+        Bridge Risk is evaluated at a different scope. A destination token, adapter, lockbox, message path, route
+        limit, bridge upgrade, or bridge administrator can harm the representation it governs without changing the
+        canonical issuer&apos;s native mint authority. Pharos therefore scores those controls on their individual bridge
+        routes. The same controller can appear in both assessments when it holds different powers, but a bridge power
+        is never treated as global native-mint risk.
       </p>
       <MethodologyFacts
         facts={[
@@ -173,8 +180,9 @@ export function MintAuthorityScoreMethodologySection() {
         <div className="space-y-2">
           <h3 className="text-foreground font-medium">Composition</h3>
           <p>
-            The mint component is one of three in the Economic Control pillar, alongside oracle and bridge topology.
-            The pillar takes the lowest binding component, so a weak mint path is not averaged away by a strong oracle.
+            The mint component is one of three in the Economic Control pillar, alongside oracle and route-scoped
+            bridge controls. The pillar takes the lowest binding component, so a weak native mint path is not averaged
+            away by a strong oracle, while a material bridge control can bind through its own component.
           </p>
         </div>
         <div className="space-y-2">
@@ -182,7 +190,9 @@ export function MintAuthorityScoreMethodologySection() {
           <p>
             The retired engine priced the mint route family (issuer-direct, permissioned minter, bridge synthetic, and
             so on) as its own weighted component. That is not carried over: the cap and claim semantics already price
-            the same risk, and counting it twice would double-penalize the same fact.
+            native issuance, while bridge capabilities are compiled separately for the routes they govern. Treating a
+            satellite bridge administrator as global mint authority would apply the wrong scope and could penalize the
+            same capability twice.
           </p>
         </div>
         <div className="space-y-2">

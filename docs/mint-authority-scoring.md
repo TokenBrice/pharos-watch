@@ -13,10 +13,17 @@ Where the signals went:
 | MPC/HSM key custody | `semantic.control.mintMergedSignals.attestedKeyCustodyQuality` / `unattestedEoaPenalty` |
 | Multisig threshold ladder | `semantic.control.mintMergedSignals.multisigQuorumAdjustment` |
 | Modules/guards evidence | `semantic.control.mintMergedSignals.modulesOrGuardsAdjustment` |
-| Route-family pricing | Excluded by design — `capSemantics` already prices it (anti-double-counting) |
+| Native route-family pricing | Excluded by design — `capSemantics` already prices it (anti-double-counting) |
+| Bridge capabilities | Route-scoped Bridge Risk controls in V9 Economic Control |
 | `authorityPosture` | Validated annotation only; `npm run safety-score-v9:mint-posture-queue` |
 
 See [report-cards.md](./report-cards.md) for the live methodology.
+
+## Current V9 scope
+
+Since Safety methodology `9.23`, the live V9 mint component assesses native issuance on the canonical deployment(s) and controls that can expand, relax, or replace that issuance. Bridge Risk separately assesses representations and cross-chain machinery, including bridge mint/burn, adapters, lockboxes or escrow, messaging, limits, upgrades, and administrators. The same controller can appear in both domains for different powers, but a bridge capability never compiles as global Mint Authority risk.
+
+Mint controls and mutable mint-logic upgrade paths on active multi-deployment assets are bound to reviewed native deployments. Structured bridge controls compile once per referenced route; when structured evidence is absent, conservative route-derived controls remain. This corrects the USDai scope bug in which satellite OToken administration had classified canonical Arbitrum issuance as `unbounded-or-compromised`; separating the evidence moved USDai from D to B. [Classification](./classification.md#mint-authority-taxonomy) owns the taxonomy boundary, and [Stablecoin Data Registry](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns the exact authoring and enforcement contract.
 
 The historical description follows.
 
@@ -28,7 +35,7 @@ The historical description follows.
 - **Scoring source:** none — the retired engine module was deleted with the lane; the live mint component lives in `shared/lib/safety-score-v9/control.ts`
 - **Public methodology anchor:** `/methodology/#mint-authority-score`
 
-## Purpose
+## Historical purpose
 
 Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged actors. It focuses on the mint path itself: issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs, custodians, and wrapper inheritance.
 

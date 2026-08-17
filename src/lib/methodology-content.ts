@@ -71,9 +71,9 @@ export const MINT_AUTHORITY_SCORE_SECTION_CONTENT = defineMethodologySectionCont
   id: "mint-authority-score",
   title: "Mint Authority Score",
   markdownParagraphs: [
-    "Mint authority measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged mint paths.",
+    "Mint authority measures how much durable stablecoin supply can be created, authorized, or expanded on the canonical native-issuance deployment or deployments.",
     "Since methodology v9.1 it is graded once, by the Safety Score V9 Economic Control pillar. The mint component starts from a derived posture (cap semantics, claim impairment, reconciliation, supervision), then applies resolved-incident age decay, a key-custody penalty that MPC or HSM attestation waives, a multisig quorum ladder, and a small Safe module modifier.",
-    "Missing or unresolved review data returns NR and never implies safety. The score shown on detail pages, the homepage table, the screener, and coverage breakdowns is that same component, so the mint column and the letter grade can no longer disagree. Mint route family is deliberately not priced separately: the cap and claim semantics already price it.",
+    "Representations and cross-chain machinery are assessed separately by Bridge Risk at deployment scope. A shared controller may appear in both domains for distinct powers, but a bridge capability never becomes global Mint Authority risk. Missing or unresolved review data returns NR and never implies safety.",
   ],
 });
 

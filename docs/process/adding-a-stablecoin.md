@@ -208,7 +208,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - Is the token itself yield-bearing, or is yield only available through a separate wrapper?
 - Is Ethereum a canonical issuance chain worth tracking for mint/burn?
 - For each supported `contracts[]` or high-signal `tradedContracts[]` chain, does the chain resolve to a L2BEAT project? If yes, record L2BEAT layer, category, host chain, stage, under-review flag, and weak risk fields as chain-route review context.
-- Who can create durable supply or change minting paths: users only, issuer/operator, minter role, facilitator, bridge route, proxy/cap admin, backend signer, DAO, timelock, Safe/multisig, wrapper parent, or unknown?
+- Which deployment(s) create native liabilities, and which are bridge or wrapped representations? For native issuance, identify users, issuer/operator, minter roles, facilitators, proxy/cap admins, backend signers, governance, timelocks, Safes/multisigs, wrapper parents, or unresolved authority. Review bridge mint/burn, adapters, lockboxes, messaging, limits, upgrades, and administrators separately.
 - Does Bluechip publish a rating for it?
 - Does it belong to an existing infrastructure cohort such as `liquity-v1`, `liquity-v2`, or `m0`?
 - If the asset is active, what admits it into `/api/stablecoins` runtime cache: `llamaId`, `detailProvider: "coingecko"` with `geckoId`, `detailProvider: "coingecko"` with on-chain total-supply fallback, or commodity `geckoId`?
@@ -412,7 +412,7 @@ Add the new object to the asset's per-coin JSON file using current field names a
 
 ### Mint Authority profile shape
 
-When the Phase 3.5 / Phase 5f gate calls for a reviewed Mint Authority profile, author it in the per-coin JSON as `mintAuthority`. It is optional overall, but when present the schema expects a reviewable profile:
+When the Phase 3.5 / Phase 5f gate calls for a reviewed Mint Authority profile, author it in `shared/data/stablecoins/domains/mint-authority/<id>.json`. It is optional overall, but when present the schema expects a reviewable profile:
 
 ```json
 {
@@ -462,6 +462,7 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
   - Gold/silver assets need a `geckoId` for the commodity supplemental path.
   - Do not rely on `canonical-order.json` alone; static routes can exist before the Worker `/api/stablecoins` cache has a row.
 - If `mintAuthority` is present, keep it sourced and schema-valid; if it is missing for a high-value active addition, record the intentional gap in Phase 5 coverage notes.
+- For an active multi-deployment asset, complete the native-versus-representation review in Phase 5f: every Mint Authority control and mutable upgrade path needs native-only deployment references, and bridge capabilities need structured route-scoped controls.
 - Work the three coupling groups below. The build, tests, and generated-artifact gates fail on **every** addition (active or pre-launch) until they match the registry.
 - Use `npm run check:stablecoin-data` before moving on.
 
@@ -615,7 +616,7 @@ Current practice:
 
 ### 5f. Mint Authority review
 
-Mint Authority review feeds the V9 Economic Control mint component and should answer whether durable supply can be created directly or indirectly by privileged minters, minter admins, proxy/cap admins, facilitators, bridge/OFT routes, backend signers, governance, timelocks, Safes/multisigs, custodians, or only through user/protocol mechanics.
+Mint Authority review feeds the V9 Economic Control mint component and should answer whether durable native supply can be created directly or indirectly by privileged minters, minter admins, proxy/cap admins, facilitators, backend signers, governance, timelocks, Safes/multisigs, custodians, or only through user/protocol mechanics. Representations and cross-chain transfer machinery belong to Bridge Risk even when they share a controller with native issuance.
 
 For new high-value active additions and pre-launch promotions, record either a reviewed `mintAuthority` profile or an intentional gap. High-value means top-60 canonical rank, market cap ≥ $50M, or an obvious issuer/operator mint control. Missing data is acceptable, but the detail page omits the Mint Authority section until reviewed data exists; do not imply unknown means safe.
 
@@ -623,16 +624,27 @@ When authoring `mintAuthority`, verify:
 
 - `mintPath`, `authorityPosture`, `confidence`, `summary`, and `review` are present.
 - `review` includes `evidence`, `reviewer`, `reviewedAt`, and either `sources[]` or `sourceFreeRationale`.
-- privileged paths such as `issuer-direct-mint`, `permissioned-minter`, `offchain-attested-minter`, `facilitator-bucket-mint`, `amo-or-custodian-hybrid`, `bridge-or-oft-synthetic`, and `m0-permissioned-minter` include at least one `controls[]` entry unless confidence is `unknown`.
+- privileged native paths such as `issuer-direct-mint`, `permissioned-minter`, `offchain-attested-minter`, `facilitator-bucket-mint`, `amo-or-custodian-hybrid`, and `m0-permissioned-minter` include at least one `controls[]` entry unless confidence is `unknown`.
 - each control identifies `label`, `role`, `authorityType`, and `directMintAbility`; addressed or mint-capable controls need control-level sources/evidence or profile-level sources.
 - Safe/multisig controls with `verified` confidence include `threshold`, `signerCount`, and `modulesOrGuardsStatus`; `modulesOrGuardsStatus: "unknown"` caps verified or probable confidence at `manual-review`.
 - EOA mint-capable controls should include `keyCustodyAttestation` when MPC/HSM custody is publicly evidenced; otherwise non-issuer-context EOA direct/can-authorize paths are capped by the score methodology.
 - Cap-limited controls should state `canRaiseCap` when known, and compromised or historically exploited mint paths should include `mintIncidents` entries with source links.
-- direct chain reads, proxy/admin reads, cap/facilitator registries, bridge route checks, and Safe state include observed block or source notes when they are part of the evidence.
+- direct chain reads, proxy/admin reads, cap/facilitator registries, and Safe state include observed block or source notes when they are part of the evidence.
 - wrapper or variant rows use `mintPath: "wrapped-or-variant-inherited"` and set `inheritedFrom` or `variantOf`; if both are present they must match.
 - `authorityPosture: "none-resolved"` is only for non-privileged user/protocol minting, or inherited wrappers whose reviewed parent is also `none-resolved`.
 - `authorityPosture: "none-resolved-mint"` is the mint-scoped alternative: use it when no control can mint or authorize minting on this asset but other control domains exist (upgrade or parameter authority, or an inherited parent mint authority). It requires the same non-privileged `mintPath` and places no condition on the parent. Prefer it over an adverse posture for share wrappers whose own token has no minter.
 - `reconciliation: "continuous" | "periodic"` and `supervision: "prudential"` are scored economic-control claims — between them they lift the V9 mint component from 25 to 55/70/80 — so each requires at least one `mintAuthority.review` source and a review evidence sentence stating what is reconciled against what, or which named regime supervises the issuer. `unknown`, `not-applicable`, and `none` record an absence and need no such sentence. Do not set a scored value from a homepage link alone.
+
+For every active asset with more than one authored deployment, also complete these required steps:
+
+1. Add one `bridgeRouteRisk.routes[]` row per authored chain/contract deployment. Use its normalized `chain:contractAddress` ID and classify the issuance model from evidence; deployment on multiple chains does not by itself prove multi-canonical issuance.
+2. Add `deploymentRefs` to every Mint Authority control, naming only reviewed `native-issuance` routes. Add `mintAuthority.upgradeability.deploymentRefs` when `canChangeMintLogic: true`, naming only the native deployments that upgrade path can replace.
+3. Author bridge mint/burn, adapters, lockboxes or escrow, messaging/peers, rate limits, validators, bridge upgrades, pause, and administrators in `bridgeRouteRisk.controls[]`. Give each control a stable kebab-case `id`, one or more exact `routeRefs`, and its evidenced bridge capabilities.
+4. Split a shared controller across the two modules when it genuinely has distinct native-mint and bridge powers. Preserve controller identity and adverse evidence, but never duplicate one bridge capability into Mint Authority.
+5. Remove active Mint Authority use of `role: "bridge-admin"`, `authorityType: "bridge"`, `routeChecks`, and `mintPath: "bridge-or-oft-synthetic"`; the three bridge-specific enum values remain only for historical readback, while `routeChecks` moves with the bridge control.
+6. If no reviewed native deployment exists, do not invent one. Author the reviewed `mintAuthority.review.noLocalIssuance` exception for `inherited-parent-issuance` or `external-only-representation`, satisfying the conditions in [Stablecoin Data Registry](../stablecoin-data.md#mint-authority-and-bridge-risk-ownership).
+
+`npm run check:stablecoin-data` blocks invalid ownership, missing active multi-deployment references, and active bridge vocabulary in Mint Authority. The V9 compiler also fails closed on invalid ownership rather than filtering the control into a safer-looking score.
 
 If you use the local scanner POC, run it as a candidate producer only:
 
