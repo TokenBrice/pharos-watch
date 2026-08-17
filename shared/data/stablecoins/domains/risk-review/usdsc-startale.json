@@ -15,5 +15,759 @@
     "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USDSC is native on Ethereum as an M0 hub-side wrapper and is represented on Soneium through M0 Portal V2. The active route unwraps USDSC, transfers M through the Ethereum HubPortal and Soneium SpokePortal over Hyperlane, then rewraps M into Soneium USDSC. Portal roles, local representation upgrades, adapter peers/operators, Hyperlane Mailbox validation, and the unresolved default-ISM validator domain are assessed here rather than in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration; verified finding 2026-08-16",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "M0 Portal V2",
+        "url": "https://docs.m0.org/build/bridging-developer",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockAndRelease"
+        ],
+        "note": "HubPortal locks/releases canonical M while SpokePortal burns/mints the spoke M representation; USDSC is unwrapped before transfer and rewrapped after receipt."
+      },
+      {
+        "source": "explorer",
+        "name": "Hyperlane",
+        "url": "https://docs.hyperlane.xyz/docs/reference/contract-addresses",
+        "bridgeTypes": [
+          "external-validated-network"
+        ],
+        "note": "The active Portal adapter uses Hyperlane Mailbox peers; the Soneium Mailbox selects a live default ISM for inbound validation."
+      }
+    ],
+    "sources": [
+      {
+        "label": "M0 Portal V2 developer guide",
+        "url": "https://docs.m0.org/build/bridging-developer"
+      },
+      {
+        "label": "M0 Portal architecture",
+        "url": "https://docs.m0.org/protocol/m-portals"
+      },
+      {
+        "label": "M0 Portal V2 specification",
+        "url": "https://docs.m0.org/protocol/portal-v2"
+      },
+      {
+        "label": "Ethereum HubPortal",
+        "url": "https://eth.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+      },
+      {
+        "label": "Soneium SpokePortal",
+        "url": "https://soneium.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+      },
+      {
+        "label": "Soneium Hyperlane adapter",
+        "url": "https://soneium.blockscout.com/address/0xfCc1d596Ad6cAb0b5394eAa447d8626813180f32"
+      },
+      {
+        "label": "Ethereum Hyperlane adapter",
+        "url": "https://eth.blockscout.com/address/0xfCc1d596Ad6cAb0b5394eAa447d8626813180f32"
+      },
+      {
+        "label": "Soneium Hyperlane Mailbox",
+        "url": "https://soneium.blockscout.com/address/0x3a464f746d23ab22155710f44db16dca53e0775e"
+      },
+      {
+        "label": "Soneium USDSC representation",
+        "url": "https://soneium.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "protocol": "M0 Ethereum hub-side USDSC MExtension",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Ethereum is the canonical M0 hub-side USDSC deployment. The verified MExtension mints USDSC only after Ethereum SwapFacility transfers matching M into the extension; the M0 Portal V2 cross-chain route unwraps this native wrapper before transfer and rewraps the destination representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2",
+          "contract:ethereum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:ethereum:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "contract:ethereum:0xc005dc82818d67af737725bd4bf75435d065d239"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771196,
+        "sources": [
+          {
+            "label": "Ethereum USDSC proxy/source",
+            "url": "https://eth.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+          },
+          {
+            "label": "M0 Portal V2 developer guide",
+            "url": "https://docs.m0.org/build/bridging-developer"
+          },
+          {
+            "label": "Ethereum HubPortal",
+            "url": "https://eth.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          }
+        ]
+      },
+      {
+        "id": "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "sourceChain": "ethereum",
+        "destinationChain": "soneium",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "representationId": "usdsc-startale-m0-portal-v2",
+        "protocol": "M0 Portal V2 with Hyperlane adapter",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Soneium USDSC is a spoke representation. M0 SpokePortal burns and mints the Soneium M representation, while the local SwapFacility rewraps that M into USDSC. The active adapter peer, Portal path, and supported USDSC route were verified in both directions.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "soneium",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2",
+          "contract:soneium:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:soneium:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "contract:soneium:0x3a464f746d23ab22155710f44db16dca53e0775e",
+          "contract:soneium:0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895895,
+        "sources": [
+          {
+            "label": "Soneium USDSC proxy/source",
+            "url": "https://soneium.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+          },
+          {
+            "label": "M0 Portal V2 specification",
+            "url": "https://docs.m0.org/protocol/portal-v2"
+          },
+          {
+            "label": "Soneium SpokePortal",
+            "url": "https://soneium.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          },
+          {
+            "label": "Soneium Hyperlane adapter",
+            "url": "https://soneium.blockscout.com/address/0xfCc1d596Ad6cAb0b5394eAa447d8626813180f32"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "m0-hub-portal-admin",
+        "label": "Ethereum HubPortal DEFAULT_ADMIN_ROLE Safe",
+        "routeRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2",
+          "safe:ethereum:0x48670b46380fe1645f0e3e821a25162db2589d19",
+          "contract:ethereum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "observedAt": "2026-08-16",
+          "observedBlock": 25771196,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Ethereum HubPortal implementation 0xdfc64dbf0e3fcca6871aa2f61f848dbb7843c2e6 has no EIP-1967 admin slot; DEFAULT_ADMIN_ROLE is held by Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 and can authorize Portal upgrades."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771196,
+        "sources": [
+          {
+            "label": "Ethereum HubPortal",
+            "url": "https://eth.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          },
+          {
+            "label": "M0 Portal V2 specification",
+            "url": "https://docs.m0.org/protocol/portal-v2"
+          }
+        ],
+        "evidence": "At Ethereum block 25771196, HubPortal implementation was 0xdfc64dbf0e3fcca6871aa2f61f848dbb7843c2e6 with no EIP-1967 admin slot, and DEFAULT_ADMIN_ROLE returned Safe 0x48670b46380fe1645f0e3e821a25162db2589d19. The Safe was identified as 3-of-5; its owner-set comparison to the Soneium M0 governance Safe was verified, but a complete module/guard enumeration was not recorded. The admin role can authorize Portal upgrades and governs the canonical-side bridge representation path."
+      },
+      {
+        "id": "m0-hub-portal-operator",
+        "label": "Ethereum HubPortal PAUSER_ROLE and OPERATOR_ROLE EOA",
+        "routeRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2",
+          "eoa:ethereum:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "contract:ethereum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Ethereum HubPortal defaultBridgeAdapter(1868) is 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 and supportedBridgingPath(USDSC, 1868, USDSC) returned true.",
+          "pausersAdminsUpgraders": "Ethereum HubPortal PAUSER_ROLE and OPERATOR_ROLE are both held by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; the operator can pause the Portal and change supported bridge adapters and token paths."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771196,
+        "sources": [
+          {
+            "label": "Ethereum HubPortal",
+            "url": "https://eth.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          }
+        ],
+        "evidence": "At Ethereum block 25771196, HubPortal currentChainId() returned 1, defaultBridgeAdapter(1868) returned 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, and supportedBridgingPath(USDSC, 1868, USDSC) returned true. The PAUSER_ROLE and OPERATOR_ROLE holder was 0xf2f1acbe0ba726fee8d75f3e32900526874740bb."
+      },
+      {
+        "id": "m0-spoke-portal-admin",
+        "label": "Soneium SpokePortal DEFAULT_ADMIN_ROLE Safe",
+        "routeRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x8c645e201dd944677864479357f8255ea943b18b",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2",
+          "safe:soneium:0x8c645e201dd944677864479357f8255ea943b18b",
+          "contract:soneium:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f0",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "observedBlock": 26895895,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Soneium SpokePortal UUPS implementation 0xa7bdf17af97d06d674d03086e90a18c2d90732b6 has EIP-1967 admin slot zero; DEFAULT_ADMIN_ROLE is held by Safe 0x8c645e201dd944677864479357f8255ea943b18b and can authorize Portal upgrades."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895895,
+        "sources": [
+          {
+            "label": "Soneium SpokePortal",
+            "url": "https://soneium.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          },
+          {
+            "label": "M0 Portal V2 specification",
+            "url": "https://docs.m0.org/protocol/portal-v2"
+          }
+        ],
+        "evidence": "At Soneium block 26895895, SpokePortal implementation was 0xa7bdf17af97d06d674d03086e90a18c2d90732b6 with EIP-1967 admin slot zero, and DEFAULT_ADMIN_ROLE returned Safe 0x8c645e201dd944677864479357f8255ea943b18b. Safe reads showed the listed 3-of-5 owners, no modules, and a zero guard. The admin can authorize Portal upgrades and governs the spoke representation route."
+      },
+      {
+        "id": "m0-spoke-portal-operator",
+        "label": "Soneium SpokePortal PAUSER_ROLE and OPERATOR_ROLE EOA",
+        "routeRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2",
+          "eoa:soneium:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "contract:soneium:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Soneium SpokePortal hubChainId() returned 1, defaultBridgeAdapter(1) returned 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, and supportedBridgingPath(USDSC, 1, USDSC) returned true.",
+          "pausersAdminsUpgraders": "Soneium SpokePortal sendPaused() and receivePaused() were false; PAUSER_ROLE and OPERATOR_ROLE are both held by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb, whose operator role can change supported bridge adapters and token paths."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895448,
+        "sources": [
+          {
+            "label": "Soneium SpokePortal",
+            "url": "https://soneium.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          }
+        ],
+        "evidence": "At Soneium block 26895448, SpokePortal hubChainId() returned 1, currentChainId() returned 1868, sendPaused() and receivePaused() returned false, defaultBridgeAdapter(1) returned 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, and the adapter was supported. The PAUSER_ROLE and OPERATOR_ROLE holder was 0xf2f1acbe0ba726fee8d75f3e32900526874740bb."
+      },
+      {
+        "id": "soneium-usdsc-wrapper",
+        "label": "Soneium USDSC representation wrapper",
+        "routeRefs": [
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "failureDomainKeys": [
+          "contract:soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "contract:soneium:0xb6807116b3b1b321a390594e31ecd6e0076f6278"
+        ],
+        "authorityType": "contract",
+        "capDescription": "The Soneium MExtension wraps the Soneium M representation after the Portal receive path and burns USDSC on unwrap; it does not create base M independently. Route supply is bounded by the M representation transferred through the Portal path.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "lockboxOrEscrow": "Soneium SwapFacility unwraps the source extension before Portal transfer and rewraps the destination extension after M arrives; the wrapper remains 1:1 against M.",
+          "onchainAmountBounds": "At Soneium block 26895895, USDSC total supply was 4,780,250.278387 and its M balance was 4,780,286.560938, an accrued excess of 36.282551 M; the local wrapper does not independently create base M supply."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895895,
+        "sources": [
+          {
+            "label": "Soneium USDSC proxy/source",
+            "url": "https://soneium.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+          },
+          {
+            "label": "Startale USDSC extension source",
+            "url": "https://github.com/StartaleGroup/usdsc-extension"
+          }
+        ],
+        "evidence": "At Soneium block 26895895, the USDSC proxy resolved to implementation 0x38e4713a896efcf253430efd6292515dc13489a1, bound to the same M token and SwapFacility constructor addresses. Its M balance exceeded USDSC supply by 36.282551 M. This local wrapper is retained as bridge-route machinery because Soneium M is a Portal-minted representation of canonical M."
+      },
+      {
+        "id": "soneium-usdsc-proxy-admin-safe",
+        "label": "Soneium USDSC ProxyAdmin owner Safe",
+        "routeRefs": [
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x3c27038d9906caa5d68355b1800625eacacd93da",
+        "failureDomainKeys": [
+          "safe:soneium:0x3c27038d9906caa5d68355b1800625eacacd93da",
+          "contract:soneium:0xf626479c7b1d8a66149a183b4fa15710edb717b8"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x98627380e05fdac375e1e9a004a9bb95ccc48d29",
+            "0x45f191a82707954f8aecff98f7068c83baecd72c",
+            "0x9798deb1164a2a6797c8e1994222f9daf975ed04",
+            "0xf3a8cbf63b115a56681cce4740005b4bcd5520d7",
+            "0x15bf9a283e5f490f6be645e4d86c9597a33d9d33"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "observedBlock": 26895895,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared USDSC ProxyAdmin can replace Soneium representation mint/burn logic; this local upgrade authority is separate from the canonical Ethereum Mint Authority scope."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895895,
+        "sources": [
+          {
+            "label": "Soneium USDSC proxy/source",
+            "url": "https://soneium.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+          },
+          {
+            "label": "Soneium USDSC ProxyAdmin",
+            "url": "https://soneium.blockscout.com/address/0xf626479c7b1d8a66149a183b4fa15710edb717b8"
+          }
+        ],
+        "evidence": "At Soneium block 26895895, the USDSC proxy used implementation 0x38e4713a896efcf253430efd6292515dc13489a1 behind the same ProxyAdmin 0xf626479c7b1d8a66149a183b4fa15710edb717b8. The owner Safe 0x3c27038d9906caa5d68355b1800625eacacd93da was observed as 3-of-5 with the listed owners, no modules, and a zero guard. Its representation upgrade surface remains scoreable under Bridge Risk."
+      },
+      {
+        "id": "soneium-swap-facility-route",
+        "label": "Soneium SwapFacility representation route",
+        "routeRefs": [
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2",
+          "contract:soneium:0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+          "contract:soneium:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "authorityType": "contract",
+        "capDescription": "SwapFacility unwraps and rewraps the approved USDSC extension around M as part of the Portal transfer rail; it does not create base M supply, and representation capacity follows available M.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "SwapFacility unwraps the source USDSC extension before M0 Portal transfer and wraps the destination extension after M arrives.",
+          "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and the M representation supplied by the Portal route.",
+          "caps": "SwapFacility capacity follows M supply and can be changed through the M0 governance/admin path rather than an immutable local cap.",
+          "pausersAdminsUpgraders": "Soneium SwapFacility implementation 0xc435b33c017da7ef313bf2d3132c99c7673a194b2 is behind ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, owned on Soneium by Safe 0x8c645e201dd944677864479357f8255ea943b18b."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895895,
+        "sources": [
+          {
+            "label": "Soneium SwapFacility",
+            "url": "https://soneium.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+          },
+          {
+            "label": "M0 extension architecture",
+            "url": "https://docs.m0.org/protocol/extensions"
+          },
+          {
+            "label": "Soneium USDSC proxy/source",
+            "url": "https://soneium.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+          }
+        ],
+        "evidence": "At Soneium block 26895895, SwapFacility used implementation 0xc435b33c017da7ef313bf2d3132c99c7673a194b and ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. ProxyAdmin owner() returned Safe 0x8c645e201dd944677864479357f8255ea943b18b, observed as a 3-of-5 Safe with the listed owners, no modules, and a zero guard. The facility's wrapper and transfer-rail facts are bridge representation controls, not canonical Mint Authority."
+      },
+      {
+        "id": "soneium-swap-facility-proxy-admin-safe",
+        "label": "Soneium SwapFacility ProxyAdmin owner Safe",
+        "routeRefs": [
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x8c645e201dd944677864479357f8255ea943b18b",
+        "failureDomainKeys": [
+          "safe:soneium:0x8c645e201dd944677864479357f8255ea943b18b",
+          "contract:soneium:0x0f38d8a5583f9316084e9c40737244870c565924"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f0",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "observedBlock": 26895895,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The Soneium SwapFacility ProxyAdmin can replace representation wrap/unwrap logic; its 3-of-5 Safe owner is a bridge-route authority and is excluded from canonical Mint Authority."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895895,
+        "sources": [
+          {
+            "label": "Soneium SwapFacility",
+            "url": "https://soneium.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+          },
+          {
+            "label": "Soneium SwapFacility ProxyAdmin",
+            "url": "https://soneium.blockscout.com/address/0x0f38d8a5583f9316084e9c40737244870c565924"
+          }
+        ],
+        "evidence": "At Soneium block 26895895, ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 owner() returned Safe 0x8c645e201dd944677864479357f8255ea943b18b. The Safe was observed as 3-of-5 with the listed owners, no modules, and a zero guard; it controls upgrades of the Soneium representation transfer facility."
+      },
+      {
+        "id": "soneium-hyperlane-adapter-admin",
+        "label": "Soneium Hyperlane adapter admin Safe",
+        "routeRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x8c645e201dd944677864479357f8255ea943b18b",
+        "failureDomainKeys": [
+          "protocol:hyperlane",
+          "safe:soneium:0x8c645e201dd944677864479357f8255ea943b18b",
+          "contract:soneium:0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f0",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "observedBlock": 26895448,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Soneium block 26895448, adapter getPeer(1) returned the same adapter address and getBridgeChainId(1) returned 1; the adapter's immutable Portal binding is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd.",
+          "pausersAdminsUpgraders": "Soneium adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 uses implementation 0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b; its admin is Safe 0x8c645e201dd944677864479357f8255ea943b18b."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895448,
+        "sources": [
+          {
+            "label": "Soneium Hyperlane adapter",
+            "url": "https://soneium.blockscout.com/address/0xfCc1d596Ad6cAb0b5394eAa447d8626813180f32"
+          },
+          {
+            "label": "Soneium SwapFacility ProxyAdmin Safe",
+            "url": "https://soneium.blockscout.com/address/0x8c645e201dd944677864479357f8255ea943b18b"
+          }
+        ],
+        "evidence": "At Soneium block 26895448, the active Hyperlane adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 resolved to implementation 0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b, was bound to Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e and Portal 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, and reported the reciprocal peer. Its upgrade admin was Safe 0x8c645e201dd944677864479357f8255ea943b18b."
+      },
+      {
+        "id": "soneium-hyperlane-adapter-operator",
+        "label": "Soneium Hyperlane adapter operator EOA",
+        "routeRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "peer-config"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:hyperlane",
+          "eoa:soneium:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "contract:soneium:0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Soneium adapter operator can alter the configured remote peer and bridge-chain mapping; the reviewed current getPeer(1) points to the reciprocal adapter address."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895448,
+        "sources": [
+          {
+            "label": "Soneium Hyperlane adapter",
+            "url": "https://soneium.blockscout.com/address/0xfCc1d596Ad6cAb0b5394eAa447d8626813180f32"
+          }
+        ],
+        "evidence": "At Soneium block 26895448, the adapter operator was EOA 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The operator can change supported remote peer and bridge-chain configuration for the Soneium Hyperlane endpoint."
+      },
+      {
+        "id": "ethereum-hyperlane-adapter-admin",
+        "label": "Ethereum Hyperlane adapter admin Safe",
+        "routeRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:hyperlane",
+          "safe:ethereum:0x48670b46380fe1645f0e3e821a25162db2589d19",
+          "contract:ethereum:0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "observedAt": "2026-08-16",
+          "observedBlock": 25771212,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25771212, adapter getPeer(1868) returned the same adapter address and getBridgeChainId(1868) returned 1868; the adapter's immutable Portal binding is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd.",
+          "pausersAdminsUpgraders": "Ethereum adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 uses implementation 0x23b7fd5ad5e4fdce30796e887086bcc749da421a; its admin is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771212,
+        "sources": [
+          {
+            "label": "Ethereum Hyperlane adapter",
+            "url": "https://eth.blockscout.com/address/0xfCc1d596Ad6cAb0b5394eAa447d8626813180f32"
+          },
+          {
+            "label": "Ethereum HubPortal",
+            "url": "https://eth.blockscout.com/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          }
+        ],
+        "evidence": "At Ethereum block 25771212, the active Hyperlane adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 resolved to implementation 0x23b7fd5ad5e4fdce30796e887086bcc749da421a, was bound to Mailbox 0xc005dc82818d67af737725bd4bf75435d065d239 and Portal 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, and reported the reciprocal peer. Its upgrade admin was Safe 0x48670b46380fe1645f0e3e821a25162db2589d19."
+      },
+      {
+        "id": "ethereum-hyperlane-adapter-operator",
+        "label": "Ethereum Hyperlane adapter operator EOA",
+        "routeRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:hyperlane",
+          "eoa:ethereum:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "contract:ethereum:0xfcc1d596ad6cab0b5394eaa447d8626813180f32"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Ethereum adapter operator can alter the configured remote peer and bridge-chain mapping; the reviewed current getPeer(1868) points to the reciprocal adapter address."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771212,
+        "sources": [
+          {
+            "label": "Ethereum Hyperlane adapter",
+            "url": "https://eth.blockscout.com/address/0xfCc1d596Ad6cAb0b5394eAa447d8626813180f32"
+          }
+        ],
+        "evidence": "At Ethereum block 25771212, the adapter operator was EOA 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The operator can change supported remote peer and bridge-chain configuration for the Ethereum Hyperlane endpoint."
+      },
+      {
+        "id": "soneium-hyperlane-mailbox-owner",
+        "label": "Soneium Hyperlane Mailbox owner",
+        "routeRefs": [
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "validator",
+          "admin"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x6af23eb68a6223a4af9f056e10d93ef4d960da05",
+        "failureDomainKeys": [
+          "protocol:hyperlane-mailbox",
+          "eoa:soneium:0x6af23eb68a6223a4af9f056e10d93ef4d960da05",
+          "contract:soneium:0x3a464f746d23ab22155710f44db16dca53e0775e"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "signingModel": "Soneium Mailbox default ISM is 0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51; the Mailbox owner controls the default ISM and hook selection."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895812,
+        "sources": [
+          {
+            "label": "Soneium Hyperlane Mailbox",
+            "url": "https://soneium.blockscout.com/address/0x3a464f746d23ab22155710f44db16dca53e0775e"
+          },
+          {
+            "label": "Hyperlane contract addresses",
+            "url": "https://docs.hyperlane.xyz/docs/reference/contract-addresses"
+          }
+        ],
+        "evidence": "At Soneium block 26895812, Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e reported local domain 1868, default ISM 0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51, default hook 0x2f0e57527bb37e5e064ef243fad56cce6241906c, required hook 0x5ddfca27f9a308c1429a010c4dab291b5534a297, and owner 0x6af23eb68a6223a4af9f056e10d93ef4d960da05."
+      },
+      {
+        "id": "soneium-hyperlane-default-ism",
+        "label": "Soneium Hyperlane Mailbox default ISM",
+        "routeRefs": [
+          "soneium:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51",
+        "failureDomainKeys": [
+          "protocol:hyperlane-mailbox",
+          "contract:soneium:0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51"
+        ],
+        "authorityType": "contract",
+        "capDescription": "The Mailbox-selected default ISM validates inbound Hyperlane messages for the Soneium route, but its verified validator roster, threshold, and upgrade/admin relationship were not enumerated.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "signingModel": "Default ISM selection was read on Soneium Mailbox, but the explorer did not provide verified source/ABI metadata for the ISM; validator threshold and current administrator remain unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26895812,
+        "sources": [
+          {
+            "label": "Soneium Hyperlane Mailbox",
+            "url": "https://soneium.blockscout.com/address/0x3a464f746d23ab22155710f44db16dca53e0775e"
+          },
+          {
+            "label": "Soneium default ISM address",
+            "url": "https://soneium.blockscout.com/address/0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51"
+          }
+        ],
+        "evidence": "At Soneium block 26895812, the Mailbox selected default ISM 0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51. The address is live, but no verified source/ABI metadata was available to enumerate its validator roster, threshold, or upgrade/admin relationship. This unresolved validator failure domain is retained while the route remains classified external-validated-network."
+      }
+    ]
   }
 }

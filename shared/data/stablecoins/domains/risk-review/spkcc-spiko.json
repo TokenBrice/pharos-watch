@@ -53,8 +53,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "SPKCC is issued natively by Spiko on all six chains: every deployment was re-verified on-chain 2026-07-20 as the canonical Spiko fund share (EVM authority() = Spiko PermissionManager; Starknet owner = Spiko's Starknet owner account; Stellar contract in Spiko's official stellar-contracts registry). Cross-chain transfers run over Chainlink CCIP, Spiko's documented interoperability rail, so the profile tier reflects an external validated-network transfer rail over issuer-native deployments.",
-    "reviewedAt": "2026-07-20",
+    "summary": "SPKCC is issued natively by Spiko on all seven chains: the six existing deployments plus Etherlink were verified as canonical issuer-native fund shares (EVM authority() = Spiko PermissionManager; Starknet owner = Spiko's Starknet owner account; Stellar contract in Spiko's official stellar-contracts registry). Cross-chain transfers run over Chainlink CCIP, Spiko's documented interoperability rail, so the profile remains external-validated-network over issuer-native deployments pending exact SPKCC-specific pool and controller verification.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "protocols": [
@@ -82,6 +82,14 @@
       {
         "label": "Spiko Cash and Carry",
         "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "Spiko contracts Etherlink deployment cache",
+        "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/.cache-42793.json"
+      },
+      {
+        "label": "Etherlink SPKCC explorer",
+        "url": "https://explorer.etherlink.com/address/0x4f33acf823e6eeb697180d553ce0c710124c8d59"
       }
     ],
     "routes": [
@@ -190,6 +198,33 @@
           {
             "label": "SPKCC on base explorer (authority() probed 2026-07-20)",
             "url": "https://basescan.org/address/0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+          }
+        ]
+      },
+      {
+        "id": "etherlink:0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "destinationChain": "etherlink",
+        "canonicalChain": "etherlink",
+        "contractAddress": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified at Etherlink block 51158914 and against Spiko's official chain-42793 deployment cache: SPKCC proxy 0x4f33acf823e6eeb697180d553ce0c710124c8d59 returned symbol() = 'SPKCC', authority() = 0x344278aff344d6fb960705dc18a4912221608472 and UUPS implementation 0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068. This is an issuer-native Spiko fund-share deployment, not a third-party wrapped representation. The exact SPKCC-specific CCIP pool, peer/lane, rate limits and controllers remain unverified, so no bridge controller is inferred here.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 51158914,
+        "sources": [
+          {
+            "label": "Spiko contracts Etherlink deployment cache",
+            "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/.cache-42793.json"
+          },
+          {
+            "label": "Etherlink SPKCC explorer",
+            "url": "https://explorer.etherlink.com/address/0x4f33acf823e6eeb697180d553ce0c710124c8d59"
           }
         ]
       },

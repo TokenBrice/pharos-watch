@@ -72,6 +72,11 @@
       "chain": "ethereum",
       "address": "0x45804880de22913dafe09f4980848ece6ecbaf78",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-top",

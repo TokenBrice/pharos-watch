@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "sfrxUSD is native on Ethereum and Fraxtal; the six other tracked deployments are FraxZero LayerZero OFTs. Frax documents that OFTs burn on the source and mint on the destination through LayerZero, while the Fraxtal hub and lockboxes provide the economic route. The OFT representations are external-validated bridge supply and are not direct Frax balance-sheet liabilities.",
-    "reviewedAt": "2026-07-31",
-    "reviewer": "T52 bridge-route review (fresh exact replay)",
+    "summary": "sfrxUSD is native on Ethereum and Fraxtal; the six other tracked deployments are FraxZero LayerZero OFTs. Current 2026-08-16 reads confirm the Fraxtal lockbox as the hub peer, the Ethereum lockbox as a canonical-side authorized minter, a common representation ProxyAdmin, and 3-of-6 chain-local OFT owner Safes. Frax documents that OFTs burn on the source and mint on the destination through LayerZero, while the lockboxes provide the external-lock route; these representations are not direct Frax balance-sheet liabilities. Endpoint DVN configuration, enforced options, rate limits, and lockbox redemption caps remain unresolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -62,6 +62,18 @@
       {
         "label": "LayerZero on L2BEAT",
         "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "Frax official cross-chain addresses",
+        "url": "https://docs.frax.com/protocol/crosschain/addresses"
+      },
+      {
+        "label": "Ethereum sfrxUSD lockbox",
+        "url": "https://eth.blockscout.com/address/0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126?tab=contract"
+      },
+      {
+        "label": "Fraxtal sfrxUSD lockbox",
+        "url": "https://fraxscan.com/address/0x88aa7854d3b2daa5e37e7ce73a1f39669623a361"
       }
     ],
     "routes": [
@@ -328,6 +340,499 @@
             "url": "https://arbiscan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "sfrxusd-ethereum-lockbox-owner",
+        "label": "Ethereum sfrxUSD lockbox owner Safe",
+        "routeRefs": [
+          "ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+          "fraxtal:0xfc00000000000000000000000000000000000008"
+        ],
+        "capabilities": [
+          "admin",
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+        "failureDomainKeys": [
+          "protocol:frax-sfrxusd-lockbox",
+          "contract:ethereum:0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126",
+          "safe:ethereum:0xb1748c79709f4ba2dd82834b8c82d4a505003f27"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 25295194,
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Frax Comptroller Safe is the current owner of the Ethereum sfrxUSD lockbox, which is the canonical-side bridge escrow and authorized minter observed in the Ethereum sfrxUSD minter set.",
+          "pausersAdminsUpgraders": "The lockbox is a bridge proxy; its common ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c is recorded separately, while additional lockbox owner, pause, and limit semantics were not independently decoded."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771126,
+        "sources": [
+          {
+            "label": "Ethereum sfrxUSD lockbox",
+            "url": "https://eth.blockscout.com/address/0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126?tab=contract"
+          },
+          {
+            "label": "Safe API - Frax Comptroller Safe",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8C82D4a505003f27/"
+          }
+        ],
+        "evidence": "At Ethereum block 25771126 (2026-08-16), the Ethereum sfrxUSD lockbox 0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126 resolved to implementation 0xf07571bedb8cbd98e6ca43b5ee0fb178477d2219 and common ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c; owner() returned the Frax Comptroller Safe 0xB1748C79709f4Ba2Dd82834B8C82D4a505003f27. This is bridge-route administration and escrow ownership, not an independent native issuer."
+      },
+      {
+        "id": "sfrxusd-ethereum-lockbox",
+        "label": "Ethereum sfrxUSD canonical lockbox",
+        "routeRefs": [
+          "ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+          "fraxtal:0xfc00000000000000000000000000000000000008"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126",
+        "failureDomainKeys": [
+          "protocol:frax-sfrxusd-lockbox",
+          "contract:ethereum:0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Ethereum lockbox is an authorized sfrxUSD minter on the canonical Ethereum route and provides the mintable adapter/lockbox path for cross-chain transfer.",
+          "trustedPeerOrRemote": "The lockbox's Fraxtal peer and endpoint configuration were not independently decoded in this pass.",
+          "rateLimits": "Lockbox redemption caps, rate limits, and supply-conservation accounting were not independently enumerated.",
+          "pausersAdminsUpgraders": "The current implementation and common ProxyAdmin were read at the fixed observation block; owner and proxy-admin powers remain separate bridge failure domains."
+        },
+        "capDescription": "The lockbox can mint and burn the canonical-side bridge representation; current numeric redemption and rate-limit bounds were not independently enumerated.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771126,
+        "sources": [
+          {
+            "label": "Frax official cross-chain addresses",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Ethereum sfrxUSD lockbox",
+            "url": "https://eth.blockscout.com/address/0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126?tab=contract"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25771126, the sfrxUSD lockbox proxy resolved to implementation 0xf07571bedb8cbd98e6ca43b5ee0fb178477d2219 and common ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. The live canonical token minter set separately confirmed this lockbox as the second authorized minter; its supply-conserving bridge accounting remains Bridge Risk evidence."
+      },
+      {
+        "id": "sfrxusd-fraxtal-lockbox-hub",
+        "label": "Fraxtal sfrxUSD lockbox hub and LayerZero peer",
+        "routeRefs": [
+          "ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+          "fraxtal:0xfc00000000000000000000000000000000000008",
+          "sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow",
+          "peer-config"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x88aa7854d3b2daa5e37e7ce73a1f39669623a361",
+        "failureDomainKeys": [
+          "protocol:frax-sfrxusd-lockbox",
+          "contract:fraxtal:0x88aa7854d3b2daa5e37e7ce73a1f39669623a361"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "Frax's official cross-chain address inventory identifies 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361 as the Fraxtal sfrxUSD lockbox hub.",
+          "trustedPeerOrRemote": "At the reviewed 2026-08-16 reads, every representation's LayerZero peers(30255) returned the Fraxtal lockbox and peers(30101) returned zero; this is the reviewed hub topology rather than six independent native mint paths.",
+          "rateLimits": "Fraxtal lockbox rate limits, redemption caps, and aggregate supply reconciliation were not independently enumerated.",
+          "pausersAdminsUpgraders": "The Fraxtal lockbox's owner, proxy-admin, pause, and upgrade configuration was not independently decoded; no governance or delay is inferred."
+        },
+        "capDescription": "The Fraxtal lockbox is the hub-side bridge mint/burn and peer path for the six external representations; route conservation depends on lockbox accounting and LayerZero message validation.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40057487,
+        "sources": [
+          {
+            "label": "Frax official cross-chain addresses",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Fraxtal sfrxUSD lockbox",
+            "url": "https://fraxscan.com/address/0x88aa7854d3b2daa5e37e7ce73a1f39669623a361"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "Fraxtal JSON-RPC fixed-block reads",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "Frax's official cross-chain address page identifies the Fraxtal lockbox as the sfrxUSD hub. At the current representation reads on 2026-08-16, all six OFT peers bound their LayerZero peer ID 30255 to this lockbox and had no peer configured for 30101. The hub and peer facts remain bridge-route machinery, not local native issuance."
+      },
+      {
+        "id": "sfrxusd-layerzero-common-proxy-admin",
+        "label": "sfrxUSD LayerZero lockbox and representation ProxyAdmin",
+        "routeRefs": [
+          "ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+          "sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerAddress": "0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "contract:sei:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "contract:mode:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "contract:xlayer:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "contract:katana:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "contract:sonic:0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+          "contract:arbitrum:0x223a681fc5c5522c85c96157c0efa18cd6c5405c"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The common ProxyAdmin address 0x223a681fc5c5522c85c96157c0efa18cd6c5405c was observed for the Ethereum lockbox and all six representation proxies; it can replace bridge-route implementations. ProxyAdmin owner, delay, and emergency controls were not independently enumerated."
+        },
+        "capDescription": "The common ProxyAdmin is a shared bridge upgrade failure domain across the Ethereum lockbox and six representation proxies; it is not a native mint controller.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ethereum sfrxUSD lockbox",
+            "url": "https://eth.blockscout.com/address/0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126?tab=contract"
+          },
+          {
+            "label": "Frax official cross-chain addresses",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 route reads, the Ethereum lockbox and each Sei, Mode, XLayer, Katana, Sonic, and Arbitrum sfrxUSD OFT proxy resolved to common ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. This shared bridge upgrade surface remains scoreable under Bridge Risk."
+      },
+      {
+        "id": "sfrxusd-sei-oft-owner-safe",
+        "label": "Sei sfrxUSD OFT owner Safe",
+        "routeRefs": [
+          "sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "sei",
+        "controllerAddress": "0x0357d02fc95320b990322d3ff69204c3d251171b",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:sei:0x0357d02fc95320b990322d3ff69204c3d251171b"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 226794353,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sei block 226794353, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c and the current LayerZero peer 30255 bound to Fraxtal lockbox 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361; peer 30101 returned zero.",
+          "pausersAdminsUpgraders": "The chain-local 3-of-6 owner Safe administers the OFT and peer configuration; the common ProxyAdmin controls proxy implementation separately."
+        },
+        "capDescription": "Chain-local OFT administration and peer configuration are controlled by a 3-of-6 Safe; signer identities were not enumerated in this pass.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 226794353,
+        "sources": [
+          {
+            "label": "Frax cross-chain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Sei OFT explorer",
+            "url": "https://seitrace.com/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ],
+        "evidence": "At Sei block 226794353 on 2026-08-16, the sfrxUSD OFT owner was Safe 0x0357d02fc95320b990322d3ff69204c3d251171b; the Safe was observed as 3-of-6 with six owners and no enabled modules. The OFT is a LayerZero representation routed through the Fraxtal lockbox, not a local native issuer."
+      },
+      {
+        "id": "sfrxusd-mode-oft-owner-safe",
+        "label": "Mode sfrxUSD OFT owner Safe",
+        "routeRefs": [
+          "mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "mode",
+        "controllerAddress": "0x6336cfa6edbec2a459d869031db77fc2770eaa66",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:mode:0x6336cfa6edbec2a459d869031db77fc2770eaa66"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 43379094,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Mode block 43379094, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c and the current LayerZero peer 30255 bound to Fraxtal lockbox 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361; peer 30101 returned zero.",
+          "pausersAdminsUpgraders": "The chain-local 3-of-6 owner Safe administers the OFT and peer configuration; the common ProxyAdmin controls proxy implementation separately."
+        },
+        "capDescription": "Chain-local OFT administration and peer configuration are controlled by a 3-of-6 Safe; signer identities were not enumerated in this pass.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 43379094,
+        "sources": [
+          {
+            "label": "Frax cross-chain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Mode OFT explorer",
+            "url": "https://modescan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ],
+        "evidence": "At Mode block 43379094 on 2026-08-16, the sfrxUSD OFT owner was Safe 0x6336cfa6edbec2a459d869031db77fc2770eaa66; the Safe was observed as 3-of-6 with six owners and no enabled modules. The OFT is a LayerZero representation routed through the Fraxtal lockbox, not a local native issuer."
+      },
+      {
+        "id": "sfrxusd-xlayer-oft-owner-safe",
+        "label": "XLayer sfrxUSD OFT owner Safe",
+        "routeRefs": [
+          "xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xe7cc52f0c86f4fab6630f1e26167b487fbf66a61",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:xlayer:0xe7cc52f0c86f4fab6630f1e26167b487fbf66a61"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 68156736,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At XLayer block 68156736, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c and the current LayerZero peer 30255 bound to Fraxtal lockbox 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361; peer 30101 returned zero.",
+          "pausersAdminsUpgraders": "The chain-local 3-of-6 owner Safe administers the OFT and peer configuration; the common ProxyAdmin controls proxy implementation separately."
+        },
+        "capDescription": "Chain-local OFT administration and peer configuration are controlled by a 3-of-6 Safe; signer identities were not enumerated in this pass.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 68156736,
+        "sources": [
+          {
+            "label": "Frax cross-chain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD XLayer OFT explorer",
+            "url": "https://www.oklink.com/xlayer/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ],
+        "evidence": "At XLayer block 68156736 on 2026-08-16, the sfrxUSD OFT owner was Safe 0xe7cc52f0c86f4fab6630f1e26167b487fbf66a61; the Safe was observed as 3-of-6 with six owners and no enabled modules. The OFT is a LayerZero representation routed through the Fraxtal lockbox, not a local native issuer."
+      },
+      {
+        "id": "sfrxusd-katana-oft-owner-safe",
+        "label": "Katana sfrxUSD OFT owner Safe",
+        "routeRefs": [
+          "katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0x19a90b0476cdc8ec1239266663ca820175b9b527",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:katana:0x19a90b0476cdc8ec1239266663ca820175b9b527"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 40182962,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Katana block 40182962, endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and the current LayerZero peer 30255 bound to Fraxtal lockbox 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361; peer 30101 returned zero.",
+          "pausersAdminsUpgraders": "The chain-local 3-of-6 owner Safe administers the OFT and peer configuration; the common ProxyAdmin controls proxy implementation separately."
+        },
+        "capDescription": "Chain-local OFT administration and peer configuration are controlled by a 3-of-6 Safe; signer identities were not enumerated in this pass.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40182962,
+        "sources": [
+          {
+            "label": "Frax cross-chain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Katana OFT explorer",
+            "url": "https://katanascan.com/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ],
+        "evidence": "At Katana block 40182962 on 2026-08-16, the sfrxUSD OFT owner was Safe 0x19a90b0476cdc8ec1239266663ca820175b9b527; the Safe was observed as 3-of-6 with six owners and no enabled modules. The OFT is a LayerZero representation routed through the Fraxtal lockbox, not a local native issuer."
+      },
+      {
+        "id": "sfrxusd-sonic-oft-owner-safe",
+        "label": "Sonic sfrxUSD OFT owner Safe",
+        "routeRefs": [
+          "sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 77635306,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sonic block 77635306, endpoint() returned 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and the current LayerZero peer 30255 bound to Fraxtal lockbox 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361; peer 30101 returned zero.",
+          "pausersAdminsUpgraders": "The chain-local 3-of-6 owner Safe administers the OFT and peer configuration; the common ProxyAdmin controls proxy implementation separately."
+        },
+        "capDescription": "Chain-local OFT administration and peer configuration are controlled by a 3-of-6 Safe; signer identities were not enumerated in this pass.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 77635306,
+        "sources": [
+          {
+            "label": "Frax cross-chain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Sonic OFT explorer",
+            "url": "https://sonicscan.org/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ],
+        "evidence": "At Sonic block 77635306 on 2026-08-16, the sfrxUSD OFT owner was Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac; the Safe was observed as 3-of-6 with six owners and no enabled modules. The OFT is a LayerZero representation routed through the Fraxtal lockbox, not a local native issuer."
+      },
+      {
+        "id": "sfrxusd-arbitrum-oft-owner-safe",
+        "label": "Arbitrum sfrxUSD OFT owner Safe",
+        "routeRefs": [
+          "arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x3da490b19f300e7cb2280426c8ad536db2df445c",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:arbitrum:0x3da490b19f300e7cb2280426c8ad536db2df445c"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 495307503,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495307503, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c and the current LayerZero peer 30255 bound to Fraxtal lockbox 0x88aa7854d3b2daa5e37e7ce73a1f39669623a361; peer 30101 returned zero.",
+          "pausersAdminsUpgraders": "The chain-local 3-of-6 owner Safe administers the OFT and peer configuration; the common ProxyAdmin controls proxy implementation separately."
+        },
+        "capDescription": "Chain-local OFT administration and peer configuration are controlled by a 3-of-6 Safe; signer identities were not enumerated in this pass.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495307503,
+        "sources": [
+          {
+            "label": "Frax cross-chain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Arbitrum OFT explorer",
+            "url": "https://arbiscan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ],
+        "evidence": "At Arbitrum block 495307503 on 2026-08-16, the sfrxUSD OFT owner was Safe 0x3da490b19f300e7cb2280426c8ad536db2df445c; the Safe was observed as 3-of-6 with six owners and no enabled modules. The OFT is a LayerZero representation routed through the Fraxtal lockbox, not a local native issuer."
       }
     ]
   }

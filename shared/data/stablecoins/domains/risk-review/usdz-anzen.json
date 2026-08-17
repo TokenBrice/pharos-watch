@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Anzen documents the USDz/sUSDz bridge as powered by LayerZero for Ethereum, Base, and Blast, so cross-chain supply movement uses an external omnichain lock/burn-and-mint route.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "summary": "Anzen's USDz route inventory separates four issuer-native deployments (Ethereum, Arbitrum, Blast, and Manta) from the Base LayerZero OFT representation. The Base OFT owner Safe controls trusted peers, pause, and delegate configuration; these bridge-administration capabilities are scored here rather than as native Mint Authority. The LayerZero route is an external lock/burn-and-mint path.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); Codex USDz mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -185,6 +185,73 @@
             "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdz-base-oft-owner-safe",
+        "label": "Anzen Base OFT owner Safe",
+        "routeRefs": [
+          "base:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x0E5ec65ea055937646Ab029ef3644DE3dE67766A",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+          "contract:base:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
+          "safe:base:0x0e5ec65ea055937646ab029ef3644de3de67766a"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0x21aE1055c747cc59051327B5F334eA0899Fe90F2",
+            "0x00000000051CBcE3fD04148CcE2c0adc7c651829",
+            "0xa464980f8ea9d2b88258FBf9BC878F989B2c5DCA",
+            "0x1103956Dfe7846332e7F4b1d86786107B7903Ac3",
+            "0x82e09977ced7dE0F93548D89C227D2E1BF8F3337",
+            "0x380c2798660B9289279Db77F1b5821fD7542456C",
+            "0x68f5549648ec500056319474F88a71619eEA57D0"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 48626678,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "ChildUSDz setPeer(uint32,bytes32) is owner-only; the owner can replace trusted LayerZero peers.",
+          "caps": "No owner-independent per-peer issuance cap was identified in the verified ChildUSDz source.",
+          "pausersAdminsUpgraders": "The verified ChildUSDz source gates setPeer, pause, and delegate configuration through the owner."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 48626678,
+        "sources": [
+          {
+            "label": "Base ChildUSDz verified source",
+            "url": "https://base.blockscout.com/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
+          },
+          {
+            "label": "Anzen Base owner Safe",
+            "url": "https://base.blockscout.com/address/0x0E5ec65ea055937646Ab029ef3644DE3dE67766A"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 48626678, ChildUSDz owner() returned this Safe. getOwners() returned seven owners, getThreshold() returned 2, VERSION() returned 1.3.0, getModulesPaginated returned no modules, and the Safe guard slot was zero. The verified ChildUSDz source gates setPeer, pause, and delegate configuration through the owner. The Base route is a LayerZero OFT representation, so this owner-controlled bridge administration is retained under Bridge Risk rather than native Mint Authority."
       }
     ]
   }

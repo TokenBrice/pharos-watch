@@ -48,6 +48,9 @@
       {
         "chain": "tron",
         "address": "TUajR7CbXU6hX8n3XtNkitFAD25JvP99K6",
+        "deploymentRefs": [
+          "tron:TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz"
+        ],
         "label": "USDD Tron Join (active ward / direct minter)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -76,6 +79,9 @@
       {
         "chain": "tron",
         "address": "TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d",
+        "deploymentRefs": [
+          "tron:TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz"
+        ],
         "label": "USDD Tron GovActionsProxy (governance executor)",
         "role": "governor",
         "authorityType": "contract",
@@ -105,6 +111,9 @@
       {
         "chain": "tron",
         "address": "TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX",
+        "deploymentRefs": [
+          "tron:TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz"
+        ],
         "label": "USDD Tron GovActionsProxy owner — single-key account (governance executor)",
         "role": "governor",
         "authorityType": "eoa",
@@ -137,6 +146,9 @@
       {
         "chain": "ethereum",
         "address": "0x983dfef6d71862d809e239845da5a959492f63b8",
+        "deploymentRefs": [
+          "ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a"
+        ],
         "label": "USDD Ethereum Join",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -165,6 +177,9 @@
       {
         "chain": "ethereum",
         "address": "0x3dba111255d3888c723242320595588754cf493e",
+        "deploymentRefs": [
+          "ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a"
+        ],
         "label": "USDD Ethereum GovActionsProxy",
         "role": "governor",
         "authorityType": "contract",
@@ -190,6 +205,9 @@
       {
         "chain": "ethereum",
         "address": "0x25198d0d111eeac0fb1bd1de826294d9fce84378",
+        "deploymentRefs": [
+          "ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a"
+        ],
         "label": "USDD Ethereum GovActionsProxy owner EOA",
         "role": "governor",
         "authorityType": "eoa",
@@ -218,6 +236,9 @@
       {
         "chain": "bsc",
         "address": "0x6b00039d76795fd59baf17e0c9c6d87011e7edac",
+        "deploymentRefs": [
+          "bsc:0x45e51bc23d592eb2dba86da3985299f7895d66ba"
+        ],
         "label": "USDD BSC Join",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -246,6 +267,9 @@
       {
         "chain": "bsc",
         "address": "0x2662e860ea672e4d31df3438114c48511229e60f",
+        "deploymentRefs": [
+          "bsc:0x45e51bc23d592eb2dba86da3985299f7895d66ba"
+        ],
         "label": "USDD BSC GovActionsProxy",
         "role": "governor",
         "authorityType": "contract",
@@ -271,6 +295,9 @@
       {
         "chain": "bsc",
         "address": "0x25198d0d111eeac0fb1bd1de826294d9fce84378",
+        "deploymentRefs": [
+          "bsc:0x45e51bc23d592eb2dba86da3985299f7895d66ba"
+        ],
         "label": "USDD BSC GovActionsProxy owner EOA",
         "role": "governor",
         "authorityType": "eoa",

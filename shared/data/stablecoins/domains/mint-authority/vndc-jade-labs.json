@@ -4,7 +4,27 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "VNDC is issued by Jade Labs (Singapore) and operated through the ONUS/VNDC Hub platforms; minting and redemption run through an issuer-controlled, admin-gated token with no third-party audit and no permissionless mint route.",
+    "summary": "VNDC has independently native issuance on Ethereum, Polygon, and BSC through Jade Labs / issuer-controlled deployments. The legacy Ethereum VNDCToken exposes owner-only issue(uint) and burn(uint) paths plus a custom deprecate(address) replacement path; Polygon and BSC TokenVNDC expose owner/admin-controlled whitelist-and-collateral mintWhitelist()/withdrawWhitelist() paths. No authored deployment is a bridge representation, and bridge machinery is assessed separately under Bridge Risk. The current-product link between the legacy Ethereum deployment and the VNDC 2.0 program remains an evidence gap, but its local issuance capability is verified.",
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Jade Labs / VNDC issuer admin — Ethereum legacy VNDCToken",
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770655,
+      "sources": [
+        {
+          "label": "Ethereum VNDCToken verified source (owner-only deprecate(address))",
+          "url": "https://etherscan.io/address/0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de#code"
+        },
+        {
+          "label": "Ethereum public JSON-RPC used for owner/code/paused reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Jade Labs / VNDC issuer admin (owner-controlled issue/redeem)",
@@ -13,6 +33,9 @@
         "directMintAbility": "can-authorize",
         "chain": "bsc",
         "address": "0x557D55E71204CE7DfDc5C839446Dd34F1b299354",
+        "deploymentRefs": [
+          "bsc:0xa276dc434a366c62ef010585b3885d0c85154389"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "present",
         "evidence": "BSC owner() returned this EOA at block 103627465; eth_getCode returned 0x (EOA confirmed). Issuer admin can authorize owner-controlled supply operations.",
@@ -30,6 +53,9 @@
         "directMintAbility": "can-authorize",
         "chain": "polygon",
         "address": "0x557D55E71204CE7DfDc5C839446Dd34F1b299354",
+        "deploymentRefs": [
+          "polygon:0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "present",
         "evidence": "Polygon owner() returned the same EOA (0x557D55E71204CE7DfDc5C839446Dd34F1b299354) at block 88323540; eth_getCode returned 0x (EOA confirmed). Same issuer-admin EOA controls both BSC and Polygon deployments.",
@@ -39,15 +65,40 @@
             "url": "https://polygonscan.com/token/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa"
           }
         ]
+      },
+      {
+        "label": "Jade Labs / VNDC issuer admin — Ethereum legacy VNDCToken",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x004D050267B7cBdD223A591824c34F69A8a7A7b7",
+        "deploymentRefs": [
+          "ethereum:0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de"
+        ],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770655,
+        "evidence": "At Ethereum block 25770655 (2026-08-16T22:35:47Z), owner() on 0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de returned this EOA, eth_getCode returned 0x confirming EOA custody, and paused() was false. The verified VNDCToken source exposes owner-only issue(uint) and burn(uint); issue has no fixed economic cap beyond integer/supply arithmetic. The same owner-only deprecate(address) path can point the legacy token at a replacement address and is recorded in mintAuthority.upgradeability.",
+        "sources": [
+          {
+            "label": "Ethereum VNDCToken verified source (owner-only issue/burn/deprecate)",
+            "url": "https://etherscan.io/address/0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de#code"
+          },
+          {
+            "label": "Ethereum public JSON-RPC used for owner/code/paused reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "BSC block 103627465 and Polygon block 88323540: owner() on both deployments returns the same EOA 0x557D55E71204CE7DfDc5C839446Dd34F1b299354; eth_getCode returned 0x on both chains confirming EOA. Polygon blocker resolved — same address as BSC. All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: the shared issuer EOA controls supply operations without a firm cap, while no whole-supply reconciliation or independent supervision is evidenced. Wave 2 external verification 2026-08-15: the former issuer domain now serves an unrelated login page, and issuer, ONUS, and audit searches found no dated independent report reconciling the BSC and Polygon supply; reconciliation remains unknown.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Native issuance is reviewed on all three authored deployments. At Ethereum block 25770655 (2026-08-16T22:35:47Z), the verified VNDCToken owner 0x004D050267B7cBdD223A591824c34F69A8a7A7b7 is an EOA, paused() is false, and owner-only issue(uint), burn(uint), and deprecate(address) are present; issue has no fixed economic cap. At Polygon block 92143560 (2026-08-16T22:46:18Z), owner() on 0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa returned EOA 0x557D55E71204CE7DfDc5C839446Dd34F1b299354, paused() was false, and the verified TokenVNDC source exposes local whitelist-and-collateral mintWhitelist()/withdrawWhitelist() paths. At BSC block 116354795 (2026-08-16T22:46:24Z), owner() on 0xa276dc434a366c62ef010585b3885d0c85154389 returned the same EOA and paused() was false; the byte-identical TokenVNDC source has the same local issuance design. Polygon and BSC totalSupply() reads were 2,560,000,000 and 12,797,267,932 respectively (decimals 0), supporting independent local liabilities rather than bridge-conservation accounting. The Ethereum deployment is legacy and its current product-support link to VNDC 2.0 is not fully proven, so that limitation remains an evidence gap. Mint Authority now names one control per native deployment; no bridge-only capability is included, and Bridge Risk contains no bridge controls. Economic-posture fields remain concentrated-admin, unbounded, unknown reconciliation, and no supervision.",
+      "reviewer": "Codex mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "BscScan VNDC token",
@@ -56,6 +107,14 @@
         {
           "label": "PolygonScan VNDC token",
           "url": "https://polygonscan.com/token/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa"
+        },
+        {
+          "label": "Ethereum VNDCToken verified source",
+          "url": "https://etherscan.io/address/0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de#code"
+        },
+        {
+          "label": "Ethereum public JSON-RPC used for fixed-block reads",
+          "url": "https://ethereum-rpc.publicnode.com"
         },
         {
           "label": "Former VNDC issuer domain (currently unrelated login)",

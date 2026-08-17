@@ -9,8 +9,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USD1 cross-chain transfers use Chainlink CCIP Burn/Mint pools on nine catalog deployments with token-specific directory and on-chain pool evidence; the Tron deployment is the issuer's own upgradeable TRC20 token with no CCIP route, so it is native issuance. Those pools establish an external validated-network control path without proving that every token on Ethereum or BNB Chain was issued through CCIP rather than the issuer's native mint authority.",
-    "reviewedAt": "2026-07-20",
+    "summary": "USD1 has issuer-native issuance on Ethereum, BNB Chain, and Tron. Ethereum and BNB also expose separate Chainlink CCIP Burn/Mint pools, while Solana, Plume, Monad, Mantle, Morph, Aptos, AB Chain, Tempo, and X Layer are cataloged CCIP representations. The current Chainlink directory also identifies Creditcoin token 0x111111d2bf19e43c34263401e0cad979ed1cdb61 and Burn/Mint pool 0xC2eAfBAD518849e9A5Acd33E687EeAc7306C1dea, but creditcoin is not a registered Pharos chain ID, so that bridge-only deployment remains an explicit uncatalogued coverage gap. The CCIP pools and their owners, external minters, rate-limit admins, and route machinery remain Bridge Risk; they do not turn the canonical token deployments into bridge-only representations. The profile therefore remains external-validated-network.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "Codex V9 bridge route curation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
@@ -23,7 +23,7 @@
           "external-messaging",
           "validated-network"
         ],
-        "note": "The token-specific directory lists exact Burn/Mint pool addresses for AB, BNB Chain, Ethereum, Mantle, Monad, Morph, Plume, and Solana."
+        "note": "The token-specific directory lists exact Burn/Mint pool addresses for Ethereum, BNB Chain, Solana, Plume, Monad, Mantle, Morph, Aptos, AB Chain, Creditcoin, Tempo, and X Layer."
       }
     ],
     "sources": [
@@ -44,15 +44,16 @@
       {
         "id": "ethereum:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
-        "protocol": "Chainlink CCIP",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
+        "protocol": "World Liberty Financial native USD1 with Chainlink CCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
         "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Chainlink lists a HybridWithExternalMinter Burn/Mint pool for this issuer deployment. The pool proves a CCIP transfer and mint-control path, not that all Ethereum USD1 supply is CCIP-originated.",
+        "reviewNote": "The Ethereum USD1 deployment is issuer-native: its TokenGovernor has independent native MINTER_ROLE members and the CCIP pools use the distinct BRIDGE_MINTER_OR_BURNER_ROLE. The current pool 0x36a72eD0096B414521C45E3ddC9ed657d1D9c141 and still-authorized legacy pool 0xf9e47d3720d5142930444ae6773c7f6d05696228 are bridge machinery assessed through Bridge Risk controls, not evidence that all Ethereum USD1 supply is CCIP-originated.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
         "controllerAddress": "0x36a72eD0096B414521C45E3ddC9ed657d1D9c141",
@@ -60,7 +61,8 @@
           "protocol:chainlink-ccip",
           "contract:ethereum:0x36a72ed0096b414521c45e3ddc9ed657d1d9c141"
         ],
-        "observedAt": "2026-07-16",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770446,
         "sources": [
           {
             "label": "Chainlink USD1 CCIP directory",
@@ -75,15 +77,16 @@
       {
         "id": "bsc:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
         "destinationChain": "bsc",
+        "canonicalChain": "bsc",
         "contractAddress": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
-        "protocol": "Chainlink CCIP",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
+        "protocol": "World Liberty Financial native USD1 with Chainlink CCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
         "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Chainlink lists a BurnMintWithExternalMinter pool for this issuer deployment. The pool proves a CCIP transfer and mint-control path, not that all BNB Chain USD1 supply is CCIP-originated.",
+        "reviewNote": "The BNB USD1 deployment is issuer-native: its independent TokenGovernor has native MINTER_ROLE members and the BNB CCIP pool 0xCe3f7378aE409e1CE0dD6fFA70ab683326b73f04 is the sole BRIDGE_MINTER_OR_BURNER_ROLE member. The native token deployment and its CCIP transfer rail are therefore scored in separate modules.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bsc",
         "controllerAddress": "0xCe3f7378aE409e1CE0dD6fFA70ab683326b73f04",
@@ -91,7 +94,8 @@
           "protocol:chainlink-ccip",
           "contract:bsc:0xce3f7378ae409e1ce0dd6ffa70ab683326b73f04"
         ],
-        "observedAt": "2026-07-16",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116349979,
         "sources": [
           {
             "label": "Chainlink USD1 CCIP directory",
@@ -116,7 +120,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "On-chain reads via TronGrid show this is the issuer's own TransparentUpgradeableProxy TRC20 (name 'World Liberty Financial USD', 18 decimals, implementation TTuTMNMSCAfGNfAsEMn4JbvFQx9UEPmZCA, EIP-1967 admin TKk4R4sjAhKij7NNTpvmnGq9bCpNPiSQeW, owner contract TBZbFrVxJ8uoRQUwGSFXucpa8i2aXzGqJ8) — the same issuer-controlled deployment pattern as the canonical Ethereum token, not a bridge representation. World Liberty Financial's current CCIP route matrix does not list Tron, so Tron supply is issuer-minted directly and no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 85415575,
         "sources": [
           {
             "label": "USD1 TRC20 token on TronScan",
@@ -352,6 +357,214 @@
             "url": "https://docs.worldlibertyfinancial.com/wlfi-tools/bridge"
           }
         ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000111111111e910f0f",
+        "sourceChain": "ethereum",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c000000000000000000000111111111e910f0f",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The current Chainlink USD1 directory lists Tempo token 0x20C000000000000000000000111111111E910F0f and Burn/Mint pool 0x891F30e80B0809800BbaB14633F9eCe8Fc210024. This is a bridge-only coverage addition; pool owner, rate-limit admin, router, and remote-peer state were not separately fixed-block verified, and the deployment is not a canonical native issuance route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x891f30e80b0809800bbab14633f9ece8fc210024",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:tempo:0x891f30e80b0809800bbab14633f9ece8fc210024"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Chainlink USD1 CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USD1"
+          },
+          {
+            "label": "World Liberty Financial bridge docs",
+            "url": "https://docs.worldlibertyfinancial.com/wlfi-tools/bridge"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "sourceChain": "ethereum",
+        "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The current Chainlink USD1 directory lists X Layer token 0x111111d2bf19e43C34263401e0CAd979eD1cdb61 and Burn/Mint pool 0x500E140CCb4Ca279aCF585cc53C4613a7D7BCF27. This is a bridge-only coverage addition; pool owner, rate-limit admin, router, and remote-peer state were not separately fixed-block verified, and the deployment is not a canonical native issuance route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0x500e140ccb4ca279acf585cc53c4613a7d7bcf27",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:xlayer:0x500e140ccb4ca279acf585cc53c4613a7d7bcf27"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Chainlink USD1 CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USD1"
+          },
+          {
+            "label": "World Liberty Financial bridge docs",
+            "url": "https://docs.worldlibertyfinancial.com/wlfi-tools/bridge"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usd1-ethereum-ccip-current-pool",
+        "label": "USD1 Ethereum current CCIP Burn/Mint pool",
+        "routeRefs": [
+          "ethereum:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x36a72eD0096B414521C45E3ddC9ed657d1D9c141",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x36a72ed0096b414521c45e3ddc9ed657d1d9c141",
+          "contract:ethereum:0x44835bbba9d40deda9b64858095ecfb2693c9449",
+          "safe:ethereum:0x0d190b74308669e8f4fe7dbce3466169b285289d",
+          "contract:ethereum:0xee9b1a09aedaced9dcda74964ea447feb93861c2"
+        ],
+        "authorityType": "contract",
+        "capDescription": "The HybridWithExternalMinter pool's releaseOrMint path invokes the USD1 TokenGovernor external minter. The pool exposes bridge-specific lock/burn and release/mint accounting; no global token cap is inferred from the pool.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The pool routes through CCIP Router 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d; remote-peer and RMN configuration remain protocol-level controls.",
+          "rateLimits": "getRateLimitAdmin() returned the 3-of-6 Safe 0x0D190B74308669E8f4fE7DBCe3466169B285289d; the fixed-block read did not establish a global aggregate cap.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770446, pool owner() returned 0x44835bBBA9D40DEDa9b64858095EcFB2693c9449, a contract with bytecode but no verified source or reliable public Safe/account ABI; no threshold is assigned.",
+          "onchainAmountBounds": "The pool's bridge accounting is distinct from native issuance and calls the external minter; route-level conservation is not treated as a native cap."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770446,
+        "sources": [
+          {
+            "label": "Verified Ethereum current CCIP pool source",
+            "url": "https://eth.blockscout.com/address/0x36a72eD0096B414521C45E3ddC9ed657d1D9c141#code"
+          },
+          {
+            "label": "Verified Ethereum TokenGovernor source",
+            "url": "https://eth.blockscout.com/address/0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2#code"
+          },
+          {
+            "label": "Safe API, USD1 controller default-admin Safe (3-of-6)",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0D190B74308669E8f4fE7DBCe3466169B285289d"
+          },
+          {
+            "label": "Chainlink USD1 CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USD1"
+          }
+        ],
+        "evidence": "At Ethereum block 25770446 (2026-08-16 21:53:59 UTC), pool 0x36a72eD0096B414521C45E3ddC9ed657d1D9c141 returned owner() = 0x44835bBBA9D40DEDa9b64858095EcFB2693c9449, getMinter() = USD1 TokenGovernor 0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2, getToken() = the USD1 proxy, getRouter() = 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, getRateLimitAdmin() = the 3-of-6 Safe 0x0D190B74308669E8f4fE7DBCe3466169B285289d, and getRebalancer() = zero. The pool is bridge machinery; the same TokenGovernor's native MINTER_ROLE is separately authored in mintAuthority."
+      },
+      {
+        "id": "usd1-ethereum-ccip-legacy-pool",
+        "label": "USD1 Ethereum still-authorized legacy CCIP pool",
+        "routeRefs": [
+          "ethereum:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf9e47d3720d5142930444ae6773c7f6d05696228",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0xf9e47d3720d5142930444ae6773c7f6d05696228"
+        ],
+        "authorityType": "contract",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770446, the legacy BurnMintWithExternalMinterTokenPool reported supported CCIP chain selectors 0x9d70576d8e253bcf and 0xf8946d7c5b972a83. The corresponding remote-pool bytes and route destinations were not decoded.",
+          "unsupportedReason": "The pool remains an authorized BRIDGE_MINTER_OR_BURNER_ROLE member, but its current owner and rate-limit admin were not fixed-block verified in this review."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770446,
+        "sources": [
+          {
+            "label": "Verified Ethereum prior CCIP pool source",
+            "url": "https://eth.blockscout.com/address/0xf9e47d3720d5142930444ae6773c7f6d05696228#code"
+          },
+          {
+            "label": "Verified Ethereum TokenGovernor source",
+            "url": "https://eth.blockscout.com/address/0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25770446, getBridgeMintersOrBurners() on the USD1 controller included the still-authorized legacy pool 0xf9e47d3720d5142930444ae6773c7f6d05696228. The verified BurnMintWithExternalMinterTokenPool reported selectors 0x9d70576d8e253bcf and 0xf8946d7c5b972a83. This pool is retained as a separate bridge control even though the current Chainlink directory lists a replacement pool."
+      },
+      {
+        "id": "usd1-bnb-ccip-current-pool",
+        "label": "USD1 BNB Chain current CCIP Burn/Mint pool",
+        "routeRefs": [
+          "bsc:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xCe3f7378aE409e1CE0dD6fFA70ab683326b73f04",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0xce3f7378ae409e1ce0dd6ffa70ab683326b73f04",
+          "safe:bsc:0x0d190b74308669e8f4fe7dbce3466169b285289d",
+          "eoa:bsc:0x950350b073956bd1d22bb1c18c4d45263b5aa3a5",
+          "contract:bsc:0xee9b1a09aedaced9dcda74964ea447feb93861c2"
+        ],
+        "authorityType": "contract",
+        "capDescription": "The BNB Burn/MintWithExternalMinter pool is the sole BRIDGE_MINTER_OR_BURNER_ROLE member on the BNB TokenGovernor. Its bridge mint/burn accounting and rate limits are separate from native MINTER_ROLE issuance.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The pool routes through CCIP Router 0x34b03cb9086d7d758ac55af71584f81a598759fe; remote-peer and RMN configuration remain protocol-level controls.",
+          "rateLimits": "getRateLimitAdmin() returned EOA 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5. The fixed-block read did not establish a global aggregate cap.",
+          "pausersAdminsUpgraders": "At BNB block 116349979, pool owner() returned the 3-of-6 Safe 0x0D190B74308669E8f4fE7DBCe3466169B285289d; the Safe has no modules and zero guard/module guard in the reviewed snapshot.",
+          "onchainAmountBounds": "The pool's bridge accounting is distinct from BNB native issuance; the native MINTER_ROLE set and the bridge pool role are separate."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116349979,
+        "sources": [
+          {
+            "label": "BNB USD1 token and pool explorer records",
+            "url": "https://bscscan.com/address/0xCe3f7378aE409e1CE0dD6fFA70ab683326b73f04#code"
+          },
+          {
+            "label": "Chainlink USD1 CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USD1"
+          },
+          {
+            "label": "Safe API, USD1 controller default-admin Safe (3-of-6)",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0D190B74308669E8f4fE7DBCe3466169B285289d"
+          },
+          {
+            "label": "World Liberty Financial bridge docs",
+            "url": "https://docs.worldlibertyfinancial.com/wlfi-tools/bridge"
+          }
+        ],
+        "evidence": "At BNB block 116349979 (2026-08-16 22:10:15 UTC), pool 0xCe3f7378aE409e1CE0dD6fFA70ab683326b73f04 returned owner() = the 3-of-6 Safe 0x0D190B74308669E8f4fE7DBCe3466169B285289d, getMinter() = the BNB TokenGovernor, getToken() = the BNB USD1 proxy, getRouter() = 0x34b03cb9086d7d758ac55af71584f81a598759fe, and getRateLimitAdmin() = EOA 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5. It is the sole BNB bridge-role member and is not a native MINTER_ROLE member."
       }
     ]
   }

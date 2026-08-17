@@ -3,49 +3,79 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "JUSD BSC is a BridgeMintableToken proxy; minting requires a 'classified authority' role — the ProxyAdmin is owned by ChainportCongress (0xb6b4c7ac, named 'ChainportCongress'). JUSD Polygon is Ownable with EOA owner 0x7be44b5d (confirmed). BSC bridge authority role holder is not enumerable on-chain without the Chainport contract ABI.",
+    "confidence": "verified",
+    "summary": "JUSD's canonical native issuance is the non-proxy Polygon JUSD contract, whose owner EOA can call an uncapped mint function. Controls governing the non-canonical representation are assessed separately in bridgeRouteRisk and do not expand this native Mint Authority assessment. Polygon remains the best-supported canonical chain; issuer materials do not explicitly declare canonicality or rule out an untracked Ethereum deployment.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "polygon:0x0ba8a6ce46d369d779299dedade864318097b703"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-08-16",
+      "observedBlock": 92140941,
+      "sources": [
+        {
+          "label": "Verified Polygon JUSD source and live contract",
+          "url": "https://polygonscan.com/address/0x0ba8a6ce46d369d779299dedade864318097b703#code"
+        },
+        {
+          "label": "TechRate report commissioned by JUSD",
+          "url": "https://jusd.app/security_audit.pdf"
+        }
+      ]
+    },
     "controls": [
       {
+        "chain": "polygon",
+        "address": "0x0ba8a6ce46d369d779299dedade864318097b703",
+        "deploymentRefs": [
+          "polygon:0x0ba8a6ce46d369d779299dedade864318097b703"
+        ],
         "label": "JUSD Polygon — issuer EOA owner",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Polygon block 88341894: JUSD proxy at 0x0ba8a6ce (no proxy admin slot — not upgradeable proxy). owner() returns 0x7be44b5d470d1cdea8703b6c5156267d4b22a42f. eth_getCode(0x7be44b5d) = 0x (confirmed EOA). Reverts on mint call with 'Ownable: caller is not the owner'."
-      },
-      {
-        "label": "JUSD BSC — Chainport bridge authority (ProxyAdmin: ChainportCongress)",
-        "role": "minter-admin",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "none",
-        "canRaiseCap": true,
-        "evidence": "At BSC block 103800563: JUSD BSC proxy at 0xbf3950db is a TransparentUpgradeableProxy with impl 0x877d233c (BridgeMintableToken — confirmed via revert message 'BridgeMintableToken: Function can be called only by a classified authority.'). ProxyAdmin = 0xe317bf1c; ProxyAdmin.owner() = 0xb6b4c7ac240b1f176c5589d064733066a83884a1 (contract named 'ChainportCongress'). The Chainport bridge authority holding the mint role on BSC is not enumerable without the Chainport contract ABI."
+        "observedAt": "2026-08-16",
+        "observedBlock": 92140941,
+        "sources": [
+          {
+            "label": "Verified Polygon JUSD source and live contract",
+            "url": "https://polygonscan.com/address/0x0ba8a6ce46d369d779299dedade864318097b703#code"
+          },
+          {
+            "label": "TechRate report commissioned by JUSD",
+            "url": "https://jusd.app/security_audit.pdf"
+          }
+        ],
+        "evidence": "At Polygon block 92140941 (2026-08-16 21:40:39 UTC), the verified non-proxy JUSD contract at 0x0ba8a6ce46d369d779299dedade864318097b703 returned owner() = 0x7be44b5d470d1cdea8703b6c5156267d4b22a42f; the owner address had no bytecode. A simulated mint(0x...01, 1) from the owner reached the mint path, while the same call from 0x...02 reverted with Ownable: caller is not the owner. The public mint function has no cap, collateral/deposit check, reserve reconciliation check, oracle condition, or supply ceiling. Ownership is transferable or renounceable, but the mint logic is not upgradeable."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At BSC block 103800563 and Polygon block 88341894: JUSD Polygon owner confirmed as EOA 0x7be44b5d (bytecode=0x). JUSD BSC is a BridgeMintableToken with minting gated by 'classified authority' — the ProxyAdmin is controlled by ChainportCongress (contract 0xb6b4c7ac). JUSD's architecture links it to the Chainport bridge protocol; the specific bridge minter role address is not publicly enumerable on-chain without the Chainport contract interface. Reserve backing remains unverified. Economic-posture fields reviewed 2026-08-15: the Polygon owner and BSC authority path are not independently capped, current whole-supply reserves are undisclosed, and no prudential supervisor is evidenced.",
+      "evidence": "Canonical-chain review at Polygon block 92140941 (2026-08-16 21:40:39 UTC): the verified non-proxy JUSD contract at 0x0ba8a6ce46d369d779299dedade864318097b703 is owned by the issuer-linked EOA 0x7be44b5d470d1cdea8703b6c5156267d4b22a42f, which can call the uncapped public mint function. No collateral, reserve reconciliation, oracle, or supply-ceiling condition bounds that native path, so economicCapSemantics remains unbounded and authorityPosture remains concentrated-admin. Controls governing the non-canonical representation are bridge machinery and are reviewed separately in bridgeRouteRisk; they are not counted as Polygon native Mint Authority. Reserve backing remains unverified, reconciliation remains unknown, and no prudential supervisor is evidenced. Polygon is the best-supported canonical chain, but issuer materials do not explicitly declare canonicality or rule out an untracked Ethereum deployment.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
+      "disposition": "scoreable",
       "sources": [
         {
-          "label": "JUSD BSC proxy on BscScan",
-          "url": "https://bscscan.com/address/0xbf3950db0522a7f5caa107d4cbbbd84de9e047e2"
+          "label": "Verified Polygon JUSD source and live contract",
+          "url": "https://polygonscan.com/address/0x0ba8a6ce46d369d779299dedade864318097b703#code"
         },
         {
-          "label": "JUSD Polygon proxy on PolygonScan",
-          "url": "https://polygonscan.com/address/0x0ba8a6ce46d369d779299dedade864318097b703"
+          "label": "TechRate report commissioned by JUSD",
+          "url": "https://jusd.app/security_audit.pdf"
+        },
+        {
+          "label": "JUSD official website and deployment listing",
+          "url": "https://jusd.app/"
         },
         {
           "label": "JUSD whitepaper",
           "url": "https://jusd.app/whitepaper.pdf"
         }
-      ],
-      "unresolvedQuestions": [
-        "Enumerate the live Chainport bridge authority address holding the classified-authority mint role on BSC (requires Chainport contract ABI or event log scan on ChainportCongress)."
       ]
     }
   }

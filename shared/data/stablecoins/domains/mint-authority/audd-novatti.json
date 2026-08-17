@@ -7,6 +7,16 @@
     "summary": "AUDD is issued by AUDC Pty Ltd (Novatti, AFSL 700123); minting and 1:1 AUD redemption run through the issuer's centralized backend against segregated AUD cash and Treasury bills at Australian ADIs.",
     "controls": [
       {
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "label": "AUDC Pty Ltd issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -19,6 +29,16 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "0x59a50cbd643347296e2cf5573b40eda3099d0c54",
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "evidence": "At Ethereum block 25295029, owner() on the AUDD ERC1967 proxy (0x4cce...0c54, impl 0xc6114a25) returned 0x59a50cbd643347296e2cf5573b40eda3099d0c54. eth_getCode returns no bytecode → EOA.",
@@ -34,6 +54,16 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "address": "0x840b18b93e44ded7d616a0f61aff8562f2548743",
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "directMintAbility": "none",
         "canRaiseCap": true,
         "evidence": "At Ethereum block 25295029, EIP-1967 admin slot on AUDD proxy returned 0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b (a ProxyAdmin contract). That ProxyAdmin's owner() returned 0x840b18b93e44ded7d616a0f61aff8562f2548743. eth_getCode returns no bytecode → EOA.",
@@ -49,6 +79,16 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127",
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "evidence": "At Base block 47200702, owner() on the AUDD Base proxy (0x449b...ae65, impl 0x3c9ead9a) returned 0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127. eth_getCode returns no bytecode → EOA.",
@@ -64,6 +104,16 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "address": "0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa",
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "directMintAbility": "none",
         "canRaiseCap": true,
         "evidence": "At Base block 47200702, EIP-1967 admin slot on AUDD Base proxy returned 0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f (ProxyAdmin contract). That ProxyAdmin's owner() returned 0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa. eth_getCode returns no bytecode → EOA.",
@@ -79,6 +129,16 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "address": "GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "evidence": "Stellar Horizon confirmed: issuer account GDC7X2MX... has master key weight 0 (locked), 7 co-signers each weight 1, and low/med/high thresholds all = 3. Effective authority is a 3-of-7 multisig. Asset is AUDD issued by this account.",
@@ -90,6 +150,16 @@
         ]
       },
       {
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "label": "AUDD XRPL issuer (master key disabled — account locked)",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -108,6 +178,16 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF",
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "evidence": "Solana getAccountInfo (jsonParsed) for SPL mint AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw returned mintAuthority = CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF. Confirmed EOA: account is owned by System Program (11111...), executable=false, zero data.",
@@ -119,6 +199,16 @@
         ]
       },
       {
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "label": "AUDD Hedera token admin key",
         "role": "minter-admin",
         "authorityType": "issuer-backend",
@@ -137,6 +227,16 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "0x994a586f6df51acefb6a417f13ce659a3150e30d",
+        "deploymentRefs": [
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "evidence": "XDC rpc.xinfin.network: owner() on AUDD contract 0x9fe4e6321eeb7c4bc537570f015e4734b15002b8 returned 0x994a586f6df51acefb6a417f13ce659a3150e30d. eth_getCode returned 0x → EOA.",
@@ -150,6 +250,10 @@
     ],
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+        "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5"
+      ],
       "proxyAddresses": [
         "0x4cce605ed955295432958d8951d0b176c10720d5",
         "0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"

@@ -4,37 +4,38 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "The tracked UTY deployment mints collateralized vault shares from USDC on Base and uses LayerZero OFTs on Avalanche and Katana. All three UTY contracts are UUPS proxies owned without delay by the same EOA; Base's mutable maxTotalAssets cap is currently uint256 max and can be changed independently by any of three EOA MANAGER_ROLE members.",
+    "summary": "Base is the sole native UTY issuance chain: the UUPS ERC-7540 vault accepts Base USDC through collateralized deposit()/mint() and has a mutable maxTotalAssets cap. The Base owner is a 3-of-4 Safe with no observed modules or guard; any of the three Base MANAGER_ROLE members can also raise the cap without delay. Avalanche and Katana are LayerZero OFT bridge representations and their bridge administration is assessed under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "base:0xba515304d8153c4b162dc79f867e152df9c127eb"
+      ],
       "proxyAddresses": [
         "0xba515304d8153c4b162dc79f867e152df9c127eb"
       ],
       "implementationAddresses": [
-        "0x79fc5fd276c03aaa8418871ce3a5c5767a0241ef",
-        "0xf2f6e1a62d3d1f0efb01c28e485f1dc8b173ce2b",
-        "0x4ef498786e9c7dd58ccdd04e8ed0aebd1c764f72"
+        "0xf2f6e1a62d3d1f0efb01c28e485f1dc8b173ce2b"
       ],
       "adminAddresses": [
-        "0xA695bB4B9a86DAF0581233031F273697135e3016"
+        "0xb237eb3c71a0f351bd121b0c467248473fbc2cca"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "UTY cross-chain UUPS owner EOA",
-      "observedAt": "2026-07-14",
-      "observedBlock": 48619333,
+      "controlRef": "UTY Base vault UUPS owner Safe",
+      "observedAt": "2026-08-16",
+      "observedBlock": 50066315,
       "sources": [
         {
           "label": "Base UTY proxy and verified implementation",
           "url": "https://base.blockscout.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
         },
         {
-          "label": "Avalanche UTY contract",
-          "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+          "label": "Base UTY verified implementation",
+          "url": "https://base.blockscout.com/address/0xf2f6e1a62d3d1f0efb01c28e485f1dc8b173ce2b"
         },
         {
-          "label": "Katana UTY contract",
-          "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+          "label": "Base UTY current Safe owner",
+          "url": "https://base.blockscout.com/address/0xb237eb3c71a0f351bd121b0c467248473fbc2cca"
         }
       ]
     },
@@ -46,11 +47,14 @@
         "directMintAbility": "cap-limited",
         "chain": "base",
         "address": "0xba515304d8153c4b162dc79f867e152df9c127eb",
-        "capDescription": "deposit() and mint() require USDC assets and enforce maxTotalAssets; the current cap is uint256 max and owner or MANAGER_ROLE can change it.",
+        "deploymentRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "capDescription": "deposit() and mint() require Base USDC assets and enforce maxTotalAssets; the current cap is uint256 max and the owner or any MANAGER_ROLE member can change it.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 48619333,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
         "failureDomainKeys": [
           "uty-base-vault-mint"
         ],
@@ -60,21 +64,42 @@
             "url": "https://base.blockscout.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
           }
         ],
-        "evidence": "At Base block 48619333, the verified UTY implementation exposed collateralized deposit()/mint(), maxDeposit()/maxMint(), and setMaxTotalAssets(). getMaxTotalAssets() returned uint256 max while totalAssets() was about 14.54 million USDC units."
+        "evidence": "At Base block 50066315, the verified UTY implementation exposed collateralized deposit()/mint(), maxDeposit()/maxMint(), and setMaxTotalAssets(). asset() returned Base USDC, getMaxTotalAssets() returned uint256 max, and totalAssets() was 14,539,040.309320 USDC units."
       },
       {
-        "label": "UTY cross-chain UUPS owner EOA",
+        "label": "UTY Base vault UUPS owner Safe",
         "role": "minter-admin",
-        "authorityType": "eoa",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 4,
         "chain": "base",
-        "address": "0xA695bB4B9a86DAF0581233031F273697135e3016",
+        "address": "0xb237eb3c71a0f351bd121b0c467248473fbc2cca",
+        "deploymentRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 48619333,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "SafeL2",
+          "owners": [
+            "0xa695bb4b9a86daf0581233031f273697135e3016",
+            "0x738742d0e1681f6e2d5d0aa41a13149d655c6f2c",
+            "0x64e7e86717a1e2f4caf556e431275296593ab742",
+            "0xd2d18094b2f45448816010342dfc05788f1d3211"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedAt": "2026-08-16",
+          "observedBlock": 50066315,
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
         "failureDomainKeys": [
-          "uty-cross-chain-owner"
+          "safe:base:0xb237eb3c71a0f351bd121b0c467248473fbc2cca"
         ],
         "sources": [
           {
@@ -82,11 +107,36 @@
             "url": "https://base.blockscout.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
           },
           {
-            "label": "YieldPoint contract addresses",
-            "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+            "label": "Base UTY current Safe owner",
+            "url": "https://base.blockscout.com/address/0xb237eb3c71a0f351bd121b0c467248473fbc2cca"
           }
         ],
-        "evidence": "At Base block 48619333, Avalanche block 90284859, and Katana block 37285133, owner() on the tracked UTY proxy returned 0xA695bB4B... on every chain and eth_getCode for that owner was empty. Each EIP-1967 implementation slot was nonzero; the verified Base implementation gates _authorizeUpgrade() with onlyOwner and also grants this EOA DEFAULT_ADMIN_ROLE and MANAGER_ROLE."
+        "evidence": "At Base block 50066315, owner() on the native UTY vault returned Safe 0xb237eb3c71a0f351bd121b0c467248473fbc2cca. The Safe is 3-of-4 with the four recorded owners, no enabled modules, and the zero guard; the verified Base implementation gates _authorizeUpgrade() with onlyOwner and lets the owner call setMaxTotalAssets() without a contract-enforced delay."
+      },
+      {
+        "label": "UTY Base MANAGER_ROLE member 0xa695",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "chain": "base",
+        "address": "0xa695bb4b9a86daf0581233031f273697135e3016",
+        "deploymentRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
+        "failureDomainKeys": [
+          "eoa:base:0xa695bb4b9a86daf0581233031f273697135e3016"
+        ],
+        "sources": [
+          {
+            "label": "Base UTY verified implementation",
+            "url": "https://base.blockscout.com/address/0xf2f6e1a62d3d1f0efb01c28e485f1dc8b173ce2b"
+          }
+        ],
+        "evidence": "At Base block 50066315, getRoleMembers(MANAGER_ROLE) included this EOA. The verified implementation permits any MANAGER_ROLE member to call setMaxTotalAssets() independently; this manager power is native Base cap administration, separate from the Safe's owner and bridge powers."
       },
       {
         "label": "UTY Base MANAGER_ROLE member 0x7387",
@@ -95,17 +145,20 @@
         "directMintAbility": "parameter-only",
         "chain": "base",
         "address": "0x738742d0E1681F6e2d5d0Aa41A13149D655C6f2C",
+        "deploymentRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 48619333,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
         "sources": [
           {
             "label": "Base UTY verified implementation",
             "url": "https://base.blockscout.com/address/0xF2F6E1a62d3d1f0efB01C28e485f1dC8B173cE2B"
           }
         ],
-        "evidence": "At Base block 48619333, getRoleMembers(MANAGER_ROLE) included this EOA. The verified implementation permits any MANAGER_ROLE member to call setMaxTotalAssets() independently."
+        "evidence": "At Base block 50066315, getRoleMembers(MANAGER_ROLE) included this EOA. The verified implementation permits any MANAGER_ROLE member to call setMaxTotalAssets() independently."
       },
       {
         "label": "UTY Base MANAGER_ROLE member 0xd2d1",
@@ -114,78 +167,29 @@
         "directMintAbility": "parameter-only",
         "chain": "base",
         "address": "0xd2d18094b2F45448816010342dfC05788f1d3211",
+        "deploymentRefs": [
+          "base:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 48619333,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066315,
         "sources": [
           {
             "label": "Base UTY verified implementation",
             "url": "https://base.blockscout.com/address/0xF2F6E1a62d3d1f0efB01C28e485f1dC8B173cE2B"
           }
         ],
-        "evidence": "At Base block 48619333, getRoleMembers(MANAGER_ROLE) included this EOA. The verified implementation permits any MANAGER_ROLE member to call setMaxTotalAssets() independently."
-      },
-      {
-        "label": "UTY Avalanche OFT owner",
-        "role": "bridge-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "chain": "avalanche",
-        "address": "0xA695bB4B9a86DAF0581233031F273697135e3016",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 90284859,
-        "failureDomainKeys": [
-          "uty-cross-chain-owner"
-        ],
-        "sources": [
-          {
-            "label": "Avalanche UTY contract",
-            "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
-          },
-          {
-            "label": "YieldPoint bridge operations",
-            "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
-          }
-        ],
-        "evidence": "At Avalanche block 90284859, the tracked UTY address was an OFT UUPS proxy with implementation 0x79fc5fd2..., LayerZero endpoint 0x1a440760..., and owner EOA 0xA695bB4B.... Project documentation identifies Avalanche as a mint/burn OFT spoke."
-      },
-      {
-        "label": "UTY Katana OFT owner",
-        "role": "bridge-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "chain": "katana",
-        "address": "0xA695bB4B9a86DAF0581233031F273697135e3016",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 37285133,
-        "failureDomainKeys": [
-          "uty-cross-chain-owner"
-        ],
-        "sources": [
-          {
-            "label": "Katana UTY contract",
-            "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
-          },
-          {
-            "label": "YieldPoint bridge operations",
-            "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
-          }
-        ],
-        "evidence": "At Katana block 37285133, the tracked UTY address was an OFT UUPS proxy with implementation 0x4ef49878..., LayerZero endpoint 0x6F475642..., and owner EOA 0xA695bB4B.... Project documentation identifies Katana as a mint/burn OFT spoke."
+        "evidence": "At Base block 50066315, getRoleMembers(MANAGER_ROLE) included this EOA. The verified implementation permits any MANAGER_ROLE member to call setMaxTotalAssets() independently."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "attestation-only",
     "review": {
-    "evidence": "The prior record described legacy Avalanche token 0xdbc5192a..., which is not the address tracked in the deployment registry. Live RPC review of the tracked 0xba515304... address found three distinct UUPS implementations with the same EOA owner on Base, Avalanche, and Katana. Verified Base source established the collateralized mint path, mutable cap, enumerable manager set, and owner-only upgrade path; project docs establish Base as the vault hub and Avalanche/Katana as OFT spokes. Economic-posture fields reviewed 2026-08-15: the common owner EOA can replace mint logic and manager EOAs can raise the Base cap without delay; Accountable telemetry does not prove liability reconciliation across both OFT spokes and is not independent supervision. Wave 2 external verification 2026-08-15: Accountable's live dashboard data explicitly splits total UTY supply across Base, Avalanche, and Katana, continuously compares the aggregate against verified reserves, and publishes signed reserve/liability snapshots with enclave and zero-knowledge attestations; this establishes whole-supply continuous reconciliation and attestation-only supervision.",
-      "reviewer": "Codex CTRL curation batch 03; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Base is the sole native UTY issuance deployment: the verified Base UUPS vault accepts Base USDC through collateralized deposit()/mint(), exposes maxDeposit()/maxMint(), and has a mutable maxTotalAssets cap. At Base block 50066315 the Base owner was Safe 0xb237eb3c71a0f351bd121b0c467248473fbc2cca, a 3-of-4 Safe with no observed modules or guard; the Safe can replace Base mint logic without a timelock, and the three Base MANAGER_ROLE members can independently call setMaxTotalAssets(). Avalanche and Katana use the same-address deployments only as LayerZero mint/burn OFT representations against the Base ShareOFTAdapter lockbox, so their bridge owner, peer, and upgrade powers are excluded from native Mint Authority and recorded under Bridge Risk. Economic-posture evidence remains unchanged: maxTotalAssets is currently uint256 max, reconciliation is continuous through Accountable telemetry, and supervision is attestation-only.",
+      "reviewer": "Codex mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {
@@ -201,22 +205,18 @@
           "url": "https://base.blockscout.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
         },
         {
-          "label": "Avalanche UTY contract",
-          "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+          "label": "Base UTY current Safe owner",
+          "url": "https://base.blockscout.com/address/0xb237eb3c71a0f351bd121b0c467248473fbc2cca"
         },
-      {
-        "label": "Katana UTY contract",
-        "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
-      },
-      {
-        "label": "Accountable YieldPoint live proof-of-solvency dashboard",
-        "url": "https://accountable.xsy.fi/"
-      },
-      {
-        "label": "Accountable YieldPoint live dashboard data",
-        "url": "https://accountable.xsy.fi:10443/dashboard"
-      }
-    ]
+        {
+          "label": "Accountable YieldPoint live proof-of-solvency dashboard",
+          "url": "https://accountable.xsy.fi/"
+        },
+        {
+          "label": "Accountable YieldPoint live dashboard data",
+          "url": "https://accountable.xsy.fi:10443/dashboard"
+        }
+      ]
     }
   }
 }

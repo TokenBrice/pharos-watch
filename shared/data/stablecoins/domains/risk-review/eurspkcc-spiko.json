@@ -57,9 +57,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "EURSPKCC is issued natively by Spiko on all six chains: every deployment was re-verified on-chain 2026-07-20 as the canonical Spiko fund share (EVM authority() = Spiko PermissionManager; Starknet owner = Spiko's 3/5 Argent multisig; Stellar contract in Spiko's official stellar-contracts registry). Cross-chain transfers run over Chainlink CCIP (BurnWithFromMintTokenPool per EVM chain, enumerated as bridge-admin controls in the 2026-07-15 mint-authority sweep), so the profile tier reflects an external validated-network transfer rail over issuer-native deployments.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "summary": "EURSPKCC has six issuer-native deployments. Chainlink CCIP spans the four EVM native deployments with twelve current directed lanes, using BurnWithFromMintTokenPool 1.6.1 burn-and-mint: source pool-held EURSPKCC is burned and destination mint is admitted only after CCIP RMN, authorized OffRamp, configured source-pool, and inbound-rate-limiter validation, with per-lane rate limits and remote pool/token mappings. The pools are administered by the shared EOA 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, which can update peers and rate-limit configuration; those controls are bridge-route risk, not canonical native Mint Authority. Starknet and Stellar are not CCIP routes.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration FIX2-06",
     "confidence": "verified",
     "protocols": [
       {
@@ -101,10 +101,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (ethereum block 25571110): name() = 'Spiko Digital Assets Cash and Carry Fund (EUR hedged)', symbol() = 'eurSPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on ethereum, minted/burned via the PermissionManager (mint restricted to Spiko operator groups; Chainlink CCIP BurnWithFromMintTokenPool on this chain holds bridge-mint rights per the 2026-07-15 mint-authority sweep) — no third-party wrapped representation.",
+        "reviewNote": "Verified on-chain 2026-08-16 (ethereum pool-read block 25770462): issuer-native Spiko fund share at 0x3868d4e336d14d38031cf680329d31e4712e11cc is governed by Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 at 0x57fa613b284f05421f78c8bd579555d5c0d7783d is the conserved bridge return path and is assessed under the structured bridge controls below; no third-party wrapped representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25571110,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770462,
         "sources": [
           {
             "label": "Spiko Cash and Carry",
@@ -128,10 +128,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (base block 48863611): name() = 'Spiko Digital Assets Cash and Carry Fund (EUR hedged)', symbol() = 'eurSPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on base, minted/burned via the PermissionManager (mint restricted to Spiko operator groups; Chainlink CCIP BurnWithFromMintTokenPool on this chain holds bridge-mint rights per the 2026-07-15 mint-authority sweep) — no third-party wrapped representation.",
+        "reviewNote": "Verified on-chain 2026-08-16 (base pool-read block 50064051): issuer-native Spiko fund share at 0x4f33acf823e6eeb697180d553ce0c710124c8d59 is governed by Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 at 0x1cd239b73ff2ed0a10767f7b6d4880ac399a3896 is the conserved bridge return path and is assessed under the structured bridge controls below; no third-party wrapped representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 48863611,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064051,
         "sources": [
           {
             "label": "Spiko Cash and Carry",
@@ -155,10 +155,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (arbitrum block 485706358): name() = 'Spiko Digital Assets Cash and Carry Fund (EUR hedged)', symbol() = 'eurSPKCC', decimals() = 5; authority() = Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a (Arbitrum proxy to the same PermissionManager implementation as Ethereum). Issuer-native Spiko fund share on arbitrum, minted/burned via the PermissionManager (mint restricted to Spiko operator groups; Chainlink CCIP BurnWithFromMintTokenPool on this chain holds bridge-mint rights per the 2026-07-15 mint-authority sweep) — no third-party wrapped representation.",
+        "reviewNote": "Verified on-chain 2026-08-16 (arbitrum pool-read block 495274659): issuer-native Spiko fund share at 0x0e389c83bc1d16d86412476f6103027555c03265 is governed by Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 at 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb is the conserved bridge return path and is assessed under the structured bridge controls below; no third-party wrapped representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 485706358,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495274659,
         "sources": [
           {
             "label": "Spiko Cash and Carry",
@@ -182,10 +182,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (polygon block 90541049): name() = 'Spiko Digital Assets Cash and Carry Fund (EUR hedged)', symbol() = 'eurSPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on polygon, minted/burned via the PermissionManager (mint restricted to Spiko operator groups; Chainlink CCIP BurnWithFromMintTokenPool on this chain holds bridge-mint rights per the 2026-07-15 mint-authority sweep) — no third-party wrapped representation.",
+        "reviewNote": "Verified on-chain 2026-08-16 (polygon pool-read block 92141614): issuer-native Spiko fund share at 0x99f70a0e1786402a6796c6b0aa997ef340a5c6da is governed by Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 at 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb is the conserved bridge return path and is assessed under the structured bridge controls below; no third-party wrapped representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 90541049,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141614,
         "sources": [
           {
             "label": "Spiko Cash and Carry",
@@ -248,6 +248,263 @@
             "url": "https://stellar.expert/explorer/public/contract/CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "eurspkcc-ethereum-ccip-pool",
+        "label": "EURSPKCC Ethereum CCIP BurnWithFromMintTokenPool 1.6.1",
+        "routeRefs": [
+          "ethereum:0x3868d4e336d14d38031cf680329d31e4712e11cc"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xEd608cf38968C0ba09676843D90B33Dd59dd7375",
+        "failureDomainKeys": [
+          "eoa:ethereum:0xed608cf38968c0ba09676843d90b33dd59dd7375"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770462, the pool has three directed CCIP lanes: Polygon selector 4051577828743386545 to pool 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb and token 0x99f70a0e1786402a6796c6b0aa997ef340a5c6da; Arbitrum selector 4949039107694359620 to pool 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb and token 0x0e389c83bc1d16d86412476f6103027555c03265; Base selector 15971525489660198786 to pool 0x1cd239b73ff2ed0a10767f7b6d4880ac399a3896 and token 0x4f33acf823e6eeb697180d553ce0c710124c8d59.",
+          "rateLimits": "The pool uses per-lane CCIP inbound and outbound rate limiters. The shared owner EOA can call setChainRateLimiterConfig, so the configured bridge bound can be widened or removed.",
+          "pausersAdminsUpgraders": "typeAndVersion() = BurnWithFromMintTokenPool 1.6.1; owner() is the shared EOA 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, which can call applyChainUpdates for remote pool/token and lane administration.",
+          "onchainAmountBounds": "The Chainlink TokenPool implementation validates the local token, RMN curse state, authorized OffRamp, configured source pool, and inbound rate limiter before releaseOrMint; BurnWithFromMintTokenPool burns source pool-held tokens and mints the destination receiver, so this is conserved bridge accounting rather than independent native issuance."
+        },
+        "capDescription": "The pool provides CCIP bridge mint and burn against source-lane accounting; per-lane rate limits and remote configuration are owner-controlled.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared owner EOA can update remote lanes and rate-limit configuration; the token's unbounded group-0 native mint remains separately reviewed in Mint Authority."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770462,
+        "sources": [
+          {
+            "label": "Ethereum EURSPKCC CCIP pool",
+            "url": "https://eth.blockscout.com/address/0x57fa613b284f05421f78c8bd579555d5c0d7783d"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink TokenPool source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/main/chains/evm/contracts/pools/TokenPool.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25770462, pool 0x57fa613b284f05421f78c8bd579555d5c0d7783d reports local token 0x3868d4e336d14d38031cf680329d31e4712e11cc, type/version BurnWithFromMintTokenPool 1.6.1, and owner 0xEd608cf38968C0ba09676843D90B33Dd59dd7375. eth_getCode(owner) = 0x. Current remote pool/token mappings cover Polygon, Arbitrum, and Base as recorded above."
+      },
+      {
+        "id": "eurspkcc-polygon-ccip-pool",
+        "label": "EURSPKCC Polygon CCIP BurnWithFromMintTokenPool 1.6.1",
+        "routeRefs": [
+          "polygon:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xEd608cf38968C0ba09676843D90B33Dd59dd7375",
+        "failureDomainKeys": [
+          "eoa:polygon:0xed608cf38968c0ba09676843d90b33dd59dd7375"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Polygon block 92141614, the pool has three directed CCIP lanes: Ethereum selector 5009297550715157269 to pool 0x57fa613b284f05421f78c8bd579555d5c0d7783d and token 0x3868d4e336d14d38031cf680329d31e4712e11cc; Arbitrum selector 4949039107694359620 to pool 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb and token 0x0e389c83bc1d16d86412476f6103027555c03265; Base selector 15971525489660198786 to pool 0x1cd239b73ff2ed0a10767f7b6d4880ac399a3896 and token 0x4f33acf823e6eeb697180d553ce0c710124c8d59.",
+          "rateLimits": "The pool uses per-lane CCIP inbound and outbound rate limiters. The shared owner EOA can call setChainRateLimiterConfig, so the configured bridge bound can be widened or removed.",
+          "pausersAdminsUpgraders": "typeAndVersion() = BurnWithFromMintTokenPool 1.6.1; owner() is the shared EOA 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, which can call applyChainUpdates for remote pool/token and lane administration.",
+          "onchainAmountBounds": "The Chainlink TokenPool implementation validates the local token, RMN curse state, authorized OffRamp, configured source pool, and inbound rate limiter before releaseOrMint; BurnWithFromMintTokenPool burns source pool-held tokens and mints the destination receiver, so this is conserved bridge accounting rather than independent native issuance."
+        },
+        "capDescription": "The pool provides CCIP bridge mint and burn against source-lane accounting; per-lane rate limits and remote configuration are owner-controlled.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared owner EOA can update remote lanes and rate-limit configuration; the token's unbounded group-0 native mint remains separately reviewed in Mint Authority."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141614,
+        "sources": [
+          {
+            "label": "Polygon EURSPKCC CCIP pool",
+            "url": "https://polygon.blockscout.com/address/0xc9d26a02bfb80e177af352c3defe68ef5ea924fb"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink TokenPool source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/main/chains/evm/contracts/pools/TokenPool.sol"
+          }
+        ],
+        "evidence": "At Polygon block 92141614, pool 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb reports local token 0x99f70a0e1786402a6796c6b0aa997ef340a5c6da, type/version BurnWithFromMintTokenPool 1.6.1, and owner 0xEd608cf38968C0ba09676843D90B33Dd59dd7375. eth_getCode(owner) = 0x. Current remote pool/token mappings cover Ethereum, Arbitrum, and Base as recorded above."
+      },
+      {
+        "id": "eurspkcc-arbitrum-ccip-pool",
+        "label": "EURSPKCC Arbitrum CCIP BurnWithFromMintTokenPool 1.6.1",
+        "routeRefs": [
+          "arbitrum:0x0e389c83bc1d16d86412476f6103027555c03265"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xEd608cf38968C0ba09676843D90B33Dd59dd7375",
+        "failureDomainKeys": [
+          "eoa:arbitrum:0xed608cf38968c0ba09676843d90b33dd59dd7375"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495274659, the pool has three directed CCIP lanes: Ethereum selector 5009297550715157269 to pool 0x57fa613b284f05421f78c8bd579555d5c0d7783d and token 0x3868d4e336d14d38031cf680329d31e4712e11cc; Polygon selector 4051577828743386545 to pool 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb and token 0x99f70a0e1786402a6796c6b0aa997ef340a5c6da; Base selector 15971525489660198786 to pool 0x1cd239b73ff2ed0a10767f7b6d4880ac399a3896 and token 0x4f33acf823e6eeb697180d553ce0c710124c8d59.",
+          "rateLimits": "The pool uses per-lane CCIP inbound and outbound rate limiters. The shared owner EOA can call setChainRateLimiterConfig, so the configured bridge bound can be widened or removed.",
+          "pausersAdminsUpgraders": "typeAndVersion() = BurnWithFromMintTokenPool 1.6.1; owner() is the shared EOA 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, which can call applyChainUpdates for remote pool/token and lane administration.",
+          "onchainAmountBounds": "The Chainlink TokenPool implementation validates the local token, RMN curse state, authorized OffRamp, configured source pool, and inbound rate limiter before releaseOrMint; BurnWithFromMintTokenPool burns source pool-held tokens and mints the destination receiver, so this is conserved bridge accounting rather than independent native issuance."
+        },
+        "capDescription": "The pool provides CCIP bridge mint and burn against source-lane accounting; per-lane rate limits and remote configuration are owner-controlled.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared owner EOA can update remote lanes and rate-limit configuration; the token's unbounded group-0 native mint remains separately reviewed in Mint Authority."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495274659,
+        "sources": [
+          {
+            "label": "Arbitrum EURSPKCC CCIP pool",
+            "url": "https://arbitrum.blockscout.com/address/0xc9d26a02bfb80e177af352c3defe68ef5ea924fb"
+          },
+          {
+            "label": "Arbitrum One PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink TokenPool source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/main/chains/evm/contracts/pools/TokenPool.sol"
+          }
+        ],
+        "evidence": "At Arbitrum block 495274659, pool 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb reports local token 0x0e389c83bc1d16d86412476f6103027555c03265, type/version BurnWithFromMintTokenPool 1.6.1, and owner 0xEd608cf38968C0ba09676843D90B33Dd59dd7375. eth_getCode(owner) = 0x. Current remote pool/token mappings cover Ethereum, Polygon, and Base as recorded above."
+      },
+      {
+        "id": "eurspkcc-base-ccip-pool",
+        "label": "EURSPKCC Base CCIP BurnWithFromMintTokenPool 1.6.1",
+        "routeRefs": [
+          "base:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xEd608cf38968C0ba09676843D90B33Dd59dd7375",
+        "failureDomainKeys": [
+          "eoa:base:0xed608cf38968c0ba09676843d90b33dd59dd7375"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50064051, the pool has three directed CCIP lanes: Ethereum selector 5009297550715157269 to pool 0x57fa613b284f05421f78c8bd579555d5c0d7783d and token 0x3868d4e336d14d38031cf680329d31e4712e11cc; Polygon selector 4051577828743386545 to pool 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb and token 0x99f70a0e1786402a6796c6b0aa997ef340a5c6da; Arbitrum selector 4949039107694359620 to pool 0xc9d26a02bfb80e177af352c3defe68ef5ea924fb and token 0x0e389c83bc1d16d86412476f6103027555c03265.",
+          "rateLimits": "The pool uses per-lane CCIP inbound and outbound rate limiters. The shared owner EOA can call setChainRateLimiterConfig, so the configured bridge bound can be widened or removed.",
+          "pausersAdminsUpgraders": "typeAndVersion() = BurnWithFromMintTokenPool 1.6.1; owner() is the shared EOA 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, which can call applyChainUpdates for remote pool/token and lane administration.",
+          "onchainAmountBounds": "The Chainlink TokenPool implementation validates the local token, RMN curse state, authorized OffRamp, configured source pool, and inbound rate limiter before releaseOrMint; BurnWithFromMintTokenPool burns source pool-held tokens and mints the destination receiver, so this is conserved bridge accounting rather than independent native issuance."
+        },
+        "capDescription": "The pool provides CCIP bridge mint and burn against source-lane accounting; per-lane rate limits and remote configuration are owner-controlled.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared owner EOA can update remote lanes and rate-limit configuration; the token's unbounded group-0 native mint remains separately reviewed in Mint Authority."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064051,
+        "sources": [
+          {
+            "label": "Base EURSPKCC CCIP pool",
+            "url": "https://base.blockscout.com/address/0x1cd239b73ff2ed0a10767f7b6d4880ac399a3896"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink TokenPool source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/main/chains/evm/contracts/pools/TokenPool.sol"
+          }
+        ],
+        "evidence": "At Base block 50064051, pool 0x1cd239b73ff2ed0a10767f7b6d4880ac399a3896 reports local token 0x4f33acf823e6eeb697180d553ce0c710124c8d59, type/version BurnWithFromMintTokenPool 1.6.1, and owner 0xEd608cf38968C0ba09676843D90B33Dd59dd7375. eth_getCode(owner) = 0x. Current remote pool/token mappings cover Ethereum, Polygon, and Arbitrum as recorded above."
+      },
+      {
+        "id": "eurspkcc-ccip-pool-owner",
+        "label": "EURSPKCC shared CCIP pool owner EOA",
+        "routeRefs": [
+          "ethereum:0x3868d4e336d14d38031cf680329d31e4712e11cc",
+          "polygon:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+          "arbitrum:0x0e389c83bc1d16d86412476f6103027555c03265",
+          "base:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xEd608cf38968C0ba09676843D90B33Dd59dd7375",
+        "failureDomainKeys": [
+          "eoa:ethereum:0xed608cf38968c0ba09676843d90b33dd59dd7375",
+          "eoa:polygon:0xed608cf38968c0ba09676843d90b33dd59dd7375",
+          "eoa:arbitrum:0xed608cf38968c0ba09676843d90b33dd59dd7375",
+          "eoa:base:0xed608cf38968c0ba09676843d90b33dd59dd7375"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At the four current pool-read heads, the same owner controls each pool's configured remote pool/token mappings across all twelve directed EVM lanes.",
+          "rateLimits": "The owner can call setChainRateLimiterConfig on each pool and can widen or remove the per-lane bridge-mint bounds.",
+          "pausersAdminsUpgraders": "The owner can call applyChainUpdates on each pool for remote lane administration; eth_getCode(owner) = 0x on the Ethereum observation and the same EOA address is returned by all four current pool reads."
+        },
+        "capDescription": "A single EOA owns the four CCIP pools and can administer peer mappings and per-lane rate-limit configuration, but it is not a direct caller of the native token mint function.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The shared EOA is a common-mode bridge failure domain across Ethereum, Polygon, Arbitrum, and Base; CCIP RMN, OffRamp, source-pool, and burn accounting checks remain route invariants."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770462,
+        "sources": [
+          {
+            "label": "Ethereum EURSPKCC CCIP pool",
+            "url": "https://eth.blockscout.com/address/0x57fa613b284f05421f78c8bd579555d5c0d7783d"
+          },
+          {
+            "label": "Polygon EURSPKCC CCIP pool",
+            "url": "https://polygon.blockscout.com/address/0xc9d26a02bfb80e177af352c3defe68ef5ea924fb"
+          },
+          {
+            "label": "Arbitrum EURSPKCC CCIP pool",
+            "url": "https://arbitrum.blockscout.com/address/0xc9d26a02bfb80e177af352c3defe68ef5ea924fb"
+          },
+          {
+            "label": "Base EURSPKCC CCIP pool",
+            "url": "https://base.blockscout.com/address/0x1cd239b73ff2ed0a10767f7b6d4880ac399a3896"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Current pool reads on 2026-08-16 identify owner 0xEd608cf38968C0ba09676843D90B33Dd59dd7375 for Ethereum block 25770462, Polygon block 92141614, Arbitrum block 495274659, and Base block 50064051. The owner is an EOA (Ethereum eth_getCode = 0x) and its reviewed powers are applyChainUpdates and setChainRateLimiterConfig across the four pools."
       }
     ]
   }

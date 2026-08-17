@@ -8,11 +8,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Polygon, XDC, Algorand, and Stellar (STASIS's published issuance chains; Ethereum delegate/owner verified on-chain). Arbitrum EURS is a Multichain representation (AnyswapV4Router owner, mint simulation verified) and Gnosis EURS is the OmniBridge representation (mediator owner verified). DefiLlama additionally reports EURS supply under the raw chain label Everscale, which does not canonicalize to any CHAIN_META entry — a policy-maintainer-routed label pool, not fixable from coin data (verified 2026-07-30: Everscale is the only uncanonicalized label and its €1,587.58 equals the full unmatched-chain-label pool).",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Kimi T57 wave-2 label-pool verification",
-    "confidence": "probable",
+    "tier": "external-lock-mint",
+    "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Algorand, Stellar, and XDC. Polygon EURS is a Polygon PoS lock/mint representation, Arbitrum EURS is a Multichain lock/mint representation, and Gnosis EURS is a Gnosis OmniBridge lock/unlock-and-mint representation; their controllers and upgrade, validator, and limit domains are assessed in structured Bridge Risk controls rather than Mint Authority. DefiLlama additionally reports EURS supply under the raw chain label Everscale, which does not canonicalize to any CHAIN_META entry — a policy-maintainer-routed label pool, not fixable from coin data (verified 2026-07-30: Everscale is the only uncanonicalized label and its €1,587.58 equals the full unmatched-chain-label pool).",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex FIX2-12 mint/bridge boundary review; Kimi T57 wave-2 label-pool verification",
+    "confidence": "verified",
     "sources": [
       {
         "label": "STASIS website",
@@ -39,13 +39,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "STASIS-issued native deployment; on Ethereum the EURSToken delegate is the reviewed 3-of-7 STASIS Safe and the token owner is the reviewed issuer EOA; EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "Re-verified at Ethereum block 25770442 on 2026-08-16: the STASIS owner Safe remains the verified owner/delegate authority for the native EURSToken. Current createTokens and freeze/unfreeze call simulations succeeded from the Safe and reverted from the slot-3 EOA, whose exact storage role remains unresolved. The Safe-gated setDelegate surface controls native mint logic; this route is issuer-minted natively, not a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770442,
         "sources": [
           {
-            "label": "STASIS EURS",
-            "url": "https://stasis.net/"
+            "label": "EURS Ethereum contract",
+            "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8#code"
+          },
+          {
+            "label": "STASIS EURS contract source",
+            "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
@@ -68,9 +77,10 @@
           "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Correction 2026-08-08: this is a Polygon PoS UChildERC20 bridge representation, not issuer-native minting. At Polygon block 91674456, implementation() returned 0xe5c9cfa10ebbfed68ba556ffbba5a89ae9e28483 and DEPOSITOR_ROLE had exactly one member, ChildChainManager 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa. Deposit minting is tied to Polygon state sync and Ethereum escrow; implementation replacement routes through a 1-of-1 legacy multisig whose sole owner is a 5-of-9 Safe.",
+        "reviewNote": "Re-verified at Polygon block 92141568 on 2026-08-16: this is a Polygon PoS UChildERC20 bridge representation, not issuer-native minting. implementation() returned 0xe5c9cfa10ebbfed68ba556ffbba5a89ae9e28483 and DEPOSITOR_ROLE had exactly one member, ChildChainManager 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa. Deposit minting is tied to Polygon state sync and Ethereum escrow; the proxy owner 0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f is a 1-of-1 legacy multisig whose sole owner is the 5-of-9 Safe 0x3a635c48836e7c0b9aeb378640b0bfd516985cf5, and that path can replace bridge-mint logic.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-08",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141568,
         "sources": [
           {
             "label": "Polygon UChildERC20 source",
@@ -79,6 +89,10 @@
           {
             "label": "EURS Polygon proxy",
             "url": "https://polygonscan.com/address/0xe111178a87a3bff0c8d18decba5798827539ae99#code"
+          },
+          {
+            "label": "Polygon public RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
           }
         ]
       },
@@ -93,13 +107,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "Re-verified at Algorand round 64135657 on 2026-08-16: ASA 227855942 is STASIS EURO/EURS with six decimals and a maximum uint64 total. The issuer account is simultaneously manager, reserve, and freeze authority, with clawback set to the zero address; EURS is issuer-minted natively on this chain, not via a third-party bridge. The account endpoint does not expose its signer set.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 64135657,
         "sources": [
           {
-            "label": "STASIS EURS",
-            "url": "https://stasis.net/"
+            "label": "Algorand EURS ASA",
+            "url": "https://mainnet-idx.algonode.cloud/v2/assets/227855942"
+          },
+          {
+            "label": "Algorand EURS manager account",
+            "url": "https://mainnet-api.algonode.cloud/v2/accounts/KJIKORX3CEQWN4VBI3A2MILSLZ7ITYWY7JRUYN4TK33KXCZSFOGSO2WIH4"
+          },
+          {
+            "label": "Algorand current block",
+            "url": "https://mainnet-api.algonode.cloud/v2/blocks/64135657"
           }
         ]
       },
@@ -122,17 +145,22 @@
           "contract:arbitrum:0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Arbitrum EURS is a Multichain-bridged representation: owner() = AnyswapV4Router 0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50 (blockscout-verified) and an eth_call mint() simulation succeeds from that router and reverts from any other sender at 2026-07-20. Not a STASIS native issuance chain (STASIS lists only Ethereum, Polygon, XDC, XRPL, Algorand, and Stellar).",
+        "reviewNote": "Re-verified at Arbitrum block 495274817 on 2026-08-16: owner() on the EURS representation is the Multichain/Anyswap router 0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50. Prior route evidence observed the router-only mint gate, and the current owner read preserves the bridge-representation classification rather than native STASIS issuance. Current Multichain MPC/validator membership, pause state, and rate-limit configuration were not independently enumerated and remain explicit route-level evidence gaps.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495274817,
         "sources": [
           {
             "label": "Arbitrum blockscout AnyswapV4Router",
             "url": "https://arbitrum.blockscout.com/address/0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50"
           },
           {
-            "label": "STASIS EURS",
-            "url": "https://stasis.net/eurs"
+            "label": "Arbitrum EURS representation",
+            "url": "https://arbiscan.io/address/0xd22a58f79e9481d1a88e00c343885a588b34b68b#code"
+          },
+          {
+            "label": "Arbitrum JSON-RPC",
+            "url": "https://arbitrum-one.publicnode.com"
           }
         ]
       },
@@ -147,13 +175,14 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "Re-verified at Stellar ledger 63986038 on 2026-08-16: the EURS issuer account still had five active weight-one signers, a weight-zero master key, and low/medium/high thresholds of 3; last-modified ledger was 63395662. EURS is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 63986038,
         "sources": [
           {
-            "label": "STASIS EURS",
-            "url": "https://stasis.net/"
+            "label": "Stellar Horizon issuer account",
+            "url": "https://horizon.stellar.org/accounts/GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ"
           }
         ]
       },
@@ -168,22 +197,27 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "Re-verified at XDC block 106140914 on 2026-08-16: the EURS token's mint gate is controlled by 0x527e5b61bc8806059aef098c97fb36db3bc4cc63, a deployed MultiSigWallet-style 2-of-5 controller. createTokens(1) succeeded when simulated from that controller and reverted from unrelated senders. EURS is issuer-minted natively on this chain, not via a third-party bridge; the deployed token's exact verified source/version remains unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 106140914,
         "sources": [
           {
-            "label": "STASIS EURS",
-            "url": "https://stasis.net/"
+            "label": "XDC EURS contract record",
+            "url": "https://xdcscan.com/address/0x1eBb2C8a71A9ec59bF558886a8Adf8F4a565814F"
+          },
+          {
+            "label": "XDC public RPC",
+            "url": "https://rpc.xinfin.network"
           }
         ]
       },
       {
-        "id": "gnosis:0x9EE40742182707467f78344F6b287bE8704F27E2",
+        "id": "gnosis:0x9ee40742182707467f78344f6b287be8704f27e2",
         "sourceChain": "ethereum",
         "destinationChain": "gnosis",
         "canonicalChain": "ethereum",
-        "contractAddress": "0x9EE40742182707467f78344F6b287bE8704F27E2",
+        "contractAddress": "0x9ee40742182707467f78344f6b287be8704f27e2",
         "protocol": "Gnosis OmniBridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
@@ -197,15 +231,251 @@
           "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "'STASIS EURS Token on xDai' is the OmniBridge-minted representation: owner() = Gnosis OmniBridge mediator 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d (contract) verified on Gnosis at 2026-07-20.",
+        "reviewNote": "Re-verified at Gnosis block 47761362 on 2026-08-16: 'STASIS EURS Token on xDai' remains the OmniBridge-minted representation and owner() returned Gnosis OmniBridge mediator 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d. Gnosis documentation describes the lock/unlock-and-mint path, AMB validation by a 4-of-7 validator multisig, 8-of-15 governance, and daily limits; this is not an independent native STASIS issuance route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 47761362,
         "sources": [
           {
             "label": "Gnosis OmniBridge documentation",
             "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          },
+          {
+            "label": "Gnosis EURS representation",
+            "url": "https://gnosisscan.io/address/0x9ee40742182707467f78344f6b287be8704f27e2#code"
+          },
+          {
+            "label": "Gnosis JSON-RPC",
+            "url": "https://gnosis.publicnode.com"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "polygon-pos-child-chain-manager",
+        "label": "Polygon EURS ChildChainManager DEPOSITOR_ROLE",
+        "routeRefs": [
+          "polygon:0xe111178a87a3bff0c8d18decba5798827539ae99"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "UChildERC20 deposit minting is tied to Polygon PoS state sync corresponding to Ethereum bridge escrow; withdrawals burn the representation from the withdrawing caller.",
+          "caps": "No independent native issuance cap is claimed; the representation mint path is restricted to the ChildChainManager and the reviewed bridge accounting path."
+        },
+        "capDescription": "UChildERC20.deposit can mint only when called by Polygon ChildChainManager through the PoS state-sync path corresponding to Ethereum bridge escrow.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141568,
+        "sources": [
+          {
+            "label": "Polygon PoS UChildERC20 source",
+            "url": "https://github.com/maticnetwork/pos-portal/blob/master/contracts/child/ChildToken/UpgradeableChildERC20/UChildERC20.sol"
+          },
+          {
+            "label": "Polygon EURS proxy",
+            "url": "https://polygonscan.com/address/0xe111178a87a3bff0c8d18decba5798827539ae99#code"
+          },
+          {
+            "label": "Polygon public RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92141568, DEPOSITOR_ROLE had exactly one member, this ChildChainManager contract. The official UChildERC20 source permits minting only through deposit() restricted to that role and burns only the withdrawing caller. The manager cannot change its own role or the proxy implementation."
+      },
+      {
+        "id": "polygon-eurs-proxy-owner-multisig",
+        "label": "Polygon EURS UChild proxy-owner legacy multisig",
+        "routeRefs": [
+          "polygon:0xe111178a87a3bff0c8d18decba5798827539ae99"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f",
+        "failureDomainKeys": [
+          "multisig:polygon:0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f"
+        ],
+        "authorityType": "multisig",
+        "threshold": 1,
+        "signerCount": 1,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "Owner-gated updateImplementation/updateAndCall can replace the Polygon bridge-mint implementation and bypass current representation constraints."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141568,
+        "sources": [
+          {
+            "label": "Polygon EURS UChild proxy source",
+            "url": "https://github.com/maticnetwork/pos-portal/blob/master/contracts/child/ChildToken/UpgradeableChildERC20/UChildERC20Proxy.sol"
+          },
+          {
+            "label": "Polygon EURS proxy",
+            "url": "https://polygonscan.com/address/0xe111178a87a3bff0c8d18decba5798827539ae99#code"
+          },
+          {
+            "label": "Polygon EURS proxy-owner legacy multisig",
+            "url": "https://polygonscan.com/address/0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f#code"
+          }
+        ],
+        "evidence": "At Polygon block 92141568, EURS proxyOwner() returned this legacy MultiSigWallet and implementation() remained 0xe5c9cfa10ebbfed68ba556ffbba5a89ae9e28483. getOwners() returned only Safe 0x3a635c48836e7c0b9aeb378640b0bfd516985cf5 and required() returned 1. The UChild proxy exposes owner-gated updateImplementation/updateAndCall, so execution by the sole-owner Safe can replace bridge-mint logic and bypass current constraints."
+      },
+      {
+        "id": "polygon-eurs-proxy-owner-safe",
+        "label": "Polygon EURS proxy-owner Safe",
+        "routeRefs": [
+          "polygon:0xe111178a87a3bff0c8d18decba5798827539ae99"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x3a635c48836e7c0b9aeb378640b0bfd516985cf5",
+        "failureDomainKeys": [
+          "safe:polygon:0x3a635c48836e7c0b9aeb378640b0bfd516985cf5"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 9,
+        "safe": {
+          "owners": [
+            "0x9d851f8b8751c5fbc09b9e74e6e68e9950949052",
+            "0x10cb290fc4a5473460572ecf67b4c0cf06da99a3",
+            "0x1ae033d45ce93bbb0ddbf71a0da9de01fefd8529",
+            "0x4e981bae8e3cd06ca911fffe5504b2653ac1c38a",
+            "0x39415255619783a2e71fcf7d8f708a951d92e1b6",
+            "0xb771380f912e4b5f6beddf81314c383c13f16ab5",
+            "0x06f2cafb5276b11baa6679abe49d5a5c0a911f5b",
+            "0xab4045c93e4effa9b325f706c9a690ed00d08958",
+            "0x342ebaca3acc54d6f5ee78073fec4af07f42b94e"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.1.1",
+          "observedAt": "2026-08-16",
+          "observedBlock": 92141568,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The 5-of-9 Safe is the sole owner of the 1-of-1 proxy-owner multisig and can authorize bridge-mint implementation replacement through that outer owner path."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141568,
+        "sources": [
+          {
+            "label": "Polygon EURS proxy-owner Safe",
+            "url": "https://polygonscan.com/address/0x3a635c48836e7c0b9aeb378640b0bfd516985cf5#code"
+          },
+          {
+            "label": "Polygon public RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92141568, the sole owner of the 1-of-1 proxy-owner multisig was this Safe. On-chain reads returned threshold 5, the listed nine owners, Safe version 1.1.1, no enabled modules, and zero guard and fallback-handler slots; that Safe version has no module-guard facility. A 5-of-9 Safe quorum can therefore authorize EURS bridge implementation replacement through the outer multisig."
+      },
+      {
+        "id": "arbitrum-multichain-router",
+        "label": "Arbitrum EURS Multichain router owner",
+        "routeRefs": [
+          "arbitrum:0xd22a58f79e9481d1a88e00c343885a588b34b68b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50",
+        "failureDomainKeys": [
+          "protocol:multichain",
+          "contract:arbitrum:0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The route is classified as a Multichain lock/mint representation of Ethereum EURS; source-side conservation and escrow accounting were not independently reverified in this pass.",
+          "rateLimits": "Current Multichain MPC/validator membership, pause state, and rate-limit configuration were not independently enumerated."
+        },
+        "capDescription": "The current token owner and prior route evidence identify the Multichain router as the route-level mint gate; the complete MPC and rate-limit controls remain unresolved.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495274817,
+        "sources": [
+          {
+            "label": "Arbitrum blockscout AnyswapV4Router",
+            "url": "https://arbitrum.blockscout.com/address/0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50"
+          },
+          {
+            "label": "Arbitrum EURS representation",
+            "url": "https://arbiscan.io/address/0xd22a58f79e9481d1a88e00c343885a588b34b68b#code"
+          },
+          {
+            "label": "Arbitrum JSON-RPC",
+            "url": "https://arbitrum-one.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 495274817, owner() on the EURS representation returned this Multichain/Anyswap router. Existing route evidence observed a router-only mint() gate, while current MPC/validator membership, pause state, and rate limits were not independently enumerated; those unknowns remain scoreable route-level gaps rather than native Mint Authority evidence."
+      },
+      {
+        "id": "gnosis-omnibridge-mediator",
+        "label": "Gnosis EURS OmniBridge mediator",
+        "routeRefs": [
+          "gnosis:0x9ee40742182707467f78344f6b287be8704f27e2"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "Ethereum-to-Gnosis flow locks the source EURS and mints the representation; Gnosis-to-Ethereum burns the representation and unlocks the source token.",
+          "attestorQuorum": "Gnosis OmniBridge documentation describes AMB validation by a 4-of-7 validator multisig and 8-of-15 governance.",
+          "rateLimits": "The Gnosis OmniBridge documentation identifies daily transfer limits for the route."
+        },
+        "capDescription": "The mediator is the representation token owner and route-level lock/unlock-and-mint controller; validator quorum, governance, and daily-limit domains constrain the bridge path rather than native STASIS issuance.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 47761362,
+        "sources": [
+          {
+            "label": "Gnosis OmniBridge documentation",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          },
+          {
+            "label": "Gnosis EURS representation",
+            "url": "https://gnosisscan.io/address/0x9ee40742182707467f78344f6b287be8704f27e2#code"
+          },
+          {
+            "label": "Gnosis JSON-RPC",
+            "url": "https://gnosis.publicnode.com"
+          }
+        ],
+        "evidence": "At Gnosis block 47761362, the EURS representation owner() returned this Gnosis OmniBridge mediator. The primary Gnosis documentation describes the mediator's lock/unlock-and-mint path, AMB validation by a 4-of-7 validator multisig, 8-of-15 governance, and daily limits. These bridge controls remain in Bridge Risk and are not counted as native Mint Authority."
       }
     ]
   }

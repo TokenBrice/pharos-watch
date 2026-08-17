@@ -43,6 +43,16 @@
       "chain": "plume",
       "address": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
       "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

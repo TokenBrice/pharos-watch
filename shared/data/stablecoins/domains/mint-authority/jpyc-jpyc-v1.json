@@ -4,53 +4,42 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "JPYC v1 is a non-upgradeable legacy ERC-20 ('JPYC is ERC20, owned') with an owner-restricted mint(address,uint256) function; JPYC Inc. as contract owner is the sole minter against yen reserves.",
+    "summary": "JPYC v1 has one reviewed native issuance deployment on Ethereum: the non-upgradeable legacy ERC-20 exposes an owner-restricted mint(address,uint256) function, and the current owner EOA can mint arbitrary amounts. Polygon and Gnosis are bridge representations assessed under bridgeRouteRisk, not additional native issuance chains.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x94c2d94a786e1aaa07e95d084e88cd3a0680d152",
+        "deploymentRefs": [
+          "ethereum:0x2370f9d504c7a6e775bf6e14b3f12846b594cd53"
+        ],
         "label": "JPYC v1 Ethereum owner/minter (EOA)",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770969,
         "sources": [
           {
             "label": "Ethereum JPYC v1 contract",
             "url": "https://etherscan.io/address/0x2370f9d504c7a6e775bf6e14b3f12846b594cd53"
+          },
+          {
+            "label": "Official JPYC v1 source",
+            "url": "https://github.com/jcam1/jpyc/blob/2fdca9ad7456a890b20ae45910ae8d3350ff0d72/jpyc.sol"
           }
         ],
-        "evidence": "At Ethereum block 25295183: eth_getStorageAt slot 5 of 0x2370f9d504c7a6e775bf6e14b3f12846b594cd53 returned 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152; eth_getCode returned no bytecode (EOA). EIP-1967 impl slot is zero (non-upgradeable)."
-      },
-      {
-        "chain": "polygon",
-        "label": "JPYC v1 Polygon (UChildERC20Proxy / PoS bridge)",
-        "role": "direct-minter",
-        "authorityType": "bridge",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Blockscout confirms Polygon JPYC v1 (0x6ae7dfc7...) is a UChildERC20Proxy controlled by the Polygon PoS bridge predicate, not JPYC Inc. directly."
-      },
-      {
-        "chain": "gnosis",
-        "label": "JPYC v1 Gnosis (OmniBridge EternalStorageProxy)",
-        "role": "direct-minter",
-        "authorityType": "bridge",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Gnosis block 25295183: storage slots 6–7 of 0x417602f4fbdd471a431ae29fb5fe0a681964c11b returned 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d (EternalStorageProxy = Gnosis OmniBridge); mint on Gnosis is bridge-mediated."
+        "evidence": "At Ethereum block 25770969 (2026-08-16T23:38:47Z), storage slot 8 of 0x2370f9d504c7a6e775bf6e14b3f12846b594cd53 returned 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152; eth_getCode returned no bytecode (EOA), totalSupply() was 1,300,000,000 JPYC, and both EIP-1967 implementation and admin slots were zero. The official JPYC v1 source defines owner-only mint(address,uint256) with no aggregate or economic cap, so this is the sole native issuance control."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295183: storage slot 5 returned EOA 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152 as owner/minter; contract is non-upgradeable. Polygon deployment is UChildERC20Proxy (Polygon PoS bridge). Gnosis deployment is OmniBridge-controlled (EternalStorageProxy 0xf6a780...). Ethereum direct-minter EOA is JPYC Inc.'s issuer key. Economic-posture fields reviewed 2026-08-15: the issuer EOA can mint without an enforced cap, while no recurring whole-supply attestation or compliance-sidecar regulator is established.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "The corrected native scope is Ethereum only. At Ethereum block 25770969, storage slot 8 of 0x2370f9d504c7a6e775bf6e14b3f12846b594cd53 returned EOA 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152, which had empty code; the official JPYC v1 source exposes owner-only mint(address,uint256) with no aggregate, time-window, reserve, or economic cap, and totalSupply() was 1,300,000,000 JPYC. Polygon and Gnosis are mapped bridge representations whose destination mint, burn, escrow, messaging, upgrade, and validator controls are reviewed under bridgeRouteRisk and are excluded from native Mint Authority. The native economic annotations therefore remain concentrated-admin, unbounded, unknown reconciliation, and no supervision.",
+      "reviewer": "Codex mint/bridge boundary migration; verified JPYC v1 finding",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Ethereum JPYC v1 contract",
@@ -59,6 +48,25 @@
         {
           "label": "JPYC GitHub",
           "url": "https://github.com/jcam1/jpyc/blob/2fdca9ad7456a890b20ae45910ae8d3350ff0d72/jpyc.sol"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x2370f9d504c7a6e775bf6e14b3f12846b594cd53"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770969,
+      "sources": [
+        {
+          "label": "Official JPYC v1 source",
+          "url": "https://github.com/jcam1/jpyc/blob/2fdca9ad7456a890b20ae45910ae8d3350ff0d72/jpyc.sol"
+        },
+        {
+          "label": "Ethereum JPYC v1 contract",
+          "url": "https://etherscan.io/address/0x2370f9d504c7a6e775bf6e14b3f12846b594cd53"
         }
       ]
     }

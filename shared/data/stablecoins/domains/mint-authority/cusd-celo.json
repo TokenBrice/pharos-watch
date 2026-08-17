@@ -4,35 +4,68 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDm minting on Celo routes through the authorized Mento Broker, while the same 4-of-6 Mento Safe can authorize minters and immediately replace token logic on both Celo and Monad. The NEAR representation has one FullAccess key that can replace its bridge-token contract. These self-controlled paths make issuance economically unbounded.",
+    "summary": "USDm has one canonical native issuance deployment on Celo. The Mento Broker and ReserveLiquidityStrategy are active Celo minters; the Broker is Timelock-backed for configuration while the token owner Safe can authorize minters and replace StableTokenV3 immediately. Monad NTT, NEAR, Ethereum, Solana, and Klaytn are bridge representations and are excluded from Mint Authority. Native Celo issuance remains economically unbounded because the owner can authorize additional minters or replace mint-critical logic.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "celo:0x765de816845861e75a25fca122bb6898b8b1282a"
+      ],
       "proxyAddresses": [
-        "0x765de816845861e75a25fca122bb6898b8b1282a"
+        "0x765de816845861e75a25fca122bb6898b8b1282a",
+        "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b"
       ],
       "implementationAddresses": [
-        "0x815795c30d0758a297b08cd4e0643620c974c318"
+        "0x815795c30d0758a297b08cd4e0643620c974c318",
+        "0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37",
+        "0x420fbdb50dadf0286144bff91ed62a6893dee148"
       ],
       "adminAddresses": [
-        "0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "0x890db8a597940165901372dd7db61c9f246e2147",
+        "0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Mento USDm token owner Safe (Celo + Monad)",
+      "controlRef": "Mento USDm Celo native token owner Safe",
       "delaySec": 0,
-      "observedAt": "2026-08-08",
-      "observedBlock": 74314266,
+      "observedAt": "2026-08-16",
+      "observedBlock": 75020227,
       "sources": [
         {
-          "label": "Celo forno RPC",
+          "label": "Mento StableTokenV3 source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenV3.sol"
+        },
+        {
+          "label": "Mento Broker source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/Broker.sol"
+        },
+        {
+          "label": "Mento ReserveLiquidityStrategy source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/liquidityStrategies/ReserveLiquidityStrategy.sol"
+        },
+        {
+          "label": "Celo USDm verified proxy",
+          "url": "https://celo.blockscout.com/address/0x765de816845861e75a25fca122bb6898b8b1282a"
+        },
+        {
+          "label": "Celo Broker",
+          "url": "https://celo.blockscout.com/address/0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+        },
+        {
+          "label": "Celo ReserveLiquidityStrategy",
+          "url": "https://celo.blockscout.com/address/0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b"
+        },
+        {
+          "label": "Mento Broker Timelock",
+          "url": "https://celo.blockscout.com/address/0x890db8a597940165901372dd7db61c9f246e2147"
+        },
+        {
+          "label": "ReserveLiquidityStrategy ProxyAdmin",
+          "url": "https://celo.blockscout.com/address/0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7"
+        },
+        {
+          "label": "Celo Forno RPC",
           "url": "https://forno.celo.org"
-        },
-        {
-          "label": "Celo explorer cUSD token",
-          "url": "https://celoscan.io/token/0x765de816845861e75a25fca122bb6898b8b1282a"
-        },
-        {
-          "label": "Celo StableToken proxy verified source",
-          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x765de816845861e75a25fca122bb6898b8b1282a"
         }
       ]
     },
@@ -40,13 +73,23 @@
       {
         "chain": "celo",
         "address": "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "deploymentRefs": [
+          "celo:0x765de816845861e75a25fca122bb6898b8b1282a"
+        ],
         "label": "Mento Broker — authorized Celo USDm minter",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "timelockDelaySec": 172800,
+        "capDescription": "The Broker mints through owner-configured exchange providers, reserve pools, and trading limits, but USDm has no immutable token-level numeric supply ceiling; its configuration and upgrade path are governed by the Mento Timelock.",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 74314266,
+        "failureDomainKeys": [
+          "contract:celo:0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+          "timelock:celo:0x890db8a597940165901372dd7db61c9f246e2147"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
         "sources": [
           {
             "label": "Celo USDm verified proxy",
@@ -54,19 +97,61 @@
           },
           {
             "label": "Mento Broker verified contract",
-            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+            "url": "https://celo.blockscout.com/address/0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+          },
+          {
+            "label": "Mento Broker source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/Broker.sol"
           },
           {
             "label": "Celo Forno RPC",
             "url": "https://forno.celo.org"
           }
         ],
-        "evidence": "At Celo block 74314266, USDm isMinter(0x777a8255ca72412f0d706dc03c9d1987306b4cad) returned true. The verified Mento Broker is therefore the active contract minter; its issuance path is governed by Mento exchange and reserve logic but has no immutable token-level numeric supply ceiling."
+        "evidence": "At Celo block 75020227, USDm isMinter(0x777a8255ca72412f0d706dc03c9d1987306b4cad) returned true. The Broker owner is Timelock 0x890db8a597940165901372dd7db61c9f246e2147; the Broker implementation slot returned 0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37 and the Timelock implementation returned 0x3efad8f997f705675924470ec84677db68c5a2d0 with getMinDelay() = 172800 seconds. The verified Broker source mints through transferOut() after owner-configured exchange-provider, reserve, and trading-limit checks, but no immutable token-level numeric supply ceiling was found."
+      },
+      {
+        "chain": "celo",
+        "address": "0x890db8a597940165901372dd7db61c9f246e2147",
+        "deploymentRefs": [
+          "celo:0x765de816845861e75a25fca122bb6898b8b1282a"
+        ],
+        "label": "Mento Broker Timelock — native configuration and upgrade authority",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "capDescription": "The Timelock can configure or replace the Broker mint path after its 172800-second delay; the token owner Safe remains an independent immediate native mint-logic authority.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "timelock:celo:0x890db8a597940165901372dd7db61c9f246e2147"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
+        "sources": [
+          {
+            "label": "Mento Broker",
+            "url": "https://celo.blockscout.com/address/0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+          },
+          {
+            "label": "Mento Broker Timelock",
+            "url": "https://celo.blockscout.com/address/0x890db8a597940165901372dd7db61c9f246e2147"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 75020227, the Mento Broker owner and proxy-admin path resolved to Timelock 0x890db8a597940165901372dd7db61c9f246e2147. The Timelock's getMinDelay() returned 172800 seconds, so it governs Broker configuration and mint-critical upgrades with a two-day delay."
       },
       {
         "chain": "celo",
         "address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
-        "label": "Mento USDm token owner Safe (Celo + Monad)",
+        "deploymentRefs": [
+          "celo:0x765de816845861e75a25fca122bb6898b8b1282a"
+        ],
+        "label": "Mento USDm Celo native token owner Safe",
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
@@ -85,64 +170,106 @@
           ],
           "threshold": 4,
           "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
           "version": "1.4.1+L2",
-          "observedBlock": 74314266,
-          "observedAt": "2026-08-08",
+          "observedBlock": 75020227,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "observedAt": "2026-08-08",
-        "observedBlock": 74314266,
+        "failureDomainKeys": [
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
         "sources": [
           {
-            "label": "Mento reserve docs",
-            "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+            "label": "Mento USDm Celo verified proxy",
+            "url": "https://celo.blockscout.com/address/0x765de816845861e75a25fca122bb6898b8b1282a"
           },
           {
-            "label": "Safe Transaction Service - Celo",
+            "label": "Mento Safe Transaction Service - Celo",
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
           },
           {
             "label": "Celo Forno RPC",
             "url": "https://forno.celo.org"
-          },
-          {
-            "label": "Monad RPC",
-            "url": "https://rpc.monad.xyz"
           }
         ],
-        "evidence": "At Celo block 74314266, USDm owner(), proxy _getOwner(), and the EIP-1967 admin slot all returned this Safe; _getImplementation() returned 0x815795c30d0758a297b08cd4e0643620c974c318 and isMinter(Broker) was true. On-chain Safe reads and the Safe Transaction Service returned the same six owners, threshold 4, no modules, and zero guard. At Monad block 94280759, the USDm owner and ProxyAdmin owner were the same address and its Monad Safe copy also returned the same six owners and threshold 4. The Safe can authorize minters and replace mint logic immediately, so it can raise or remove issuance bounds."
+        "evidence": "At Celo block 75020227, USDm owner(), the custom proxy owner slot, and the EIP-1967 admin slot resolved to the 4-of-6 Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458. getOwners() returned six owners, getThreshold() returned 4, and the reviewed module-list call returned no enabled modules; the current SafeL2 ABI did not expose a guard getter, so no current guard value is claimed. The Safe can authorize another native minter or replace StableTokenV3 immediately. Monad representation and NTT ownership by this same Safe are separately authored under Bridge Risk and do not expand the canonical Celo Mint Authority scope."
       },
       {
-        "chain": "near",
-        "label": "NEAR cUSD bridge-token FullAccess key",
+        "chain": "celo",
+        "address": "0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b",
+        "deploymentRefs": [
+          "celo:0x765de816845861e75a25fca122bb6898b8b1282a"
+        ],
+        "label": "Mento ReserveLiquidityStrategy — authorized Celo USDm minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "capDescription": "The ReserveLiquidityStrategy can mint USDm when its configured reserve pools receive stable-asset liquidity; the strategy and its proxy administrator remain upgradeable, so no immutable token-level cap is claimed.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "contract:celo:0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
+        "sources": [
+          {
+            "label": "Mento ReserveLiquidityStrategy source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/liquidityStrategies/ReserveLiquidityStrategy.sol"
+          },
+          {
+            "label": "Celo ReserveLiquidityStrategy",
+            "url": "https://celo.blockscout.com/address/0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b"
+          },
+          {
+            "label": "Celo USDm verified proxy",
+            "url": "https://celo.blockscout.com/address/0x765de816845861e75a25fca122bb6898b8b1282a"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 75020227, USDm isMinter(0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b) returned true. The strategy implementation was 0x420fbdb50dadf0286144bff91ed62a6893dee148, its ProxyAdmin was 0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7, and the strategy owner and ProxyAdmin owner were the Mento Safe. reserve() returned 0x4255cf38e51516766180b33122029a88cb853806 with four configured pools. The verified source's _transferToPool() calls USDm mint() for configured stable-asset pools, establishing a second native Celo issuance path."
+      },
+      {
+        "chain": "celo",
+        "address": "0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7",
+        "deploymentRefs": [
+          "celo:0x765de816845861e75a25fca122bb6898b8b1282a"
+        ],
+        "label": "ReserveLiquidityStrategy ProxyAdmin — native mint-logic upgrade path",
         "role": "proxy-admin",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
-          "near-access-key:ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb"
+          "contract:celo:0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
         ],
-        "observedAt": "2026-08-08",
-        "observedBlock": 210490105,
+        "observedAt": "2026-08-16",
+        "observedBlock": 75020227,
         "sources": [
           {
-            "label": "NEAR RPC account view",
-            "url": "https://rpc.mainnet.near.org"
+            "label": "ReserveLiquidityStrategy ProxyAdmin",
+            "url": "https://celo.blockscout.com/address/0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7"
           },
           {
-            "label": "NEAR FullAccess key semantics",
-            "url": "https://docs.near.org/protocol/accounts-contracts/access-keys"
+            "label": "Celo ReserveLiquidityStrategy",
+            "url": "https://celo.blockscout.com/address/0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b"
           },
           {
-            "label": "NEAR contract-upgrade semantics",
-            "url": "https://docs.near.org/smart-contracts/release/upgrade"
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
           }
         ],
-        "evidence": "At finalized NEAR height 210490105, cusd.token.a11bd.near had deployed code hash 2K5PmiMQgfCZWirws2FS5mUNVc1UfHQdQD5ZSRUQB2GR and exactly one FullAccess key, ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb. The same key is also present on a11bd.near, while a separate parent key does not automatically control the child. NEAR's primary documentation confirms a FullAccess key can call any method, add keys, and redeploy contract code, so this single key can replace bridge-token mint logic even though the current contract exposes no owner view."
+        "evidence": "At Celo block 75020227, the ReserveLiquidityStrategy proxy resolved to implementation 0x420fbdb50dadf0286144bff91ed62a6893dee148 and ProxyAdmin 0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7. The ProxyAdmin owner was the Mento Safe, so the Safe can replace the native strategy mint logic without an independently identified timelock."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -152,41 +279,37 @@
       "disposition": "scoreable",
       "sources": [
         {
-          "label": "Mento reserve docs",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+          "label": "Mento StableTokenV3 source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenV3.sol"
         },
         {
-          "label": "Safe Transaction Service - Celo",
-          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          "label": "Mento Broker source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/Broker.sol"
+        },
+        {
+          "label": "Mento ReserveLiquidityStrategy source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/liquidityStrategies/ReserveLiquidityStrategy.sol"
         },
         {
           "label": "Mento reserve dashboard",
           "url": "https://reserve.mento.org/"
         },
         {
-          "label": "USDm Celo verified proxy",
-          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x765de816845861e75a25fca122bb6898b8b1282a"
+          "label": "Mento Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        },
+        {
+          "label": "Celo USDm verified proxy",
+          "url": "https://celo.blockscout.com/address/0x765de816845861e75a25fca122bb6898b8b1282a"
         },
         {
           "label": "Celo Forno RPC",
           "url": "https://forno.celo.org"
-        },
-        {
-          "label": "Monad RPC",
-          "url": "https://rpc.monad.xyz"
-        },
-        {
-          "label": "NEAR RPC",
-          "url": "https://rpc.mainnet.near.org"
-        },
-        {
-          "label": "NEAR FullAccess key semantics",
-          "url": "https://docs.near.org/protocol/accounts-contracts/access-keys"
         }
       ],
-      "evidence": "At Celo block 74314266, the verified USDm proxy's owner(), _getOwner(), and EIP-1967 admin slot all resolved to the 4-of-6 Mento Safe; _getImplementation() and the implementation slot both resolved to 0x815795c30d0758a297b08cd4e0643620c974c318, and the Mento Broker remained an authorized minter. The same Safe address owned the Monad token and Monad ProxyAdmin at block 94280759, with the same six owners and 4-of-6 threshold; the prior seventh Monad signer was no longer present. Neither path has an independent timelock, so the Safe can authorize or replace mint logic and overall cap semantics are unbounded. At finalized NEAR height 210490105, the cUSD bridge-token account had exactly one FullAccess key; contrary to the previous profile, the parent account does not control a subaccount merely through account hierarchy, but the shared key directly controls this child and can redeploy its code. Mento publishes live on-chain reserve state and a continuously updating dashboard, supporting continuous reconciliation; no prudential supervisor was identified.",
-      "reviewer": "OpenAI Codex C05 control review",
-      "reviewedAt": "2026-08-08"
+      "evidence": "Canonical-chain review at Celo block 75020227 on 2026-08-16: USDm proxy 0x765de816845861e75a25fca122bb6898b8b1282a used StableTokenV3 implementation 0x815795c30d0758a297b08cd4e0643620c974c318 and was owned/administered by the 4-of-6 Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad and ReserveLiquidityStrategy 0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b both returned true from isMinter(). Broker configuration and upgradeability resolve to Timelock 0x890db8a597940165901372dd7db61c9f246e2147 with getMinDelay() = 172800 seconds; the strategy implementation 0x420fbdb50dadf0286144bff91ed62a6893dee148 is behind ProxyAdmin 0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7 owned by the same Safe, and reserve() returned 0x4255cf38e51516766180b33122029a88cb853806 with four configured pools. The token owner can replace mint-critical logic and authorize another native minter immediately, so native economic cap semantics remain unbounded. The reserve dashboard and live strategy support continuous reconciliation, and no prudential supervisor was identified. The canonical-side NTT minter role and all non-Celo deployments are bridge machinery and are reviewed separately under bridgeRouteRisk; a complete historical MinterUpdated event sweep was not recovered, so these are not claimed to be the only minters.",
+      "reviewer": "Codex cusd-celo mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

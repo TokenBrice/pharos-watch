@@ -22,9 +22,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT or Hyperlane implementing hub lock/release plus spoke mint/burn logic. The 2026-07-20 cohort resolved the non-native route controls with on-chain reads, including Solana's documented M Portal program. The 2026-07-22 pass also maps DefiLlama's Hyperliquid supply label to the same chain-999 HyperEVM deployment and control domain; see per-route evidence.",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-CORP-A wave6",
+    "summary": "M0 has one native issuer on Ethereum; all other authored deployments, including Solana, are bridge representations. M Portals use Ethereum hub lock/release and spoke mint/burn through Wormhole NTT or Hyperlane. The Solana 1-of-2 inbound mint multisig and Portal program upgrade EOA are route-scoped Bridge Risk controls, not native M mint authority; the remaining EVM route machinery stays represented by the reviewed route inventory.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -539,6 +539,90 @@
             "url": "https://docs.m0.org/"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "m0-solana-inbound-mint-multisig",
+        "label": "M Solana inbound mint multisig",
+        "routeRefs": [
+          "solana:mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "contract:solana:ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th"
+        ],
+        "authorityType": "multisig",
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "Solana M is a spoke deployment bridged from Ethereum M; base supply remains governed by the Ethereum MinterGateway.",
+          "trustedPeerOrRemote": "The SPL mint authority is a 1-of-2 SPL multisig whose signers are off-curve PDAs controlled by M0 portal/allied programs.",
+          "caps": "Effective Solana mint capacity is bounded by the portal route and base M supply, not by an immutable Solana token cap.",
+          "pausersAdminsUpgraders": "M0 Solana programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW; extension authorities point to the same EOA where checked."
+        },
+        "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway. The SPL Token-2022 mintAuthority is a 1-of-2 SPL multisig (ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th) whose two signers are off-curve PDAs controlled by M0 Portal and allied programs; all programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 439805516,
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "Solana M mint on Solscan",
+            "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439805516, the M Token-2022 mint reported this 1-of-2 SPL multisig as mintAuthority, with numRequiredSigners = 1 and numValidSigners = 2; its signers were 9vSE2CHNE54enDAVG3r8dkthXNVWtEyZdXXEFnVN1a8H and BQdqsDuByTYYeDp92ar7guMFD1P4FTWXJPP1WMq2rUXm. The mint had null freezeAuthority and metadata linking it to Ethereum M 0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b. Its signers are program-derived authorities in the Portal route, so this multisig is cap-limited by current bridge execution and cannot itself raise that route limit; the shared program upgrade authority is modeled separately."
+      },
+      {
+        "id": "m0-solana-portal-upgrade-authority",
+        "label": "M0 Solana Portal program upgrade authority",
+        "routeRefs": [
+          "solana:mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "contract:solana:ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The Solana Portal upgrade authority can replace bridge logic and alter or bypass current inbound mint constraints without an independent delay."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439805516,
+        "sources": [
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://solscan.io/account/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439805516, the Portal program account mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY resolved to ProgramData GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n, whose upgradeable-loader state named this EOA as authority. It can replace the Portal logic and thereby change or bypass current Solana route constraints, so canRaiseCap is true for the bridge route; this is bridge upgrade authority, not Ethereum native M mint authority."
       }
     ]
   }

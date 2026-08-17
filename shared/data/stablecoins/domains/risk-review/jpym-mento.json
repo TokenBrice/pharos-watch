@@ -160,9 +160,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "JPYm's durable cross-chain supply path is Wormhole Native Token Transfers (NTT), Mento's officially selected interoperability provider for its full stablecoin suite. Mento runs a hub-and-spoke model: issuance and risk management stay anchored on Celo (the CDP hub) while spoke chains like Monad hold NTT-Manager-minted deployments, with cross-chain supply attested by Wormhole's Guardian network and enforced by the NTT Global Accountant. This is an external-validated messaging-network route, not an opaque/undocumented one. (Probable, not verified: Monad launched with the GBPm/USDm pair first; JPYm's specific NTT-Manager wiring on Monad was not independently confirmed on-chain, though JPYm is already deployed there as a Mento-Safe-owned proxy.)",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "summary": "JPYm's cross-chain supply path is Wormhole Native Token Transfers (NTT), with Celo as the native locking/escrow hub and Monad as a burning-mode spoke representation. Current fixed-block reads confirm the JPYm-specific NTT manager, transceiver, spoke-token roles, Safe ownership, Wormhole peer, and Monad ProxyAdmin; the official configuration sets 40,000,000e18 outbound and per-peer inbound nominal limits. Wormhole Guardian attestation and NTT accounting remain external bridge failure domains, so these capabilities are assessed here rather than in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -217,16 +217,17 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native JPYm hub on Celo: Mento's issuance and risk management anchor on Celo (CDP hub); the token owner is the Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458 (threshold 4 of 6, verified on-chain 2026-07-20).",
+        "reviewNote": "Native JPYm hub on Celo: Mento's official registry and current role reads identify Celo as the JPYm V3 CDP issuance chain. At Celo block 75024239, the token owner is the 4-of-6 Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458; Monad is a separate NTT representation rather than an independent native liability.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75024406,
         "sources": [
           {
             "label": "Mento stablecoin docs",
             "url": "https://docs.mento.org/"
           },
           {
-            "label": "JPYm on Celo explorer (owner() probed 2026-07-20)",
+            "label": "JPYm on Celo explorer (current owner and role reads)",
             "url": "https://celoscan.io/address/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
           }
         ]
@@ -244,7 +245,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: the Wormhole NTT manager 0x7431419fe761e7da37587245c55a35e5a356c91b on Monad returns token() = this JPYm and mode() = 1 (burning), with registered transceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339 and owner() = the Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458; Mento's DeployNTT/DeployStableTokenSpoke broadcasts created this token and manager, so the NTT manager is the mint authority for this spoke representation.",
+        "reviewNote": "At Monad block 96627980, the JPYm-specific Wormhole NTT manager 0x7431419fe761e7da37587245c55a35e5a356c91b returned token() = this JPYm spoke, mode() = 1 (burning), and isMinter/isBurner = true; it is owned and pausable by the Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458. The registered transceiver is 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339, and the Monad spoke token ProxyAdmin is owned by the same Safe. This is a conserved NTT representation, not independent Monad issuance.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "monad",
         "controllerAddress": "0x7431419fe761e7da37587245c55a35e5a356c91b",
@@ -252,7 +253,8 @@
           "protocol:wormhole-ntt",
           "contract:monad:0x7431419fe761e7da37587245c55a35e5a356c91b"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96628312,
         "sources": [
           {
             "label": "Mento DeployNTT + DeployStableTokenSpoke broadcasts (Monad, chain 143)",
@@ -267,6 +269,288 @@
             "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/concepts/architecture/"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "jpym-celo-wormhole-ntt-manager",
+        "label": "JPYm Celo Wormhole NTT locking manager",
+        "routeRefs": [
+          "celo:0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "rate-limit",
+          "escrow",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:celo:0x7431419fe761e7da37587245c55a35e5a356c91b",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 4,
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "enabledModules": [],
+          "observedBlock": 75024239,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Celo NTT manager is the canonical-side locking and escrow rail. The Safe controls its route administration, pause state, peer configuration, and nominal rate limits; this is conserved bridge accounting rather than native JPYm issuance.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "Wormhole Guardian attestation and NTT Global Accountant governance are external to the Mento Safe and remain separate bridge failure domains."
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "At Celo block 75024330, the NTT manager returned token() = 0xc45ecf20f3cd864b32d9794d6f76814ae8892e20 and getMode() = 0; the official JPYm NTT configuration marks the Celo leg isBurning = false, so the route locks/escrows native JPYm.",
+          "trustedPeerOrRemote": "The official JPYm NTT configuration pairs the Celo locking leg with the Monad burning leg through transceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339.",
+          "attestorQuorum": "At Celo block 75024330, getThreshold() = 1; inbound route validation uses the Wormhole transceiver and Guardian attestation domain rather than an independent Celo minter.",
+          "rateLimits": "The official configuration sets a nominal 40,000,000e18 JPYm outbound limit and matching per-peer inbound limits; live remaining capacities were not read.",
+          "pausersAdminsUpgraders": "At Celo block 75024330, pauser() returned the Mento Safe. Manager and transceiver implementation/admin slots were zero at Celo block 75024355, so no separate manager upgrade authority was observed.",
+          "caps": "The manager's limits bound this cross-chain accounting route and do not create independent native liabilities on Celo."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 75024355,
+        "sources": [
+          {
+            "label": "Mento JPYm NTT configuration",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Mento NTT deployment source",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/deploy/wormhole/DeployNTT.s.sol"
+          },
+          {
+            "label": "Celo JSON-RPC fixed-block reads",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 75024330, manager 0x7431419fe761e7da37587245c55a35e5a356c91b returned token() = the native Celo JPYm, getMode() = 0, getThreshold() = 1, and pauser() = the Mento Safe; both manager token-role probes returned false. The transceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339 had the same Safe as owner and pauser. The official NTT configuration and deployment source define this as the Celo locking/escrow leg of the conserved hub-and-spoke route."
+      },
+      {
+        "id": "jpym-monad-wormhole-ntt-manager",
+        "label": "JPYm Monad Wormhole NTT burning manager",
+        "routeRefs": [
+          "monad:0x22f6a6752800eab67b84748fefc3cc658384af72"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:monad:0x7431419fe761e7da37587245c55a35e5a356c91b",
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 4,
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x91606e52a843845669f1f25BbD5E95cb055a9707",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedBlock": 80607801,
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Monad NTT manager is the burning-mode spoke route controller: it can mint and burn the Monad representation after validated messages, and the Safe controls its pause, peer, and nominal limit administration. This is bridge representation authority, not native Monad issuance.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "Wormhole Guardian attestation and NTT Global Accountant governance are external to the Mento Safe and remain separate bridge failure domains."
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "At Monad block 96627980, the NTT manager returned token() = 0x22f6a6752800eab67b84748fefc3cc658384af72 and getMode() = 1; the official JPYm NTT configuration marks the Monad leg isBurning = true, so representation minting is paired with burn accounting.",
+          "trustedPeerOrRemote": "At Monad block 96627980, getWormholePeer(14) returned transceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339; the official configuration binds it to the Celo locking manager.",
+          "attestorQuorum": "At Monad block 96627980, getThreshold() = 1; inbound route validation uses the Wormhole transceiver and Guardian attestation domain rather than an independent native issuer.",
+          "rateLimits": "The official configuration sets a nominal 40,000,000e18 JPYm outbound limit and matching per-peer inbound limits; live remaining capacities were not read.",
+          "pausersAdminsUpgraders": "At Monad block 96627980, the manager owner() and pauser() were the Mento Safe. The manager implementation/admin slots were zero at Monad block 96628312, so the manager's upgrade surface is not a separate proxy-admin path.",
+          "caps": "The manager's limits and burn/mint path are route-level conserved-supply controls and do not establish independent Monad liabilities."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96628312,
+        "sources": [
+          {
+            "label": "Mento JPYm NTT configuration",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Mento NTT deployment source",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/deploy/wormhole/DeployNTT.s.sol"
+          },
+          {
+            "label": "Monad JSON-RPC fixed-block reads",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 96627980, manager 0x7431419fe761e7da37587245c55a35e5a356c91b returned token() = the Monad JPYm spoke, getMode() = 1, getThreshold() = 1, and the Mento Safe as owner and pauser; isMinter(manager) and isBurner(manager) both returned true on the spoke token. The official NTT configuration supplies the 40-million-JPYm nominal limits, and the route is conserved NTT bridge accounting rather than independent Monad issuance."
+      },
+      {
+        "id": "jpym-wormhole-ntt-transceiver",
+        "label": "JPYm Wormhole NTT transceiver and Guardian validation path",
+        "routeRefs": [
+          "celo:0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
+          "monad:0x22f6a6752800eab67b84748fefc3cc658384af72"
+        ],
+        "capabilities": [
+          "validator",
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "protocol:wormhole-transceiver",
+          "protocol:wormhole-guardian-set",
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 4,
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "enabledModules": [],
+          "observedBlock": 75024239,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Safe controls the NTT transceiver's route administration and pause surface; the transceiver carries Wormhole Guardian-attested validation for the Celo locking and Monad burning legs. Guardian-set governance is a separate external failure domain.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Monad block 96627980, getWormholePeer(14) returned the reviewed transceiver address; the official NTT configuration binds the Celo and Monad managers through this transceiver.",
+          "attestorQuorum": "The NTT managers report getThreshold() = 1 on both legs and use one Wormhole transceiver/Guardian validation path; Guardian membership and governance are external to the Mento Safe.",
+          "pausersAdminsUpgraders": "The transceiver owner and pauser were the Mento Safe on both Celo block 75024330 and Monad block 96627980. Its implementation/admin slots were zero at Celo block 75024355 and Monad block 96628312, so no separate transceiver proxy upgrade authority was observed."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96628312,
+        "sources": [
+          {
+            "label": "Mento JPYm NTT configuration",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Mento NTT deployment source",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/deploy/wormhole/DeployNTT.s.sol"
+          },
+          {
+            "label": "Celo and Monad JSON-RPC fixed-block reads",
+            "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Wormhole NTT architecture",
+            "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/concepts/architecture/"
+          }
+        ],
+        "evidence": "The deterministic NTT transceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339 is owned and pausable by the Mento Safe on both chains. At Monad block 96627980, getWormholePeer(14) returned the transceiver for the Celo Wormhole chain ID. The manager/transceiver implementation slots were nonzero only as implementation observations with zero admin slots at Celo block 75024355 and Monad block 96628312; the validation path relies on Wormhole Guardians, whose attestation domain remains separate from the Safe."
+      },
+      {
+        "id": "jpym-monad-spoke-owner-safe",
+        "label": "JPYm Monad spoke owner Safe and ProxyAdmin",
+        "routeRefs": [
+          "monad:0x22f6a6752800eab67b84748fefc3cc658384af72"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:monad:0x22f6a6752800eab67b84748fefc3cc658384af72",
+          "contract:monad:0xe4256e2d1a73510b72886e08afb0fc7651303016",
+          "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 4,
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x91606e52a843845669f1f25BbD5E95cb055a9707",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedBlock": 80607801,
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Mento Safe owns the Monad JPYm spoke and its ProxyAdmin, can authorize the NTT manager's representation mint/burn roles, and can replace spoke-token logic. These are bridge-representation controls, not Celo native issuance authority.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Monad block 96628312, the JPYm spoke implementation was 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e and ProxyAdmin 0xe4256e2d1a73510b72886e08afb0fc7651303016; the ProxyAdmin owner was the Mento Safe. The same Safe owns the spoke token and can administer its bridge role surface.",
+          "caps": "The Safe's token-role and ProxyAdmin powers can change the representation's bridge mint/burn and implementation surfaces; they do not create a second native liability chain."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96628312,
+        "sources": [
+          {
+            "label": "Monad JPYm spoke token",
+            "url": "https://monadscan.com/address/0x22f6a6752800eab67b84748fefc3cc658384af72"
+          },
+          {
+            "label": "Monad JPYm ProxyAdmin",
+            "url": "https://monadscan.com/address/0xe4256e2d1a73510b72886e08afb0fc7651303016"
+          },
+          {
+            "label": "Monad JSON-RPC fixed-block reads",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Safe Transaction Service - Monad",
+            "url": "https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458"
+          }
+        ],
+        "evidence": "At Monad block 96627980, the JPYm NTT manager was both minter and burner of the Monad spoke, and the manager owner/pauser was the Mento Safe. At block 96628312, the spoke token's EIP-1967 implementation was 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e and ProxyAdmin 0xe4256e2d1a73510b72886e08afb0fc7651303016; the ProxyAdmin owner was the same Safe. The prior Safe authority observation at block 80607801 recorded a 4-of-7 Safe with an empty module list; current guard status was not reasserted after the public RPC probe reverted."
       }
     ]
   }

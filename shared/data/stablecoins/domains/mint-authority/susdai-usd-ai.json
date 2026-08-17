@@ -8,6 +8,9 @@
     "summary": "sUSDai's canonical Arbitrum vault mints shares only against USDai deposited at the current share price. Its adapter-only return mint is bounded by sUSDai previously burned outbound and recorded as bridgedSupply. The transparent proxy can change those constraints only through a 48-hour DVNTimelock whose sole proposer and canceller is a 3-of-3 Safe. Satellite OToken and LayerZero controls are reviewed separately in the bridge-risk module.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "arbitrum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+      ],
       "proxyAddresses": [
         "0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
       ],
@@ -45,6 +48,9 @@
       {
         "chain": "arbitrum",
         "address": "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
+        "deploymentRefs": [
+          "arbitrum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+        ],
         "label": "sUSDai canonical USDai-backed vault",
         "role": "wrapper",
         "authorityType": "contract",
@@ -76,6 +82,9 @@
       {
         "chain": "arbitrum",
         "address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
+        "deploymentRefs": [
+          "arbitrum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+        ],
         "label": "sUSDai Arbitrum ProxyAdmin timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
@@ -107,6 +116,9 @@
       {
         "chain": "arbitrum",
         "address": "0x783b08aa21de056717173f72e04be0e91328a07b",
+        "deploymentRefs": [
+          "arbitrum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+        ],
         "label": "sUSDai Arbitrum timelock proposer Safe",
         "role": "governor",
         "authorityType": "safe",

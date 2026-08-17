@@ -6,5 +6,173 @@
     "evidence": "Inferred review retained: PAXG resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "PAXG is now covered as issuer-native on Ethereum and Solana, while the Ethereum-side LayerZero adapter is authored here as bridge machinery rather than global native Mint Authority. Paxos documents Ethereum-to-Solana movement through its platform or LayerZero Stargate, and the adapter has a current owner, implementation, bridge-mint/burn capacity, and rate limit. The exact LayerZero endpoint/OApp peers, DVN/validator set, current rate-limit state, burn/mint supply-conservation invariant, and Solana mint-authority attribution remain unresolved, so the route assessment is intentionally opaque-or-unknown rather than external-validated-network.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Paxos PAXG multi-chain expansion",
+        "slug": "paxos-paxg",
+        "url": "https://www.paxos.com/blog/bringing-paxg-to-solana",
+        "bridgeTypes": [
+          "issuer-native-mint",
+          "burn-mint"
+        ],
+        "note": "Paxos calls Solana PAXG native and says existing Ethereum holders can bridge through Paxos or LayerZero Stargate, but the exact supply-conservation relationship is not yet proven."
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero Stargate",
+        "slug": "layerzero-stargate",
+        "url": "https://docs.layerzero.network/v2/get-started/overview",
+        "bridgeTypes": [
+          "burn-mint-oft"
+        ],
+        "note": "LayerZero documents omnichain ERC-20/SPL transfers, but PAXG-specific endpoint, peer, DVN, and accounting configuration remains unresolved."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Paxos PAXG-to-Solana announcement",
+        "url": "https://www.paxos.com/blog/bringing-paxg-to-solana"
+      },
+      {
+        "label": "Official PAXG product site",
+        "url": "https://www.paxg.com/"
+      },
+      {
+        "label": "PAXG LayerZero adapter proxy",
+        "url": "https://etherscan.io/address/0xd09ede557ef195983c9544a5724046fbd6e8a3c6"
+      },
+      {
+        "label": "PAXG SupplyControl proxy",
+        "url": "https://etherscan.io/address/0xbe62db8ed4838e10e1318593ac9e3eb9ccfb2dc7"
+      },
+      {
+        "label": "PAXG Solana mint",
+        "url": "https://solscan.io/token/5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
+      },
+      {
+        "label": "LayerZero documentation",
+        "url": "https://docs.layerzero.network/v2/get-started/overview"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x45804880de22913dafe09f4980848ece6ecbaf78",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+        "protocol": "Paxos PAXG native Ethereum deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PAXG is natively issued on Ethereum through Paxos SupplyControl. The canonical-side LayerZero adapter ingress/egress capability and rate limit are separately recorded in the bridge control below and do not change this route's native issuance model.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770003,
+        "sources": [
+          {
+            "label": "PAXG Ethereum token proxy",
+            "url": "https://etherscan.io/address/0x45804880de22913dafe09f4980848ece6ecbaf78"
+          },
+          {
+            "label": "Paxos PAXG contract repository",
+            "url": "https://github.com/paxosglobal/paxos-gold-contract"
+          }
+        ]
+      },
+      {
+        "id": "solana:5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW",
+        "destinationChain": "solana",
+        "contractAddress": "5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW",
+        "protocol": "Paxos PAXG Solana Token-2022 deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Paxos calls this a Solana-native Token-2022 deployment and the official PAXG site links the mint. The route remains opaque-or-unknown for bridge assessment because the relationship between the direct mint authority, LayerZero Stargate messages, and Ethereum gold-backed supply has not been verified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439713418,
+        "sources": [
+          {
+            "label": "Paxos PAXG-to-Solana announcement",
+            "url": "https://www.paxos.com/blog/bringing-paxg-to-solana"
+          },
+          {
+            "label": "Official PAXG product site",
+            "url": "https://www.paxg.com/"
+          },
+          {
+            "label": "PAXG Solana mint on Solscan",
+            "url": "https://solscan.io/token/5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "paxg-ethereum-layerzero-adapter",
+        "label": "PAXG Ethereum LayerZero adapter SupplyController",
+        "routeRefs": [
+          "ethereum:0x45804880de22913dafe09f4980848ece6ecbaf78",
+          "solana:5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit",
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "failureDomainKeys": [
+          "contract:ethereum:0xbe62db8ed4838e10e1318593ac9e3eb9ccfb2dc7",
+          "contract:ethereum:0xd09ede557ef195983c9544a5724046fbd6e8a3c6",
+          "eoa:ethereum:0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+          "protocol:layerzero-stargate-paxg"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Paxos documents LayerZero Stargate as a PAXG bridge path, but the PAXG-specific endpoint/OApp peer and remote-token configuration were not enumerated.",
+          "rateLimits": "At Ethereum block 25526129, the adapter was an active SupplyController with a 13,320-PAXG capacity and 0.155-PAXG-per-second refill. The current post-block-25526129 rate-limit state was not re-read.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770003, adapter implementation was 0xc54ca36efe594e4c774ba8463adf67ba3de1236f and owner() was 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. The exact endpoint/DVN/validator and route pause/upgrade administrator graph remains unresolved."
+        },
+        "capDescription": "The adapter's bridge SupplyController capacity and refill are distinct from the two native Paxos controller capacities; the controller-manager EOA can change adapter membership and limits immediately.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770003,
+        "sources": [
+          {
+            "label": "PAXG LayerZero adapter proxy",
+            "url": "https://etherscan.io/address/0xd09ede557ef195983c9544a5724046fbd6e8a3c6"
+          },
+          {
+            "label": "PAXG SupplyControl source",
+            "url": "https://github.com/paxosglobal/paxos-token-contracts/blob/ac239fd78bb4330e94c78e306bc1539db9544e16/contracts/SupplyControl.sol"
+          },
+          {
+            "label": "Paxos PAXG-to-Solana announcement",
+            "url": "https://www.paxos.com/blog/bringing-paxg-to-solana"
+          },
+          {
+            "label": "LayerZero documentation",
+            "url": "https://docs.layerzero.network/v2/get-started/overview"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, PAXG SupplyControl getAllSupplyControllerAddresses() included adapter proxy 0xd09ede557ef195983c9544a5724046fbd6e8a3c6, whose configuration had 13,320 PAXG capacity and 0.155 PAXG-per-second refill. At block 25770003, the adapter implementation resolved to 0xc54ca36efe594e4c774ba8463adf67ba3de1236f and owner() returned controller-manager EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. This is canonical-side bridge machinery and is not included in the native Mint Authority controls."
+      }
+    ]
   }
 }

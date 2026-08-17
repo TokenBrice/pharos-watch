@@ -4,18 +4,23 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "MONEY is an authorized crvUSD fork on Arbitrum/Optimism: users deposit approved collateral (WBTC, ETH, etc.) and mint MONEY against per-market debt ceilings using crvUSD's controller/LLAMMA design; defi.money governance/admin controls market onboarding and risk parameters.",
+    "summary": "MONEY has independent native crvUSD-style CDP issuance on Arbitrum, Base, and Optimism: users deposit approved collateral (WBTC, ETH, etc.) and mint MONEY against per-market debt ceilings using defi.money's controller/LLAMMA design; the defi.money admin Safe controls market onboarding and native risk parameters. LayerZero OFT transfer machinery is assessed separately in Bridge Risk.",
     "controls": [
       {
         "chain": "arbitrum",
+        "deploymentRefs": [
+          "arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+          "base:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+          "optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
         "label": "defi.money market controllers (crvUSD-style minter)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "MONEY is minted only against overcollateralized loans in defi.money markets under per-market debt ceilings, using crvUSD's controller and LLAMMA soft-liquidation mechanics; supply tracks collateralized borrowing, not an issuer minter.",
-        "evidence": "defi.money docs describe a crvUSD-style loan/CDP stablecoin where users deposit approved collateral and borrow MONEY against per-market risk parameters with peg-keeper/LLAMMA mechanics.",
+        "capDescription": "On each reviewed native deployment, MONEY is minted only against overcollateralized loans in defi.money markets under per-market debt ceilings, using crvUSD's controller and LLAMMA soft-liquidation mechanics; supply tracks collateralized borrowing, not an issuer minter.",
+        "evidence": "The official defi.money deployment registry lists a MainController on Arbitrum, Base, and Optimism. defi.money docs describe a crvUSD-style loan/CDP stablecoin where users deposit approved collateral and borrow MONEY against per-market risk parameters with peg-keeper/LLAMMA mechanics on supported networks.",
         "failureDomainKeys": [
           "protocol:defi-money-controllers"
         ]
@@ -23,6 +28,11 @@
       {
         "chain": "arbitrum",
         "address": "0x222d2B30EcD382a058618d9F1ee01F147666E48b",
+        "deploymentRefs": [
+          "arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+          "base:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+          "optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
         "label": "defi.money admin Safe (MONEY token owner)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -31,8 +41,8 @@
         "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "defi.money 3-of-7 Safe owns MONEY token and controls market onboarding, debt ceilings, and risk parameters.",
-        "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API (arb1) confirmed Gnosis Safe v1.3.0+L2, threshold 3, 7 owners (0x3e254c20, 0x334deb1b, 0xCA88C5D4, 0x31dADb64, 0x86cf559f, 0xDeF1c4aD, 0xbADbABEF), no modules, no guard, nonce 6. EIP-1967 admin slot returned zero — not an upgradeable proxy. Direct Arbitrum RPC reads at block 472427523: getOwners() returned 7 owners, getThreshold()=3, getModulesPaginated empty, guard slot zero, masterCopy GnosisSafeL2 v1.3.0.",
+        "capDescription": "defi.money 3-of-7 Safe owns the MONEY token deployments and controls market onboarding, debt ceilings, and native risk parameters on the reviewed networks.",
+        "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API (arb1) confirmed Gnosis Safe v1.3.0+L2, threshold 3, 7 owners (0x3e254c20, 0x334deb1b, 0xCA88C5D4, 0x31dADb64, 0x86cf559f, 0xDeF1c4aD, 0xbADbABEF), no modules, no guard, nonce 6. EIP-1967 admin slot returned zero — not an upgradeable proxy. Direct Arbitrum RPC reads at block 472427523: getOwners() returned 7 owners, getThreshold()=3, getModulesPaginated empty, guard slot zero, masterCopy GnosisSafeL2 v1.3.0. The reviewed Base and Optimism route observations found the same owner address on their same-address MONEY deployments; the Safe's native relevance is market onboarding and debt-ceiling/risk-parameter administration, while LayerZero bridge powers are separately authored under Bridge Risk.",
         "sources": [
           {
             "label": "Arbitrum MONEY token (Arbiscan)",
@@ -78,13 +88,21 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API confirmed Gnosis Safe v1.3.0+L2, 3-of-7 threshold, 7 owners, no modules, no guard. EIP-1967 admin slot zero (not upgradeable proxy). No minter() selector on token. crvUSD-style market controllers are bounded by the Safe's admin authority; no independent privileged mint surface detected on the token. 2026-07-20 dc-1 pass: the crvUSD-style market-controller set has no single contract address; its failure domain is recorded as protocol:defi-money-controllers. The economic mint cap is raiseable — the verified admin Safe 0x222d2B30EcD382a058618d9F1ee01F147666E48b can authorize controllers and raise caps (can-authorize + canRaiseCap=true in this profile). Economic-posture fields reviewed 2026-08-15: the self-controlled 3-of-7 Safe can authorize controllers and raise caps without an independent delay, while current issuance is on-chain CDP collateral and no supervisor or attestor is evidenced.",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API confirmed Gnosis Safe v1.3.0+L2, 3-of-7 threshold, 7 owners, no modules, no guard. EIP-1967 admin slot zero (not upgradeable proxy). No minter() selector on token. The official defi.money deployment registry and reviewed MainController observations establish independent collateralized native issuance on Arbitrum, Base, and Optimism. The same Safe can authorize market controllers and raise native debt ceilings; LayerZero OFT bridge mint/burn and message validation are separate Bridge Risk machinery and are not counted as native Mint Authority. Economic-posture fields reviewed 2026-08-16: the self-controlled 3-of-7 Safe can authorize controllers and raise caps without an independent delay, while current issuance is on-chain CDP collateral and no supervisor or attestor is evidenced.",
+      "reviewer": "Codex mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "defi.money docs",
           "url": "https://docs.defi.money/"
+        },
+        {
+          "label": "defi.money deployment registry",
+          "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+        },
+        {
+          "label": "Pinned MainController source",
+          "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
         },
         {
           "label": "Arbitrum MONEY token (Arbiscan)",

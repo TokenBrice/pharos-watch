@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "verified",
-    "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/11 Safe with no modules or guard detected.",
+    "confidence": "manual-review",
+    "summary": "The 13 issuer-native MIM deployments expose owner-controlled mint functions. Ethereum's owner is a 5/11 Safe with no modules or guard detected; the other 12 native owner Safes are enumerated with verified thresholds and empty module reads, while their guard status remains unverified. The Berachain LayerZero OFT representation is excluded from Mint Authority and remains in Bridge Risk.",
     "mintIncidents": [
       {
         "date": "2024-01-30",
@@ -61,6 +61,9 @@
       {
         "chain": "ethereum",
         "address": "0x5f0DeE98360d8200b20812e174d139A1a633EDd2",
+        "deploymentRefs": [
+          "ethereum:0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3"
+        ],
         "label": "MIM owner Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -104,6 +107,426 @@
         "evidence": "MIM.owner() returns this Safe. Safe Transaction Service returned threshold 5 with 11 current owners, no modules, and nonce 260; Sourcify ABI for MagicInternetMoneyV1 exposes mint and mintToBentoBox.",
         "observedAt": "2026-07-20",
         "observedBlock": 25575152
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xf46bb6dda9709c49efb918201d97f6474eac5aea",
+        "deploymentRefs": [
+          "arbitrum:0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a"
+        ],
+        "label": "MIM Arbitrum owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 5,
+        "signerCount": 11,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 495275336,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Arbiscan",
+            "url": "https://arbiscan.io/address/0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a"
+          }
+        ],
+        "evidence": "At Arbitrum block 495275336 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 5, 11 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495275336
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xae64a325027c3c14cf6abc7818aa3b9c07f5c799",
+        "deploymentRefs": [
+          "avalanche:0x130966628846bfd36ff31a822705796e8cb8c18d"
+        ],
+        "label": "MIM Avalanche owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 92978097,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Snowscan",
+            "url": "https://snowscan.xyz/address/0x130966628846bfd36ff31a822705796e8cb8c18d"
+          }
+        ],
+        "evidence": "At Avalanche block 92978097 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 5, 10 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92978097
+      },
+      {
+        "chain": "fantom",
+        "address": "0xb4ad8b57bd6963912c80fcbb6baea99988543c1c",
+        "deploymentRefs": [
+          "fantom:0x82f0b8b456c1a451378467398982d4834b6829c1"
+        ],
+        "label": "MIM Fantom owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 122919000,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on FtmScan",
+            "url": "https://ftmscan.com/address/0x82f0b8b456c1a451378467398982d4834b6829c1"
+          }
+        ],
+        "evidence": "At Fantom block 122919000 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 5, 10 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 122919000
+      },
+      {
+        "chain": "bsc",
+        "address": "0x9d9bc38bf4a128530ea45a7d27d0ccb9c2ebfaf6",
+        "deploymentRefs": [
+          "bsc:0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba"
+        ],
+        "label": "MIM BSC owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 9,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 4,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 116348664,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on BscScan",
+            "url": "https://bscscan.com/address/0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba"
+          }
+        ],
+        "evidence": "At BSC block 116348664 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 4, 9 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116348664
+      },
+      {
+        "chain": "optimism",
+        "address": "0x4217aa01360846a849d2a89809d450d10248b513",
+        "deploymentRefs": [
+          "optimism:0xb153fb3d196a8eb25522705560ac152eeec57901"
+        ],
+        "label": "MIM Optimism owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 155659424,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Optimistic Etherscan",
+            "url": "https://optimistic.etherscan.io/address/0xb153fb3d196a8eb25522705560ac152eeec57901"
+          }
+        ],
+        "evidence": "At Optimism block 155659424 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 5, 10 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155659424
+      },
+      {
+        "chain": "polygon",
+        "address": "0x7d847c4a0151fc6e79c6042d8f5b811753f4f66e",
+        "deploymentRefs": [
+          "polygon:0x49a0400587a7f65072c87c4910449fdcc5c47242"
+        ],
+        "label": "MIM Polygon owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 92141731,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Polygonscan",
+            "url": "https://polygonscan.com/address/0x49a0400587a7f65072c87c4910449fdcc5c47242"
+          }
+        ],
+        "evidence": "At Polygon block 92141731 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 5, 10 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141731
+      },
+      {
+        "chain": "kava",
+        "address": "0x1261894f79e6cf21bf7e586af7905ec173c8805b",
+        "deploymentRefs": [
+          "kava:0x471ee749ba270eb4c1165b5ad95e614947f6fceb"
+        ],
+        "label": "MIM Kava owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 22135837,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Kava explorer",
+            "url": "https://kavascan.com/address/0x471ee749ba270eb4c1165b5ad95e614947f6fceb"
+          }
+        ],
+        "evidence": "At Kava block 22135837 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 5, 10 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 22135837
+      },
+      {
+        "chain": "blast",
+        "address": "0xfed8589d09650db3d30a568b1e194882549d78cf",
+        "deploymentRefs": [
+          "blast:0x76da31d7c9cbeae102aff34d3398bc450c8374c1"
+        ],
+        "label": "MIM Blast owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 5,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 39053904,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Blastscan",
+            "url": "https://blastscan.io/address/0x76da31d7c9cbeae102aff34d3398bc450c8374c1"
+          }
+        ],
+        "evidence": "At Blast block 39053904 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 5, 10 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 39053904
+      },
+      {
+        "chain": "moonriver",
+        "address": "0xfc88aa661c44b4ede197644ba971764ac59afa62",
+        "deploymentRefs": [
+          "moonriver:0x0cae51e1032e8461f4806e26332c030e34de3adb"
+        ],
+        "label": "MIM Moonriver owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 17381654,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Moonscan",
+            "url": "https://moonriver.moonscan.io/address/0x0cae51e1032e8461f4806e26332c030e34de3adb"
+          }
+        ],
+        "evidence": "At Moonriver block 17381654 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 3, 5 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 17381654
+      },
+      {
+        "chain": "nibiru",
+        "address": "0x282df9f8a9b1f23aea9050a4fdeb5eee29c2f540",
+        "deploymentRefs": [
+          "nibiru:0xfcfc58685101e2914cbcf7551b432500db84eaa8"
+        ],
+        "label": "MIM Nibiru owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 44572187,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Nibiru explorer",
+            "url": "https://nibiscan.io/address/0xfcfc58685101e2914cbcf7551b432500db84eaa8"
+          }
+        ],
+        "evidence": "At Nibiru block 44572187 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 3, 5 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 44572187
+      },
+      {
+        "chain": "base",
+        "address": "0xf657de126f9d7666b5ffe4756ccd9eb393d86a92",
+        "deploymentRefs": [
+          "base:0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d"
+        ],
+        "label": "MIM Base owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 50064137,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Basescan",
+            "url": "https://basescan.org/address/0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d"
+          }
+        ],
+        "evidence": "At Base block 50064137 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 3, 5 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064137
+      },
+      {
+        "chain": "linea",
+        "address": "0x1c063276cf810957cf0665903fad20d008f4b404",
+        "deploymentRefs": [
+          "linea:0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a"
+        ],
+        "label": "MIM Linea owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "source": "onchain",
+          "observedBlock": 31737362,
+          "observedAt": "2026-08-16"
+        },
+        "sources": [
+          {
+            "label": "Abracadabra MIM tokenomics",
+            "url": "https://docs.abracadabra.money/learn/tokens/tokenomics.md"
+          },
+          {
+            "label": "MIM token on Lineascan",
+            "url": "https://lineascan.build/address/0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a"
+          }
+        ],
+        "evidence": "At Linea block 31737362 on 2026-08-16, the supported native MIM contract owner() returned this Safe; Safe reads returned threshold 3, 5 signers, and no modules. The guard getter reverted on this Safe proxy variant, so guard status remains unverified. The owner-controlled MIM mint entry points are native issuance authority for this deployment.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 31737362
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -132,9 +555,9 @@
           "url": "https://snowscan.xyz/address/0x130966628846bfd36ff31a822705796e8cb8c18d#readContract"
         }
       ],
-      "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/11 Safe owner with direct owner-controlled mint functions on the token. Re-verified by direct chain reads at Ethereum block 25575152 on 2026-07-20: MIM 0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3 owner() returns Safe 0x5f0DeE98360d8200b20812e174d139A1a633EDd2, which returns getThreshold()=5 over the same eleven owners, an empty getModulesPaginated array, a zero guard slot, and Safe 1.3.0 masterCopy 0xd9db270c1b5e3bd161e8c8503c55ceabee709552. Economic-control adjudication: the token owner Safe holds unconditional mint and mintToBentoBox entry points with no on-chain cap, no timelock, and no independent bound, so the mint cap is economically unbounded. There is no supply-versus-reserve attestation of any cadence and the token-level owner mint means outstanding MIM cannot be reconciled to cauldron collateral from on-chain reads alone, so reconciliation stays unknown, and no financial regulator supervises Abracadabra. 2026-07-21 follow-up closes the two prior open questions: (1) the verified MagicInternetMoneyV1.sol source shows both mint() and mintToBentoBox() are onlyOwner with no separate cauldron-level minter role — cauldrons draw down MIM the owner has pre-minted into BentoBox rather than minting directly themselves — and mint() itself enforces a soft per-period rate limiter (MINTING_INCREASE=15000/1e5=15% growth of totalSupply per rolling 24-hour MINTING_PERIOD), though the owner can still call mint repeatedly with no absolute ceiling, so the cap remains economically unbounded despite this rate-of-growth throttle; (2) independent owner() reads on Arbitrum (block 486130018) and Avalanche (block 90861407) return 0xf46BB6dDA9709C49EfB918201D97F6474EAc5Aea and 0xae64A325027C3C14Cf6abC7818aA3B9c07F5C799 respectively, matching this asset's separately reviewed bridgeRouteRisk owner() reads for all fourteen deployments (each an Abracadabra team Safe with signer overlap to the Ethereum 5/11 Safe), so the full multichain mint-capable surface is now cross-verified rather than Ethereum-only. Economic-posture fields reviewed 2026-08-15: the existing unbounded, unknown-reconciliation, and no-supervision verdicts remain supported by the owner-mint and attestation evidence. Wave 2 external review 2026-08-15: Abracadabra's token, cauldron, deployment, and analytics pages expose supply and collateral data but no recurring independent report reconciles all MIM liabilities, including owner-level minting across deployments.",
+      "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/11 Safe owner with direct owner-controlled mint functions on the token. Re-verified by direct chain reads at Ethereum block 25575152 on 2026-07-20: MIM 0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3 owner() returns Safe 0x5f0DeE98360d8200b20812e174d139A1a633EDd2, which returns getThreshold()=5 over the same eleven owners, an empty getModulesPaginated array, a zero guard slot, and Safe 1.3.0 masterCopy 0xd9db270c1b5e3bd161e8c8503c55ceabee709552. Economic-control adjudication: the token owner Safe holds unconditional mint and mintToBentoBox entry points with no on-chain cap, no timelock, and no independent bound, so the mint cap is economically unbounded. There is no supply-versus-reserve attestation of any cadence and the token-level owner mint means outstanding MIM cannot be reconciled to cauldron collateral from on-chain reads alone, so reconciliation stays unknown, and no financial regulator supervises Abracadabra. 2026-07-21 follow-up closes the two prior open questions: (1) the verified MagicInternetMoneyV1.sol source shows both mint() and mintToBentoBox() are onlyOwner with no separate cauldron-level minter role — cauldrons draw down MIM the owner has pre-minted into BentoBox rather than minting directly themselves — and mint() itself enforces a soft per-period rate limiter (MINTING_INCREASE=15000/1e5=15% growth of totalSupply per rolling 24-hour MINTING_PERIOD), though the owner can still call mint repeatedly with no absolute ceiling, so the cap remains economically unbounded despite this rate-of-growth throttle; (2) the 13 issuer-native MIM deployments are now enumerated in controls with chain-specific owner Safes, while the Berachain LayerZero OFT representation is excluded from Mint Authority and remains in bridgeRouteRisk. The non-Ethereum Safe proxy guard getters reverted, so their guard state remains unverified rather than inferred. Economic-posture fields reviewed 2026-08-15: the existing unbounded, unknown-reconciliation, and no-supervision verdicts remain supported by the owner-mint and attestation evidence. Wave 2 external review 2026-08-15: Abracadabra's token, cauldron, deployment, and analytics pages expose supply and collateral data but no recurring independent report reconciles all MIM liabilities, including owner-level minting across deployments.",
       "reviewer": "Codex mint-authority top100 batch-c; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20); Claude Safety Score V9 curation lane (multichain + rate-limiter resolution, 2026-07-21); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "unresolvedQuestions": [
         "Establish whether the 5-of-11 owner Safe (or any of the thirteen other chains' team Safes) is subject to any off-chain governance constraint beyond the on-chain Safe threshold; no timelock, guard, or module was detected on any read deployment."
       ],

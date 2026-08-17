@@ -7,6 +7,9 @@
     "summary": "USDtb is issued by Anchorage Digital Bank against BUIDL/cash reserves. Ethereum issuance uses a MINTER_BURNER_ROLE and immediate proxy admin controlled by issuer EOAs; the native Solana Token-2022 mint has a distinct wallet authority. LayerZero OFT routes are reviewed separately as bridge controls.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xc139190f447e929f090edeb554d95abb8b18ac1c"
+      ],
       "proxyAddresses": [
         "0xc139190f447e929f090edeb554d95abb8b18ac1c"
       ],
@@ -40,6 +43,9 @@
       {
         "chain": "ethereum",
         "address": "0x364366a7164fb518eafaa42af0c86eddab78e6f3",
+        "deploymentRefs": [
+          "ethereum:0xc139190f447e929f090edeb554d95abb8b18ac1c"
+        ],
         "label": "USDtb MINTER_BURNER_ROLE holder",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -70,6 +76,9 @@
       {
         "chain": "ethereum",
         "address": "0xd93826BB299765c87D13AeBa2A7E5d9B27A03956",
+        "deploymentRefs": [
+          "ethereum:0xc139190f447e929f090edeb554d95abb8b18ac1c"
+        ],
         "label": "USDtb DEFAULT_ADMIN_ROLE holder",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -102,6 +111,9 @@
       {
         "chain": "solana",
         "address": "C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt",
+        "deploymentRefs": [
+          "solana:8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T"
+        ],
         "label": "USDtb Solana Token-2022 mint and permanent-delegate authority",
         "role": "direct-minter",
         "authorityType": "eoa",

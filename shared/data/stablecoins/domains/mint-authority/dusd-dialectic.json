@@ -11,6 +11,9 @@
     "supervision": "none",
     "upgradeability": {
       "model": "beacon",
+      "deploymentRefs": [
+        "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+      ],
       "proxyAddresses": [
         "0x6b006870c83b1cd49e766ac9209f8d68763df721"
       ],
@@ -40,6 +43,9 @@
       {
         "chain": "ethereum",
         "address": "0x6b006870c83b1cd49e766ac9209f8d68763df721",
+        "deploymentRefs": [
+          "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+        ],
         "label": "Dialectic USD Machine (share issuer)",
         "role": "wrapper",
         "authorityType": "contract",
@@ -64,6 +70,9 @@
       {
         "chain": "ethereum",
         "address": "0xa7f0121375dc52028e333f02715183a1d1a690a7",
+        "deploymentRefs": [
+          "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+        ],
         "label": "Watermark Fee Manager (fee-share dilution)",
         "role": "other",
         "authorityType": "contract",
@@ -88,6 +97,9 @@
       {
         "chain": "ethereum",
         "address": "0x36ba7c92cd68051fb304bd4580c4a51c1d376532",
+        "deploymentRefs": [
+          "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+        ],
         "label": "Makina Risk Manager - 3-of-5 Safe (share supply cap)",
         "role": "cap-admin",
         "authorityType": "safe",
@@ -135,6 +147,9 @@
       {
         "chain": "ethereum",
         "address": "0x62244c74e1d09b3d86ef7342d354b5d7770bde10",
+        "deploymentRefs": [
+          "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+        ],
         "label": "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -182,6 +197,9 @@
       {
         "chain": "ethereum",
         "address": "0x89faa3b02ef5ab185b8ace489af62748acb50afc",
+        "deploymentRefs": [
+          "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+        ],
         "label": "Makina Security Council - 2-of-4 Safe (guardian, recovery mode, slashing)",
         "role": "governor",
         "authorityType": "safe",

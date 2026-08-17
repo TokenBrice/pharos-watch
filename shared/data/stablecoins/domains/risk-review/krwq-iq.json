@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "KRWQ uses or is linked to LayerZero/OFT-style cross-chain token infrastructure. Because OFT/adapter routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "summary": "KRWQ has one issuer-native liability route on Ethereum and five LayerZero V2 OFT representations. The Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57 locks canonical KRWQ in escrow and releases it on verified inbound messages; Base, Polygon, Fraxtal, Codex, and Morph burn on outbound transfer and mint on verified inbound messages. Adapter and destination Safe owners can change peer/configuration and representation upgrade surfaces, while LayerZero Endpoint V2 validation and DVN/Executor governance remain external failure domains. At the reviewed observations, the Adapter held 777,136,188.987974 KRWQ versus 777,125,188.987974 KRWQ summed across the five spokes, an 11,000 KRWQ pooled-inventory surplus rather than five independent native liabilities.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -37,6 +37,10 @@
     ],
     "sources": [
       {
+        "label": "KRWQ official site",
+        "url": "https://krwq.cash"
+      },
+      {
         "label": "KRWQ whitepaper",
         "url": "https://krwq.cash/whitepaper.pdf"
       },
@@ -47,6 +51,10 @@
       {
         "label": "LayerZero OFT technical reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "Ethereum OFT Adapter",
+        "url": "https://etherscan.io/address/0xbdc82654f3574a113cdbd62f39cbe02e5b522d57"
       }
     ],
     "routes": [
@@ -62,17 +70,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Reviewed mintAuthority documents this canonical TransparentUpgradeableProxy with an owner-managed minter set (owner 3/5 Safe 0x56398b89...). Issuer-native deployment; no bridge control carries the claim.",
+        "reviewNote": "Ethereum is the reviewed canonical issuer-native liability deployment. Its TransparentUpgradeableProxy and owner-managed minter/custodian path are documented in Mint Authority; the OFT Adapter is a separate bridge route and is not treated as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770699,
         "sources": [
           {
             "label": "KRWQ token on Etherscan",
             "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
           },
           {
-            "label": "KRWQ documentation",
-            "url": "https://krwq.io/"
+            "label": "KRWQ official site",
+            "url": "https://krwq.cash"
           }
         ]
       },
@@ -82,6 +91,7 @@
         "destinationChain": "base",
         "canonicalChain": "ethereum",
         "contractAddress": "0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
+        "representationId": "krwq-layerzero-unified-supply",
         "protocol": "LayerZero OFT",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
@@ -89,23 +99,30 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
+        "reviewNote": "At Base block 50065471 (2026-08-16), token() returned the deployment itself, approvalRequired() returned false, endpoint() returned the chain's LayerZero V2 endpoint, and peers(30101) returned the Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. This is a live burn/mint OFT representation, not an issuer-native liability deployment; totalSupply() was 538,144,727.584575 KRWQ.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
         "controllerAddress": "0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
         "failureDomainKeys": [
           "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
           "contract:base:0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065471,
         "sources": [
           {
             "label": "KRWQ token on Basescan",
             "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
           },
           {
-            "label": "KRWQ documentation",
-            "url": "https://krwq.io/"
+            "label": "KRWQ official site",
+            "url": "https://krwq.cash"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
           }
         ]
       },
@@ -115,6 +132,7 @@
         "destinationChain": "polygon",
         "canonicalChain": "ethereum",
         "contractAddress": "0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
+        "representationId": "krwq-layerzero-unified-supply",
         "protocol": "LayerZero OFT",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
@@ -122,23 +140,30 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
+        "reviewNote": "At Polygon block 92143510 (2026-08-16), token() returned the deployment itself, approvalRequired() returned false, endpoint() returned the chain's LayerZero V2 endpoint, and peers(30101) returned the Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. This is a live burn/mint OFT representation, not an issuer-native liability deployment; totalSupply() was 60,885,127.932701 KRWQ.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "polygon",
         "controllerAddress": "0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
         "failureDomainKeys": [
           "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
           "contract:polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92143510,
         "sources": [
           {
             "label": "KRWQ token on Polygonscan",
             "url": "https://polygonscan.com/address/0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
           },
           {
-            "label": "KRWQ documentation",
-            "url": "https://krwq.io/"
+            "label": "KRWQ official site",
+            "url": "https://krwq.cash"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
           }
         ]
       },
@@ -148,6 +173,7 @@
         "destinationChain": "fraxtal",
         "canonicalChain": "ethereum",
         "contractAddress": "0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
+        "representationId": "krwq-layerzero-unified-supply",
         "protocol": "LayerZero OFT",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
@@ -155,23 +181,30 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
+        "reviewNote": "At Fraxtal block 40054791 (2026-08-16), token() returned the deployment itself, approvalRequired() returned false, endpoint() returned the chain's LayerZero V2 endpoint, and peers(30101) returned the Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. This is a live burn/mint OFT representation, not an issuer-native liability deployment; totalSupply() was 177,646,385.029559 KRWQ.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "fraxtal",
         "controllerAddress": "0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
         "failureDomainKeys": [
           "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
           "contract:fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40054791,
         "sources": [
           {
             "label": "KRWQ token on Fraxscan",
             "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
           },
           {
-            "label": "KRWQ documentation",
-            "url": "https://krwq.io/"
+            "label": "KRWQ official site",
+            "url": "https://krwq.cash"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
           }
         ]
       },
@@ -181,6 +214,7 @@
         "destinationChain": "codex",
         "canonicalChain": "ethereum",
         "contractAddress": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
+        "representationId": "krwq-layerzero-unified-supply",
         "protocol": "LayerZero OFT",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
@@ -188,23 +222,30 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
+        "reviewNote": "At Codex block 29011114 (2026-08-16), the live deployment returned token() = itself, approvalRequired() = false, endpoint() = 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa, and peers(30101) = the Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. Public RPC reads succeeded; this is a live burn/mint OFT representation, not a note-only deployment. totalSupply() was 5 KRWQ.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "codex",
         "controllerAddress": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
         "failureDomainKeys": [
           "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
           "contract:codex:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 29011114,
         "sources": [
           {
             "label": "KRWQ token on Codex explorer",
             "url": "https://explorer.codex.xyz/address/0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
           },
           {
-            "label": "KRWQ documentation",
-            "url": "https://krwq.io/"
+            "label": "KRWQ official site",
+            "url": "https://krwq.cash"
+          },
+          {
+            "label": "Codex public RPC",
+            "url": "https://rpc.codex.xyz"
           }
         ]
       },
@@ -214,6 +255,7 @@
         "destinationChain": "morph-l2",
         "canonicalChain": "ethereum",
         "contractAddress": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
+        "representationId": "krwq-layerzero-unified-supply",
         "protocol": "LayerZero OFT",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
@@ -221,25 +263,400 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
+        "reviewNote": "At Morph block 25379231 (2026-08-16), the live deployment returned token() = itself, approvalRequired() = false, endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, and peers(30101) = the Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. Public RPC reads succeeded; this is a live burn/mint OFT representation, not a note-only deployment. totalSupply() was 448,943.441139 KRWQ.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "morph-l2",
         "controllerAddress": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
         "failureDomainKeys": [
           "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
           "contract:morph-l2:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25379231,
         "sources": [
           {
             "label": "KRWQ token on Morph explorer",
             "url": "https://explorer.morphl2.io/address/0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
           },
           {
-            "label": "KRWQ documentation",
-            "url": "https://krwq.io/"
+            "label": "KRWQ official site",
+            "url": "https://krwq.cash"
+          },
+          {
+            "label": "Morph public RPC",
+            "url": "https://rpc.morphl2.io"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "krwq-ethereum-oft-adapter-safe",
+        "label": "KRWQ Ethereum OFT Adapter owner (3/5 Safe)",
+        "routeRefs": [
+          "base:0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
+          "polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
+          "fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
+          "codex:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
+          "morph-l2:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
+        ],
+        "capabilities": [
+          "admin",
+          "escrow",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x56398b89d53e8731bca8c1b06886cfb14bd6b654",
+        "failureDomainKeys": [
+          "safe:ethereum:0x56398b89d53e8731bca8c1b06886cfb14bd6b654",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
+          "contract:base:0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
+          "contract:polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
+          "contract:fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
+          "contract:codex:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
+          "contract:morph-l2:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x0bfda3970a72557a5c785c90b0d85aad092d5a3a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228"
+          ],
+          "enabledModules": [],
+          "observedBlock": 25770699,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25770699, the OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57 returned token() = the canonical KRWQ and approvalRequired() = true; its KRWQ balance was 777,136,188.987974. It is the canonical-side escrow/lockbox for the five reviewed routes.",
+          "trustedPeerOrRemote": "The Adapter returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c and is the peer at EID 30101 for each reviewed destination OFT. The owner Safe can administer the Adapter's peer/configuration path; reverse peer reads on every destination returned this Adapter.",
+          "pausersAdminsUpgraders": "The Ethereum Safe owns the OFT Adapter and its upgrade/admin surface. LayerZero Endpoint V2 message validation, ULN/DVN configuration, and Executor governance remain external to the issuer Safe.",
+          "onchainAmountBounds": "At the reviewed observations, the Adapter held 777,136,188.987974 KRWQ while Base, Polygon, Fraxtal, Codex, and Morph totalSupply values summed to 777,125,188.987974 KRWQ. The 11,000 KRWQ surplus is recorded as pooled route inventory; destination mint/burn is not treated as independent native issuance."
+        },
+        "capDescription": "The Ethereum Safe controls the OFT Adapter's canonical KRWQ escrow, peer/configuration, and upgrade/admin surfaces for the five LayerZero routes. This is bridge-route authority over pooled supply, not an additional native Ethereum mint authority.",
+        "bypassSurfaces": [
+          "LayerZero Endpoint V2, ULN, DVN, and Executor governance is external to the KRWQ Safe and remains a shared bridge failure domain."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770699,
+        "sources": [
+          {
+            "label": "Ethereum OFT Adapter",
+            "url": "https://etherscan.io/address/0xbdc82654f3574a113cdbd62f39cbe02e5b522d57"
+          },
+          {
+            "label": "KRWQ Ethereum contract",
+            "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770699 (2026-08-16), the OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57 returned token() = canonical KRWQ, approvalRequired() = true, Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, and owner() = the 3-of-5 Safe 0x56398b89. Its KRWQ balance was 777,136,188.987974. The Adapter locks canonical KRWQ for outbound LayerZero transfers and releases conserved inventory on verified inbound messages; the Safe controls its bridge administration and upgrade surface."
+      },
+      {
+        "id": "krwq-base-oft-owner-safe",
+        "label": "KRWQ Base OFT owner (3/5 Safe)",
+        "routeRefs": [
+          "base:0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x74986f1aaa569f09e369ed19e87e388de1976f9b",
+        "failureDomainKeys": [
+          "safe:base:0x74986f1aaa569f09e369ed19e87e388de1976f9b",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
+          "contract:base:0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+            "0x0bfda3970a72557a5c785c90b0d85aad092d5a3a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228"
+          ],
+          "enabledModules": [],
+          "observedBlock": 50065471,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50065471, the OFT endpoint was live and peers(30101) returned the Ethereum Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. The owner Safe can call setPeer(uint32,bytes32) to replace the trusted remote.",
+          "pausersAdminsUpgraders": "The Base OFT owner is Safe 0x74986f1a. The Safe administers the representation's bridge mint/burn path and owns ProxyAdmin 0x748e1558937c34c9b503f472bb7b7badc99a3ce0, which controls implementation 0x394b2763895d648abcd84c191c2a12ff9504de27. These are representation controls, not native Ethereum issuance.",
+          "onchainAmountBounds": "The verified KRWQOFT implementation mints on accepted LayerZero credit and burns on outbound transfer; its intended supply-conserving bound is the Adapter escrow and LayerZero message/peer validation, not an independent native liability cap."
+        },
+        "capDescription": "The 3-of-5 Base Safe can set the OFT peer, administer the destination bridge mint/burn path, and replace the representation implementation through its ProxyAdmin. There is no separate destination mint cap in the reviewed evidence.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "LayerZero Endpoint V2, ULN, DVN, and Executor governance is external to the Base Safe and remains a shared bridge failure domain."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065471,
+        "sources": [
+          {
+            "label": "KRWQ Base OFT",
+            "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f#code"
+          },
+          {
+            "label": "KRWQ Base ProxyAdmin",
+            "url": "https://basescan.org/address/0x748e1558937c34c9b503f472bb7b7badc99a3ce0"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50065471 (2026-08-16), the KRWQ OFT 0x370923d39f139c64813f173a1bf0b4f9ba36a24f returned token() = itself, approvalRequired() = false, endpoint() = the chain's LayerZero V2 endpoint, and peers(30101) = the Ethereum Adapter. owner() returned Safe 0x74986f1a, whose current threshold was 3-of-5 and getModules() was empty; guard/fallback absence is not claimed because those reads were not compatible. The Safe can setPeer and owns ProxyAdmin 0x748e1558937c34c9b503f472bb7b7badc99a3ce0."
+      },
+      {
+        "id": "krwq-polygon-oft-owner-safe",
+        "label": "KRWQ Polygon OFT owner (3/6 Safe)",
+        "routeRefs": [
+          "polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
+        "failureDomainKeys": [
+          "safe:polygon:0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
+          "eoa:polygon:0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
+          "contract:polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x0bfda3970a72557a5c785c90b0d85aad092d5a3a",
+            "0xf4e1d185666a624099298fcc42c50ba662dc7e52",
+            "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xf83b59a99f2e1ce05ec5c69ae1db4fbf41dade89",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228"
+          ],
+          "enabledModules": [],
+          "observedBlock": 92143510,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Polygon block 92143510, the OFT endpoint was live and peers(30101) returned the Ethereum Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. The owner Safe can call setPeer(uint32,bytes32) to replace the trusted remote.",
+          "pausersAdminsUpgraders": "The Polygon OFT owner is Safe 0x78f2bcc6. The Safe administers the representation's bridge mint/burn path. ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15 is separately owned by EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff and can replace implementation 0x1dcb966101be76a6a06ac0f9ebfb7587ab1a77a8; both are Bridge Risk controls, not native Ethereum issuance.",
+          "onchainAmountBounds": "The verified KRWQOFT implementation mints on accepted LayerZero credit and burns on outbound transfer; its intended supply-conserving bound is the Adapter escrow and LayerZero message/peer validation, not an independent native liability cap."
+        },
+        "capDescription": "The 3-of-6 Polygon Safe can set the OFT peer and administer the destination bridge mint/burn path. The separate single EOA ProxyAdmin owner can replace the representation implementation; neither capability belongs in native Mint Authority.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "LayerZero Endpoint V2, ULN, DVN, and Executor governance is external to the Polygon Safe and remains a shared bridge failure domain."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92143510,
+        "sources": [
+          {
+            "label": "KRWQ Polygon OFT",
+            "url": "https://polygonscan.com/address/0x44c3950a6ed303c863a6568ea18c1a01e504ffd2#code"
+          },
+          {
+            "label": "KRWQ Polygon ProxyAdmin",
+            "url": "https://polygonscan.com/address/0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92143510 (2026-08-16), the KRWQ OFT 0x44c3950a6ed303c863a6568ea18c1a01e504ffd2 returned token() = itself, approvalRequired() = false, endpoint() = the chain's LayerZero V2 endpoint, and peers(30101) = the Ethereum Adapter. owner() returned Safe 0x78f2bcc6, whose current threshold was 3-of-6 and getModules() was empty; guard/fallback absence is not claimed because those reads were not compatible. The Safe can setPeer. ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15 is owned by the separately recorded single EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff."
+      },
+      {
+        "id": "krwq-fraxtal-oft-owner-safe",
+        "label": "KRWQ Fraxtal OFT owner (3/5 Safe)",
+        "routeRefs": [
+          "fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x5493f3dbe06accd1f51568213de839498a2a3b83",
+        "failureDomainKeys": [
+          "safe:fraxtal:0x5493f3dbe06accd1f51568213de839498a2a3b83",
+          "eoa:fraxtal:0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+          "protocol:layerzero-oft",
+          "protocol:layerzero-endpoint-v2",
+          "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
+          "contract:fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+            "0x0bfda3970a72557a5c785c90b0d85aad092d5a3a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928"
+          ],
+          "enabledModules": [],
+          "observedBlock": 40054791,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Fraxtal block 40054791, the OFT endpoint was live and peers(30101) returned the Ethereum Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. The owner Safe can call setPeer(uint32,bytes32) to replace the trusted remote.",
+          "pausersAdminsUpgraders": "The Fraxtal OFT owner is Safe 0x5493f3db. The Safe administers the representation's bridge mint/burn path. ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb is separately owned by EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff and can replace implementation 0x07fb13555085cedb41546d5deb58eedeb6791874; both are Bridge Risk controls, not native Ethereum issuance.",
+          "onchainAmountBounds": "The verified KRWQOFT implementation mints on accepted LayerZero credit and burns on outbound transfer; its intended supply-conserving bound is the Adapter escrow and LayerZero message/peer validation, not an independent native liability cap."
+        },
+        "capDescription": "The 3-of-5 Fraxtal Safe can set the OFT peer and administer the destination bridge mint/burn path. The separate single EOA ProxyAdmin owner can replace the representation implementation; neither capability belongs in native Mint Authority.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "LayerZero Endpoint V2, ULN, DVN, and Executor governance is external to the Fraxtal Safe and remains a shared bridge failure domain."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 40054791,
+        "sources": [
+          {
+            "label": "KRWQ Fraxtal OFT",
+            "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6#code"
+          },
+          {
+            "label": "KRWQ Fraxtal ProxyAdmin",
+            "url": "https://fraxscan.com/address/0x3faff366c59eb98cacc6247816e98ad800f5a2fb"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "At Fraxtal block 40054791 (2026-08-16), the KRWQ OFT 0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6 returned token() = itself, approvalRequired() = false, endpoint() = the chain's LayerZero V2 endpoint, and peers(30101) = the Ethereum Adapter. owner() returned Safe 0x5493f3db, whose current threshold was 3-of-5 and getModules() was empty; guard/fallback absence is not claimed because those reads were not compatible. The Safe can setPeer. ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb is owned by the separately recorded single EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff."
+      },
+      {
+        "id": "krwq-polygon-proxy-admin-eoa",
+        "label": "KRWQ Polygon ProxyAdmin owner (single EOA)",
+        "routeRefs": [
+          "polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+        "failureDomainKeys": [
+          "eoa:polygon:0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+          "contract:polygon:0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15",
+          "contract:polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
+          "protocol:layerzero-oft"
+        ],
+        "authorityType": "eoa",
+        "capDescription": "As sole owner of Polygon ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15, this EOA can call upgradeAndCall() to replace the KRWQ representation implementation with one that mints without limit. There is no cap, timelock, or multisig on this upgrade authority.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "This single-key representation upgrade path is independent of the Polygon OFT owner Safe; LayerZero Endpoint V2 validation remains an additional external failure domain."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92143510,
+        "sources": [
+          {
+            "label": "KRWQ Polygon token proxy",
+            "url": "https://polygonscan.com/address/0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
+          },
+          {
+            "label": "KRWQ Polygon ProxyAdmin",
+            "url": "https://polygonscan.com/address/0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92143510 (2026-08-16), the KRWQ proxy's EIP-1967 admin slot held ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15. ProxyAdmin.owner() returned 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff, whose code was empty, confirming a plain EOA that can unilaterally replace the destination OFT implementation."
+      },
+      {
+        "id": "krwq-fraxtal-proxy-admin-eoa",
+        "label": "KRWQ Fraxtal ProxyAdmin owner (single EOA)",
+        "routeRefs": [
+          "fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+        "failureDomainKeys": [
+          "eoa:fraxtal:0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+          "contract:fraxtal:0x3faff366c59eb98cacc6247816e98ad800f5a2fb",
+          "contract:fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
+          "protocol:layerzero-oft"
+        ],
+        "authorityType": "eoa",
+        "capDescription": "As sole owner of Fraxtal ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb, this EOA can call upgradeAndCall() to replace the KRWQ representation implementation with one that mints without limit. There is no cap, timelock, or multisig on this upgrade authority.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "This single-key representation upgrade path is independent of the Fraxtal OFT owner Safe; LayerZero Endpoint V2 validation remains an additional external failure domain."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 40054791,
+        "sources": [
+          {
+            "label": "KRWQ Fraxtal token proxy",
+            "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+          },
+          {
+            "label": "KRWQ Fraxtal ProxyAdmin",
+            "url": "https://fraxscan.com/address/0x3faff366c59eb98cacc6247816e98ad800f5a2fb"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "At Fraxtal block 40054791 (2026-08-16), the KRWQ proxy's EIP-1967 admin slot held ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb. ProxyAdmin.owner() returned 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff, whose code was empty, confirming a plain EOA that can unilaterally replace the destination OFT implementation."
       }
     ]
   }

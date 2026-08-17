@@ -7,6 +7,15 @@
     "summary": "GBPSAFO is the GBP share class of Spiko's AMF-authorized UCITS fund; tokens are minted to KYC'd investor addresses by Spiko's in-house 'daily-operator' relayer and burned by a dedicated redemption contract, under a multisig super-admin that can upgrade contracts and manage permissions.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "arbitrum:0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635",
+        "base:0x2f6c0e5e06b43512706a9cdf66cd21f723fe0ec3",
+        "ethereum:0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0",
+        "etherlink:0xfe20ebe3881491b2e158b9d10cb95bcfa652262d",
+        "polygon:0x4fe515c67eeeadb3282780325f09bb7c244fe774",
+        "starknet:0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49",
+        "stellar:CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "Spiko super-admin multisig",
       "observedAt": "2026-07-20",
@@ -19,6 +28,15 @@
     },
     "controls": [
       {
+        "deploymentRefs": [
+          "arbitrum:0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635",
+          "base:0x2f6c0e5e06b43512706a9cdf66cd21f723fe0ec3",
+          "ethereum:0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0",
+          "etherlink:0xfe20ebe3881491b2e158b9d10cb95bcfa652262d",
+          "polygon:0x4fe515c67eeeadb3282780325f09bb7c244fe774",
+          "starknet:0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49",
+          "stellar:CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP"
+        ],
         "label": "Spiko daily-operator relayer (minter)",
         "role": "backend-signer",
         "authorityType": "issuer-backend",
@@ -54,6 +72,9 @@
         ],
         "chain": "ethereum",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": [
+          "ethereum:0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0"
+        ],
         "threshold": 3,
         "signerCount": 7,
         "safe": {

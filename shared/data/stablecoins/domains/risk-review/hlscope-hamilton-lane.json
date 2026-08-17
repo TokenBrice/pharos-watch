@@ -18,21 +18,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "HLSCOPE was first tokenized through Securitize on Polygon and is now tracked on Ethereum and Optimism as well. Public multichain evidence points to Wormhole-enabled interoperability, so the route is reviewed conservatively as an external lock/mint route.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "summary": "HLSCOPE has five reviewed issuer-native deployments on Ethereum, Polygon, Optimism, Plume, and Tron. Official issuer announcements describe Wormhole-powered multichain interoperability, but no HLSCOPE-specific adapter, NTT manager/transceiver, bridge controller, peer/DVN configuration, rate limit, or burn/lock accounting has been identified in reviewed primary sources. The profile therefore retains the conservative external-lock-mint tier as a provisional route assessment; only native issuance rows are reviewed below and no unverified bridge controller is scored.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge boundary migration; HLSCOPE route evidence review",
     "confidence": "probable",
-    "protocols": [
-      {
-        "source": "docs",
-        "name": "Wormhole NTT",
-        "url": "https://wormhole.com/products/native-token-transfers",
-        "bridgeTypes": [
-          "nativeTokenTransfer",
-          "lockAndMint"
-        ]
-      }
-    ],
     "sources": [
       {
         "label": "Hamilton Lane SCOPE via Securitize",
@@ -43,8 +32,16 @@
         "url": "https://securitize.io/learn/press/securitize-expands-access-to-hamilton-lanes-senior-credit-opportunities-fund-via-polygon"
       },
       {
-        "label": "Wormhole NTT",
-        "url": "https://wormhole.com/products/native-token-transfers"
+        "label": "Wormhole HLSCOPE multichain announcement",
+        "url": "https://wormhole.com/blog/hamilton-lane-expands-scope-fund-multichain-with-securitize-and-wormhole"
+      },
+      {
+        "label": "Plume Securitize deployment announcement",
+        "url": "https://plume.org/blog/securitize-to-launch-on-plume"
+      },
+      {
+        "label": "Securitize HLSCOPE Tron announcement",
+        "url": "https://www.linkedin.com/posts/securitize_securitize-is-expanding-access-to-hamilton-activity-7467560930529402880-VriE"
       }
     ],
     "routes": [
@@ -59,10 +56,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on polygon at block 90540065: HLSCOPE token 0x4c5ca366e26409845624e29b62c388a06961a792 (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). Issuer-minted natively; cross-chain movement runs through Securitize's Wormhole-enabled interoperability under issuer control.",
+        "reviewNote": "Verified on polygon at block 90540065: HLSCOPE token 0x4c5ca366e26409845624e29b62c388a06961a792 (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). This is an independently native issuance route; no HLSCOPE-specific Wormhole adapter, manager/transceiver, or bridge controller was identified in reviewed primary sources.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
         "canonicalChain": "polygon",
         "observedBlock": 90540065,
         "sources": [
@@ -87,11 +83,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on ethereum at block 25570988: HLSCOPE token 0xda2ffa104356688e74d9340519b8c17f00d7752e (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). Issuer-minted natively; cross-chain movement runs through Securitize's Wormhole-enabled interoperability under issuer control.",
+        "reviewNote": "Verified on ethereum at block 25570988: HLSCOPE token 0xda2ffa104356688e74d9340519b8c17f00d7752e (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). This is an independently native issuance route; no HLSCOPE-specific Wormhole adapter, manager/transceiver, or bridge controller was identified in reviewed primary sources.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
+        "canonicalChain": "ethereum",
         "observedBlock": 25570988,
         "sources": [
           {
@@ -115,11 +110,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on optimism at block 154458159: HLSCOPE token 0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). Issuer-minted natively; cross-chain movement runs through Securitize's Wormhole-enabled interoperability under issuer control.",
+        "reviewNote": "Verified on optimism at block 154458159: HLSCOPE token 0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). This is an independently native issuance route; no HLSCOPE-specific Wormhole adapter, manager/transceiver, or bridge controller was identified in reviewed primary sources.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
+        "canonicalChain": "optimism",
         "observedBlock": 154458159,
         "sources": [
           {
@@ -143,11 +137,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on plume at block 82174966: HLSCOPE token 0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). Issuer-minted natively; cross-chain movement runs through Securitize's Wormhole-enabled interoperability under issuer control.",
+        "reviewNote": "Verified on plume at block 82174966: HLSCOPE token 0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). This is an independently native issuance route; no HLSCOPE-specific Wormhole adapter, manager/transceiver, or bridge controller was identified in reviewed primary sources.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
+        "canonicalChain": "plume",
         "observedBlock": 82174966,
         "sources": [
           {
@@ -171,11 +164,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Tron 2026-07-20 via TronGrid triggerconstantcontract: contract TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X (an ERC1967Proxy) reports symbol()='HLSCOPE', name()='Hamilton Lane SCOPE Securitize Tokenized Feeder Fund LP', owner() = 0x4a833ac40b115635a7300f1cc97ae436c555384a (no contract code on Tron — EOA). Securitize's native Tron issuance of the Hamilton Lane SCOPE fund token.",
+        "reviewNote": "Verified on Tron 2026-07-20 via TronGrid triggerconstantcontract: contract TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X (an ERC1967Proxy) reports symbol()='HLSCOPE', name()='Hamilton Lane SCOPE Securitize Tokenized Feeder Fund LP', owner() = 0x4a833ac40b115635a7300f1cc97ae436c555384a (no contract code on Tron — EOA). This is an independently native Securitize issuance route; no HLSCOPE-specific Wormhole adapter, manager/transceiver, or bridge controller was identified in reviewed primary sources.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "polygon",
-        "canonicalChain": "polygon",
+        "canonicalChain": "tron",
         "sources": [
           {
             "label": "HLSCOPE on Tronscan (verified 2026-07-20)",

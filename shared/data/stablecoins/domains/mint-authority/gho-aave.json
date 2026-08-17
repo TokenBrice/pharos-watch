@@ -28,6 +28,9 @@
       {
         "chain": "ethereum",
         "address": "0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
         "label": "Aave Ethereum ACL Admin executor",
         "role": "bucket-admin",
         "authorityType": "dao-governor",
@@ -54,6 +57,9 @@
       {
         "chain": "ethereum",
         "address": "0x5513224daaeabca31af5280727878d52097afa05",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
         "label": "CoreGhoDirectMinter",
         "role": "facilitator",
         "authorityType": "contract",
@@ -72,6 +78,9 @@
       {
         "chain": "ethereum",
         "address": "0xb639d208bcf0589d54fac24e655c79ec529762b8",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
         "label": "FlashMinter Facilitator",
         "role": "facilitator",
         "authorityType": "contract",
@@ -90,6 +99,9 @@
       {
         "chain": "ethereum",
         "address": "0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
         "label": "GhoDirectFacilitator Plasma",
         "role": "facilitator",
         "authorityType": "contract",
@@ -108,6 +120,9 @@
       {
         "chain": "ethereum",
         "address": "0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
         "label": "GhoDirectFacilitator GSMs Mainnet",
         "role": "facilitator",
         "authorityType": "contract",
@@ -126,6 +141,9 @@
       {
         "chain": "ethereum",
         "address": "0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
         "label": "LidoGhoDirectMinter",
         "role": "facilitator",
         "authorityType": "contract",
@@ -144,6 +162,9 @@
       {
         "chain": "ethereum",
         "address": "0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+        "deploymentRefs": [
+          "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        ],
         "label": "HorizonGhoDirectMinter",
         "role": "facilitator",
         "authorityType": "contract",

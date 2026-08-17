@@ -60,30 +60,23 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "mRe7YIELD is a Midas liquid yield token with multichain distribution, and the workflow candidate identifies Across as the material route surface. Because Across is an intent/liquidity framework, the route is reviewed as liquidity-route risk. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native; Etherlink row confirmed uniform Midas deployment; Starknet row remains unresolved (non-EVM).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "tier": "single-chain-or-native",
+    "summary": "All three authored mRe7YIELD deployments are reviewed as Midas issuer-native issuance on Ethereum, Etherlink, and Starknet. No token-specific bridge adapter, escrow, peer, validator/DVN, rate-limit, or bridge-admin route is verified; the generic Across liquidity/intent listing is not treated as material bridge evidence.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex Mint/Bridge boundary migration RELOC-10",
     "confidence": "probable",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "Across",
-        "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "intent",
-          "liquidity"
-        ]
-      }
-    ],
     "sources": [
       {
-        "label": "Midas ecosystem",
-        "url": "https://midas.app/ecosystem"
+        "label": "Midas smart-contract directory",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
       },
       {
-        "label": "Across on L2BEAT",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "Midas mRe7YIELD product documentation",
+        "url": "https://docs.midas.app/tokens/mre7yield"
+      },
+      {
+        "label": "Starknet publication describing native mRe7YIELD deployment",
+        "url": "https://www.starknet.io/blog/bitcoin-defi-domain/"
       }
     ],
     "routes": [
@@ -116,28 +109,25 @@
         "id": "etherlink:0x733d504435a49fc8c4e9759e756c2846c92f0160",
         "destinationChain": "etherlink",
         "contractAddress": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
-        "protocol": "Midas multichain deployment (uniform proxy admin)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Midas mRe7YIELD native issuance on Etherlink",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals on Etherlink; EIP-1967 admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac matches the Ethereum deployment admin (uniform Midas multichain deployment). The token contract executes mint.",
+        "reviewNote": "Midas's official smart-contract directory lists an mRe7YIELD token and issuance vault on Etherlink. At Etherlink block 51161116 on 2026-08-16, the chain-local vault and shared EOA retained M_RE7_MINT_OPERATOR_ROLE, confirming an issuer-native mint path rather than a conserved bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "etherlink",
-        "controllerAddress": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
-        "failureDomainKeys": [
-          "protocol:midas-multichain",
-          "contract:etherlink:0x733d504435a49fc8c4e9759e756c2846c92f0160"
-        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 51161116,
         "sources": [
           {
-            "label": "Midas",
-            "url": "https://midas.app/"
+            "label": "Midas smart-contract directory",
+            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+          },
+          {
+            "label": "Etherlink mRe7YIELD proxy",
+            "url": "https://explorer.etherlink.com/address/0x733d504435a49fc8c4e9759e756c2846c92f0160"
           }
         ]
       },
@@ -145,30 +135,24 @@
         "id": "starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
         "destinationChain": "starknet",
         "contractAddress": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-        "protocol": "Midas multichain deployment (uniform proxy admin)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Midas mRe7YIELD native issuance on Starknet",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Starknet 2026-07-20 (starknet_call, block 12067807): name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals, totalSupply 175,676.21 tokens. getClassHashAt returns class 0x05ffbcfeb50d200a0677c48a129a11245a3fc519d1d98d76882d1c9a1b19c6ed with get_upgrade_delay() = 0, matching the 2026-07-13 mintAuthority review: the single-key OpenZeppelin governance account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c holds class-replacement power. Same uniform Midas multichain deployment pattern as the reviewed Etherlink route — the token contract executes mint; no third-party bridge is in the path.",
+        "reviewNote": "At Starknet block 13408053 on 2026-08-16, the tracked contract returned name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals, and a live total supply. Its verified class ABI exposes permissioned_mint/permissioned_burn and governance-admin/upgrade-governor functions with no L1 handler entrypoints; get_upgrade_delay() = 0 and governance account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c is a governance admin. This supports native issuer-style issuance rather than a StarkGate-style bridge representation, although Midas's public directory omits the Starknet address and supply policy.",
         "mappingVersion": "bridge-route-facts-v1",
-        "controllerChain": "starknet",
-        "controllerAddress": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-        "failureDomainKeys": [
-          "protocol:midas-multichain",
-          "contract:starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
-        ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 12067807,
+        "observedAt": "2026-08-16",
+        "observedBlock": 13408053,
         "sources": [
           {
-            "label": "Midas",
-            "url": "https://midas.app/"
+            "label": "Starknet publication describing native mRe7YIELD deployment",
+            "url": "https://www.starknet.io/blog/bitcoin-defi-domain/"
           },
           {
-            "label": "mRe7YIELD on Starkscan (verified 2026-07-20)",
+            "label": "mRe7YIELD on Starkscan",
             "url": "https://starkscan.co/contract/0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
           }
         ]

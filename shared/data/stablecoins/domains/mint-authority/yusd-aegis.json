@@ -4,22 +4,26 @@
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "YUSD mint authority terminates in a single 3-of-5 Safe (0x4Fe78eF65BD8EDDED480efaB030BA680646503c8) on every deployment. Ethereum and BSC each mint through a chain-local AegisMinting contract that requires a whitelisted order signed by trusted signer 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e; Avalanche is a LayerZero V2 OFT that mints on peer delivery. None of the four contracts is a proxy, but the Safe can repoint mint logic because YUSD.setMinter is onlyOwner, so mint-critical logic is Safe-changeable with no timelock.",
+    "summary": "YUSD has independent native issuance on Ethereum and BSC. Each chain-local AegisMinting contract mints its YUSD against the native whitelisted order and single trusted-signer path; Ethereum's active mint cap is disabled and BSC's configurable cap is raiseable. The common 3-of-5 Safe owns the native YUSD, AegisMinting, and AegisConfig controls and can change minters and settings without a timelock. Avalanche and Katana are LayerZero V2 burn/mint representations; their adapter, OFT, peer, delegate, DVN, and cross-chain operator risks are assessed only in Bridge Risk.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+        "bsc:0xab3dbcd9b096c3ff76275038bf58eac10d22c61f"
+      ],
       "implementationAddresses": [
         "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
         "0xc4df68e592245ca5202fe8b7c438d2b799820fc2",
         "0xab3dbcd9b096c3ff76275038bf58eac10d22c61f",
-        "0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        "0x02bf8f0e046f471709e578b1e633077096ce65cf"
       ],
       "adminAddresses": [
         "0x4Fe78eF65BD8EDDED480efaB030BA680646503c8"
       ],
       "canChangeMintLogic": true,
       "controlRef": "Aegis admin Safe",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25575161,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770366,
       "sources": [
         {
           "label": "YUSD Ethereum verified source (setMinter is onlyOwner; mint is onlyMinter)",
@@ -34,8 +38,8 @@
           "url": "https://bscscan.com/address/0xab3dbcd9b096c3ff76275038bf58eac10d22c61f"
         },
         {
-          "label": "YUSD Avalanche LayerZero OFT (owner/endpoint read on-chain)",
-          "url": "https://snowtrace.io/address/0xca2671dcd031a72359f456c212f62a9bda737cd7"
+          "label": "BSC AegisMinting verified source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x02bf8f0e046f471709e578b1e633077096ce65cf?fields=all"
         }
       ]
     },
@@ -43,28 +47,32 @@
       {
         "chain": "ethereum",
         "address": "0xC4Df68e592245cA5202fE8b7C438d2b799820fc2",
+        "deploymentRefs": [
+          "ethereum:0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a"
+        ],
         "label": "AegisMinting",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "attestorQuorum": "mint(Order,signature) verifies AegisConfig.trustedSigner() before minting",
-          "caps": "mintLimit exists but current tuple read did not prove an active hard cap; admin can set mint limits",
-          "pausersAdminsUpgraders": "SETTINGS_MANAGER_ROLE can pause mint/redeem/cross-chain flows"
-        },
         "sources": [
           {
             "label": "AegisMinting Sourcify source",
             "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
           }
         ],
-        "evidence": "YUSD.minter() returned AegisMinting. Sourcify source shows yusd.mint(...) in mint(), depositIncome(), and mintForCrossChain()."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770366,
+        "evidence": "At Ethereum block 25770366, YUSD.minter() returned this AegisMinting deployment. Its verified source shows the native mint(Order,signature) path requiring a whitelisted wallet, supported collateral, an unpaused mint path, the configured mint limit, and a signature from AegisConfig.trustedSigner(), followed by collateral transfer before yusd.mint(...). The separate depositIncome() reward-mint path is FUNDS_MANAGER-gated and remains native issuance evidence. The mintLimit exists but the current tuple read did not prove an active hard cap; an administrator can set mint limits, and SETTINGS_MANAGER_ROLE can pause native mint and redemption flows."
       },
       {
         "chain": "ethereum",
         "address": "0x4Fe78eF65BD8EDDED480efaB030BA680646503c8",
+        "deploymentRefs": [
+          "ethereum:0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+          "bsc:0xab3dbcd9b096c3ff76275038bf58eac10d22c61f"
+        ],
         "label": "Aegis admin Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -72,10 +80,6 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
-        "routeChecks": {
-          "pausersAdminsUpgraders": "Aegis admin Safe is owner/defaultAdmin for Ethereum AegisMinting and, verified 2026-07-20, is also YUSD(BSC).owner(), AegisMinting(BSC).owner()/defaultAdmin(), AegisConfig(BSC).owner(), the Avalanche OFT owner() and the LayerZero EndpointV2 delegate for that OFT. Reviewed as 3-of-5 with no modules and zero guard.",
-          "caps": "Safe can administer mint limits and trusted-signer/cross-chain operator roles; the reviewed Ethereum trusted signer is configured by this Safe and CROSS_CHAIN_OPERATOR_ROLE is unassigned."
-        },
         "safe": {
           "threshold": 3,
           "owners": [
@@ -88,8 +92,8 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "observedAt": "2026-07-20",
-          "observedBlock": 25165875,
+          "observedAt": "2026-08-16",
+          "observedBlock": 25770366,
           "source": "safe-api"
         },
         "sources": [
@@ -98,11 +102,16 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4Fe78eF65BD8EDDED480efaB030BA680646503c8/"
           }
         ],
-        "evidence": "AegisMinting.owner() and defaultAdmin() returned this Safe. Cross-chain re-verification 2026-07-20: the same Safe is the terminal administrator on all three YUSD deployments (Ethereum block 25575161, BSC block 111124154, Avalanche block 90804258), so mint authority is not federated across chains."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770366,
+        "evidence": "At Ethereum block 25770366 and BSC block 116345704, the common Safe remained owner/defaultAdmin of both YUSD tokens, both AegisMinting contracts, and both AegisConfig contracts. The current Safe API read returned five owners, threshold 3, no enabled modules, and the zero guard. The Safe can call YUSD.setMinter immediately and can change native mint limits, pause state, and trusted-signer/configuration settings through its owner, DEFAULT_ADMIN_ROLE, and SETTINGS_MANAGER_ROLE powers. Native Ethereum minting remains unbounded because its active mint limit is disabled; BSC's configured limit is raiseable rather than a permanent supply ceiling."
       },
       {
         "chain": "bsc",
         "address": "0x02bf8f0e046F471709E578b1E633077096ce65CF",
+        "deploymentRefs": [
+          "bsc:0xab3dbcd9b096c3ff76275038bf58eac10d22c61f"
+        ],
         "label": "AegisMinting (BSC)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -110,12 +119,8 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "No on-chain supply ceiling; the BSC AegisMinting contract is the sole minter of the BSC YUSD token and its mint limits are administered by the same Aegis admin Safe that owns the Ethereum deployment.",
-        "routeChecks": {
-          "attestorQuorum": "BSC AegisConfig 0xB9f1E8417ABaedF6Fd838212267cA8260c4ca9da trustedSigner() = 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e, the same trusted signer as the Ethereum deployment; minting requires that single signer's signature over the order.",
-          "pausersAdminsUpgraders": "AegisMinting(BSC).owner() and defaultAdmin() both return the Aegis admin Safe 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8; BSC AegisConfig.owner() returns the same Safe."
-        },
-        "observedAt": "2026-07-20",
-        "observedBlock": 111124154,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116345704,
         "sources": [
           {
             "label": "BSC AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF",
@@ -126,35 +131,7 @@
             "url": "https://bscscan.com/address/0xab3dbcd9b096c3ff76275038bf58eac10d22c61f"
           }
         ],
-        "evidence": "At BSC block 111124154: YUSD(0xab3dbcd9...).minter() = 0x02bf8f0e046F471709E578b1E633077096ce65CF and YUSD.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8. AegisMinting(BSC).yusd() = 0xAB3dBcD9B096C3fF76275038bf58eAC10D22C61f, .owner() = .defaultAdmin() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, .aegisConfig() = 0xB9f1E8417ABaedF6Fd838212267cA8260c4ca9da. Both the token (4,903 bytes) and AegisMinting (20,949 bytes) read zero at the EIP-1967 implementation slot, so neither is a standard proxy. BSC YUSD totalSupply was 1,750,514.259681894109980192."
-      },
-      {
-        "chain": "avalanche",
-        "address": "0xca2671Dcd031a72359f456C212F62A9bDa737cD7",
-        "label": "YUSD Avalanche LayerZero OFT",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The Avalanche deployment is a LayerZero V2 OFT that mints on delivery of a message from a configured peer; there is no on-chain supply ceiling and the peer/DVN configuration is set by the LayerZero delegate.",
-        "routeChecks": {
-          "trustedPeerOrRemote": "LayerZero V2 EndpointV2 0x1a44076050125825900e736c501f859c50fE728c on Avalanche returns delegates(YUSD) = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, so the Aegis admin Safe configures peers, DVNs and libraries for this OFT.",
-          "pausersAdminsUpgraders": "OFT.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8."
-        },
-        "observedAt": "2026-07-20",
-        "observedBlock": 90804258,
-        "sources": [
-          {
-            "label": "YUSD Avalanche LayerZero OFT (owner/endpoint read on-chain)",
-            "url": "https://snowtrace.io/address/0xca2671dcd031a72359f456c212f62a9bda737cd7"
-          },
-          {
-            "label": "LayerZero V2 EndpointV2 on Avalanche (delegates(YUSD) read on-chain)",
-            "url": "https://snowtrace.io/address/0x1a44076050125825900e736c501f859c50fE728c"
-          }
-        ],
-        "evidence": "At Avalanche block 90804235-90804258: YUSD(0xca2671Dc...) name() 'YUSD', decimals() 18, sharedDecimals() 6, approvalRequired() false, token() = itself (native OFT, not an adapter), endpoint() = LayerZero V2 EndpointV2 0x1a44076050125825900e736c501f859c50fE728c, owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, EndpointV2.delegates(YUSD) = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8. The EIP-1967 implementation slot reads zero (13,161 bytes of code, non-proxy). Avalanche YUSD totalSupply was 101,841.662456."
+        "evidence": "At BSC block 116345704, YUSD(0xab3dbcd9...).minter() = 0x02bf8f0e046F471709E578b1E633077096ce65CF and YUSD.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8. AegisMinting(BSC).yusd() = 0xAB3dBcD9B096C3fF76275038bf58eAC10D22C61f, .owner() = .defaultAdmin() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, and .aegisConfig() = 0xB9f1E8417ABaedF6Fd838212267cA8260c4ca9da. Both the token (4,903 bytes) and AegisMinting (20,949 bytes) read zero at the EIP-1967 implementation slot, so neither is a standard proxy. The verified native path requires the single trusted signer and collateral/order checks; BSC mintLimit() is configurable and not a permanent supply ceiling."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -187,21 +164,13 @@
           "url": "https://bscscan.com/address/0xab3dbcd9b096c3ff76275038bf58eac10d22c61f"
         },
         {
-          "label": "YUSD Avalanche LayerZero OFT (owner/endpoint read on-chain)",
-          "url": "https://snowtrace.io/address/0xca2671dcd031a72359f456c212f62a9bda737cd7"
-        },
-        {
-          "label": "LayerZero V2 EndpointV2 on Avalanche (delegates(YUSD) read on-chain)",
-          "url": "https://snowtrace.io/address/0x1a44076050125825900e736c501f859c50fE728c"
-        },
-        {
           "label": "Accountable live YUSD proof of reserves and liabilities",
           "url": "https://aegis.accountable.capital/"
         }
       ],
-      "evidence": "Prior review left the BSC and Avalanche authority chains unenumerated. Resolved 2026-07-20 by direct reads. Ethereum (block 25575161): YUSD.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() = AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2, totalSupply 34,129,715.738490831724848552. BSC (block 111124154): YUSD.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() = AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF whose owner() and defaultAdmin() are the same Safe and whose AegisConfig 0xB9f1E8417ABaedF6Fd838212267cA8260c4ca9da has owner() = the Safe and trustedSigner() = 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e, identical to Ethereum. Avalanche (block 90804258): the token is a native LayerZero V2 OFT with owner() = the Safe and EndpointV2.delegates() = the Safe. All four contracts read zero at the EIP-1967 implementation slot, so none is a standard proxy; the verified Ethereum YUSD source shows setMinter(address) is onlyOwner and mint(address,uint256) is onlyMinter, so the Safe can substitute mint logic without an upgrade and without a delay. Every mint surface therefore reduces to one 3-of-5 Safe plus one trusted signer. Reconciliation cadence and prudential supervision remain unevidenced and are deliberately left \"unknown\" rather than inferred from the Accountable real-time dashboard; that is recorded in the profile fields, not as a blocking question. Economic-posture fields reviewed 2026-08-15: the common Safe can replace mint logic without delay, while Accountable reserve telemetry does not reconcile every chain liability and no regulator or independent attestor is evidenced. Wave 2 external review 2026-08-15 resolved reconciliation as continuous and supervision as attestation-only: Accountable's live independent dashboard aggregates total on-chain YUSD supply across the supported chain distribution and verifies it against directly sourced protocol reserves with cryptographic proofs.",
+      "evidence": "Native Mint Authority review refreshed for Ethereum block 25770366 and BSC block 116345704. Ethereum YUSD.owner() remained 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() remained AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2, and the Ethereum AegisMinting path requires a whitelisted collateral order and the single AegisConfig.trustedSigner() 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e. BSC YUSD.owner() remained the same Safe, YUSD.minter() remained AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF, and BSC AegisMinting.owner()/defaultAdmin() and AegisConfig.owner() remained the Safe with the same trusted signer. Ethereum mintLimit() has periodDuration = 0 and maxPeriodAmount = 0; BSC has a 600-second, 210,000e18 configurable period limit, so the native economic cap remains unbounded and raiseable. The Safe is 3-of-5 with no enabled modules and a zero guard, can call YUSD.setMinter immediately, and can change native AegisMinting settings without a timelock; all four native deployments are non-proxy. The native review covers mint(Order,signature), depositIncome, native owner/default-admin/settings powers, and Accountable-backed continuous reconciliation with attestation-only supervision. LayerZero adapters, OFTs, peers, delegates, DVNs, and mintForCrossChain/burnForCrossChain are bridge capabilities retained under Bridge Risk and are not counted here.",
       "reviewer": "Pharos V9 Phase 3 curation lane cur-12 (on-chain reads); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

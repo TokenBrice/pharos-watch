@@ -1,100 +1,153 @@
 {
   "id": "usdm-mega",
   "mintAuthority": {
-    "mintPath": "wrapped-or-variant-inherited",
+    "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "inheritedFrom": "usdtb-ethena",
-    "summary": "USDM is MegaETH's dollar issued on Ethena's USDtb rails and backed ~90% by USDtb, so it inherits the backing and issuance dependency on USDtb. Each USDM deployment is also a UUPS-upgradeable OFT whose 4-of-9 owner Safe can add or remove direct minters and replace mint-critical logic without a timelock.",
+    "summary": "USDM's canonical native issuance is on Ethereum through the non-upgradeable USDmMinting collateral/order gateway, whose current MINTER_ROLE EOAs are constrained by collateral validation and global/per-asset per-block caps. The Ethereum token is a UUPS OFT owned by a 4-of-8 Safe that can add an arbitrary direct minter or replace mint-critical logic without a timelock; MegaETH is a LayerZero burn/mint representation assessed separately under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+      ],
       "proxyAddresses": [
-        "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926",
-        "0xfafddbb3fc7688494971a79cc65dca3ef82079e7"
+        "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
       ],
       "implementationAddresses": [
-        "0x61e6eb7f9e36d27db1da7df55b898122b9145de2",
-        "0xac37677261885fdb372a37ac8d5d47044196073c"
+        "0x61e6eb7f9e36d27db1da7df55b898122b9145de2"
       ],
       "adminAddresses": [
         "0x141c03abc062a9d5d4238e1666b849c929e53cb2"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "USDM logic owner (Gnosis Safe 9/4)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530956,
+      "controlRef": "USDM Ethereum issuance and token owner Safe (4-of-8)",
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770580,
       "sources": [
         {
-          "label": "USDM Ethereum implementation verified source",
-          "url": "https://eth.blockscout.com/address/0x61e6eb7f9e36d27db1da7df55b898122b9145de2"
+          "label": "USDM Ethereum token, verified proxy and source",
+          "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
         },
         {
-          "label": "USDM MegaETH implementation verified source",
-          "url": "https://megaeth.blockscout.com/address/0xac37677261885fdb372a37ac8d5d47044196073c"
+          "label": "USDM Ethereum verified implementation",
+          "url": "https://eth.blockscout.com/address/0x61e6eb7f9e36d27db1da7df55b898122b9145de2"
         }
       ]
     },
     "controls": [
       {
-        "label": "USDM USDtb-rails representation (share accounting)",
-        "role": "wrapper",
+        "chain": "ethereum",
+        "address": "0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2",
+        "deploymentRefs": [
+          "ethereum:0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+        ],
+        "label": "USDM Ethereum USDmMinting collateral/order gateway",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "none",
+        "directMintAbility": "cap-limited",
         "canRaiseCap": false,
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "USDmMinting mint and mintWETH require MINTER_ROLE, a valid signed OrderType.MINT order, an active supported asset, route ratios summing to 10,000, collateral transfer from the benefactor, and per-asset and global per-block mint caps. At the reviewed block, global and active USDtb/USDC caps were 10,000,000 USDm per block; WETH was inactive and stablesDeltaLimit() was zero.",
+        "failureDomainKeys": [
+          "contract:ethereum:0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2",
+          "contract:ethereum:0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770626,
         "sources": [
           {
-            "label": "USDM MegaETH contract (Blockscout)",
-            "url": "https://megaeth.blockscout.com/address/0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7"
+            "label": "Ethereum USDmMinting verified source and ABI",
+            "url": "https://eth.blockscout.com/address/0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2"
           },
           {
-            "label": "USDM Ethereum contract (Blockscout)",
+            "label": "USDM Ethereum token",
             "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
           }
         ],
-        "evidence": "At Ethereum block 25530956 and MegaETH block 21235969, the ERC-1967 implementation slots resolve to verified xUSDOFTUpgradeable implementations 0x61e6... and 0xac376... respectively, while the transparent-proxy admin slots are zero as expected for UUPS proxies. The verified implementation exposes mint(address,uint256), addMinter(address), and removeMinter(address); mint is restricted to the contract's owner-managed minter set.",
-        "chain": "ethereum",
-        "address": "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+        "evidence": "At Ethereum block 25770626, USDmMinting.usdm() returned USDM 0xec2af1c8b110a61fd9c3fa6a554a031ca9943926 and the token's isMinter(USDmMinting) returned true. The verified non-proxy USDmMinting source calls usdm.mint(...) only after MINTER_ROLE, signed OrderType.MINT, active-asset, route-ratio, collateral-transfer, and per-asset/global per-block checks. Current globalConfig and active USDtb/USDC tokenConfig caps were 10,000,000 USDm per block; WETH was inactive and stablesDeltaLimit() was zero. The gateway itself is native issuance authority; its Safe-controlled admin and the token owner's arbitrary-minter/upgrade powers are recorded separately."
       },
       {
         "chain": "ethereum",
-        "address": "0x141C03AbC062a9d5d4238e1666B849C929e53cB2",
-        "label": "USDM logic owner (Gnosis Safe 9/4)",
+        "deploymentRefs": [
+          "ethereum:0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+        ],
+        "label": "USDM USDmMinting MINTER_ROLE EOAs (10)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The ten current MINTER_ROLE EOAs can invoke the native USDmMinting path, but each invocation remains subject to signed-order, supported-asset, collateral-transfer, route-ratio, and global/per-asset per-block checks in the immutable gateway.",
+        "failureDomainKeys": [
+          "contract:ethereum:0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770626,
+        "sources": [
+          {
+            "label": "Ethereum USDmMinting verified source and ABI",
+            "url": "https://eth.blockscout.com/address/0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2"
+          }
+        ],
+        "evidence": "At Ethereum block 25770626, the verified MINTER_ROLE hash 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6 was active for ten EOAs: 0x29f1f862aaed5f77ce23cbf4969269b4e69af1e6, 0xe28f1d45a5a6b436d13c0756af572f245338683d, 0xd316704b9783fdde38839e4a69aa2db4e2606e82, 0xc3a0a22901a7b018b423d4d5425e1f8db1addfa3, 0x4569a33362d2356979c6e2d31421b9d8f0215a5c, 0x5dee2b7bfeeed6c18e6b4c50e32aa890d3844b2c, 0x04053a8f50651832f042ed8938bf427b580061ca, 0x254c8aff4559da3ee52f76a7503bd620777b6d17, 0x14ef18f0b11c0b52f71a2079e686e3d2ecb1490a, and 0x31cf91c38c01e1acfb7e89a34f47516fe5454d23. The same ten addresses were active for the observed REDEEMER_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x141c03abc062a9d5d4238e1666b849c929e53cb2",
+        "deploymentRefs": [
+          "ethereum:0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+        ],
+        "label": "USDM Ethereum issuance and token owner Safe (4-of-8)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
         "threshold": 4,
-        "signerCount": 9,
+        "signerCount": 8,
         "safe": {
           "owners": [
+            "0x9be91e640b980184e6bf0f8083f8dff05dd8df3f",
             "0xe3731a0ad5e59c3083fd899e234b7b2361d25b33",
             "0x73a2063e47a6e20420b40a4655327de631ca70e0",
-            "0xe313794f9a827956d939c0df12732cfdeb5cf27e",
             "0xd1e25f0e9193d7d69acf0348ab6b7936801090ec",
             "0xd2668a22ecbe34cf651a7522312e4563d96a5aed",
             "0x83408cc6157b2bb3a47acc912f7c30520ce4782b",
             "0xbdc5974832b41c829b62eb3f713809910bef0237",
-            "0xa516af633efc0e856e4357514462e6195b1b2154",
-            "0x67fc0e9f75806ff0039ca8dc8bb398434db078c6"
+            "0xa516af633efc0e856e4357514462e6195b1b2154"
           ],
           "threshold": 4,
           "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
-          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedBlock": 25294742,
+          "observedBlock": 25770585,
           "source": "onchain"
         },
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "safe:ethereum:0x141c03abc062a9d5d4238e1666b849c929e53cb2",
+          "contract:ethereum:0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2",
+          "contract:ethereum:0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+        ],
+        "bypassSurfaces": [
+          "The Safe can grant or revoke USDmMinting roles, change supported assets, caps, custodians, whitelists, and the stable-price limit immediately; no on-chain timelock was observed.",
+          "The same Safe owns the Ethereum UUPS token and can add an arbitrary direct minter or replace mint-critical logic through upgradeToAndCall without a timelock."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770585,
         "sources": [
           {
-            "label": "USDM Ethereum contract (Blockscout)",
+            "label": "USDM Ethereum token",
             "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+          },
+          {
+            "label": "USDM Ethereum owner Safe",
+            "url": "https://eth.blockscout.com/address/0x141c03abc062a9d5d4238e1666b849c929e53cb2"
+          },
+          {
+            "label": "Ethereum USDmMinting verified source and ABI",
+            "url": "https://eth.blockscout.com/address/0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2"
           }
         ],
-        "evidence": "At Ethereum block 25530956 and MegaETH block 21235969, owner() on both USDM proxies returns 0x141C03AbC062a9d5d4238e1666B849C929e53cB2. On-chain Safe review returned 9 owners, threshold 4, no enabled modules, a zero guard, and a zero fallback handler. Verified xUSDOFTUpgradeable source makes addMinter() and removeMinter() onlyOwner and authorizes UUPS upgradeToAndCall() through _authorizeUpgrade(...), also onlyOwner; the zero ERC-1967 admin slot does not renounce these UUPS powers."
+        "evidence": "At Ethereum block 25770626, USDmMinting.owner() and DEFAULT_ADMIN_ROLE were the Safe 0x141c03abc062a9d5d4238e1666b849c929e53cb2; its admin can grant and revoke MINTER_ROLE and REDEEMER_ROLE and change supported assets, caps, custodians, whitelists, and the stable-price limit immediately. At Ethereum block 25770585, the same Safe was 4-of-8 with the eight owners recorded above and no enabled modules. Direct getGuard() and getFallbackHandler() calls reverted on this Safe implementation, so guard and fallback values are not asserted. The Ethereum token's UUPS authorization is onlyOwner, and the Safe can add an arbitrary direct token minter or replace mint-critical logic without a timelock."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -103,29 +156,30 @@
     "review": {
       "sources": [
         {
-          "label": "USDM MegaETH contract (Blockscout)",
-          "url": "https://megaeth.blockscout.com/address/0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7"
+          "label": "Ethereum USDmMinting verified source and ABI",
+          "url": "https://eth.blockscout.com/address/0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2"
         },
         {
-          "label": "USDM Ethereum contract (Blockscout)",
+          "label": "USDM Ethereum token and verified implementation",
           "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
         },
         {
-          "label": "MegaETH docs",
-          "url": "https://docs.megaeth.com"
+          "label": "USDM Ethereum owner Safe",
+          "url": "https://eth.blockscout.com/address/0x141c03abc062a9d5d4238e1666b849c929e53cb2"
         },
         {
-          "label": "MegaUSD official reserve disclosure",
-          "url": "https://megausd.money/"
-        },
-        {
-          "label": "MegaETH USDm launch announcement",
+          "label": "MegaETH USDm announcement",
           "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
+        },
+        {
+          "label": "MegaETH bridge documentation",
+          "url": "https://docs.megaeth.com/user-guide/bridge.md"
         }
       ],
-      "evidence": "Both USDM deployments are ERC1967Proxy contracts with verified xUSDOFTUpgradeable implementations. Direct RPC checks confirmed the implementation slots and common owner Safe. Contrary to the earlier zero-admin-slot interpretation, verified source shows a UUPS authorization path controlled by onlyOwner plus owner-managed addMinter/removeMinter functions and a direct mint entry point restricted to those minters. The common owner is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, and no timelock observed. Parent coin usdtb-ethena is tracked separately. Economic-posture fields reviewed 2026-08-15: the 4/9 owner Safe can install direct minters or replace mint logic immediately, no repo evidence reconciles both local deployments and all minters, and no local supervisor or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: MegaUSD and MegaETH materials plus Ethena and Anchorage USDtb disclosures identify upstream reserve components, but no recurring report or live feed reconciles both USDM deployments and every owner-managed mint path to the complete local wrapper supply. Codex reconciliation wave 1 research: MegaUSD's official reserve page and MegaETH's dated launch disclosure identify a USDC/USDtb basket and describe USDtb/BUIDL settlement, but publish no dated recurring attestation or live feed reconciling liabilities for both local deployments against reserves; reconciliation remains unknown.",
-      "reviewer": "OpenAI Codex adversarial verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Canonical-chain review at Ethereum blocks 25770580, 25770585, and 25770626 (2026-08-16): Ethereum 0xec2af1c8b110a61fd9c3fa6a554a031ca9943926 is the verified UUPS xUSDOFTUpgradeable token whose usdm() issuer path is USDmMinting 0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2, and isMinter(USDmMinting) returned true. USDmMinting is a non-proxy collateral/order gateway with active per-asset and global per-block caps, but the common 4-of-8 Safe can change its roles and caps immediately. The same Safe owns the Ethereum token, can add an arbitrary direct token minter, and can replace UUPS mint logic without a timelock; therefore the token-level economic cap remains unbounded despite the ordinary USDmMinting checks. MegaETH 0xfafddbb3fc7688494971a79cc65dca3ef82079e7 is a LayerZero OFT representation with reciprocal peer configuration, not an independently evidenced native issuer; its bridge upgrade, peer, rate-limit, and message-path powers are excluded from Mint Authority and retained in bridgeRouteRisk. Reconciliation of Ethereum native liabilities, MegaETH representation supply, every owner-authorizable minter, and USDm reserves remains unknown, and no independent local supervisor or recurring wrapper-liability attestation was evidenced.",
+      "reviewer": "Codex usdm-mega canonical mint-authority correction",
+      "reviewedAt": "2026-08-16",
+      "disposition": "scoreable"
     }
   }
 }

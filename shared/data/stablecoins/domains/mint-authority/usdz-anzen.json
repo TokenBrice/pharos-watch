@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDz uses immutable bytecode on all five tracked deployments, but its control plane is chain-local. Ethereum deposit minting is SPCT-gated under a 2/6 admin Safe; Base's 2/7 owner Safe controls OFT peers; and 2/6 Arbitrum, 2/7 Blast, and 2/6 Manta owner Safes can replace each chain's currently uncapped direct minter.",
+    "summary": "USDz has four reviewed native-issuance deployments with immutable bytecode and chain-local control planes. Ethereum deposit minting is SPCT-gated under a 2/6 admin Safe; 2/6 Arbitrum, 2/7 Blast, and 2/6 Manta owner Safes can replace each chain's currently uncapped direct minter. The Base LayerZero OFT owner and peer controls are reviewed separately in Bridge Risk.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -46,6 +46,9 @@
         "canRaiseCap": true,
         "chain": "ethereum",
         "address": "0xc88729a8f57cd88fda7f94478985e5df108fd679",
+        "deploymentRefs": [
+          "ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+        ],
         "signerCount": 6,
         "threshold": 2,
         "modulesOrGuardsStatus": "none-detected",
@@ -82,63 +85,15 @@
         "canRaiseCap": false,
         "chain": "ethereum",
         "address": "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+        "deploymentRefs": [
+          "ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+        ],
         "capDescription": "deposit() and depositBySPCT() are callable by any holder of the permissioned SPCT token; mint supply is bounded by SPCT availability (issuer-controlled RWA).",
         "evidence": "Blockscout ABI shows deposit(uint256) and depositBySPCT(uint256) on the USDz contract with no role guard visible in the ABI — supply expansion is bounded by SPCT access, which is issuer-controlled.",
         "sources": [
           {
             "label": "Anzen USDz overview",
             "url": "https://docs.anzen.finance/usdz-101/overview"
-          }
-        ]
-      },
-      {
-        "label": "Anzen Base OFT owner Safe",
-        "role": "bridge-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "chain": "base",
-        "address": "0x0E5ec65ea055937646Ab029ef3644DE3dE67766A",
-        "signerCount": 7,
-        "threshold": 2,
-        "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 48626678,
-        "routeChecks": {
-          "trustedPeerOrRemote": "ChildUSDz setPeer(uint32,bytes32) is owner-only; the owner can replace trusted LayerZero peers.",
-          "caps": "No owner-independent per-peer issuance cap was identified in the verified ChildUSDz source."
-        },
-        "safe": {
-          "owners": [
-            "0x21aE1055c747cc59051327B5f334eA0899Fe90F2",
-            "0x00000000051CBcE3fD04148CcE2c0adc7c651829",
-            "0xa464980f8ea9d2b88258FBf9BC878F989B2c5DCA",
-            "0x1103956Dfe7846332e7F4b1d86786107B7903Ac3",
-            "0x82e09977ced7dE0F93548D89C227D2E1BF8F3337",
-            "0x380c2798660B9289279Db77F1b5821fD7542456C",
-            "0x68f5549648ec500056319474F88a71619eEA57D0"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "version": "1.3.0",
-          "observedBlock": 48626678,
-          "observedAt": "2026-07-14",
-          "source": "onchain"
-        },
-        "evidence": "At Base block 48626678, ChildUSDz owner() returned this Safe. getOwners() returned seven owners, getThreshold() returned 2, VERSION() returned 1.3.0, getModulesPaginated returned no modules, and the Safe guard slot was zero. The verified ChildUSDz source gates setPeer, pause, and delegate configuration through the owner.",
-        "sources": [
-          {
-            "label": "Base ChildUSDz verified source",
-            "url": "https://base.blockscout.com/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
-          },
-          {
-            "label": "Anzen Base owner Safe",
-            "url": "https://base.blockscout.com/address/0x0E5ec65ea055937646Ab029ef3644DE3dE67766A"
-          },
-          {
-            "label": "Base PublicNode RPC",
-            "url": "https://base-rpc.publicnode.com"
           }
         ]
       },
@@ -150,6 +105,9 @@
         "canRaiseCap": true,
         "chain": "arbitrum",
         "address": "0x0E5ec65ea055937646Ab029ef3644DE3dE67766A",
+        "deploymentRefs": [
+          "arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f"
+        ],
         "signerCount": 6,
         "threshold": 2,
         "modulesOrGuardsStatus": "none-detected",
@@ -196,6 +154,9 @@
         "canRaiseCap": true,
         "chain": "arbitrum",
         "address": "0xdd216101D84d513A12CB7bFB109F7abCF330D58e",
+        "deploymentRefs": [
+          "arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f"
+        ],
         "capDescription": "ChildUSDzV2 maxSupply() returned zero; its verified implementation applies a maximum only when maxSupply is nonzero.",
         "observedAt": "2026-07-14",
         "observedBlock": 483807177,
@@ -223,6 +184,9 @@
         "canRaiseCap": true,
         "chain": "blast",
         "address": "0x9076e336e9d0901A3Aca0D559124884E114D7B48",
+        "deploymentRefs": [
+          "blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
+        ],
         "signerCount": 7,
         "threshold": 2,
         "modulesOrGuardsStatus": "none-detected",
@@ -270,6 +234,9 @@
         "canRaiseCap": true,
         "chain": "blast",
         "address": "0x5A1b8C0e9fE27b9DB4913df6B361deA5e96EA129",
+        "deploymentRefs": [
+          "blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
+        ],
         "capDescription": "ChildUSDzV2 maxSupply() returned zero; its implementation applies a maximum only when maxSupply is nonzero.",
         "observedAt": "2026-07-14",
         "observedBlock": 37616444,
@@ -297,6 +264,9 @@
         "canRaiseCap": true,
         "chain": "manta",
         "address": "0x349D4B7580aBC27cD9fBA78C0e7A62865eF51da6",
+        "deploymentRefs": [
+          "manta:0x73d23f3778a90be8846e172354a115543df2a7e4"
+        ],
         "signerCount": 6,
         "threshold": 2,
         "modulesOrGuardsStatus": "none-detected",
@@ -343,6 +313,9 @@
         "canRaiseCap": true,
         "chain": "manta",
         "address": "0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938",
+        "deploymentRefs": [
+          "manta:0x73d23f3778a90be8846e172354a115543df2a7e4"
+        ],
         "capDescription": "ChildUSDzV2 maxSupply() returned zero; its verified implementation applies a maximum only when maxSupply is nonzero.",
         "observedAt": "2026-07-14",
         "observedBlock": 8981874,
@@ -367,9 +340,9 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "The five USDz deployments retain immutable runtime bytecode, but the complete authority graph is multichain. Ethereum uses its 2/6 DEFAULT_ADMIN Safe and SPCT-gated deposit path. At pinned Base 48626678, Arbitrum 483807177, Blast 37616444, and Manta 8981874 blocks, owner() resolved respectively to 2/7, 2/6, 2/7, and 2/6 chain-local Safes with no enabled modules or guard. Base's owner controls LayerZero peers. Arbitrum, Blast, and Manta owners can grant or revoke mint roles immediately; their sole current minters were 0xdd216101D84d513A12CB7bFB109F7abCF330D58e, 0x5A1b8C0e9fE27b9DB4913df6B361deA5e96EA129, and 0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938, and each token returned maxSupply() = 0. No tracked child-chain control is omitted. Economic-posture fields reviewed 2026-08-15: chain-local issuer Safes can install uncapped minters immediately, the real-time SPCT disclosure is checked against aggregate multichain supply, and no independent attestor or prudential supervisor is evidenced.",
-      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+        "evidence": "The four USDz native deployments retain immutable runtime bytecode, and the complete native authority graph is chain-local. Ethereum uses its 2/6 DEFAULT_ADMIN Safe and SPCT-gated deposit path. At pinned Arbitrum 483807177, Blast 37616444, and Manta 8981874 blocks, owner() resolved respectively to 2/6, 2/7, and 2/6 chain-local Safes with no enabled modules or guard. Arbitrum, Blast, and Manta owners can grant or revoke mint roles immediately; their sole current minters were 0xdd216101D84d513A12CB7bFB109F7abCF330D58e, 0x5A1b8C0e9fE27b9DB4913df6B361deA5e96EA129, and 0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938, and each token returned maxSupply() = 0. The Base OFT owner and LayerZero peer, pause, and delegate controls are excluded from native Mint Authority and retained in bridgeRouteRisk. No tracked native control is omitted. Economic-posture fields reviewed 2026-08-15: chain-local issuer Safes can install uncapped minters immediately, the real-time SPCT disclosure is checked against aggregate multichain supply, and no independent attestor or prudential supervisor is evidenced.",
+      "reviewer": "Codex USDz canonical mint-authority boundary migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "USDz token (Blockscout)",

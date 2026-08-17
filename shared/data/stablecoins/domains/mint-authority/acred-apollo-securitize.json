@@ -3,48 +3,27 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "ACRED has three independent immediate-upgrade domains. Four EVM token/trust-service pairs share one uncapped MASTER EOA; Solana uses two ISSUER paths through Securitize's shared issuer/controller stack, including a configurable on-ramp PDA, and four mint-critical programs share one upgrade EOA; Aptos has two issuer EOAs plus a master that also owns the upgradable package.",
+    "confidence": "probable",
+    "summary": "ACRED's working canonical Mint Authority scope is Ethereum only: its token/trust-service master EOA is an uncapped direct issuer and immediate upgrade authority. Avalanche, Ink, Polygon, Solana, and Aptos local issuer and upgrade surfaces are reviewed as bridge-representation controls under bridgeRouteRisk pending proof of independent reconciled fund liabilities; they are not additional canonical Mint Authority.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x17418038ecf73ba4026c4f428547bf099706f27b"
+      ],
       "proxyAddresses": [
         "0x17418038ecf73ba4026c4f428547bf099706f27b",
-        "0xc397436742eAF7C325DDBFc4dc63D95822b27101",
-        "0x7c64925002bfa705834b118a923e9911bee32875",
-        "0xB71fB5AFD602591BdD0A5290F68d92F9Ab5FB0AE",
-        "0xfce60bbc52a5705cec5b445501fbaf3274dc43d0",
-        "0x6B0E0898E6B379a878A21ae3359c7Fe52ea098ca",
-        "0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3",
-        "0x38C680c3832Be7aCCD673B18420820E61d1b8F39",
-        "3g6fUgMsJQhjPUYxNjEU5PyzGf8DerbDx8p5Qh4yMnRR",
-        "7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP",
-        "FsE8mCJyvgMzqJbfHbJQm3iuf3cRZC6n2vZi1Q8rQCy2",
-        "GQDbgV5oYTtovRDJU7b2w87PbTVqD7dGjJSZtqH5uS4w",
-        "0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88"
+        "0xc397436742eAF7C325DDBFc4dc63D95822b27101"
       ],
       "implementationAddresses": [
         "0xfc8a9000c161e3c6e073e967107ce926a44a06e2",
-        "0xd5417b82ae5b9ab7db1532b517fb284f38d7141e",
-        "0x3bfcfc2b71aad49c46767f8ec2aba78fbdaad407",
-        "0x5a72be0e2964e91352fcdbed63556e7127ab5822",
-        "0xd6e16fdab381ab9dc17edeb6382a48de51cb72e0",
-        "0xec48002ef961a326d8ef913ee3a9acda5b5b89b1",
-        "0xaa48c328ae9f12882347eed3c511c01d2746b418",
-        "0x39a60c64d56c026e258a54773978fa2d863ec980",
-        "9hWb9yPMRXSzUrfzMoM5FoxYfRBfdePCidTwC3gtAHtz",
-        "7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1",
-        "49VkXT8UniLy3Tw69FDeHZz4a3Hv58pomU9Vug3ne8hP",
-        "AkKn3WvuNm979m46w1Zbe3PhauyUJzuKfQwxtBTSZj51",
-        "0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a"
+        "0xd5417b82ae5b9ab7db1532b517fb284f38d7141e"
       ],
       "adminAddresses": [
-        "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
-        "8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
-        "0xc35dd2252c745bac5aced78b9087a1165ecf5003723d29dcc41bb8c88206aec7"
+        "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "ACRED deployment-wide immediate upgrade authorities",
+      "controlRef": "ACRED Ethereum master and upgrade owner",
       "observedAt": "2026-07-13",
       "sources": [
         {
@@ -52,35 +31,18 @@
           "url": "https://eth.blockscout.com/address/0x17418038ecf73ba4026c4f428547bf099706f27b?tab=contract"
         },
         {
-          "label": "Avalanche ACRED token",
-          "url": "https://snowtrace.io/address/0x7c64925002bfa705834b118a923e9911bee32875/contract/43114/code"
-        },
-        {
-          "label": "Polygon ACRED token",
-          "url": "https://polygonscan.com/address/0xfce60bbc52a5705cec5b445501fbaf3274dc43d0#code"
-        },
-        {
-          "label": "Ink ACRED token",
-          "url": "https://explorer.inkonchain.com/address/0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3?tab=contract"
-        },
-        {
-          "label": "Solana ACRED issuer program",
-          "url": "https://solscan.io/account/3g6fUgMsJQhjPUYxNjEU5PyzGf8DerbDx8p5Qh4yMnRR"
-        },
-        {
-          "label": "Solana ACRED on-ramp program",
-          "url": "https://solscan.io/account/GQDbgV5oYTtovRDJU7b2w87PbTVqD7dGjJSZtqH5uS4w"
-        },
-        {
-          "label": "Aptos ACRED metadata",
-          "url": "https://explorer.aptoslabs.com/account/0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88?network=mainnet"
+          "label": "Ethereum ACRED trust service",
+          "url": "https://eth.blockscout.com/address/0xc397436742eaf7c325ddbfc4dc63d95822b27101?tab=contract"
         }
       ]
     },
     "controls": [
       {
         "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
-        "label": "ACRED EVM master and upgrade owner",
+        "deploymentRefs": [
+          "ethereum:0x17418038ecf73ba4026c4f428547bf099706f27b"
+        ],
+        "label": "ACRED Ethereum master and upgrade owner",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "direct",
@@ -100,214 +62,7 @@
             "url": "https://eth.blockscout.com/address/0xc397436742eaf7c325ddbfc4dc63d95822b27101?tab=contract"
           }
         ],
-        "evidence": "At the fixed exact cutoff, this zero-code EOA was owner or MASTER for all four EVM ACRED token and trust-service deployments. It could call issueTokens, grant or revoke ISSUER, set the one-time token cap, and immediately replace every token or trust-service implementation. cap() returned zero on all four deployments, which the verified implementation treats as uncapped."
-      },
-      {
-        "chain": "solana",
-        "address": "4BjYWQ9MgvE4haFXa5mjtCb75SoFoAiukk4j5NwTZH8a",
-        "label": "ACRED Solana issuer signer",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "eoa:solana:4bjywq9mgve4hafxa5mjtcb75sofoaiukk4j5nwtzh8a"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
-        "sources": [
-          {
-            "label": "Solana ACRED mint",
-            "url": "https://solscan.io/token/FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8"
-          },
-          {
-            "label": "Pre-cutoff Solana ACRED issue transaction",
-            "url": "https://solscan.io/tx/58ndZvZQN8gHjQR6zzxLwcfVfZkBTEjcnHtjNbc3xMRikQcXUVkiTSa6bPTbLRvUMJyhkGBE1R468RgBM5JSSzbs"
-          }
-        ],
-        "evidence": "At Solana slot 432714278, this on-curve signer was a decoded member of ACRED ISSUER role account 8TpJ...2JTV. Transaction 58nd...Szbs at pre-cutoff slot 419520045 proves it invoking the Securitize issuer program, which CPI-minted Token-2022 ACRED through controller PDA Fr3R...TYbH. No finite token cap applies."
-      },
-      {
-        "chain": "solana",
-        "address": "A2m2kmZ1Tf1WLY1dXTBb9dFMiyFYA3hfUymXJtXHBWTj",
-        "label": "ACRED Solana Securitize on-ramp issuer PDA",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "present",
-        "failureDomainKeys": [
-          "program:solana:gqdbgv5oyttovrdju7b2w87pbtvqd7dgjjsztqh5us4w"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
-        "sources": [
-          {
-            "label": "Solana ACRED issuer role account",
-            "url": "https://solscan.io/account/8TpJJVPJhQ54vv4deLjt2SnzD78v9p7mEyzLVTqo2JTV"
-          },
-          {
-            "label": "Solana ACRED on-ramp program",
-            "url": "https://solscan.io/account/GQDbgV5oYTtovRDJU7b2w87PbTVqD7dGjJSZtqH5uS4w"
-          }
-        ],
-        "evidence": "The ACRED ISSUER role also contained this off-curve PDA. It derives exactly from Securitize on-ramp program GQDbg...uS4w with seeds [\"on_ramp_authority\", WCAg...UEBn] and bump 255. The deployed program's SubscribeDsToken path builds an IssueTokens CPI, subject to its configured subscription, NAV, asset-provider, and compliance checks."
-      },
-      {
-        "chain": "solana",
-        "address": "D2kGPFTyGSeeTSCA1kEzKZNrdMvYKPLdZtrmAnnK6jCS",
-        "label": "ACRED Solana on-ramp admin",
-        "role": "minter-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "eoa:solana:d2kgpftygseetsca1kezkznrdmvykpldztrmannk6jcs"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
-        "sources": [
-          {
-            "label": "Solana ACRED on-ramp state",
-            "url": "https://solscan.io/account/WCAg15hGdRdgZYwULnC5CaSDns5PKTZKKdewBZzUEBn"
-          },
-          {
-            "label": "Solana ACRED on-ramp admin change",
-            "url": "https://solscan.io/tx/4ozM13yb8cwkkgUVNQYYJEBPPczaGSy5BhzyDN15E5N2ZCgMbc5PNcpiWbhgodj8X6zasprPaBdRNhsR714ATRYb"
-          }
-        ],
-        "evidence": "Before the cutoff, ChangeAdmin set this system-owned EOA as the on-ramp state admin, and the state had no later writes. The deployed program lets the admin pause the path and change operators, the NAV provider, and the asset-provider configuration that governs use of the authorized issuer PDA."
-      },
-      {
-        "chain": "solana",
-        "address": "8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
-        "label": "ACRED Solana shared program upgrade authority",
-        "role": "proxy-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "eoa:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
-        "sources": [
-          {
-            "label": "Solana ACRED issuer program",
-            "url": "https://solscan.io/account/3g6fUgMsJQhjPUYxNjEU5PyzGf8DerbDx8p5Qh4yMnRR"
-          },
-          {
-            "label": "Solana ACRED controller program",
-            "url": "https://solscan.io/account/7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
-          },
-          {
-            "label": "Solana ACRED transfer-hook program",
-            "url": "https://solscan.io/account/FsE8mCJyvgMzqJbfHbJQm3iuf3cRZC6n2vZi1Q8rQCy2"
-          },
-          {
-            "label": "Solana ACRED on-ramp program",
-            "url": "https://solscan.io/account/GQDbgV5oYTtovRDJU7b2w87PbTVqD7dGjJSZtqH5uS4w"
-          }
-        ],
-        "evidence": "At Solana slot 432714278, the issuer, PDA controller, transfer-hook, and ACRED on-ramp programs were all BPF-upgradeable and shared this system-owned single-account upgrade authority. Their ProgramData accounts had no post-cutoff writes, and the authority could replace all four programs immediately with no on-chain delay."
-      },
-      {
-        "chain": "aptos",
-        "address": "0x193e9ac9c96cec19030155cfe4c9340ba064bdec5a1a5439e43e0ec91baf6299",
-        "label": "ACRED Aptos issuer 1",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "eoa:aptos:0x193e9ac9c96cec19030155cfe4c9340ba064bdec5a1a5439e43e0ec91baf6299"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 6262999136,
-        "sources": [
-          {
-            "label": "Aptos ACRED trust store",
-            "url": "https://explorer.aptoslabs.com/account/0x904f16acd72ba779f6a9ba91cef1d5e4b4d16e6f3a7f4556446836cc8b318edf?network=mainnet"
-          }
-        ],
-        "evidence": "At Aptos ledger version 6262999136, this ordinary account was one of two Roles.issuers entries. The deployed trust_service code permits an issuer or master to call issue_tokens. CustomMetadata.cap was zero, which the deployed ds_token logic treats as uncapped."
-      },
-      {
-        "chain": "aptos",
-        "address": "0x2414a407080aa7092c9986fd3be3a6ec6768f2cc8fd131a3fb468657ccbefa85",
-        "label": "ACRED Aptos issuer 2",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "eoa:aptos:0x2414a407080aa7092c9986fd3be3a6ec6768f2cc8fd131a3fb468657ccbefa85"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 6262999136,
-        "sources": [
-          {
-            "label": "Aptos ACRED trust store",
-            "url": "https://explorer.aptoslabs.com/account/0x904f16acd72ba779f6a9ba91cef1d5e4b4d16e6f3a7f4556446836cc8b318edf?network=mainnet"
-          }
-        ],
-        "evidence": "At Aptos ledger version 6262999136, this ordinary account was the second Roles.issuers entry. The deployed trust_service code permits an issuer or master to call issue_tokens. CustomMetadata.cap was zero, which the deployed ds_token logic treats as uncapped."
-      },
-      {
-        "chain": "aptos",
-        "address": "0xc35dd2252c745bac5aced78b9087a1165ecf5003723d29dcc41bb8c88206aec7",
-        "label": "ACRED Aptos master and package owner",
-        "role": "minter-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "eoa:aptos:0xc35dd2252c745bac5aced78b9087a1165ecf5003723d29dcc41bb8c88206aec7"
-        ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 6262999136,
-        "sources": [
-          {
-            "label": "Aptos ACRED package object",
-            "url": "https://explorer.aptoslabs.com/account/0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a?network=mainnet"
-          }
-        ],
-        "evidence": "At Aptos ledger version 6262999136, this ordinary single account was trust_service master and owner of package object 0x13816cd4...f06a. It could mint, administer roles, set the one-time cap, and publish compatible package upgrades immediately; no multisig resource or on-chain timelock was present."
-      },
-      {
-        "label": "ACRED deployment-wide immediate upgrade authorities",
-        "role": "proxy-admin",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "failureDomainKeys": [
-          "eoa:evm:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
-          "eoa:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6",
-          "eoa:aptos:0xc35dd2252c745bac5aced78b9087a1165ecf5003723d29dcc41bb8c88206aec7"
-        ],
-        "observedAt": "2026-07-13",
-        "sources": [
-          {
-            "label": "Ethereum ACRED token",
-            "url": "https://eth.blockscout.com/address/0x17418038ecf73ba4026c4f428547bf099706f27b?tab=contract"
-          },
-          {
-            "label": "Solana ACRED issuer program",
-            "url": "https://solscan.io/account/3g6fUgMsJQhjPUYxNjEU5PyzGf8DerbDx8p5Qh4yMnRR"
-          },
-          {
-            "label": "Aptos ACRED package object",
-            "url": "https://explorer.aptoslabs.com/account/0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a?network=mainnet"
-          }
-        ],
-        "evidence": "This umbrella registry record preserves three independent immediate upgrade domains solely because the current upgradeability schema accepts one controlRef. It does not represent one shared signer or quorum: the four EVM deployments share EOA 0x59c1...76Ee, Solana's four mint-critical programs share EOA 8d36...qzbB6, and the Aptos package is controlled by account 0xc35d...aec7."
+        "evidence": "At the fixed exact cutoff, this zero-code EOA was owner or MASTER for the Ethereum ACRED token and trust-service deployments. It could call issueTokens, grant or revoke ISSUER, set the one-time token cap, and immediately replace both Ethereum token or trust-service implementations. cap() returned zero on the Ethereum deployment, which the verified implementation treats as uncapped."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -345,9 +100,9 @@
           "url": "https://www.bvifsc.vg/regulated-entities/securitize-tokenized-apollo-diversified-credit-fund-ltd"
         }
       ],
-      "evidence": "The fixed exact cutoff was anchored at Ethereum block 25526129, Avalanche block 90233120, Polygon block 90179923, Ink block 50476469, Solana slot 432714278, and Aptos ledger version 6262999136. All four EVM token/trust-service pairs were uncapped and shared one zero-code EOA owner/MASTER that could mint, administer issuers, and upgrade immediately. Solana's live pre-cutoff issue transaction resolved the EOA issuer and PDA mint path; its second issuer is the Securitize on-ramp PDA with a separate EOA admin, while all four mint-critical programs share one immediate upgrade key. Aptos Roles resolved two issuer EOAs plus a master/package owner with immediate compatible-upgrade authority. These root controls are complete; chain-local delegated EVM issuer lists are not asserted to be identical across deployments. Evidence challenge completed 2026-07-15: ACRED publishes daily Securitize-administered NAV through RedStone, but the oracle relays a trusted single-source value and no dated independent feeder-fund supply-to-assets reconciliation was found. The BVI FSC registry matches Securitize Tokenized Apollo Diversified Credit Fund, Ltd.; supervision is established, reconciliation is not. Economic-posture fields reviewed 2026-08-15: uncapped issuer and immediate-upgrade authorities remain unbounded, daily NAV does not reconcile feeder-token supply to assets, and BVI FSC supervision is named. Wave 2 external review 2026-08-15: Securitize, Chainlink, SEC, BVI FSC, RWA.xyz, and Apollo fund reports still do not publish recurring ACRED feeder-share liabilities reconciled across all six deployments, so reconciliation remains unknown.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "The fixed exact cutoff verified Ethereum as a native ACRED issuance route: its token and trust service share one zero-code EOA owner/MASTER that can issue, administer issuers, set the one-time cap, and upgrade immediately; cap() returned zero and the implementation treats that as uncapped. The launch and Wormhole/Securitize material identify Avalanche, Ink, Polygon, Solana, and Aptos as cross-chain destinations, while current destination controls remain adverse bridge-representation facts. Public primary sources do not prove that those five local issuance surfaces create independently reconciled fund liabilities or are restricted to validated transfer receipts, so they are excluded from canonical Mint Authority and retained under bridgeRouteRisk. Daily Securitize-administered NAV does not establish feeder-token supply-to-assets reconciliation; BVI FSC supervision is established, but reconciliation remains unknown.",
+      "reviewer": "Codex mint-bridge boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

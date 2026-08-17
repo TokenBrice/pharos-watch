@@ -4,9 +4,17 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "WBRL is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "summary": "WBRL has independent native issuer deployments on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis. The shared Ripio EOA holds MINTER_ROLE and UPGRADER_ROLE on all six; the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE, and the issuer's LimitedMinter facility is a native cap-limited minter on Ethereum, BSC, Polygon, and Gnosis. The separate LimitedMinterBridge/BridgeDeposit burn-mint rail is reviewed under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+      ],
       "proxyAddresses": [
         "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
       ],
@@ -56,6 +64,14 @@
       {
         "chain": "multichain",
         "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "deploymentRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
         "label": "Ripio shared WBRL admin and MINTER_ROLE holder (EOA)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -67,6 +83,14 @@
       {
         "chain": "ethereum",
         "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
         "label": "Ripio WBRL Safe multisig (DEFAULT_ADMIN_ROLE)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -98,24 +122,19 @@
       {
         "chain": "ethereum",
         "address": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
-        "label": "Ripio WBRL Ethereum minter-router contract",
+        "deploymentRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
+        "label": "Ripio WBRL native LimitedMinter contract",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WBRL token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
-      },
-      {
-        "chain": "multichain",
-        "address": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
-        "label": "Ripio WBRL cross-chain minter-router contract",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WBRL token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
+        "evidence": "At the fixed 2026-08-16 reads, 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7 held MINTER_ROLE on WBRL at Ethereum block 25771239, BSC block 116369053, Polygon block 92147851, and Gnosis block 47763178; it was not a minter on Base block 50068727 or World Chain block 33795582. The verified LimitedMinter source fixes a mint destination and applies a daily cap, making this an issuer-operated native facility rather than the arbitrary-recipient LimitedMinterBridge route."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -152,9 +171,9 @@
           "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
         }
       ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Supervision review (2026-08-08): an independent third-party reserve certification exists - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 719,448 wBRL outstanding across six chains against R$809,597.28 in a Brazilian bank account as of 2026-03-31 - so reserve evidence is attestation-backed rather than absent. Reconciliation stays unknown because Ripio labels this the first attestation of wBRL collateral, the wFIAT whitepaper commits only to attestations that 'may' be published periodically, and later-period certifications return 404. No prudential regime applies: the issuer is described only as a Ripio group affiliate, and the disclosed CNV PSAV and Florida money-transmitter registrations cover other group entities. Economic-posture fields reviewed 2026-08-15: issuer-controlled minters are uncapped across six chains, and the sole whole-supply certification is ad hoc rather than recurring. Wave 2 external verification 2026-08-15: no later WBRL certification was found, and Ripio's July Celo launch added a seventh deployment outside the March six-chain snapshot; reconciliation remains unknown. Wave 1 reconciliation review: Pablo Eduardo Soto's 2026-03-31 certification reconciles wBRL issuance and burn records to Brazilian bank collateral, but Ripio's official wFIAT page calls it the first wBRL attestation and publishes no later report or recurring cadence; reconciliation remains unknown.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "All native mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. The native LimitedMinter 0xd168cfbb is separately scoped to Ethereum, BSC, Polygon, and Gnosis by the fixed 2026-08-16 role reads. Supervision review (2026-08-08): an independent third-party reserve certification exists - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 719,448 wBRL outstanding across six chains against R$809,597.28 in a Brazilian bank account as of 2026-03-31 - so reserve evidence is attestation-backed rather than absent. Reconciliation stays unknown because Ripio labels this the first attestation of wBRL collateral, the wFIAT whitepaper commits only to attestations that 'may' be published periodically, and later-period certifications return 404. No prudential regime applies: the issuer is described only as a Ripio group affiliate, and the disclosed CNV PSAV and Florida money-transmitter registrations cover other group entities. Economic-posture fields reviewed 2026-08-15: issuer-controlled minters are uncapped across six chains, and the sole whole-supply certification is ad hoc rather than recurring. Wave 2 external verification 2026-08-15: no later WBRL certification was found, and Ripio's July Celo launch added a seventh deployment outside the March six-chain snapshot; reconciliation remains unknown. Wave 1 reconciliation review: Pablo Eduardo Soto's 2026-03-31 certification reconciles wBRL issuance and burn records to Brazilian bank collateral, but Ripio's official wFIAT page calls it the first wBRL attestation and publishes no later report or recurring cadence; reconciliation remains unknown. Boundary migration review on 2026-08-16 retains the shared issuer EOA, Safe, native LimitedMinter, and six native UUPS upgrade targets in Mint Authority; the separate LimitedMinterBridge and BridgeDeposit burn-mint machinery is structured under Bridge Risk. The unlisted Celo deployment remains outside the authored native set pending catalog-owner scope adjudication.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Codex mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

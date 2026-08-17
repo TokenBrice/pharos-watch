@@ -9,10 +9,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "AllUnity says EURAU integrates Chainlink CCIP for native zero-slippage burn/mint transfers across supported chains. Because durable cross-chain supply movement depends on CCIP's external interoperability network and issuer controls, the route is scored as external-validated-network.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-    "confidence": "verified",
+    "summary": "All eight authored EURAU contract rows are reviewed issuer-native issuance lanes, not bridge representations. AllUnity says EURAU integrates Chainlink CCIP/CCT for supply-conserving burn-and-mint transfers across supported chains, so cross-chain machinery remains external-validated-network Bridge Risk rather than Mint Authority. Exact AllUnity CCIP token-pool/adapter, router, peer, rate-limit, pause, upgrade, and Chainlink validator/DON/ARM controller identities remain unresolved; the route control below preserves the evidenced bridge capabilities without inferring issuer-native controllers.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex eurau-allunity bridge-boundary migration",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "docs",
@@ -48,8 +48,6 @@
         "reviewNote": "Verified on ethereum at block 25570728: EURAU token 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2 is AllUnity's EIP-1967 upgradeable ERC-20 (symbol EURAU, 6 decimals; implementation slot -> 0x56c19aea2192ff0ac5f6b252776480db601a1482, a Blockscout-verified contract named 'AllUnity' on Ethereum, with AccessControl MINTER_ROLE/BURNER_ROLE/PAUSER_ROLE/DEFAULT_ADMIN_ROLE surface). AllUnity (BaFin-licensed EMI, DWS/Flow Traders/Galaxy JV) documents EURAU as natively issued across its supported chains; the deterministic same-address deployment with the identical implementation across six EVM chains confirms the issuer-operated mesh.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
         "observedBlock": 25570728,
         "sources": [
           {
@@ -76,8 +74,6 @@
         "reviewNote": "Verified on arbitrum at block 485683481: EURAU token 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2 is AllUnity's EIP-1967 upgradeable ERC-20 (symbol EURAU, 6 decimals; implementation slot -> 0x56c19aea2192ff0ac5f6b252776480db601a1482, a Blockscout-verified contract named 'AllUnity' on Ethereum, with AccessControl MINTER_ROLE/BURNER_ROLE/PAUSER_ROLE/DEFAULT_ADMIN_ROLE surface). AllUnity (BaFin-licensed EMI, DWS/Flow Traders/Galaxy JV) documents EURAU as natively issued across its supported chains; the deterministic same-address deployment with the identical implementation across six EVM chains confirms the issuer-operated mesh.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
         "observedBlock": 485683481,
         "sources": [
           {
@@ -104,8 +100,6 @@
         "reviewNote": "Verified on optimism at block 154456584: EURAU token 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2 is AllUnity's EIP-1967 upgradeable ERC-20 (symbol EURAU, 6 decimals; implementation slot -> 0x56c19aea2192ff0ac5f6b252776480db601a1482, a Blockscout-verified contract named 'AllUnity' on Ethereum, with AccessControl MINTER_ROLE/BURNER_ROLE/PAUSER_ROLE/DEFAULT_ADMIN_ROLE surface). AllUnity (BaFin-licensed EMI, DWS/Flow Traders/Galaxy JV) documents EURAU as natively issued across its supported chains; the deterministic same-address deployment with the identical implementation across six EVM chains confirms the issuer-operated mesh.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
         "observedBlock": 154456584,
         "sources": [
           {
@@ -132,8 +126,6 @@
         "reviewNote": "Verified on base at block 48861299: EURAU token 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2 is AllUnity's EIP-1967 upgradeable ERC-20 (symbol EURAU, 6 decimals; implementation slot -> 0x56c19aea2192ff0ac5f6b252776480db601a1482, a Blockscout-verified contract named 'AllUnity' on Ethereum, with AccessControl MINTER_ROLE/BURNER_ROLE/PAUSER_ROLE/DEFAULT_ADMIN_ROLE surface). AllUnity (BaFin-licensed EMI, DWS/Flow Traders/Galaxy JV) documents EURAU as natively issued across its supported chains; the deterministic same-address deployment with the identical implementation across six EVM chains confirms the issuer-operated mesh.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
         "observedBlock": 48861299,
         "sources": [
           {
@@ -160,8 +152,6 @@
         "reviewNote": "Verified on polygon at block 90537966: EURAU token 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2 is AllUnity's EIP-1967 upgradeable ERC-20 (symbol EURAU, 6 decimals; implementation slot -> 0x56c19aea2192ff0ac5f6b252776480db601a1482, a Blockscout-verified contract named 'AllUnity' on Ethereum, with AccessControl MINTER_ROLE/BURNER_ROLE/PAUSER_ROLE/DEFAULT_ADMIN_ROLE surface). AllUnity (BaFin-licensed EMI, DWS/Flow Traders/Galaxy JV) documents EURAU as natively issued across its supported chains; the deterministic same-address deployment with the identical implementation across six EVM chains confirms the issuer-operated mesh.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
         "observedBlock": 90537966,
         "sources": [
           {
@@ -188,8 +178,6 @@
         "reviewNote": "Verified on Solana mainnet 2026-07-20 (getAccountInfo jsonParsed): EURAU SPL mint 9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS, 6 decimals, mintAuthority = freezeAuthority = APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP. AllUnity announced EURAU's Solana launch (Raydium EURAU/USDT pool, April 2026); the issuer-held mint authority is the native issuance controller.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
         "sources": [
           {
             "label": "AllUnity EURAU/USDT liquidity pools announcement",
@@ -215,8 +203,6 @@
         "reviewNote": "Verified on Tempo 2026-07-20: TIP-20 token 0x20c0000000000000000000009a4a4b17e0dc6651 reports name()='AllUnity EUR', symbol()='EURAU', 6 decimals, totalSupply 79,999.0. TIP-20 role administration lives in Tempo's precompile interface and owner()/admin() selectors revert, so the admin set is not enumerable via standard EVM calls; identity matches AllUnity's announced Tempo deployment (testnet December 2025, EURAU/USDT0 Uniswap pool April 2026).",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
         "sources": [
           {
             "label": "AllUnity Tempo integration announcement",
@@ -242,8 +228,6 @@
         "reviewNote": "Verified on bsc at block 111005466: EURAU token 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2 is AllUnity's EIP-1967 upgradeable ERC-20 (symbol EURAU, 6 decimals; implementation slot -> 0x56c19aea2192ff0ac5f6b252776480db601a1482, a Blockscout-verified contract named 'AllUnity' on Ethereum, with AccessControl MINTER_ROLE/BURNER_ROLE/PAUSER_ROLE/DEFAULT_ADMIN_ROLE surface). AllUnity (BaFin-licensed EMI, DWS/Flow Traders/Galaxy JV) documents EURAU as natively issued across its supported chains; the deterministic same-address deployment with the identical implementation across six EVM chains confirms the issuer-operated mesh.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
         "observedBlock": 111005466,
         "sources": [
           {
@@ -255,6 +239,58 @@
             "url": "https://bscscan.com/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "eurau-allunity-ccip-route-machinery-unresolved",
+        "label": "EURAU Chainlink CCIP burn/mint route machinery (controller identities unresolved)",
+        "routeRefs": [
+          "ethereum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "arbitrum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "optimism:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "base:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "polygon:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+          "solana:9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS",
+          "tempo:0x20c0000000000000000000009a4a4b17e0dc6651",
+          "bsc:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "validator",
+          "peer-config"
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "AllUnity's official CCIP/CCT description identifies burn-and-mint transfer semantics; no AllUnity-specific token-pool lockbox or escrow address was identified in the reviewed primary sources.",
+          "trustedPeerOrRemote": "CCIP token-pool, router, remote-pool, and peer or allowlist identities for EURAU were not identified in the reviewed AllUnity materials or verified EURAU token source.",
+          "attestorQuorum": "The route depends on Chainlink CCIP's external validation network, but the EURAU-specific DON, ARM, validator, and quorum configuration was not identified.",
+          "rateLimits": "CCIP token-pool/router rate-limit values and the administrators able to change them were not identified for EURAU.",
+          "onchainAmountBounds": "The documented CCT path burns source EURAU and mints destination EURAU for cross-chain transfer; this supply-conserving route accounting is bridge machinery, not independent native issuer mint authority.",
+          "pausersAdminsUpgraders": "AllUnity-specific CCIP token-pool/adapter/router pause, admin, and upgrade identities were not identified; no issuer token minter or native admin is inferred as a bridge controller."
+        },
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "AllUnity Chainlink CCIP/CCT announcement",
+            "url": "https://allunity.com/news/allunity-enters-strategic-partnership-with-chainlink-to-power-cross-chain-stablecoin-payments-across-europe"
+          },
+          {
+            "label": "AllUnity EURAU supported blockchains",
+            "url": "https://allunity.com/eurau"
+          },
+          {
+            "label": "Chainlink CCIP Router source",
+            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/main/chains/evm/contracts/Router.sol"
+          }
+        ],
+        "evidence": "AllUnity's official 2025 Chainlink announcement documents EURAU's CCIP/CCT burn-and-mint path as native, zero-slippage cross-chain transfer with 1:1 value and supply parity. The reviewed issuer materials and verified EURAU token source do not expose the EURAU-specific token-pool/adapter, router/on-ramp/off-ramp, peer, rate-limit, pause, upgrade, or Chainlink validator/DON/ARM controller addresses. This unresolved route control retains the documented bridge-mint, bridge-burn, rate-limit, validator, and peer-configuration surfaces without treating any issuer-native minter or admin as a bridge controller."
       }
     ]
   }

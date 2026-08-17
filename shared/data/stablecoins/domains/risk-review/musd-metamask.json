@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "mUSD is an M0 extension token deployed at the same address on Ethereum, Linea, and Monad. Every mUSD unit is minted by wrapping M0's $M one-for-one, verified on-chain by mToken() and by $M balances held inside the mUSD contract. Ethereum is the hub: $M there is minted by the M0 MinterGateway with no proxy and no portal, so mUSD on Ethereum is native issuance. On Linea and Monad the local $M is a cross-chain representation whose sole mint authority is the M0 Portal at 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, and essentially all local $M sits inside the mUSD wrapper, so those deployments carry M0 Portal burn-mint bridge risk.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos V9 Phase 3 curation lane cur-4",
+    "summary": "MetaMask USD has one canonical native issuance route on Ethereum, where M0 M is created by the immutable MinterGateway and MUSD wraps hub-native M through the Ethereum SwapFacility. Linea and Monad MUSD are bridge representations: M0 Portal v2 burns and mints spoke M, then the local SwapFacility wraps it. Their token and SwapFacility proxy-admin paths, Portal roles and UUPS upgrades, Hyperlane adapter peers, mailbox default ISMs, 2-of-2 validator sets, pauses, and the absence of a token-specific Portal rate limit are assessed here as Bridge Risk and are excluded from Mint Authority posture.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration; Pharos V9 Phase 3 curation lane cur-4",
     "confidence": "verified",
     "sources": [
       {
@@ -24,11 +24,15 @@
       },
       {
         "label": "M0 mUSD repository",
-        "url": "https://github.com/m0-foundation/mUSD"
+        "url": "https://github.com/m0-platform/mUSD"
       },
       {
-        "label": "M0 documentation",
-        "url": "https://docs.m0.org/"
+        "label": "M0 Portal v2 source",
+        "url": "https://github.com/m0-platform/m-portal-v2"
+      },
+      {
+        "label": "Hyperlane bridge source",
+        "url": "https://github.com/hyperlane-xyz/hyperlane-monorepo/tree/main/solidity/contracts"
       }
     ],
     "routes": [
@@ -56,7 +60,7 @@
           },
           {
             "label": "M0 mUSD repository",
-            "url": "https://github.com/m0-foundation/mUSD"
+            "url": "https://github.com/m0-platform/mUSD"
           }
         ]
       },
@@ -66,31 +70,47 @@
         "destinationChain": "linea",
         "canonicalChain": "ethereum",
         "contractAddress": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
-        "protocol": "M0 Portal (burn-mint cross-chain $M) wrapped into the local mUSD extension",
+        "protocol": "M0 Portal v2 burn-mint $M through Hyperlane, wrapped into the local MUSD extension",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain at Linea block 31455579: mUSD reads name 'MetaMask USD', 6 decimals, and mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b. Local $M is a proxy whose portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, the M0 Portal that is its sole mint and burn authority. Local $M total supply is 7,592,236.26 and the mUSD contract holds 7,592,225.76 of it against 7,592,108.58 mUSD outstanding, so effectively all Linea $M backs mUSD and the deployment inherits M0 Portal bridge risk.",
+        "reviewNote": "Verified at Linea block 31736976: mUSD reads mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, while spoke M portal() returns M0 Portal v2 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd. Its default adapter for hub chain ID 1 is HyperlaneBridgeAdapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, whose mailbox is 0x02d16bc51af6bfd153d67ca61754cf912e82c4d9; its mailbox default static ISM 0x29c3d1759e2995550aa84d102ca928ec9e505db8 has a 2-of-2 validator set. Local M is therefore a burn-mint representation of Ethereum M and local MUSD inherits this Portal/Hyperlane route risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 31455579,
+        "observedAt": "2026-08-16",
+        "observedBlock": 31736976,
         "controllerChain": "linea",
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "failureDomainKeys": [
-          "protocol:m0-portal",
-          "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          "protocol:m0-portal-v2",
+          "contract:linea:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+          "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:linea:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "contract:linea:0x02d16bc51af6bfd153d67ca61754cf912e82c4d9",
+          "contract:linea:0x29c3d1759e2995550aa84d102ca928ec9e505db8",
+          "safe:linea:0x48670b46380fe1645f0e3e821a25162db2589d19",
+          "eoa:linea:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "validator:linea:0x69dca95b7abf731e5909a77aeca405b746b92914",
+          "validator:linea:0xb1a545387eb101cd07f2b51858f4b43d14f5bd"
         ],
         "sources": [
           {
-            "label": "M0 documentation",
-            "url": "https://docs.m0.org/"
+            "label": "M0 Portal v2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Hyperlane bridge source",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-monorepo/tree/main/solidity/contracts"
+          },
+          {
+            "label": "Linea PublicNode JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
           },
           {
             "label": "M0 mUSD repository",
-            "url": "https://github.com/m0-foundation/mUSD"
+            "url": "https://github.com/m0-platform/mUSD"
           }
         ]
       },
@@ -100,33 +120,501 @@
         "destinationChain": "monad",
         "canonicalChain": "ethereum",
         "contractAddress": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
-        "protocol": "M0 Portal (burn-mint cross-chain $M) wrapped into the local mUSD extension",
+        "protocol": "M0 Portal v2 burn-mint $M through Hyperlane, wrapped into the local MUSD extension",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain at Monad block 89027653: mUSD reads name 'MetaMask USD', 6 decimals, and mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b. Local $M is a proxy whose portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, the M0 Portal that is its sole mint and burn authority. Local $M total supply is 9,802,235.94 and the mUSD contract holds 9,802,229.53 of it against 9,786,631.56 mUSD outstanding, so effectively all Monad $M backs mUSD and the deployment inherits M0 Portal bridge risk.",
+        "reviewNote": "Verified at Monad block 96594242: mUSD reads mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, while spoke M portal() returns M0 Portal v2 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd. Its default adapter for hub chain ID 1 is HyperlaneBridgeAdapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, whose mailbox is 0x3a464f746d23ab22155710f44db16dca53e0775e; its mailbox default static ISM 0x0e1f8b3b48f9c429f9349848fc711cdb455be269 has a 2-of-2 validator set. Local M is therefore a burn-mint representation of Ethereum M and local MUSD inherits this Portal/Hyperlane route risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 89027653,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96594242,
         "controllerChain": "monad",
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "failureDomainKeys": [
-          "protocol:m0-portal",
-          "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+          "protocol:m0-portal-v2",
+          "contract:monad:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+          "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:monad:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "contract:monad:0x3a464f746d23ab22155710f44db16dca53e0775e",
+          "contract:monad:0x0e1f8b3b48f9c429f9349848fc711cdb455be269",
+          "safe:monad:0x48670b46380fe1645f0e3e821a25162db2589d19",
+          "eoa:monad:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "validator:monad:0x24f89395e932961c27167f42db928ec92047b695",
+          "validator:monad:0xbb67da637d4b030c647176a53dd27d8d868e01cb"
         ],
         "sources": [
           {
-            "label": "M0 documentation",
-            "url": "https://docs.m0.org/"
+            "label": "M0 Portal v2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Hyperlane bridge source",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-monorepo/tree/main/solidity/contracts"
+          },
+          {
+            "label": "Monad public JSON-RPC",
+            "url": "https://rpc.monad.xyz"
           },
           {
             "label": "M0 mUSD repository",
-            "url": "https://github.com/m0-foundation/mUSD"
+            "url": "https://github.com/m0-platform/mUSD"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "musd-linea-token-upgrade-timelock",
+        "label": "Linea MUSD representation token upgrade timelock",
+        "routeRefs": [
+          "linea:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x7701f4fa4592f59a6cd0e3ac1c182b3c3173c280",
+        "failureDomainKeys": [
+          "contract:linea:0xaca92e438df0b2401ff60da7e4337b687a2435da",
+          "contract:linea:0x685e7f8c9414bfa716b254b349153e2317929ac9",
+          "timelock:linea:0x7701f4fa4592f59a6cd0e3ac1c182b3c3173c280",
+          "safe:linea:0x5916ec446793e8740645e57a63dc7bc5910c7724"
+        ],
+        "authorityType": "timelock",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 259200,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "The 3-of-5 Safe 0x5916ec446793e8740645e57a63dc7bc5910c7724 holds proposer, executor, and canceller roles on the Linea MUSD upgrade timelock.",
+          "rateLimits": "The timelock minimum delay is 259,200 seconds; no token-specific Portal rate limit is implied by this representation upgrade control.",
+          "pausersAdminsUpgraders": "The Linea MUSD proxy used implementation 0x58a3a9c561591bab0dd11110eca755ea455f1841 and ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9 at the reviewed representation observation; the ProxyAdmin owner path is the three-day MUSD timelock."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 31369840,
+        "sources": [
+          {
+            "label": "MetaMask USD token audit",
+            "url": "https://diligence.consensys.io/audits/2025/08/metamask-usd-token/"
+          },
+          {
+            "label": "Linea PublicNode JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Linea block 31369840, the MUSD representation proxy used the recorded implementation and common ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9; its owner path was the 259,200-second timelock with the shared 3-of-5 Safe. This representation upgrade authority is retained here and is not counted as native Ethereum MUSD mint authority."
+      },
+      {
+        "id": "musd-monad-token-upgrade-timelock",
+        "label": "Monad MUSD representation token upgrade timelock",
+        "routeRefs": [
+          "monad:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x7701f4fa4592f59a6cd0e3ac1c182b3c3173c280",
+        "failureDomainKeys": [
+          "contract:monad:0xaca92e438df0b2401ff60da7e4337b687a2435da",
+          "contract:monad:0x685e7f8c9414bfa716b254b349153e2317929ac9",
+          "timelock:monad:0x7701f4fa4592f59a6cd0e3ac1c182b3c3173c280",
+          "safe:monad:0x5916ec446793e8740645e57a63dc7bc5910c7724"
+        ],
+        "authorityType": "timelock",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 259200,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "The 3-of-5 Safe 0x5916ec446793e8740645e57a63dc7bc5910c7724 holds proposer, executor, and canceller roles on the Monad MUSD upgrade timelock.",
+          "rateLimits": "The timelock minimum delay is 259,200 seconds; no token-specific Portal rate limit is implied by this representation upgrade control.",
+          "pausersAdminsUpgraders": "The Monad MUSD proxy used implementation 0xc2e2fbcef84dea88025a5b2599039c912ef6b61c and ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9 at the reviewed representation observation; the ProxyAdmin owner path is the three-day MUSD timelock."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 87714833,
+        "sources": [
+          {
+            "label": "MetaMask USD token audit",
+            "url": "https://diligence.consensys.io/audits/2025/08/metamask-usd-token/"
+          },
+          {
+            "label": "Monad public JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 87714833, the MUSD representation proxy used the recorded implementation and common ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9; its owner path was the 259,200-second timelock with the shared 3-of-5 Safe. This representation upgrade authority is retained here and is not counted as native Ethereum MUSD mint authority."
+      },
+      {
+        "id": "musd-linea-swapfacility-route",
+        "label": "Linea M0 SwapFacility representation route",
+        "routeRefs": [
+          "linea:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+        "failureDomainKeys": [
+          "contract:linea:0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+          "contract:linea:0x0f38d8a5583f9316084e9c40737244870c565924",
+          "timelock:linea:0xa7bdf17af97d06d674d03086e90a18c2d90732b6"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Linea SwapFacility wraps approved M0 extensions 1:1 against spoke M; it does not create base M supply.",
+          "onchainAmountBounds": "Representation extension minting is bounded by available spoke-M-backed wrapper flow and the M0 Portal burn/mint accounting path.",
+          "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable local MUSD cap.",
+          "pausersAdminsUpgraders": "The Linea SwapFacility is a TransparentUpgradeableProxy with ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924; its owner is Linea TimelockController 0xa7bdf17af97d06d674d03086e90a18c2d90732b6 with a three-day delay."
+        },
+        "capDescription": "SwapFacility routes approved M0 extensions 1:1 against spoke M; it can mint representation balances through wrap flows but does not create base M supply.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 31369840,
+        "sources": [
+          {
+            "label": "M0 SwapFacility docs",
+            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+          },
+          {
+            "label": "Linea PublicNode JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Linea block 31369840, the SwapFacility representation route used implementation 0x9e0fdb26954bc8998158c0c921c8254bd6dfe5ec and ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. Its three-day timelock owner path can replace the wrapper logic, but the resulting capability remains bridge-representation issuance against spoke M rather than a new native MUSD liability source."
+      },
+      {
+        "id": "musd-monad-swapfacility-route",
+        "label": "Monad M0 SwapFacility representation route",
+        "routeRefs": [
+          "monad:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+        "failureDomainKeys": [
+          "contract:monad:0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+          "contract:monad:0x0f38d8a5583f9316084e9c40737244870c565924",
+          "safe:monad:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Monad SwapFacility wraps approved M0 extensions 1:1 against spoke M; it does not create base M supply.",
+          "onchainAmountBounds": "Representation extension minting is bounded by available spoke-M-backed wrapper flow and the M0 Portal burn/mint accounting path.",
+          "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable local MUSD cap.",
+          "pausersAdminsUpgraders": "The Monad SwapFacility is a TransparentUpgradeableProxy with ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924; its owner is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 directly, with no timelock."
+        },
+        "capDescription": "SwapFacility routes approved M0 extensions 1:1 against spoke M; it can mint representation balances through wrap flows but does not create base M supply.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 87714833,
+        "sources": [
+          {
+            "label": "M0 SwapFacility docs",
+            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+          },
+          {
+            "label": "Monad public JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 87714833, the SwapFacility representation route used implementation 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e and ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. ProxyAdmin owner() returned the direct 3-of-5 Safe 0x48670b46380fe1645f0e3e821a25162db2589d19, so this route has no timelock on SwapFacility upgrades; it remains bridge-representation issuance against spoke M."
+      },
+      {
+        "id": "musd-linea-portal-adapter-admin",
+        "label": "Linea M0 Portal and Hyperlane adapter administrator",
+        "routeRefs": [
+          "linea:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:linea:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:linea:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Portal default adapter for internal chain 1 is 0xfcc1d596ad6cab0b5394eaa447d8626813180f32. The adapter reports the Portal as its immutable parent and its generic peer for internal chain 1 as itself.",
+          "pausersAdminsUpgraders": "Portal DEFAULT_ADMIN_ROLE and adapter DEFAULT_ADMIN_ROLE are held by this Safe. The Linea Portal is UUPS with implementation 0x67a6ea7be440b4aa90552fa40505fa21cc1a2237; the HyperlaneBridgeAdapter is UUPS with implementation 0x248af94d8f8f7f37b9b2355c8ca46b19e7c7c6c2."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 31736976,
+        "sources": [
+          {
+            "label": "M0 Portal v2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Linea PublicNode JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Linea block 31736976, Portal 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd and adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 were governed by the shared 3-of-5 Safe 0x48670b46380fe1645f0e3e821a25162db2589d19. This Safe is the default administrator and upgrade failure domain for both representation components; its module list was empty and its guard was zero."
+      },
+      {
+        "id": "musd-monad-portal-adapter-admin",
+        "label": "Monad M0 Portal and Hyperlane adapter administrator",
+        "routeRefs": [
+          "monad:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:monad:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:monad:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0x0e9b9509c0e6e6f816f31d23140db8fe6b9a22f",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Portal default adapter for internal chain 1 is 0xfcc1d596ad6cab0b5394eaa447d8626813180f32. The adapter reports the Portal as its immutable parent and its generic peer for internal chain 1 as itself.",
+          "pausersAdminsUpgraders": "Portal DEFAULT_ADMIN_ROLE and adapter DEFAULT_ADMIN_ROLE are held by this Safe. The Monad Portal is UUPS with implementation 0x58a3a9c561591bab0dd11110eca755ea455f1841; the HyperlaneBridgeAdapter is UUPS with implementation 0x23d8162e084aa33d8ef6fcc0ab33f4028a53ee79."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96594242,
+        "sources": [
+          {
+            "label": "M0 Portal v2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Monad public JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 96594242, Portal 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd and adapter 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 were governed by the shared 3-of-5 Safe 0x48670b46380fe1645f0e3e821a25162db2589d19. This Safe is the default administrator and upgrade failure domain for both representation components; its module list was empty and its guard was zero."
+      },
+      {
+        "id": "musd-linea-portal-adapter-operator-pauser",
+        "label": "Linea M0 Portal and Hyperlane adapter operator/pauser",
+        "routeRefs": [
+          "linea:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:linea:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "eoa:linea:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "OPERATOR_ROLE on Portal and adapter is held by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; it controls the default adapter/path and peer-related route configuration for hub chain ID 1.",
+          "rateLimits": "No token-specific Portal rate limit was evidenced; the route is bounded by Hyperlane message approval, peer/adapter configuration, and M burn/mint accounting.",
+          "pausersAdminsUpgraders": "PAUSER_ROLE on Portal and OPERATOR_ROLE on Portal/adapter are held by this address. Portal sendPaused() and receivePaused() were false. The address is an EOA on Linea with no deployed code, and its organizational signer policy was not established."
+        },
+        "capDescription": "No token-specific local MUSD cap was evidenced on Portal v2; the bridge route relies on cross-chain approval and supply-conserving M burn/mint accounting.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 31736976,
+        "sources": [
+          {
+            "label": "M0 Portal v2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Linea PublicNode JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Linea block 31736976, Portal and adapter OPERATOR_ROLE plus Portal PAUSER_ROLE resolved to 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; the Portal default adapter for internal chain 1 was 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, and sendPaused()/receivePaused() were false."
+      },
+      {
+        "id": "musd-monad-portal-adapter-operator-pauser",
+        "label": "Monad M0 Portal and Hyperlane adapter operator/pauser",
+        "routeRefs": [
+          "monad:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:monad:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "eoa:monad:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "OPERATOR_ROLE on Portal and adapter is held by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; it controls the default adapter/path and peer-related route configuration for hub chain ID 1.",
+          "rateLimits": "No token-specific Portal rate limit was evidenced; the route is bounded by Hyperlane message approval, peer/adapter configuration, and M burn/mint accounting.",
+          "pausersAdminsUpgraders": "PAUSER_ROLE on Portal and OPERATOR_ROLE on Portal/adapter are held by this address. Portal sendPaused() and receivePaused() were false. The address is an EIP-7702 delegated account on Monad rather than a timelocked Safe, and its organizational signer policy was not established."
+        },
+        "capDescription": "No token-specific local MUSD cap was evidenced on Portal v2; the bridge route relies on cross-chain approval and supply-conserving M burn/mint accounting.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96594242,
+        "sources": [
+          {
+            "label": "M0 Portal v2 source",
+            "url": "https://github.com/m0-platform/m-portal-v2"
+          },
+          {
+            "label": "Monad public JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 96594242, Portal and adapter OPERATOR_ROLE plus Portal PAUSER_ROLE resolved to 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; the Portal default adapter for internal chain 1 was 0xfcc1d596ad6cab0b5394eaa447d8626813180f32, and sendPaused()/receivePaused() were false."
+      },
+      {
+        "id": "musd-linea-hyperlane-default-ism",
+        "label": "Linea Hyperlane mailbox default ISM validator set",
+        "routeRefs": [
+          "linea:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x29c3d1759e2995550aa84d102ca928ec9e505db8",
+        "failureDomainKeys": [
+          "contract:linea:0x02d16bc51af6bfd153d67ca61754cf912e82c4d9",
+          "contract:linea:0x29c3d1759e2995550aa84d102ca928ec9e505db8",
+          "validator:linea:0x69dca95b7abf731e5909a77aeca405b746b92914",
+          "validator:linea:0xb1a545387eb101cd07f2b51858f4b43d14f5bd"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Linea adapter mailbox is 0x02d16bc51af6bfd153d67ca61754cf912e82c4d9 and its default ISM is this static message-ID multisig.",
+          "attestorQuorum": "The Linea default ISM 0x29c3d1759e2995550aa84d102ca928ec9e505db8 requires both validators 0x69dca95b7abf731e5909a77aeca405b746b92914 and 0xb1a545387eb101cd07f2b51858f4b43d14f5bd; threshold is 2-of-2.",
+          "rateLimits": "The external validator quorum is the reviewed route approval control; no token-specific Portal rate limit was evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 31736976,
+        "sources": [
+          {
+            "label": "Hyperlane static multisig ISM source",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-monorepo/tree/main/solidity/contracts"
+          },
+          {
+            "label": "Linea PublicNode JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "The Linea Hyperlane mailbox 0x02d16bc51af6bfd153d67ca61754cf912e82c4d9 uses default static ISM 0x29c3d1759e2995550aa84d102ca928ec9e505db8 with a decoded 2-of-2 validator set. Validator key custody and operational quorum beyond the on-chain configuration remain unverified."
+      },
+      {
+        "id": "musd-monad-hyperlane-default-ism",
+        "label": "Monad Hyperlane mailbox default ISM validator set",
+        "routeRefs": [
+          "monad:0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x0e1f8b3b48f9c429f9349848fc711cdb455be269",
+        "failureDomainKeys": [
+          "contract:monad:0x3a464f746d23ab22155710f44db16dca53e0775e",
+          "contract:monad:0x0e1f8b3b48f9c429f9349848fc711cdb455be269",
+          "validator:monad:0x24f89395e932961c27167f42db928ec92047b695",
+          "validator:monad:0xbb67da637d4b030c647176a53dd27d8d868e01cb"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Monad adapter mailbox is 0x3a464f746d23ab22155710f44db16dca53e0775e and its default ISM is this static message-ID multisig.",
+          "attestorQuorum": "The Monad default ISM 0x0e1f8b3b48f9c429f9349848fc711cdb455be269 requires both validators 0x24f89395e932961c27167f42db928ec92047b695 and 0xbb67da637d4b030c647176a53dd27d8d868e01cb; threshold is 2-of-2.",
+          "rateLimits": "The external validator quorum is the reviewed route approval control; no token-specific Portal rate limit was evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96594242,
+        "sources": [
+          {
+            "label": "Hyperlane static multisig ISM source",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-monorepo/tree/main/solidity/contracts"
+          },
+          {
+            "label": "Monad public JSON-RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "The Monad Hyperlane mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e uses default static ISM 0x0e1f8b3b48f9c429f9349848fc711cdb455be269 with a decoded 2-of-2 validator set. Validator key custody and operational quorum beyond the on-chain configuration remain unverified."
       }
     ]
   }

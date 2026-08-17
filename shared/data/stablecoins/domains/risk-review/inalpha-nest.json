@@ -17,11 +17,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "Nest issues the inALPHA BoringVault natively on Ethereum and Plume at the same address under the same Nest 3-of-6 Safe (owner() read 2026-07-20); cross-chain share movement runs through Nest's own LayerZero OFT contracts (issuer-operated burn/mint, hub-and-spoke accounting). No third-party bridge carries the representation.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
-    "confidence": "verified",
+    "tier": "opaque-or-unknown",
+    "summary": "Ethereum and Plume each host a reviewed inALPHA BoringVault native-issuance deployment at 0x64ab176c545bb85eca75d53c3ffcb361deafb855 under the same Nest 3-of-6 Safe and the current authorized Teller 0x20428f901a50ec69f5a2b56d313491cc686fafff; these native issuance facts remain in Mint Authority. Nest's official materials describe LayerZero OFT share movement for legacy BoringVaults and the inALPHA config records that route type and peers, but no live inALPHA NestVaultOFT/NestShareOFT address pair or current delegate, upgrade admin, peer, DVN/ULN, executor, pause, or rate-limit state is identified. No bridge representation or controller is invented; the bridge tier remains opaque-or-unknown pending reconciliation of the exact route.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "Nest docs",
@@ -30,6 +30,37 @@
       {
         "label": "Nest website",
         "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Nest Protocol repository — inALPHA deployment inventory",
+        "url": "https://github.com/plumenetwork/nest-protocol/blob/main/README.md"
+      },
+      {
+        "label": "Nest inALPHA deployment configuration",
+        "url": "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      },
+      {
+        "label": "Nest cross-chain architecture",
+        "url": "https://docs.nest.credit/about/cross-chain/"
+      },
+      {
+        "label": "Ethereum fixed-block JSON-RPC reads",
+        "url": "https://ethereum.publicnode.com/"
+      },
+      {
+        "label": "Plume fixed-block JSON-RPC reads",
+        "url": "https://rpc.plume.org/"
+      }
+    ],
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Nest LayerZero OFT share movement",
+        "url": "https://docs.nest.credit/about/cross-chain/",
+        "bridgeTypes": [
+          "LayerZero OFT"
+        ],
+        "note": "Nest documents source burn/debit and destination mint/credit for legacy BoringVault share movement, but the live inALPHA OFT contract pair and its current route controls remain unresolved."
       }
     ],
     "routes": [
@@ -44,9 +75,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the same Nest BoringVault is deployed on ethereum with owner() = the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (on-chain read 2026-07-20); shares mint only through Nest's own Teller contract. No third-party bridge mints this deployment.",
+        "reviewNote": "Reviewed native-issuance deployment: the Nest BoringVault is deployed on Ethereum with owner() = the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 and authority() = RolesAuthority 0x5e500500968388a13b3ff885c3eed7158a5d82ef. At Ethereum block 25,769,980, the current Teller 0x20428f901a50ec69f5a2b56d313491cc686fafff holds role 3 for the vault enter() capability. This row covers native issuance only; the separate inALPHA LayerZero OFT route is not assigned an address here because the live OFT pair is unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25769980,
         "sources": [
           {
             "label": "inALPHA Ethereum vault",
@@ -59,6 +91,14 @@
           {
             "label": "nest-protocol repository (inALPHA deployment config)",
             "url": "https://github.com/plumenetwork/nest-protocol"
+          },
+          {
+            "label": "Nest Protocol repository — inALPHA deployment inventory",
+            "url": "https://github.com/plumenetwork/nest-protocol/blob/main/README.md"
+          },
+          {
+            "label": "Ethereum fixed-block JSON-RPC reads",
+            "url": "https://ethereum.publicnode.com/"
           }
         ]
       },
@@ -69,13 +109,14 @@
         "protocol": "Nest inALPHA vault",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the same Nest BoringVault is deployed on Plume with owner() = the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (on-chain read 2026-07-20). Cross-chain share movement between Plume and Ethereum runs through Nest's own LayerZero OFT contracts (NestVaultOFT/NestShareOFT hub-and-spoke per the nest-protocol repository and Nest cross-chain docs) — an issuer-operated burn/mint, not a third-party bridge; the share token itself is not the LayerZero OApp.",
+        "reviewNote": "Reviewed native-issuance deployment: the Nest BoringVault is deployed on Plume with owner() = the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 and authority() = RolesAuthority 0x5e500500968388a13b3ff885c3eed7158a5d82ef. At Plume block 87,665,989, the current Teller 0x20428f901a50ec69f5a2b56d313491cc686fafff holds role 3 for the vault enter() capability; totalSupply() was zero at that observation block but the native issuance path is deployed and authorized. This row covers native issuance only; Nest's separate LayerZero OFT share route and its supply-conservation controls remain unresolved because the live inALPHA OFT pair is not identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 87665989,
         "sources": [
           {
             "label": "inALPHA Plume vault",
@@ -88,6 +129,14 @@
           {
             "label": "nest-protocol repository (inALPHA deployment config)",
             "url": "https://github.com/plumenetwork/nest-protocol"
+          },
+          {
+            "label": "Nest Protocol repository — inALPHA deployment inventory",
+            "url": "https://github.com/plumenetwork/nest-protocol/blob/main/README.md"
+          },
+          {
+            "label": "Plume fixed-block JSON-RPC reads",
+            "url": "https://rpc.plume.org/"
           }
         ]
       }

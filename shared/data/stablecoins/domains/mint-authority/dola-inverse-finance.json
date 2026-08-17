@@ -42,6 +42,9 @@
       {
         "chain": "ethereum",
         "address": "0x926dF14a23BE491164dCF93f4c468A50ef659D5B",
+        "deploymentRefs": [
+          "ethereum:0x865377367054516e17014ccded1e7d814edc9ce4"
+        ],
         "label": "DOLA token operator (Timelock, 48h delay)",
         "role": "direct-minter",
         "authorityType": "contract",

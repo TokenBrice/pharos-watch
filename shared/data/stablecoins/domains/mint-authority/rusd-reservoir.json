@@ -33,6 +33,9 @@
       {
         "chain": "ethereum",
         "address": "0x4809010926aec940b550D34a46A52739f996D75D",
+        "deploymentRefs": [
+          "ethereum:0x09d4214c03d01f49544c0448dbe3a27f768f2b34"
+        ],
         "label": "Reservoir USDC Peg Stability Module",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -51,6 +54,9 @@
       {
         "chain": "ethereum",
         "address": "0x04716DB62C085D9e08050fcF6F7D775A03d07720",
+        "deploymentRefs": [
+          "ethereum:0x09d4214c03d01f49544c0448dbe3a27f768f2b34"
+        ],
         "label": "Reservoir Credit Enforcer",
         "role": "cap-admin",
         "authorityType": "contract",
@@ -73,6 +79,9 @@
       {
         "chain": "ethereum",
         "address": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "deploymentRefs": [
+          "ethereum:0x09d4214c03d01f49544c0448dbe3a27f768f2b34"
+        ],
         "label": "Reservoir PSM and Credit Enforcer DEFAULT_ADMIN (EOA)",
         "role": "minter-admin",
         "authorityType": "eoa",

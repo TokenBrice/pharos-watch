@@ -43,24 +43,15 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "sYUSD is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native sYUSD; BSC row confirmed Aegis cross-chain deployment.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "manual-review",
-    "protocols": [
-      {
-        "source": "issuer",
-        "name": "sYUSD issuer-operated multichain issuance",
-        "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
-      }
-    ],
+    "tier": "single-chain-or-native",
+    "summary": "Both authored sYUSD deployments are local Aegis ERC-4626 wrappers over chain-local YUSD, not bridge representations. The reviewed contracts expose deposit/mint and withdrawal/cooldown share accounting but no sYUSD LayerZero/OFT, peer, endpoint, lockbox, adapter, validator/DVN, cross-chain mint/burn, or rate-limit machinery. The parent YUSD LayerZero mesh remains assessed only under yusd-aegis Bridge Risk.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration; syusd-aegis finding",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Aegis sYUSD docs",
-        "url": "https://docs.aegis.im/tokens/syusd"
+        "label": "Aegis sYUSD documentation",
+        "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
       },
       {
         "label": "Aegis smart contracts",
@@ -75,13 +66,13 @@
         "protocol": "Aegis sYUSD (native issuance on Ethereum)",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Staked YUSD', symbol sYUSD, 18 decimals — Aegis issuer-native deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-08-16: the Ethereum sYUSD proxy reads name 'Staked YUSD', symbol sYUSD, and 18 decimals; asset() returns chain-local YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a. The verified local ERC-4626 implementation mints shares through deposit/mint against YUSD and burns shares on withdrawal/cooldown; no cross-chain bridge surface is present.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Aegis",
@@ -97,28 +88,29 @@
         "id": "bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2",
         "destinationChain": "bsc",
         "contractAddress": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
-        "protocol": "Aegis sYUSD cross-chain deployment",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Aegis sYUSD (native issuance on BSC)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Staked YUSD', symbol sYUSD, 18 decimals on BSC; EIP-1967 admin 0x87696e700eb66a4c807731f68ad33d9dba2036a8. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "Verified on-chain 2026-08-16: the BSC sYUSD proxy reads name 'Staked YUSD', symbol sYUSD, and 18 decimals; asset() returns chain-local YUSD 0xab3dbcd9b096c3ff76275038bf58eac10d22c61f. The verified local ERC-4626 implementation mints shares through deposit/mint against YUSD and burns shares on withdrawal/cooldown; no cross-chain bridge surface is present.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "bsc",
-        "controllerAddress": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
-        "failureDomainKeys": [
-          "protocol:aegis-crosschain",
-          "contract:bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2"
-        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116365876,
         "sources": [
           {
-            "label": "Aegis",
-            "url": "https://aegis.im/"
+            "label": "Aegis sYUSD documentation",
+            "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+          },
+          {
+            "label": "sYUSD BSC proxy (BscScan)",
+            "url": "https://bscscan.com/address/0x24db057b19241eefb9b522e8627c293ed8f93af2#code"
+          },
+          {
+            "label": "sYUSD BSC implementation (BscScan)",
+            "url": "https://bscscan.com/address/0x42940c329e2a4d0bd0e828b7815c90111065415e#code"
           }
         ]
       }

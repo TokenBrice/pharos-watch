@@ -48,6 +48,11 @@
       "chain": "polygon",
       "address": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+      "decimals": 18
     }
   ],
   "custodyModel": "institutional-unregulated",

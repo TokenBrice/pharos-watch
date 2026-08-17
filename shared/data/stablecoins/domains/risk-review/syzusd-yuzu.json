@@ -69,11 +69,11 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "syzUSD moves cross-chain between Plasma and Monad via a LayerZero OVault. Yuzu's own audited contracts (ovault/ProtoOVaultComposer and PSMOVaultComposer) inherit LayerZero's VaultComposerSync and wire an asset+share OFT mesh, with the share token (syzUSD) explicitly required to be an OFTAdapter lockbox (approvalRequired()==true) on the hub chain (most likely Plasma) and a standard OFT on spokes. Because the durable supply path for shares runs through a third-party (LayerZero) OFTAdapter lockbox control surface, this is an external lock/mint route rather than opaque. (Named DVN set and a live LayerZeroScan trace were not pinned, and the on-chain hub identity was not confirmed at the explorer/deploy-config level, but the lockbox/adapter requirement is code-enforced in the issuer's audited composer.)",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-    "confidence": "verified",
+    "tier": "opaque-or-unknown",
+    "summary": "Plasma is the only reviewed native syzUSD issuance route. Ethereum is a verified BridgeableTokenAdapterUpgradeable representation with a lockbox and owner-only locked-token withdrawal surface; Monad's current implementation is bridgeable/OFT code exposing CCIP mint/burn role surfaces, but its current pool, router, role grants, allowlists, limits, and message traces were not verified. Current LayerZero peers read as zero on both representations, so the historical OVault architecture is retained as evidence but no active LayerZero lane or CCIP conservation invariant is claimed. Bridge upgrade/admin controls remain explicitly scored here, with the route tier kept opaque-or-unknown until the live machinery is resolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex syzUSD bridge-boundary correction",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "issuer",
@@ -97,6 +97,17 @@
           "ovault"
         ],
         "note": "Audit states cross-chain operations via LayerZero added; reviewers focused on the LayerZero oVault integration."
+      },
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "slug": "chainlink-ccip",
+        "url": "https://docs.chain.link/ccip",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockAndRelease"
+        ],
+        "note": "The current Monad implementation exposes CCIP minter/burner role constants, but this review did not verify the live pool, router, role holders, allowlists, limits, or message traces."
       }
     ],
     "sources": [
@@ -115,6 +126,26 @@
       {
         "label": "LayerZero OVault standard (share OFTAdapter lockbox on hub, OFT on spokes)",
         "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
+      },
+      {
+        "label": "Current syzUSD Ethereum adapter proxy",
+        "url": "https://etherscan.io/address/0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12#code"
+      },
+      {
+        "label": "Current syzUSD Ethereum adapter implementation",
+        "url": "https://etherscan.io/address/0x692d91e94b55ec1360f20970010538263ce29b58#code"
+      },
+      {
+        "label": "Current syzUSD Monad proxy",
+        "url": "https://monadscan.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f#code"
+      },
+      {
+        "label": "Current syzUSD Monad implementation",
+        "url": "https://monadscan.com/address/0xe536b80e7f859e72ad095d769da1da45b7312d53#code"
+      },
+      {
+        "label": "Current syzUSD fixed-block RPC reads",
+        "url": "https://rpc.monad.xyz"
       }
     ],
     "routes": [
@@ -129,9 +160,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: transparent-proxy ERC-4626 'Staked Yuzu USD' vault (implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8, ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 whose owner is the 4/5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d) minting shares natively against yzUSD deposits (asset() = 0x6695c0f8706c5ace3bdf8995073179cca47926dc). The vault owner() EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 is operational-only. Native wrapper issuance; no bridge control carries the claim.",
+        "reviewNote": "At Plasma block 29981334 on 2026-08-16, the transparent-proxy syzUSD ERC-4626 vault resolves to implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8 and ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, whose owner is the 4-of-5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d. asset() returns yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, so current share issuance is native and deposit-bounded; the vault owner() EOA is operational-only. Native wrapper issuance is kept separate from bridge controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 29981334,
         "sources": [
           {
             "label": "syzUSD vault on Plasmascan",
@@ -144,29 +176,158 @@
         ]
       },
       {
-        "id": "monad:0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-        "destinationChain": "monad",
-        "contractAddress": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-        "protocol": "Yuzu syzUSD ERC-4626 vault (native wrapper)",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "id": "ethereum:0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+        "sourceChain": "plasma",
+        "destinationChain": "ethereum",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+        "protocol": "Yuzu syzUSD BridgeableTokenAdapterUpgradeable representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: transparent-proxy ERC-4626 'Staked Yuzu USD' vault (implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53, ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 whose owner is 0xd32ab76a165f1a716986ba8c58344e3df4397f5e) minting shares natively against yzUSD deposits; vault owner() EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae (no code) is operational-only. Native wrapper issuance; no bridge control carries the claim.",
+        "reviewNote": "At Ethereum block 25770862 on 2026-08-16, this verified syzUSD representation resolves to BridgeableTokenAdapterUpgradeable implementation 0x692d91e94b55ec1360f20970010538263ce29b58, an OFT adapter with an underlying lockbox and owner-only locked-token withdrawal. The adapter is not a canonical native issuance deployment. LayerZero peers for the checked Plasma and Monad EIDs returned zero, and no current CCIP pool, router, role grant, allowlist, limit, or message trace was verified; the representation role is reviewed but an active lane and conservation invariant remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "failureDomainKeys": [
+          "protocol:layerzero-ovault",
+          "contract:ethereum:0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+          "proxy-admin:ethereum:0xab08de77a15ae9dc675eeeb89b3bd558069341a9"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770862,
         "sources": [
           {
-            "label": "syzUSD vault on Monadexplorer",
-            "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+            "label": "Current syzUSD Ethereum adapter proxy",
+            "url": "https://etherscan.io/address/0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12#code"
           },
           {
-            "label": "Yuzu documentation",
-            "url": "https://docs.yuzu.money/"
+            "label": "Current syzUSD Ethereum adapter implementation",
+            "url": "https://etherscan.io/address/0x692d91e94b55ec1360f20970010538263ce29b58#code"
+          },
+          {
+            "label": "Ethereum public RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
+      },
+      {
+        "id": "monad:0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+        "sourceChain": "plasma",
+        "destinationChain": "monad",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+        "protocol": "Yuzu syzUSD bridgeable/OFT representation with CCIP surfaces",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Monad block 96617731 on 2026-08-16, the current proxy resolves to bridgeable/OFT implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53. The implementation exposes CCIP_MINTER_ROLE and CCIP_BURNER_ROLE constants plus OFT mint/burn surfaces, while the cataloged asset() and paused() wrapper selectors revert. LayerZero peers for EIDs 30101, 30383, 30390, and 30109 returned zero, and the current CCIP pool, router, role holders, allowlists, limits, and message traces were not verified; this is a reviewed representation candidate, not a verified active native or bridge lane.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "protocol:layerzero",
+          "contract:monad:0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+          "proxy-admin:monad:0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331",
+          "timelock:monad:0xd32ab76a165f1a716986ba8c58344e3df4397f5e"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 96617731,
+        "sources": [
+          {
+            "label": "Current syzUSD Monad proxy",
+            "url": "https://monadscan.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f#code"
+          },
+          {
+            "label": "Current syzUSD Monad implementation",
+            "url": "https://monadscan.com/address/0xe536b80e7f859e72ad095d769da1da45b7312d53#code"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "syzusd-ethereum-proxy-admin-owner",
+        "label": "Yuzu Ethereum syzUSD adapter ProxyAdmin owner",
+        "routeRefs": [
+          "ethereum:0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38",
+        "failureDomainKeys": [
+          "proxy-admin:ethereum:0xab08de77a15ae9dc675eeeb89b3bd558069341a9",
+          "eoa:ethereum:0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Ethereum block 25770862, the syzUSD adapter proxy admin is 0xab08de77a15ae9dc675eeeb89b3bd558069341a9 and its owner is EOA 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38; this upgrade path can replace the current lockbox/OFT-adapter implementation. The active LayerZero/CCIP lane and its role/limit controls were not verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770862,
+        "sources": [
+          {
+            "label": "Current syzUSD Ethereum adapter proxy",
+            "url": "https://etherscan.io/address/0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12#code"
+          },
+          {
+            "label": "Current syzUSD Ethereum adapter implementation",
+            "url": "https://etherscan.io/address/0x692d91e94b55ec1360f20970010538263ce29b58#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25770862 on 2026-08-16, the verified syzUSD proxy 0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12 resolved to BridgeableTokenAdapterUpgradeable implementation 0x692d91e94b55ec1360f20970010538263ce29b58. Its EIP-1967 ProxyAdmin 0xab08de77a15ae9dc675eeeb89b3bd558069341a9 had owner EOA 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38. The owner can replace the bridge-adapter implementation, but no current CCIP pool/router or LayerZero peer/control set was established."
+      },
+      {
+        "id": "syzusd-monad-proxy-admin-timelock",
+        "label": "Yuzu Monad ProxyAdmin 12-hour timelock",
+        "routeRefs": [
+          "monad:0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xd32ab76a165f1a716986ba8c58344e3df4397f5e",
+        "failureDomainKeys": [
+          "proxy-admin:monad:0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331",
+          "timelock:monad:0xd32ab76a165f1a716986ba8c58344e3df4397f5e"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 43200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Monad block 96617731 on 2026-08-16, ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 owner() is TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e and getMinDelay() is 43,200 seconds. A completed timelocked upgrade can replace the current bridgeable/OFT implementation and change its CCIP or LayerZero mint/burn surfaces; the current role grants, pool, router, allowlists, limits, and message traces remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96617731,
+        "sources": [
+          {
+            "label": "Current syzUSD Monad proxy",
+            "url": "https://monadscan.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f#code"
+          },
+          {
+            "label": "Current syzUSD Monad implementation",
+            "url": "https://monadscan.com/address/0xe536b80e7f859e72ad095d769da1da45b7312d53#code"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 96617731 on 2026-08-16, the syzUSD proxy 0x484be0540ad49f351eaa04eeb35df0f937d4e73f resolved to current implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53 and ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331. ProxyAdmin.owner() returned TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e with getMinDelay() = 43,200 seconds. The timelock can replace the bridgeable/OFT implementation; current CCIP and LayerZero route configuration was not established."
       }
     ]
   }

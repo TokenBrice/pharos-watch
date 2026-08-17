@@ -7,6 +7,9 @@
     "summary": "SAFO tokens are UUPS-upgradeable ERC-20s governed by a per-chain Permission Manager (PM) contract. On Ethereum, the PM's ADMIN group (group 0) is held by a legacy 6-signer multisig (threshold 3) at 0x4eaa52b6. The mint requirement on the Ethereum token is group 0 or group 2; only the multisig currently holds group 0 (group 2 was previously assigned to an EOA that has since been removed). The PM itself is upgradeable but has no separate proxy admin, so upgrades require group 0 approval by this multisig.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+      ],
       "proxyAddresses": [
         "0xcbade7d9bdee88411cb6cbcbb29952b742036992",
         "0x344278aff344d6fb960705dc18a4912221608472"
@@ -51,6 +54,9 @@
         "evidence": "Spiko's token is a UUPS-upgradeable ERC-20 whose privileged functions (including mint/burn) are governed by a central Permission Manager; Spiko, as transfer agent for the SICAV, mints fund shares on KYC-gated subscription at the published NAV.",
         "chain": "ethereum",
         "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
         "failureDomainKeys": [
           "contract:ethereum:0x344278aff344d6fb960705dc18a4912221608472",
           "contract:arbitrum:0xa925c217e4c1c82ee721ebd496d3863d5c2d829a"
@@ -82,6 +88,9 @@
         ],
         "chain": "ethereum",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": [
+          "ethereum:0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        ],
         "failureDomainKeys": [
           "multisig:ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea"
         ]

@@ -6,6 +6,9 @@
     "confidence": "verified",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x056fd409e1d7a124bd7017459dfea2f387b6d5cd"
+      ],
       "proxyAddresses": [
         "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
         "0xc42b14e49744538e3c239f8ae48a1eaaf35e68a0"
@@ -49,6 +52,9 @@
       {
         "chain": "ethereum",
         "address": "0xd24400ae8bfebb18ca49be86258a3c749cf46853",
+        "deploymentRefs": [
+          "ethereum:0x056fd409e1d7a124bd7017459dfea2f387b6d5cd"
+        ],
         "label": "GUSD limited-printer EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -73,6 +79,9 @@
       {
         "chain": "ethereum",
         "address": "0x1789cca7430aacbdb7c89f9b5695a9c06e4764eb",
+        "deploymentRefs": [
+          "ethereum:0x056fd409e1d7a124bd7017459dfea2f387b6d5cd"
+        ],
         "label": "GUSD issuance 2-of-3 custodian (one-hour delay)",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -103,6 +112,9 @@
       {
         "chain": "ethereum",
         "address": "0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421",
+        "deploymentRefs": [
+          "ethereum:0x056fd409e1d7a124bd7017459dfea2f387b6d5cd"
+        ],
         "label": "GUSD Proxy and Store 2-of-3 upgrade custodian (two-day delay)",
         "role": "governor",
         "authorityType": "multisig",

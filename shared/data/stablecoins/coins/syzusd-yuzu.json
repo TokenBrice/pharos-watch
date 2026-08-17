@@ -75,6 +75,11 @@
       "decimals": 18
     },
     {
+      "chain": "ethereum",
+      "address": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+      "decimals": 18
+    },
+    {
       "chain": "monad",
       "address": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
       "decimals": 18

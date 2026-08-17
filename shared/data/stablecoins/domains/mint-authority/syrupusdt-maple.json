@@ -29,6 +29,9 @@
       {
         "chain": "ethereum",
         "address": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+        "deploymentRefs": [
+          "ethereum:0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+        ],
         "label": "Maple syrupUSDT ERC-4626 vault token",
         "role": "wrapper",
         "authorityType": "contract",
@@ -41,6 +44,9 @@
       {
         "chain": "ethereum",
         "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "deploymentRefs": [
+          "ethereum:0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+        ],
         "label": "Inherited USDT (Tether) issuer mint path",
         "role": "direct-minter",
         "authorityType": "multisig",

@@ -4,9 +4,16 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "HLSCOPE uses Securitize DSToken UUPS proxies on Ethereum, Polygon, Optimism, Plume, and Tron. The four EVM deployments share owner EOA 0x59c1eAcE...76Ee; Tron uses owner EOA TGmCDF...6huia. Both reviewed owners hold the trust-service MASTER role on their respective reviewed branches, which authorizes issuance and UUPS upgrades. No permissionless mint route exists.",
+    "summary": "HLSCOPE uses Securitize DSToken UUPS proxies on five independently native issuance chains: Ethereum, Polygon, Optimism, Plume, and Tron. The four EVM deployments share owner EOA 0x59c1eAcE...76Ee; Tron uses owner EOA TGmCDF...6huia. Both reviewed owners hold the trust-service MASTER role on their respective reviewed branches, which authorizes issuance and UUPS upgrades. No permissionless mint route exists. Wormhole's advertised multichain interoperability is reviewed separately under Bridge Risk and is not treated as native Mint Authority.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xda2ffa104356688e74d9340519b8c17f00d7752e",
+        "polygon:0x4c5ca366e26409845624e29b62c388a06961a792",
+        "optimism:0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
+        "plume:0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a",
+        "tron:TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X"
+      ],
       "proxyAddresses": [
         "0xda2ffa104356688e74d9340519b8c17f00d7752e",
         "0x4c5ca366e26409845624e29b62c388a06961a792",
@@ -59,6 +66,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0xda2ffa104356688e74d9340519b8c17f00d7752e"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -86,6 +96,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "polygon:0x4c5ca366e26409845624e29b62c388a06961a792"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -109,6 +122,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "optimism:0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -132,6 +148,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "plume:0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -159,6 +178,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "tron:TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -185,6 +207,12 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0xda2ffa104356688e74d9340519b8c17f00d7752e",
+          "polygon:0x4c5ca366e26409845624e29b62c388a06961a792",
+          "optimism:0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
+          "plume:0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
@@ -221,6 +249,9 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "tron:TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -304,9 +335,9 @@
           "url": "https://defillama.com/rwa/asset/HLSCOPE"
         }
       ],
-      "evidence": "The full five-deployment registry was re-verified on 2026-07-14. Exact-block EVM reads resolved implementations 0xa2f6...62c9 (Ethereum block 25531417), 0x5e98...2e0b (Polygon block 90222365), 0x05ea...63ae (Optimism block 154219883), and 0x0d12...c344 (Plume block 81057700); each proxy had a zero EIP-1967 admin slot and returned shared code-empty owner EOA 0x59c1...76Ee. Plume's trust service returned MASTER for that owner. Tronscan and TronGrid identified Tron proxy TSwy...TPht1X, implementation TPEA...PrTFT, trust service THCi...zvau, and non-contract owner TGmC...6huia with MASTER role. Verified DSToken implementations gate privileged issuance at ISSUER-or-above and UUPS upgrades at MASTER. Evidence challenge completed 2026-07-15: HLSCOPE uses RedStone TSSO to deliver issuer-provided NAV for pricing and redemptions, but no dated independent supply-to-fund-assets reconciliation was found. Its Rule 506(c) and Investment Company Act Section 3(c)(7) exemptions do not prudentially supervise the fund. Re-verified at Ethereum block 25575167 on 2026-07-20: HLSCOPE 0xda2ffa104356688e74d9340519b8c17f00d7752e still returns owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and its EIP-1967 implementation slot still resolves to 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9. Economic-control adjudication: the shared code-empty owner EOA holds the Securitize trust-service MASTER role, which authorizes both issuance at ISSUER-or-above and UUPS upgrades, with no on-chain cap, no multisig, no timelock, and no independent bound, so the mint cap is economically unbounded (the fund's offering documents constrain the issuer legally, not on-chain). Economic-posture fields reviewed 2026-08-15: issuer EOAs can issue and upgrade across all five deployments, while NAV reporting does not reconcile token supply to fund assets and no prudential product supervisor is evidenced. Wave 2 external research reviewed 2026-08-15: Securitize, Hamilton Lane, SEC filings, and the RedStone NAV material disclose fund valuation but no aggregate token-supply reconciliation across the five deployments, so reconciliation remains unknown. Reconciliation review 2026-08-16: Securitize/Hamilton Lane materials and the SEC Form D establish a NAV-priced, qualified-purchaser fund share, while RedStone publishes a daily NAV feed; DefiLlama's attestation index reports no attestation found. No named examiner or other dated recurring artifact reconciling liabilities across all five token deployments to fund assets was found, so reconciliation remains unknown.",
-      "reviewer": "owner-triage; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20); Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "The full five-deployment registry was re-verified on 2026-07-14. Exact-block EVM reads resolved implementations 0xa2f6...62c9 (Ethereum block 25531417), 0x5e98...2e0b (Polygon block 90222365), 0x05ea...63ae (Optimism block 154219883), and 0x0d12...c344 (Plume block 81057700); each proxy had a zero EIP-1967 admin slot and returned shared code-empty owner EOA 0x59c1...76Ee. Plume's trust service returned MASTER for that owner. Tronscan and TronGrid identified Tron proxy TSwy...TPht1X, implementation TPEA...PrTFT, trust service THCi...zvau, and non-contract owner TGmC...6huia with MASTER role. Verified DSToken implementations gate privileged issuance at ISSUER-or-above and UUPS upgrades at MASTER. The five deployments are independently native issuance surfaces; Wormhole's advertised multichain interoperability is not counted as native Mint Authority, and no HLSCOPE-specific bridge controller is included here without route evidence. Evidence challenge completed 2026-07-15: HLSCOPE uses RedStone TSSO to deliver issuer-provided NAV for pricing and redemptions, but no dated independent supply-to-fund-assets reconciliation was found. Its Rule 506(c) and Investment Company Act Section 3(c)(7) exemptions do not prudentially supervise the fund. Re-verified at Ethereum block 25575167 on 2026-07-20: HLSCOPE 0xda2ffa104356688e74d9340519b8c17f00d7752e still returns owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and its EIP-1967 implementation slot still resolves to 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9. Economic-control adjudication: the shared code-empty owner EOA holds the Securitize trust-service MASTER role, which authorizes both issuance at ISSUER-or-above and UUPS upgrades, with no on-chain cap, no multisig, no timelock, and no independent bound, so the mint cap is economically unbounded (the fund's offering documents constrain the issuer legally, not on-chain). Economic-posture fields reviewed 2026-08-15: issuer EOAs can issue and upgrade across all five deployments, while NAV reporting does not reconcile token supply to fund assets and no prudential product supervisor is evidenced. Wave 2 external research reviewed 2026-08-15: Securitize, Hamilton Lane, SEC filings, and the RedStone NAV material disclose fund valuation but no aggregate token-supply reconciliation across the five deployments, so reconciliation remains unknown. Reconciliation review 2026-08-16: Securitize/Hamilton Lane materials and the SEC Form D establish a NAV-priced, qualified-purchaser fund share, while RedStone publishes a daily NAV feed; DefiLlama's attestation index reports no attestation found. No named examiner or other dated recurring artifact reconciling liabilities across all five token deployments to fund assets was found, so reconciliation remains unknown.",
+      "reviewer": "owner-triage; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20); Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Codex mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

@@ -3,12 +3,15 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "KRWQ's canonical Ethereum token is a TransparentUpgradeableProxy over a Frax-style ERC20 with an owner-managed minter set: minterMint(address,uint256) is uncapped for any address in the minters mapping, and the owner (3/5 Safe 0x56398b89) can addMinter/removeMinter at will. Two active minters are KRWTCustodianWithOracle contracts, both owned by that same Safe. Base, Polygon and Fraxtal do not run lock/unlock adapters: each is a native mint-and-burn LayerZero OFT (KRWQOFT is OFTUpgradeable; token() returns itself and approvalRequired() is false), so its owner Safe can setPeer a new trusted remote and cause unbounded KRWQ to be credited on that chain. Every deployment is a transparent proxy; on Ethereum and Base the ProxyAdmin is owned by the chain's Safe, but on Polygon and Fraxtal the ProxyAdmin is owned by a single EOA (0x9fEAB70f), which can replace the implementation unilaterally. Codex and Morph are note-only (no public RPC).",
+    "confidence": "manual-review",
+    "summary": "KRWQ has one issuer-native liability deployment on Ethereum. Its TransparentUpgradeableProxy owner (3/5 Safe 0x56398b89) controls the token minter set; the two active KRWTCustodianWithOracle minters use deposit/custodian-asset and oracle-freshness gates with current mutable 1.5 billion KRWQ caps, so native issuance is cap- and deposit-bounded but the Safe can raise caps, authorize minters, and replace mint-critical logic. Base, Polygon, Fraxtal, Codex, and Morph are LayerZero V2 OFT representations and are excluded from Mint Authority; their bridge controllers and the Ethereum OFT Adapter are recorded in Bridge Risk.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x56398b89d53e8731bca8c1b06886cfb14bd6b654",
+        "deploymentRefs": [
+          "ethereum:0xc00db6b41473d065027f5ed6fada20fde75f142e"
+        ],
         "label": "KRWQ Ethereum owner (3/5 Safe)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -16,279 +19,191 @@
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "unknown",
         "safe": {
           "threshold": 3,
           "owners": [
-            "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
-            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
-            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
-            "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
-            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228"
+            "0x0bfda3970a72557a5c785c90b0d85aad092d5a3a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228"
           ],
           "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "observedBlock": 25530913,
+          "observedBlock": 25770699,
           "source": "onchain"
         },
         "sources": [
           {
             "label": "KRWQ Ethereum contract",
             "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
-          }
-        ],
-        "evidence": "At Ethereum block 25530913: KRWQ (0xc00db6b4) is a transparent proxy (EIP-1967 impl 0x350b6b5c, ProxyAdmin 0xff85d94f). Verified implementation source: contract KRWQ is ERC20Permit, ERC20Burnable, Ownable2Step, with minterMint(address,uint256) onlyMinters (calls _mint, no cap) and addMinter/removeMinter onlyOwner. owner() = Safe 0x56398b89, pendingOwner() = zero. ProxyAdmin.owner() = the same Safe. mintersArray enumerates 2 active minters, 0x5573b8db and 0x7e88ac6a, both verified KRWTCustodianWithOracle proxies whose owner() and ProxyAdmin.owner() are also Safe 0x56398b89. Safe state: getThreshold()=3, getOwners()=5, getModulesPaginated() empty, guard slot zero.",
-        "capDescription": "No cap. minterMint(address,uint256) is uncapped for any address in the minters mapping; addMinter(address)/removeMinter(address) are onlyOwner, so this Safe can authorize unbounded new KRWQ on the canonical chain. It also owns the Ethereum ProxyAdmin."
-      },
-      {
-        "chain": "base",
-        "address": "0x74986f1aaa569f09e369ed19e87e388de1976f9b",
-        "label": "KRWQ Base OFT adapter owner (3/5 Safe)",
-        "role": "bridge-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "threshold": 3,
-        "signerCount": 5,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "threshold": 3,
-          "owners": [
-            "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
-            "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
-            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
-            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
-            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228"
-          ],
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "source": "onchain",
-          "observedBlock": 48621722,
-          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
-        },
-        "sources": [
-          {
-            "label": "KRWQ Base OFT adapter",
-            "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
-          }
-        ],
-        "evidence": "At Base block 48621557: KRWQ (0x370923d3) is a transparent proxy (EIP-1967 impl 0x394b2763, ProxyAdmin 0x748e1558). The verified implementation is KRWQOFT is OFTUpgradeable; token() returns 0x370923d3 (itself) and approvalRequired() returns false, which is the native mint/burn OFT signature (an OFTAdapter would return a distinct ERC20 and true). setPeer(uint32,bytes32) is onlyOwner. owner() = Safe 0x74986f1a; ProxyAdmin.owner() is the same Safe. At Base block 48621722: getThreshold()=3, getOwners()=5 signers, getModulesPaginated() empty, guard slot zero.",
-        "capDescription": "No cap. KRWQ on Base is a native mint-and-burn OFT, not a lock/unlock adapter: _credit() mints on inbound receipt. The owner Safe can setPeer(uint32,bytes32) to trust a new remote source, and also owns the ProxyAdmin, so it can authorize unbounded new KRWQ on Base."
-      },
-      {
-        "chain": "polygon",
-        "address": "0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
-        "label": "KRWQ Polygon OFT adapter owner (3/6 Safe)",
-        "role": "bridge-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "threshold": 3,
-        "signerCount": 6,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "threshold": 3,
-          "owners": [
-            "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
-            "0xf4e1d185666a624099298fcc42c50ba662dc7e52",
-            "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
-            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
-            "0xf83b59a99f2e1ce05ec5c69ae1db4fbf41dade89",
-            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228"
-          ],
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "source": "onchain",
-          "observedBlock": 90218531,
-          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
-        },
-        "sources": [
-          {
-            "label": "KRWQ Polygon OFT adapter",
-            "url": "https://polygonscan.com/address/0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2"
-          }
-        ],
-        "evidence": "At Polygon block 90218312: KRWQ (0x44c3950a) is a transparent proxy (EIP-1967 impl 0x1dcb9661, ProxyAdmin 0x4583b85c). token() returns itself and approvalRequired() returns false = native mint/burn OFT. setPeer is onlyOwner. owner() = Safe 0x78f2bcc6. At Polygon block 90218531: getThreshold()=3, getOwners()=6 signers, getModulesPaginated() empty, guard slot zero.",
-        "capDescription": "No cap. Native mint-and-burn OFT (_credit() mints). The owner Safe can setPeer(uint32,bytes32) to trust a new remote source and cause unbounded KRWQ to be credited on Polygon. Note the Polygon ProxyAdmin is NOT held by this Safe — it is owned by a single EOA (see separate control)."
-      },
-      {
-        "chain": "fraxtal",
-        "address": "0x5493f3dbe06accd1f51568213de839498a2a3b83",
-        "label": "KRWQ Fraxtal OFT adapter owner (3/5 Safe)",
-        "role": "bridge-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "threshold": 3,
-        "signerCount": 5,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "threshold": 3,
-          "owners": [
-            "0x9fEAB70f3c4a944B97b7565BAc4991dF5B7A69ff",
-            "0x0bFDA3970A72557a5C785c90B0D85AaD092d5A3a",
-            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
-            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
-            "0xcbc616D595D38483e6AdC45C7E426f44bF230928"
-          ],
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "source": "onchain",
-          "observedBlock": 38611041,
-          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804"
-        },
-        "sources": [
-          {
-            "label": "KRWQ Fraxtal OFT adapter",
-            "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
-          }
-        ],
-        "evidence": "At Fraxtal block 38610876: KRWQ (0xbe5b2eb2) is a transparent proxy (EIP-1967 impl 0x07fb1355, ProxyAdmin 0x3faff366). token() returns itself and approvalRequired() returns false = native mint/burn OFT. setPeer is onlyOwner. owner() = Safe 0x5493f3db. At Fraxtal block 38611041: getThreshold()=3, getOwners()=5 signers, getModulesPaginated() empty, guard slot zero.",
-        "capDescription": "No cap. Native mint-and-burn OFT (_credit() mints). The owner Safe can setPeer(uint32,bytes32) to trust a new remote source and cause unbounded KRWQ to be credited on Fraxtal. Note the Fraxtal ProxyAdmin is NOT held by this Safe — it is owned by a single EOA (see separate control)."
-      },
-      {
-        "chain": "polygon",
-        "address": "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
-        "label": "KRWQ Polygon ProxyAdmin owner (single EOA)",
-        "role": "proxy-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": true,
-        "capDescription": "Single-key upgrade authority. As sole owner of the Polygon ProxyAdmin (0x4583b85c), this EOA can call upgradeAndCall() to replace the KRWQ implementation with one that mints without limit. No cap, no timelock, no multisig.",
-        "evidence": "At Polygon block 90218312: the KRWQ proxy's EIP-1967 admin slot holds ProxyAdmin 0x4583b85c (OZ v5: upgradeAndCall(address,address,bytes) onlyOwner, UPGRADE_INTERFACE_VERSION present). ProxyAdmin.owner() = 0x9feab70f, and eth_getCode at that address returned 0x (no code) — a plain EOA, not a Safe. This address is also a signer on all four KRWQ Safes.",
-        "sources": [
-          {
-            "label": "KRWQ Polygon token proxy",
-            "url": "https://polygonscan.com/address/0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2"
           },
           {
-            "label": "KRWQ Polygon ProxyAdmin",
-            "url": "https://polygonscan.com/address/0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15"
+            "label": "KRWQ Ethereum implementation",
+            "url": "https://etherscan.io/address/0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca#code"
           },
           {
-            "label": "Polygon PublicNode RPC",
-            "url": "https://polygon-bor-rpc.publicnode.com"
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 90218312
+        "evidence": "At Ethereum block 25770699 (2026-08-16), the KRWQ TransparentUpgradeableProxy implementation 0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca exposes minterMint(address,uint256) only to addresses in the minters mapping; the token function itself has no token-level cap, and addMinter/removeMinter are owner-only. The two active minters are KRWTCustodianWithOracle proxies 0x5573b8db24043bee020c36ee0df32694dffef04c and 0x7e88ac6a9c2dad21fea4de6b54c764ca4d99c05d, both owned by this 3-of-5 Safe. Each custodian uses deposit/custodian-asset and oracle-freshness checks and currently reports mintCap = 1,500,000,000e18; the Safe can raise those caps, add or remove minters, and owns the Ethereum mint-critical ProxyAdmins. getModules() returned empty, while current guard/fallback reads reverted, so guard state is not claimed absent.",
+        "capDescription": "The token's minterMint function is uncapped for an authorized minter, but the two currently authorized KRWTCustodianWithOracle contracts enforce deposit/oracle checks and 1,500,000,000 KRWQ caps. This Safe can add or remove minters and call the owner paths that raise those caps, so the reviewed native path is raiseable rather than economically unbounded."
       },
       {
-        "chain": "fraxtal",
-        "address": "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
-        "label": "KRWQ Fraxtal ProxyAdmin owner (single EOA)",
-        "role": "proxy-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": true,
-        "capDescription": "Single-key upgrade authority. As sole owner of the Fraxtal ProxyAdmin (0x3faff366), this EOA can call upgradeAndCall() to replace the KRWQ implementation with one that mints without limit. No cap, no timelock, no multisig.",
-        "evidence": "At Fraxtal block 38610876: the KRWQ proxy's EIP-1967 admin slot holds ProxyAdmin 0x3faff366 (OZ v5 ProxyAdmin). ProxyAdmin.owner() = 0x9feab70f, and eth_getCode at that address returned 0x (no code) — a plain EOA, not a Safe. Same address is a signer on all four KRWQ Safes.",
+        "chain": "ethereum",
+        "address": "0x5573b8db24043bee020c36ee0df32694dffef04c",
+        "deploymentRefs": [
+          "ethereum:0xc00db6b41473d065027f5ed6fada20fde75f142e"
+        ],
+        "label": "KRWQ Ethereum custodian minter 0x5573 (deposit/oracle; 1.5bn cap)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "KRWTCustodianWithOracle mints through its deposit/custodian-asset path with oracle-freshness checks and a current mintCap of 1,500,000,000e18. The custodian cannot raise its own cap; its owner Safe controls setMintCap().",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770699,
+        "failureDomainKeys": [
+          "contract:ethereum:0x5573b8db24043bee020c36ee0df32694dffef04c",
+          "safe:ethereum:0x56398b89d53e8731bca8c1b06886cfb14bd6b654"
+        ],
         "sources": [
           {
-            "label": "KRWQ Fraxtal token proxy",
-            "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+            "label": "KRWQ custodian implementation 0x281a",
+            "url": "https://etherscan.io/address/0x281aa2e0684439ed9fee12eff0d8ff346b755a39#code"
           },
           {
-            "label": "KRWQ Fraxtal ProxyAdmin",
-            "url": "https://fraxscan.com/address/0x3faff366c59eb98cacc6247816e98ad800f5a2fb"
+            "label": "KRWQ Ethereum contract",
+            "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
           },
           {
-            "label": "Fraxtal RPC",
-            "url": "https://rpc.frax.com"
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 38610876
+        "evidence": "At Ethereum block 25770699, mintersArray on the verified KRWQ implementation included this KRWTCustodianWithOracle proxy. Its verified implementation exposes deposit/mint against a custodian asset, oracle freshness state, mutable mintCap, and owner-only setMintCap; the live mintCap read returned 1,500,000,000e18. The custodian owner and its ProxyAdmin owner resolve to the Ethereum 3-of-5 Safe 0x56398b89."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7e88ac6a9c2dad21fea4de6b54c764ca4d99c05d",
+        "deploymentRefs": [
+          "ethereum:0xc00db6b41473d065027f5ed6fada20fde75f142e"
+        ],
+        "label": "KRWQ Ethereum custodian minter 0x7e88 (deposit/oracle; 1.5bn cap)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "KRWTCustodianWithOracle mints through its deposit/custodian-asset path with oracle-freshness checks and a current mintCap of 1,500,000,000e18. The custodian cannot raise its own cap; its owner Safe controls setMintCap().",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770699,
+        "failureDomainKeys": [
+          "contract:ethereum:0x7e88ac6a9c2dad21fea4de6b54c764ca4d99c05d",
+          "safe:ethereum:0x56398b89d53e8731bca8c1b06886cfb14bd6b654"
+        ],
+        "sources": [
+          {
+            "label": "KRWQ custodian implementation 0x45f6",
+            "url": "https://etherscan.io/address/0x45f64c15ad6bfffb12fca4ff845d731b2255f241#code"
+          },
+          {
+            "label": "KRWQ Ethereum contract",
+            "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770699, mintersArray on the verified KRWQ implementation included this KRWTCustodianWithOracle proxy. Its verified implementation exposes deposit/mint against a custodian asset, oracle freshness state, mutable mintCap, and owner-only setMintCap; the live mintCap read returned 1,500,000,000e18. The custodian owner and its ProxyAdmin owner resolve to the Ethereum 3-of-5 Safe 0x56398b89."
       }
     ],
-    "economicCapSemantics": "unbounded",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Re-verified on-chain at pinned blocks (Ethereum 25530913, Base 48621557/48621722, Polygon 90218312/90218531, Fraxtal 38610876/38611041). All four deployments are TransparentUpgradeableProxies. Ethereum: owner() = 3/5 Safe 0x56398b89 (owners and threshold re-read, no modules, guard zero); implementation KRWQ exposes uncapped minterMint() onlyMinters plus addMinter/removeMinter onlyOwner; mintersArray = 2 active KRWTCustodianWithOracle contracts, both owned by that Safe; ProxyAdmin 0xff85d94f owned by that Safe. Base/Polygon/Fraxtal are NOT lock/unlock adapters: each implementation is KRWQOFT is OFTUpgradeable with token() == self and approvalRequired() == false (native mint/burn OFT), so each owner Safe can setPeer a new trusted remote and cause unbounded credit-side minting on its chain; canRaiseCap is therefore true for all three. ProxyAdmin ownership is split: Ethereum and Base ProxyAdmins are owned by their chain Safe, but the Polygon (0x4583b85c) and Fraxtal (0x3faff366) ProxyAdmins are owned by a single EOA, 0x9feab70f (eth_getCode = 0x on both chains), which can unilaterally replace the implementation. Codex and Morph remain note-only (no public RPC). Economic-posture fields reviewed 2026-08-15: issuer-controlled Safes and EOAs can add minters, trust new OFT peers, or replace mint logic without a timelock; the assets-only Chainlink feed does not reconcile global liabilities and no supervisor or independent attestor is evidenced. Wave 2 external review 2026-08-15: the live issuer page displays aggregate minted KRWQ and reserve assets, but the whitepaper still describes independent attestations as planned and neither source proves liability coverage for every native OFT and unresolved deployment. Reconciliation research 2026-08-15: the issuer's custodian-assets API and Chainlink Proof of Reserve expose reserve assets only, not token liabilities across Ethereum, Base, Polygon, Fraxtal, or the note-only deployments; the whitepaper's independent monthly attestations are planned, and no dated report reconciling the full multi-chain supply was found.",
-      "reviewer": "Claude V9 CTRL clearing pass; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Reviewed at the Mint Authority / Bridge Risk boundary on 2026-08-16 using pinned 2026-08-16 observations. Ethereum is the only issuer-native liability route: the KRWQ token proxy is owner-controlled by the 3-of-5 Safe 0x56398b89, its two active KRWTCustodianWithOracle minters enforce deposit/custodian-asset and oracle-freshness checks with 1,500,000,000e18 caps, and the Safe can raise those caps, change the minter set, or replace the token and custodian mint-critical implementations. Base, Polygon, Fraxtal, Codex, and Morph are LayerZero OFT bridge representations; their destination mint/burn, peer, owner, and upgrade machinery, plus the Ethereum OFT Adapter escrow, are scored only under bridgeRouteRisk. The assets-only Chainlink Proof of Reserve does not reconcile total liabilities across the canonical token, Adapter, and five representations, so reconciliation remains unknown and no independent supervisor is evidenced.",
+      "reviewer": "Codex mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
-          "label": "LayerZero - KRWQ multi-chain Korean won stablecoin",
-          "url": "https://layerzero.network/blog/krwq-first-multi-chain-korean-won-stablecoin"
-        },
-        {
-          "label": "KRWQ website",
+          "label": "KRWQ official site",
           "url": "https://krwq.cash"
         },
         {
-          "label": "KRWQ Ethereum contract",
-          "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
+          "label": "KRWQ Ethereum implementation",
+          "url": "https://etherscan.io/address/0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca#code"
         },
         {
-          "label": "KRWQ Base OFT adapter",
-          "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+          "label": "KRWQ custodian implementation 0x281a",
+          "url": "https://etherscan.io/address/0x281aa2e0684439ed9fee12eff0d8ff346b755a39#code"
         },
         {
-          "label": "KRWQ Polygon OFT adapter",
-          "url": "https://polygonscan.com/address/0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2"
+          "label": "KRWQ custodian implementation 0x45f6",
+          "url": "https://etherscan.io/address/0x45f64c15ad6bfffb12fca4ff845d731b2255f241#code"
         },
         {
-          "label": "KRWQ Fraxtal OFT adapter",
-          "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         },
         {
-          "label": "KRWQ custodian-assets API",
-          "url": "https://www.krwq.cash/api/custodian-assets"
-        },
-        {
-          "label": "KRWQ whitepaper",
-          "url": "https://krwq.cash/whitepaper.pdf"
-        },
-        {
-          "label": "KRWQ Chainlink Proof of Reserve announcement",
-          "url": "https://blog.iqai.com/krwq-the-worlds-largest-korean-won-stablecoin-from-iq-adopts-chainlink-for-automated-reserve-verifications-2/"
+          "label": "KRWQ LayerZero OFT route documentation",
+          "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
         }
       ],
       "disposition": "scoreable"
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xc00db6b41473d065027f5ed6fada20fde75f142e"
+      ],
       "proxyAddresses": [
         "0xc00db6b41473d065027f5ed6fada20fde75f142e",
-        "0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
-        "0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
-        "0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+        "0x5573b8db24043bee020c36ee0df32694dffef04c",
+        "0x7e88ac6a9c2dad21fea4de6b54c764ca4d99c05d"
       ],
       "implementationAddresses": [
         "0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca",
-        "0x394b2763895d648abcd84c191c2a12ff9504de27",
-        "0x1dcb966101be76a6a06ac0f9ebfb7587ab1a77a8",
-        "0x07fb13555085cedb41546d5deb58eedeb6791874"
+        "0x281aa2e0684439ed9fee12eff0d8ff346b755a39",
+        "0x45f64c15ad6bfffb12fca4ff845d731b2255f241"
       ],
       "adminAddresses": [
         "0xff85d94fabb650c086c83b112e7126048a5e31bb",
-        "0x748e1558937c34c9b503f472bb7b7badc99a3ce0",
-        "0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15",
-        "0x3faff366c59eb98cacc6247816e98ad800f5a2fb"
+        "0xaf2b523c595181bae21332f2f7e85ca7b6f08a77",
+        "0xf0c7d4934cc268ca881a92140dfe835de787fd28"
       ],
       "canChangeMintLogic": true,
       "controlRef": "KRWQ Ethereum owner (3/5 Safe)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530913,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770699,
       "sources": [
         {
-          "label": "KRWQ Ethereum implementation (verified)",
+          "label": "KRWQ Ethereum implementation",
           "url": "https://etherscan.io/address/0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca#code"
         },
         {
-          "label": "KRWQ Base OFT implementation (verified)",
-          "url": "https://basescan.org/address/0x394b2763895d648abcd84c191c2a12ff9504de27#code"
+          "label": "KRWQ custodian implementation 0x281a",
+          "url": "https://etherscan.io/address/0x281aa2e0684439ed9fee12eff0d8ff346b755a39#code"
         },
         {
-          "label": "KRWQ Polygon ProxyAdmin",
-          "url": "https://polygonscan.com/address/0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15"
+          "label": "KRWQ custodian implementation 0x45f6",
+          "url": "https://etherscan.io/address/0x45f64c15ad6bfffb12fca4ff845d731b2255f241#code"
         },
         {
-          "label": "KRWQ Fraxtal ProxyAdmin",
-          "url": "https://fraxscan.com/address/0x3faff366c59eb98cacc6247816e98ad800f5a2fb"
+          "label": "KRWQ Ethereum token ProxyAdmin",
+          "url": "https://etherscan.io/address/0xff85d94fabb650c086c83b112e7126048a5e31bb"
+        },
+        {
+          "label": "KRWQ custodian ProxyAdmin 0xaf2b",
+          "url": "https://etherscan.io/address/0xaf2b523c595181bae21332f2f7e85ca7b6f08a77"
+        },
+        {
+          "label": "KRWQ custodian ProxyAdmin 0xf0c7",
+          "url": "https://etherscan.io/address/0xf0c7d4934cc268ca881a92140dfe835de787fd28"
         },
         {
           "label": "Ethereum PublicNode RPC",

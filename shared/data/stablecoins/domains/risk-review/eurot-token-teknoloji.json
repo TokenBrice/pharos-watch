@@ -8,67 +8,322 @@
     "reviewedAt": "2026-05-14"
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "EUROT is described by Token Teknoloji as created on its supported blockchains with euro backing for each token issued. No separate cross-chain mint, lockbox, or liquidity bridge route was resolved, so Pharos treats the profile as native issuance on each listed chain.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "tier": "opaque-or-unknown",
+    "summary": "EUROT has independently mintable, immutable StableCoin deployments on Ethereum, Avalanche, and Polygon, which remain native issuance routes in Mint Authority. Each deployment also exposes the issuer-controlled ExternallyTransferable externalTransfer burn and externalTransferFrom arbitrary-mint rail. No primary source identifies the live networkURI mappings, counterpart contracts, peers, validators, escrow, replay protection, conservation check, or rate limits, so Bridge Risk conservatively uses the opaque-or-unknown tier and records the local controller failure domains without treating the rail as a verified supply-conserving bridge.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
+    "protocols": [
+      {
+        "source": "explorer",
+        "name": "Token Teknoloji ExternallyTransferable externalTransfer/externalTransferFrom",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
+        "note": "The verified StableCoin source exposes a user-allowance burn path and a supply-manager arbitrary-mint path, but does not identify the live external route protocol."
+      }
+    ],
     "sources": [
       {
         "label": "Token Teknoloji EUROT",
         "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+      },
+      {
+        "label": "EUROT Ethereum verified source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+      },
+      {
+        "label": "EUROT Avalanche verified source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+      },
+      {
+        "label": "EUROT Ethereum explorer",
+        "url": "https://etherscan.io/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+      },
+      {
+        "label": "EUROT Polygon explorer",
+        "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+      },
+      {
+        "label": "Ethereum JSON-RPC fixed-block observations",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Avalanche C-Chain JSON-RPC fixed-block observations",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      },
+      {
+        "label": "Polygon JSON-RPC fixed-block observations",
+        "url": "https://polygon.drpc.org"
       }
     ],
     "routes": [
       {
         "id": "avalanche:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
         "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
         "protocol": "Token Teknoloji issuer-native EUROT",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "opaque-or-unknown",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: immutable (non-proxy) 'EURO Token' contract with owner() = issuer EOA 0xff80b391b286887d446b1124820f87d5b049b4fb, matching the reviewed mintAuthority; issuer-native deployment, no bridge control carries the claim.",
+        "reviewNote": "At Avalanche block 92986796 on 2026-08-16, the immutable (non-proxy) StableCoin deployment had owner() and supplyManager() equal to EOA 0xff80b391b286887d446b1124820f87d5b049b4fb and direct uncapped mint(uint256) remained available. This route is native issuance and remains in Mint Authority; the same contract's generic ExternallyTransferable rail is assessed separately by the route-scoped bridge control because no live destination or conservation mapping is verified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92986796,
         "sources": [
+          {
+            "label": "EUROT Avalanche verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+          },
           {
             "label": "EUROT token on Snowscan",
             "url": "https://snowscan.xyz/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
           },
           {
-            "label": "Token Teknoloji EUROT documentation",
-            "url": "https://www.tokenteknoloji.com.tr/en"
+            "label": "Avalanche C-Chain JSON-RPC fixed-block observations",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
           }
         ]
       },
       {
         "id": "polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
         "destinationChain": "polygon",
+        "canonicalChain": "polygon",
         "contractAddress": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
         "protocol": "Token Teknoloji issuer-native EUROT",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "opaque-or-unknown",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: immutable (non-proxy) 'EURO Token' contract with owner() = issuer EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, matching the reviewed mintAuthority; issuer-native deployment, no bridge control carries the claim.",
+        "reviewNote": "At Polygon block 92148079 on 2026-08-16, the immutable (non-proxy) StableCoin deployment had owner() and supplyManager() equal to EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with EOA 0xff80b391b286887d446b1124820f87d5b049b4fb as proposedOwner and able to claim immediately. Direct uncapped mint(uint256) remains native issuance in Mint Authority; the same contract's generic ExternallyTransferable rail is assessed separately by route-scoped bridge controls because no live destination or conservation mapping is verified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92148079,
         "sources": [
           {
-            "label": "EUROT token on Polygonscan",
+            "label": "EUROT Polygon explorer",
             "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
           },
           {
-            "label": "Token Teknoloji EUROT documentation",
-            "url": "https://www.tokenteknoloji.com.tr/en"
+            "label": "Polygon JSON-RPC fixed-block observations",
+            "url": "https://polygon.drpc.org"
           }
         ]
+      },
+      {
+        "id": "ethereum:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "protocol": "Token Teknoloji issuer-native EUROT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25771272 on 2026-08-16, the immutable (non-proxy) StableCoin deployment had owner() and supplyManager() equal to EOA 0xff80b391b286887d446b1124820f87d5b049b4fb, proposedOwner() zero, and direct uncapped mint(uint256) available. This route is native issuance and is added to Mint Authority; the same contract's generic ExternallyTransferable rail is assessed separately by the route-scoped bridge control because no live destination or conservation mapping is verified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771272,
+        "sources": [
+          {
+            "label": "EUROT Ethereum verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+          },
+          {
+            "label": "Ethereum EUROT explorer",
+            "url": "https://etherscan.io/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block observations",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "eurot-avalanche-external-transfer-controller",
+        "label": "EUROT Avalanche external-transfer owner and supply manager",
+        "routeRefs": [
+          "avalanche:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause"],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "failureDomainKeys": [
+          "avalanche:0xff80b391b286887d446b1124820f87d5b049b4fb",
+          "contract:avalanche:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "No bridge escrow or lockbox is present in the verified StableCoin source; externalTransfer burns from the user after allowance and externalTransferFrom mints through the supply manager before recipient transfer.",
+          "trustedPeerOrRemote": "externalTransfer and externalTransferFrom accept arbitrary networkURI strings and externalAddress bytes; no on-chain peer or source-chain allowlist is verified.",
+          "attestorQuorum": "No validator, DVN, signer set, or attestor quorum is present in the verified StableCoin source.",
+          "rateLimits": "No aggregate, per-call, or route-level rate limit is present in the verified external-transfer path.",
+          "pausersAdminsUpgraders": "The chain-local owner or supply manager controls external transfers and can pause or unpause the token; owner can replace supplyManager. The StableCoin deployment is immutable, so no bridge upgrade admin is present.",
+          "onchainAmountBounds": "externalTransfer burns only after a user-approved external allowance and balance check; externalTransferFrom mints an arbitrary amount to the supply manager without verified source-burn, lock, or conservation accounting.",
+          "unsupportedReason": "The exact live external-transfer protocol, networkURI values, destination mapping, and route accounting are unresolved; no replay or conservation protection is verified."
+        },
+        "capDescription": "externalTransferFrom mints directly through the supply manager with no verified aggregate supply ceiling or route-level amount bound.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "arbitrary networkURI and bytes destination parameters",
+          "issuer owner or supply manager can invoke externalTransferFrom without a verified peer, validator, source proof, conservation check, or rate limit"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92986796,
+        "sources": [
+          {
+            "label": "EUROT Avalanche verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC fixed-block observations",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "At Avalanche block 92986796 on 2026-08-16, owner() and supplyManager() both returned 0xff80b391b286887d446b1124820f87d5b049b4fb, an EOA. The verified StableCoin source exposes owner-or-supply-manager externalTransfer burn and externalTransferFrom arbitrary-mint calls accepting arbitrary networkURI and bytes addresses, with no verified peer registry, validator/DVN set, escrow, replay protection, conservation check, or rate limit. The same controller can pause or unpause the token and replace supplyManager; the bridge failure domain is this chain-local EOA and immutable contract."
+      },
+      {
+        "id": "eurot-polygon-external-transfer-controller",
+        "label": "EUROT Polygon external-transfer owner and supply manager",
+        "routeRefs": [
+          "polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause"],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xd61c0129f6c35a675db6e2a067b31e75b2573077",
+        "failureDomainKeys": [
+          "polygon:0xd61c0129f6c35a675db6e2a067b31e75b2573077",
+          "contract:polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "No bridge escrow or lockbox is present in the verified StableCoin source; externalTransfer burns from the user after allowance and externalTransferFrom mints through the supply manager before recipient transfer.",
+          "trustedPeerOrRemote": "externalTransfer and externalTransferFrom accept arbitrary networkURI strings and externalAddress bytes; no on-chain peer or source-chain allowlist is verified.",
+          "attestorQuorum": "No validator, DVN, signer set, or attestor quorum is present in the verified StableCoin source.",
+          "rateLimits": "No aggregate, per-call, or route-level rate limit is present in the verified external-transfer path.",
+          "pausersAdminsUpgraders": "The chain-local owner or supply manager controls external transfers and can pause or unpause the token; owner can replace supplyManager. The StableCoin deployment is immutable, so no bridge upgrade admin is present.",
+          "onchainAmountBounds": "externalTransfer burns only after a user-approved external allowance and balance check; externalTransferFrom mints an arbitrary amount to the supply manager without verified source-burn, lock, or conservation accounting.",
+          "unsupportedReason": "The exact live external-transfer protocol, networkURI values, destination mapping, and route accounting are unresolved; no replay or conservation protection is verified."
+        },
+        "capDescription": "externalTransferFrom mints directly through the supply manager with no verified aggregate supply ceiling or route-level amount bound.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "arbitrary networkURI and bytes destination parameters",
+          "issuer owner or supply manager can invoke externalTransferFrom without a verified peer, validator, source proof, conservation check, or rate limit"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92148079,
+        "sources": [
+          {
+            "label": "EUROT Polygon explorer",
+            "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+          },
+          {
+            "label": "Polygon JSON-RPC fixed-block observations",
+            "url": "https://polygon.drpc.org"
+          }
+        ],
+        "evidence": "At Polygon block 92148079 on 2026-08-16, owner() and supplyManager() both returned 0xd61c0129f6c35a675db6e2a067b31e75b2573077, an EOA, while proposedOwner() returned 0xff80b391b286887d446b1124820f87d5b049b4fb. The verified StableCoin source exposes owner-or-supply-manager externalTransfer burn and externalTransferFrom arbitrary-mint calls accepting arbitrary networkURI and bytes addresses, with no verified peer registry, validator/DVN set, escrow, replay protection, conservation check, or rate limit. The current controller can pause or unpause the token and replace supplyManager; the bridge failure domain is this chain-local EOA and immutable contract."
+      },
+      {
+        "id": "eurot-ethereum-external-transfer-controller",
+        "label": "EUROT Ethereum external-transfer owner and supply manager",
+        "routeRefs": [
+          "ethereum:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "failureDomainKeys": [
+          "ethereum:0xff80b391b286887d446b1124820f87d5b049b4fb",
+          "contract:ethereum:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "No bridge escrow or lockbox is present in the verified StableCoin source; externalTransfer burns from the user after allowance and externalTransferFrom mints through the supply manager before recipient transfer.",
+          "trustedPeerOrRemote": "externalTransfer and externalTransferFrom accept arbitrary networkURI strings and externalAddress bytes; no on-chain peer or source-chain allowlist is verified.",
+          "attestorQuorum": "No validator, DVN, signer set, or attestor quorum is present in the verified StableCoin source.",
+          "rateLimits": "No aggregate, per-call, or route-level rate limit is present in the verified external-transfer path.",
+          "pausersAdminsUpgraders": "The chain-local owner or supply manager controls external transfers and can pause or unpause the token; owner can replace supplyManager. The StableCoin deployment is immutable, so no bridge upgrade admin is present.",
+          "onchainAmountBounds": "externalTransfer burns only after a user-approved external allowance and balance check; externalTransferFrom mints an arbitrary amount to the supply manager without verified source-burn, lock, or conservation accounting.",
+          "unsupportedReason": "The exact live external-transfer protocol, networkURI values, destination mapping, and route accounting are unresolved; no replay or conservation protection is verified."
+        },
+        "capDescription": "externalTransferFrom mints directly through the supply manager with no verified aggregate supply ceiling or route-level amount bound.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "arbitrary networkURI and bytes destination parameters",
+          "issuer owner or supply manager can invoke externalTransferFrom without a verified peer, validator, source proof, conservation check, or rate limit"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771272,
+        "sources": [
+          {
+            "label": "EUROT Ethereum verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed-block observations",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25771272 on 2026-08-16, owner() and supplyManager() both returned 0xff80b391b286887d446b1124820f87d5b049b4fb, an EOA, and proposedOwner() was zero. The verified StableCoin source exposes owner-or-supply-manager externalTransfer burn and externalTransferFrom arbitrary-mint calls accepting arbitrary networkURI and bytes addresses, with no verified peer registry, validator/DVN set, escrow, replay protection, conservation check, or rate limit. The same controller can pause or unpause the token and replace supplyManager; the bridge failure domain is this chain-local EOA and immutable contract."
+      },
+      {
+        "id": "eurot-polygon-pending-owner-external-transfer-admin",
+        "label": "EUROT Polygon pending owner external-transfer admin",
+        "routeRefs": [
+          "polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause"],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "failureDomainKeys": [
+          "polygon:0xff80b391b286887d446b1124820f87d5b049b4fb",
+          "contract:polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The proposed owner is not a peer or validator; the external-transfer rail accepts arbitrary networkURI and bytes addresses and no on-chain peer allowlist is verified.",
+          "attestorQuorum": "No validator, DVN, signer set, or attestor quorum is present in the verified StableCoin source.",
+          "rateLimits": "No aggregate, per-call, or route-level rate limit is present in the verified external-transfer path.",
+          "pausersAdminsUpgraders": "At Polygon block 92148079, proposedOwner() returned this EOA. Claimable ownership permits claimOwnership without another current-owner transaction, after which it can invoke the external-transfer burn/mint rail, pause or unpause the token, or replace supplyManager immediately. The StableCoin deployment is immutable.",
+          "onchainAmountBounds": "After ownership claim, externalTransferFrom has no verified prior-burn, lock, or conservation accounting bound.",
+          "unsupportedReason": "The exact live external-transfer protocol, networkURI values, destination mapping, and route accounting are unresolved; no replay or conservation protection is verified."
+        },
+        "capDescription": "After claimOwnership, this EOA can control the external-transfer mint/burn rail or replace the supply manager; no aggregate route cap is verified.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "claimOwnership requires no additional current-owner transaction",
+          "after claim, owner can replace supplyManager and invoke externalTransferFrom"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92148079,
+        "sources": [
+          {
+            "label": "EUROT Polygon explorer",
+            "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+          },
+          {
+            "label": "Polygon JSON-RPC fixed-block observations",
+            "url": "https://polygon.drpc.org"
+          }
+        ],
+        "evidence": "At Polygon block 92148079 on 2026-08-16, proposedOwner() returned 0xff80b391b286887d446b1124820f87d5b049b4fb, an EOA. Verified Claimable ownership lets this EOA call claimOwnership without another current-owner action, after which owner() can control the issuer-controlled externalTransfer burn and externalTransferFrom arbitrary-mint rail, pause or unpause the token, or replace supplyManager immediately."
       }
     ]
   }

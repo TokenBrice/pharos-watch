@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "AUSD is natively issued by Agora on every tracked deployment (same deterministic contract family; per-network supply reconciled in the monthly Grant Thornton reserve attestations). In late 2025 Agora adopted LayerZero's OFT standard (AUSD0) to connect deployments by burn/mint; on EVM chains an Agora-owned adapter (0x9CaB7Ede13dc56652E44D2404E969C212f22689b, the on-chain BRIDGE_MINTER_ROLE holder) is deployed at the same address on 10 chains and relays through LayerZero Endpoint V2, so material cross-chain routes are externally validated rather than issuer-attested. Ethereum is the canonical home chain. Immutable zkEVM, Solana, and Sui are verified native deployments with no separately confirmed live bridge route at review time. Plasma and Plume carry the AUSD0 OFT token at the same deterministic address (Plasma runs a distinct OFT-era implementation). The 2024 Wormhole NTT integration was superseded by LayerZero OFT.",
-    "reviewedAt": "2026-07-19",
-    "reviewer": "Kimi rescue lane 1e (2026-07-19)",
+    "summary": "AUSD has reviewed native issuance deployments across the Agora EVM family, Solana Token-2022, and Sui; Ethereum is the canonical home chain. LayerZero's OFT burn/mint rail is bridge machinery: the verified Ethereum AgoraMintBurnOFTAdapter (0x9CaB7Ede13dc56652E44D2404E969C212f22689b) holds the EVM BRIDGE_MINTER_ROLE, and its owner, pause, rate-limit, peer, and proxy-admin surfaces are structured below under Bridge Risk rather than Mint Authority. Plasma is AUSD0, a distinct LayerZero bridge representation rather than native Agora issuance; Plume retains a reviewed native-issuance route. The route is externally validated and supply-conserving at the bridge level, but exact current peers, DVN/validator configuration, and destination-specific rate limits remain explicit evidence gaps. The 2024 Wormhole NTT integration was superseded by LayerZero OFT.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos mint-bridge-boundary migration (ausd-agora finding)",
     "confidence": "verified",
     "protocols": [
       {
@@ -413,15 +413,16 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
         "protocol": "Agora AUSD0 / LayerZero OFT",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
-        "scope": "canonical",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "AUSD0 OFT deployment verified on-chain at Agora's deterministic address (symbol AUSD0, 6 decimals, distinct OFT-era implementation 0xce8d6e32789fb340267523113280a9ec156a6a62); burn/mint connectivity via LayerZero per Agora and LayerZero announcements.",
+        "reviewNote": "At Plasma block 29979305 (2026-08-16 22:37:31Z), the authored address returned symbol/name AUSD0 and distinct runtime code; the native AUSD implementation() and proxyAdminAddress() surfaces reverted. This is the LayerZero AUSD0 OFT bridge representation, not an independent Agora native-issuance deployment. The reviewed Ethereum adapter control carries the route's bridge-mint/burn and administration evidence; exact current LayerZero peer bytes, DVN/validator configuration, and destination-specific rate limits were not replayed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19",
+        "observedAt": "2026-08-16",
+        "observedBlock": 29979305,
         "sources": [
           {
             "label": "LayerZero — Agora and LayerZero bring AUSD to 5 blockchains",
@@ -466,6 +467,144 @@
             "url": "https://explorer.plume.org/token/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "ausd-ethereum-layerzero-oft-adapter",
+        "label": "AUSD Ethereum LayerZero MintBurnOFTAdapter",
+        "routeRefs": [
+          "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x9cab7ede13dc56652e44d2404e969c212f22689b",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:ethereum:0x9cab7ede13dc56652e44d2404e969c212f22689b",
+          "eoa:ethereum:0xb805ff516f02db3a2dc1791bd28d77c109b37570",
+          "eoa:ethereum:0x0a8370fb80b149f7e91b5ecb7282b7cde1f16498",
+          "eoa:ethereum:0xf433d65bc5726cea42e729a7038753ba81623391",
+          "proxy-admin:ethereum:0x1a7254f247346db01dc3666c10cb88828624ea14",
+          "eoa:ethereum:0x519385ab42dfd123bcfe2fa0ec1bc2f013f72528"
+        ],
+        "authorityType": "contract",
+        "capDescription": "The verified AgoraMintBurnOFTAdapter holds the AUSD BRIDGE_MINTER_ROLE and burns source AUSD/mints destination AUSD after LayerZero delivery. The adapter cannot change its own rolling rate limit; the bridge route's owner and rate-limit manager are separate control surfaces.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The adapter endpoint() is LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c; exact current peer/delegate and DVN/validator configuration were not replayed.",
+          "rateLimits": "Verified adapter source enforces inbound and outbound rate-limit checks. RATE_LIMIT_MANAGER_ROLE was held by 0xf433d65bc5726cea42e729a7038753ba81623391; exact destination-specific configured values were not replayed.",
+          "pausersAdminsUpgraders": "At the observation block, owner() and ACCESS_CONTROL_MANAGER_ROLE were 0xb805ff516f02db3a2dc1791bd28d77c109b37570, PAUSER_ROLE was 0x0a8370fb80b149f7e91b5ecb7282b7cde1f16498, paused() was false, and the adapter proxy admin was 0x1a7254f247346db01dc3666c10cb88828624ea14 with role-based admin 0x519385ab42dfd123bcfe2fa0ec1bc2f013f72528.",
+          "onchainAmountBounds": "The adapter burns source AUSD and mints destination AUSD after LayerZero delivery. This supply-conserving route-level accounting is bridge machinery, not independent native issuer mint authority.",
+          "unsupportedReason": "Exact current LayerZero peers/delegate, DVN/validator configuration, and per-destination rate limits were not independently replayed in this pass."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770633,
+        "sources": [
+          {
+            "label": "Verified LayerZero adapter proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x9cab7ede13dc56652e44d2404e969c212f22689b"
+          },
+          {
+            "label": "Verified LayerZero adapter implementation on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x446666f26be625ea11bdd29641d0a1c63efc0ca8"
+          },
+          {
+            "label": "Verified AUSD proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ],
+        "evidence": "At Ethereum block 25770633 (2026-08-16 22:31:23Z), the verified AgoraMintBurnOFTAdapter at 0x9CaB7Ede13dc56652E44D2404E969C212f22689b reported token() = the AUSD proxy, endpoint() = LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, owner() and ACCESS_CONTROL_MANAGER_ROLE = 0xb805ff516f02db3a2dc1791bd28d77c109b37570, PAUSER_ROLE = 0x0a8370fb80b149f7e91b5ecb7282b7cde1f16498, RATE_LIMIT_MANAGER_ROLE = 0xf433d65bc5726cea42e729a7038753ba81623391, and paused() = false. Its proxy admin was 0x1a7254f247346db01dc3666c10cb88828624ea14, whose verified role-based admin read returned code-empty EOA 0x519385ab42dfd123bcfe2fa0ec1bc2f013f72528. The adapter source enforces pause and inbound/outbound rate-limit checks and burns source AUSD/mints destination AUSD after LayerZero delivery. The bridge roles and upgrade/admin surfaces are retained here rather than compiled as native Mint Authority."
+      },
+      {
+        "id": "ausd-ethereum-layerzero-adapter-owner",
+        "label": "AUSD Ethereum LayerZero adapter owner/access-control EOA",
+        "routeRefs": [
+          "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb805ff516f02db3a2dc1791bd28d77c109b37570",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:ethereum:0x9cab7ede13dc56652e44d2404e969c212f22689b",
+          "eoa:ethereum:0xb805ff516f02db3a2dc1791bd28d77c109b37570",
+          "eoa:ethereum:0x0a8370fb80b149f7e91b5ecb7282b7cde1f16498",
+          "eoa:ethereum:0xf433d65bc5726cea42e729a7038753ba81623391"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The adapter owner controls LayerZero peers/delegate; exact current peer bytes and delegate value were not replayed.",
+          "rateLimits": "The adapter source exposes inbound/outbound rate-limit surfaces. RATE_LIMIT_MANAGER_ROLE was separately held by 0xf433d65bc5726cea42e729a7038753ba81623391, and exact configured values were not replayed.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770633, owner() and ACCESS_CONTROL_MANAGER_ROLE resolved to this code-empty EOA; PAUSER_ROLE was separately held by 0x0a8370fb80b149f7e91b5ecb7282b7cde1f16498 and paused() was false.",
+          "unsupportedReason": "The current LayerZero peer/delegate, DVN/validator, and route-specific rate-limit state remains an evidence gap."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770633,
+        "sources": [
+          {
+            "label": "Verified LayerZero adapter proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x9cab7ede13dc56652e44d2404e969c212f22689b"
+          },
+          {
+            "label": "Verified LayerZero adapter implementation on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x446666f26be625ea11bdd29641d0a1c63efc0ca8"
+          }
+        ],
+        "evidence": "At Ethereum block 25770633 (2026-08-16 22:31:23Z), the adapter owner() and ACCESS_CONTROL_MANAGER_ROLE member were the code-empty EOA 0xb805ff516f02db3a2dc1791bd28d77c109b37570. The adapter's LayerZero owner controls peers/delegate and its pause/rate-limit administration surfaces; PAUSER_ROLE was 0x0a8370fb80b149f7e91b5ecb7282b7cde1f16498 and RATE_LIMIT_MANAGER_ROLE was 0xf433d65bc5726cea42e729a7038753ba81623391."
+      },
+      {
+        "id": "ausd-ethereum-layerzero-adapter-proxy-admin",
+        "label": "AUSD Ethereum LayerZero adapter proxy admin",
+        "routeRefs": [
+          "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1a7254f247346db01dc3666c10cb88828624ea14",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:ethereum:0x9cab7ede13dc56652e44d2404e969c212f22689b",
+          "proxy-admin:ethereum:0x1a7254f247346db01dc3666c10cb88828624ea14",
+          "eoa:ethereum:0x519385ab42dfd123bcfe2fa0ec1bc2f013f72528"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The LayerZero adapter proxy admin is 0x1a7254f247346db01dc3666c10cb88828624ea14; its verified role-based admin read returned code-empty EOA 0x519385ab42dfd123bcfe2fa0ec1bc2f013f72528. This upgrade path governs the bridge adapter representation, not the native AUSD proxy.",
+          "unsupportedReason": "The reviewed evidence did not establish a timelock or Safe quorum for the adapter proxy-admin EOA."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770633,
+        "sources": [
+          {
+            "label": "Verified LayerZero adapter proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x9cab7ede13dc56652e44d2404e969c212f22689b"
+          },
+          {
+            "label": "Verified LayerZero adapter implementation on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x446666f26be625ea11bdd29641d0a1c63efc0ca8"
+          }
+        ],
+        "evidence": "At Ethereum block 25770633 (2026-08-16 22:31:23Z), the adapter proxy admin resolved to 0x1a7254f247346db01dc3666c10cb88828624ea14 and its verified role-based admin read returned code-empty EOA 0x519385ab42dfd123bcfe2fa0ec1bc2f013f72528. This bridge-representation upgrade/admin authority is retained under Bridge Risk and is not a native AUSD mint-authority control."
       }
     ]
   }

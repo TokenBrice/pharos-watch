@@ -117,9 +117,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "sUSDS is issued natively by the Sky Savings USDS vault on Ethereum. Its three authored non-Ethereum deployments are SkyLink canonical rollup lock/mint representations on Base, OP Mainnet, and Arbitrum; no unauthored NTT or liquidity route influences this profile tier. A near-synchronous 2026-07-21 totalSupply snapshot attributes 342,446,332.180536477297262823 sUSDS, or 7.9776341236% of canonical Ethereum supply, to those three representations.",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "summary": "sUSDS is issued natively only by the Sky Savings USDS vault on Ethereum. Base, OP Mainnet, and Arbitrum are SkyLink canonical-rollup lock/mint representations; their destination-token wards, UUPS implementations, L2 bridges/gateway, governance relays, canonical L1 bridges, and escrows are Bridge Risk rather than native Mint Authority. The intended route is supply-conserving through canonical lock, finalized messaging, destination mint, and withdrawal burn, but the reviewed destination ward surfaces can mint directly and the bridge machinery is upgradeable/administered. A near-synchronous 2026-07-21 totalSupply snapshot attributes 342,446,332.180536477297262823 sUSDS, or 7.9776341236% of canonical Ethereum supply, to those three representations.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex C01 mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -314,6 +314,566 @@
             "url": "https://arbiscan.io/block/486322344"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "susds-base-l2-token-bridge",
+        "label": "sUSDS Base L2 token bridge",
+        "routeRefs": [
+          "base:0x5875eee11cf8398102fdad704c9e96607675467a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Base SkyLink route locks canonical sUSDS in Ethereum escrow 0x7f311a4d48377030bd810395f4ccfc03bdbe9ef3 before finalized-message minting on Base; withdrawal burns the Base representation before escrow release.",
+          "trustedPeerOrRemote": "The Base bridge maps Ethereum sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd to Base sUSDS 0x5875eee11cf8398102fdad704c9e96607675467a through the SkyLink L1 bridge 0xa5874756416fa632257eea380cabd2e87ced352a.",
+          "rateLimits": "At Base block 50065518, maxWithdraws(sUSDS) returned type(uint256).max; no finite per-token withdrawal ceiling was observed.",
+          "pausersAdminsUpgraders": "At Base block 50065518, the destination sUSDS wards mapping returned 1 for the L2 bridge 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7 and the L2 governance relay 0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255. The destination token's current UUPS implementation was 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8, and the bridge proxy's current UUPS implementation was 0x289a37be5d6ccef7a8f2b90535b3bb6bd3905f72.",
+          "onchainAmountBounds": "The intended route bounds destination minting by canonical escrow and finalized cross-chain messaging, while the ward-gated destination token mint remains an arbitrary direct-mint failure surface."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065518,
+        "sources": [
+          {
+            "label": "SkyLink Base ETH native bridge guide",
+            "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
+          },
+          {
+            "label": "Sky governance Base bridge initialization",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-base-network-skylink-bridge-initialization-for-usds-and-susds-star-allocation-system-initialization-for-spark-add-new-validators-to-medianizer-october-31-2024"
+          },
+          {
+            "label": "Base sUSDS token",
+            "url": "https://basescan.org/address/0x5875eee11cf8398102fdad704c9e96607675467a"
+          },
+          {
+            "label": "Base SkyLink L2 bridge",
+            "url": "https://basescan.org/address/0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7"
+          }
+        ],
+        "evidence": "At Base block 50065518, the SkyLink L2 bridge was open, maxWithdraws(sUSDS) was type(uint256).max, and the Base sUSDS token's active wards included both the bridge 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7 and governance relay 0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255. The destination token resolved to UUPS implementation 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8 and the bridge proxy resolved to UUPS implementation 0x289a37be5d6ccef7a8f2b90535b3bb6bd3905f72. The token-level mint/burn and upgrade/admin powers are therefore scored on the Base bridge route, not as Ethereum native issuance."
+      },
+      {
+        "id": "susds-base-l2-governance-relay",
+        "label": "sUSDS Base L2 governance relay",
+        "routeRefs": [
+          "base:0x5875eee11cf8398102fdad704c9e96607675467a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Base governance relay is the L2 relay named by Sky's bridge initialization and is the governance-controlled administrator for the Base bridge route.",
+          "pausersAdminsUpgraders": "At Base block 50065518, the Base sUSDS token returned wards(0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255) = 1; the relay can authorize or replace bridge-side administration and upgrade logic."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065518,
+        "sources": [
+          {
+            "label": "Sky governance Base bridge initialization",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-base-network-skylink-bridge-initialization-for-usds-and-susds-star-allocation-system-initialization-for-spark-add-new-validators-to-medianizer-october-31-2024"
+          },
+          {
+            "label": "Base sUSDS token",
+            "url": "https://basescan.org/address/0x5875eee11cf8398102fdad704c9e96607675467a"
+          }
+        ],
+        "evidence": "The official Base initialization names 0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255 as the L2 governance relay. At Base block 50065518 it remained a ward on the Base sUSDS representation, so its bridge upgrade and administration authority is route-scoped Bridge Risk. The historical candidate admin address 0x36b072ed8afe665e3aa6daba79decbec63752b22 is retained as adverse evidence: wards(0x36b072ed8afe665e3aa6daba79decbec63752b22) returned 0 at that block and current SkyLink documents do not identify it, so it is stale/non-current rather than an active controller."
+      },
+      {
+        "id": "susds-optimism-l2-token-bridge",
+        "label": "sUSDS Optimism L2 token bridge",
+        "routeRefs": [
+          "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Optimism SkyLink route locks canonical sUSDS in Ethereum escrow 0x467194771dae2967aef3ecbedd3bf9a310c76c65 before finalized-message minting on Optimism; withdrawal burns the Optimism representation before escrow release.",
+          "trustedPeerOrRemote": "The Optimism bridge maps Ethereum sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd to OP Mainnet sUSDS 0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0 through the SkyLink L1 bridge 0x3d25b7d486cae1810374d37a48bcf0963c9b8057.",
+          "rateLimits": "At OP Mainnet block 155660733, maxWithdraws(sUSDS) returned type(uint256).max; no finite per-token withdrawal ceiling was observed.",
+          "pausersAdminsUpgraders": "At OP Mainnet block 155660733, the destination sUSDS wards mapping returned 1 for the L2 bridge 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6 and the shared L2 governance relay 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f. The destination token's current UUPS implementation was 0x6f0888dda6a5e35451d5be0fabb20171715788b3, and the bridge proxy's current UUPS implementation was 0xc2702c859016db756149716cc4d2b7d7a436cf04.",
+          "onchainAmountBounds": "The intended route bounds destination minting by canonical escrow and finalized cross-chain messaging, while the ward-gated destination token mint remains an arbitrary direct-mint failure surface."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 155660733,
+        "sources": [
+          {
+            "label": "SkyLink OP Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/op-token-bridge"
+          },
+          {
+            "label": "Sky governance Optimism bridge initialization",
+            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+          },
+          {
+            "label": "Optimism sUSDS token",
+            "url": "https://optimistic.etherscan.io/address/0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0"
+          },
+          {
+            "label": "Optimism SkyLink L2 bridge",
+            "url": "https://optimistic.etherscan.io/address/0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6"
+          }
+        ],
+        "evidence": "At OP Mainnet block 155660733, the SkyLink L2 bridge was open, maxWithdraws(sUSDS) was type(uint256).max, and the OP Mainnet sUSDS token's active wards included the bridge 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6 and governance relay 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f. The destination token resolved to UUPS implementation 0x6f0888dda6a5e35451d5be0fabb20171715788b3 and the bridge proxy resolved to UUPS implementation 0xc2702c859016db756149716cc4d2b7d7a436cf04. The token-level mint/burn and upgrade/admin powers are therefore scored on the Optimism bridge route, not as Ethereum native issuance."
+      },
+      {
+        "id": "susds-rollup-l2-governance-relay",
+        "label": "sUSDS Optimism and Arbitrum L2 governance relay",
+        "routeRefs": [
+          "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
+          "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerAddress": "0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x10e6593cdda8c58a1d0f14c5164b376352a55f2f"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The same Sky governance relay is named as the L2 relay for both the Optimism and Arbitrum token bridges and can forward governance administration to each route.",
+          "pausersAdminsUpgraders": "At OP Mainnet block 155660733 and Arbitrum block 495285763, the shared relay was an active ward on the respective destination sUSDS representations; it can authorize or replace bridge-side administration and upgrade logic on both routes."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Sky governance Optimism bridge initialization",
+            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+          },
+          {
+            "label": "SkyLink Arbitrum Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+          },
+          {
+            "label": "Optimism sUSDS token",
+            "url": "https://optimistic.etherscan.io/address/0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0"
+          },
+          {
+            "label": "Arbitrum sUSDS token",
+            "url": "https://arbiscan.io/address/0xddb46999f8891663a8f2828d25298f70416d7610"
+          }
+        ],
+        "evidence": "The official Optimism initialization names 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f as the L2 governance relay, and the Arbitrum bridge deployment uses the same relay. Live ward reads at OP Mainnet block 155660733 and Arbitrum block 495285763 confirmed its route-specific bridge administration authority on the two sUSDS representations."
+      },
+      {
+        "id": "susds-arbitrum-l2-token-gateway",
+        "label": "sUSDS Arbitrum L2 token gateway",
+        "routeRefs": [
+          "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x13f7f24ca959359a4d710d32c715d4bce273c793",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x13f7f24ca959359a4d710d32c715d4bce273c793"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Arbitrum SkyLink route locks canonical sUSDS in Ethereum escrow 0xa10c7ce4b876998858b1a9e12b10092229539400 before retryable-ticket finalization and L2 minting; withdrawal burns the Arbitrum representation before escrow release.",
+          "trustedPeerOrRemote": "The Arbitrum gateway binds Ethereum sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd to Arbitrum sUSDS 0xddb46999f8891663a8f2828d25298f70416d7610 through the L1 gateway 0x84b9700e28b23f873b82c1beb23d86c091b6079e.",
+          "rateLimits": "At Arbitrum block 495285763, maxWithdraws(sUSDS) returned type(uint256).max; no finite per-token withdrawal ceiling was observed.",
+          "pausersAdminsUpgraders": "At Arbitrum block 495285763, the destination sUSDS wards mapping returned 1 for the L2 gateway 0x13f7f24ca959359a4d710d32c715d4bce273c793 and shared governance relay 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f. The gateway proxy's current UUPS implementation was 0xd404ed36d6976bdcad8abbccc9f09ef07e33a9a8.",
+          "onchainAmountBounds": "The intended route bounds destination minting by canonical escrow and finalized cross-chain messaging, while the ward-gated destination token mint remains an arbitrary direct-mint failure surface."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495285763,
+        "sources": [
+          {
+            "label": "SkyLink Arbitrum Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+          },
+          {
+            "label": "Arbitrum sUSDS token",
+            "url": "https://arbiscan.io/address/0xddb46999f8891663a8f2828d25298f70416d7610"
+          },
+          {
+            "label": "Arbitrum SkyLink L2 gateway",
+            "url": "https://arbiscan.io/address/0x13f7f24ca959359a4d710d32c715d4bce273c793"
+          },
+          {
+            "label": "Verified Arbitrum L2 gateway implementation",
+            "url": "https://arbitrum.blockscout.com/address/0xd404ed36d6976bdcad8abbccc9f09ef07e33a9a8#code"
+          }
+        ],
+        "evidence": "At Arbitrum block 495285763, the SkyLink L2 gateway was open, maxWithdraws(sUSDS) was type(uint256).max, and the Arbitrum sUSDS token's active wards included the gateway 0x13f7f24ca959359a4d710d32c715d4bce273c793 and shared governance relay 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f. The destination token resolved to UUPS implementation 0x5aee6b37d6e31860804575aee3e2f368a0a428e7 and the gateway proxy resolved to verified UUPS implementation 0xd404ed36d6976bdcad8abbccc9f09ef07e33a9a8. The token-level mint/burn and upgrade/admin powers are therefore scored on the Arbitrum bridge route, not as Ethereum native issuance."
+      },
+      {
+        "id": "susds-base-l1-token-bridge",
+        "label": "sUSDS Base L1 token bridge",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "base:0x5875eee11cf8398102fdad704c9e96607675467a"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xa5874756416fa632257eea380cabd2e87ced352a",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:ethereum:0xa5874756416fa632257eea380cabd2e87ced352a"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Base L1 bridge transfers canonical sUSDS into Ethereum escrow 0x7f311a4d48377030bd810395f4ccfc03bdbe9ef on deposit and releases it after a finalized withdrawal message.",
+          "trustedPeerOrRemote": "Sky's Base initialization binds this L1 bridge to the Base L2 bridge 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7 and the Ethereum-to-Base sUSDS mapping.",
+          "pausersAdminsUpgraders": "The Base bridge is an upgradeable SkyLink route administered through the L1 governance relay 0x1ee0ae8a993f2f5abdb51eaf4ac2876202b65c3b; bridge proxy and implementation identities are recorded by the official initialization.",
+          "onchainAmountBounds": "The intended route is canonical lock/mint and burn/release accounting; bridge administration remains able to alter the route machinery."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "SkyLink Base ETH native bridge guide",
+            "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
+          },
+          {
+            "label": "Sky governance Base bridge initialization",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-base-network-skylink-bridge-initialization-for-usds-and-susds-star-allocation-system-initialization-for-spark-add-new-validators-to-medianizer-october-31-2024"
+          },
+          {
+            "label": "Base SkyLink L1 bridge",
+            "url": "https://etherscan.io/address/0xa5874756416fa632257eea380cabd2e87ced352a"
+          }
+        ],
+        "evidence": "The official Base bridge initialization names L1 bridge 0xa5874756416fa632257eea380cabd2e87ced352a, escrow 0x7f311a4d48377030bd810395f4ccfc03bdbe9ef3, Base L2 bridge 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7, and L1 governance relay 0x1ee0ae8a993f2f5abdb51eaf4ac2876202b65c3b for the sUSDS lock/mint route. These canonical-side bridge powers remain Bridge Risk and are not Ethereum native sUSDS mint authority."
+      },
+      {
+        "id": "susds-base-l1-escrow",
+        "label": "sUSDS Base L1 escrow",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "base:0x5875eee11cf8398102fdad704c9e96607675467a"
+        ],
+        "capabilities": [
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x7f311a4d48377030bd810395f4ccfc03bdbe9ef3",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:ethereum:0x7f311a4d48377030bd810395f4ccfc03bdbe9ef3"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Base SkyLink escrow is the canonical lockbox for sUSDS deposited from Ethereum and is the release-side custody point after a finalized Base withdrawal message.",
+          "trustedPeerOrRemote": "The escrow is paired with the Base L1 bridge 0xa5874756416fa632257eea380cabd2e87ced352a and Base L2 bridge 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Sky governance Base bridge initialization",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-base-network-skylink-bridge-initialization-for-usds-and-susds-star-allocation-system-initialization-for-spark-add-new-validators-to-medianizer-october-31-2024"
+          },
+          {
+            "label": "SkyLink Base ETH native bridge guide",
+            "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
+          }
+        ],
+        "evidence": "The Base initialization names escrow 0x7f311a4d48377030bd810395f4ccfc03bdbe9ef3 as the canonical custody component for both listed tokens, including sUSDS. Its lock/release role is a bridge-route control and is retained separately from native Mint Authority."
+      },
+      {
+        "id": "susds-base-l1-governance-relay",
+        "label": "sUSDS Base L1 governance relay",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "base:0x5875eee11cf8398102fdad704c9e96607675467a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1ee0ae8a993f2f5abdb51eaf4ac2876202b65c3b",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:ethereum:0x1ee0ae8a993f2f5abdb51eaf4ac2876202b65c3b"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The L1 governance relay is the canonical-side relay named in Sky's Base initialization and forwards governance administration to the Base bridge route.",
+          "pausersAdminsUpgraders": "The relay can administer the Base L1 bridge and its route configuration; the corresponding L2 relay and destination-token ward are recorded in the Base L2 controls."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Sky governance Base bridge initialization",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-base-network-skylink-bridge-initialization-for-usds-and-susds-star-allocation-system-initialization-for-spark-add-new-validators-to-medianizer-october-31-2024"
+          }
+        ],
+        "evidence": "Sky's official Base initialization identifies 0x1ee0ae8a993f2f5abdb51eaf4ac2876202b65c3b as the L1 governance relay for the Base SkyLink bridge. Its authority governs the cross-chain rail and is not native Ethereum sUSDS issuance."
+      },
+      {
+        "id": "susds-optimism-l1-token-bridge",
+        "label": "sUSDS Optimism L1 token bridge",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x3d25b7d486cae1810374d37a48bcf0963c9b8057",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:ethereum:0x3d25b7d486cae1810374d37a48bcf0963c9b8057"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Optimism L1 bridge transfers canonical sUSDS into Ethereum escrow 0x467194771dae2967aef3ecbedd3bf9a310c76c65 on deposit and releases it after a finalized withdrawal message.",
+          "trustedPeerOrRemote": "Sky's Optimism initialization binds this L1 bridge to the OP Mainnet L2 bridge 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6 and the Ethereum-to-Optimism sUSDS mapping.",
+          "pausersAdminsUpgraders": "The Optimism bridge is an upgradeable SkyLink route administered through the L1 governance relay 0x09b354cda89203bb7b3131cc728dfa06ab09ae2f; the official initialization records the bridge and implementation identities.",
+          "onchainAmountBounds": "The intended route is canonical lock/mint and burn/release accounting; bridge administration remains able to alter the route machinery."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "SkyLink OP Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/op-token-bridge"
+          },
+          {
+            "label": "Sky governance Optimism bridge initialization",
+            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+          },
+          {
+            "label": "Optimism SkyLink L1 bridge",
+            "url": "https://etherscan.io/address/0x3d25b7d486cae1810374d37a48bcf0963c9b8057"
+          }
+        ],
+        "evidence": "The official Optimism initialization names L1 bridge 0x3d25b7d486cae1810374d37a48bcf0963c9b8057, escrow 0x467194771dae2967aef3ecbedd3bf9a310c76c65, OP Mainnet L2 bridge 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6, and L1 governance relay 0x09b354cda89203bb7b3131cc728dfa06ab09ae2f for the sUSDS lock/mint route. These canonical-side bridge powers remain Bridge Risk and are not Ethereum native sUSDS mint authority."
+      },
+      {
+        "id": "susds-optimism-l1-escrow",
+        "label": "sUSDS Optimism L1 escrow",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0"
+        ],
+        "capabilities": [
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x467194771dae2967aef3ecbedd3bf9a310c76c65",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:ethereum:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Optimism SkyLink escrow is the canonical lockbox for sUSDS deposited from Ethereum and is the release-side custody point after a finalized OP Mainnet withdrawal message.",
+          "trustedPeerOrRemote": "The escrow is paired with the Optimism L1 bridge 0x3d25b7d486cae1810374d37a48bcf0963c9b8057 and OP Mainnet L2 bridge 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Sky governance Optimism bridge initialization",
+            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+          },
+          {
+            "label": "SkyLink OP Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/op-token-bridge"
+          }
+        ],
+        "evidence": "The Optimism initialization names escrow 0x467194771dae2967aef3ecbedd3bf9a310c76c65 as the canonical custody component for both listed tokens, including sUSDS. Its lock/release role is a bridge-route control and is retained separately from native Mint Authority."
+      },
+      {
+        "id": "susds-optimism-l1-governance-relay",
+        "label": "sUSDS Optimism L1 governance relay",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x09b354cda89203bb7b3131cc728dfa06ab09ae2f",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:ethereum:0x09b354cda89203bb7b3131cc728dfa06ab09ae2f"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The L1 governance relay is the canonical-side relay named in Sky's Optimism initialization and forwards governance administration to the Optimism bridge route.",
+          "pausersAdminsUpgraders": "The relay can administer the Optimism L1 bridge and its route configuration; the corresponding L2 relay and destination-token ward are recorded in the Optimism L2 controls."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Sky governance Optimism bridge initialization",
+            "url": "https://v2.vote.makerdao.com/sky-executive/template-executive-vote-mkr-to-sky-upgrade-phase-two-switch-sky-token-rewards-vesting-stream-source-initialize-unichain-and-optimism-native-bridges-deactivate-sparklend-ddm-transfer-ownership-of-spk-token-to-spk-company-multisig-increase-allocator-spark-a-maximum-debt-ceiling-launch-project-funding-delegate-compensation-for-april-2025-atlas-core-development-payments-for-may-2025-sky-executive-vote-may-29-2025"
+          }
+        ],
+        "evidence": "Sky's official Optimism initialization identifies 0x09b354cda89203bb7b3131cc728dfa06ab09ae2f as the L1 governance relay for the Optimism SkyLink bridge. Its authority governs the cross-chain rail and is not native Ethereum sUSDS issuance."
+      },
+      {
+        "id": "susds-arbitrum-l1-token-gateway",
+        "label": "sUSDS Arbitrum L1 token gateway",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x84b9700e28b23f873b82c1beb23d86c091b6079e",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:ethereum:0x84b9700e28b23f873b82c1beb23d86c091b6079e"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Arbitrum L1 gateway transfers canonical sUSDS into Ethereum escrow 0xa10c7ce4b876998858b1a9e12b10092229539400 on deposit and releases it after the Arbitrum retryable-ticket withdrawal finalization period.",
+          "trustedPeerOrRemote": "The Arbitrum gateway binds Ethereum sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd to Arbitrum sUSDS 0xddb46999f8891663a8f2828d25298f70416d7610 and its L2 gateway 0x13f7f24ca959359a4d710d32c715d4bce273c793.",
+          "pausersAdminsUpgraders": "The Arbitrum gateway uses the verified Sky UUPS token-bridge implementation model and is administered through the L1 governance relay 0x9ba25c289e351779e0d481ba37489317c34a899d.",
+          "onchainAmountBounds": "The intended route is canonical lock/mint and burn/release accounting; bridge administration remains able to alter the route machinery."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "SkyLink Arbitrum Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+          },
+          {
+            "label": "Verified Arbitrum L1 gateway",
+            "url": "https://eth.blockscout.com/address/0x84b9700e28b23f873b82c1beb23d86c091b6079e#code"
+          }
+        ],
+        "evidence": "The verified Arbitrum bridge source identifies the L1/L2 gateway pair as UUPS upgradeable, with the L1 gateway at 0x84b9700e28b23f873b82c1beb23d86c091b6079e and the shared Ethereum escrow at 0xa10c7ce4b876998858b1a9e12b10092229539400. The canonical-side gateway controls the lock/message/release rail for Arbitrum sUSDS and is Bridge Risk, not native Ethereum sUSDS mint authority."
+      },
+      {
+        "id": "susds-arbitrum-l1-escrow",
+        "label": "sUSDS Arbitrum L1 escrow",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610"
+        ],
+        "capabilities": [
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xa10c7ce4b876998858b1a9e12b10092229539400",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:ethereum:0xa10c7ce4b876998858b1a9e12b10092229539400"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Arbitrum SkyLink escrow is the canonical lockbox for sUSDS deposited from Ethereum and is the release-side custody point after the Arbitrum withdrawal message is finalized.",
+          "trustedPeerOrRemote": "The escrow is paired with the Arbitrum L1 gateway 0x84b9700e28b23f873b82c1beb23d86c091b6079e and L2 gateway 0x13f7f24ca959359a4d710d32c715d4bce273c793."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "SkyLink Arbitrum Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+          },
+          {
+            "label": "Verified Arbitrum L1 gateway",
+            "url": "https://eth.blockscout.com/address/0x84b9700e28b23f873b82c1beb23d86c091b6079e#code"
+          }
+        ],
+        "evidence": "The official Arbitrum bridge repository identifies a shared Ethereum escrow for the bridged token balances. For the sUSDS route, escrow 0xa10c7ce4b876998858b1a9e12b10092229539400 is the canonical lock/release custody component and remains scored under Bridge Risk."
+      },
+      {
+        "id": "susds-arbitrum-l1-governance-relay",
+        "label": "sUSDS Arbitrum L1 governance relay",
+        "routeRefs": [
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x9ba25c289e351779e0d481ba37489317c34a899d",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:ethereum:0x9ba25c289e351779e0d481ba37489317c34a899d"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The L1 governance relay is the canonical-side relay named by the Sky Arbitrum bridge deployment and forwards governance administration to the Arbitrum bridge route.",
+          "pausersAdminsUpgraders": "The relay can administer the Arbitrum L1 gateway and route configuration; the corresponding shared L2 relay and destination-token ward are recorded in the Arbitrum L2 control."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "SkyLink Arbitrum Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+          },
+          {
+            "label": "Arbitrum bridge deployment transaction",
+            "url": "https://arbiscan.io/tx/0xe5e6787a47c6d820017e4e0c9acb3b592fb1b9ebfce565f62f735096dc55d3"
+          }
+        ],
+        "evidence": "Sky's Arbitrum bridge deployment identifies 0x9ba25c289e351779e0d481ba37489317c34a899d as the L1 governance relay for the route. Its authority governs the cross-chain rail and is not native Ethereum sUSDS issuance."
       }
     ]
   }

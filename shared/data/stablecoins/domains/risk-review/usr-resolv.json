@@ -11,5 +11,937 @@
     "evidence": "Explicit Direct retained: incident reporting and the local obituary record that Resolv burned unbacked USR supply via a blacklist freeze after the March 2026 exploit.",
     "reviewer": "Codex inferred-status backfill audit",
     "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "USR is natively issued on Ethereum; LayerZero V2 connects the Ethereum USR lockbox to six burn/mint SimpleOFT representations. Remote token-level minting is externally authenticated and supply-conserving only while adapter lock/remote burn accounting, peer authentication, endpoint/DVN checks, and upgrade controls hold; the route is assessed here rather than as native Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary FIX2-07",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Resolv USR LayerZero/Stargate bridge",
+        "slug": "resolv-usr-layerzero",
+        "url": "https://docs.resolv.xyz/litepaper/using-resolv/external-integrations",
+        "bridgeTypes": [
+          "oft",
+          "oft-adapter"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero V2 OFT and OFT Adapter",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart",
+        "bridgeTypes": [
+          "oft",
+          "oft-adapter"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Resolv smart-contract registry",
+        "url": "https://docs.resolv.xyz/litepaper/resources/smart-contracts"
+      },
+      {
+        "label": "Resolv external integrations",
+        "url": "https://docs.resolv.xyz/litepaper/using-resolv/external-integrations"
+      },
+      {
+        "label": "LayerZero V2 OFT quickstart",
+        "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+      },
+      {
+        "label": "LayerZero V2 chain and EID address book",
+        "url": "https://raw.githubusercontent.com/LayerZero-Labs/lz-address-book/main/src/generated/LZAddresses.sol"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110",
+        "sourceChain": "ethereum",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110",
+        "protocol": "Resolv SimpleToken",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25770505 on 2026-08-16, the TransparentUpgradeableProxy at 0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110 resolves to verified SimpleToken implementation 0xef4c4bcbe105170810b6ef58a286d9ce97a1fabe. SERVICE_ROLE-gated mint and burn are the native issuance path; the token has no LayerZero endpoint or OFT peer surface. The Ethereum SimpleOFTAdapter at 0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e is separate canonical-side bridge machinery assessed under the external-lock-mint routes.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "contract:ethereum:0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110",
+          "safe:ethereum:0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+          "proxy-admin:ethereum:0x44a41b959188794aa16128469194a72d4b41d921",
+          "timelock:ethereum:0x290d9544669c9c7a64f6899a0a3b28d563f6ebee"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770505,
+        "sources": [
+          {
+            "label": "Ethereum USR token proxy",
+            "url": "https://eth.blockscout.com/address/0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110?tab=contract"
+          },
+          {
+            "label": "Ethereum live JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "base:0x35e5db674d8e93a03d814fa0ada70731efe8a4b9",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x35e5db674d8e93a03d814fa0ada70731efe8a4b9",
+        "protocol": "LayerZero V2 SimpleOFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At base block 50064097 on 2026-08-16, proxy 0x35e5db674d8e93a03d814fa0ada70731efe8a4b9 resolves through its implementation slot to verified SimpleOFT implementation 0x2492d0006411af6c8bbb1c8afc1b0197350a79e9; endpoint() is 0x1a44076050125825900e736c501f859c50fe728c and peer(EID 30101) is the Ethereum adapter 0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e. The destination owner is Safe 0xd6889f307be1b83bb355d5da7d4478fb0d2af547 and its ProxyAdmin 0xcf3e9da6190997ca7b1f46a2568caa29575678bd is owned by a 259200-second Timelock. SimpleOFT debits/burns on send and credits/mints on validated receive; token-level mint is externally authenticated and supply-conserving only while adapter lock/remote burn accounting, peer/DVN checks, and upgrade controls hold. Exact endpoint ULN/DVN/Executor getConfig values and rate limits remain a follow-up gap.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:base:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:base:0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+          "timelock:base:0xcf3e9da6190997ca7b1f46a2568caa29575678bd"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064097,
+        "sources": [
+          {
+            "label": "base USR SimpleOFT proxy",
+            "url": "https://base.blockscout.com/address/0x35e5db674d8e93a03d814fa0ada70731efe8a4b9?tab=contract"
+          },
+          {
+            "label": "base live JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+        "protocol": "LayerZero V2 SimpleOFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At bsc block 116348480 on 2026-08-16, proxy 0x2492d0006411af6c8bbb1c8afc1b0197350a79e9 resolves through its implementation slot to verified SimpleOFT implementation 0x5943026e21e3936538620ba27e01525bba311255; endpoint() is 0x1a44076050125825900e736c501f859c50fe728c and peer(EID 30101) is the Ethereum adapter 0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e. The destination owner is Safe 0xd6889f307be1b83bb355d5da7d4478fb0d2af547 and its ProxyAdmin 0xc31389794ffac23331e0d9f611b7953f90aa5fdc is owned by a 259200-second Timelock. SimpleOFT debits/burns on send and credits/mints on validated receive; token-level mint is externally authenticated and supply-conserving only while adapter lock/remote burn accounting, peer/DVN checks, and upgrade controls hold. Exact endpoint ULN/DVN/Executor getConfig values and rate limits remain a follow-up gap.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:bsc:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:bsc:0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+          "timelock:bsc:0xc31389794ffac23331e0d9f611b7953f90aa5fdc"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116348480,
+        "sources": [
+          {
+            "label": "bsc live JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+        "protocol": "LayerZero V2 SimpleOFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At berachain block 24951412 on 2026-08-16, proxy 0x2492d0006411af6c8bbb1c8afc1b0197350a79e9 resolves through its implementation slot to verified SimpleOFT implementation 0x5943026e21e3936538620ba27e01525bba311255; endpoint() is 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and peer(EID 30101) is the Ethereum adapter 0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e. The destination owner is Safe 0xd6889f307be1b83bb355d5da7d4478fb0d2af547 and its ProxyAdmin 0x616be5e0ef9e5cedf8e944e85e3f33431ef4e272 is owned by a 259200-second Timelock. SimpleOFT debits/burns on send and credits/mints on validated receive; token-level mint is externally authenticated and supply-conserving only while adapter lock/remote burn accounting, peer/DVN checks, and upgrade controls hold. Exact endpoint ULN/DVN/Executor getConfig values and rate limits remain a follow-up gap.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "berachain",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:berachain:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "safe:berachain:0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+          "timelock:berachain:0x616be5e0ef9e5cedf8e944e85e3f33431ef4e272"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 24951412,
+        "sources": [
+          {
+            "label": "berachain live JSON-RPC",
+            "url": "https://berachain-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77",
+        "sourceChain": "ethereum",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77",
+        "protocol": "LayerZero V2 SimpleOFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At hyperevm block 43372464 on 2026-08-16, proxy 0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77 resolves through its implementation slot to verified SimpleOFT implementation 0x6ca43d7570201a7d7107edb33f824935959a374a; endpoint() is 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 and peer(EID 30101) is the Ethereum adapter 0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e. The destination owner is Safe 0x7fbf7473c4059509e8a6229d0989828ddc990bae and its ProxyAdmin 0xc31389794ffac23331e0d9f611b7953f90aa5fdc is owned by a 259200-second Timelock. SimpleOFT debits/burns on send and credits/mints on validated receive; token-level mint is externally authenticated and supply-conserving only while adapter lock/remote burn accounting, peer/DVN checks, and upgrade controls hold. The implementation family and owner Safe were verified by live RPC; source publication should be rechecked. Exact endpoint ULN/DVN/Executor getConfig values and rate limits remain a follow-up gap.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x7fbf7473c4059509e8a6229d0989828ddc990bae",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:hyperevm:0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9",
+          "safe:hyperevm:0x7fbf7473c4059509e8a6229d0989828ddc990bae",
+          "timelock:hyperevm:0xc31389794ffac23331e0d9f611b7953f90aa5fdc"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 43372464,
+        "sources": [
+          {
+            "label": "hyperevm live JSON-RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+        "protocol": "LayerZero V2 SimpleOFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At arbitrum block 495275018 on 2026-08-16, proxy 0x2492d0006411af6c8bbb1c8afc1b0197350a79e9 resolves through its implementation slot to verified SimpleOFT implementation 0x5943026e21e3936538620ba27e01525bba311255; endpoint() is 0x1a44076050125825900e736c501f859c50fe728c and peer(EID 30101) is the Ethereum adapter 0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e. The destination owner is Safe 0xd6889f307be1b83bb355d5da7d4478fb0d2af547 and its ProxyAdmin 0x81056482e80fa1456c6e7a50e1e806f659f661a7 is owned by a 259200-second Timelock. SimpleOFT debits/burns on send and credits/mints on validated receive; token-level mint is externally authenticated and supply-conserving only while adapter lock/remote burn accounting, peer/DVN checks, and upgrade controls hold. Exact endpoint ULN/DVN/Executor getConfig values and rate limits remain a follow-up gap.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:arbitrum:0x1a44076050125825900e736c501f859c50fe728c",
+          "safe:arbitrum:0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+          "timelock:arbitrum:0x81056482e80fa1456c6e7a50e1e806f659f661a7"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495275018,
+        "sources": [
+          {
+            "label": "arbitrum USR SimpleOFT proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x2492d0006411af6c8bbb1c8afc1b0197350a79e9?tab=contract"
+          },
+          {
+            "label": "arbitrum live JSON-RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ]
+      },
+      {
+        "id": "soneium:0xb1b385542b6e80f77b94393ba8342c3af699f15c",
+        "sourceChain": "ethereum",
+        "destinationChain": "soneium",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb1b385542b6e80f77b94393ba8342c3af699f15c",
+        "protocol": "LayerZero V2 SimpleOFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At soneium block 26891395 on 2026-08-16, proxy 0xb1b385542b6e80f77b94393ba8342c3af699f15c resolves through its implementation slot to verified SimpleOFT implementation 0xc31389794ffac23331e0d9f611b7953f90aa5fdc; endpoint() is 0x4bcb6a963a9563c33569d7a512d35754221f3a19 and peer(EID 30101) is the Ethereum adapter 0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e. The destination owner is Safe 0x74e6c3aae1c4960baa91ef05b87a1a0e25188605 and its ProxyAdmin 0x5943026e21e3936538620ba27e01525bba311255 is owned by a 259200-second Timelock. SimpleOFT debits/burns on send and credits/mints on validated receive; token-level mint is externally authenticated and supply-conserving only while adapter lock/remote burn accounting, peer/DVN checks, and upgrade controls hold. Exact endpoint ULN/DVN/Executor getConfig values and rate limits remain a follow-up gap.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "soneium",
+        "controllerAddress": "0x74e6c3aae1c4960baa91ef05b87a1a0e25188605",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:soneium:0x4bcb6a963a9563c33569d7a512d35754221f3a19",
+          "safe:soneium:0x74e6c3aae1c4960baa91ef05b87a1a0e25188605",
+          "timelock:soneium:0x5943026e21e3936538620ba27e01525bba311255"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 26891395,
+        "sources": [
+          {
+            "label": "soneium USR SimpleOFT proxy",
+            "url": "https://soneium.blockscout.com/address/0xb1b385542b6e80f77b94393ba8342c3af699f15c?tab=contract"
+          },
+          {
+            "label": "soneium live JSON-RPC",
+            "url": "https://rpc.soneium.org"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "ethereum-adapter-owner-safe",
+        "label": "Ethereum USR adapter owner Safe",
+        "routeRefs": [
+          "base:0x35e5db674d8e93a03d814fa0ada70731efe8a4b9",
+          "bsc:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "berachain:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "hyperevm:0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77",
+          "arbitrum:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "soneium:0xb1b385542b6e80f77b94393ba8342c3af699f15c"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e",
+          "safe:ethereum:0xd6889f307be1b83bb355d5da7d4478fb0d2af547"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x9a73d57bb1fb280c5672a13f655675de25f13b70",
+            "0x8de707f6f4cffd55ca9f4e493cf126818ea70482",
+            "0xd279d5f4e2979d61ea646865599e4f35b10f9fec",
+            "0xe84b20a7590c51bb4aa913f29407254a4d817c77",
+            "0x5bfeee5e8105c7ca7f78b08c61c25842656bda18",
+            "0x21bdfe7265a702d7f462b46c00a0fb39b39b9972"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25770505,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Ethereum SimpleOFTAdapter holds canonical USR and locks/unlocks it for LayerZero transfers; it does not create an independent native liability.",
+          "trustedPeerOrRemote": "Adapter peers bind the route to Base, BSC, Berachain, HyperEVM, Arbitrum, and Soneium representations; remote peer mesh is also configured.",
+          "rateLimits": "No application-level rate-limit contract was identified; endpoint-level rate limiting and exact ULN/DVN/Executor getConfig remain unverified.",
+          "pausersAdminsUpgraders": "The Safe owns adapter configuration including peers and delegate-related bridge settings; the separate ProxyAdmin Timelock controls adapter upgrades."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770505,
+        "sources": [
+          {
+            "label": "Ethereum USR LayerZero adapter proxy",
+            "url": "https://eth.blockscout.com/address/0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e?tab=contract"
+          },
+          {
+            "label": "Ethereum USR token and Safe review",
+            "url": "https://eth.blockscout.com/address/0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25770505, the 4-of-6 Safe owns the LayerZero adapter that locks and unlocks canonical USR and controls its bridge peer configuration. This bridge capability is separate from the native SERVICE_ROLE mint path; supply conservation depends on adapter lock/remote burn accounting and authenticated LayerZero peers."
+      },
+      {
+        "id": "base-oft-owner-safe",
+        "label": "base USR SimpleOFT owner Safe",
+        "routeRefs": [
+          "base:0x35e5db674d8e93a03d814fa0ada70731efe8a4b9"
+        ],
+        "capabilities": [
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "safe:base:0xd6889f307be1b83bb355d5da7d4478fb0d2af547"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x9a73d57bb1fb280c5672a13f655675de25f13b70",
+            "0xd279d5f4e2979d61ea646865599e4f35b10f9fec",
+            "0xe84b20a7590c51bb4aa913f29407254a4d817c77",
+            "0x21bdfe7265a702d7f462b46c00a0fb39b39b9972",
+            "0x8f96b74058a5df5921835deade88cb76b61e0c50",
+            "0x5bfeee5e8105c7ca7f78b08c61c25842656bda18"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "observedBlock": 50064097,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner controls setPeer and related LayerZero route configuration; the Ethereum EID 30101 peer is the canonical adapter and the representation also participates in the verified satellite mesh.",
+          "rateLimits": "No application-level rate-limit contract was identified; endpoint-level rate limiting and exact ULN/DVN/Executor getConfig remain unverified.",
+          "pausersAdminsUpgraders": "The owner controls peer/delegate, enforced-options, message-inspector, and pre-crime settings; no separate pause controller was identified. The legacy guard selector reverted, so guard status remains unknown."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064097,
+        "sources": [
+          {
+            "label": "base USR SimpleOFT proxy",
+            "url": "https://base.blockscout.com/address/0x35e5db674d8e93a03d814fa0ada70731efe8a4b9?tab=contract"
+          },
+          {
+            "label": "base live JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At base block 50064097, this 4-of-6 Safe owns the destination SimpleOFT configuration. Its empty module read and the unresolved legacy guard read are retained; it can change peer/authentication settings that determine whether remote receive minting remains constrained to the LayerZero route."
+      },
+      {
+        "id": "bsc-oft-owner-safe",
+        "label": "bsc USR SimpleOFT owner Safe",
+        "routeRefs": [
+          "bsc:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9"
+        ],
+        "capabilities": [
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "safe:bsc:0xd6889f307be1b83bb355d5da7d4478fb0d2af547"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x9a73d57bb1fb280c5672a13f655675de25f13b70",
+            "0xd279d5f4e2979d61ea646865599e4f35b10f9fec",
+            "0xe84b20a7590c51bb4aa913f29407254a4d817c77",
+            "0x21bdfe7265a702d7f462b46c00a0fb39b39b9972",
+            "0x8f96b74058a5df5921835deade88cb76b61e0c50",
+            "0x5bfeee5e8105c7ca7f78b08c61c25842656bda18"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "observedBlock": 116348480,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner controls setPeer and related LayerZero route configuration; the Ethereum EID 30101 peer is the canonical adapter and the representation also participates in the verified satellite mesh.",
+          "rateLimits": "No application-level rate-limit contract was identified; endpoint-level rate limiting and exact ULN/DVN/Executor getConfig remain unverified.",
+          "pausersAdminsUpgraders": "The owner controls peer/delegate, enforced-options, message-inspector, and pre-crime settings; no separate pause controller was identified. The legacy guard selector reverted, so guard status remains unknown."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116348480,
+        "sources": [
+          {
+            "label": "bsc live JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ],
+        "evidence": "At bsc block 116348480, this 4-of-6 Safe owns the destination SimpleOFT configuration. Its empty module read and the unresolved legacy guard read are retained; it can change peer/authentication settings that determine whether remote receive minting remains constrained to the LayerZero route."
+      },
+      {
+        "id": "berachain-oft-owner-safe",
+        "label": "berachain USR SimpleOFT owner Safe",
+        "routeRefs": [
+          "berachain:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9"
+        ],
+        "capabilities": [
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "safe:berachain:0xd6889f307be1b83bb355d5da7d4478fb0d2af547"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x9a73d57bb1fb280c5672a13f655675de25f13b70",
+            "0xd279d5f4e2979d61ea646865599e4f35b10f9fec",
+            "0xba71a1aaff2bbc8b949a36f667e2e70b60bbab0f",
+            "0xe84b20a7590c51bb4aa913f29407254a4d817c77",
+            "0x21bdfe7265a702d7f462b46c00a0fb39b39b9972",
+            "0x8f96b74058a5df5921835deade88cb76b61e0c50"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "observedBlock": 24951412,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner controls setPeer and related LayerZero route configuration; the Ethereum EID 30101 peer is the canonical adapter and the representation also participates in the verified satellite mesh.",
+          "rateLimits": "No application-level rate-limit contract was identified; endpoint-level rate limiting and exact ULN/DVN/Executor getConfig remain unverified.",
+          "pausersAdminsUpgraders": "The owner controls peer/delegate, enforced-options, message-inspector, and pre-crime settings; no separate pause controller was identified. The legacy guard selector reverted, so guard status remains unknown."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 24951412,
+        "sources": [
+          {
+            "label": "berachain live JSON-RPC",
+            "url": "https://berachain-rpc.publicnode.com"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ],
+        "evidence": "At berachain block 24951412, this 4-of-6 Safe owns the destination SimpleOFT configuration. Its empty module read and the unresolved legacy guard read are retained; it can change peer/authentication settings that determine whether remote receive minting remains constrained to the LayerZero route."
+      },
+      {
+        "id": "hyperevm-oft-owner-safe",
+        "label": "hyperevm USR SimpleOFT owner Safe",
+        "routeRefs": [
+          "hyperevm:0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77"
+        ],
+        "capabilities": [
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x7fbf7473c4059509e8a6229d0989828ddc990bae",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "safe:hyperevm:0x7fbf7473c4059509e8a6229d0989828ddc990bae"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x9a73d57bb1fb280c5672a13f655675de25f13b70",
+            "0xd279d5f4e2979d61ea646865599e4f35b10f9fec",
+            "0x8f96b74058a5df5921835deade88cb76b61e0c50",
+            "0xba71a1aaff2bbc8b949a36f667e2e70b60bbab0f",
+            "0xe84b20a7590c51bb4aa913f29407254a4d817c77",
+            "0x21bdfe7265a702d7f462b46c00a0fb39b39b9972"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "observedBlock": 43372464,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner controls setPeer and related LayerZero route configuration; the Ethereum EID 30101 peer is the canonical adapter and the representation also participates in the verified satellite mesh.",
+          "rateLimits": "No application-level rate-limit contract was identified; endpoint-level rate limiting and exact ULN/DVN/Executor getConfig remain unverified.",
+          "pausersAdminsUpgraders": "The owner controls peer/delegate, enforced-options, message-inspector, and pre-crime settings; no separate pause controller was identified. The legacy guard selector reverted, so guard status remains unknown."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 43372464,
+        "sources": [
+          {
+            "label": "hyperevm live JSON-RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "LayerZero V2 OFT quickstart",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ],
+        "evidence": "At hyperevm block 43372464, this 4-of-6 Safe owns the destination SimpleOFT configuration. Its empty module read and the unresolved legacy guard read are retained; it can change peer/authentication settings that determine whether remote receive minting remains constrained to the LayerZero route."
+      },
+      {
+        "id": "arbitrum-oft-owner-safe",
+        "label": "arbitrum USR SimpleOFT owner Safe",
+        "routeRefs": [
+          "arbitrum:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9"
+        ],
+        "capabilities": [
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "safe:arbitrum:0xd6889f307be1b83bb355d5da7d4478fb0d2af547"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x9a73d57bb1fb280c5672a13f655675de25f13b70",
+            "0xd279d5f4e2979d61ea646865599e4f35b10f9fec",
+            "0xe84b20a7590c51bb4aa913f29407254a4d817c77",
+            "0x21bdfe7265a702d7f462b46c00a0fb39b39b9972",
+            "0x8f96b74058a5df5921835deade88cb76b61e0c50",
+            "0x5bfeee5e8105c7ca7f78b08c61c25842656bda18"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "observedBlock": 495275018,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner controls setPeer and related LayerZero route configuration; the Ethereum EID 30101 peer is the canonical adapter and the representation also participates in the verified satellite mesh.",
+          "rateLimits": "No application-level rate-limit contract was identified; endpoint-level rate limiting and exact ULN/DVN/Executor getConfig remain unverified.",
+          "pausersAdminsUpgraders": "The owner controls peer/delegate, enforced-options, message-inspector, and pre-crime settings; no separate pause controller was identified. The legacy guard selector reverted, so guard status remains unknown."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495275018,
+        "sources": [
+          {
+            "label": "arbitrum USR SimpleOFT proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x2492d0006411af6c8bbb1c8afc1b0197350a79e9?tab=contract"
+          },
+          {
+            "label": "arbitrum live JSON-RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At arbitrum block 495275018, this 4-of-6 Safe owns the destination SimpleOFT configuration. Its empty module read and the unresolved legacy guard read are retained; it can change peer/authentication settings that determine whether remote receive minting remains constrained to the LayerZero route."
+      },
+      {
+        "id": "soneium-oft-owner-safe",
+        "label": "soneium USR SimpleOFT owner Safe",
+        "routeRefs": [
+          "soneium:0xb1b385542b6e80f77b94393ba8342c3af699f15c"
+        ],
+        "capabilities": [
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x74e6c3aae1c4960baa91ef05b87a1a0e25188605",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "safe:soneium:0x74e6c3aae1c4960baa91ef05b87a1a0e25188605"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x9a73d57bb1fb280c5672a13f655675de25f13b70",
+            "0xd279d5f4e2979d61ea646865599e4f35b10f9fec",
+            "0xe84b20a7590c51bb4aa913f29407254a4d817c77",
+            "0x21bdfe7265a702d7f462b46c00a0fb39b39b9972",
+            "0x8f96b74058a5df5921835deade88cb76b61e0c50",
+            "0x093ac9db89c8c2372916423b27e703eb648ec4a4"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "observedBlock": 26891395,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner controls setPeer and related LayerZero route configuration; the Ethereum EID 30101 peer is the canonical adapter and the representation also participates in the verified satellite mesh.",
+          "rateLimits": "No application-level rate-limit contract was identified; endpoint-level rate limiting and exact ULN/DVN/Executor getConfig remain unverified.",
+          "pausersAdminsUpgraders": "The owner controls peer/delegate, enforced-options, message-inspector, and pre-crime settings; no separate pause controller was identified. The legacy guard selector reverted, so guard status remains unknown."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26891395,
+        "sources": [
+          {
+            "label": "soneium USR SimpleOFT proxy",
+            "url": "https://soneium.blockscout.com/address/0xb1b385542b6e80f77b94393ba8342c3af699f15c?tab=contract"
+          },
+          {
+            "label": "soneium live JSON-RPC",
+            "url": "https://rpc.soneium.org"
+          }
+        ],
+        "evidence": "At soneium block 26891395, this 4-of-6 Safe owns the destination SimpleOFT configuration. Its empty module read and the unresolved legacy guard read are retained; it can change peer/authentication settings that determine whether remote receive minting remains constrained to the LayerZero route."
+      },
+      {
+        "id": "ethereum-adapter-proxy-admin-timelock",
+        "label": "Ethereum USR adapter ProxyAdmin Timelock",
+        "routeRefs": [
+          "base:0x35e5db674d8e93a03d814fa0ada70731efe8a4b9",
+          "bsc:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "berachain:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "hyperevm:0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77",
+          "arbitrum:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "soneium:0xb1b385542b6e80f77b94393ba8342c3af699f15c"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x290d9544669c9c7a64f6899a0a3b28d563f6ebee",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "timelock:ethereum:0x290d9544669c9c7a64f6899a0a3b28d563f6ebee"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Timelock owns the adapter ProxyAdmin and can replace canonical-side bridge logic with zero enforced delay; this is bridge upgrade authority, not the native SERVICE_ROLE mint gate.",
+          "unsupportedReason": "Exact LayerZero endpoint ULN/DVN/Executor getConfig values and rate limits remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770505,
+        "sources": [
+          {
+            "label": "Ethereum USR LayerZero adapter proxy",
+            "url": "https://eth.blockscout.com/address/0xd2ee2776f34ef4e7325745b06e6d464b08d4be0e?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25770505, ProxyAdmin owner 0x290d9544669c9c7a64f6899a0a3b28d563f6ebee controls the adapter upgrade path and reports getMinDelay() = 0. The adverse upgrade domain is preserved under Bridge Risk; the native token's own upgrade and SERVICE_ROLE controls remain in Mint Authority."
+      },
+      {
+        "id": "base-oft-proxy-admin-timelock",
+        "label": "base USR SimpleOFT ProxyAdmin Timelock",
+        "routeRefs": [
+          "base:0x35e5db674d8e93a03d814fa0ada70731efe8a4b9"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xcf3e9da6190997ca7b1f46a2568caa29575678bd",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "timelock:base:0xcf3e9da6190997ca7b1f46a2568caa29575678bd"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 259200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Timelock owns the route's immutable TransparentUpgradeableProxy ProxyAdmin and can replace destination SimpleOFT logic after a 259200-second minimum delay; this is bridge upgrade authority, not native issuance.",
+          "unsupportedReason": "Exact LayerZero endpoint ULN/DVN/Executor getConfig values and rate limits remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50064097,
+        "sources": [
+          {
+            "label": "base USR SimpleOFT proxy",
+            "url": "https://base.blockscout.com/address/0x35e5db674d8e93a03d814fa0ada70731efe8a4b9?tab=contract"
+          }
+        ],
+        "evidence": "At base block 50064097, ProxyAdmin 0xcf3e9da6190997ca7b1f46a2568caa29575678bd is owned by a Timelock with a 259200-second minimum delay and can replace the destination SimpleOFT logic. This upgrade domain is bridge risk; the destination OFT is not a native issuance route."
+      },
+      {
+        "id": "bsc-oft-proxy-admin-timelock",
+        "label": "bsc USR SimpleOFT ProxyAdmin Timelock",
+        "routeRefs": [
+          "bsc:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xc31389794ffac23331e0d9f611b7953f90aa5fdc",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "timelock:bsc:0xc31389794ffac23331e0d9f611b7953f90aa5fdc"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 259200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Timelock owns the route's immutable TransparentUpgradeableProxy ProxyAdmin and can replace destination SimpleOFT logic after a 259200-second minimum delay; this is bridge upgrade authority, not native issuance.",
+          "unsupportedReason": "Exact LayerZero endpoint ULN/DVN/Executor getConfig values and rate limits remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116348480,
+        "sources": [
+          {
+            "label": "bsc live JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At bsc block 116348480, ProxyAdmin 0xc31389794ffac23331e0d9f611b7953f90aa5fdc is owned by a Timelock with a 259200-second minimum delay and can replace the destination SimpleOFT logic. This upgrade domain is bridge risk; the destination OFT is not a native issuance route."
+      },
+      {
+        "id": "berachain-oft-proxy-admin-timelock",
+        "label": "berachain USR SimpleOFT ProxyAdmin Timelock",
+        "routeRefs": [
+          "berachain:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0x616be5e0ef9e5cedf8e944e85e3f33431ef4e272",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "timelock:berachain:0x616be5e0ef9e5cedf8e944e85e3f33431ef4e272"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 259200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Timelock owns the route's immutable TransparentUpgradeableProxy ProxyAdmin and can replace destination SimpleOFT logic after a 259200-second minimum delay; this is bridge upgrade authority, not native issuance.",
+          "unsupportedReason": "Exact LayerZero endpoint ULN/DVN/Executor getConfig values and rate limits remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 24951412,
+        "sources": [
+          {
+            "label": "berachain live JSON-RPC",
+            "url": "https://berachain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At berachain block 24951412, ProxyAdmin 0x616be5e0ef9e5cedf8e944e85e3f33431ef4e272 is owned by a Timelock with a 259200-second minimum delay and can replace the destination SimpleOFT logic. This upgrade domain is bridge risk; the destination OFT is not a native issuance route."
+      },
+      {
+        "id": "hyperevm-oft-proxy-admin-timelock",
+        "label": "hyperevm USR SimpleOFT ProxyAdmin Timelock",
+        "routeRefs": [
+          "hyperevm:0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xc31389794ffac23331e0d9f611b7953f90aa5fdc",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "timelock:hyperevm:0xc31389794ffac23331e0d9f611b7953f90aa5fdc"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 259200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Timelock owns the route's immutable TransparentUpgradeableProxy ProxyAdmin and can replace destination SimpleOFT logic after a 259200-second minimum delay; this is bridge upgrade authority, not native issuance.",
+          "unsupportedReason": "Exact LayerZero endpoint ULN/DVN/Executor getConfig values and rate limits remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 43372464,
+        "sources": [
+          {
+            "label": "hyperevm live JSON-RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "At hyperevm block 43372464, ProxyAdmin 0xc31389794ffac23331e0d9f611b7953f90aa5fdc is owned by a Timelock with a 259200-second minimum delay and can replace the destination SimpleOFT logic. This upgrade domain is bridge risk; the destination OFT is not a native issuance route."
+      },
+      {
+        "id": "arbitrum-oft-proxy-admin-timelock",
+        "label": "arbitrum USR SimpleOFT ProxyAdmin Timelock",
+        "routeRefs": [
+          "arbitrum:0x2492d0006411af6c8bbb1c8afc1b0197350a79e9"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x81056482e80fa1456c6e7a50e1e806f659f661a7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "timelock:arbitrum:0x81056482e80fa1456c6e7a50e1e806f659f661a7"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 259200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Timelock owns the route's immutable TransparentUpgradeableProxy ProxyAdmin and can replace destination SimpleOFT logic after a 259200-second minimum delay; this is bridge upgrade authority, not native issuance.",
+          "unsupportedReason": "Exact LayerZero endpoint ULN/DVN/Executor getConfig values and rate limits remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495275018,
+        "sources": [
+          {
+            "label": "arbitrum USR SimpleOFT proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x2492d0006411af6c8bbb1c8afc1b0197350a79e9?tab=contract"
+          }
+        ],
+        "evidence": "At arbitrum block 495275018, ProxyAdmin 0x81056482e80fa1456c6e7a50e1e806f659f661a7 is owned by a Timelock with a 259200-second minimum delay and can replace the destination SimpleOFT logic. This upgrade domain is bridge risk; the destination OFT is not a native issuance route."
+      },
+      {
+        "id": "soneium-oft-proxy-admin-timelock",
+        "label": "soneium USR SimpleOFT ProxyAdmin Timelock",
+        "routeRefs": [
+          "soneium:0xb1b385542b6e80f77b94393ba8342c3af699f15c"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x5943026e21e3936538620ba27e01525bba311255",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "timelock:soneium:0x5943026e21e3936538620ba27e01525bba311255"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 259200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Timelock owns the route's immutable TransparentUpgradeableProxy ProxyAdmin and can replace destination SimpleOFT logic after a 259200-second minimum delay; this is bridge upgrade authority, not native issuance.",
+          "unsupportedReason": "Exact LayerZero endpoint ULN/DVN/Executor getConfig values and rate limits remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 26891395,
+        "sources": [
+          {
+            "label": "soneium USR SimpleOFT proxy",
+            "url": "https://soneium.blockscout.com/address/0xb1b385542b6e80f77b94393ba8342c3af699f15c?tab=contract"
+          }
+        ],
+        "evidence": "At soneium block 26891395, ProxyAdmin 0x5943026e21e3936538620ba27e01525bba311255 is owned by a Timelock with a 259200-second minimum delay and can replace the destination SimpleOFT logic. This upgrade domain is bridge risk; the destination OFT is not a native issuance route."
+      }
+    ]
   }
 }

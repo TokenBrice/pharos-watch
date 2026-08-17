@@ -9,10 +9,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "XSGD is issuer-minted natively by StraitsX on all eight networks (per-chain masterMinter/owner reads verified on the EVM deployments; Solana SPL multisig, Hedera HTS, and XRPL issued asset are issuer rails); no third-party bridge carries the claim.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-    "confidence": "probable",
+    "summary": "XSGD has eight reviewed issuer-native issuance routes: Ethereum, Polygon, Arbitrum, Avalanche, Base, Solana, Hedera, and XRPL. These are canonical native liabilities, not bridge representations. No third-party bridge, adapter, lockbox, peer, validator, or bridge-admin capability is evidenced; native issuer controls remain exclusively in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex mint-bridge boundary migration",
+    "confidence": "verified",
     "sources": [
       {
         "label": "StraitsX XSGD",
@@ -37,7 +37,7 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "MasterMinter/owner Safes reviewed in the mint-authority profile; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "StraitsX XSGD",
@@ -56,9 +56,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "masterMinter()=0xd75c83e8a0fb2bab20ac89aeaaeb1b2f6faa1878, owner()=0x0abf5f8cf954e174310b63bd1571ef6ae64cd5c4 read on Polygon at 2026-07-20; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "masterMinter()=0xd75c83e8a0fb2bab20ac89aeaaeb1b2f6faa1878, owner()=0x0abf5f8cf954e174310b63bd1571ef6ae64cd5c4 read on Polygon at 2026-08-16; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "StraitsX XSGD",
@@ -77,9 +77,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "masterMinter()=0xf0465edee01f8ec329e26d1af937aa82ce497116, owner()=0x01a5c17d8431543ec228675a9e750f9f7788f3d6 read on Arbitrum at 2026-07-20; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "masterMinter()=0xf0465edee01f8ec329e26d1af937aa82ce497116, owner()=0x01a5c17d8431543ec228675a9e750f9f7788f3d6 read on Arbitrum at 2026-08-16; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "StraitsX XSGD",
@@ -98,9 +98,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "masterMinter()=0x9290a4c35217e0a6b67a48596867c58a8d467787, owner()=0x76bd5f5b1cef12637ef876d018b5def4a031ea01 read on Avalanche at 2026-07-20; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "masterMinter()=0x9290a4c35217e0a6b67a48596867c58a8d467787, owner()=0x76bd5f5b1cef12637ef876d018b5def4a031ea01 read on Avalanche at 2026-08-16; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "StraitsX XSGD",
@@ -119,9 +119,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "masterMinter()=0x64e23625304278fe7501701f857163067819f700, owner()=0xda4a35d931376daaacf45e25d25b06ff00ab8c66 read on Base at 2026-07-20; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "masterMinter()=0x64e23625304278fe7501701f857163067819f700, owner()=0xda4a35d931376daaacf45e25d25b06ff00ab8c66 read on Base at 2026-08-16; XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "StraitsX XSGD",
@@ -142,7 +142,7 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "SPL mint authority is the reviewed 3-of-10 multisig (mint-authority profile); XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "StraitsX XSGD",
@@ -163,7 +163,7 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "native HTS token administered by StraitsX (supply key under issuer control); XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "StraitsX XSGD",
@@ -184,7 +184,7 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "native XRPL issued asset (issuing account rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw under StraitsX control); XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "StraitsX XSGD",

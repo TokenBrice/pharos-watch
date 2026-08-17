@@ -9,6 +9,9 @@
       {
         "chain": "ethereum",
         "address": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+        "deploymentRefs": [
+          "ethereum:0x722a89f1b925fe41883978219c2176aecc7d6699"
+        ],
         "label": "XNK legacy mintable token",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -33,6 +36,9 @@
       {
         "chain": "ethereum",
         "address": "0x2691FBB371456eaC5C5AA0082a0f53C91249c044",
+        "deploymentRefs": [
+          "ethereum:0x722a89f1b925fe41883978219c2176aecc7d6699"
+        ],
         "label": "XNK token sale contract (token owner)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -53,6 +59,9 @@
       {
         "chain": "ethereum",
         "address": "0x50EA796bCf3D178a100B1f0Ef44fAAEF64741bFE",
+        "deploymentRefs": [
+          "ethereum:0x722a89f1b925fe41883978219c2176aecc7d6699"
+        ],
         "label": "Kinka TimelockController (sale contract owner)",
         "role": "timelock",
         "authorityType": "timelock",
@@ -77,6 +86,9 @@
       {
         "chain": "ethereum",
         "address": "0x8a4b8f479d4f1ee7b9aff581172796e1eab343b6",
+        "deploymentRefs": [
+          "ethereum:0x722a89f1b925fe41883978219c2176aecc7d6699"
+        ],
         "label": "Kinka timelock proposer Safe (2-of-3)",
         "role": "governor",
         "authorityType": "safe",
@@ -114,6 +126,9 @@
       {
         "chain": "ethereum",
         "address": "0xE6A2356896F8a91aC473e2Be31620A235B70d8c4",
+        "deploymentRefs": [
+          "ethereum:0x722a89f1b925fe41883978219c2176aecc7d6699"
+        ],
         "label": "Kinka deployer EOA (timelock DEFAULT_ADMIN, sale adminWallet)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -127,6 +142,9 @@
       {
         "chain": "cardano",
         "address": "2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac",
+        "deploymentRefs": [
+          "cardano:2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b"
+        ],
         "label": "XNK Cardano PlutusV3 minting policy (NFT-gated)",
         "role": "direct-minter",
         "authorityType": "contract",

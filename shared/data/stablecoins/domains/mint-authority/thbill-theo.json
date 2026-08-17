@@ -7,6 +7,9 @@
     "summary": "Canonical thBILL is a UUPS ERC-4626 multi-asset vault: public deposit and mint paths transfer supported collateral before minting shares, with no privileged raw-mint function. A two-day TimelockController holds DEFAULT_ADMIN_ROLE and UUPS authority; Theo's 4-of-6 Safe controls that timelock.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x5fa487bca6158c64046b2813623e20755091da0b"
+      ],
       "proxyAddresses": [
         "0x5fa487bca6158c64046b2813623e20755091da0b"
       ],
@@ -44,6 +47,9 @@
       {
         "chain": "ethereum",
         "address": "0x5fa487bca6158c64046b2813623e20755091da0b",
+        "deploymentRefs": [
+          "ethereum:0x5fa487bca6158c64046b2813623e20755091da0b"
+        ],
         "label": "thBILL ERC-4626 multi-asset wrapper",
         "role": "wrapper",
         "authorityType": "contract",
@@ -63,6 +69,9 @@
       },
       {
         "address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+        "deploymentRefs": [
+          "ethereum:0x5fa487bca6158c64046b2813623e20755091da0b"
+        ],
         "chain": "ethereum",
         "label": "thBILL UUPS upgrade timelock",
         "role": "proxy-admin",
@@ -87,6 +96,9 @@
       },
       {
         "address": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+        "deploymentRefs": [
+          "ethereum:0x5fa487bca6158c64046b2813623e20755091da0b"
+        ],
         "chain": "ethereum",
         "label": "Theo governance Safe (timelock proposer/executor/canceller)",
         "role": "governor",

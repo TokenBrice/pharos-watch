@@ -24,16 +24,16 @@
         "url": "https://monadscan.com/address/0x650b616b46ff94000eb115926ab8393b90788d76"
       }
     ],
-    "evidence": "All four live implementations authorize chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 for forceTransfer(address,address,uint256) and arbitrary-holder burn(address,uint256), while the shared mint EOA lacks those permissions. Nonzero seizure simulations against actual holders succeeded on Ethereum block 25590408 (hash 0x114ec56a77156d27c6d2d91bf401ca428ffed4aa85f0ff0371b34af67f109052), Base block 48979919 (hash 0x4e8d1eed9b32347b239c53b681c713a167c3f491f0af1b79b7072d0ba3732c83), and Arbitrum block 486632328 (hash 0xc536c0320873e43c1c1d63ee1fdc6cd1b63ccf61cf61ac7c54867bfda503faeb); Monad block 89486097 (hash 0x6d816fae89965dc2323f02e29116adb6550c83b4a8870f8f75d539d10cf1b0be) confirmed selector authorization and a successful Safe call. Current Safe thresholds were Ethereum 3-of-8, Base 3-of-7, Arbitrum 1-of-7, and Monad 2-of-7.",
+    "evidence": "All four live implementations authorize chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 for forceTransfer(address,address,uint256) and arbitrary-holder burn(address,uint256), while the shared mint EOA lacks those permissions. Nonzero seizure simulations against actual holders succeeded on Ethereum block 25590408 (hash 0x114ec56a77156d27c6d2d91bf401ca428ffed4aa85f0ff0371b34af67f109052), Base block 48979919 (hash 0x4e8d1eed9b32347b239c53b681c713a167c3f491f0af1b79b7072d0ba3732c83), and Arbitrum block 486632328 (hash 0xc536c0320873e43c1c1d63ee1fdc6cd1b63ccf61cf61ac7c54867bfda503faeb); Monad block 89486097 (hash 0x6d816fae89965dc2323f02e29116adb6550c83b4a8870f8f75d539d10cf1b0be) confirmed selector authorization and a successful Safe call. Current Safe thresholds are Ethereum 3-of-8, Base 3-of-7, Arbitrum 4-of-8, and Monad 4-of-8.",
     "reviewer": "GPT SOL-NR-A wave6",
     "reviewedAt": "2026-07-22"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Multipli documents rwaUSDi and its unwind/peg module across multiple EVM deployments, with no external bridge protocol resolved. The reviewed route is issuer/protocol-native issuance and redemption mechanics across supported chains.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-    "confidence": "verified",
+    "summary": "Multipli issues rwaUSDi natively on Ethereum, Base, Monad, and Arbitrum; the four reviewed routes remain issuer-native. The latest implementation is CCIP-admin/IBurnMintERC20-compatible, but official Chainlink Token Manager/CCIP Directory lookups for the exact token addresses returned no configured-network row in this review, and no TokenPool, remote token, or active lane was verified. The unresolved CCIP binding is bridge-evidence follow-up in Bridge Risk; it does not make the four authored deployments representations. Ethereum in the peripheral route rows is an identity/accounting convention, not evidence that Base, Monad, or Arbitrum are bridged.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "Multipli docs",
@@ -42,6 +42,22 @@
       {
         "label": "Multipli unwind and peg module",
         "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
+      },
+      {
+        "label": "Verified predecessor RWAUSDi implementation",
+        "url": "https://eth.blockscout.com/address/0xdcaebe1c84a722b1e26d1b5093e962016f7c0b3f?tab=contract"
+      },
+      {
+        "label": "Current RWAUSDi implementation bytecode",
+        "url": "https://eth.blockscout.com/address/0xec9c824543dd3d635c1d71029f385a6eba511dc0?tab=contract"
+      },
+      {
+        "label": "Chainlink CCIP Token Manager",
+        "url": "https://tokenmanager.chain.link/"
+      },
+      {
+        "label": "Chainlink CCIP Directory",
+        "url": "https://docs.chain.link/ccip/directory"
       }
     ],
     "routes": [
@@ -57,9 +73,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native rwaUSDi: 212-byte EIP-1967 proxy (impl 0x2a66bb2da3ad1c854e79307f64b862decd860d4c), owner() = the chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read 2026-07-20). Multipli issues natively on each chain; no bridge contract mints this deployment.",
+        "reviewNote": "Native rwaUSDi: EIP-1967 proxy current implementation slot 0xec9c824543dd3d635c1d71029f385a6eba511dc0, owner() = the chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read at Ethereum block 25771300 on 2026-08-16). The predecessor source and current bytecode expose CCIP-admin/IBurnMintERC20 compatibility, but no active TokenPool, remote-token, or lane binding was verified; Multipli issues this deployment natively.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Multipli",
@@ -79,9 +95,9 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native rwaUSDi on Base: 212-byte EIP-1967 proxy (impl 0x5f0d2ae761a5eed6d7106771db846aa67be153f6), owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read 2026-07-20).",
+        "reviewNote": "Native rwaUSDi on Base: EIP-1967 proxy current implementation slot 0xec9c824543dd3d635c1d71029f385a6eba511dc0, owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read at Base block 50069092 on 2026-08-16). The predecessor source and current bytecode expose CCIP-admin/IBurnMintERC20 compatibility, but no active TokenPool, remote-token, or lane binding was verified; this remains a native issuance route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Multipli",
@@ -101,9 +117,9 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native rwaUSDi on Monad: 212-byte EIP-1967 proxy (impl 0x524e2461234672643fd59310bd95ffe41538916d), owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read 2026-07-20).",
+        "reviewNote": "Native rwaUSDi on Monad: EIP-1967 proxy current implementation slot 0xec9c824543dd3d635c1d71029f385a6eba511dc0, owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read at Monad block 96636315 on 2026-08-16). The predecessor source and current bytecode expose CCIP-admin/IBurnMintERC20 compatibility, but no active TokenPool, remote-token, or lane binding was verified; this remains a native issuance route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Multipli",
@@ -123,9 +139,9 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native rwaUSDi on Arbitrum: same 212-byte proxy and impl 0x2a66bb2da3ad1c854e79307f64b862decd860d4c as Ethereum, owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read 2026-07-20).",
+        "reviewNote": "Native rwaUSDi on Arbitrum: EIP-1967 proxy current implementation slot 0xec9c824543dd3d635c1d71029f385a6eba511dc0, owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read at Arbitrum block 495314430 on 2026-08-16). The predecessor source and current bytecode expose CCIP-admin/IBurnMintERC20 compatibility, but no active TokenPool, remote-token, or lane binding was verified; this remains a native issuance route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Multipli",

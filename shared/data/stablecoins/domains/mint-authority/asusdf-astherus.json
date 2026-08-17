@@ -5,7 +5,7 @@
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "inheritedFrom": "usdf-astherus",
-    "summary": "asUSDF shares mint only after the asUSDFEarn UUPS wrapper receives USDF; the token's sole default admin and the wrapper upgrade authority are a six-hour timelock governed by an Astherus 4-of-8 Safe. Underlying USDF issuance remains inherited from usdf-astherus.",
+    "summary": "asUSDF is a native BSC savings wrapper whose shares mint only after the asUSDFEarn UUPS wrapper receives USDF; the token's mint-role administration and wrapper upgrade authority are native timelock/Safe controls, not bridge machinery. Underlying USDF issuance remains inherited from usdf-astherus, and no cross-chain representation or bridge administrator is identified.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -75,12 +75,6 @@
         "failureDomainKeys": [
           "bsc:0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f"
         ],
-        "routeChecks": {
-          "signingModel": "The sole external proposer, executor, and canceller is Safe 0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f, threshold 4 of 8. The timelock also lists itself as proposer and executor but cannot originate an unscheduled operation.",
-          "rateLimits": "getMinDelay() returned 21,600 seconds. MAX_DELAY is 172,800 seconds, an execution-expiry window rather than an additional mandatory delay.",
-          "caps": "No on-chain maximum asUSDF share supply was found; an added minter or a mint-logic upgrade is unbounded rather than a raiseable capped path.",
-          "pausersAdminsUpgraders": "The timelock holds asUSDF DEFAULT_ADMIN_ROLE, which administers MINTER_AND_BURN_ROLE, and the wrapper implementation restricts _authorizeUpgrade to its immutable TIMELOCK_ADDRESS."
-        },
         "observedAt": "2026-07-15",
         "observedBlock": 110184820,
         "sources": [
@@ -97,7 +91,7 @@
             "url": "https://bscscan.com/block/110184820"
           }
         ],
-        "evidence": "At blocks 110184782 and 110184820, asUSDF recognized this timelock as DEFAULT_ADMIN_ROLE, the wrapper's immutable TIMELOCK_ADDRESS resolved here, getMinDelay() was 21,600 seconds, and the timelock role inventory was Safe 0xa8c0...1c3f plus self for proposer and executor and that Safe alone for canceller. The default admin can grant a minter or change mint logic through the UUPS upgrade path after the delay."
+        "evidence": "At blocks 110184782 and 110184820, asUSDF recognized this timelock as DEFAULT_ADMIN_ROLE, the wrapper's immutable TIMELOCK_ADDRESS resolved here, getMinDelay() was 21,600 seconds, and the timelock role inventory was Safe 0xa8c0...1c3f plus self for proposer and executor and that Safe alone for canceller. The default admin can grant a minter or change mint logic through the UUPS upgrade path after the delay. Native timelock checks preserved from the former routeChecks block: the sole external proposer, executor, and canceller is Safe 0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f, threshold 4 of 8; the timelock also lists itself as proposer and executor but cannot originate an unscheduled operation. getMinDelay() returned 21,600 seconds. MAX_DELAY is 172,800 seconds, an execution-expiry window rather than an additional mandatory delay. No on-chain maximum asUSDF share supply was found; an added minter or a mint-logic upgrade is unbounded rather than a raiseable capped path. The timelock holds asUSDF DEFAULT_ADMIN_ROLE, which administers MINTER_AND_BURN_ROLE, and the wrapper implementation restricts _authorizeUpgrade to its immutable TIMELOCK_ADDRESS."
       },
       {
         "chain": "bsc",
@@ -136,10 +130,6 @@
           "bsc:0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f"
         ],
         "capDescription": "The Safe can schedule timelock operations that grant minters or upgrade the wrapper; no independent on-chain mint cap constrains the upgraded path.",
-        "routeChecks": {
-          "signingModel": "At the observed BSC snapshot, the Safe had eight owners with a four-signature threshold and was the only non-self proposer, executor, and canceller of the timelock.",
-          "pausersAdminsUpgraders": "The Safe also holds asUSDF ADMIN_ROLE, which can pause transfers. It controls mint-role and upgrade changes through the timelock's six-hour delay."
-        },
         "observedAt": "2026-07-15",
         "observedBlock": 110184782,
         "sources": [
@@ -156,16 +146,16 @@
             "url": "https://bscscan.com/block/110184782"
           }
         ],
-        "evidence": "At BSC block 110184782, getOwners() returned the listed eight owners, getThreshold() returned four, getModulesPaginated() returned no modules, and the guard slot was zero. The configured fallback handler is the verified Safe CompatibilityFallbackHandler 1.3.0 at its canonical address; its reviewed source supplies signature, callback, module-enumeration, and reverting simulation helpers rather than an arbitrary Safe transaction executor."
+        "evidence": "At BSC block 110184782, getOwners() returned the listed eight owners, getThreshold() returned four, getModulesPaginated() returned no modules, and the guard slot was zero. The configured fallback handler is the verified Safe CompatibilityFallbackHandler 1.3.0 at its canonical address; its reviewed source supplies signature, callback, module-enumeration, and reverting simulation helpers rather than an arbitrary Safe transaction executor. Native governance checks preserved from the former routeChecks block: at the observed BSC snapshot, the Safe had eight owners with a four-signature threshold and was the only non-self proposer, executor, and canceller of the timelock. The Safe also holds asUSDF ADMIN_ROLE, which can pause transfers. It controls mint-role and upgrade changes through the timelock's six-hour delay."
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At BSC block 110184782 (hash 0x6c69322d76d1b36ffd46305ea6f10ed181953df19fc71101762d43bf7f101155), asUSDF recognized timelock 0xe829...1861 as DEFAULT_ADMIN_ROLE, asUSDFEarn 0xdb57...3695 as MINTER_AND_BURN_ROLE, and Safe 0xa8c0...1c3f as ADMIN_ROLE. The wrapper's EIP-1967 implementation was 0x29f306...1662f and its immutable TIMELOCK_ADDRESS was the same timelock. At block 110184820 (hash 0x1cbfdbaa4bf8113a21bd4ca779bbcea56078f280c90f2431062970fa8560bc95), that timelock's only external proposer, executor, and canceller was the 4-of-8 Safe. BscScan's RoleGranted and RoleRevoked history for the token resolves five grants and two revocations, including revocation of the deployer's default-admin and ADMIN roles; it supports the current role inventory without an untracked minter. The wrapper's verified source requires USDF deposits for ordinary share issuance, while the reviewed timelock route can authorize a new minter or change wrapper mint logic after six hours. The parent USDF issuance path remains represented by inheritedFrom. Economic-posture fields reviewed 2026-08-15: local shares are deposit-gated, while any bypass minter or mint-logic change must pass the enforced six-hour timelock; no local attestor or prudential supervisor is evidenced.",
+      "evidence": "Mint/bridge boundary review completed 2026-08-16: asUSDF has one verified native BSC deployment and no OFT, endpoint, peer, adapter, lockbox, escrow, validator, or other bridge machinery. Its local wrapper and inherited USDF controls remain exclusively in Mint Authority; no synthetic Bridge Risk route is fabricated. At BSC block 110184782 (hash 0x6c69322d76d1b36ffd46305ea6f10ed181953df19fc71101762d43bf7f101155), asUSDF recognized timelock 0xe829...1861 as DEFAULT_ADMIN_ROLE, asUSDFEarn 0xdb57...3695 as MINTER_AND_BURN_ROLE, and Safe 0xa8c0...1c3f as ADMIN_ROLE. The wrapper's EIP-1967 implementation was 0x29f306...1662f and its immutable TIMELOCK_ADDRESS was the same timelock. At block 110184820 (hash 0x1cbfdbaa4bf8113a21bd4ca779bbcea56078f280c90f2431062970fa8560bc95), that timelock's only external proposer, executor, and canceller was the 4-of-8 Safe. BscScan's RoleGranted and RoleRevoked history for the token resolves five grants and two revocations, including revocation of the deployer's default-admin and ADMIN roles; it supports the current role inventory without an untracked minter. The wrapper's verified source requires USDF deposits for ordinary share issuance, while the reviewed timelock route can authorize a new minter or change wrapper mint logic after six hours. The parent USDF issuance path remains represented by inheritedFrom. Economic-posture fields reviewed 2026-08-15: local shares are deposit-gated, while any bypass minter or mint-logic change must pass the enforced six-hour timelock; no local attestor or prudential supervisor is evidenced. The non-enumerable asUSDF AccessControl ABI still leaves a complete current DEFAULT_ADMIN_ROLE inventory unresolved; retain the adverse posture until bounded event or storage evidence resolves it.",
       "reviewer": "Codex Safety Score V9 TERRA-III; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {

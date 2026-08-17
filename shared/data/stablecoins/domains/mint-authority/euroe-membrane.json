@@ -4,19 +4,64 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "EUROe was a Finnish EMI-licensed euro EMT solely issued by Membrane Finance (later Paxos Issuance Europe), now in redemption-only wind-down. MINTER_ROLE and DEFAULT_ADMIN_ROLE are both held by EOAs; no multisig migration occurred despite earlier plans. UUPS proxy with no timelock.",
+    "summary": "EUROe was a Finnish EMI-licensed euro EMT issued by Membrane Finance (later Paxos Issuance Europe), now in redemption-only wind-down. The five EVM deployments and the independent Solana SPL mint are reviewed as native issuance routes. MINTER_ROLE and DEFAULT_ADMIN_ROLE remain EOA-held on the EVM routes, while Solana has a separate non-multisig mint authority; the EVM contracts use UUPS upgrade paths with no timelock.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "polygon:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "avalanche:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "optimism:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "arbitrum:0xcf985aba4647a432e60efceeb8054bbd64244305"
+      ],
+      "proxyAddresses": [
+        "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+        "0xcf985aba4647a432e60efceeb8054bbd64244305"
+      ],
+      "implementationAddresses": [
+        "0x85c427aa5605c242ff693c1e45b8641a9cb8279d",
+        "0x64bf35bbe75445ec5fbfb59517c2d6311503c2d3"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "DEFAULT_ADMIN_ROLE EOA (UUPS upgrade authority)",
+      "observedAt": "2026-08-16",
+      "sources": [
+        {
+          "label": "EUROe Ethereum proxy and implementation",
+          "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+        },
+        {
+          "label": "EUROe Arbitrum proxy and implementation",
+          "url": "https://arbiscan.io/token/0xcf985aba4647a432e60efceeb8054bbd64244305"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Membrane/Paxos MINTER_ROLE EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "polygon:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "avalanche:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "optimism:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "arbitrum:0xcf985aba4647a432e60efceeb8054bbd64244305"
+        ],
+        "capDescription": "No on-chain mint cap was identified in the reviewed implementations; the active MINTER_ROLE can call mint directly on each EVM deployment.",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295054, hasRole(MINTER_ROLE=0x9f2df0fe…, 0x74424510108a8ad9aa6a5b506048948e6a16706b) = true; eth_getCode on that address returned no bytecode (EOA). RoleGranted events scanned from creation block 16432602; no RoleRevoked for this address was found. The minter role was never migrated to a multisig.",
+        "observedAt": "2026-08-16",
+        "evidence": "At Ethereum block 25770838, Polygon block 92144619, Avalanche block 92982043, Optimism block 155661593, and Arbitrum block 495292609 (all 2026-08-16 UTC), hasRole(MINTER_ROLE, 0x74424510108a8ad9aa6a5b506048948e6a16706b) = true and a zero-amount mint simulation from that address succeeds on every EVM deployment. The address has no bytecode on Ethereum, Avalanche, Optimism, and Arbitrum; the Polygon bytecode read timed out during the current screen. The existing Ethereum role-history review found no revoke or migration to a multisig. These are direct native issuance gates, not bridge adapter roles.",
         "sources": [
           {
-            "label": "EUROe Ethereum contract",
+            "label": "EUROe Ethereum proxy",
             "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          },
+          {
+            "label": "EUROe Arbitrum proxy",
+            "url": "https://arbiscan.io/token/0xcf985aba4647a432e60efceeb8054bbd64244305"
           }
         ]
       },
@@ -25,13 +70,52 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "deploymentRefs": [
+          "ethereum:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "polygon:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "avalanche:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "optimism:0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "arbitrum:0xcf985aba4647a432e60efceeb8054bbd64244305"
+        ],
+        "capDescription": "The DEFAULT_ADMIN_ROLE-controlled UUPS upgrade path can replace mint-critical logic and raise or remove any contract-level issuance bound; no timelock was observed.",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25295054, hasRole(DEFAULT_ADMIN_ROLE=0x00…, 0xd5731b8c97b61cdede6c612ec963b3f86af0c3f7) = true; eth_getCode returned no bytecode (EOA). The UUPS proxy has no separate proxy-admin slot (empty). PROXYOWNER_ROLE was self-assigned to the proxy contract at creation (pattern for UUPS self-administration). No multisig migration occurred.",
+        "observedAt": "2026-08-16",
+        "evidence": "At Ethereum block 25770838, Polygon block 92144619, Avalanche block 92982043, Optimism block 155661593, and Arbitrum block 495292609 (all 2026-08-16 UTC), hasRole(DEFAULT_ADMIN_ROLE, 0xd5731b8c97b61cdede6c612ec963b3f86af0c3f7) = true on all five EVM deployments. The common EVM implementation is 0x85c427aa5605c242ff693c1e45b8641a9cb8279d on Ethereum, Polygon, Avalanche, and Optimism; Arbitrum uses 0x64bf35bbe75445ec5fbfb59517c2d6311503c2d3. Each EIP-1967 admin slot is zero, consistent with UUPS self-administration, and no timelock or multisig migration was observed.",
         "sources": [
           {
-            "label": "EUROe Ethereum contract",
+            "label": "EUROe Ethereum proxy",
             "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          },
+          {
+            "label": "EUROe Arbitrum proxy",
+            "url": "https://arbiscan.io/token/0xcf985aba4647a432e60efceeb8054bbd64244305"
+          }
+        ]
+      },
+      {
+        "chain": "solana",
+        "address": "8ykETiDvCFHrrPP1X8McwChWFVDHbhz2cJpVEVY5GNAC",
+        "label": "EUROe Solana mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439734038,
+        "evidence": "At finalized Solana slot 439734038 (2026-08-16T23:09:50Z), the EUROe SPL mint 2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg is initialized with 6 decimals, mint authority 8ykETiDvCFHrrPP1X8McwChWFVDHbhz2cJpVEVY5GNAC, and freeze authority 8FyB12RHpTsTMbY7uNrU7SeDXmUpWik8HE1ZSFqzMaQd. Both authority accounts are System Program-owned, non-executable accounts. No SPL multisig threshold, on-chain cap, or timelock was verified; this is a separate native authority and is not inferred from the EVM EOA.",
+        "sources": [
+          {
+            "label": "EUROe Solana mint on Solscan",
+            "url": "https://solscan.io/token/2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg"
+          },
+          {
+            "label": "Solana finalized JSON-RPC observation",
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ]
       }
@@ -40,9 +124,9 @@
     "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
-      "evidence": "Verified at Ethereum block 25295054. UUPS proxy at 0x820802fa8a99901f52e39acd21177b0be6ee2974; impl 0x85c427aa5605c242ff693c1e45b8641a9cb8279d (EUROe contract, verified). MINTER_ROLE active holder: EOA 0x74424510 (hasRole confirmed, no revoke). DEFAULT_ADMIN_ROLE: EOA 0xd5731b8c (hasRole confirmed). No multisig migration ever occurred despite earlier plans; both key roles remain EOA-held. Token is in redemption-only wind-down; total supply 20510 EUROe as of block 25295054, no minting events in last 50k blocks. Economic-posture fields reviewed 2026-08-15: EOA mint and UUPS-admin paths are unbounded, FIN-FSA EMI authorization is prudential supervision, and the redemption notice provides no recurring whole-supply reconciliation.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Reviewed at the current observations on 2026-08-16 UTC: Ethereum block 25770838, Polygon block 92144619, Avalanche block 92982043, Optimism block 155661593, and Arbitrum block 495292609. The same issuer EOA 0x74424510108a8ad9aa6a5b506048948e6a16706b has active MINTER_ROLE on all five EVM deployments and zero-amount mint simulations succeed; DEFAULT_ADMIN_ROLE remains held by EOA 0xd5731b8c97b61cdede6c612ec963b3f86af0c3f7. The common implementation is 0x85c427aa5605c242ff693c1e45b8641a9cb8279d on Ethereum, Polygon, Avalanche, and Optimism, while Arbitrum uses 0x64bf35bbe75445ec5fbfb59517c2d6311503c2d3; EIP-1967 admin slots are zero and no UUPS timelock was observed. At finalized Solana slot 439734038 (2026-08-16T23:09:50Z), the independent SPL mint retains mint authority 8ykETiDvCFHrrPP1X8McwChWFVDHbhz2cJpVEVY5GNAC and freeze authority 8FyB12RHpTsTMbY7uNrU7SeDXmUpWik8HE1ZSFqzMaQd, with no verified multisig, cap, or timelock. Paxos redemption-only status does not revoke these on-chain capabilities. The native issuer-direct paths remain concentrated-admin, contract-level issuance remains unbounded, FIN-FSA EMI authorization is prudential supervision, and no recurring whole-supply reconciliation was verified. The historical issuer statement about bridging is recorded under Bridge Risk; no catalogued deployment is classified as a bridge representation.",
+      "reviewer": "Codex mint-bridge boundary migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "EUROe Access & Admin Controls (developer portal)",
@@ -51,6 +135,18 @@
         {
           "label": "EUROe Ethereum contract",
           "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+        },
+        {
+          "label": "EUROe Arbitrum contract",
+          "url": "https://arbiscan.io/token/0xcf985aba4647a432e60efceeb8054bbd64244305"
+        },
+        {
+          "label": "Paxos EUROe redemption notice",
+          "url": "https://www.paxos.com/euroe-redemptions"
+        },
+        {
+          "label": "EUROe Solana mint",
+          "url": "https://solscan.io/token/2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg"
         }
       ]
     }

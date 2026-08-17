@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Gold Token SA issues DGLD natively on Ethereum and Base; per-chain token proxies are administered by the issuer's own EOAs (mint-authority review 2026-07-16). No third-party bridge carries the representation.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex static metadata correction review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "summary": "Gold Token SA issues DGLD natively on Ethereum and Base; per-chain token proxies are administered by separate issuer EOAs. No current third-party bridge carries either representation. On February 23, 2026, the former Ethereum-Base bridge allowed phantom deposits and unauthorized unbacked minting on Base; the path was frozen, legacy Base balances were migrated one-for-one, the old Base contract was deprecated, the bridge was closed on June 30, 2026, and the replacement Base token was independently allocated gold-backed. Gold Token SA completed the legacy Base balance reset on July 15, 2026. This retired-bridge incident remains adverse historical Bridge Risk evidence and does not describe current native issuance.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration review",
     "confidence": "verified",
     "sources": [
       {

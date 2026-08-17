@@ -7,6 +7,10 @@
     "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum and BSC both have the same EOA owner and same proxy-admin contract whose owner is also a confirmed EOA.",
     "controls": [
       {
+        "deploymentRefs": [
+          "bsc:0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+          "ethereum:0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+        ],
         "label": "Banking Circle issuer-operated mint authority",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -28,6 +32,9 @@
       {
         "chain": "ethereum",
         "address": "0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D",
+        "deploymentRefs": [
+          "ethereum:0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+        ],
         "label": "EURI token owner (Ethereum and BSC)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -45,6 +52,9 @@
       {
         "chain": "ethereum",
         "address": "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC",
+        "deploymentRefs": [
+          "ethereum:0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+        ],
         "label": "EURI EIP-1967 proxy admin (Ethereum and BSC)",
         "role": "proxy-admin",
         "authorityType": "contract",
@@ -91,6 +101,10 @@
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "bsc:0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "ethereum:0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+      ],
       "adminAddresses": [
         "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC"
       ],

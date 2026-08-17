@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Within the current runtime-selected material snapshot, USDat is an issuer-native M0 extension on Ethereum and a Chainlink CCIP burn/mint representation on Monad. Pinned Monad reads identify the sole MINTER_ROLE holder as a CCIP BurnMintTokenPool whose configured Ethereum remote token is the canonical USDat deployment; deployments not selected by this snapshot are outside this binding pass.",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "summary": "USDat has one native issuance route on Ethereum through the M0-backed extension and two Chainlink CCIP burn/mint representations on Monad and BNB. Ethereum's LockReleaseTokenPool is the canonical-side escrow/egress rail, while the Monad and BNB pools mint and burn the destination representations under configured CCIP peers; representation token upgrades and token-level roles remain Bridge Risk failure domains.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex RELOC-12 usdat-saturn migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -34,6 +34,7 @@
         "slug": "chainlink-ccip",
         "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools",
         "bridgeTypes": [
+          "lockRelease",
           "burnAndMint"
         ]
       }
@@ -69,10 +70,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Ethereum block 25573173 on 2026-07-20, name() = USDat, symbol() = USDat, decimals() = 6, mToken() = Ethereum M 0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b, and swapFacility() = 0xB6807116b3B1B321a390594e31ECD6e0076f6278. This is a locally issued M0 extension wrapped and unwrapped through the Ethereum SwapFacility, not a cross-chain bridge representation.",
+        "reviewNote": "At Ethereum block 25573173 on 2026-07-20, name() = USDat, symbol() = USDat, decimals() = 6, mToken() = Ethereum M 0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b, and swapFacility() = 0xB6807116b3B1B321a390594e31ECD6e0076f6278. This is a locally issued M0 extension wrapped and unwrapped through the Ethereum SwapFacility, not a cross-chain bridge representation. At Ethereum block 25771036 on 2026-08-16, canonical-side CCIP pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86 reported LockReleaseTokenPool 1.6.1, owner RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449, rate-limit admin 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c, and peers to the BNB and Monad pools. The pool is bridge escrow/egress machinery, not native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573173,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771036,
         "sources": [
           {
             "label": "Saturn USDat overview",
@@ -85,6 +86,14 @@
           {
             "label": "USDat contract on Etherscan",
             "url": "https://etherscan.io/address/0x23238f20b894f29041f48d88ee91131c395aaa71"
+          },
+          {
+            "label": "Ethereum canonical CCIP pool",
+            "url": "https://etherscan.io/address/0xa0de671eb84de9dee1d311d996d25c41f63a0d86"
+          },
+          {
+            "label": "Ethereum public RPC",
+            "url": "https://ethereum.publicnode.com/"
           }
         ]
       },
@@ -94,14 +103,14 @@
         "destinationChain": "monad",
         "canonicalChain": "ethereum",
         "contractAddress": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
-        "protocol": "Chainlink CCIP BurnMintTokenPool",
+        "protocol": "Chainlink CCIP BurnFromMintTokenPool",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Monad block 89485023, name(), symbol(), and decimals() identify this 6-decimal USDat deployment; its EIP-1967 implementation is the Sourcify exact-match SaturnOFT contract at 0x79eda68d227eaa4b6431b123aa89f31f4bc70e5d. MINTER_ROLE enumeration returns only 0x8ab40e2dabcd24dcff0a06a68eb59990405270f0. That controller exposes the Chainlink CCIP BurnMintTokenPool interface, getRouter() = 0x33566fe5976aaa420f3d5c64996641fc3858cadb, and its Ethereum remote-token configuration resolves to canonical USDat 0x23238f20b894f29041f48d88ee91131c395aaa71. The token default admin is a timelock with minDelay() = 172800 seconds.",
+        "reviewNote": "At Monad block 96624455, the 6-decimal SaturnOFT USDat deployment resolves to implementation 0x79eda68d227eaa4b6431b123aa89f31f4bc70e5d. MINTER_ROLE and BURNER_ROLE are held only by 0x8ab40e2dabcd24dcff0a06a68eb59990405270f0. That pool exposes BurnFromMintTokenPool 1.6.1, getRouter() = 0x33566fe5976aaa420f3d5c64996641fc3858cadb, and its Ethereum remote-token configuration resolves to canonical USDat 0x23238f20b894f29041f48d88ee91131c395aaa71. The token default admin is a SaturnTimelock with minDelay() = 172800 seconds. The live BNB peer for selector 11344663589394136015 is representation USDat through pool 0x904939a965edc2efbd44fd4db223f07680510c61; the Ethereum selector 5009297550715157269 points to the canonical token and Ethereum pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "monad",
         "controllerAddress": "0x8ab40e2dabcd24dcff0a06a68eb59990405270f0",
@@ -109,8 +118,8 @@
           "protocol:chainlink-ccip",
           "contract:monad:0x8ab40e2dabcd24dcff0a06a68eb59990405270f0"
         ],
-        "observedAt": "2026-07-22",
-        "observedBlock": 89485023,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96624455,
         "sources": [
           {
             "label": "USDat on Monadscan",
@@ -127,8 +136,298 @@
           {
             "label": "Monad public RPC",
             "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "BNB CCIP pool peer",
+            "url": "https://bscscan.com/address/0x904939a965edc2efbd44fd4db223f07680510c61"
           }
         ]
+      },
+      {
+        "id": "bsc:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+        "protocol": "Chainlink CCIP BurnFromMintTokenPool",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At BNB block 116363343, the SaturnOFT USDat deployment resolves to implementation 0x65458213bb2398f968ca1760b806956966b9adac. MINTER_ROLE and BURNER_ROLE are held only by BNB CCIP pool 0x904939a965edc2efbd44fd4db223f07680510c61. The pool exposes BurnFromMintTokenPool 1.6.1, getRouter() = 0x34B03Cb9086d7D758AC55af71584F81A598759FE, owner RBACTimelock 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 with 10800-second delay, and rate-limit admin 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c. Its Ethereum remote token is canonical USDat 0x23238f20b894f29041f48d88ee91131c395aaa71 through pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86. This is a CCIP burn/mint representation, not a second native issuance route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x904939a965edc2efbd44fd4db223f07680510c61",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x904939a965edc2efbd44fd4db223f07680510c61"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363343,
+        "sources": [
+          {
+            "label": "BNB USDat proxy/token",
+            "url": "https://bscscan.com/address/0x0Bb150DFa86EA5d7742F07FEfCD8E8edA81D64eF"
+          },
+          {
+            "label": "BNB CCIP pool",
+            "url": "https://bscscan.com/address/0x904939a965edc2efbd44fd4db223f07680510c61"
+          },
+          {
+            "label": "Chainlink CCIP EVM token-pool documentation",
+            "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+          },
+          {
+            "label": "BNB public RPC",
+            "url": "https://bsc.publicnode.com/"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdat-ethereum-ccip-lock-release-pool",
+        "label": "USDat Ethereum CCIP LockReleaseTokenPool",
+        "routeRefs": [
+          "ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"
+        ],
+        "capabilities": [
+          "escrow",
+          "peer-config",
+          "rate-limit",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x44835bbba9d40deda9b64858095ecfb2693c9449",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0xa0de671eb84de9dee1d311d996d25c41f63a0d86",
+          "timelock:ethereum:0x44835bbba9d40deda9b64858095ecfb2693c9449",
+          "rate-limit-admin:ethereum:0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 10800,
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25771036, pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86 returned getToken() = canonical USDat and typeAndVersion() = LockReleaseTokenPool 1.6.1. It is the canonical-side CCIP escrow and release/egress rail; it does not create an independent native USDat liability.",
+          "trustedPeerOrRemote": "At the observed block, the pool peer for selector 11344663589394136015 was BNB pool 0x904939a965edc2efbd44fd4db223f07680510c61 and the peer for selector 8481857512324358265 was Monad pool 0x8ab40e2dabcd24dcff0a06a68eb59990405270f0. Both remote tokens were the USDat representation 0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef.",
+          "rateLimits": "getRateLimitAdmin() returned SaturnTimelock 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c. The rate-limit administrator is a separate bridge capacity-control domain; exact current aggregate and per-lane limits were not enumerated in the reviewed read.",
+          "pausersAdminsUpgraders": "owner() returned RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449 with getMinDelay() = 10800 seconds. The pool owner administers the canonical-side CCIP rail; no pool proxy upgrade authority was separately evidenced."
+        },
+        "capDescription": "The Ethereum LockRelease pool escrows or releases canonical USDat for CCIP transfer routes. Its bridge conservation depends on configured peers, message validation, and route limits; this pool is not native Mint Authority.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771036,
+        "sources": [
+          {
+            "label": "Ethereum canonical CCIP pool",
+            "url": "https://etherscan.io/address/0xa0de671eb84de9dee1d311d996d25c41f63a0d86"
+          },
+          {
+            "label": "Chainlink CCIP EVM token-pool documentation",
+            "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+          },
+          {
+            "label": "Ethereum public RPC",
+            "url": "https://ethereum.publicnode.com/"
+          }
+        ],
+        "evidence": "At Ethereum block 25771036 (2026-08-16), the canonical USDat CCIP pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86 returned LockReleaseTokenPool 1.6.1, owner RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449 with an 10800-second delay, rate-limit admin 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c, and live peers for BNB and Monad pools. This is canonical-side bridge escrow and administration, not independent USDat issuance."
+      },
+      {
+        "id": "usdat-monad-ccip-burn-mint-pool",
+        "label": "USDat Monad CCIP BurnFromMintTokenPool",
+        "routeRefs": [
+          "monad:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config",
+          "rate-limit",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x8ab40e2dabcd24dcff0a06a68eb59990405270f0",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0x8ab40e2dabcd24dcff0a06a68eb59990405270f0"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 10800,
+        "routeChecks": {
+          "onchainAmountBounds": "BurnFromMintTokenPool burns the source-side route and mints the Monad representation only through the configured CCIP path. Aggregate supply is conserved only while the CCIP peers and token roles remain intact; this is bridge accounting, not native USDat issuance.",
+          "trustedPeerOrRemote": "At Monad block 96624455, Ethereum selector 5009297550715157269 resolved to canonical USDat 0x23238f20b894f29041f48d88ee91131c395aaa71 and Ethereum pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86. BNB selector 11344663589394136015 resolved to local representation USDat and BNB pool 0x904939a965edc2efbd44fd4db223f07680510c61.",
+          "rateLimits": "getRateLimitAdmin() returned 0xd691b6da5b61b4106b3355295b94a4a4b66cbc8d. The rate-limit administrator can change the route ceiling; exact current aggregate and per-lane limits were not enumerated in the reviewed read.",
+          "pausersAdminsUpgraders": "owner() returned RBACTimelock 0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2 with a 10800-second delay. At the observed block, the local pool was the sole MINTER_ROLE and BURNER_ROLE holder on the Monad representation; token default-admin and proxy replacement powers are separately recorded in the shared representation-token control."
+        },
+        "capDescription": "The Monad CCIP pool can mint and burn the Monad USDat representation as a configured transfer rail. Its route-level conservation depends on CCIP peers, limits, and the pool-held token roles; it is not a second native issuance path.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96624455,
+        "sources": [
+          {
+            "label": "Monad USDat proxy",
+            "url": "https://monadscan.com/address/0x0Bb150DFa86EA5d7742F07FEfCD8E8edA81D64eF"
+          },
+          {
+            "label": "Monad CCIP pool",
+            "url": "https://monadscan.com/address/0x8ab40e2dabcd24dcff0a06a68eb59990405270f0"
+          },
+          {
+            "label": "Sourcify exact-match SaturnOFT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/143/0x79EdA68D227eaA4B6431B123aa89f31F4bC70e5d?fields=all"
+          },
+          {
+            "label": "Chainlink CCIP EVM token-pool documentation",
+            "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 96624455 (2026-08-16), pool 0x8ab40e2dabcd24dcff0a06a68eb59990405270f0 returned BurnFromMintTokenPool 1.6.1, owner RBACTimelock 0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2 with an 10800-second delay, router 0x33566fe5976aaa420f3d5c64996641fc3858cadb, and rate-limit admin 0xd691b6da5b61b4106b3355295b94a4a4b66cbc8d. The local SaturnOFT held MINTER_ROLE and BURNER_ROLE only for this pool, so the capability is route-scoped CCIP burn/mint."
+      },
+      {
+        "id": "usdat-bnb-ccip-burn-mint-pool",
+        "label": "USDat BNB CCIP BurnFromMintTokenPool",
+        "routeRefs": [
+          "bsc:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config",
+          "rate-limit",
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x904939a965edc2efbd44fd4db223f07680510c61",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x904939a965edc2efbd44fd4db223f07680510c61"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 10800,
+        "routeChecks": {
+          "onchainAmountBounds": "BurnFromMintTokenPool burns the source-side route and mints the BNB representation only through the configured CCIP path. Aggregate supply is conserved only while the CCIP peers and token roles remain intact; this is bridge accounting, not native USDat issuance.",
+          "trustedPeerOrRemote": "At BNB block 116363343, the Ethereum selector 5009297550715157269 resolved to canonical USDat 0x23238f20b894f29041f48d88ee91131c395aaa71 and Ethereum pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86. The BNB pool's local representation is the reciprocal route to the Monad pool for selector 11344663589394136015.",
+          "rateLimits": "getRateLimitAdmin() returned SaturnTimelock 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c. The rate-limit administrator can change the route ceiling; exact current aggregate and per-lane limits were not enumerated in the reviewed read.",
+          "pausersAdminsUpgraders": "owner() returned RBACTimelock 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 with a 10800-second delay. At the observed block, the local pool was the sole MINTER_ROLE and BURNER_ROLE holder on the BNB representation; token default-admin and proxy replacement powers are separately recorded in the shared representation-token control."
+        },
+        "capDescription": "The BNB CCIP pool can mint and burn the BNB USDat representation as a configured transfer rail. Its route-level conservation depends on CCIP peers, limits, and the pool-held token roles; it is not a second native issuance path.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116363343,
+        "sources": [
+          {
+            "label": "BNB USDat proxy/token",
+            "url": "https://bscscan.com/address/0x0Bb150DFa86EA5d7742F07FEfCD8E8edA81D64eF"
+          },
+          {
+            "label": "BNB CCIP pool",
+            "url": "https://bscscan.com/address/0x904939a965edc2efbd44fd4db223f07680510c61"
+          },
+          {
+            "label": "Chainlink CCIP EVM token-pool documentation",
+            "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+          },
+          {
+            "label": "BNB public RPC",
+            "url": "https://bsc.publicnode.com/"
+          }
+        ],
+        "evidence": "At BNB block 116363343 (2026-08-16), pool 0x904939a965edc2efbd44fd4db223f07680510c61 returned BurnFromMintTokenPool 1.6.1, owner RBACTimelock 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 with an 10800-second delay, router 0x34B03Cb9086d7D758AC55af71584F81A598759FE, and rate-limit admin 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c. The local SaturnOFT held MINTER_ROLE and BURNER_ROLE only for this pool, so the capability is route-scoped CCIP burn/mint."
+      },
+      {
+        "id": "usdat-representation-token-proxy-admin",
+        "label": "USDat Monad and BNB representation token ProxyAdmin",
+        "routeRefs": [
+          "monad:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+          "bsc:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xcb8384df068b55228a66ea6efab4a10fcbfa42a2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "proxy-admin:monad:0xcb8384df068b55228a66ea6efab4a10fcbfa42a2",
+          "proxy-admin:bsc:0xcb8384df068b55228a66ea6efab4a10fcbfa42a2",
+          "timelock:monad:0xf0237a1cb794ea830129966049ef99243082ff0c",
+          "timelock:bsc:0xf0237a1cb794ea830129966049ef99243082ff0c"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Monad and BNB representation proxies share ProxyAdmin 0xcb8384df068b55228a66ea6efab4a10fcbfa42a2, whose owner is SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c with a 172800-second delay. That timelock is also each representation token's defaultAdmin and can replace representation token logic or token-level admin/role configuration; these are bridge failure domains, not native USDat mint authority.",
+          "onchainAmountBounds": "At Monad block 96624455 and BNB block 116363343, the local CCIP pool was the sole MINTER_ROLE and BURNER_ROLE holder on each representation token, and isPaused() was false. Replacing the representation token or its roles can change the route's supply-conservation assumptions."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 96624455,
+        "sources": [
+          {
+            "label": "Monad USDat proxy",
+            "url": "https://monadscan.com/address/0x0Bb150DFa86EA5d7742F07FEfCD8E8edA81D64eF"
+          },
+          {
+            "label": "BNB USDat proxy/token",
+            "url": "https://bscscan.com/address/0x0Bb150DFa86EA5d7742F07FEfCD8E8edA81D64eF"
+          },
+          {
+            "label": "Sourcify exact-match SaturnOFT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/143/0x79EdA68D227eaA4B6431B123aa89f31F4bC70e5d?fields=all"
+          },
+          {
+            "label": "Chainlink CCIP EVM token-pool documentation",
+            "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+          }
+        ],
+        "evidence": "The Monad and BNB representation proxies share ProxyAdmin 0xcb8384df068b55228a66ea6efab4a10fcbfa42a2, owned by SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c with a two-day delay. At Monad block 96624455 and BNB block 116363343, the corresponding local CCIP pool held the only MINTER_ROLE and BURNER_ROLE, while the shared timelock was the token defaultAdmin. The common upgrade/admin domain can replace representation logic or token roles and remains scored under Bridge Risk."
+      },
+      {
+        "id": "usdat-ccip-rmn-validation",
+        "label": "USDat Chainlink CCIP lane and RMN validation domain",
+        "routeRefs": [
+          "ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71",
+          "monad:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+          "bsc:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "protocol:chainlink-ccip-rmn"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "Chainlink CCIP's lane and Risk Management Network validate cross-chain token-pool messages for the Ethereum, Monad, and BNB route. The exact current lane-specific RMN/validator membership, quorum, and emergency override roster were not independently replayed in the reviewed fixed-block reads.",
+          "trustedPeerOrRemote": "The reviewed pool reads establish the exact Ethereum, Monad, and BNB peer mappings; this control retains the protocol-level message-validation dependency separately from the pool owners and peer administrators."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Chainlink CCIP EVM token-pool documentation",
+            "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+          },
+          {
+            "label": "Ethereum canonical CCIP pool",
+            "url": "https://etherscan.io/address/0xa0de671eb84de9dee1d311d996d25c41f63a0d86"
+          },
+          {
+            "label": "Monad CCIP pool",
+            "url": "https://monadscan.com/address/0x8ab40e2dabcd24dcff0a06a68eb59990405270f0"
+          },
+          {
+            "label": "BNB CCIP pool",
+            "url": "https://bscscan.com/address/0x904939a965edc2efbd44fd4db223f07680510c61"
+          }
+        ],
+        "evidence": "The Chainlink CCIP documentation identifies the CCIP lane/RMN message-validation layer used by the reviewed LockRelease and BurnFromMintTokenPool routes. Fixed-block reads at Ethereum 25771036, Monad 96624455, and BNB 116363343 establish the live pool peers and token routes, but do not independently enumerate the lane-specific RMN/validator roster; that evidence gap is retained here rather than treated as a native mint control."
       }
     ]
   }

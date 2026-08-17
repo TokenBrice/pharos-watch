@@ -2,33 +2,47 @@
   "id": "usdsc-startale",
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDSC is an M0-backed extension on Soneium; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
+    "summary": "USDSC's canonical Mint Authority is the live Ethereum M0 hub-side wrapper: M0 MinterGateway creates the backing M, Ethereum SwapFacility transfers that M into the USDSC extension, and the extension mints USDSC 1:1. The Soneium wrapper and its representation/bridge machinery are assessed separately under Bridge Risk. The current M-backed path is continuously reconciled and raiseable through M0 governance, but the canonical Ethereum SwapFacility has an immediate EOA-controlled mint-logic upgrade path.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+      ],
       "proxyAddresses": [
+        "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
         "0xB6807116b3B1B321a390594e31ECD6e0076f6278"
       ],
       "implementationAddresses": [
-        "0xc435b33c017da7ef313bf2d3132c99c7673a194b"
+        "0x090de327f3EA32C7215AfDC7CdD77d864d7c3db2",
+        "0x45bf08d042a8958f01f8e8319b791e4584550da8"
       ],
       "adminAddresses": [
+        "0xf626479c7b1d8a66149a183b4fA15710EDb717b8",
         "0x0f38d8a5583f9316084e9c40737244870c565924"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "M0 SwapFacility extension router",
-      "observedAt": "2026-06-11",
-      "observedBlock": 24028800,
+      "controlRef": "Ethereum SwapFacility ProxyAdmin owner EOA",
+      "observedAt": "2026-08-16",
+      "observedBlock": 25771218,
       "sources": [
         {
-          "label": "M0 deployments",
-          "url": "https://docs.m0.org/get-started/resources/addresses/"
+          "label": "Ethereum USDSC proxy on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
         },
         {
-          "label": "M0 SwapFacility docs",
-          "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+          "label": "Ethereum USDSC implementation on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x090de327f3ea32c7215afdc7cdd77d864d7c3db2"
+        },
+        {
+          "label": "Ethereum SwapFacility on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+        },
+        {
+          "label": "M0 extension architecture",
+          "url": "https://docs.m0.org/protocol/extensions"
         }
       ]
     },
@@ -36,31 +50,24 @@
       {
         "chain": "ethereum",
         "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "deploymentRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
         "controllerAssetId": "m-m0",
         "label": "M0 MinterGateway backing rail",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "Base M issuance backing USDSC depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
-        "routeChecks": {
-          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
-          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
-          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
-          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
-        },
+        "capDescription": "Base M issuance backing USDSC depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks. Per-Minter capacity can be changed by M0 TTG governance, so the bound is protocol-governed rather than immutable.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
           },
           {
-            "label": "M0 protocol docs",
-            "url": "https://docs.m0.org/protocol/minting-burning"
-          },
-          {
-            "label": "M0 minter gateway docs",
+            "label": "M0 protocol minting docs",
             "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
@@ -68,35 +75,150 @@
             "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders)."
+        "evidence": "At Ethereum block 25295161, Blockscout confirms ContractName=MinterGateway and IsProxy=false; EIP-1967 admin and implementation slots are zero. M0 validator attestations, approved-minter status, collateral/debt checks, and mint-delay review bound ordinary M issuance, while M0 TTG and Registrar governance can raise per-Minter capacity. This is the canonical backing rail, not bridge administration."
       },
       {
-        "chain": "soneium",
-        "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
-        "label": "M0 SwapFacility extension router",
+        "chain": "ethereum",
+        "address": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "deploymentRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "label": "Ethereum USDSC M-backed wrapper",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
-        "routeChecks": {
-          "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
-          "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply.",
-          "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
-          "pausersAdminsUpgraders": "Soneium SwapFacility proxy owner is reviewed as a 2-of-3 EOA multisig; MinterGateway base supply remains under M0 governance."
-        },
+        "capDescription": "The verified Ethereum MExtension mints USDSC only after its immutable SwapFacility transfers the matching amount of M; unwrap burns USDSC and returns M to SwapFacility. The 1:1 local wrapper does not independently create base M supply.",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771196,
+        "failureDomainKeys": [
+          "contract:ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
         "sources": [
           {
-            "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "label": "Ethereum USDSC proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+          },
+          {
+            "label": "Startale USDSC extension source",
+            "url": "https://github.com/StartaleGroup/usdsc-extension"
+          },
+          {
+            "label": "M0 extension architecture",
+            "url": "https://docs.m0.org/protocol/extensions"
+          }
+        ],
+        "evidence": "At Ethereum block 25771196, the verified USDSC proxy resolved to implementation 0x090de327f3ea32c7215afdc7cdd77d864d7c3db2, mToken() returned 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, and swapFacility() returned 0xb6807116b3b1b321a390594e31ecd6e0076f6278. The verified MExtension wrap path is callable only by SwapFacility, transfers M into the extension, and then mints USDSC 1:1; unwrap burns the extension balance and transfers M back. Total supply was 5.051550 USDSC at the observation block."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3c27038d9906caa5d68355b1800625eacacd93da",
+        "deploymentRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "label": "Ethereum USDSC ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x98627380e05fdac375e1e9a004a9bb95ccc48d29",
+            "0x45f191a82707954f8aecff98f7068c83baecd72c",
+            "0x9798deb1164a2a6797c8e1994222f9daf975ed04",
+            "0xf3a8cbf63b115a56681cce4740005b4bcd5520d7",
+            "0x15bf9a283e5f490f6be645e4d86c9597a33d9d33"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "observedBlock": 25771196,
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771196,
+        "failureDomainKeys": [
+          "safe:ethereum:0x3c27038d9906caa5d68355b1800625eacacd93da"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum USDSC proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+          },
+          {
+            "label": "Ethereum USDSC ProxyAdmin",
+            "url": "https://eth.blockscout.com/address/0xf626479c7b1d8a66149a183b4fa15710edb717b8"
+          }
+        ],
+        "evidence": "At Ethereum block 25771196, the USDSC EIP-1967 admin slot resolved to ProxyAdmin 0xf626479c7b1d8a66149a183b4fa15710edb717b8 and owner() returned Safe 0x3c27038d9906caa5d68355b1800625eacacd93da. The Safe was observed as 3-of-5 with the listed owners, no enabled modules, and a zero guard; it can replace canonical Ethereum USDSC mint-critical logic without an observed timelock."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "deploymentRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "label": "Ethereum SwapFacility extension router",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Ethereum SwapFacility transfers approved M0 extensions 1:1 against M; it can route extension balances through wrap flows but does not create base M supply. Its capacity follows M supply and M0 governance.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771218,
+        "failureDomainKeys": [
+          "contract:ethereum:0xb6807116b3b1b321a390594e31ecd6e0076f6278"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum SwapFacility on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
+            "url": "https://docs.m0.org/protocol/extensions"
           }
         ],
-        "evidence": "At Soneium block 24028800: SwapFacility at 0xB6807116b3B1B321a390594e31ECD6e0076f6278 confirmed TransparentUpgradeableProxy (code=3060 bytes, impl=0xc435b33c017da7ef313bf2d3132c99c7673a194b). EIP-1967 admin slot=0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin). ProxyAdmin owner=0xdcf79C332cB3Fe9d39A830a5f8de7cE6b1BD6fD1, a 2/3 EOA multisig with 3 EOA owners (verified eth_getCode=0x for all three), no modules (getModules() empty), guard=0x0. ProxyAdmin code confirmed present (2724 bytes). No upgrade path accessible without 2/3 Safe signers."
+        "evidence": "At Ethereum block 25771218, SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278 used implementation 0x45bf08d042a8958f01f8e8319b791e4584550da8 with ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. The facility approved the USDSC extension and reported paused() = false; isMSwapper(0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd) was true. The wrapper's 1:1 M-backed flow is native Ethereum issuance, while the portal transfer rail is reviewed separately under Bridge Risk."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8c645e201dd944677864479357f8255ea943b18b",
+        "deploymentRefs": [
+          "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        ],
+        "label": "Ethereum SwapFacility ProxyAdmin owner EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771218,
+        "failureDomainKeys": [
+          "proxy-admin:ethereum:0x0f38d8a5583f9316084e9c40737244870c565924",
+          "eoa:ethereum:0x8c645e201dd944677864479357f8255ea943b18b"
+        ],
+        "bypassSurfaces": [
+          "ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 is owned directly by this code-free EOA; no observed timelock or multisig wrapper delays canonical SwapFacility mint-logic upgrades."
+        ],
+        "sources": [
+          {
+            "label": "Ethereum SwapFacility on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+          },
+          {
+            "label": "Ethereum SwapFacility ProxyAdmin",
+            "url": "https://eth.blockscout.com/address/0x0f38d8a5583f9316084e9c40737244870c565924"
+          }
+        ],
+        "evidence": "At Ethereum block 25771218, the SwapFacility proxy admin slot returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, owner() returned 0x8c645e201dd944677864479357f8255ea943b18b, and eth_getCode for the owner was empty. No timelock or multisig wrapper was observed, so this EOA can immediately replace canonical SwapFacility mint-critical logic."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -105,21 +227,34 @@
     "review": {
       "sources": [
         {
-          "label": "M0 protocol docs",
-          "url": "https://docs.m0.org/protocol/minting-burning"
+          "label": "M0 platform deployments",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
         },
         {
-          "label": "M0 minter gateway docs",
-          "url": "https://docs.m0.org/protocol/minting-burning"
+          "label": "M0 Portal V2 developer guide",
+          "url": "https://docs.m0.org/build/bridging-developer"
         },
         {
-          "label": "MinterGateway on Blockscout",
-          "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+          "label": "M0 extension architecture",
+          "url": "https://docs.m0.org/protocol/extensions"
+        },
+        {
+          "label": "Ethereum USDSC proxy/source",
+          "url": "https://eth.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+        },
+        {
+          "label": "Startale USDSC extension source",
+          "url": "https://github.com/StartaleGroup/usdsc-extension"
+        },
+        {
+          "label": "Ethereum SwapFacility",
+          "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false). At Soneium block 24028800: SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5...; ProxyAdmin owner=2/3 EOA multisig 0xdcf79c... (3 EOA owners, no modules, no guard). All controls fully characterized. Economic-posture fields reviewed 2026-08-15: independent M0 governance can raise base capacity, the 1:1 M extension and real-time validator attestations cover issuance, and no prudential supervisor is evidenced.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Canonical Mint Authority is scoped to Ethereum: M0 MinterGateway supplies the backing M, the Ethereum SwapFacility transfers M into the approved USDSC extension, and verified MExtension logic mints USDSC only after that transfer and burns it on unwrap. At Ethereum block 25771196, USDSC supply was 5.051550 USDSC and the live wrapper was bound to M 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b and SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278. At block 25771218, the canonical SwapFacility implementation was 0x45bf08d042a8958f01f8e8319b791e4584550da8 behind ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, whose owner is the code-free EOA 0x8c645e201dd944677864479357f8255ea943b18b with no observed delay or multisig. The current economic path remains M-backed, continuously reconciled, and raiseable through M0 governance; the immediate EOA upgrade path is therefore reflected in the adverse canonical posture. Soneium USDSC, its SwapFacility, SpokePortal, M representation, and Hyperlane route controls are excluded from Mint Authority and preserved in bridgeRouteRisk.",
+      "reviewer": "Codex mint-bridge boundary migration; verified finding 2026-08-16",
+      "reviewedAt": "2026-08-16",
+      "disposition": "scoreable"
     }
   }
 }

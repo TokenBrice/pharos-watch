@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "AID is a LayerZero OFT omnichain deployment at the same EVM address on Ethereum, Arbitrum, Base, and BNB Chain. Cross-chain movement uses LayerZero burn/mint messaging rather than the Arbitrum canonical rollup bridge.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 BRDG curation",
+    "summary": "AID's only native issuance route is Ethereum, where its MINTER_ROLE and DEFAULT_ADMIN_ROLE controls are reviewed in Mint Authority. Arbitrum, Base, and BNB Chain are LayerZero OFT burn/mint representations at the same address; their local token controllers, external-validated-network tier, and messaging failure domain remain Bridge Risk rather than native issuance authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex Safety Score V9 BRDG curation; Codex mint/bridge boundary migration",
     "confidence": "verified",
     "protocols": [
       {

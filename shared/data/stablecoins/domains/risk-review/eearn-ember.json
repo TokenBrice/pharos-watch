@@ -29,19 +29,230 @@
     "reviewedAt": "2026-07-31"
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "eEARN has one tracked Ethereum vault contract used by Royco Dawn. No separate bridge route is modeled for Pharos, so the asset is reviewed as a native single-chain vault token.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex Royco coverage addition",
+    "tier": "opaque-or-unknown",
+    "summary": "eEARN is currently a single-chain Ethereum USDC vault-share token: bridgeAdapter() was zero at Ethereum block 25770499, so no live destination representation, peer, messenger, validator, or supply-conserving route is claimed. The verified vault nevertheless exposes configurable adapter-only bridgeMint/bridgeBurn functions, and its ProtocolConfig/admin and UUPS owner paths can authorize that dormant surface. This conservative opaque-or-unknown tier records latent bridge capability, not a claim that eEARN currently has a destination route.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex eEARN bridge-boundary correction",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Royco Dawn",
-        "url": "https://dawn.royco.org/"
+        "label": "Ember core concepts",
+        "url": "https://learn.ember.so/ember-protocol/core-concepts"
       },
       {
-        "label": "Ethereum eEARN contract",
-        "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract"
+        "label": "Current eEARN proxy",
+        "url": "https://eth.blockscout.com/address/0x9be9294722f8aad37b11a9792be2c782182cafa2?tab=contract"
+      },
+      {
+        "label": "Current verified EmberVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
+      },
+      {
+        "label": "Current verified Ember ProtocolConfig implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x540db273e41587a748365f01f35adb095b58bfeB"
+      },
+      {
+        "label": "Current verified CTGOneGovernance admin timelock",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3bcbdee23b83a05464cb8c9bef63862aa282790c"
+      },
+      {
+        "label": "Current governance logs",
+        "url": "https://eth.blockscout.com/api/v2/addresses/0x3bcbdee23b83a05464cb8c9bef63862aa282790c/logs"
+      },
+      {
+        "label": "Ethereum fixed-block JSON-RPC reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        "protocol": "Ember eEARN native vault with configurable bridge adapter",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25770499 on 2026-08-16, the sole eEARN deployment is verified as the native Ethereum USDC vault-share issuance contract. Its bridgeAdapter() returned the zero address, so no destination representation is claimed. The verified EmberVault nevertheless exposes adapter-only bridgeMint and bridgeBurn functions, while ProtocolConfig can authorize a future adapter and bridge limits; those latent bridge facts remain unresolved in the profile tier and linked controls rather than changing the current native deployment classification.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "contract:ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2",
+          "contract:ethereum:0x1dc4836e5a0a95105bee1899e3b6bbb1714480fb",
+          "timelock:ethereum:0x3bcbdee23b83a05464cb8c9bef63862aa282790c"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770499,
+        "sources": [
+          {
+            "label": "Current eEARN proxy",
+            "url": "https://eth.blockscout.com/address/0x9be9294722f8aad37b11a9792be2c782182cafa2?tab=contract"
+          },
+          {
+            "label": "Current verified EmberVault implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
+          },
+          {
+            "label": "Current verified Ember ProtocolConfig implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x540db273e41587a748365f01f35adb095b58bfeB"
+          },
+          {
+            "label": "Ethereum fixed-block JSON-RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "eearn-bridge-admin-timelock",
+        "label": "eEARN bridge adapter and limit admin timelock",
+        "routeRefs": [
+          "ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x3bcbdee23b83a05464cb8c9bef63862aa282790c",
+        "failureDomainKeys": [
+          "contract:ethereum:0x3bcbdee23b83a05464cb8c9bef63862aa282790c",
+          "contract:ethereum:0x1dc4836e5a0a95105bee1899e3b6bbb1714480fb",
+          "contract:ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2",
+          "eoa:ethereum:0xe9f9f43f89e4c375dbeb845477b35dbe3ccbe4c6",
+          "eoa:ethereum:0xa2160f1dee338b921d13c9d02a7e2cadb02af38f",
+          "eoa:ethereum:0x71aa7564fae10a393f2bf0efa9e6350d872f07f7"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 43200,
+        "routeChecks": {
+          "trustedPeerOrRemote": "No peer, destination, or messenger is configured because eEARN bridgeAdapter() was zero at the observation block.",
+          "rateLimits": "The verified ProtocolConfig forwarding surface exposes setVaultBridgeLimits; the CTG One Governance timelock is the decisive vault roles.admin and can configure the future adapter's minimum and maximum bridge amounts. No active adapter-specific limit is currently evidenced.",
+          "pausersAdminsUpgraders": "ProtocolConfig setVaultBridgeAdapter and setVaultBridgeLimits pass the original caller to the vault; the eEARN roles.admin check resolves to this 12-hour CTG One Governance timelock.",
+          "unsupportedReason": "The adapter is disabled, so there is no live bridge endpoint or route-level conservation check to assess."
+        },
+        "capDescription": "This timelock can authorize a nonzero bridge adapter and configure bridge amount limits through the vault's admin-gated path; adapter-only bridgeMint and bridgeBurn are latent and not currently active.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "ProtocolConfig forwarding functions are permissionless, but the vault's roles.admin check remains the effective authorization."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770499,
+        "sources": [
+          {
+            "label": "Current verified Ember ProtocolConfig implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x540db273e41587a748365f01f35adb095b58bfeB"
+          },
+          {
+            "label": "Current verified CTGOneGovernance admin timelock",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3bcbdee23b83a05464cb8c9bef63862aa282790c"
+          },
+          {
+            "label": "Current governance logs",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x3bcbdee23b83a05464cb8c9bef63862aa282790c/logs"
+          },
+          {
+            "label": "Ethereum fixed-block JSON-RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770499, the verified CTGOneGovernance contract at 0x3bcbdee23b83a05464cb8c9bef63862aa282790c had a 43200-second delay. PROPOSER_ROLE was held by EOA 0xe9f9f43f89e4c375dbeb845477b35dbe3ccbe4c6, EXECUTOR_ROLE by 0xa2160f1dee338b921d13c9d02a7e2cadb02af38f, and CANCELLER_ROLE by 0x71aa7564fae10a393f2bf0efa9e6350d872f07f7; each returned empty code and no Safe quorum was evidenced. The proposer scheduled a ProtocolConfig call in transaction 0x873451a338fcd289408a3198e4940972107f5a37dd7dded1033801df65e2d788 at block 25761463, confirming that the adapter/limit configuration machinery is live governance surface even though bridgeAdapter() is currently zero."
+      },
+      {
+        "id": "eearn-protocol-config-bridge-forwarder",
+        "label": "eEARN ProtocolConfig bridge adapter and limit forwarder",
+        "routeRefs": [
+          "ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1dc4836e5a0a95105bee1899e3b6bbb1714480fb",
+        "failureDomainKeys": [
+          "contract:ethereum:0x1dc4836e5a0a95105bee1899e3b6bbb1714480fb",
+          "implementation:ethereum:0x540db273e41587a748365f01f35adb095b58bfeb",
+          "contract:ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2",
+          "contract:ethereum:0x3bcbdee23b83a05464cb8c9bef63862aa282790c"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "No peer, destination, messenger, or adapter contract is configured because the vault's bridgeAdapter() returned zero.",
+          "rateLimits": "The verified ProtocolConfig implementation exposes permissionless setVaultBridgeLimits forwarding, but it passes the original caller to the vault and the vault's roles.admin check is decisive.",
+          "unsupportedReason": "This is a forwarding surface, not a live route controller; no active bridge endpoint or configured limit was evidenced."
+        },
+        "capDescription": "ProtocolConfig forwards bridge adapter and bridge limit calls into eEARN; the forwarding entry points are permissionless, but only the vault's configured roles.admin can authorize the state change.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770499,
+        "sources": [
+          {
+            "label": "Current verified Ember ProtocolConfig implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x540db273e41587a748365f01f35adb095b58bfeB"
+          },
+          {
+            "label": "Current eEARN proxy",
+            "url": "https://eth.blockscout.com/address/0x9be9294722f8aad37b11a9792be2c782182cafa2?tab=contract"
+          },
+          {
+            "label": "Ethereum fixed-block JSON-RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770499, eEARN protocolConfig() returned 0x1dc4836e5a0a95105bee1899e3b6bbb1714480fb and the verified ProtocolConfig implementation was 0x540db273e41587a748365f01f35adb095b58bfeB. Its setVaultBridgeAdapter and setVaultBridgeLimits functions are permissionless forwarders that preserve the original caller, so the vault roles.admin at CTG One Governance timelock 0x3bcbdee23b83a05464cb8c9bef63862aa282790c is the effective authorization. bridgeAdapter() remained zero at the observation block."
+      },
+      {
+        "id": "eearn-uups-bridge-impacting-upgrader",
+        "label": "eEARN UUPS owner bridge-impacting implementation upgrader",
+        "routeRefs": [
+          "ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2"
+        ],
+        "capabilities": [
+          "upgrade",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x12917e06b55995e7a5d73681ce491774c73b7c6a",
+        "failureDomainKeys": [
+          "contract:ethereum:0x12917e06b55995e7a5d73681ce491774c73b7c6a",
+          "contract:ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2",
+          "timelock:ethereum:0x12917e06b55995e7a5d73681ce491774c73b7c6a"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 86400,
+        "routeChecks": {
+          "trustedPeerOrRemote": "No bridge peer or destination is currently configured because bridgeAdapter() returned zero.",
+          "pausersAdminsUpgraders": "The current EmberVault _authorizeUpgrade path is onlyOwner; eEARN owner() is CTGOneGovernance 0x12917e06b55995e7a5d73681ce491774c73b7c6a with a one-day delay. A replacement implementation could change the latent adapter-only bridgeMint/bridgeBurn semantics.",
+          "unsupportedReason": "The upgrade path is bridge-impacting but cannot establish a live route or supply-conservation invariant while the adapter is zero."
+        },
+        "capDescription": "The eEARN UUPS owner can replace local share and latent bridge-mint/burn logic after the one-day governance delay; this is the same owner path retained in native Mint Authority for local implementation control.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770499,
+        "sources": [
+          {
+            "label": "Current verified EmberVault implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
+          },
+          {
+            "label": "eEARN UUPS owner timelock",
+            "url": "https://eth.blockscout.com/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a?tab=logs"
+          },
+          {
+            "label": "Ethereum fixed-block JSON-RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770499, the eEARN proxy's EIP-1967 implementation slot resolved to 0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e, admin and beacon slots were zero, and owner() returned CTGOneGovernance 0x12917e06b55995e7a5d73681ce491774c73b7c6a. The verified implementation gates bridgeMint and bridgeBurn with onlyBridgeAdapter, while bridgeAdapter() is zero. This native UUPS owner path is retained in Mint Authority for local share logic and is separately represented here only for its potential to replace the latent bridge surface."
       }
     ]
   }

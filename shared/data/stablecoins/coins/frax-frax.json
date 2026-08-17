@@ -92,11 +92,6 @@
       "decimals": 18
     },
     {
-      "chain": "fraxtal",
-      "address": "0xfc00000000000000000000000000000000000002",
-      "decimals": 18
-    },
-    {
       "chain": "harmony",
       "address": "0xfa7191d292d5633f702b0bd7e3e3bccc0e633200",
       "decimals": 18

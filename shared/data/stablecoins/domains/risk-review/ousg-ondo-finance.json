@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Ondo issues OUSG natively on Ethereum, Polygon, Solana, and the XRP Ledger; per-chain administration resolves to Ondo-controlled Safes and keypairs (Ethereum/Polygon proxy admins re-read 2026-07-20), and Ondo's documented token bridge covers USDY/GM only — no OUSG bridge route carries the claim.",
+    "summary": "All four authored OUSG routes are issuer-native canonical deployments. Bridge Risk contains no OUSG representation, bridge adapter, escrow, peer, validator, or bridge-rate-limit control; Ethereum, Polygon, Solana, and XRPL issuance authorities remain exclusively in Mint Authority, while Solana freeze and XRPL issuer flags stay in their owning modules. Ondo's documented token bridge covers USDY/GM, not OUSG.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",

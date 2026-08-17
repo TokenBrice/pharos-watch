@@ -7,6 +7,10 @@
     "summary": "AxCNH is issued by AnchorX Ltd against offshore-CNH reserves. The Ethereum and Conflux FiatTokenV2 deployments each use a 3-of-4 MultiSigWallet as masterMinter and an independently identified owner and proxy-admin path; masterMinters can configure bounded operational minters, owners can replace the masterMinter, and proxy-admin multisigs can replace mint logic. A historical Ethereum operational minter has zero remaining allowance.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "conflux:0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e",
+        "ethereum:0x2925ac3be7d585874b88ea51ed50add376ad8239"
+      ],
       "proxyAddresses": [
         "0x2925ac3be7d585874b88ea51ed50add376ad8239",
         "0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
@@ -50,6 +54,9 @@
       {
         "chain": "ethereum",
         "address": "0x5246b59a9e9473e680ea52ecda4a8dcff3fbfc97",
+        "deploymentRefs": [
+          "ethereum:0x2925ac3be7d585874b88ea51ed50add376ad8239"
+        ],
         "label": "AxCNH Ethereum masterMinter multisig",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -79,6 +86,9 @@
       {
         "chain": "ethereum",
         "address": "0xf9f304225756edfe9a05d7ea235b0b181380edd5",
+        "deploymentRefs": [
+          "ethereum:0x2925ac3be7d585874b88ea51ed50add376ad8239"
+        ],
         "label": "AxCNH Ethereum token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -102,6 +112,9 @@
       {
         "chain": "ethereum",
         "address": "0x674241ca030bf7487d46d4fbf595c64a256e2c85",
+        "deploymentRefs": [
+          "ethereum:0x2925ac3be7d585874b88ea51ed50add376ad8239"
+        ],
         "label": "AxCNH Ethereum operational minter (exhausted allowance)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -130,6 +143,9 @@
       {
         "chain": "ethereum",
         "address": "0xe1c2b27082e89d889f3c5cf55ce91a7933001a54",
+        "deploymentRefs": [
+          "ethereum:0x2925ac3be7d585874b88ea51ed50add376ad8239"
+        ],
         "label": "AxCNH Ethereum proxy-admin multisig",
         "role": "proxy-admin",
         "authorityType": "multisig",
@@ -159,6 +175,9 @@
       {
         "chain": "conflux",
         "address": "0x8b26530b369f7eb499597bbde00ed8a4a77d74d0",
+        "deploymentRefs": [
+          "conflux:0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+        ],
         "label": "AxCNH Conflux masterMinter multisig",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -184,6 +203,9 @@
       {
         "chain": "conflux",
         "address": "0xf80b9c06a601351612b3324d8cd0f57cf7952e1b",
+        "deploymentRefs": [
+          "conflux:0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+        ],
         "label": "AxCNH Conflux token owner multisig",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -209,6 +231,9 @@
       {
         "chain": "conflux",
         "address": "0xea4ab98ba1f1885b87592e38bf868a2a952ff1f0",
+        "deploymentRefs": [
+          "conflux:0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+        ],
         "label": "AxCNH Conflux proxy-admin multisig",
         "role": "proxy-admin",
         "authorityType": "multisig",

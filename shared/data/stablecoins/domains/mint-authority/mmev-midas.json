@@ -4,9 +4,14 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "mMEV has independently mintable deployments on Ethereum, Plume, and Etherlink. A chain-local deposit vault and EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 can mint on every deployment, while EOA 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 is an additional Ethereum minter. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and shared admin EOA can change those grants immediately; proxy upgrades pass through a two-day chain-local timelock.",
+    "summary": "mMEV has independently mintable deployments on Ethereum, Plume, and Etherlink. A chain-local deposit vault and EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 can mint on every deployment, while EOA 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 is an additional Ethereum minter. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and shared admin EOA can change those grants immediately; proxy upgrades pass through a two-day chain-local timelock. These are native issuance controls; no bridge representation or bridge-only authority is included in Mint Authority.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "plume:0x7d611dc23267f508de90724731dc88ca28ef7473",
+        "etherlink:0x5542f82389b76c23f5848268893234d8a63fd5c8"
+      ],
       "proxyAddresses": [
         "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
         "0x7d611dc23267f508de90724731dc88ca28ef7473",
@@ -70,6 +75,11 @@
         "canRaiseCap": false,
         "capDescription": "No on-chain supply cap was identified; each chain-local vault holds M_MEV_MINT_OPERATOR_ROLE.",
         "address": "0xe092737d412e0b290380f9c8548cb5a58174704f",
+        "deploymentRefs": [
+          "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+          "plume:0x7d611dc23267f508de90724731dc88ca28ef7473",
+          "etherlink:0x5542f82389b76c23f5848268893234d8a63fd5c8"
+        ],
         "modulesOrGuardsStatus": "none-detected",
         "failureDomainKeys": [
           "ethereum:0xe092737d412e0b290380f9c8548cb5a58174704f",
@@ -98,6 +108,11 @@
         "canRaiseCap": false,
         "capDescription": "No on-chain supply cap was identified; this EOA holds M_MEV_MINT_OPERATOR_ROLE directly on all three chains.",
         "address": "0x2facac0cda0225d7acca792821164b398c26bbd2",
+        "deploymentRefs": [
+          "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+          "plume:0x7d611dc23267f508de90724731dc88ca28ef7473",
+          "etherlink:0x5542f82389b76c23f5848268893234d8a63fd5c8"
+        ],
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
           "ethereum:0x2facac0cda0225d7acca792821164b398c26bbd2",
@@ -130,6 +145,9 @@
         "canRaiseCap": false,
         "capDescription": "No on-chain supply cap was identified; this EOA holds M_MEV_MINT_OPERATOR_ROLE directly on Ethereum.",
         "address": "0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2",
+        "deploymentRefs": [
+          "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3"
+        ],
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
           "ethereum:0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2"
@@ -152,6 +170,11 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "deploymentRefs": [
+          "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+          "plume:0x7d611dc23267f508de90724731dc88ca28ef7473",
+          "etherlink:0x5542f82389b76c23f5848268893234d8a63fd5c8"
+        ],
         "threshold": 1,
         "signerCount": 3,
         "timelockDelaySec": 0,
@@ -189,6 +212,11 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "deploymentRefs": [
+          "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+          "plume:0x7d611dc23267f508de90724731dc88ca28ef7473",
+          "etherlink:0x5542f82389b76c23f5848268893234d8a63fd5c8"
+        ],
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
@@ -217,6 +245,11 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "deploymentRefs": [
+          "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+          "plume:0x7d611dc23267f508de90724731dc88ca28ef7473",
+          "etherlink:0x5542f82389b76c23f5848268893234d8a63fd5c8"
+        ],
         "threshold": 1,
         "signerCount": 3,
         "timelockDelaySec": 172800,
@@ -229,11 +262,6 @@
           "plume:0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b",
           "etherlink:0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
         ],
-        "routeChecks": {
-          "signingModel": "Each chain-local upgrade Safe is 1-of-3 with no enabled modules and a zero guard. The owner sets differ by chain, so the failure-domain keys retain each Safe independently.",
-          "rateLimits": "Every current ProxyAdmin is owned by a chain-local MidasTimelockController whose getMinDelay() returned 172800 seconds.",
-          "pausersAdminsUpgraders": "Each local Safe was the timelock's sole proposer, executor, and canceller; the delayed proxy-upgrade route is separate from immediate MidasAccessControl role administration."
-        },
         "observedAt": "2026-07-13",
         "sources": [
           {
@@ -249,16 +277,16 @@
             "url": "https://explorer.etherlink.com/address/0x852c4f1beb54acb5360dbdba7ebbe9940a698f76"
           }
         ],
-        "evidence": "At Ethereum block 25527148, Plume block 80928370, and Etherlink block 48212139, every listed token, access-control, and deposit-vault transparent proxy resolved through its chain-local ProxyAdmin. ProxyAdmin ownership resolved to timelocks 0xe3eee3e0d2398799c884a47fc40c029c8e241852, 0x2538325446dd80fc49830eea55d9e662b5acc35c, and 0x852c4f1beb54acb5360dbdba7ebbe9940a698f76. Each returned getMinDelay() = 172800 and assigned sole proposer, executor, and canceller authority to the corresponding chain-local 1-of-3 Safe."
+        "evidence": "At Ethereum block 25527148, Plume block 80928370, and Etherlink block 48212139, every listed token, access-control, and deposit-vault transparent proxy resolved through its chain-local ProxyAdmin. ProxyAdmin ownership resolved to timelocks 0xe3eee3e0d2398799c884a47fc40c029c8e241852, 0x2538325446dd80fc49830eea55d9e662b5acc35c, and 0x852c4f1beb54acb5360dbdba7ebbe9940a698f76. Each returned getMinDelay() = 172800 and assigned sole proposer, executor, and canceller authority to the corresponding chain-local 1-of-3 Safe. Each upgrade Safe had no enabled modules and a zero guard; the owner sets differ by chain, so the failure-domain keys retain each Safe independently. This delayed native proxy-upgrade route is separate from immediate MidasAccessControl role administration and is not bridge machinery."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Pinned chain state was reviewed at Ethereum 25527148, Plume 80928370, and Etherlink 48212139. M_MEV_MINT_OPERATOR_ROLE holders were: Ethereum EOAs 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 and 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0xe092737d412e0b290380f9c8548cb5a58174704f; Plume EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0xe6f0c60fca2bd97d633a3d9d49dbefdf19636d8c; Etherlink EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0x577617613c4fac5a7561f8f3f2cb128a560774bc. Every chain also retained its local 1-of-3 Safe and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 as immediate DEFAULT_ADMIN_ROLE holders. All current mint-critical transparent proxies resolved through chain-local ProxyAdmins to two-day timelocks controlled by those local Safes. Economic-control evidence reviewed 2026-07-15: Midas publishes recurring collateral/NAV checkpoints through its Attestation Engine, with source notarization and independent LlamaRisk or Canary verification; the live transparency dashboard was reviewed on 2026-07-15. FMA prospectus approval is not issuer prudential licensing. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Pinned chain state was reviewed at Ethereum 25527148, Plume 80928370, and Etherlink 48212139. M_MEV_MINT_OPERATOR_ROLE holders were: Ethereum EOAs 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 and 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0xe092737d412e0b290380f9c8548cb5a58174704f; Plume EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0xe6f0c60fca2bd97d633a3d9d49dbefdf19636d8c; Etherlink EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0x577617613c4fac5a7561f8f3f2cb128a560774bc. Every chain also retained its local 1-of-3 Safe and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 as immediate DEFAULT_ADMIN_ROLE holders. All current mint-critical transparent proxies resolved through chain-local ProxyAdmins to two-day timelocks controlled by those local Safes. Economic-control evidence reviewed 2026-07-15: Midas publishes recurring collateral/NAV checkpoints through its Attestation Engine, with source notarization and independent LlamaRisk or Canary verification; the live transparency dashboard was reviewed on 2026-07-15. FMA prospectus approval is not issuer prudential licensing. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported. All three authored route deployments are reviewed native-issuance surfaces; no mMEV bridge representation or bridge-only control is compiled into Mint Authority, and Bridge Risk contains no bridge control.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {

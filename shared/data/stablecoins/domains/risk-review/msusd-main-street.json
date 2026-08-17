@@ -8,29 +8,243 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "canonical-rollup-bridge",
-    "summary": "MSUSD is deployed on Ethereum and Sonic. Sonic documentation describes Sonic Gateway as the native Ethereum/Sonic bridge, so Pharos treats this as canonical/native gateway route exposure rather than a third-party liquidity bridge.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "MSUSD has one reviewed LayerZero V1 OFT route from canonical Ethereum to a Sonic bridge representation. The route uses Ethereum lock/release and Sonic burn/mint accounting, with reciprocal trusted remotes; the Sonic Safe can configure peers, raise the representation supply limit, appoint a future minter, and upgrade the OFT implementation. LayerZero V1 oracle/relayer configuration remains an explicit evidence gap, so this external-validated-network assessment is manual-review rather than fully closed.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration; msUSD fixed-block review",
+    "confidence": "manual-review",
     "protocols": [
       {
-        "source": "docs",
-        "name": "Sonic Gateway",
-        "url": "https://docs.soniclabs.com/sonic/sonic-gateway",
+        "source": "issuer",
+        "name": "Main Street LayerZero OFT V1",
+        "slug": "layerzero",
+        "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/technical/key-addresses.md",
         "bridgeTypes": [
-          "canonical"
-        ]
+          "OFT",
+          "lock-mint"
+        ],
+        "note": "Main Street identifies the Sonic deployment as a legacy/cross-chain msUSDV2 and states that cross-chain deployments use LayerZero's OFT standard."
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero V1",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v1/developers/evm/evm-guides/contract-standards/oft-standard",
+        "bridgeTypes": [
+          "external-validated-network"
+        ],
+        "note": "The current V1 oracle/relayer addresses, library versions, confirmations, fee/adapter configuration, and retry state were not independently replayed in this review."
       }
     ],
     "sources": [
       {
-        "label": "Main Street Finance",
-        "url": "https://mainstreet.finance/"
+        "label": "Main Street Key Addresses",
+        "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/technical/key-addresses.md"
       },
       {
-        "label": "Sonic Gateway docs",
-        "url": "https://docs.soniclabs.com/sonic/sonic-gateway"
+        "label": "Main Street ecosystem overview",
+        "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/msusd-and-strategy-vaults/main-st-ecosystem-overview.md"
+      },
+      {
+        "label": "Ethereum MSUSD proxy and verified implementation",
+        "url": "https://etherscan.io/address/0x4ba01f22827018b4772cd326c7627fb4956a7c00#code"
+      },
+      {
+        "label": "Sonic MSUSD proxy and verified implementation",
+        "url": "https://sonicscan.org/address/0xe5fb2ed6832def99dde57c0b9d9a56537c89121d#code"
+      },
+      {
+        "label": "LayerZero V1 OFT standard",
+        "url": "https://docs.layerzero.network/v1/developers/evm/evm-guides/contract-standards/oft-standard"
+      },
+      {
+        "label": "Safe Transaction Service - Sonic",
+        "url": "https://api.safe.global/tx-service/sonic/api/v1/safes/0x861a58d3DE287196c5546d10c7afFa479E0963e4/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+        "protocol": "Main Street native msUSDV2 issuance with LayerZero OFT route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Main Street's official Key Addresses page lists msUSDV2 under Core contracts on Ethereum, while Sonic is listed under Legacy Contracts and cross-chain deployments are identified as LayerZero OFT. At Ethereum block 25771195, the proxy resolves to verified msUSDV2 and its minter() and stakedmsUSD() paths are live, so Ethereum is the sole reviewed native-issuance deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771195,
+        "failureDomainKeys": [
+          "contract:ethereum:0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+          "safe:ethereum:0x0eae4acb10f3e5696cf6b0de33693ef8ec571858"
+        ],
+        "sources": [
+          {
+            "label": "Main Street Key Addresses",
+            "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/technical/key-addresses.md"
+          },
+          {
+            "label": "Ethereum MSUSD proxy and verified implementation",
+            "url": "https://etherscan.io/address/0x4ba01f22827018b4772cd326c7627fb4956a7c00#code"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
+        "sourceChain": "ethereum",
+        "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
+        "protocol": "LayerZero V1 OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sonic is a LayerZero OFT representation, not an independent native issuance chain. The Ethereum implementation locks tokens in the Ethereum token contract and releases them on the authenticated return path; the Sonic implementation burns on source-side debit and mints on destination-side credit. At Ethereum block 25771195 and Sonic block 77635499, the reciprocal trusted remotes point to the paired MSUSD deployments. Sonic Gateway TOKEN_PAIRS reads returned zero for this pair, so Gateway is not the reviewed route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sonic",
+        "controllerAddress": "0x861a58d3de287196c5546d10c7affa479e0963e4",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v1",
+          "contract:ethereum:0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+          "contract:sonic:0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
+          "safe:sonic:0x861a58d3de287196c5546d10c7affa479e0963e4",
+          "endpoint:ethereum:layerzero:0x66a71dcef29a0ffbdbe3c6a460a3b5bc225cd675",
+          "endpoint:sonic:layerzero:0xb6319cc6c8c27a8f5daf0dd3df91ea35c4720dd7",
+          "endpoint-owner:ethereum:layerzero:0xbe010a7e3686fdf65e93344ab664d065a0b02478",
+          "endpoint-owner:sonic:layerzero:0x802563fb3e5be9f388d4a73fd4992da4d53c2cb0"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 77635499,
+        "sources": [
+          {
+            "label": "Main Street Key Addresses",
+            "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/technical/key-addresses.md"
+          },
+          {
+            "label": "Ethereum MSUSD proxy and verified implementation",
+            "url": "https://etherscan.io/address/0x4ba01f22827018b4772cd326c7627fb4956a7c00#code"
+          },
+          {
+            "label": "Sonic MSUSD proxy and verified implementation",
+            "url": "https://sonicscan.org/address/0xe5fb2ed6832def99dde57c0b9d9a56537c89121d#code"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "msusd-sonic-oft-owner-safe",
+        "label": "MSUSD Sonic OFT owner (3/4 Safe)",
+        "routeRefs": [
+          "sonic:0xe5fb2ed6832def99dde57c0b9d9a56537c89121d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x861a58d3de287196c5546d10c7affa479e0963e4",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v1",
+          "contract:sonic:0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
+          "safe:sonic:0x861a58d3de287196c5546d10c7affa479e0963e4",
+          "endpoint:sonic:layerzero:0xb6319cc6c8c27a8f5daf0dd3df91ea35c4720dd7"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x5A8F0e61B503D958D0c9996268b373555295402D",
+            "0x7C7BC56841070b577FD1413f14381bd8466aD5c0",
+            "0x95d617E8be77D8Ad57745Ae814FeD83e55bb4108",
+            "0x19F63Dda10b162F0a35c3018ef3710606273D8E3"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "version": "1.4.1+L2",
+          "observedBlock": 77635499,
+          "observedAt": "2026-08-16",
+          "source": "safe-api"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25771195, LayerZero endpoint 0x66a71dcef29a0ffbdbe3c6a460a3b5bc225cd675 returned Sonic token 0xe5fb2ed6832def99dde57c0b9d9a56537c89121d for remote 332, with stored path Sonic token || Ethereum token. At Sonic block 77635499, endpoint 0xb6319cc6c8c27a8f5daf0dd3df91ea35c4720dd7 returned Ethereum token 0x4ba01f22827018b4772cd326c7627fb4956a7c00 for remote 101, with stored path Ethereum token || Sonic token.",
+          "caps": "The Sonic owner can change supplyLimit() and appoint a future minter. The current zero minter() and stakedmsUSD() values therefore do not remove the representation's reactivation and cap-raising surface.",
+          "pausersAdminsUpgraders": "The Sonic Safe owns the msUSDV2Sonic UUPS representation and can replace its implementation, configure the OFT trusted remote, appoint a future minter, and change the supply limit. The EIP-1967 admin slot was zero at the observed block.",
+          "onchainAmountBounds": "The route-level conservation assumption is Ethereum token lock/release plus Sonic burn/mint through authenticated LayerZero callbacks; it is not an independent native Sonic supply allowance. Replacing the representation implementation or appointing a future minter can change that assumption."
+        },
+        "capDescription": "The Sonic Safe can raise the representation supply limit and appoint a future minter, while its UUPS and trusted-remote powers can alter the LayerZero OFT route. These are bridge controls, not native Ethereum issuance authority.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 77635499,
+        "sources": [
+          {
+            "label": "Sonic MSUSD proxy and verified implementation",
+            "url": "https://sonicscan.org/address/0xe5fb2ed6832def99dde57c0b9d9a56537c89121d#code"
+          },
+          {
+            "label": "Safe Transaction Service - Sonic",
+            "url": "https://api.safe.global/tx-service/sonic/api/v1/safes/0x861a58d3DE287196c5546d10c7afFa479E0963e4/"
+          }
+        ],
+        "evidence": "At Sonic block 77635499, the 3-of-4 Safe 0x861a58d3de287196c5546d10c7affa479e0963e4 owned the msUSDV2Sonic representation. The same signer set, empty module set, zero guard, and Safe L2 v1.4.1 configuration were observed in the fixed-block Safe reads. The Sonic token's owner-only powers include LayerZero peer/trusted-remote configuration, UUPS implementation replacement, future-minter appointment, and supplyLimit() changes; minter() and stakedmsUSD() were both zero at the observation block, so no direct native Sonic mint is assumed."
+      },
+      {
+        "id": "msusd-layerzero-v1-endpoint-validation-domain",
+        "label": "MSUSD LayerZero V1 endpoint validation and owner domain",
+        "routeRefs": [
+          "ethereum:0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+          "sonic:0xe5fb2ed6832def99dde57c0b9d9a56537c89121d"
+        ],
+        "capabilities": [
+          "validator",
+          "admin"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v1",
+          "endpoint:ethereum:layerzero:0x66a71dcef29a0ffbdbe3c6a460a3b5bc225cd675",
+          "endpoint:sonic:layerzero:0xb6319cc6c8c27a8f5daf0dd3df91ea35c4720dd7",
+          "endpoint-owner:ethereum:layerzero:0xbe010a7e3686fdf65e93344ab664d065a0b02478",
+          "endpoint-owner:sonic:layerzero:0x802563fb3e5be9f388d4a73fd4992da4d53c2cb0"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The fixed-block token reads established reciprocal LayerZero V1 trusted-remote paths: Ethereum remote 332 points to the Sonic token, and Sonic remote 101 points to the Ethereum token, with the expected token-address concatenation in each stored path.",
+          "attestorQuorum": "The route is externally validated by LayerZero V1, but the current oracle/relayer addresses, library versions, confirmations, fee/adapter configuration, delivery retry state, and route-specific limits were not independently replayed. This remains an explicit configuration gap.",
+          "pausersAdminsUpgraders": "LayerZero endpoint owners observed in the fixed-block reads were 0xbe010a7e3686fdf65e93344ab664d065a0b02478 on Ethereum and 0x802563fb3e5be9f388d4a73fd4992da4d53c2cb0 on Sonic. They are protocol-level endpoint administration domains, not Main Street native minters; their precise current V1 configuration powers remain part of the evidence gap.",
+          "onchainAmountBounds": "The OFT callback architecture is intended to conserve route supply through Ethereum lock/release and Sonic burn/mint accounting, but whole-supply reconciliation and current LayerZero validation configuration were not independently established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771195,
+        "sources": [
+          {
+            "label": "LayerZero V1 OFT standard",
+            "url": "https://docs.layerzero.network/v1/developers/evm/evm-guides/contract-standards/oft-standard"
+          },
+          {
+            "label": "Ethereum MSUSD proxy and verified implementation",
+            "url": "https://etherscan.io/address/0x4ba01f22827018b4772cd326c7627fb4956a7c00#code"
+          },
+          {
+            "label": "Sonic MSUSD proxy and verified implementation",
+            "url": "https://sonicscan.org/address/0xe5fb2ed6832def99dde57c0b9d9a56537c89121d#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25771195, lzEndpoint() returned 0x66a71dcef29a0ffbdbe3c6a460a3b5bc225cd675 and the trusted remote for LayerZero chain 332 was the Sonic token. At Sonic block 77635499, lzEndpoint() returned 0xb6319cc6c8c27a8f5daf0dd3df91ea35c4720dd7 and the trusted remote for chain 101 was the Ethereum token. Endpoint owners were observed as 0xbe010a7e3686fdf65e93344ab664d065a0b02478 on Ethereum and 0x802563fb3e5be9f388d4a73fd4992da4d53c2cb0 on Sonic. Oracle/relayer and route-configuration details were not independently replayed and remain explicitly unresolved under Bridge Risk."
       }
     ]
   }

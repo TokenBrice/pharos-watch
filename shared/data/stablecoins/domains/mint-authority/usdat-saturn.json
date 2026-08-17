@@ -4,23 +4,18 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDat is an M0-backed extension on Ethereum; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
+    "summary": "USDat is an M0-backed extension with native issuance only on Ethereum; extension wrapping routes through M0 infrastructure while base M issuance remains on the Ethereum MinterGateway. BNB and Monad USDat deployments are CCIP representations reviewed under Bridge Risk, not additional native issuance chains.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "deploymentRefs": ["ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"],
         "controllerAssetId": "m-m0",
         "label": "M0 MinterGateway backing rail",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance backing USDat depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
-        "routeChecks": {
-          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
-          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
-          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
-          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
-        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -41,22 +36,17 @@
             "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
           }
         ],
-        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders)."
+        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. M0 validator attestations, approved-minter status, collateral/debt checks, and mint-delay review bound ordinary M issuance; per-Minter capacity remains raiseable by M0 TTG and Registrar governance. No external admin or module surface exists on this immutable gateway."
       },
       {
         "chain": "ethereum",
         "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "deploymentRefs": ["ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"],
         "label": "M0 SwapFacility extension router",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
-        "routeChecks": {
-          "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
-          "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply.",
-          "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
-          "pausersAdminsUpgraders": "SwapFacility is reviewed as the same ProxyAdmin -> TimelockController governance pattern as verified MUSD."
-        },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
@@ -73,11 +63,12 @@
             "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
           }
         ],
-        "evidence": "At Ethereum block 25295161: EIP-1967 impl slot=0x45bf08d042a8958f01f8e8319b791e4584550da8 (TransparentUpgradeableProxy). ProxyAdmin (EIP-1967 admin slot)=0x0f38d8a5583f9316084e9c40737244870c565924. ProxyAdmin owner=TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (minDelay=259200s, 3 days); timelock proposer=Gnosis Safe 3/5 (0xb7a9b5f301ef3bad36c2b4964e82931dd7fb989c). No modules detected."
+        "evidence": "At Ethereum block 25295161: EIP-1967 impl slot=0x45bf08d042a8958f01f8e8319b791e4584550da8 (TransparentUpgradeableProxy). ProxyAdmin (EIP-1967 admin slot)=0x0f38d8a5583f9316084e9c40737244870c565924. SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply; extension minting is bounded by available M-backed wrapper flow and base M supply. ProxyAdmin owner=TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (minDelay=259200s, 3 days); timelock proposer=Gnosis Safe 3/5 (0xb7a9b5f301ef3bad36c2b4964e82931dd7fb989c). SwapFacility capacity follows M supply and its governance/admin path, with no modules detected."
       },
       {
         "chain": "ethereum",
         "address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+        "deploymentRefs": ["ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"],
         "label": "USDat proxy admin timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
@@ -118,12 +109,13 @@
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy (IsProxy=false, both EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); timelock proposer is Gnosis Safe 3/5. Same governance structure as verified musd-metamask. All controls fully characterized. Economic-posture fields reviewed 2026-08-15: M0 TTG governance controls base-M capacity while SwapFacility and USDat logic changes pass through enforced three- and five-day timelocks; real-time M0 validator/reserve reconciliation exists without named prudential supervision.",
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy (IsProxy=false, both EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); timelock proposer is Gnosis Safe 3/5. The USDat proxy logic path remains governed by its separate five-day TimelockController. Native USDat issuance is therefore limited to the M0-backed Ethereum extension path; BNB and Monad representations, pools, peer configuration, and token-admin controls are scored under Bridge Risk. Economic-posture fields reviewed 2026-08-15: M0 TTG governance controls base-M capacity while SwapFacility and USDat logic changes pass through enforced three- and five-day timelocks; real-time M0 validator/reserve reconciliation exists without named prudential supervision.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16"
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": ["ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71"],
       "proxyAddresses": [
         "0x23238f20b894f29041f48d88ee91131c395aaa71"
       ],

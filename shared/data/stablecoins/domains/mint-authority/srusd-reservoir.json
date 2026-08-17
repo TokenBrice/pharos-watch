@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "srUSD (Savingcoin, non-upgradeable) is minted only by Savings Module 0x5475... (MINTER role confirmed). DEFAULT_ADMIN = EOA 0xb7570e32... No proxy/upgrade path. Base rUSD mint authority inherited from Reservoir PSM/Credit Enforcer controls.",
+    "summary": "srUSD's Ethereum Savingcoin is the sole reviewed native-issuance route and is minted only by Savings Module 0x5475... (MINTER role confirmed). DEFAULT_ADMIN = EOA 0xb7570e32...; the wrapper has no proxy/upgrade path. Base rUSD mint authority remains inherited from Reservoir PSM/Credit Enforcer controls, while the Berachain LayerZero OFT and Ethereum OFT adapter are Bridge Risk machinery.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -25,6 +25,9 @@
       {
         "chain": "ethereum",
         "address": "0x738d1115b90efa71ae468f1287fc864775e23a31",
+        "deploymentRefs": [
+          "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31"
+        ],
         "label": "srUSD Savingcoin token (non-upgradeable, AccessControl)",
         "role": "wrapper",
         "authorityType": "eoa",
@@ -46,6 +49,9 @@
       {
         "chain": "ethereum",
         "address": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+        "deploymentRefs": [
+          "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31"
+        ],
         "label": "Reservoir Savings Module (MINTER on srUSD)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -63,6 +69,9 @@
       {
         "chain": "ethereum",
         "address": "0x04716DB62C085D9e08050fcF6F7D775A03d07720",
+        "deploymentRefs": [
+          "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31"
+        ],
         "label": "Inherited Reservoir Credit Enforcer",
         "role": "cap-admin",
         "authorityType": "contract",
@@ -89,9 +98,9 @@
           "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31"
         }
       ],
-      "evidence": "At Ethereum block 25295219: srUSD is a non-upgradeable Savingcoin token. The only mint-capable surface is the Savings Module 0x5475... (MINTER role confirmed via hasRole). DEFAULT_ADMIN = EOA 0xb7570e32... All wrapper mint surfaces fully confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25771151, srUSD is a non-upgradeable Savingcoin token and the Savings Module 0x5475611dffb8ef4d697ae39df9395513b6e947d7 holds its MINTER role. DEFAULT_ADMIN is the code-empty EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. The native liability path is the Ethereum srUSD wrapper and inherited rUSD controls; the Berachain SrusdOft and Ethereum MyOFTAdapter are cross-chain machinery and are excluded from Mint Authority.",
+      "reviewer": "Pharos mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

@@ -9,6 +9,9 @@
       {
         "chain": "ethereum",
         "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
+        "deploymentRefs": [
+          "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f"
+        ],
         "label": "EURQ Ethereum owner mint authority",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -32,6 +35,9 @@
       {
         "chain": "ethereum",
         "address": "0xa6724f792002D5677a7Bc370986E1B580b8773E7",
+        "deploymentRefs": [
+          "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f"
+        ],
         "label": "EURQ Ethereum EIP-1967 proxy admin",
         "role": "proxy-admin",
         "authorityType": "multisig",
@@ -50,6 +56,9 @@
       {
         "chain": "polygon",
         "address": "0x84e8d731fcbe186b803db51e9e58142083417929",
+        "deploymentRefs": [
+          "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3"
+        ],
         "label": "EURQ Polygon owner mint authority",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -69,6 +78,9 @@
       {
         "chain": "polygon",
         "address": "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8",
+        "deploymentRefs": [
+          "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3"
+        ],
         "label": "EURQ Polygon EIP-1967 proxy admin",
         "role": "proxy-admin",
         "authorityType": "multisig",
@@ -85,6 +97,12 @@
         "evidence": "At Polygon block 88323602: EIP-1967 proxy admin slot returned 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8; required() returned 3; getOwners() returned 5 addresses."
       },
       {
+        "deploymentRefs": [
+          "algorand:2768422954",
+          "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f",
+          "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
+          "xrpl:EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+        ],
         "label": "EURQ XRPL issuer account",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -100,6 +118,12 @@
         "evidence": "XRPL account rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs confirmed active (no RegularKey, no signer list, master key enabled — single-key issuer custody). Issuer-backend model corroborated by Quantoz EMI/MiCA licensing."
       },
       {
+        "deploymentRefs": [
+          "algorand:2768422954",
+          "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f",
+          "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
+          "xrpl:EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+        ],
         "label": "EURQ Algorand ASA manager",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -147,6 +171,12 @@
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "algorand:2768422954",
+        "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f",
+        "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
+        "xrpl:EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+      ],
       "adminAddresses": [
         "0xa6724f792002D5677a7Bc370986E1B580b8773E7",
         "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8"

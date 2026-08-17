@@ -17,10 +17,10 @@
     "reviewedAt": "2026-05-24"
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "Ondo Global Markets assets use the Ondo Bridge, which documents LayerZero OFT architecture for GM assets in addition to USDY. Because IAUon is an Ondo GM asset and route accounting depends on that external OFT stack, it is scored as external-lock-mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "tier": "external-validated-network",
+    "summary": "IAUon's Ethereum and BSC native deployments have OndoOFT bridge overlays and HyperEVM is a LayerZero OFT bridge representation. Ondo documents LayerZero V2, Canary DVN, LayerZero Labs DVN, Ondo DVN, custom rate limiting, and emergency pause as bridge controls; the current IAUon-specific peers, DVN path configuration, and numeric limits remain evidence gaps. Native GMTokenManager and Solana issuance stay in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration; verified finding 2026-08-16",
     "confidence": "verified",
     "protocols": [
       {
@@ -57,9 +57,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native IAUon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
+        "reviewNote": "Native IAUon: at Ethereum block 25,770,668, MINTER_ROLE includes the Ondo GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c and the separate Ethereum OndoOFT bridge overlay. Ondo Global Markets issues natively on Ethereum; the OFT is assessed as bridge machinery rather than independent native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770668,
         "sources": [
           {
             "label": "Ondo Global Markets",
@@ -70,7 +71,7 @@
       {
         "id": "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
         "destinationChain": "bsc",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "bsc",
         "contractAddress": "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
         "protocol": "Ondo Global Markets native issuance",
         "issuanceModel": "native-issuance",
@@ -79,9 +80,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native IAUon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
+        "reviewNote": "Native IAUon: at BSC block 116,353,763, MINTER_ROLE includes the BSC GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 and the separate BSC OndoOFT bridge overlay. Ondo Global Markets issues independently on BSC; the OFT is assessed as bridge machinery rather than independent native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116353763,
         "sources": [
           {
             "label": "Ondo Global Markets",
@@ -91,30 +93,28 @@
       },
       {
         "id": "solana:M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo",
-        "sourceChain": "ethereum",
         "destinationChain": "solana",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "solana",
         "contractAddress": "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo",
-        "protocol": "OndoOFT on Solana (LayerZero)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Ondo Global Markets native Solana issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "IAUon on Solana shares the Ondo program mint authority PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD (no SOL account exists at the address — a program-derived mint authority, read 2026-07-20 via Solana RPC); freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is Ondo's. DefiLlama attributes Solana IAUon supply to Ondo's cross-chain deployment.",
+        "reviewNote": "At finalized Solana slot 439,728,907, Token-2022 mint M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo had mint authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, the PDA used by Ondo's open-source GM Solana program. The program implements mint_with_usdc and mint_with_usdon with attestation, whitelist, sanity-check, and token/user rate-limit checks. This is an independent native issuance path, not a LayerZero representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "controllerChain": "solana",
-        "controllerAddress": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:solana:9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD"
-        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439728907,
         "sources": [
           {
-            "label": "Ondo Global Markets",
-            "url": "https://ondo.finance/"
+            "label": "Ondo GM Solana program",
+            "url": "https://github.com/ondoprotocol/global-markets-solana"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://solana-rpc.publicnode.com"
           }
         ]
       },
@@ -131,9 +131,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "IAUon on HyperEVM is minted solely by the OndoOFT contract 0xce61f9246755cc399fd7f37d6b3478590b75aace (sole MINTER_ROLE member, read 2026-07-20): a 6,152-byte LayerZero OApp with endpoint() = HyperEVM LZ V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 and token() = this deployment.",
+        "reviewNote": "At HyperEVM block 43,374,894, IAUon is minted solely by OndoOFT 0xce61f9246755cc399fd7f37d6b3478590b75aace. Its endpoint() is the HyperEVM LayerZero V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, token() is this deployment, owner() is OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d, and approvalRequired() is false. This is a LayerZero bridge representation, not native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 43374894,
         "controllerChain": "hyperevm",
         "controllerAddress": "0xce61f9246755cc399fd7f37d6b3478590b75aace",
         "failureDomainKeys": [
@@ -142,10 +143,464 @@
         ],
         "sources": [
           {
-            "label": "Ondo Global Markets",
-            "url": "https://ondo.finance/"
+            "label": "HyperEVM OndoOFT",
+            "url": "https://www.hyperscan.com/address/0xce61f9246755cc399fd7f37d6b3478590b75aace"
+          },
+          {
+            "label": "HyperEVM RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "iauon-layerzero-dvn-validation",
+        "label": "IAUon LayerZero V2 DVN validation",
+        "routeRefs": [
+          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
+          "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "protocol:layerzero-dvns"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "attestorQuorum": "Ondo's current bridge documentation names Canary DVN, LayerZero Labs DVN, and Ondo DVN for the LayerZero V2 rail; the current IAUon-specific DVN quorum and path configuration were not published.",
+          "unsupportedReason": "Generic documentation establishes the validator families but not the live IAUon-specific peer, DVN, or per-path configuration."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "LayerZero on L2Beat",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "evidence": "Ondo documents LayerZero V2 for Ondo Stocks with Canary DVN, LayerZero Labs DVN, and Ondo DVN validation. This protocol-level validator control applies to the Ethereum and BSC OFT overlays and the HyperEVM representation; Solana is a native issuance route and is excluded."
+      },
+      {
+        "id": "iauon-ethereum-oft-bridge-minter",
+        "label": "IAUon Ethereum OndoOFT bridge mint/burn authority",
+        "routeRefs": [
+          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x8ffe0da486a4075e7bbb5763fad4732d41f9667c",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x8ffe0da486a4075e7bbb5763fad4732d41f9667c"
+        ],
+        "authorityType": "bridge",
+        "capDescription": "The Ethereum OndoOFT is the token-level bridge minter/burner; route-specific custom limits are administered separately and were not published for IAUon.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The OFT uses the Ethereum LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c; the current IAUon-specific peer was not independently decoded.",
+          "rateLimits": "Ondo documents custom rate limiting for the bridge, but the current Ethereum IAUon path limit was not published.",
+          "onchainAmountBounds": "Ondo documents source burn and destination mint of the same token amount; no chain-by-chain global liability ledger was found to prove stronger conservation.",
+          "pausersAdminsUpgraders": "At Ethereum block 25,770,668, the OFT was a MINTER_ROLE member of IAUon. Its owner is OndoOwner 0xbc6d5c103a3f586e68bd475942a49d041b171c3e; owner roles are recorded in the separate Ethereum OndoOwner bridge control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770668,
+        "sources": [
+          {
+            "label": "Ethereum OndoOFT",
+            "url": "https://eth.blockscout.com/address/0x8ffe0da486a4075e7bbb5763fad4732d41f9667c"
+          },
+          {
+            "label": "Ethereum IAUon token",
+            "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+          }
+        ],
+        "evidence": "At Ethereum block 25,770,668, IAUon MINTER_ROLE included OndoOFT 0x8ffe0da486a4075e7bbb5763fad4732d41f9667c. The OFT owner() was OndoOwner 0xbc6d5c103a3f586e68bd475942a49d041b171c3e, endpoint() was LayerZero V2 0x1a44076050125825900e736c501f859c50fe728c, token() was the Ethereum IAUon deployment, and approvalRequired() was false. This is bridge mint/burn machinery, not native issuer issuance."
+      },
+      {
+        "id": "iauon-bsc-oft-bridge-minter",
+        "label": "IAUon BSC OndoOFT bridge mint/burn authority",
+        "routeRefs": [
+          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xeb8ceb319463fdc97f7860211042e2e1abc81f88",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0xeb8ceb319463fdc97f7860211042e2e1abc81f88"
+        ],
+        "authorityType": "bridge",
+        "capDescription": "The BSC OndoOFT is the token-level bridge minter/burner; route-specific custom limits are administered separately and were not published for IAUon.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The OFT uses the LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c; the current IAUon-specific peer was not independently decoded.",
+          "rateLimits": "Ondo documents custom rate limiting for the bridge, but the current BSC IAUon path limit was not published.",
+          "onchainAmountBounds": "Ondo documents source burn and destination mint of the same token amount; no chain-by-chain global liability ledger was found to prove stronger conservation.",
+          "pausersAdminsUpgraders": "At BSC block 116,353,763, the OFT was a MINTER_ROLE member of IAUon. Its owner is OndoOwner 0x4d4e562d6882dc523b8d629d2e9df9230b699933; owner roles are recorded in the separate BSC OndoOwner bridge control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116353763,
+        "sources": [
+          {
+            "label": "BSC OndoOFT",
+            "url": "https://bscscan.com/address/0xeb8ceb319463fdc97f7860211042e2e1abc81f88"
+          },
+          {
+            "label": "BSC IAUon token",
+            "url": "https://bscscan.com/address/0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+          }
+        ],
+        "evidence": "At BSC block 116,353,763, IAUon MINTER_ROLE included OndoOFT 0xeb8ceb319463fdc97f7860211042e2e1abc81f88. The OFT owner() was OndoOwner 0x4d4e562d6882dc523b8d629d2e9df9230b699933, endpoint() was LayerZero V2 0x1a44076050125825900e736c501f859c50fe728c, token() was the BSC IAUon deployment, and approvalRequired() was false. This is bridge mint/burn machinery, not independent BSC native issuance."
+      },
+      {
+        "id": "iauon-hyperevm-oft-bridge-minter",
+        "label": "IAUon HyperEVM OndoOFT bridge mint/burn authority",
+        "routeRefs": [
+          "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xce61f9246755cc399fd7f37d6b3478590b75aace",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0xce61f9246755cc399fd7f37d6b3478590b75aace"
+        ],
+        "authorityType": "bridge",
+        "capDescription": "The HyperEVM OndoOFT is the sole local token minter for the bridge representation; route-specific custom limits are administered separately and were not published for IAUon.",
+        "canRaiseCap": false,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The OFT endpoint() is HyperEVM LayerZero V2 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9; the current IAUon-specific peer was not independently decoded.",
+          "rateLimits": "Ondo documents custom rate limiting for the bridge, but the current HyperEVM IAUon path limit was not published.",
+          "onchainAmountBounds": "Ondo documents source burn and destination mint of the same token amount; no chain-by-chain global liability ledger was found to prove stronger conservation.",
+          "pausersAdminsUpgraders": "At HyperEVM block 43,374,894, this OFT was the sole MINTER_ROLE member of the representation token. Its owner is OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d; owner roles and representation upgrades are recorded in separate bridge controls."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 43374894,
+        "sources": [
+          {
+            "label": "HyperEVM OndoOFT",
+            "url": "https://www.hyperscan.com/address/0xce61f9246755cc399fd7f37d6b3478590b75aace"
+          },
+          {
+            "label": "HyperEVM IAUon token",
+            "url": "https://www.hyperscan.com/address/0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+          }
+        ],
+        "evidence": "At HyperEVM block 43,374,894, the sole IAUon MINTER_ROLE member was OndoOFT 0xce61f9246755cc399fd7f37d6b3478590b75aace. Its endpoint() was 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, token() was the HyperEVM IAUon deployment, owner() was OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d, and approvalRequired() was false. This is a bridge representation rather than local native issuance."
+      },
+      {
+        "id": "iauon-ethereum-ondo-owner",
+        "label": "IAUon Ethereum OndoOwner bridge administrator",
+        "routeRefs": [
+          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xbc6d5c103a3f586e68bd475942a49d041b171c3e",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x8ffe0da486a4075e7bbb5763fad4732d41f9667c",
+          "contract:ethereum:0xbc6d5c103a3f586e68bd475942a49d041b171c3e",
+          "eoa:ethereum:0x71a4d411b5f7941dee020417fca30413712f1646",
+          "eoa:ethereum:0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "bypassSurfaces": [
+          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE member: 0x71a4d411b5f7941dee020417fca30413712f1646",
+          "INSPECTOR_ADMIN_ROLE member: 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc",
+          "RATE_LIMITER_ADMIN_ROLE member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "OndoOwner holds MESSENGER_ADMIN_ROLE for LayerZero route administration, but the current IAUon-specific peer was not independently decoded.",
+          "rateLimits": "RATE_LIMITER_ADMIN_ROLE is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; current numeric limits are recorded as a separate route control and were not published.",
+          "pausersAdminsUpgraders": "At Ethereum block 25,770,668, OndoOFT owner() returned this OndoOwner. Its current role members were DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE 0x71a4d411b5f7941dee020417fca30413712f1646, INSPECTOR_ADMIN_ROLE 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc, and RATE_LIMITER_ADMIN_ROLE 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; Ondo documents emergency pause for the bridge."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770668,
+        "sources": [
+          {
+            "label": "Ethereum OndoOwner",
+            "url": "https://eth.blockscout.com/address/0xbc6d5c103a3f586e68bd475942a49d041b171c3e"
+          },
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          }
+        ],
+        "evidence": "At Ethereum block 25,770,668, OndoOFT owner() returned OndoOwner 0xbc6d5c103a3f586e68bd475942a49d041b171c3e. Live role inventory identified the exact DEFAULT_ADMIN/MESSENGER, INSPECTOR, and RATE_LIMITER members above. This controller governs Ethereum bridge administration and messaging, not native GMTokenManager issuance."
+      },
+      {
+        "id": "iauon-bsc-ondo-owner",
+        "label": "IAUon BSC OndoOwner bridge administrator",
+        "routeRefs": [
+          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "pause"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4d4e562d6882dc523b8d629d2e9df9230b699933",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0xeb8ceb319463fdc97f7860211042e2e1abc81f88",
+          "contract:bsc:0x4d4e562d6882dc523b8d629d2e9df9230b699933",
+          "safe:bsc:0xa307e57ca7f9712af3557af8c5624bef214aa913",
+          "safe:bsc:0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "bypassSurfaces": [
+          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE member: 0xa307e57ca7f9712af3557af8c5624bef214aa913 (4-of-7 Safe)",
+          "INSPECTOR_ADMIN_ROLE member: 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 (1-of-9 Safe)",
+          "RATE_LIMITER_ADMIN_ROLE member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "OndoOwner holds MESSENGER_ADMIN_ROLE for LayerZero route administration, but the current IAUon-specific peer was not independently decoded.",
+          "rateLimits": "RATE_LIMITER_ADMIN_ROLE is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; current numeric limits are recorded as a separate route control and were not published.",
+          "pausersAdminsUpgraders": "At BSC block 116,353,763, OndoOFT owner() returned this OndoOwner. Current role members were DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE 0xa307e57ca7f9712af3557af8c5624bef214aa913, INSPECTOR_ADMIN_ROLE 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97, and RATE_LIMITER_ADMIN_ROLE 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The 4-of-7 Safe threshold and seven-owner count were confirmed; current module/guard probes reverted with Safe GS106. Ondo documents emergency pause for the bridge."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116353763,
+        "sources": [
+          {
+            "label": "BSC OndoOwner",
+            "url": "https://bscscan.com/address/0x4d4e562d6882dc523b8d629d2e9df9230b699933"
+          },
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          }
+        ],
+        "evidence": "At BSC block 116,353,763, OndoOFT owner() returned OndoOwner 0x4d4e562d6882dc523b8d629d2e9df9230b699933. Its live role members and the 4-of-7 Safe relationship are recorded above; current Safe guard/module probes reverted with GS106, so that state remains an evidence gap. This controller governs the BSC bridge overlay, not native GMTokenManager issuance."
+      },
+      {
+        "id": "iauon-hyperevm-ondo-owner",
+        "label": "IAUon HyperEVM OndoOwner bridge administrator",
+        "routeRefs": [
+          "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "pause"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0xce61f9246755cc399fd7f37d6b3478590b75aace",
+          "contract:hyperevm:0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d",
+          "safe:hyperevm:0xa307e57ca7f9712af3557af8c5624bef214aa913",
+          "safe:hyperevm:0xd484422208b1020c83a155336d2b13ce883e5a21"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
+        "bypassSurfaces": [
+          "DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE member: 0xa307e57ca7f9712af3557af8c5624bef214aa913 (4-of-7 Safe)",
+          "INSPECTOR_ADMIN_ROLE member: 0xd484422208b1020c83a155336d2b13ce883e5a21 (1-of-9 Safe)",
+          "RATE_LIMITER_ADMIN_ROLE member: 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "OndoOwner holds MESSENGER_ADMIN_ROLE for LayerZero route administration, but the current IAUon-specific peer was not independently decoded.",
+          "rateLimits": "RATE_LIMITER_ADMIN_ROLE is held by the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; current numeric limits are recorded as a separate route control and were not published.",
+          "pausersAdminsUpgraders": "At HyperEVM block 43,374,894, OndoOFT owner() returned this OndoOwner. Current role members were DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE 0xa307e57ca7f9712af3557af8c5624bef214aa913, INSPECTOR_ADMIN_ROLE 0xd484422208b1020c83a155336d2b13ce883e5a21, and RATE_LIMITER_ADMIN_ROLE 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The 4-of-7 Safe threshold and seven-owner count were confirmed; current module/guard probes reverted with Safe GS106. Ondo documents emergency pause for the bridge."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 43374894,
+        "sources": [
+          {
+            "label": "HyperEVM OndoOwner",
+            "url": "https://www.hyperscan.com/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d"
+          },
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          }
+        ],
+        "evidence": "At HyperEVM block 43,374,894, OndoOFT owner() returned OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d. Its live role members and the 4-of-7 Safe relationship are recorded above; current Safe guard/module probes reverted with GS106, so that state remains an evidence gap. This controller governs the HyperEVM bridge representation, not native issuance."
+      },
+      {
+        "id": "iauon-shared-rate-limiter-admin",
+        "label": "IAUon shared Ondo bridge rate-limiter administrator",
+        "routeRefs": [
+          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
+          "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+        ],
+        "capabilities": [
+          "rate-limit"
+        ],
+        "controllerAddress": "0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "eoa:0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The same EOA holds RATE_LIMITER_ADMIN_ROLE on the Ethereum, BSC, and HyperEVM OndoOwner contracts; current numeric per-path limits were not published.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "rateLimits": "Live role inventories at Ethereum block 25,770,668, BSC block 116,353,763, and HyperEVM block 43,374,894 identify 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as the RATE_LIMITER_ADMIN_ROLE member on each OndoOwner. Ondo documents custom bridge rate limiting, but current IAUon values were not published.",
+          "unsupportedReason": "No route-specific inbound/outbound capacity or aggregate limit was independently decoded in this review."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ondo Token Bridge docs",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "Ethereum OndoOwner",
+            "url": "https://eth.blockscout.com/address/0xbc6d5c103a3f586e68bd475942a49d041b171c3e"
+          },
+          {
+            "label": "BSC OndoOwner",
+            "url": "https://bscscan.com/address/0x4d4e562d6882dc523b8d629d2e9df9230b699933"
+          },
+          {
+            "label": "HyperEVM OndoOwner",
+            "url": "https://www.hyperscan.com/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d"
+          }
+        ],
+        "evidence": "The current Ethereum, BSC, and HyperEVM OndoOwner role inventories all identify the shared EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b as RATE_LIMITER_ADMIN_ROLE. This is a bridge route control and does not govern native GMTokenManager issuance."
+      },
+      {
+        "id": "iauon-ethereum-beacon-bridge-upgrade",
+        "label": "IAUon Ethereum beacon bridge-impacting upgrade timelock",
+        "routeRefs": [
+          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598",
+          "contract:ethereum:0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 7200,
+        "capDescription": "The Ethereum beacon-owner timelock can replace the native token implementation, including bridge-impacting OFT integration logic; native mint upgrade risk remains separately scored in Mint Authority.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Ethereum IAUon BeaconProxy resolves to beacon 0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598, whose owner timelock 0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 has a 7,200-second delay. The bridge-impacting representation surface is duplicated here only as Bridge Risk; native issuance upgradeability remains in Mint Authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770668,
+        "sources": [
+          {
+            "label": "Ethereum IAUon BeaconProxy",
+            "url": "https://eth.blockscout.com/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25,770,668, the IAUon token's beacon was 0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598 and its owner was the two-hour timelock 0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1. Because the same implementation can affect the Ethereum OFT overlay, this upgrade surface remains visible under Bridge Risk while the native mint path stays in Mint Authority."
+      },
+      {
+        "id": "iauon-bsc-beacon-bridge-upgrade",
+        "label": "IAUon BSC beacon bridge-impacting upgrade timelock",
+        "routeRefs": [
+          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x8860bbfc7a83e4788a981f4e9f30878331413b26",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0xc046b05a920e4b412815934dd8e58904dda73315",
+          "contract:bsc:0x8860bbfc7a83e4788a981f4e9f30878331413b26",
+          "safe:bsc:0xa307e57ca7f9712af3557af8c5624bef214aa913"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 7200,
+        "capDescription": "The BSC beacon-owner timelock can replace the native token implementation, including bridge-impacting OFT integration logic; native mint upgrade risk remains separately scored in Mint Authority.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The BSC IAUon BeaconProxy resolves to beacon 0xc046b05a920e4b412815934dd8e58904dda73315, whose owner timelock 0x8860bbfc7a83e4788a981f4e9f30878331413b26 has a 7,200-second delay and proposes through the 4-of-7 Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913. The bridge-impacting representation surface is duplicated here only as Bridge Risk; native issuance upgradeability remains in Mint Authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116353763,
+        "sources": [
+          {
+            "label": "BSC IAUon BeaconProxy",
+            "url": "https://bscscan.com/address/0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+          },
+          {
+            "label": "BSC PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BSC block 116,353,763, the IAUon token's beacon was 0xc046b05a920e4b412815934dd8e58904dda73315 and its owner was the two-hour timelock 0x8860bbfc7a83e4788a981f4e9f30878331413b26. Because the same implementation can affect the BSC OFT overlay, this upgrade surface remains visible under Bridge Risk while the native mint path stays in Mint Authority."
+      },
+      {
+        "id": "iauon-hyperevm-beacon-bridge-upgrade",
+        "label": "IAUon HyperEVM representation beacon upgrade timelock",
+        "routeRefs": [
+          "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x6253fbc5bcf4f49c80745694366f05d6c7be0e83",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0x258269e782ab73aca6c0574990ff29b79aafffb6",
+          "contract:hyperevm:0x6253fbc5bcf4f49c80745694366f05d6c7be0e83",
+          "safe:hyperevm:0xa307e57ca7f9712af3557af8c5624bef214aa913",
+          "safe:hyperevm:0xd484422208b1020c83a155336d2b13ce883e5a21",
+          "safe:hyperevm:0xa3a3c71380128972f172ff4052af7b6405da6364"
+        ],
+        "authorityType": "timelock",
+        "timelockDelaySec": 7200,
+        "capDescription": "The HyperEVM beacon-owner timelock can replace the bridge-representation implementation and therefore alter bridge mint/burn behavior; no native issuance is claimed on HyperEVM.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At HyperEVM block 43,374,894, the representation beacon was 0x258269e782ab73aca6c0574990ff29b79aafffb6 and its owner timelock 0x6253fbc5bcf4f49c80745694366f05d6c7be0e83 reported a 7,200-second delay. The timelock proposes through the 4-of-7 Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913; execution/cancellation and external administration are additional Safe/EOA failure domains, with current module/guard probes returning Safe GS106."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 43374894,
+        "sources": [
+          {
+            "label": "HyperEVM IAUon BeaconProxy",
+            "url": "https://www.hyperscan.com/address/0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+          },
+          {
+            "label": "HyperEVM RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "At HyperEVM block 43,374,894, the IAUon representation's beacon was 0x258269e782ab73aca6c0574990ff29b79aafffb6 and its owner timelock was 0x6253fbc5bcf4f49c80745694366f05d6c7be0e83 with a 7,200-second delay. This bridge-only upgrade path was removed from Mint Authority and remains scoreable here."
       }
     ]
   }

@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "IST was minted through Agoric Inter Protocol vault and PSM contracts. Governance approved the protocol wind-down in mid-2025, disabled new minting, and completed the sunset process on June 26, 2025.",
+    "summary": "IST's native issuance is confined to Agoric Inter Protocol vault and PSM contracts. Governance approved the protocol wind-down in mid-2025, disabled new minting, and completed the sunset process on June 26, 2025. The authored Osmosis denomination is an ICS-20 bridge representation reviewed separately under bridgeRouteRisk.",
     "controls": [
       {
         "chain": "agoric",
@@ -12,10 +12,13 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "agoric:uist"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "IST mints only via overcollateralized Inter Protocol vaults or the PSM (1:1 against approved IBC stablecoins), each subject to a governance-set MintLimit; there is no centralized issuer minter.",
-        "evidence": "Inter Protocol docs describe IST minting through overcollateralized vaults and a Parity Stability Module, each with a governance-set mint limit."
+        "evidence": "Inter Protocol docs describe IST minting through overcollateralized vaults and a Parity Stability Module, each with a governance-set mint limit. Current Agoric vstorage observations on 2026-08-16 report DebtLimit +0 for all six vault managers, consistent with the approved wind-down; the historical governance model remains raiseable."
       },
       {
         "chain": "agoric",
@@ -23,19 +26,22 @@
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
+        "deploymentRefs": [
+          "agoric:uist"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "BLD stakers approve collateral onboarding and contract upgrades; the elected Economic Committee sets risk parameters and PSM/vault mint limits and can pause contracts in emergencies.",
-        "evidence": "Inter Protocol governance docs describe two-tier governance: BLD stakers for major changes and collateral onboarding, and an elected Economic Committee with parameter-level control, mint-limit setting, and emergency contract pausing."
+        "evidence": "Inter Protocol governance docs describe two-tier governance: BLD stakers for major changes and collateral onboarding, and an elected Economic Committee with parameter-level control, mint-limit setting, and emergency contract pausing. The current frozen state reports zero vault DebtLimits, but the governance model historically retains the ability to raise issuance parameters on the Agoric native route."
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. Agoric is a Cosmos-SDK chain; its governance state is not accessible without a live node or public REST API, and no keyless public endpoint confirmed the current Economic Committee membership or governance contract addresses at the time of review. Economic-posture fields reviewed 2026-08-15: on-chain vault/PSM issuance is governed by BLD stakers and the Economic Committee, which can raise mint limits; no off-chain reserve claim or prudential supervisor applies.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. The canonical issuance scope is Agoric only; the authored Osmosis ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5 denomination is an ICS-20 representation and is excluded from Mint Authority. At Agoric block 26894424 on 2026-08-16, native uist supply was 217275917509 micro-IST and all six live vault-manager governance records reported DebtLimit +0, consistent with the approved wind-down. Historical governance remains able to set or raise mint limits; no off-chain reserve claim or prudential supervisor applies.",
+      "reviewer": "OpenAI Codex migration review",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Inter Protocol governance docs",
@@ -44,9 +50,21 @@
         {
           "label": "Inter Protocol docs",
           "url": "https://docs.inter.trade/"
+        },
+        {
+          "label": "Agoric latest block",
+          "url": "https://main.api.agoric.net/cosmos/base/tendermint/v1beta1/blocks/latest"
+        },
+        {
+          "label": "Agoric vault manager governance state",
+          "url": "https://main.api.agoric.net/agoric/vstorage/data/published.vaultFactory.managers.manager0.governance"
+        },
+        {
+          "label": "Agoric sunset governance proposal",
+          "url": "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787"
         }
       ],
-      "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance confirmed from docs; Agoric chain governance state is not publicly queryable without a node endpoint, blocking on-chain confirmation.",
+      "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance are documented; current Agoric vstorage confirms all six vault-manager DebtLimit values are +0, but the current Economic Committee membership and direct authority object were not exposed by the queried public paths.",
       "unresolvedQuestions": [
         "Confirm the current Economic Committee member addresses and governance contract state via Agoric REST API (e.g. https://main.api.agoric.net) or a live Agoric node before raising confidence."
       ]

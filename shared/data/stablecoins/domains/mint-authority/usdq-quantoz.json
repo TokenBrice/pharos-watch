@@ -2,13 +2,16 @@
   "id": "usdq-quantoz",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDQ is issuer-minted on both Ethereum (3/5 multisig owner, no modules) and Polygon (2/5 multisig owner, no modules) via the same HadronToken onlyOwner mint function. Polygon can independently mint. Both chain proxy admins are 3/5 multisigs, no modules.",
+    "summary": "USDQ is issuer-minted natively on Ethereum, Polygon, XRPL, and Algorand. Ethereum and Polygon expose independent HadronToken onlyOwner mint paths with 3/5 and 2/5 issuer multisig owners, respectively; both proxy admins are 3/5 multisigs with no detected modules. XRPL issuance is controlled by the USDQ issuer account, while Algorand ASA distribution and role replacement are controlled by the issuer manager/reserve account. The EVM paths remain economically unbounded, and no independent whole-supply reconciliation is verified.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+        "deploymentRefs": [
+          "ethereum:0xc83e27f270cce0a3a3a29521173a83f402c1768b"
+        ],
         "label": "USDQ Ethereum HadronToken mint surface",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -26,6 +29,9 @@
       {
         "chain": "ethereum",
         "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
+        "deploymentRefs": [
+          "ethereum:0xc83e27f270cce0a3a3a29521173a83f402c1768b"
+        ],
         "label": "USDQ Ethereum owner",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -45,6 +51,9 @@
       {
         "chain": "ethereum",
         "address": "0xa6724f792002d5677a7bc370986e1b580b8773e7",
+        "deploymentRefs": [
+          "ethereum:0xc83e27f270cce0a3a3a29521173a83f402c1768b"
+        ],
         "label": "USDQ Ethereum proxy admin",
         "role": "proxy-admin",
         "authorityType": "multisig",
@@ -58,6 +67,9 @@
       {
         "chain": "polygon",
         "address": "0xb291996477504506bf5f583102b5b5ea5d1e40e0",
+        "deploymentRefs": [
+          "polygon:0xb291996477504506bf5f583102b5b5ea5d1e40e0"
+        ],
         "label": "USDQ Polygon HadronToken mint surface",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -75,6 +87,9 @@
       {
         "chain": "polygon",
         "address": "0x84e8d731fCBe186B803DB51e9E58142083417929",
+        "deploymentRefs": [
+          "polygon:0xb291996477504506bf5f583102b5b5ea5d1e40e0"
+        ],
         "label": "USDQ Polygon owner",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -88,6 +103,9 @@
       {
         "chain": "polygon",
         "address": "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8",
+        "deploymentRefs": [
+          "polygon:0xb291996477504506bf5f583102b5b5ea5d1e40e0"
+        ],
         "label": "USDQ Polygon proxy admin",
         "role": "proxy-admin",
         "authorityType": "multisig",
@@ -97,6 +115,73 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "evidence": "At Polygon block 88323726, EIP-1967 proxy-admin slot confirmed. required()=3, getOwners() returned 5 addresses (0xb924ba8f0b6ef038eb95546464370caf0c5319db, 0x083aa04c8106c42986261cf4ffed3067898009b6, 0x0674cd4cc43764dfce39cd08dd30ddab128e649a, 0x52126765ff90fa2d1ff341c25ce7a3285606b525, 0x3f5af3c2ea1cfad9c34e5189fe5246ff4939079b). getModules()=0x (no modules). Same 5 signers as ETH proxy admin."
+      },
+      {
+        "chain": "xrpl",
+        "address": "rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "deploymentRefs": [
+          "xrpl:USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+        ],
+        "label": "USDQ XRPL issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "account:xrpl:rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 106344095,
+        "sources": [
+          {
+            "label": "XRPL validated USDQ issuer reads",
+            "url": "https://s1.ripple.com:51234"
+          },
+          {
+            "label": "USDQ issuer account on XRPScan",
+            "url": "https://xrpscan.com/account/rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+          },
+          {
+            "label": "Quantoz USDQ product page",
+            "url": "https://www.quantoz.com/products/eurq-usdq"
+          }
+        ],
+        "evidence": "At validated XRPL ledger 106344095, the official XRPL server returned the Quantoz issuer account rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs and gateway_balances reported a USDQ obligation of 1,000,000 units. account_info showed defaultRipple, allowTrustLineClawback, and no SignerList object. The issuer account is the native issued-currency supply authority; no documented multisig policy was present."
+      },
+      {
+        "chain": "algorand",
+        "address": "UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M",
+        "deploymentRefs": [
+          "algorand:2768603795"
+        ],
+        "label": "USDQ Algorand ASA manager/reserve account",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ASA 2768603795 has a fixed total of 10000000000000000000 base units. The issuer-controlled reserve account controls distribution of that pre-created supply, while the manager can replace reserve, freeze, and clawback role addresses but cannot increase the ASA total after creation.",
+        "failureDomainKeys": [
+          "account:algorand:UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 64138559,
+        "sources": [
+          {
+            "label": "USDQ ASA on Algorand indexer",
+            "url": "https://mainnet-idx.algonode.cloud/v2/assets/2768603795"
+          },
+          {
+            "label": "USDQ Algorand manager account",
+            "url": "https://mainnet-api.algonode.cloud/v2/accounts/UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M"
+          },
+          {
+            "label": "Algorand current round",
+            "url": "https://mainnet-api.algonode.cloud/v2/blocks/64138559"
+          }
+        ],
+        "evidence": "At Algorand round 64138559, the official node/indexer returned ASA 2768603795 named Quantoz USDQ (USDQ, six decimals), with manager and creator UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M and reserve, freeze, and clawback all set to 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY. The ASA total is fixed at 10000000000000000000 base units; the reserve account controls distribution, while the manager can replace role addresses. The manager account is standard signature type, but its off-chain signer custody is not established."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -125,19 +210,23 @@
           "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
         }
       ],
-      "evidence": "At ETH block 25294990: owner()=0x284Df (3/5 multisig, no modules), proxy admin=0xa6724f (3/5 multisig, no modules). At Polygon block 88323726: owner()=0x84e8d (2/5 multisig, no modules), proxy admin=0x2f875 (3/5 multisig, no modules). Polygon deployment uses same HadronToken implementation and can independently mint. XRPL and Algorand contracts not in mint-authority scope (separate ledger rails); Ethereum and Polygon are the material EVM mint surfaces. Quantoz publishes a real-time issuer-operated transparency dashboard, but challenge searches of its transparency, audit, assurance, and product materials found no recurring independent USDQ assets-and-liabilities report. No independent attestor, cadence, or latest qualifying report date is available, so reconciliation is unknown. The DNB register matches Quantoz Payments B.V. under relation R186418 as an authorized Electronic Money Institution, supporting prudential supervision of the same issuer entity. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint and upgrades are unbounded, the ad-hoc self-reported snapshot does not establish recurring whole-supply reconciliation, and DNB authorizes Quantoz Payments B.V. as the USDQ MiCA EMT issuer. Wave 2 external research reviewed 2026-08-15: Quantoz's transparency page publishes a dated issuer snapshot covering all listed USDQ deployments and DNB supervision, but accessible evidence does not establish a recurring report series or live independently verifiable assets-and-liabilities reconciliation for the complete supply.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 25294990 and Polygon block 88323726, the HadronToken deployments expose independent issuer-controlled onlyOwner mint paths, with 3/5 and 2/5 owner multisigs and separate 3/5 proxy-admin multisigs; those proxy admins can replace mint logic. At validated XRPL ledger 106344095, the Quantoz issuer account natively controls the USDQ issued-currency obligation, with no SignerList object present. At Algorand round 64138559, ASA 2768603795 is a native Quantoz USDQ asset with a fixed total, issuer manager, and reserve/freeze/clawback controls; the reserve distributes pre-created supply and the manager can replace role addresses. These four authored deployments are native issuance and are not bridge representations. Quantoz publishes a dated issuer-operated reserve snapshot and DNB supervision, but accessible evidence does not establish a recurring independent whole-supply assets-and-liabilities reconciliation, so reconciliation remains unknown. The EVM direct-mint and upgrade paths remain economically unbounded, and supervision remains prudential.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; OpenAI Codex mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16"
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+        "polygon:0xb291996477504506bf5f583102b5b5ea5d1e40e0"
+      ],
       "adminAddresses": [
         "0xa6724f792002d5677a7bc370986e1b580b8773e7",
         "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8"
       ],
       "canChangeMintLogic": true,
       "controlRef": "USDQ Ethereum proxy admin",
-      "observedAt": "2026-06-11",
+      "observedAt": "2026-08-16",
       "sources": [
         {
           "label": "Sourcify USDQ Ethereum HadronToken source",

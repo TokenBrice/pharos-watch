@@ -77,10 +77,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "savUSD is an avUSD variant whose supported cross-chain deployments use Chainlink CCIP Burn & Mint pools as the primary route, with LayerZero OFT/OFT-adapter infrastructure for Movement and Avalanche. Because CCIP and LayerZero are third-party messaging bridges, Pharos keeps the route scored as external validated-network exposure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-    "confidence": "verified",
+    "summary": "Reviewed 2026-08-16: Avalanche is the only native savUSD issuance route; its CCIP LockRelease pool and LayerZero OFT adapter, plus the destination CCIP representations, are Bridge Risk rather than Mint Authority. Base is now tracked with a verified CCIP burn/mint representation, while the Movement non-EVM route and Arbitrum bridged token remain explicit unresolved bridge inventory because their peer/delegate/controller and admin paths are incomplete. The assessed route tier remains external validated-network exposure.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex mint-bridge-boundary migration",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "docs",
@@ -108,6 +108,10 @@
         "url": "https://docs.avantprotocol.com/security/contract-addresses"
       },
       {
+        "label": "Avant core tokens",
+        "url": "https://docs.avantprotocol.com/overview/core-tokens"
+      },
+      {
         "label": "Chainlink CCIP docs",
         "url": "https://docs.chain.link/ccip"
       },
@@ -129,9 +133,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: the canonical Staked avUSD ERC-4626 vault (asset() = avUSD 0x24dE8771bC5DdB3362Db529Fc3358F2df3A0E346) minting shares against deposits; a CCIP Lock-and-Release pool 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D and a LayerZero OFT adapter 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85 exist for cross-chain movement but do not mint this canonical supply. Native vault issuance.",
+        "reviewNote": "On-chain 2026-08-16 at Avalanche block 92981175: the canonical Staked avUSD ERC-4626 vault (asset() = avUSD 0x24dE8771bC5DdB3362Db529Fc3358F2df3A0E346) mints shares against deposits; its CCIP Lock-and-Release pool 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D is owned by 0xf4c7e640eda248ef95972845a62bdc74237805db, and the LayerZero OFT adapter is 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85. These are cross-chain machinery and do not mint canonical supply. Native vault issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92981175,
         "sources": [
           {
             "label": "savUSD vault on Snowscan",
@@ -439,6 +444,222 @@
             "url": "https://docs.avantprotocol.com/security/contract-addresses"
           }
         ]
+      },
+      {
+        "id": "base:0xa6ef20fe18cd529ca15a8a53a29d1832b1f848ff",
+        "sourceChain": "avalanche",
+        "destinationChain": "base",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0xa6ef20fe18cd529ca15a8a53a29d1832b1f848ff",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Base block 50065737, the documented representation has live code and symbol() = savUSD. At Base block 50065776, the documented CCIP BurnMintTokenPool 0x82d6818D933DA2657D011433EA32Cf4D23368258 returned getToken() = this savUSD deployment and typeAndVersion() = BurnMintTokenPool 1.5.1; owner() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd. The route is reviewed for representation semantics, but the pool's complete admin/upgrade path and route limits remain to be verified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x82d6818D933DA2657D011433EA32Cf4D23368258",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x82d6818d933da2657d011433ea32cf4d23368258"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065776,
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "Base savUSD representation",
+            "url": "https://basescan.org/address/0xa6EF20FE18CD529cA15A8a53A29D1832B1F848ff"
+          },
+          {
+            "label": "Base CCIP BurnMintTokenPool",
+            "url": "https://basescan.org/address/0x82d6818D933DA2657D011433EA32Cf4D23368258"
+          }
+        ]
+      },
+      {
+        "id": "movement:0xde6eb2598d91fd43c432ba7f0bca56158525a74ac0841b749ce17bf984cf5642",
+        "sourceChain": "avalanche",
+        "destinationChain": "movement",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0xde6eb2598d91fd43c432ba7f0bca56158525a74ac0841b749ce17bf984cf5642",
+        "protocol": "LayerZero OFT / Movement Fungible Asset",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "The official Avant registry identifies a Movement bridged savUSD Fungible Asset at this resource and the LayerZero OFT controller at movement:0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c. At Movement ledger version 196234021, the resource metadata returned name Staked avUSD, symbol savUSD, and 8 decimals. Current peer/delegate/upgrade/admin state remains unresolved, so this non-EVM bridge representation is not marked fully reviewed or native.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedBlock": 196234021,
+        "controllerChain": "movement",
+        "controllerAddress": "0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:movement:0xdc79f688a8c3765ecc1ea3fbec5a7e1b52bfb31191079c66460baf0690bcae9c"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "Movement node API: savUSD Fungible Asset metadata at ledger version 196234021",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xde6eb2598d91fd43c432ba7f0bca56158525a74ac0841b749ce17bf984cf5642/resources?ledger_version=196234021"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xa322e23a357cb7c596a7a834102b9d6d5b15da3e",
+        "sourceChain": "avalanche",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0xa322e23a357cb7c596a7a834102b9d6d5b15da3e",
+        "protocol": "unresolved Arbitrum bridged savUSD route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Avant's core-token page labels this Arbitrum deployment bridged, and live code with symbol() = savUSD was confirmed at Arbitrum block 495288104. The security registry does not identify its route controller; CCIP pool, source-token mapping, router, admin, and rate limits remain unresolved, so no reviewed bridge tier is assigned.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495288104,
+        "sources": [
+          {
+            "label": "Avant core tokens",
+            "url": "https://docs.avantprotocol.com/overview/core-tokens"
+          },
+          {
+            "label": "Arbitrum savUSD representation",
+            "url": "https://arbiscan.io/address/0xA322e23a357cB7C596A7a834102B9d6d5b15da3e"
+          },
+          {
+            "label": "Arbitrum public RPC control read",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "avalanche-ccip-lock-release-owner",
+        "label": "Avant Avalanche CCIP LockReleaseTokenPool owner",
+        "routeRefs": [
+          "avalanche:0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+        ],
+        "capabilities": ["escrow", "admin"],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xf4c7e640eda248ef95972845a62bdc74237805db",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d",
+          "eoa:evm:0xf4c7e640eda248ef95972845a62bdc74237805db"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "lockboxOrEscrow": "The canonical-side CCIP LockReleaseTokenPool is 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D and holds the bridge escrow path for native savUSD.",
+          "pausersAdminsUpgraders": "At Avalanche block 92981175, the pool owner() returned 0xf4c7e640eda248ef95972845a62bdc74237805db. Other pool admin, upgrade, router, and rate-limit surfaces remain outside this fixed owner read."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92981175,
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "Avalanche CCIP pool RPC read",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink CCIP docs",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Avalanche block 92981175, the official Avant registry's canonical-side CCIP pool 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D returned getToken() = native savUSD and typeAndVersion() = LockReleaseTokenPool 1.5.1; owner() returned the EOA 0xf4c7e640eda248ef95972845a62bdc74237805db. This is bridge escrow and administration for cross-chain movement, not an independent native savUSD issuance path."
+      },
+      {
+        "id": "avalanche-layerzero-oft-adapter",
+        "label": "Avant Avalanche savUSD LayerZero OFT adapter",
+        "routeRefs": [
+          "avalanche:0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "peer-config"],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x3524609c4d8111d45afc912bf1e1270cd5a1bd85",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:avalanche:0x3524609c4d8111d45afc912bf1e1270cd5a1bd85"
+        ],
+        "authorityType": "contract",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The official Avant registry identifies 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85 as the Avalanche savUSD LayerZero OFT adapter; current delegate and peer bindings remain unresolved.",
+          "pausersAdminsUpgraders": "The adapter is cross-chain machinery only. Current admin, pause, and upgrade authority was not independently resolved, so no stronger canonical mint authority is inferred."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92981175,
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At the 2026-08-16 Avalanche route review, the official registry identified 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85 as the savUSD LayerZero OFT adapter. Its bridge transfer capability and unresolved peer/delegate/admin state are retained here under Bridge Risk; this adapter is not a native savUSD issuance controller."
+      },
+      {
+        "id": "base-ccip-burn-mint-pool",
+        "label": "Base savUSD CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "base:0xa6ef20fe18cd529ca15a8a53a29d1832b1f848ff"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin"],
+        "controllerChain": "base",
+        "controllerAddress": "0x82d6818d933da2657d011433ea32cf4d23368258",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x82d6818d933da2657d011433ea32cf4d23368258"
+        ],
+        "authorityType": "contract",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Base block 50065776, pool owner() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd. The complete admin, upgrade, router, and rate-limit path remains to be verified before treating this as the complete controller set."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065776,
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "Base CCIP BurnMintTokenPool",
+            "url": "https://basescan.org/address/0x82d6818D933DA2657D011433EA32Cf4D23368258"
+          },
+          {
+            "label": "Chainlink CCIP docs",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Base block 50065776, 0x82d6818D933DA2657D011433EA32Cf4D23368258 returned getToken() = savUSD 0xa6EF20FE18CD529cA15A8a53A29D1832B1F848ff and typeAndVersion() = BurnMintTokenPool 1.5.1; owner() returned 0x881e3a65b4d4a04dd529061dd0071cf975f58bcd. The pool's representation burn/mint and owner-admin powers are bridge-route controls, not canonical Mint Authority."
       }
     ]
   }

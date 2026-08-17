@@ -18,10 +18,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USSD uses Frax/LayerZero OFT-style omnichain infrastructure for cross-chain USSD minting, while CCTP v2 remains a secondary USDC redemption rail. The durable cross-chain risk is therefore the external LayerZero route plus scoped CCTP redemption exposure, not issuer-native CCTP alone. 2026-07-20 cohort dc-1 pass: Sonic row confirmed native; other-chain rows confirmed as the uniform USSD cross-chain deployment (uniform address, admin, implementation reads).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "probable",
+    "summary": "USSD has canonical native issuance on Sonic through the BrandedCustodian/BrandedFactory path. Ethereum, Base, Arbitrum, Optimism, and Scroll are Frax branded-token representations reached through CrossChainRouter redemption and LayerZero RemoteHop/FraxtalHop composition; their local custodians, factories, ProxyAdmin owners, router roles, Hop peers, five-DVN validation, executors, treasuries, pause, admin, and recovery surfaces are assessed here. CCTP v2 remains a secondary USDC redemption rail whose USSD conversion contract is unresolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex FIX2-02 USSD Sonic Labs bridge-boundary migration",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
@@ -33,6 +33,18 @@
           "burnAndMint"
         ],
         "note": "Primary USSD cross-chain minting route through Frax/LayerZero infrastructure."
+      },
+      {
+        "source": "docs",
+        "name": "Frax Branded Stablecoins CrossChainRouter",
+        "slug": "frax-branded-stablecoins",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins",
+        "bridgeTypes": [
+          "branded-custodian",
+          "layerzero",
+          "burnAndMint"
+        ],
+        "note": "CrossChainRouter redeems source USSD for frxUSD and destination Hop composition re-mints branded USSD through the local BrandedCustodian."
       },
       {
         "source": "l2beat",
@@ -49,6 +61,22 @@
       {
         "label": "Sonic USSD launch blog",
         "url": "https://blog.soniclabs.com/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/"
+      },
+      {
+        "label": "Frax Branded Stablecoins documentation",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+      },
+      {
+        "label": "Sonic CrossChainRouter verified source",
+        "url": "https://sonicscan.org/address/0x2F30BeF74c1F7572a3ea5e101d1f587287d06C94#code"
+      },
+      {
+        "label": "Sonic RemoteHopV201 verified source",
+        "url": "https://sonicscan.org/address/0x0000006d38568b00b457580b734e0076c62de659#code"
+      },
+      {
+        "label": "Fraxtal FraxtalHopV201 verified source",
+        "url": "https://fraxscan.com/address/0x00000000e18afc20afe54d4b2c8688bb60c06b36#code"
       },
       {
         "label": "The Block USSD / Frax infrastructure report",
@@ -71,13 +99,14 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'US Sonic Dollar', symbol USSD, 18 decimals; EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 (Frax ProxyAdmin per the mint-authority review) — native issuance on Sonic.",
+        "reviewNote": "Verified at Sonic block 77630948 on 2026-08-16: the GeniusDollar implementation and BrandedCustodian path identify Sonic as the canonical USSD product chain; the Sonic ProxyAdmin is 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and the local BrandedCustodian is the direct frxUSD-backed native mint gateway.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 77630948,
         "sources": [
           {
             "label": "USSD on Sonic explorer",
-            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
           }
         ]
       },
@@ -92,21 +121,20 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'US Sonic Dollar', symbol USSD, 18 decimals; uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 across Sonic/Ethereum/Arbitrum/Scroll/Optimism. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "Verified on 2026-08-16 at Ethereum block 25770394: this is the Sonic-canonical USSD representation with uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 and ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. Local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 holds MINTER_ROLE with mintCap uint256.max, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d holds FACTORY_ROLE and owns the custodian, and ProxyAdmin owner 0xb1748c79709f4ba2dd82834b8c82d4a505003f27 is a threshold-3 SafeProxy-shaped contract. This is a bridge representation, not an Ethereum-canonical issuance route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "ethereum",
-        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770394,
+        "sourceChain": "sonic",
+        "canonicalChain": "sonic",
         "failureDomainKeys": [
           "protocol:ussd-uniform-deployment",
           "contract:ethereum:0x000000000eccff26b795f73fb0a70d48da657fef"
         ],
         "sources": [
           {
-            "label": "USSD on Sonic explorer",
-            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+            "label": "USSD on Etherscan",
+            "url": "https://etherscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
           }
         ]
       },
@@ -121,21 +149,20 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 (identical to the five name-verified chains); name()/symbol() reads returned empty via the Base public RPC on 2026-07-20, so identity rests on the uniform proxy fingerprints. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "Verified on 2026-08-16 at Base block 50063637: this is the Sonic-canonical USSD representation with uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 and ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. Local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 is the destination MINTER_ROLE holder with mintCap uint256.max, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d is its FACTORY_ROLE owner, and ProxyAdmin owner 0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53 is a threshold-3 SafeProxy-shaped contract. Base is a bridge representation, not the canonical product chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "base",
-        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063637,
+        "sourceChain": "sonic",
+        "canonicalChain": "sonic",
         "failureDomainKeys": [
           "protocol:ussd-uniform-deployment",
           "contract:base:0x000000000eccff26b795f73fb0a70d48da657fef"
         ],
         "sources": [
           {
-            "label": "USSD on Sonic explorer",
-            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+            "label": "USSD on Basescan",
+            "url": "https://basescan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
           }
         ]
       },
@@ -150,21 +177,20 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'US Sonic Dollar', symbol USSD, 18 decimals; uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 across Sonic/Ethereum/Arbitrum/Scroll/Optimism. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "Verified on 2026-08-16 at Arbitrum block 495271411: this is the Sonic-canonical USSD representation with uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 and ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. Local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 is the destination MINTER_ROLE holder with mintCap uint256.max, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d is its FACTORY_ROLE owner, and ProxyAdmin owner 0x3da490b19f300e7cb2280426c8ad536db2df445c is a threshold-3 SafeProxy-shaped contract. Arbitrum is a bridge representation, not the canonical product chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "arbitrum",
-        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495271411,
+        "sourceChain": "sonic",
+        "canonicalChain": "sonic",
         "failureDomainKeys": [
           "protocol:ussd-uniform-deployment",
           "contract:arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef"
         ],
         "sources": [
           {
-            "label": "USSD on Sonic explorer",
-            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+            "label": "USSD on Arbiscan",
+            "url": "https://arbiscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
           }
         ]
       },
@@ -179,21 +205,20 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'US Sonic Dollar', symbol USSD, 18 decimals; uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 across Sonic/Ethereum/Arbitrum/Scroll/Optimism. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "Verified on 2026-08-16 at Optimism block 155658923: this is the Sonic-canonical USSD representation with uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 and ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. Local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 is the destination MINTER_ROLE holder with mintCap uint256.max, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d is its FACTORY_ROLE owner, and ProxyAdmin owner 0x419e672d625f998dd07a7ecf2e06b896f8717cb2 is a threshold-3 SafeProxy-shaped contract. Optimism is a bridge representation, not the canonical product chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "optimism",
-        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658923,
+        "sourceChain": "sonic",
+        "canonicalChain": "sonic",
         "failureDomainKeys": [
           "protocol:ussd-uniform-deployment",
           "contract:optimism:0x000000000eccff26b795f73fb0a70d48da657fef"
         ],
         "sources": [
           {
-            "label": "USSD on Sonic explorer",
-            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+            "label": "USSD on Optimism Etherscan",
+            "url": "https://optimistic.etherscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
           }
         ]
       },
@@ -208,23 +233,835 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'US Sonic Dollar', symbol USSD, 18 decimals; uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 across Sonic/Ethereum/Arbitrum/Scroll/Optimism. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "Verified on 2026-08-16 at Scroll block 34662007: this is the Sonic-canonical USSD representation with uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 and ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. Local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 is the destination MINTER_ROLE holder with mintCap uint256.max, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d is its FACTORY_ROLE owner, and ProxyAdmin owner 0x73f365d34b81e731825a094c2e722a08574335cd is a threshold-3 SafeProxy-shaped contract. Scroll is a bridge representation, not the canonical product chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "scroll",
-        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "observedAt": "2026-08-16",
+        "observedBlock": 34662007,
+        "sourceChain": "sonic",
+        "canonicalChain": "sonic",
         "failureDomainKeys": [
           "protocol:ussd-uniform-deployment",
           "contract:scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
         ],
         "sources": [
           {
-            "label": "USSD on Sonic explorer",
-            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+            "label": "USSD on Scrollscan",
+            "url": "https://scrollscan.com/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "ussd-ethereum-branded-custodian",
+        "label": "USSD Ethereum BrandedCustodian destination mint gateway",
+        "routeRefs": [
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:ethereum:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+          "contract:ethereum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The destination BrandedCustodian holds USSD MINTER_ROLE and reports mintCap uint256.max; its owner-controlled cap and local deposit path can mint destination representation supply against the received branded frxUSD asset.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "CrossChainRouter redeems source USSD for frxUSD and destination Hop composition deposits the received frxUSD into the local BrandedCustodian before it mints destination USSD.",
+          "trustedPeerOrRemote": "The custodian is reached through the Frax CrossChainRouter and LayerZero Hop path; the destination-specific router and RemoteHop configuration was not independently enumerated in this pass.",
+          "caps": "At Ethereum block 25770394, the local custodian mintCap read uint256.max; exact destination cap governance remains route-scoped here.",
+          "pausersAdminsUpgraders": "The custodian owner is the local BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d. The token proxy's separate ProxyAdmin owner is recorded in the route-specific upgrade control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770394,
+        "sources": [
+          {
+            "label": "Ethereum USSD BrandedCustodian",
+            "url": "https://etherscan.io/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+          },
+          {
+            "label": "Frax BrandedCustodian documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+          }
+        ],
+        "evidence": "At Ethereum block 25770394, local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 held the USSD MINTER_ROLE, its owner was BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d, and mintCap was uint256.max. The verified Frax branded-custodian path is destination representation minting after cross-chain frxUSD redemption, not independent Ethereum-canonical USSD issuance."
+      },
+      {
+        "id": "ussd-base-branded-custodian",
+        "label": "USSD Base BrandedCustodian destination mint gateway",
+        "routeRefs": [
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:base:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+          "contract:base:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The destination BrandedCustodian holds USSD MINTER_ROLE and reports mintCap uint256.max; its owner-controlled cap and local deposit path can mint destination representation supply against the received branded frxUSD asset.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "CrossChainRouter redeems source USSD for frxUSD and destination Hop composition deposits the received frxUSD into the local BrandedCustodian before it mints destination USSD.",
+          "trustedPeerOrRemote": "The custodian is reached through the Frax CrossChainRouter and LayerZero Hop path; the destination-specific router and RemoteHop configuration was not independently enumerated in this pass.",
+          "caps": "At Base block 50063637, the local custodian mintCap read uint256.max; exact destination cap governance remains route-scoped here.",
+          "pausersAdminsUpgraders": "The custodian owner is the local BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d. The token proxy's separate ProxyAdmin owner is recorded in the route-specific upgrade control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063637,
+        "sources": [
+          {
+            "label": "Base USSD BrandedCustodian",
+            "url": "https://basescan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+          },
+          {
+            "label": "Frax BrandedCustodian documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+          }
+        ],
+        "evidence": "At Base block 50063637, local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 was the destination USSD MINTER_ROLE holder, its owner was BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d, and mintCap was uint256.max. This is destination representation minting through the Frax branded-token route, not independent Base-canonical USSD issuance."
+      },
+      {
+        "id": "ussd-arbitrum-branded-custodian",
+        "label": "USSD Arbitrum BrandedCustodian destination mint gateway",
+        "routeRefs": [
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:arbitrum:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+          "contract:arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The destination BrandedCustodian holds USSD MINTER_ROLE and reports mintCap uint256.max; its owner-controlled cap and local deposit path can mint destination representation supply against the received branded frxUSD asset.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "CrossChainRouter redeems source USSD for frxUSD and destination Hop composition deposits the received frxUSD into the local BrandedCustodian before it mints destination USSD.",
+          "trustedPeerOrRemote": "The custodian is reached through the Frax CrossChainRouter and LayerZero Hop path; the destination-specific router and RemoteHop configuration was not independently enumerated in this pass.",
+          "caps": "At Arbitrum block 495271411, the local custodian mintCap read uint256.max; exact destination cap governance remains route-scoped here.",
+          "pausersAdminsUpgraders": "The custodian owner is the local BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d. The token proxy's separate ProxyAdmin owner is recorded in the route-specific upgrade control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495271411,
+        "sources": [
+          {
+            "label": "Arbitrum USSD BrandedCustodian",
+            "url": "https://arbiscan.io/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+          },
+          {
+            "label": "Frax BrandedCustodian documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+          }
+        ],
+        "evidence": "At Arbitrum block 495271411, local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 was the destination USSD MINTER_ROLE holder, its owner was BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d, and mintCap was uint256.max. This is destination representation minting through the Frax branded-token route, not independent Arbitrum-canonical USSD issuance."
+      },
+      {
+        "id": "ussd-optimism-branded-custodian",
+        "label": "USSD Optimism BrandedCustodian destination mint gateway",
+        "routeRefs": [
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:optimism:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+          "contract:optimism:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The destination BrandedCustodian holds USSD MINTER_ROLE and reports mintCap uint256.max; its owner-controlled cap and local deposit path can mint destination representation supply against the received branded frxUSD asset.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "CrossChainRouter redeems source USSD for frxUSD and destination Hop composition deposits the received frxUSD into the local BrandedCustodian before it mints destination USSD.",
+          "trustedPeerOrRemote": "The custodian is reached through the Frax CrossChainRouter and LayerZero Hop path; the destination-specific router and RemoteHop configuration was not independently enumerated in this pass.",
+          "caps": "At Optimism block 155658923, the local custodian mintCap read uint256.max; exact destination cap governance remains route-scoped here.",
+          "pausersAdminsUpgraders": "The custodian owner is the local BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d. The token proxy's separate ProxyAdmin owner is recorded in the route-specific upgrade control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658923,
+        "sources": [
+          {
+            "label": "Optimism USSD BrandedCustodian",
+            "url": "https://optimistic.etherscan.io/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+          },
+          {
+            "label": "Frax BrandedCustodian documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+          }
+        ],
+        "evidence": "At Optimism block 155658923, local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 was the destination USSD MINTER_ROLE holder, its owner was BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d, and mintCap was uint256.max. This is destination representation minting through the Frax branded-token route, not independent Optimism-canonical USSD issuance."
+      },
+      {
+        "id": "ussd-scroll-branded-custodian",
+        "label": "USSD Scroll BrandedCustodian destination mint gateway",
+        "routeRefs": [
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "scroll",
+        "controllerAddress": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:scroll:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+          "contract:scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The destination BrandedCustodian holds USSD MINTER_ROLE and reports mintCap uint256.max; its owner-controlled cap and local deposit path can mint destination representation supply against the received branded frxUSD asset.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "lockboxOrEscrow": "CrossChainRouter redeems source USSD for frxUSD and destination Hop composition deposits the received frxUSD into the local BrandedCustodian before it mints destination USSD.",
+          "trustedPeerOrRemote": "The custodian is reached through the Frax CrossChainRouter and LayerZero Hop path; the destination-specific router and RemoteHop configuration was not independently enumerated in this pass.",
+          "caps": "At Scroll block 34662007, the local custodian mintCap read uint256.max; exact destination cap governance remains route-scoped here.",
+          "pausersAdminsUpgraders": "The custodian owner is the local BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d. The token proxy's separate ProxyAdmin owner is recorded in the route-specific upgrade control."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 34662007,
+        "sources": [
+          {
+            "label": "Scroll USSD BrandedCustodian",
+            "url": "https://scrollscan.com/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+          },
+          {
+            "label": "Frax BrandedCustodian documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+          }
+        ],
+        "evidence": "At Scroll block 34662007, local BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 was the destination USSD MINTER_ROLE holder, its owner was BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d, and mintCap was uint256.max. This is destination representation minting through the Frax branded-token route, not independent Scroll-canonical USSD issuance."
+      },
+      {
+        "id": "ussd-ethereum-branded-factory",
+        "label": "USSD Ethereum BrandedFactory role administrator",
+        "routeRefs": [
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x63e89638743a409e2389f06a3f778a4570314d7d",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:ethereum:0x63e89638743a409e2389f06a3f778a4570314d7d",
+          "contract:ethereum:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BrandedFactory holds FACTORY_ROLE, the MINTER_ROLE administrator, and owns the destination BrandedCustodian; it can authorize destination minters and change the custodian mint cap.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The local custodian mintCap is uint256.max and its onlyOwner setMintCap path is owned by this BrandedFactory.",
+          "pausersAdminsUpgraders": "The verified GeniusDollar source assigns FACTORY_ROLE as MINTER_ROLE's admin role; this control is destination bridge administration, not canonical Sonic issuance."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770394,
+        "sources": [
+          {
+            "label": "Ethereum USSD BrandedFactory",
+            "url": "https://etherscan.io/address/0x63e89638743a409e2389f06a3f778a4570314d7d#code"
+          },
+          {
+            "label": "Frax branded stablecoins documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+          }
+        ],
+        "evidence": "At Ethereum block 25770394, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d was the local BrandedCustodian owner and the FACTORY_ROLE holder/admin path for the destination USSD MINTER_ROLE. Its capability is scoped to the Sonic-canonical representation route."
+      },
+      {
+        "id": "ussd-base-branded-factory",
+        "label": "USSD Base BrandedFactory role administrator",
+        "routeRefs": [
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x63e89638743a409e2389f06a3f778a4570314d7d",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:base:0x63e89638743a409e2389f06a3f778a4570314d7d",
+          "contract:base:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BrandedFactory holds FACTORY_ROLE, the MINTER_ROLE administrator, and owns the destination BrandedCustodian; it can authorize destination minters and change the custodian mint cap.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The local custodian mintCap is uint256.max and its onlyOwner setMintCap path is owned by this BrandedFactory.",
+          "pausersAdminsUpgraders": "The verified GeniusDollar source assigns FACTORY_ROLE as MINTER_ROLE's admin role; this control is destination bridge administration, not canonical Sonic issuance."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063637,
+        "sources": [
+          {
+            "label": "Base USSD BrandedFactory",
+            "url": "https://basescan.org/address/0x63e89638743a409e2389f06a3f778a4570314d7d#code"
+          },
+          {
+            "label": "Frax branded stablecoins documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+          }
+        ],
+        "evidence": "At Base block 50063637, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d was the local BrandedCustodian owner and the FACTORY_ROLE holder/admin path for the destination USSD MINTER_ROLE. Its capability is scoped to the Sonic-canonical representation route."
+      },
+      {
+        "id": "ussd-arbitrum-branded-factory",
+        "label": "USSD Arbitrum BrandedFactory role administrator",
+        "routeRefs": [
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x63e89638743a409e2389f06a3f778a4570314d7d",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:arbitrum:0x63e89638743a409e2389f06a3f778a4570314d7d",
+          "contract:arbitrum:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BrandedFactory holds FACTORY_ROLE, the MINTER_ROLE administrator, and owns the destination BrandedCustodian; it can authorize destination minters and change the custodian mint cap.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The local custodian mintCap is uint256.max and its onlyOwner setMintCap path is owned by this BrandedFactory.",
+          "pausersAdminsUpgraders": "The verified GeniusDollar source assigns FACTORY_ROLE as MINTER_ROLE's admin role; this control is destination bridge administration, not canonical Sonic issuance."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495271411,
+        "sources": [
+          {
+            "label": "Arbitrum USSD BrandedFactory",
+            "url": "https://arbiscan.io/address/0x63e89638743a409e2389f06a3f778a4570314d7d#code"
+          },
+          {
+            "label": "Frax branded stablecoins documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+          }
+        ],
+        "evidence": "At Arbitrum block 495271411, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d was the local BrandedCustodian owner and the FACTORY_ROLE holder/admin path for the destination USSD MINTER_ROLE. Its capability is scoped to the Sonic-canonical representation route."
+      },
+      {
+        "id": "ussd-optimism-branded-factory",
+        "label": "USSD Optimism BrandedFactory role administrator",
+        "routeRefs": [
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x63e89638743a409e2389f06a3f778a4570314d7d",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:optimism:0x63e89638743a409e2389f06a3f778a4570314d7d",
+          "contract:optimism:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BrandedFactory holds FACTORY_ROLE, the MINTER_ROLE administrator, and owns the destination BrandedCustodian; it can authorize destination minters and change the custodian mint cap.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The local custodian mintCap is uint256.max and its onlyOwner setMintCap path is owned by this BrandedFactory.",
+          "pausersAdminsUpgraders": "The verified GeniusDollar source assigns FACTORY_ROLE as MINTER_ROLE's admin role; this control is destination bridge administration, not canonical Sonic issuance."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658923,
+        "sources": [
+          {
+            "label": "Optimism USSD BrandedFactory",
+            "url": "https://optimistic.etherscan.io/address/0x63e89638743a409e2389f06a3f778a4570314d7d#code"
+          },
+          {
+            "label": "Frax branded stablecoins documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+          }
+        ],
+        "evidence": "At Optimism block 155658923, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d was the local BrandedCustodian owner and the FACTORY_ROLE holder/admin path for the destination USSD MINTER_ROLE. Its capability is scoped to the Sonic-canonical representation route."
+      },
+      {
+        "id": "ussd-scroll-branded-factory",
+        "label": "USSD Scroll BrandedFactory role administrator",
+        "routeRefs": [
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "scroll",
+        "controllerAddress": "0x63e89638743a409e2389f06a3f778a4570314d7d",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "contract:scroll:0x63e89638743a409e2389f06a3f778a4570314d7d",
+          "contract:scroll:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BrandedFactory holds FACTORY_ROLE, the MINTER_ROLE administrator, and owns the destination BrandedCustodian; it can authorize destination minters and change the custodian mint cap.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The local custodian mintCap is uint256.max and its onlyOwner setMintCap path is owned by this BrandedFactory.",
+          "pausersAdminsUpgraders": "The verified GeniusDollar source assigns FACTORY_ROLE as MINTER_ROLE's admin role; this control is destination bridge administration, not canonical Sonic issuance."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 34662007,
+        "sources": [
+          {
+            "label": "Scroll USSD BrandedFactory",
+            "url": "https://scrollscan.com/address/0x63e89638743a409e2389f06a3f778a4570314d7d#code"
+          },
+          {
+            "label": "Frax branded stablecoins documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+          }
+        ],
+        "evidence": "At Scroll block 34662007, BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d was the local BrandedCustodian owner and the FACTORY_ROLE holder/admin path for the destination USSD MINTER_ROLE. Its capability is scoped to the Sonic-canonical representation route."
+      },
+      {
+        "id": "ussd-ethereum-proxyadmin-owner",
+        "label": "USSD Ethereum representation ProxyAdmin owner",
+        "routeRefs": [
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "proxy-admin:ethereum:0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
+          "safe:ethereum:0xb1748c79709f4ba2dd82834b8c82d4a505003f27"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The local USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 is owned by this threshold-3 SafeProxy-shaped contract and can replace token mint-critical logic; no enforced upgrade timelock was resolved.",
+          "unsupportedReason": "The complete signer set, modules, guard, and upgrade timelock status for this destination owner were not enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770394,
+        "sources": [
+          {
+            "label": "Ethereum USSD representation",
+            "url": "https://etherscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "label": "Ethereum ProxyAdmin owner",
+            "url": "https://etherscan.io/address/0xb1748c79709f4ba2dd82834b8c82d4a505003f27"
+          }
+        ],
+        "evidence": "At Ethereum block 25770394, the uniform USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 was owned by 0xb1748c79709f4ba2dd82834b8c82d4a505003f27. The owner contract returned threshold 3 and SafeProxy-shaped bytecode; complete signer, module, guard, and timelock state remains unresolved."
+      },
+      {
+        "id": "ussd-base-proxyadmin-owner",
+        "label": "USSD Base representation ProxyAdmin owner",
+        "routeRefs": [
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "proxy-admin:base:0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
+          "safe:base:0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The local USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 is owned by this threshold-3 SafeProxy-shaped contract and can replace token mint-critical logic; no enforced upgrade timelock was resolved.",
+          "unsupportedReason": "The complete signer set, modules, guard, and upgrade timelock status for this destination owner were not enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063637,
+        "sources": [
+          {
+            "label": "Base USSD representation",
+            "url": "https://basescan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "label": "Base ProxyAdmin owner",
+            "url": "https://basescan.org/address/0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53"
+          }
+        ],
+        "evidence": "At Base block 50063637, the uniform USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 was owned by 0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53. The owner contract returned threshold 3 and SafeProxy-shaped bytecode; complete signer, module, guard, and timelock state remains unresolved."
+      },
+      {
+        "id": "ussd-arbitrum-proxyadmin-owner",
+        "label": "USSD Arbitrum representation ProxyAdmin owner",
+        "routeRefs": [
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x3da490b19f300e7cb2280426c8ad536db2df445c",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "proxy-admin:arbitrum:0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
+          "safe:arbitrum:0x3da490b19f300e7cb2280426c8ad536db2df445c"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The local USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 is owned by this threshold-3 SafeProxy-shaped contract and can replace token mint-critical logic; no enforced upgrade timelock was resolved.",
+          "unsupportedReason": "The complete signer set, modules, guard, and upgrade timelock status for this destination owner were not enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495271411,
+        "sources": [
+          {
+            "label": "Arbitrum USSD representation",
+            "url": "https://arbiscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "label": "Arbitrum ProxyAdmin owner",
+            "url": "https://arbiscan.io/address/0x3da490b19f300e7cb2280426c8ad536db2df445c"
+          }
+        ],
+        "evidence": "At Arbitrum block 495271411, the uniform USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 was owned by 0x3da490b19f300e7cb2280426c8ad536db2df445c. The owner contract returned threshold 3 and SafeProxy-shaped bytecode; complete signer, module, guard, and timelock state remains unresolved."
+      },
+      {
+        "id": "ussd-optimism-proxyadmin-owner",
+        "label": "USSD Optimism representation ProxyAdmin owner",
+        "routeRefs": [
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x419e672d625f998dd07a7ecf2e06b896f8717cb2",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "proxy-admin:optimism:0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
+          "safe:optimism:0x419e672d625f998dd07a7ecf2e06b896f8717cb2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The local USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 is owned by this threshold-3 SafeProxy-shaped contract and can replace token mint-critical logic; no enforced upgrade timelock was resolved.",
+          "unsupportedReason": "The complete signer set, modules, guard, and upgrade timelock status for this destination owner were not enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 155658923,
+        "sources": [
+          {
+            "label": "Optimism USSD representation",
+            "url": "https://optimistic.etherscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "label": "Optimism ProxyAdmin owner",
+            "url": "https://optimistic.etherscan.io/address/0x419e672d625f998dd07a7ecf2e06b896f8717cb2"
+          }
+        ],
+        "evidence": "At Optimism block 155658923, the uniform USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 was owned by 0x419e672d625f998dd07a7ecf2e06b896f8717cb2. The owner contract returned threshold 3 and SafeProxy-shaped bytecode; complete signer, module, guard, and timelock state remains unresolved."
+      },
+      {
+        "id": "ussd-scroll-proxyadmin-owner",
+        "label": "USSD Scroll representation ProxyAdmin owner",
+        "routeRefs": [
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "scroll",
+        "controllerAddress": "0x73f365d34b81e731825a094c2e722a08574335cd",
+        "failureDomainKeys": [
+          "protocol:frax-branded-stablecoin",
+          "proxy-admin:scroll:0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
+          "safe:scroll:0x73f365d34b81e731825a094c2e722a08574335cd"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The local USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 is owned by this threshold-3 SafeProxy-shaped contract and can replace token mint-critical logic; no enforced upgrade timelock was resolved.",
+          "unsupportedReason": "The complete signer set, modules, guard, and upgrade timelock status for this destination owner were not enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 34662007,
+        "sources": [
+          {
+            "label": "Scroll USSD representation",
+            "url": "https://scrollscan.com/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "label": "Scroll ProxyAdmin owner",
+            "url": "https://scrollscan.com/address/0x73f365d34b81e731825a094c2e722a08574335cd"
+          }
+        ],
+        "evidence": "At Scroll block 34662007, the uniform USSD ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 was owned by 0x73f365d34b81e731825a094c2e722a08574335cd. The owner contract returned threshold 3 and SafeProxy-shaped bytecode; complete signer, module, guard, and timelock state remains unresolved."
+      },
+      {
+        "id": "ussd-cross-chain-router",
+        "label": "USSD Sonic CrossChainRouter redemption and compose controller",
+        "routeRefs": [
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x2f30bef74c1f7572a3ea5e101d1f587287d06c94",
+        "failureDomainKeys": [
+          "protocol:frax-cross-chain-router",
+          "contract:sonic:0x2f30bef74c1f7572a3ea5e101d1f587287d06c94",
+          "safe:sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac",
+          "contract:sonic:0x63e89638743a409e2389f06a3f778a4570314d7d"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "CrossChainRouter.send() transfers USSD into the router, calls the local BrandedCustodian.redeem() to burn USSD for frxUSD, and sends the backing through RemoteHopV201; hopCompose() deposits received frxUSD to mint destination USSD.",
+          "trustedPeerOrRemote": "setHopV2Address() and relayer-controlled destination-router configuration bind the router to the Hop path; destination-specific router addresses were not enumerated in this pass.",
+          "attestorQuorum": "The router hands frxUSD to the Sonic RemoteHop and LayerZero endpoint; validator/DVN/executor validation is represented by the common Hop controls below.",
+          "rateLimits": "No router-local rate-limit control was resolved. mintAndSend() was disabled while isolatedBackingEnabled was false on the current Sonic and Ethereum reads.",
+          "pausersAdminsUpgraders": "Sonic role-grant logs at block 64151860 granted DEFAULT_ADMIN_ROLE and RELAYER_ROLE to Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac, with BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d as grant sender. The router is non-proxy; the Safe-held admin can replace the Hop address and the relayer can set non-deterministic destination routers."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 77630948,
+        "sources": [
+          {
+            "label": "Sonic CrossChainRouter verified source",
+            "url": "https://sonicscan.org/address/0x2F30BeF74c1F7572a3ea5e101d1f587287d06C94#code"
+          },
+          {
+            "label": "Sonic USSD launch blog",
+            "url": "https://blog.soniclabs.com/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/"
+          },
+          {
+            "label": "Sonic RPC",
+            "url": "https://rpc.soniclabs.com"
+          }
+        ],
+        "evidence": "The verified CrossChainRouter at Sonic 0x2f30bef74c1f7572a3ea5e101d1f587287d06c94 implements send(), mintAndSend(), hopCompose(), and setHopV2Address(). At the fixed Sonic review, role-grant history assigned DEFAULT_ADMIN_ROLE and RELAYER_ROLE to Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac; the router is not a USSD token MINTER_ROLE holder. Its redemption, compose, Hop-address, and destination-router surfaces are bridge machinery rather than canonical token issuance."
+      },
+      {
+        "id": "ussd-cross-chain-router-safe-admin",
+        "label": "USSD Sonic CrossChainRouter Safe administrator",
+        "routeRefs": [
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac",
+        "failureDomainKeys": [
+          "protocol:frax-cross-chain-router",
+          "contract:sonic:0x2f30bef74c1f7572a3ea5e101d1f587287d06c94",
+          "safe:sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 75932905,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Safe's CrossChainRouter administration can replace the Hop address and the relayer can set destination-router addresses; these controls are scoped to the five representation routes.",
+          "pausersAdminsUpgraders": "Sonic role-grant logs at block 64151860 assigned DEFAULT_ADMIN_ROLE and RELAYER_ROLE on the non-proxy CrossChainRouter to this 3-of-6 Safe; current destination-specific router role sets were not enumerated."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 77630948,
+        "sources": [
+          {
+            "label": "Sonic CrossChainRouter verified source",
+            "url": "https://sonicscan.org/address/0x2F30BeF74c1F7572a3ea5e101d1f587287d06C94#code"
+          },
+          {
+            "label": "Sonic CrossChainRouter administrator Safe",
+            "url": "https://sonicscan.org/address/0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+          }
+        ],
+        "evidence": "The Sonic CrossChainRouter's role-grant history assigned DEFAULT_ADMIN_ROLE and RELAYER_ROLE to Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac. Existing on-chain Safe evidence records this controller as 3-of-6 with six owners, no enabled modules, and a zero guard. Its admin and relayer powers govern the bridge route and do not create canonical USSD liabilities."
+      },
+      {
+        "id": "ussd-sonic-remote-hop",
+        "label": "USSD Sonic RemoteHopV201 LayerZero route control",
+        "routeRefs": [
+          "sonic:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "pause",
+          "peer-config",
+          "validator"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x0000006d38568b00b457580b734e0076c62de659",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sonic:0x0000006d38568b00b457580b734e0076c62de659",
+          "endpoint:sonic:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "safe:sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sonic block 77630948, remoteHop(30255) pointed to Fraxtal Hop 0x00000000e18afc20afe54d4b2c8688bb60c06b36. The Hop's local EID was 30332 and its approved local frxUSD OFT was 0x80eede496655fb9047dd39d9f418d5483ed600df.",
+          "attestorQuorum": "At Sonic block 77630948, the Hop reported endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, numDVNs 5, executor 0x4208d6e27538189bb48e603d6123a94b8abe0a0b, DVN 0x282b3386571f7f794450d5789911a9804fa346b4, and treasury 0x4514fc667a944752ee8a29f544c1b20b1a315f25. The full five-DVN membership/configuration was not independently enumerated.",
+          "rateLimits": "No route-specific rate-limit control was resolved in the Sonic Hop evidence.",
+          "pausersAdminsUpgraders": "The current Hop paused() read was false. Sonic role reads show two DEFAULT_ADMIN_ROLE accounts, six pausers, and Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac as recovery role. No proxy upgrade path was evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 77630948,
+        "sources": [
+          {
+            "label": "Sonic RemoteHopV201 verified source",
+            "url": "https://sonicscan.org/address/0x0000006d38568b00b457580b734e0076c62de659#code"
+          },
+          {
+            "label": "Sonic RPC",
+            "url": "https://rpc.soniclabs.com"
+          },
+          {
+            "label": "Frax Branded Stablecoins documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+          }
+        ],
+        "evidence": "At Sonic block 77630948, RemoteHopV201 0x0000006d38568b00b457580b734e0076c62de659 reported local EID 30332, the LayerZero endpoint, five DVNs, executor, DVN, treasury, paused=false, approved frxUSD OFT 0x80eede496655fb9047dd39d9f418d5483ed600df, and remoteHop(30255) = Fraxtal Hop 0x00000000e18afc20afe54d4b2c8688bb60c06b36. The route's pause, peer, recovery, and validation surfaces remain scoreable here; complete DVN membership and destination-specific Hop configuration remain gaps."
+      },
+      {
+        "id": "ussd-fraxtal-hop",
+        "label": "USSD Fraxtal HopV201 LayerZero route control",
+        "routeRefs": [
+          "sonic:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "base:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "optimism:0x000000000eccff26b795f73fb0a70d48da657fef",
+          "scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "pause",
+          "peer-config",
+          "validator"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x00000000e18afc20afe54d4b2c8688bb60c06b36",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:fraxtal:0x00000000e18afc20afe54d4b2c8688bb60c06b36",
+          "endpoint:fraxtal:0x1a44076050125825900e736c501f859c50fe728c",
+          "recovery:fraxtal:0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Fraxtal block 40053292, the Hop's remoteHop mapping pointed the five representation EIDs 30101, 30110, 30111, 30184, and 30214 plus Sonic EID 30332 to Sonic RemoteHop 0x0000006d38568b00b457580b734e0076c62de659. The verified source rejects destinations without a configured remote hop.",
+          "attestorQuorum": "At Fraxtal block 40053292, the Hop reported local EID 30255, endpoint 0x1a44076050125825900e736c501f859c50fe728c, numDVNs 5, executor 0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d, DVN 0xcce466a522984415bc91338c232d98869193d46e, and treasury 0xc1b621b18187f74c8f6d52a6f709dd2780c09821. The full five-DVN membership/configuration was not independently enumerated.",
+          "rateLimits": "No route-specific rate-limit control was resolved in the Fraxtal Hop evidence.",
+          "pausersAdminsUpgraders": "The current Hop paused() read was false. Fraxtal role reads show default admins 0x34029e02821178b4387e12644896994f910d6e73, 0x5f25218ed9474b721d6a38c115107428e832fa2e, and 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, six pausers, and 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 as recovery role. No proxy upgrade path was evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 40053292,
+        "sources": [
+          {
+            "label": "Fraxtal FraxtalHopV201 verified source",
+            "url": "https://fraxscan.com/address/0x00000000e18afc20afe54d4b2c8688bb60c06b36#code"
+          },
+          {
+            "label": "Frax RPC",
+            "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Frax Branded Stablecoins documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+          }
+        ],
+        "evidence": "At Fraxtal block 40053292, FraxtalHopV201 0x00000000e18afc20afe54d4b2c8688bb60c06b36 reported local EID 30255, the LayerZero endpoint, five DVNs, executor, DVN, treasury, paused=false, and remoteHop mappings for all five representation EIDs plus Sonic EID 30332 to Sonic RemoteHop 0x0000006d38568b00b457580b734e0076c62de659. The Hop's remote validation, pause, admin, recovery, and composed route surfaces remain scoreable here; complete DVN membership and destination-specific OFT allowlists remain gaps."
       }
     ]
   }

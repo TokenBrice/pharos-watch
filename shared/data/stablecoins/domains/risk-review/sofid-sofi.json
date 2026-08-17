@@ -54,9 +54,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "SoFi Bank issues SOFID for direct withdrawal to Ethereum or Solana wallets. The issuer's current materials describe native bank-managed availability on both supported networks, not a holder-operated third-party bridge.",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Pharos P7 bridge review",
+    "summary": "SOFID has two reviewed canonical native-issuance deployments: SoFi Bank, N.A. issues the Ethereum ERC1967/UUPS token and the Solana Token-2022 mint, with direct bank-managed withdrawal to either network. Neither authored deployment is a bridge representation. No OFT/lockbox/escrow, adapter, peer/delegate, validator/DVN, rate-limit, or configured bridge-admin machinery was verified; any future BRIDGE_MINTER grant or transfer rail would be authored separately under Bridge Risk.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos P7 bridge review; Codex mint-bridge-boundary migration 2026-08-16",
     "confidence": "verified",
     "protocols": [
       {
@@ -82,32 +82,68 @@
       {
         "id": "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SoFi Bank native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "SoFi Bank, N.A. natively issues SOFID on Ethereum through the verified Stablecoin implementation behind this UUPS proxy. The implementation has native MINTER and separate BRIDGE_MINTER code paths, but no authored representation route or decoded bridge-minter configuration event was identified; this deployment is therefore classified as canonical native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770993,
+        "sources": [
+          {
+            "label": "SOFID Ethereum ERC-1967 proxy",
+            "url": "https://eth.blockscout.com/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+          },
+          {
+            "label": "SOFID Ethereum Stablecoin implementation",
+            "url": "https://eth.blockscout.com/address/0x69edf9fa820df057e493635ed1db6b9e5f8124a0"
+          },
+          {
+            "label": "SOFID Ethereum decoded log history",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e/logs"
+          },
+          {
+            "label": "SoFiUSD multi-chain launch announcement",
+            "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx"
+          }
+        ]
       },
       {
         "id": "solana:APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SoFi Bank native Token-2022 issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "SoFi Bank, N.A. natively issues SOFID on Solana through this initialized Token-2022 mint. Its live mintAuthority is a reviewed 1-of-2 multisig; no bridge program, escrow, peer/delegate, or destination representation was identified, so this deployment is classified as canonical native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 439738944,
+        "sources": [
+          {
+            "label": "SOFID Solana Token-2022 metadata",
+            "url": "https://stablecoins.bitgo.com/sofid-solana/metadata.json"
+          },
+          {
+            "label": "Solana PublicNode RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          },
+          {
+            "label": "SoFiUSD multi-chain launch announcement",
+            "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx"
+          }
+        ]
       }
     ]
   }

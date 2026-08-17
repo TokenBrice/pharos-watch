@@ -39,6 +39,9 @@
         ],
         "chain": "polygon",
         "address": "0x4760847023fa0833221ae76e01db1e483a5d20e0",
+        "deploymentRefs": [
+          "polygon:0xa0e4c84693266a9d3bbef2f394b33712c76599ab"
+        ],
         "observedAt": "2026-07-20",
         "failureDomainKeys": [
           "polygon:0x4760847023fa0833221ae76e01db1e483a5d20e0",
@@ -61,6 +64,9 @@
         ],
         "chain": "polygon",
         "address": "0x84d28251143df55df1768870fc26983f50364557",
+        "deploymentRefs": [
+          "polygon:0xa0e4c84693266a9d3bbef2f394b33712c76599ab"
+        ],
         "observedAt": "2026-07-20"
       }
     ],

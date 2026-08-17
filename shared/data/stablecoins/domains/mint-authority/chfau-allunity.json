@@ -7,6 +7,11 @@
     "summary": "CHFAU is issuer-native on Ethereum, Polygon, Base, and Tempo. The three EVM deployments use the same deterministic ERC1967 proxy address and UUPS implementation; the same AllUnity EOAs hold DEFAULT_ADMIN_ROLE and MINTER_ROLE on Ethereum, Polygon, and Base. Tempo uses a native TIP-20 token whose role members are not enumerable through the standard EVM interface.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "base:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+        "ethereum:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+        "polygon:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+      ],
       "proxyAddresses": [
         "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
       ],
@@ -48,6 +53,9 @@
       {
         "chain": "ethereum",
         "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
+        "deploymentRefs": [
+          "ethereum:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+        ],
         "label": "CHFAU EVM MINTER_ROLE holder",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -71,6 +79,9 @@
       {
         "chain": "ethereum",
         "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
+        "deploymentRefs": [
+          "ethereum:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+        ],
         "label": "CHFAU EVM default admin",
         "role": "minter-admin",
         "authorityType": "eoa",

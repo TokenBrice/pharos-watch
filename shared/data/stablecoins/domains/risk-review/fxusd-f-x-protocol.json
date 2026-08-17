@@ -207,8 +207,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "fxUSD crosses from its Ethereum home chain to Base via a LayerZero V2 OFT Adapter: the FxUSDOFTAdaptor lockbox (0xA07d8cc4...) locks canonical fxUSD ERC-20 on Ethereum while the Base deployment is a native LayerZero OFT that mints/burns 1:1. The durable cross-chain supply path is thus an external lock/mint bridge with a LayerZero control surface.",
-    "reviewedAt": "2026-07-14",
+    "summary": "fxUSD crosses from its Ethereum home chain to Base via a LayerZero V2 OFT Adapter: the FxUSDOFTAdaptor lockbox (0xA07d8cc4...) locks canonical fxUSD ERC-20 on Ethereum while the Base deployment is a native LayerZero OFT that mints/burns 1:1. The durable cross-chain supply path is thus an external lock/mint bridge with a LayerZero control surface. The Base OFT owner's peer and messaging authority is structured here and excluded from native Mint Authority.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "Pharos bridge-route re-verification",
     "confidence": "verified",
     "protocols": [
@@ -349,6 +349,78 @@
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "fxusd-base-oft-owner-safe",
+        "label": "fxUSD Base OFT owner (3-of-4 Safe)",
+        "routeRefs": [
+          "base:0x55380fe7a1910dff29a47b622057ab4139da42c5"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa07d8cc424421cc2bce0544a65481376f010a438",
+          "contract:base:0x55380fe7a1910dff29a47b622057ab4139da42c5",
+          "safe:ethereum:0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+          "safe:base:0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x38a93e70b0D8343657f802C1c3Fdb06aC8F8fe99",
+            "0xF483De0f306952FA56ef56c1dbBDd2A70737bDd5",
+            "0xe3522d85d37F55735e9327CD7a5cDe3abaf28E03",
+            "0x74390470F4001Ca85D93bD546A4Ab1724359654B"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "observedBlock": 50065524,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "lockboxOrEscrow": "Ethereum FxUSDOFTAdaptor 0xA07d8cc424421cC2bce0544a65481376f010A438 locks canonical fxUSD before the paired Base OFT mints, and burns on return before the adapter releases canonical fxUSD.",
+          "trustedPeerOrRemote": "At Base block 50065524, peers(30101) returned the Ethereum FxUSDOFTAdaptor. The Base owner Safe can change the authenticated peer and LayerZero messaging configuration.",
+          "rateLimits": "The route's current LayerZero Endpoint V2 DVN and rate-limit state was not independently resolved at the reviewed blocks.",
+          "pausersAdminsUpgraders": "At Base block 50065524, owner() returned Safe 0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2 and paused() was false. LayerZero's OFT owner controls peers, enforced options, delegate, and endpoint configuration; the Base OFT has immutable bytecode and no native implementation upgrade path.",
+          "onchainAmountBounds": "At Ethereum block 25770715, the adapter held 0x416ddff530bf7b71d000 canonical fxUSD; at Base block 50065524, the OFT total supply matched that balance. The route is therefore a supply-conserving lock/mint representation rather than independent native issuance."
+        },
+        "capDescription": "The Base Safe can immediately reconfigure the authenticated LayerZero route, while the representation's observed supply is backed by canonical fxUSD held in the Ethereum adapter lockbox.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The 3-of-4 Base Safe can immediately change the OFT peer and LayerZero messaging configuration without a timelock; it cannot replace the immutable OFT bytecode."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065524,
+        "sources": [
+          {
+            "label": "fxUSD LayerZero OFT on BaseScan",
+            "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5"
+          },
+          {
+            "label": "fxUSD Base owner Safe",
+            "url": "https://basescan.org/address/0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2#code"
+          },
+          {
+            "label": "FxUSDOFTAdaptor on Etherscan",
+            "url": "https://etherscan.io/address/0xA07d8cc424421cC2bce0544a65481376f010A438"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Base block 50065524, owner() on fxUSD OFT 0x55380fe7a1910dff29a47b622057ab4139da42c5 returned Safe 0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2, peers(30101) returned Ethereum FxUSDOFTAdaptor 0xA07d8cc424421cC2bce0544a65481376f010A438, endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, and paused() was false. Current Safe reads returned threshold 3, four owners, and no enabled modules; guard reads were not independently recoverable. The Safe can authorize which authenticated bridge messages reach the Base mint path by changing peer and messaging configuration, but cannot replace the immutable OFT bytecode. At Ethereum block 25770715, the adapter token() returned canonical fxUSD and peers(30184) returned the Base OFT; the adapter's canonical fxUSD balance equaled the Base OFT total supply at the reviewed blocks, preserving the external lock/mint route semantics."
       }
     ]
   }

@@ -73,9 +73,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Parallel USDp is issuer-native on every observed chain: each deployment's authority() returns a chain-local ParallelAccessManager mint-authority module operated by the Parallel DAO/team, so Pharos scores the reviewed routes as issuer-native burn/mint with no external bridge protocol carrying the claim.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "summary": "Parallel USDp has no reviewed bridge representation: all 23 authored routes are native-issuance deployments whose authority() returns a chain-local ParallelAccessManager. Bridge Risk therefore retains the issuer-native-burn-mint route classification without bridge controls; the native role-110 mint gates, admin Safes, and mint-logic upgrade path are scored in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Codex mint/bridge boundary migration (2026-08-16)",
     "confidence": "verified",
     "sources": [
       {

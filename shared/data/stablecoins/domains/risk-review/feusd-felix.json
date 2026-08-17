@@ -308,11 +308,11 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "canonical-rollup-bridge",
-    "summary": "FEUSD has HyperEVM/Hyperliquid deployments and candidate evidence points to Hyperliquid canonical routing. With no separate issuer bridge protocol resolved, the route is reviewed as canonical ecosystem bridge exposure. 2026-07-20 cohort dc-1 pass: HyperEVM row confirmed native feUSD; HyperCore row remains unresolved (non-EVM).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "probable",
+    "tier": "opaque-or-unknown",
+    "summary": "HyperCore FEUSD is a noncanonical Hyperliquid representation linked by the official spotMeta registry to the HyperEVM native feUSD token. The representation boundary is verified, but the primary-source inventory does not identify the Hyperliquid system asset-linkage controller or its validator, upgrade, pause, withdrawal, peer, or rate-limit controls; the aggregate bridge tier therefore remains fail-closed opaque-or-unknown.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex feUSD bridge-route correction",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "l2beat",
@@ -332,6 +332,18 @@
       {
         "label": "L2BEAT Hyperliquid",
         "url": "https://l2beat.com/interop/protocols/hyperliquid"
+      },
+      {
+        "label": "Hyperliquid FEUSD spotMeta registry",
+        "url": "https://api.hyperliquid.xyz/info"
+      },
+      {
+        "label": "Hyperliquid HyperCore/HyperEVM asset transfer docs",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/interacting-with-hypercore.md"
+      },
+      {
+        "label": "Hyperliquid EVM JSON-RPC",
+        "url": "https://rpc.hyperliquid.xyz/evm"
       }
     ],
     "routes": [
@@ -363,21 +375,20 @@
         "canonicalChain": "hyperevm",
         "contractAddress": "0x88102bea0bbad5f301f6e9e4dacdf979",
         "protocol": "Hyperliquid native HyperCore/HyperEVM asset linkage (Felix feUSD)",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "single-chain-or-native",
-        "semantics": "native-mint",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "other",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Resolved 2026-07-20 from the Hyperliquid operator info API (POST /info, type spotMeta): HyperCore spot token FEUSD sits at index 241 with tokenId 0x88102bea0bbad5f301f6e9e4dacdf979, weiDecimals 8 (matching this profile's contracts[] entry) and fullName 'Felix USD'. Its evmContract field links directly to the HyperEVM feUSD token 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70 with evm_extra_wei_decimals 10, so 8 + 10 = the 18 decimals read on HyperEVM. This is Hyperliquid's own L1/EVM asset linkage, not a third-party bridge: no separate mint authority exists on the HyperCore side and every feUSD unit still originates from the Felix Liquity-v2 branch mint on HyperEVM, so the mint controller is the same set of BorrowerOperations and ActivePool contracts recorded under mintAuthority.",
+        "reviewNote": "Resolved 2026-08-16 from the Hyperliquid operator info API (POST /info, type spotMeta): HyperCore spot token FEUSD sits at index 241 with tokenId 0x88102bea0bbad5f301f6e9e4dacdf979, weiDecimals 8 (matching this profile's contracts[] entry), isCanonical false, and fullName 'Felix USD'. Its evmContract field links directly to the HyperEVM feUSD token 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70 with evm_extra_wei_decimals 10, so 8 + 10 = the 18 decimals read on HyperEVM. This is a noncanonical HyperCore representation of the HyperEVM native token, not an independent Felix native issuance deployment. The registry and official HyperCore interaction documentation do not expose a separate FEUSD issuer minter or the exact system asset-linkage controller, validator, upgrade, pause, withdrawal, peer, or rate-limit controls; those controls remain unknown and no Felix Safe is substituted as a HyperCore controller.",
         "mappingVersion": "bridge-route-facts-v1",
-        "controllerChain": "hyperevm",
-        "controllerAddress": "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
         "failureDomainKeys": [
           "protocol:hyperliquid-hypercore-evm-linkage",
-          "contract:hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
+          "contract:hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+          "system:hyperliquid-feusd-asset-linkage-unknown"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Hyperliquid info API spotMeta",

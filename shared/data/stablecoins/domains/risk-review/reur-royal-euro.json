@@ -14,10 +14,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Royal Euro is presented as an issuer-backed euro stable-value token, and the reviewed public material does not document a separate third-party bridge route. Pharos treats the multichain supply as issuer-native issuance/redemption at probable confidence.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "REUR is issued natively by RIB Digital Holdings on Ethereum, BSC, and TRON. The verified direct RoyalEuro token ABI exposes issuer mint/burn and administrative functions but no OFT, messaging, peer, lockbox, escrow, validator, or other bridge surface. No third-party bridge representation was found, so the route profile remains issuer-native burn/mint with verified confidence and no Bridge Risk controls.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration; verified finding 2026-08-16",
+    "confidence": "verified",
     "sources": [
       {
         "label": "RCOINS Royal Euro",
@@ -26,49 +26,85 @@
     ],
     "routes": [
       {
-        "id": "ethereum:0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
-        "destinationChain": "ethereum",
-        "contractAddress": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+      "id": "ethereum:0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+      "destinationChain": "ethereum",
+      "canonicalChain": "ethereum",
+      "contractAddress": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+      "protocol": "RIB Digital issuer-native REUR",
+      "issuanceModel": "native-issuance",
+      "routeClass": "native",
+      "riskTier": "issuer-native-burn-mint",
+      "semantics": "native-mint",
+      "scope": "canonical",
+      "reviewDisposition": "reviewed",
+      "reviewNote": "Verified issuer-native REUR issuance on Ethereum: the direct non-upgradeable RoyalEuro token exposes issuer-controlled MASTERMINTER_ROLE mintByMaster/configureMinter functions and no OFT, messaging, lockbox, escrow, peer, or bridge-adapter surface; live totalSupply was 1,000,000,000 REUR at block 25770811.",
+      "mappingVersion": "bridge-route-facts-v1",
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770811,
+      "sources": [
+        {
+          "label": "REUR Ethereum verified Royal Euro token",
+          "url": "https://etherscan.io/address/0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+        },
+        {
+          "label": "Ethereum live JSON-RPC observation",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
       },
       {
-        "id": "bsc:0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
-        "destinationChain": "bsc",
-        "contractAddress": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+      "id": "bsc:0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+      "destinationChain": "bsc",
+      "canonicalChain": "bsc",
+      "contractAddress": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+      "protocol": "RIB Digital issuer-native REUR",
+      "issuanceModel": "native-issuance",
+      "routeClass": "native",
+      "riskTier": "issuer-native-burn-mint",
+      "semantics": "native-mint",
+      "scope": "canonical",
+      "reviewDisposition": "reviewed",
+      "reviewNote": "Verified issuer-native REUR issuance on BSC: the direct non-upgradeable RoyalEuro token exposes issuer-controlled MASTERMINTER_ROLE mintByMaster/configureMinter functions and no OFT, messaging, lockbox, escrow, peer, or bridge-adapter surface; live totalSupply was 2,000,000,000 REUR at block 116357570.",
+      "mappingVersion": "bridge-route-facts-v1",
+      "observedAt": "2026-08-16",
+      "observedBlock": 116357570,
+      "sources": [
+        {
+          "label": "REUR BSC verified Royal Euro token",
+          "url": "https://bscscan.com/address/0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+        },
+        {
+          "label": "BSC live JSON-RPC observation",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ]
       },
       {
-        "id": "tron:TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz",
-        "destinationChain": "tron",
-        "contractAddress": "TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+      "id": "tron:TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz",
+      "destinationChain": "tron",
+      "canonicalChain": "tron",
+      "contractAddress": "TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz",
+      "protocol": "RIB Digital issuer-native REUR",
+      "issuanceModel": "native-issuance",
+      "routeClass": "native",
+      "riskTier": "issuer-native-burn-mint",
+      "semantics": "native-mint",
+      "scope": "canonical",
+      "reviewDisposition": "reviewed",
+      "reviewNote": "Verified issuer-native REUR issuance on TRON: the direct TRC-20 RoyalEuro deployment exposes issuer-controlled mint functions and no OFT, messaging, lockbox, escrow, peer, or bridge-adapter surface; live totalSupply was 2,000,000,000 REUR at block 85416672.",
+      "mappingVersion": "bridge-route-facts-v1",
+      "observedAt": "2026-08-16",
+      "observedBlock": 85416672,
+      "sources": [
+        {
+          "label": "REUR TRON verified Royal Euro token",
+          "url": "https://tronscan.org/#/contract/TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz"
+        },
+        {
+          "label": "TRON JSON-RPC observation",
+          "url": "https://api.trongrid.io/jsonrpc"
+        }
+      ]
       }
     ]
   }

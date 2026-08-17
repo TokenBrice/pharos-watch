@@ -30,9 +30,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDCx is issued through Circle's xReserve architecture and transfers to USDC through Circle-controlled CCTP/Gateway rails. The route is reviewed as issuer-native burn/mint evidence; the penalty-only Safety Score blend can only drag weak routes and cannot lift USDCx's Decentralization score.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex L2BEAT route review",
+    "summary": "USDCx is an issuer-native Circle xReserve burn/mint representation on Movement, not an independently canonical Movement-native issuance deployment. The reviewed route binds Ethereum USDC domain 0 to Movement domain 10005; xReserve collateral, RemoteDomainDepositor attestations, and Movement attester/admin/package controls are represented in route-scoped Bridge Risk controls. The current collateral balance and Movement supply are not exact equality proof, and the route remains issuer-native-burn-mint.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration RELOC-015",
     "confidence": "verified",
     "protocols": [
       {
@@ -60,12 +60,311 @@
         "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
       },
       {
-        "label": "Circle xReserve",
-        "url": "https://www.circle.com/xreserve"
+        "label": "Circle USDCx on Movement via xReserve",
+        "url": "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve"
       },
       {
-        "label": "L2BEAT CCTP v2",
-        "url": "https://l2beat.com/interop/protocols/cctpv2"
+        "label": "Circle xReserve supported domains",
+        "url": "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains"
+      },
+      {
+        "label": "Circle xReserve technical guide",
+        "url": "https://developers.circle.com/xreserve/concepts/technical-guide"
+      },
+      {
+        "label": "Circle xReserve how-it-works",
+        "url": "https://developers.circle.com/xreserve/concepts/how-xreserve-works"
+      },
+      {
+        "label": "Current Ethereum xReserve JSON-RPC observation",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Current Movement ledger info",
+        "url": "https://mainnet.movementnetwork.xyz/v1"
+      }
+    ],
+    "routes": [
+      {
+        "id": "movement:0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+        "sourceChain": "ethereum",
+        "destinationChain": "movement",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+        "protocol": "Circle xReserve (CCTP/Gateway collateral rails)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Circle xReserve domain 0 on Ethereum maps remote domain 10005 to the authored Movement USDCx representation; Ethereum USDC is inherited canonical collateral and no canonical Movement-native USDCx issuance is claimed. Current xReserve registration and collateral reads were observed at Ethereum block 25770561, with Movement ledger version 195984896 / block height 85264354. The collateral balance and Movement supply differ, so this route does not assert exact equality.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:circle-xreserve",
+          "contract:ethereum:0x8888888199b2df864bf678259607d6d5ebb4e3ce",
+          "contract:ethereum:0xdb5d7133002ee1134a97fc857315a0662f09cbbb",
+          "contract:movement:0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+          "multisig:movement:0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770561,
+        "sources": [
+          {
+            "label": "Circle USDCx on Movement via xReserve",
+            "url": "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve"
+          },
+          {
+            "label": "Circle xReserve supported domains",
+            "url": "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains"
+          },
+          {
+            "label": "Circle xReserve technical guide",
+            "url": "https://developers.circle.com/xreserve/concepts/technical-guide"
+          },
+          {
+            "label": "Verified xReserve proxy",
+            "url": "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
+          },
+          {
+            "label": "Current Movement USDCx resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=195984896"
+          },
+          {
+            "label": "Current Movement USDCx view reads",
+            "url": "https://mainnet.movementnetwork.xyz/v1/view?ledger_version=195984896"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "circle-xreserve-owner-route-authority",
+        "label": "Circle xReserve owner and route configuration EOA",
+        "routeRefs": [
+          "movement:0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "escrow",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1117ba72a62fcc6ae5a9bb31a54a7879f4f1dbd2",
+        "failureDomainKeys": [
+          "protocol:circle-xreserve",
+          "contract:ethereum:0x8888888199b2df864bf678259607d6d5ebb4e3ce",
+          "eoa:ethereum:0x1117ba72a62fcc6ae5a9bb31a54a7879f4f1dbd2"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The xReserve owner controls the UUPS implementation path and route registration/configuration.",
+          "No useful aggregate economic cap was established for the remote mint path; collateral accounting and attestation admission are the practical route bounds."
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25770561, xReserve balanceOfNativeCollateral(USDC, 10005) returned 1,723,729.922856 USDC; remote burns require an operator signature and withdrawal attestation before reserved USDC is released.",
+          "trustedPeerOrRemote": "xReserve domain 0 is Ethereum, remote domain 10005 is registered to the Movement USDCx representation, and getRemoteToken(10005, USDC) resolves to the authored Movement token.",
+          "pausersAdminsUpgraders": "The xReserve proxy at 0x8888888199b2Df864bf678259607d6D5EBb4e3Ce reported implementation 0x7d817ce411839c4a5716c5B8E85BdD2cf40E3915 and owner EOA 0x1117ba72a62fcc6ae5a9bb31a54a7879f4f1dbd2 at Ethereum block 25770561; domain deposits, withdrawals, and the global pause read were unpaused.",
+          "onchainAmountBounds": "The observed native-collateral balance is not presented as exact equality with Movement supply: supply was 1,720,946.355996 USDCx, leaving a difference requiring settlement, pending-attestation, fee, and withdrawal-buffer accounting."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770561,
+        "sources": [
+          {
+            "label": "Circle xReserve technical guide",
+            "url": "https://developers.circle.com/xreserve/concepts/technical-guide"
+          },
+          {
+            "label": "Circle xReserve how-it-works",
+            "url": "https://developers.circle.com/xreserve/concepts/how-xreserve-works"
+          },
+          {
+            "label": "Verified xReserve proxy",
+            "url": "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
+          },
+          {
+            "label": "Verified xReserve implementation",
+            "url": "https://eth.blockscout.com/address/0x7d817ce411839c4a5716c5B8E85BdD2cf40E3915"
+          },
+          {
+            "label": "Ethereum JSON-RPC endpoint for block observation",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770561, the Circle xReserve proxy reported implementation 0x7d817ce411839c4a5716c5B8E85BdD2cf40E3915, domain 0, the registered Movement remote domain 10005, and the expected Movement USDCx token. Owner EOA 0x1117ba72a62fcc6ae5a9bb31a54a7879f4f1dbd2 controlled the route configuration, UUPS upgrade, collateral escrow/release, bridge mint/burn admission, and pause-related authority. The xReserve native-collateral read returned 1,723,729.922856 USDC; route accounting remains adverse and scoreable without claiming exact supply equality."
+      },
+      {
+        "id": "circle-remote-domain-depositor-attestation",
+        "label": "Circle RemoteDomainDepositor attestation authority",
+        "routeRefs": [
+          "movement:0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd7e22951de7af453aac5400d6e072e3b63beb7e2",
+        "failureDomainKeys": [
+          "protocol:circle-xreserve",
+          "contract:ethereum:0xdb5d7133002ee1134a97fc857315a0662f09cbbb",
+          "contract:ethereum:0x0093a77b14fee8593cc5e381fd674948cf84df13",
+          "eoa:ethereum:0xd7e22951de7af453aac5400d6e072e3b63beb7e2"
+        ],
+        "authorityType": "eoa",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "The registered remote-domain depositor is the validation and attestation control plane for remote mint and withdrawal admission.",
+          "The exact operator identities behind the four enabled attesters were not established by the verified contract reads."
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "RemoteDomainDepositor proxy 0xdb5d7133002ee1134a97fc857315a0662f09cbbb is configured for the Movement remote domain and its registered USDCx route.",
+          "attestorQuorum": "Current reads show a 2-of-4 signature threshold with four persistent enabled attesters for the remote mint and withdrawal attestation path.",
+          "signingModel": "The domain authority 0xd7e22951de7af453aac5400d6e072e3b63beb7e2 governs the registered RemoteDomainDepositor attestation machinery; the exact off-chain operator identities remain unresolved.",
+          "rateLimits": "The current RemoteDomainDepositor read reports a 50,400-block persistent-signature buffer delay; no aggregate route cap was established by the reviewed reads."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770561,
+        "sources": [
+          {
+            "label": "Verified RemoteDomainDepositor proxy",
+            "url": "https://eth.blockscout.com/address/0xdb5d7133002ee1134a97fc857315a0662f09cbbb"
+          },
+          {
+            "label": "Verified RemoteDomainDepositor implementation",
+            "url": "https://eth.blockscout.com/address/0x0093a77B14fEE8593Cc5E381Fd674948Cf84DF13"
+          },
+          {
+            "label": "Circle xReserve technical guide",
+            "url": "https://developers.circle.com/xreserve/concepts/technical-guide"
+          },
+          {
+            "label": "Ethereum JSON-RPC endpoint for block observation",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770561, the registered RemoteDomainDepositor proxy 0xdb5d7133002ee1134a97fc857315a0662f09cbbb and its verified implementation exposed the source-side attestation machinery for Movement domain 10005. The current configuration was 2-of-4 with four persistent enabled attesters and a 50,400-block persistent-signature buffer delay. This is route validation and remote mint/withdrawal admission, not independent native USDCx issuance; exact operator identities were not established by the verified reads."
+      },
+      {
+        "id": "movement-usdcx-xreserve-attester",
+        "label": "Movement USDCx xReserve attester key",
+        "routeRefs": [
+          "movement:0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator"
+        ],
+        "controllerChain": "movement",
+        "controllerAddress": "0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466",
+        "failureDomainKeys": [
+          "movement:xreserve-attester:0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466",
+          "movement:xreserve-attester:0x6a4854078428eea517e8013827cba9f90583f8a9fdf8610c8791d1b04feb6a3eee428bf506c98ead1e870918f26a1d41f5bfb792b1e4f331679d1ad3e527326f"
+        ],
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The current signed attester key can authorize remote USDCx mint and burn messages; the token has no useful local economic cap beyond the attestation and reconciliation system."
+        ],
+        "routeChecks": {
+          "attestorQuorum": "At Movement ledger version 195984896, get_attesters() returned the current two keys: 0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466 and 0x6a4854078428eea517e8013827cba9f90583f8a9fdf8610c8791d1b04feb6a3eee428bf506c98ead1e870918f26a1d41f5bfb792b1e4f331679d1ad3e527326f.",
+          "signingModel": "The Movement usdcx::mint entry requires an xReserve message and signature; this key is one of the current attesters and is not a permissionless public minter.",
+          "caps": "The fungible asset maximum is the uint256 maximum rather than a useful economic cap; current supply was 1,720,946.355996 USDCx at the observed ledger."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 85264354,
+        "sources": [
+          {
+            "label": "Current Movement USDCx resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=195984896"
+          },
+          {
+            "label": "Current Movement USDCx view reads",
+            "url": "https://mainnet.movementnetwork.xyz/v1/view?ledger_version=195984896"
+          },
+          {
+            "label": "Current Movement USDCx module ABI and bytecode",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83/module/usdcx?ledger_version=195984896"
+          }
+        ],
+        "evidence": "At Movement ledger version 195984896 and block height 85264354, the current get_attesters() view returned two active xReserve attester keys, including this key and the second key recorded in failureDomainKeys. The usdcx::mint entry requires a signed message, so this is a bridge validator and remote-mint/remote-burn control rather than independent native issuance. The older observation's key remains active in the current two-key set; the current two-key read replaces the stale one-attester interpretation."
+      },
+      {
+        "id": "movement-usdcx-admin-attester-package-owner",
+        "label": "Movement USDCx 4-of-6 admin, attester, and package-owner multisig",
+        "routeRefs": [
+          "movement:0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "movement",
+        "controllerAddress": "0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1",
+        "failureDomainKeys": [
+          "movement:0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1",
+          "package:movement:0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83",
+          "protocol:circle-xreserve"
+        ],
+        "authorityType": "multisig",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "capDescription": "The Movement fungible asset maximum is the uint256 maximum rather than a useful economic cap. The admin can replace attesters, change route policy, pause bridge mint/burn, or upgrade compatible function bodies without an observed delay; xReserve attestations and collateral reconciliation remain the practical route boundary.",
+        "bypassSurfaces": [
+          "The 4-of-6 account is both usdcx::Roles.admin and ObjectCore.owner of the compatible-policy package.",
+          "The current package module response has source_digest null; exact source-level mint implementation verification is incomplete."
+        ],
+        "routeChecks": {
+          "signingModel": "At Movement ledger version 195984896, account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 was a native 0x1::multisig_account::MultisigAccount with threshold 4 and six ordinary account owners.",
+          "attestorQuorum": "get_attesters() returned two current attester keys; the same view returned eight pausers and is_paused() = false.",
+          "trustedPeerOrRemote": "get_domain() returned 10005, the Circle xReserve remote domain for Movement; the current usdcx ABI exposes domain and signed mint/burn state.",
+          "rateLimits": "get_min_burn_size() returned 5,000,000 base units (5 USDCx). This is a minimum burn size, not a native collateral cap or proof of aggregate supply conservation.",
+          "caps": "The fungible asset maximum is the uint256 maximum; current supply was 1,720,946.355996 USDCx at ledger version 195984896.",
+          "pausersAdminsUpgraders": "The multisig was the current usdcx::Roles.admin and package ObjectCore.owner. Package policy 1 permits compatible upgrades that preserve public layout while changing function bodies; no timelock or enforced delay was observed, and the current module response reports source_digest null."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 85264354,
+        "sources": [
+          {
+            "label": "Current Movement USDCx admin multisig resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=195984896"
+          },
+          {
+            "label": "Current Movement USDCx package resources",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83/resources?ledger_version=195984896"
+          },
+          {
+            "label": "Current Movement USDCx module ABI and bytecode",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83/module/usdcx?ledger_version=195984896"
+          },
+          {
+            "label": "Movement Move package documentation",
+            "url": "https://docs.movementnetwork.xyz/devs/move-book/package"
+          },
+          {
+            "label": "Aptos compatible package policy documentation",
+            "url": "https://legacy.aptos.dev/move/move-on-aptos/modules-on-aptos/"
+          }
+        ],
+        "evidence": "At Movement ledger version 195984896 and block height 85264354, account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 was the current 4-of-6 admin multisig and the ObjectCore.owner of package 0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83. Its owners were 0xe409dcf645fed5437e8d824853846c997bbc603864062a3ef58da467e705a09f, 0x49ca66964d9932cac56acd3fe4a06fc614dfc3dfa2469cdb172d2e9ae0b8157a, 0x90d5fff22134646ac25f7f39db6d77cb3472bbced136c0dbe43ab4579bd4492e, 0x8f74be8a4e703502f222c17eecd74737b4eb9f84915ff723f6d5adafd12d843, 0xc9153e132398b925c78aac2edafd5c0f4b701b3e58244a5163434cb7596b6321, and 0x53d163b14e497aabd0fa8e2f40cb783e3fd364fe2620c430dfd08144f06e4cc9. The same current view reported two attesters, eight pausers, domain 10005, minimum burn size 5,000,000 base units, and is_paused() = false. Package policy 1 supports compatible upgrades with no observed delay; source_digest is null."
       }
     ]
   }

@@ -2,18 +2,23 @@
   "id": "frxusd-frax",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe, while proxy upgrades require the same Safe to pass through a 24-hour timelock.",
+    "summary": "Ethereum frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe, while Ethereum proxy upgrades require the same Safe to pass through a 24-hour timelock. Fraxtal frxUSD3 also exposes a direct minter_mint path to an owner/timelock-controlled minter set with no source-level cap or max-supply check; the Fraxtal L2 bridge and canonical-side lockboxes are bridge machinery assessed separately under bridgeRouteRisk, and Tempo remains unresolved.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "fraxtal:0xfc00000000000000000000000000000000000001"
+      ],
       "proxyAddresses": [
         "0xcacd6fd266af91b8aed52accc382b4e165586e29",
         "0xFE2Ea8dE262d956e852F12DE108fda57171a0a29",
         "0x860Cc723935FC9A15fF8b1A94237a711DFeF7857",
         "0xe827abf9f462ac4f147753d86bc5f91e186e4e9c",
         "0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c",
-        "0x5fbAa3A3B489199338fbD85F7E3D444dc0504F33"
+        "0x5fbAa3A3B489199338fbD85F7E3D444dc0504F33",
+        "0xfc00000000000000000000000000000000000001"
       ],
       "implementationAddresses": [
         "0x0000000048d2c8baf31742f6765383278bada4d5",
@@ -21,7 +26,8 @@
         "0x4db9c0e8893b565f7419cf3886062845a8cbc529",
         "0xbccd08e2996a5c748e01fde3feca959dee24276b",
         "0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
-        "0x7617e69d47c1c18e2e3bb0b470aa0fbbd45b57da"
+        "0x7617e69d47c1c18e2e3bb0b470aa0fbbd45b57da",
+        "0x0000000083bdf23788585d499eab0d92a8befb1d"
       ],
       "adminAddresses": [
         "0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6",
@@ -29,10 +35,10 @@
         "0x53043dc135b68521834c06592fbefdd93e770e9d",
         "0x69dc4f46bb49cba89a95715923937de8a8f2071f",
         "0x1a4563f238fa693ba9771cdba5ee8280a114ed7e",
-        "0x3046a74ff708774efbabba685b5b93fa1d134aeb"
+        "0x3046a74ff708774efbabba685b5b93fa1d134aeb",
+        "0xfc0000000000000000000000000000000000000a"
       ],
       "canChangeMintLogic": true,
-      "delaySec": 86400,
       "controlRef": "frxUSD upgrade timelock",
       "observedAt": "2026-07-16",
       "observedBlock": 25546949,
@@ -56,6 +62,18 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Frax frxUSD Fraxtal contract source",
+          "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+        },
+        {
+          "label": "Fraxtal ProxyAdmin constants",
+          "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/Constants.sol"
+        },
+        {
+          "label": "Fraxtal RPC",
+          "url": "https://rpc.frax.com"
         }
       ]
     },
@@ -63,6 +81,9 @@
       {
         "chain": "ethereum",
         "address": "0xFE2Ea8dE262d956e852F12DE108fda57171a0a29",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
         "label": "frxUSD-USDB Custodian Proxy",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -87,6 +108,9 @@
       {
         "chain": "ethereum",
         "address": "0x860Cc723935FC9A15fF8b1A94237a711DFeF7857",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
         "label": "frxUSD-WTGXX Custodian Proxy",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -111,6 +135,9 @@
       {
         "chain": "ethereum",
         "address": "0xe827abf9f462ac4f147753d86bc5f91e186e4e9c",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
         "label": "frxUSD-BUIDL Custodian Proxy",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -135,6 +162,9 @@
       {
         "chain": "ethereum",
         "address": "0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
         "label": "frxUSD-USDC Custodian Proxy",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -159,6 +189,9 @@
       {
         "chain": "ethereum",
         "address": "0x5fbAa3A3B489199338fbD85F7E3D444dc0504F33",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
         "label": "frxUSD-USTB Custodian Proxy",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -183,6 +216,9 @@
       {
         "chain": "ethereum",
         "address": "0xb898Ad2976b4d8f2E21521C9db16b7497825E503",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
         "label": "frxUSD upgrade timelock",
         "role": "timelock",
         "authorityType": "timelock",
@@ -210,6 +246,9 @@
       {
         "chain": "ethereum",
         "address": "0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937",
+        "deploymentRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
         "label": "frxUSD owner/custodian admin Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -250,6 +289,95 @@
           }
         ],
         "evidence": "At Ethereum block 25546949, frxUSD token owner(), every listed custodian owner(), and the upgrade timelock admin() returned this Safe. On-chain Safe reads returned version 1.3.0, threshold 4, the seven listed owners, no enabled modules, zero guard, and zero moduleGuard."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+        "label": "Fraxtal frxUSD owner/timelock contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "fraxtal:0xfc00000000000000000000000000000000000001"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "FrxUSD3 inherits ERC20PermitPermissionedOptiMintable: minter_mint() has no source-level cap or max-supply invariant; owner()/timelock_address() controls the minter set, and the separate Fraxtal ProxyAdmin is owner-controlled. Total supply at the fixed review block was 14408997.267859968047907063 frxUSD.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40053263,
+        "sources": [
+          {
+            "label": "Frax frxUSD Fraxtal contract source",
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+          },
+          {
+            "label": "Permissioned OptiMintable source",
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+          },
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "At Fraxtal block 40053263, owner() and timelock_address() on 0xfc00000000000000000000000000000000000001 both returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and minters(0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6) returned true. The reviewed FrxUSD2 and ERC20PermitPermissionedOptiMintable source shows that an active minter can call minter_mint() directly, while the owner/timelock can manage minters; no cap or max-supply check appears on that path."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xfc0000000000000000000000000000000000000d",
+        "label": "Fraxtal frxUSD active minter 0xfc...000d",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "fraxtal:0xfc00000000000000000000000000000000000001"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The active minter_mint() path has no source-level cap or max-supply check. This address exposes proxy/system-like upgrade selectors, but its exact identity, owner, upgrade configuration, and ability to alter mint economics remain unresolved.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40053263,
+        "sources": [
+          {
+            "label": "Frax frxUSD Fraxtal contract source",
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "At Fraxtal block 40053263, minters(0xfc0000000000000000000000000000000000000d) returned true and an active MinterAdded event for this address was present in the token history. The address exposes proxy/system-like upgrade selectors, but its exact contract identity and admin were not resolved."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x8c33cd6e5bed3bcb43b116410842bdd21630bff4",
+        "label": "Fraxtal frxUSD active minter 0x8c...bff4",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "fraxtal:0xfc00000000000000000000000000000000000001"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The active minter_mint() path has no source-level cap or max-supply check. owner() returned the Fraxtal owner/timelock contract, but its exact contract identity, mint-specific configuration, and ability to alter mint economics remain unresolved.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40053263,
+        "sources": [
+          {
+            "label": "Frax frxUSD Fraxtal contract source",
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "At Fraxtal block 40053263, minters(0x8c33cd6e5bed3bcb43b116410842bdd21630bff4) returned true, its owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and an active MinterAdded event for this address was present in the token history."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -284,11 +412,27 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Frax frxUSD Fraxtal contract source",
+          "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+        },
+        {
+          "label": "Permissioned OptiMintable source",
+          "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+        },
+        {
+          "label": "Frax frxUSD contract addresses",
+          "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+        },
+        {
+          "label": "Fraxtal RPC",
+          "url": "https://rpc.frax.com"
         }
       ],
-      "evidence": "At Ethereum block 25546949, the frxUSD token and all five custodian proxies published by Frax resolved distinct EIP-1967 implementations and ProxyAdmins. Every ProxyAdmin had identical verified runtime and owner() = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503. That verified timelock had admin 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, pendingAdmin zero, and a 86400-second delay. The same 4-of-7 Safe directly owned the token and every custodian, could raise their mint caps, and had no enabled modules, guard, or module guard. This establishes the complete published Ethereum token/custodian upgrade and mint-control chain; replacing mint-critical logic requires the Safe-controlled 24-hour timelock. Economic-posture fields reviewed 2026-08-15: the Safe can raise custodian caps directly outside the upgrade timelock, while the live full-composition Frax/Chaos reserve feed provides continuous third-party reconciliation without named prudential supervision.",
-      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 25546949, the frxUSD token and all five custodian proxies published by Frax resolved distinct EIP-1967 implementations and ProxyAdmins. Every ProxyAdmin had identical verified runtime and owner() = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503. That verified timelock had admin 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, pendingAdmin zero, and a 86400-second delay. The same 4-of-7 Safe directly owned the token and every custodian, could raise their mint caps, and had no enabled modules, guard, or module guard. This establishes the complete published Ethereum token/custodian upgrade and mint-control chain; replacing mint-critical logic requires the Safe-controlled 24-hour timelock. At Fraxtal block 40053263, native frxUSD at 0xfc00000000000000000000000000000000000001 returned BRIDGE() = 0x4200000000000000000000000000000000000010, REMOTE_TOKEN() = 0xcacd6fd266af91b8aed52accc382b4e165586e29, owner() = timelock_address() = 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and active minters 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, 0xfc0000000000000000000000000000000000000d, 0x96a394058e2b84a89bac9667b19661ed003cf5d4, and 0x8c33cd6e5bed3bcb43b116410842bdd21630bff4. The reviewed source has no cap or max-supply check on minter_mint(); the Fraxtal ProxyAdmin owner/delay is not independently resolved, so the Ethereum 86400-second delay is not applied to Fraxtal. Economic-posture fields reviewed 2026-08-16: the Ethereum Safe can raise custodian caps directly outside the upgrade timelock, Fraxtal owner-controlled minters can mint without a source-level economic bound, and the live full-composition Frax/Chaos reserve feed provides continuous third-party reconciliation without named prudential supervision.",
+      "reviewer": "Codex mint-bridge-boundary FIX2-07",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

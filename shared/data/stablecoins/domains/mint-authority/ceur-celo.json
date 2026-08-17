@@ -7,6 +7,9 @@
     "summary": "EURm minting on Celo routes through the Mento Broker contract (confirmed isMinter), while token ownership resolves to a 4/6 Mento Safe; identical structure to verified GBPm.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "celo:0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+      ],
       "proxyAddresses": [
         "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
       ],
@@ -43,6 +46,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "celo:0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Mento Broker minting is rate-limited by Mento exchange limits and circuit breakers on the EURm FPMM pool.",
@@ -61,6 +67,9 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "celo:0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+        ],
         "threshold": 4,
         "signerCount": 6,
         "canRaiseCap": true,
@@ -119,7 +128,7 @@
       ],
       "evidence": "Celo block 69291541: owner() = 4/6 Safe (threshold 4, 6 owners, no modules); isMinter(Broker 0x777A...) = true. Both mint-capable surfaces confirmed. Safe lost one signer since prior review (7→6); threshold unchanged at 4. Identical pattern to verified gbpm-mento. Economic-posture fields reviewed 2026-08-15: the no-timelock 4-of-6 Safe can replace the Broker, raise exchange limits, or change mint logic; the Celo-only issuer reserve feed does not prove liability reconciliation across all five tracked deployments and no independent attestor or prudential supervisor is evidenced. Reconciliation finding 2026-08-15: Mento Protocol's live Reserve dashboard continuously publishes total Mento stablecoin supply, reserve debt and held supply against shared-Reserve collateral and its collateral ratio; EURm is documented as reserve-backed and minted or burned by ReserveLiquidityStrategy. The reviewed bridge graph maps Monad NTT and legacy Ethereum, Polygon, and Solana representations back to Celo canonical EURm claims, so this is continuous protocol supply-to-collateral reconciliation rather than a periodic attestation; supervision remains none because no prudential regulator is named.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "reviewedAt": "2026-08-16"
     }
   }
 }

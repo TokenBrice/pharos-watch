@@ -22,11 +22,20 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Ripio issues wBRL natively on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis: every deployment is an EIP-1167 clone of one Ripio master implementation, and per-chain MINTER_ROLE is held only by Ripio-administered accounts (mint-authority review 2026-06-11, role reads re-verified for this review). No third-party bridge carries the representation.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "summary": "Ripio issues wBRL as six independent native deployments on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis, and the same token deployments also participate in Ripio's first-party burn/mint bridge. BridgeDeposit burns source WBRL, records per-route burn and mint counters, and lets role-authorized operators fulfill destination mints through LimitedMinterBridge. The adapter mints to arbitrary recipients under a 29,000 WBRL daily cap at the reviewed reads, but its administrator can change registration and limits; route enablement, fixed fees, pause, replay keys, and the two operator EOAs are structured below. The route is issuer-native-burn-mint, with no external validator or cryptographic source-burn proof.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration wbrl-ripio",
     "confidence": "verified",
     "protocols": [
+      {
+        "source": "manual",
+        "name": "Ripio latam-stables burn-mint bridge",
+        "url": "https://github.com/ripio/latam-stables",
+        "bridgeTypes": [
+          "burn-mint"
+        ],
+        "note": "Ripio's BridgeDeposit and LimitedMinterBridge contracts define the issuer-operated cross-chain burn/mint rail; no external validator or DVN network was identified."
+      },
       {
         "source": "l2beat",
         "name": "Across",
@@ -56,6 +65,26 @@
       {
         "label": "L2BEAT World Chain",
         "url": "https://l2beat.com/scaling/projects/world"
+      },
+      {
+        "label": "Ripio latam-stables repository and bridge architecture",
+        "url": "https://github.com/ripio/latam-stables"
+      },
+      {
+        "label": "Ripio BridgeDeposit source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+      },
+      {
+        "label": "Ripio LimitedMinterBridge source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+      },
+      {
+        "label": "Verified Ripio LimitedMinterBridge",
+        "url": "https://eth.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6?tab=contract"
+      },
+      {
+        "label": "Verified Ripio BridgeDeposit",
+        "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47?tab=contract"
       }
     ],
     "routes": [
@@ -70,7 +99,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the ethereum wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on ethereum is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the ethereum wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and direct issuer MINTER_ROLE evidence supports independent native issuance. The same token deployment also participates in the separate first-party Ripio burn/mint route structured below; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -95,7 +124,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the base wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on base is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the base wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and direct issuer MINTER_ROLE evidence supports independent native issuance. The same token deployment also participates in the separate first-party Ripio burn/mint route structured below; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -120,7 +149,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the worldchain wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on worldchain is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the worldchain wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and direct issuer MINTER_ROLE evidence supports independent native issuance. The same token deployment also participates in the separate first-party Ripio burn/mint route structured below; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -145,7 +174,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the bsc wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on bsc is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the bsc wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and direct issuer MINTER_ROLE evidence supports independent native issuance. The same token deployment also participates in the separate first-party Ripio burn/mint route structured below; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -170,7 +199,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the polygon wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on polygon is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the polygon wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and direct issuer MINTER_ROLE evidence supports independent native issuance. The same token deployment also participates in the separate first-party Ripio burn/mint route structured below; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -195,7 +224,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the gnosis wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on gnosis is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the gnosis wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and direct issuer MINTER_ROLE evidence supports independent native issuance. The same token deployment also participates in the separate first-party Ripio burn/mint route structured below; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -208,6 +237,355 @@
             "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "wbrl-bridge-deposit",
+        "label": "Ripio WBRL BridgeDeposit burn and fulfillment coordinator",
+        "routeRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-wbrl-burn-mint-bridge",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:multichain:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "eoa:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "eoa:0xbc924f707ca021f9b220088afe56c85b9cb43085"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BridgeDeposit burns source WBRL and fulfills destination mints through the registered LimitedMinterBridge; its route configuration controls enabled destinations and fixed fees rather than imposing a cryptographic supply cap.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "Off-chain operators submit the source transaction hash, source deposit ID, and amount used for fulfillment.",
+          "DEFAULT_ADMIN_ROLE can replace the LimitedMinterBridge reference and configure enabled routes; the contract does not cryptographically bind the submitted source proof to a particular burn."
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "All 30 non-self directed routes among Ethereum, Base, World Chain, BSC, Polygon, and Gnosis returned enabled at the recorded 2026-08-16 chain-specific reads. depositForBridge() checks the enabled destination route, while fulfillBridgeMint() checks BRIDGE_OPERATOR_ROLE, registered-token state, and a replay key before invoking LimitedMinterBridge.",
+          "caps": "The fixed route fees were 0.08 WBRL for Ethereum-origin routes to non-Ethereum destinations, 2 WBRL for non-Ethereum-origin routes to Ethereum, and 0.08 WBRL for other non-Ethereum routes; the adapter's daily mint cap is recorded separately.",
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE is held by issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and the 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68. BRIDGE_OPERATOR_ROLE is held by 0x5ca3f8eeba12d83408fc097c2dad79212456f20f and 0xbc924f707ca021f9b220088afe56c85b9cb43085; FEE_MANAGER_ROLE is held by the issuer EOA, feeCollector() is the Safe, and limitedMinter() resolves to 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. DEFAULT_ADMIN_ROLE can pause bridge deposits and fulfillments.",
+          "onchainAmountBounds": "BridgeDeposit records totalBurnedTo on source routes and totalMintedFrom on destination routes, but the contract does not cryptographically prove that the supplied source transaction, hash, deposit ID, or amount corresponds to a particular source burn; conservation is an operational/off-chain assertion with on-chain counters."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Verified Ripio BridgeDeposit",
+            "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47?tab=contract"
+          },
+          {
+            "label": "Ripio latam-stables repository",
+            "url": "https://github.com/ripio/latam-stables"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 reads (Ethereum 25771239, Base 50068727, World Chain 33795582, BSC 116369053, Polygon 92147851, and Gnosis 47763178), BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 was deployed on all six authored chains with the role and adapter relationships recorded above. Its source burns the fee-adjusted source amount, records totalBurnedTo, and lets a BRIDGE_OPERATOR_ROLE holder fulfill a destination mint through LimitedMinterBridge while recording totalMintedFrom and a composite replay key. The source does not bind the submitted source transaction/hash/deposit ID and amount to a cryptographic burn proof."
+      },
+      {
+        "id": "wbrl-limited-minter-bridge",
+        "label": "Ripio WBRL LimitedMinterBridge arbitrary-recipient adapter",
+        "routeRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "pause",
+          "rate-limit"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-wbrl-burn-mint-bridge",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:multichain:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge applies a 29,000 WBRL UTC-day cap at the reviewed reads and mints to arbitrary recipients; token registration and the daily cap are administrator-controlled.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "mintTo() accepts an arbitrary recipient and the adapter's MINTER_ROLE is not an external validator quorum.",
+          "Token administrators can register or unregister WBRL and change its daily mint limit."
+        ],
+        "routeChecks": {
+          "caps": "WBRL tokenConfigs returned dailyMaxMint = 29,000 WBRL and mintedToday = 0 at the fixed 2026-08-16 reads on all six authored chains; the source permits token administrators to register, unregister, and change daily limits.",
+          "trustedPeerOrRemote": "BridgeDeposit is the registered route coordinator and calls mintTo() only after its operator, token-registration, and replay-key checks; the source does not provide a cryptographic source-burn proof.",
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE is held by issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and the 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68. MINTER_ROLE is held by the issuer EOA and BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47; the adapter exposes admin pause/unpause and arbitrary-recipient minting."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Verified Ripio LimitedMinterBridge",
+            "url": "https://eth.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6?tab=contract"
+          },
+          {
+            "label": "Ripio latam-stables repository",
+            "url": "https://github.com/ripio/latam-stables"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 reads, LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 was deployed on all six authored chains, held WBRL MINTER_ROLE, and returned a 29,000 WBRL daily cap with mintedToday == 0. Its verified source allows arbitrary-recipient mintTo(), administrator-controlled token registration and daily-limit changes, and pause/unpause; BridgeDeposit is the other MINTER_ROLE holder."
+      },
+      {
+        "id": "wbrl-bridge-issuer-eoa-admin",
+        "label": "Ripio issuer EOA bridge administrator and adapter minter",
+        "routeRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "failureDomainKeys": [
+          "protocol:ripio-wbrl-burn-mint-bridge",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The issuer EOA is DEFAULT_ADMIN_ROLE on BridgeDeposit and LimitedMinterBridge, MINTER_ROLE on LimitedMinterBridge, FEE_MANAGER_ROLE on BridgeDeposit, and the native WBRL minter; it can change route, fee, registration, and daily-limit settings and can mint through the adapter.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The same EOA directly mints native WBRL on all six deployments and can also invoke the bridge adapter's arbitrary-recipient mint path.",
+          "No external validator or DVN quorum gates the issuer's bridge administration."
+        ],
+        "routeChecks": {
+          "caps": "The EOA can change LimitedMinterBridge's WBRL daily limit and BridgeDeposit route fees through its administrator roles.",
+          "pausersAdminsUpgraders": "Fixed reads confirm the issuer EOA as DEFAULT_ADMIN_ROLE on BridgeDeposit and LimitedMinterBridge, MINTER_ROLE on LimitedMinterBridge, and FEE_MANAGER_ROLE on BridgeDeposit; it can pause both bridge contracts.",
+          "trustedPeerOrRemote": "The issuer EOA administers enabled destination routes and the LimitedMinterBridge reference; route fulfillment relies on the two role-authorized operator EOAs rather than an external validator network."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ethereum public RPC fixed bridge reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 reads across all six authored chains, issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b held the BridgeDeposit and LimitedMinterBridge administrator roles, BridgeDeposit FEE_MANAGER_ROLE, and LimitedMinterBridge MINTER_ROLE. The same EOA also holds native WBRL MINTER_ROLE and UPGRADER_ROLE, but native issuance remains separately authored in Mint Authority."
+      },
+      {
+        "id": "wbrl-bridge-safe-admin",
+        "label": "Ripio WBRL Safe bridge administrator",
+        "routeRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "failureDomainKeys": [
+          "protocol:ripio-wbrl-burn-mint-bridge",
+          "safe:multichain:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0x067823401127ca6647481c68011805b90d42231e",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295015,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The 4-of-7 Safe holds DEFAULT_ADMIN_ROLE on BridgeDeposit and LimitedMinterBridge, so it can pause the bridge, replace the adapter reference, configure routes, and authorize token registration or daily-limit changes through the token administrator path.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The Safe's administrator power can change bridge route configuration, adapter registration, and daily limits without an external validator quorum.",
+          "The Safe is also the BridgeDeposit fee collector and the native WBRL DEFAULT_ADMIN_ROLE holder."
+        ],
+        "routeChecks": {
+          "caps": "The Safe can authorize changes to LimitedMinterBridge daily limits and BridgeDeposit route fees through its administrator control.",
+          "pausersAdminsUpgraders": "Fixed reads confirm the Safe as DEFAULT_ADMIN_ROLE on BridgeDeposit and LimitedMinterBridge; the existing on-chain Safe review records 4-of-7 owners, no enabled modules, and no guard at block 25295015.",
+          "trustedPeerOrRemote": "The Safe configures the issuer-operated bridge route and does not represent an external validator or DVN network."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio Safe multisig",
+            "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 bridge-role reads, Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 held DEFAULT_ADMIN_ROLE on BridgeDeposit and LimitedMinterBridge across the six authored routes and remained the BridgeDeposit fee collector. Its 4-of-7 signer, module, and guard state is carried from the existing on-chain observation at Ethereum block 25295015; no later module/guard enumeration was available in this review."
+      },
+      {
+        "id": "wbrl-bridge-operator-primary",
+        "label": "Ripio WBRL primary bridge operator EOA",
+        "routeRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+        "failureDomainKeys": [
+          "protocol:ripio-wbrl-burn-mint-bridge",
+          "eoa:0x5ca3f8eeba12d83408fc097c2dad79212456f20f"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "This EOA is a BRIDGE_OPERATOR_ROLE holder on BridgeDeposit and can submit fulfillBridgeMint() calls; it is an issuer-trusted operator, not an external validator quorum.",
+          "onchainAmountBounds": "BridgeDeposit checks the operator role and replay key but does not cryptographically bind the supplied source transaction/hash/deposit ID and amount to a source burn."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum public RPC fixed bridge reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 reads, EOA 0x5ca3f8eeba12d83408fc097c2dad79212456f20f held BRIDGE_OPERATOR_ROLE on BridgeDeposit across the six authored chains and was one of the two role-authorized accounts able to call fulfillBridgeMint()."
+      },
+      {
+        "id": "wbrl-bridge-operator-secondary",
+        "label": "Ripio WBRL secondary bridge operator EOA",
+        "routeRefs": [
+          "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+          "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0xbc924f707ca021f9b220088afe56c85b9cb43085",
+        "failureDomainKeys": [
+          "protocol:ripio-wbrl-burn-mint-bridge",
+          "eoa:0xbc924f707ca021f9b220088afe56c85b9cb43085"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "This EOA is a BRIDGE_OPERATOR_ROLE holder on BridgeDeposit and can submit fulfillBridgeMint() calls; it is an issuer-trusted operator, not an external validator quorum.",
+          "onchainAmountBounds": "BridgeDeposit checks the operator role and replay key but does not cryptographically bind the supplied source transaction/hash/deposit ID and amount to a source burn."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum public RPC fixed bridge reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 reads, EOA 0xbc924f707ca021f9b220088afe56c85b9cb43085 held BRIDGE_OPERATOR_ROLE on BridgeDeposit across the six authored chains and was one of the two role-authorized accounts able to call fulfillBridgeMint()."
       }
     ]
   }

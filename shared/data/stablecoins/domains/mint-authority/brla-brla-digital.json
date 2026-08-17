@@ -7,6 +7,9 @@
     "summary": "BRLA is issued by Avenia (formerly BRLA Digital); mint() on every tracked chain is gated solely by OPERATOR_ROLE (0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929), verified functionally by eth_call mint() on all four chains. Current holders, reconstructed from full event histories and hasRole/eth_getCode reads: Polygon 12 (deployer EOA 0x08abf5f6, operator EOA 0xb35fdcb2, and 10 issuer-owned contracts/proxies), Gnosis 5 (3 EOAs + 2 backend proxies), Celo 4 (3 EOAs + 1 backend proxy), Moonbeam 5 (3 EOAs + 2 backend proxies). The two EOAs listed here previously (0x36cd3733, 0x55127198) hold the BLACKLISTED role (0xf48dee1a…), not mint rights — mint() from 0x36cd3733 reverts 'missing role 0x97667070…'. No bridge or third-party contract holds mint rights on any chain; issuance is issuer-direct per chain.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+      ],
       "proxyAddresses": [
         "0xe6a537a407488807f0bbeb0038b79004f19dddfb"
       ],
@@ -39,6 +42,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0x08abf5f6e956b7de8b2880d0e5897f67f181de76",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -57,6 +63,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0xb35fdcb2dd129ece6cb060c85db79b85b761bb80",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -75,6 +84,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0x061194fdcae633dd298f9cf4395e31f1d5c151b4",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -93,6 +105,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0x18c4acf5c84c0cc6a4de347297452e4c55ba3035",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -111,6 +126,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0x66b2816d79e2dd9e2d70217683a0ff4dad27dc35",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -129,6 +147,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0xdff6a5f8526a055185f14f17356afe4fc1e4ab3b",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -147,6 +168,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0xe41d3fcba696b67311dcb1c94193fb829fd6a0e2",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -165,6 +189,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0xed5fc3f3a2d13a2a279e04d4ea2ba0e8ef49cdb9",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -183,6 +210,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0xf25020df7771a42bd075ef52d0487cee97f4cdcd",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -201,6 +231,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0x2305256fb0a361a4751f6c9a490768f24cccbba0",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -219,6 +252,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0x59704d789c978341a20f29e855334e82d0961322",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -237,6 +273,9 @@
         "directMintAbility": "direct",
         "chain": "polygon",
         "address": "0xa5e1a81738259256181f9a0e478188553062d340",
+        "deploymentRefs": [
+          "polygon:0xe6a537a407488807f0bbeb0038b79004f19dddfb"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 90539985,
@@ -255,6 +294,9 @@
         "directMintAbility": "direct",
         "chain": "gnosis",
         "address": "0x08abf5f6e956b7de8b2880d0e5897f67f181de76",
+        "deploymentRefs": [
+          "gnosis:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 47292620,
@@ -273,6 +315,9 @@
         "directMintAbility": "direct",
         "chain": "gnosis",
         "address": "0x19df6878cfa6ad30d9167de8a696f390a548fb3d",
+        "deploymentRefs": [
+          "gnosis:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 47292620,
@@ -291,6 +336,9 @@
         "directMintAbility": "direct",
         "chain": "gnosis",
         "address": "0xbb6878b99c144c42ad0739fdacd25c7032d28fa3",
+        "deploymentRefs": [
+          "gnosis:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 47292620,
@@ -309,6 +357,9 @@
         "directMintAbility": "direct",
         "chain": "gnosis",
         "address": "0xca0402fb9a244b39531b327380951b68cbca183c",
+        "deploymentRefs": [
+          "gnosis:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 47292620,
@@ -327,6 +378,9 @@
         "directMintAbility": "direct",
         "chain": "gnosis",
         "address": "0xa5e1a81738259256181f9a0e478188553062d340",
+        "deploymentRefs": [
+          "gnosis:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 47292620,
@@ -345,6 +399,9 @@
         "directMintAbility": "direct",
         "chain": "celo",
         "address": "0x08abf5f6e956b7de8b2880d0e5897f67f181de76",
+        "deploymentRefs": [
+          "celo:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 72615641,
@@ -363,6 +420,9 @@
         "directMintAbility": "direct",
         "chain": "celo",
         "address": "0x19df6878cfa6ad30d9167de8a696f390a548fb3d",
+        "deploymentRefs": [
+          "celo:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 72615641,
@@ -381,6 +441,9 @@
         "directMintAbility": "direct",
         "chain": "celo",
         "address": "0xbb6878b99c144c42ad0739fdacd25c7032d28fa3",
+        "deploymentRefs": [
+          "celo:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 72615641,
@@ -399,6 +462,9 @@
         "directMintAbility": "direct",
         "chain": "celo",
         "address": "0xa5e1a81738259256181f9a0e478188553062d340",
+        "deploymentRefs": [
+          "celo:0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 72615641,
@@ -417,6 +483,9 @@
         "directMintAbility": "direct",
         "chain": "moonbeam",
         "address": "0x08abf5f6e956b7de8b2880d0e5897f67f181de76",
+        "deploymentRefs": [
+          "moonbeam:0xfeb25f3fddad13f82c4d6dbc1481516f62236429"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 16514336,
@@ -435,6 +504,9 @@
         "directMintAbility": "direct",
         "chain": "moonbeam",
         "address": "0x19df6878cfa6ad30d9167de8a696f390a548fb3d",
+        "deploymentRefs": [
+          "moonbeam:0xfeb25f3fddad13f82c4d6dbc1481516f62236429"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 16514336,
@@ -453,6 +525,9 @@
         "directMintAbility": "direct",
         "chain": "moonbeam",
         "address": "0xbb6878b99c144c42ad0739fdacd25c7032d28fa3",
+        "deploymentRefs": [
+          "moonbeam:0xfeb25f3fddad13f82c4d6dbc1481516f62236429"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 16514336,
@@ -471,6 +546,9 @@
         "directMintAbility": "direct",
         "chain": "moonbeam",
         "address": "0x5b6ee295532fd7086c829195affa69d5da9fd1a3",
+        "deploymentRefs": [
+          "moonbeam:0xfeb25f3fddad13f82c4d6dbc1481516f62236429"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 16514336,
@@ -489,6 +567,9 @@
         "directMintAbility": "direct",
         "chain": "moonbeam",
         "address": "0xa5e1a81738259256181f9a0e478188553062d340",
+        "deploymentRefs": [
+          "moonbeam:0xfeb25f3fddad13f82c4d6dbc1481516f62236429"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-20",
         "observedBlock": 16514336,

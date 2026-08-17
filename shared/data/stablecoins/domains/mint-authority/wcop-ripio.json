@@ -4,10 +4,23 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "WCOP is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "summary": "WCOP has six reviewed independent native issuance deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's issuer EOA directly holds MINTER_ROLE on each deployment, the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE and can regrant native roles, and the separate LimitedMinter contract is an additional Ethereum native minter facility. The LimitedMinterBridge burn/mint adapter is bridge machinery reviewed only under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+      ],
       "proxyAddresses": [
+        "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "0x8a1d45e102e886510e891d2ec656a708991e2d76",
         "0x8a1d45e102e886510e891d2ec656a708991e2d76"
       ],
       "implementationAddresses": [
@@ -18,6 +31,7 @@
         "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 0,
       "controlRef": "Ripio shared WCOP admin and MINTER_ROLE holder (EOA)",
       "observedAt": "2026-07-14",
       "observedBlock": 25530763,
@@ -40,6 +54,14 @@
       {
         "chain": "multichain",
         "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "deploymentRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
         "label": "Ripio shared WCOP admin and MINTER_ROLE holder (EOA)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -51,6 +73,14 @@
       {
         "chain": "ethereum",
         "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "deploymentRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
         "label": "Ripio WCOP Safe multisig (DEFAULT_ADMIN_ROLE)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -82,6 +112,9 @@
       {
         "chain": "ethereum",
         "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+        "deploymentRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
         "label": "Ripio WCOP Ethereum minter-router contract",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -89,17 +122,6 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WCOP token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
-      },
-      {
-        "chain": "multichain",
-        "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
-        "label": "Ripio WCOP cross-chain minter-router contract",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WCOP token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -136,9 +158,9 @@
           "url": "https://www.ripio.com/en/wfiat"
         }
       ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Supervision review (2026-08-08): wCOP has its own independent certification - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 104,898,654 wCOP outstanding across six chains against COP 107,966,549.02 in a Colombian bank account as of 2026-03-31 - so reserve evidence is attestation-backed. Reconciliation stays unknown because Ripio labels it the first attestation of wCOP collateral, the whitepaper's cadence language is permissive, and later-period certifications return 404. No prudential regime applies to the unnamed Ripio group affiliate that issues wFIAT. Economic-posture fields reviewed 2026-08-15: issuer-controlled minters are uncapped across six chains, and the sole whole-supply certification is ad hoc rather than recurring. Wave 2 external verification 2026-08-15: no later WCOP certification was found, and Ripio's July Celo launch added a seventh deployment outside the March six-chain snapshot; reconciliation remains unknown. Codex wave 1 review 2026-08-15: Ripio's current wFIAT releases page still labels the 2026-03-31 wCOP certification the first attestation and supplies no later dated wCOP reconciliation, so a recurring cadence is not evidenced; supervision remains attestation-only because the named CPA certification is not a prudential regime.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "The corrected Mint Authority scope is six independent native WCOP deployments: Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis each expose the verified LatamStable implementation and the issuer EOA's direct MINTER_ROLE; the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE and can regrant native roles. The separate 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7 LimitedMinter remains an Ethereum native minter facility with its own daily limit. The 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 LimitedMinterBridge is an issuer-operated cross-chain burn/mint adapter with rate-limit, pause, admin, and arbitrary-recipient mint surfaces; those facts are relocated to route-scoped Bridge Risk and are not counted as native Mint Authority. LatamStable.mint() has no intrinsic cap and its UUPS upgrade authorization has no timelock, so native issuance remains unbounded and immediately replaceable. Supervision remains attestation-only because the March 2026 CPA certification is ad hoc rather than a recurring prudential regime; reconciliation remains unknown.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Codex mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

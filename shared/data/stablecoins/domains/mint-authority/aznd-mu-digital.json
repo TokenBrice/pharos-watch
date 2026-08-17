@@ -4,30 +4,47 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "AZND primary issuance is KYC-gated by Mu Digital, while the Monad token's mint function is available to three current TOKEN_MINTER_ROLE holders: the PrimaryMarket contract, one EOA, and one EIP-7702 delegated EOA. The Monad AccessManager default admin can change that role set. Ethereum AZND is a UUPS LayerZero OFT spoke whose owner can change trusted peers and whose AccessManager default admin can upgrade mint-critical logic; both controls currently resolve to the same Mu Digital EOA.",
+    "summary": "AZND native issuance is confined to the Monad AZND deployment. Its mint function is available to three current TOKEN_MINTER_ROLE holders: the PrimaryMarket contract, one EOA, and one EIP-7702 delegated EOA; the Monad AccessManager default admin can change that role set. PrimaryMarket is KYC- and allowlist-gated but its verified mint path has no economic amount cap or whole-supply reconciliation invariant. Ethereum AZND is a LayerZero OFT bridge representation and its burn/mint, peer, adapter, escrow, Endpoint, and bridge-upgrade controls are scored under Bridge Risk rather than Mint Authority.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
+      ],
       "proxyAddresses": [
-        "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"
+        "0xe64730de04aeaf8d38925825d77d7a4c00340c89",
+        "0x7b14860ecd88fb65a22a1d259d1248bf199fb47f"
       ],
       "implementationAddresses": [
-        "0x2e49c14a73210356de9f23a46a98de777b8a0db6"
+        "0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb",
+        "0xef1776ed00e8f9fe783e269d10676c7820465461"
       ],
       "adminAddresses": [
         "0x8b5f269f68d42490dee19fc4ab275cdd80940068"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Ethereum AZND OFT owner and UUPS admin",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530490,
+      "controlRef": "Monad AccessManager default admin",
+      "observedAt": "2026-08-16",
+      "observedBlock": 96611302,
       "sources": [
         {
-          "label": "Etherscan AZND proxy and verified implementation",
-          "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+          "label": "MonadScan verified PrimaryMarket proxy",
+          "url": "https://monadscan.com/address/0xe64730de04aeaf8d38925825d77d7a4c00340c89#code"
         },
         {
-          "label": "Ethereum mainnet RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "MonadScan verified PrimaryMarket implementation",
+          "url": "https://monadscan.com/address/0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb#code"
+        },
+        {
+          "label": "MonadScan verified AccessManager proxy",
+          "url": "https://monadscan.com/address/0x7b14860ecd88fb65a22a1d259d1248bf199fb47f#code"
+        },
+        {
+          "label": "MonadScan verified AccessManager implementation",
+          "url": "https://monadscan.com/address/0xef1776ed00e8f9fe783e269d10676c7820465461#code"
+        },
+        {
+          "label": "Monad mainnet RPC",
+          "url": "https://rpc.monad.xyz"
         }
       ]
     },
@@ -38,6 +55,9 @@
         "authorityType": "contract",
         "chain": "monad",
         "address": "0xe64730de04aeaf8d38925825d77d7a4c00340c89",
+        "deploymentRefs": [
+          "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
+        ],
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "present",
         "observedAt": "2026-07-14",
@@ -64,6 +84,9 @@
         "authorityType": "eoa",
         "chain": "monad",
         "address": "0xf6e5255f4dec1473717e1df54310e2b2668d1ca8",
+        "deploymentRefs": [
+          "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
+        ],
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -86,6 +109,9 @@
         "authorityType": "eoa",
         "chain": "monad",
         "address": "0x8b33f0174e7ef6b4b8f1c55bdf9ec93ea70ebd0b",
+        "deploymentRefs": [
+          "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
+        ],
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -108,6 +134,9 @@
         "authorityType": "eoa",
         "chain": "monad",
         "address": "0x8b5f269f68d42490dee19fc4ab275cdd80940068",
+        "deploymentRefs": [
+          "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
+        ],
         "directMintAbility": "can-authorize",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
@@ -125,24 +154,31 @@
         ]
       },
       {
-        "label": "Ethereum AZND OFT owner and UUPS admin",
-        "role": "proxy-admin",
+        "label": "Monad AccessManager MANAGER_PRIMARY_MARKET parameter authority",
+        "role": "other",
         "authorityType": "eoa",
-        "chain": "ethereum",
+        "chain": "monad",
         "address": "0x8b5f269f68d42490dee19fc4ab275cdd80940068",
-        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
+        ],
+        "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530490,
-        "evidence": "At Ethereum block 25530490, AZND proxy owner() returned 0x8b5f269f...0068, accessManager() returned 0xe683fcd4...b520, that AccessManager returned true for DEFAULT_ADMIN_ROLE on the same EOA, and the EIP-1967 implementation slot resolved to 0x2e49c14a...0db6. Verified source shows the OFT owner can change trusted peers, inbound trusted LayerZero messages mint through _credit, and UUPS _authorizeUpgrade requires the AccessManager default admin. The EOA therefore can authorize the Ethereum spoke mint path and replace mint-critical implementation logic.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 96611302,
+        "evidence": "At Monad block 96611302, Mu AccessManager 0x7b14860e...b47f returned true for MANAGER_PRIMARY_MARKET on 0x8b5f269f...0068, and the same code-empty EOA held DEFAULT_ADMIN_ROLE. The manager role can change PrimaryMarket's treasury 0xf3cdc00cca19f336b1c1b4bd684a949124a93ea7, PriceFeed 0x8b9670c5e4d9f1c14f1f9fe625dd099924ad4d4f, deposited and received-token allowlists, and whitelist, so it is native parameter authority. AccessManager exposes hasRole but no enumerable role-member view; this fixed-block observation does not prove that the EOA is the sole MANAGER_PRIMARY_MARKET holder.",
         "sources": [
           {
-            "label": "Etherscan AZND proxy and verified implementation",
-            "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+            "label": "MonadScan verified AccessManager source",
+            "url": "https://monadscan.com/address/0x7b14860ecd88fb65a22a1d259d1248bf199fb47f#code"
           },
           {
-            "label": "Ethereum mainnet RPC",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "MonadScan verified PrimaryMarket implementation",
+            "url": "https://monadscan.com/address/0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb#code"
+          },
+          {
+            "label": "Monad mainnet RPC",
+            "url": "https://rpc.monad.xyz"
           }
         ]
       }
@@ -151,9 +187,9 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Mu Digital documents KYC-gated primary minting through PrimaryMarket. At Monad block 87687688, verified AZND source and RPC reads resolve three TOKEN_MINTER_ROLE holders and the AccessManager default admin; the token is a direct non-proxy deployment with immutable PrimaryMarket but mutable role membership. At Ethereum block 25530490, verified OFT/UUPS source and RPC reads resolve the spoke proxy implementation, owner, AccessManager, and same 0x8b5f...0068 EOA as upgrade admin. Ethereum owner minting is indirect through trusted LayerZero peer configuration and UUPS control, not a public owner-only mint function. Economic-posture fields reviewed 2026-08-15: uncapped Monad role holders and the issuer EOA role/OFT/upgrade controls make minting economically unbounded; no whole-supply recurring reconciliation or named prudential supervisor is evidenced. Wave 2 external review 2026-08-15: Accountable's independent proof-of-solvency dashboard aggregates AZND supply liabilities and Asset Pool reserves with a daily verification interval and history; because the public feed is not currently live, this supports periodic reconciliation and attestation-only supervision rather than continuous reconciliation. Reconciliation determination 2026-08-15: Accountable's MuDigital Proof of Solvency dashboard independently aggregates AZND Supply liabilities against Protocol Reserves, shows a Reserves vs Supply Timeline, and publishes a daily verification interval; this is a dated recurring reconciliation by Accountable, so reconciliation is periodic rather than continuous. Supervision remains attestation-only because no named prudential regulator or regime supervising AZND issuance was found.",
-      "reviewer": "Codex V9 mint-authority review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Mu Digital documents KYC-gated primary minting through PrimaryMarket. At Monad block 96611302, verified AZND source and RPC reads resolve three TOKEN_MINTER_ROLE holders: PrimaryMarket 0xe64730de...0c89, EOA 0xf6e5255f...1ca8, and EIP-7702 delegated EOA 0x8b33f017...bd0b; the AccessManager default admin is 0x8b5f269f...0068 and can change the role set. The same EOA holds MANAGER_PRIMARY_MARKET, which can change PrimaryMarket treasury, PriceFeed, token allowlists, and whitelist; the role is not enumerable, so additional holders are not excluded. PrimaryMarket proxy 0xe64730de...0c89 resolves to UUPS implementation 0xe5f8ec54...28eb, and AccessManager proxy 0x7b14860e...b47f resolves to UUPS implementation 0xef1776ed...5461; no timelock or Safe was evidenced. The verified native mint path has no economic amount cap or whole-supply reconciliation invariant, so authorityPosture remains unbounded-reconciled and economicCapSemantics remains unbounded. Accountable's independent proof-of-solvency dashboard provides periodic reconciliation and attestation-only supervision; no named prudential supervisor for AZND issuance was evidenced. Ethereum AZND is a bridge representation and its OFT, adapter, peer, Endpoint, escrow, and bridge-upgrade authorities are excluded from this native review and recorded under Bridge Risk.",
+      "reviewer": "Codex V9 mint-authority review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; mint-bridge-boundary verification 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Mu Digital mint and redeem documentation",
@@ -172,8 +208,20 @@
           "url": "https://monadscan.com/address/0x7b14860ecd88fb65a22a1d259d1248bf199fb47f#code"
         },
         {
-          "label": "Etherscan AZND proxy and verified implementation",
-          "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+          "label": "MonadScan verified PrimaryMarket proxy",
+          "url": "https://monadscan.com/address/0xe64730de04aeaf8d38925825d77d7a4c00340c89#code"
+        },
+        {
+          "label": "MonadScan verified PrimaryMarket implementation",
+          "url": "https://monadscan.com/address/0xe5f8ec544310d5ae79da0f921d01ce80ffd528eb#code"
+        },
+        {
+          "label": "MonadScan verified AccessManager implementation",
+          "url": "https://monadscan.com/address/0xef1776ed00e8f9fe783e269d10676c7820465461#code"
+        },
+        {
+          "label": "Monad mainnet RPC",
+          "url": "https://rpc.monad.xyz"
         },
         {
           "label": "Mu Digital Accountable proof of solvency",

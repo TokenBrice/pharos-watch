@@ -1,36 +1,30 @@
 {
   "id": "iusd-initia",
   "mintAuthority": {
-    "mintPath": "bridge-or-oft-synthetic",
+    "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "Initia iUSD is a single-chain wrapper of Agora AUSD bridged via LayerZero; each iUSD is minted on Initia against AUSD locked/burned at the LayerZero bridge endpoint, so supply is controlled by the bridge/OFT route rather than a local CDP or issuer.",
+    "summary": "Initia iUSD is a wrapper over the AUSD0 representation of Agora AUSD. Users deposit registered AUSD0 collateral into the local iusd-vault and receive iUSD 1:1; AUSD0/LayerZero administration and its bridge mint/burn surface are reviewed separately under Bridge Risk.",
+    "inheritedFrom": "ausd-agora",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "initia:0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"
+      ],
       "implementationAddresses": [
-        "0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6",
-        "0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2"
+        "0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
       ],
       "adminAddresses": [
-        "0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6",
-        "0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d"
+        "0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
       ],
       "canChangeMintLogic": true,
       "controlRef": "iusd-vault multisig admin (3-of-4)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 19467576,
+      "observedAt": "2026-08-16",
+      "observedBlock": 20754353,
       "sources": [
         {
           "label": "Initia iusd-vault package modules",
           "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules"
-        },
-        {
-          "label": "Initia AUSD0 OFT package modules",
-          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/modules"
-        },
-        {
-          "label": "Initia AUSD0 OFT package resources",
-          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
         },
         {
           "label": "Initia object-code deployment module ABI",
@@ -46,20 +40,19 @@
       {
         "chain": "initia",
         "address": "0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6",
+        "deploymentRefs": [
+          "initia:0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"
+        ],
         "label": "iusd-vault contract (mints iUSD 1:1 against AUSD0 deposits)",
-        "role": "bridge-admin",
+        "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "iUSD is minted by the iusd-vault contract (0x2981d795...) 1:1 against AUSD0 deposited. There is no fixed token cap: effective capacity rises when more AUSD0 is deposited, while outstanding supply remains bounded by deposited AUSD0. The vault is the only entity that can invoke the mint_ref through the 0xfd6a07 sticky Move object's ExtendRef.",
-        "routeChecks": {
-          "lockboxOrEscrow": "User bridges AUSD0 via LayerZero OFT (0xf407bc...); OFT mints AUSD0 on Initia; AUSD0 deposited to vault object 0xfd6a07...; vault uses ExtendRef to generate signer for 0xfd6a07 and calls managed_coin::Capabilities to mint iUSD 1:1.",
-          "caps": "No cap beyond AUSD0 supply deposited. LayerZero DVN/security config not independently resolved. vault::ModuleStore.base_token = AUSD0 (0x8078cf9...)."
-        },
-        "evidence": "Initia REST (rest.initia.xyz): 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a is a sticky Move Object (ObjectCore.owner = 0x0, non-transferable). vault::VaultAccount.extend_ref stored at iusd-vault contract 0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6. Confirmed from tx 4dbe5cba...: OFT LayerZero messaging_composer::ComposeDelivered triggers AUSD0 mint by OFT contract 0xf407bc..., followed by vault MintEvent minting iUSD 1:1. vault module functions are private/friend-only — no external mint path. vault::ModuleStore.admin = self (0x2981d7...).",
-        "observedAt": "2026-07-14",
-        "observedBlock": 19467576,
+        "capDescription": "The iusd-vault mints iUSD 1:1 only after a registered AUSD0 base-token deposit. The optional vault BaseTokenConfig max_balance may bound deposits, but its current numeric value was not returned; the sticky ExtendRef on 0xfd6a07... retains the local iUSD capabilities and the current supply has no metadata-level maximum.",
+        "evidence": "At Initia height 20754353, the iusd-vault package at 0x2981d795... held the VaultAccount.extend_ref for sticky object 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a. The vault's current base_tokens table has length 1 and identifies vault::BaseTokenConfig; the item and optional max_balance were not returned by the public table endpoint. The published March 2026 Zellic audit describes user mint as depositing a registered base token before minting iUSD 1:1. AUSD0/LayerZero delivery and administration are separate Bridge Risk evidence.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 20754353,
         "failureDomainKeys": [
           "contract:initia:0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
         ],
@@ -71,12 +64,19 @@
           {
             "label": "Initia scan — iusd-vault contract",
             "url": "https://scan.initia.xyz/initia-1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
+          },
+          {
+            "label": "Initia Labs iUSD Vault Zellic audit",
+            "url": "https://github.com/initia-labs/audits/blob/main/iUSD%20Vault%20-%20Zellic%20Audit%20Report.pdf"
           }
         ]
       },
       {
         "chain": "initia",
         "address": "0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6",
+        "deploymentRefs": [
+          "initia:0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"
+        ],
         "label": "iusd-vault multisig admin (3-of-4)",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -85,9 +85,9 @@
         "signerCount": 4,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Initia height 19467576, iusd-vault account 0x2981d795... held the native MultisigWallet named 'iusd-vault', threshold 3 (each member weight 1), and 4 voting members: 0xa5a8f716d5..., 0xc24c6072be..., 0x21b8a1fa32..., and 0x6c7034c703... (plus 2 proposers with weight 0). The same account held the package MetadataStore, and its vault module had COMPATIBLE upgrade policy. Because transactions from the publishing account require the 3-of-4 multisig, this control can upgrade mint-critical vault function bodies as well as govern vault configuration; individual AUSD0-backed mints remain automatic and require no vote.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 19467576,
+        "evidence": "At Initia height 20754353, iusd-vault account 0x2981d795... held the native MultisigWallet named 'iusd-vault', threshold 3 with four weight-1 voting members 0xa5a8f716d5aea6568c64de1831f6e7b37f384761, 0xc24c6072bed56e2c4d8943dc843dce5dd940cfd2, 0x21b8a1fa32ac1422b7837bad31fb0a8ae5146a4c, and 0x6c7034c703abaf8fd1f1006b94ee6470acee150e, plus two weight-0 proposers. The same account held the package MetadataStore, and the vault module remained COMPATIBLE. Transactions from the publishing account therefore can upgrade mint-critical vault function bodies and govern vault configuration; individual registered-AUSD0-backed mints remain deposit-bound and require no vote.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 20754353,
         "failureDomainKeys": [
           "multisig:initia:0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6"
         ],
@@ -101,47 +101,15 @@
             "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules"
           }
         ]
-      },
-      {
-        "chain": "initia",
-        "address": "0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d",
-        "label": "AUSD0 LayerZero OFT admin multisig (3-of-5)",
-        "role": "bridge-admin",
-        "authorityType": "multisig",
-        "directMintAbility": "upgrade-only",
-        "threshold": 3,
-        "signerCount": 5,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Initia height 19467576, AUSD0 OFT package object 0xf407bcfb... had ObjectCore.owner = 0x486bc26c... and object_code_deployment::ManagingRefs with arbitrary_signer_enabled = true. All eight package modules had COMPATIBLE upgrade policy, and the object-code deployment ABI exposed get_code_object_signer and upgrade entry points for the owned code object. The owner address was the native 'AUSD0 Multisig - Weighted' wallet with threshold 30 (3-of-5 x weight 10 each), five voting members, and one weight-1 proposer. This proves package-signing control independently of the matching OApp admin/delegate fields: the 3-of-5 multisig can upgrade AUSD0 mint and bridge logic and administer LayerZero OFT routing, but it has no separate direct mint key.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 19467576,
-        "failureDomainKeys": [
-          "multisig:initia:0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d"
-        ],
-        "sources": [
-          {
-            "label": "Initia REST — AUSD0 OFT resources",
-            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
-          },
-          {
-            "label": "Initia REST — AUSD0 OFT package modules",
-            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/modules"
-          },
-          {
-            "label": "Initia REST — object-code deployment module ABI",
-            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x838c8daa1ba8b2e01617d4d50620cb5ea98c61a6/modules"
-          }
-        ]
       }
     ],
-    "economicCapSemantics": "unbounded",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "continuous",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Initia height 19467576, 0xfd6a07... was a sticky Move Object (owner=0x0, non-transferable); vault::VaultAccount.extend_ref was stored at iusd-vault contract 0x2981d795..., so only the vault could sign for 0xfd6a07 and invoke managed_coin mint. Transaction 4dbe5cba... traced LayerZero OFT AUSD0 minting by 0xf407bc... followed by a 1:1 vault MintEvent for iUSD. The iusd-vault package was COMPATIBLE and published by its native 3-of-4 multisig account. The AUSD0 package was also COMPATIBLE; its code object was owned by native 3-of-5 multisig 0x486bc26c..., and its live ManagingRefs plus the object-code deployment ABI proved that owner could derive the code-object signer and submit upgrades. Supply remained bounded by deposited AUSD0, with no independent free-mint path, while both material package upgrade controllers were identified. Economic-posture fields reviewed 2026-08-15: the local 3-of-4 and 3-of-5 multisigs can replace vault or OFT mint logic without delay, while live Initia resources reconcile iUSD 1:1 to AUSD0 and Agora's recurring independent reserve report supplies attestation-only coverage.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Initia height 20754353, 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a remained a sticky Move Object and vault::VaultAccount.extend_ref remained stored at iusd-vault contract 0x2981d795..., so the local vault controls the iUSD capabilities. The current base_tokens table has length 1 and identifies vault::BaseTokenConfig; its item and optional max_balance were not returned by the public table endpoint. The published March 2026 Zellic audit describes the user mint path as depositing a registered base token before minting iUSD 1:1. The vault package was COMPATIBLE and its publishing account was a native 3-of-4 multisig with no separately observed timelock or delay. These native facts support partially-bounded-admin, raiseable, continuous, and attestation-only annotations. AUSD0/LayerZero bridge administration and its package upgrade surface are excluded from Mint Authority and preserved under the reviewed Bridge Risk route.",
+      "reviewer": "Codex mint/bridge boundary migration RELOC-01",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Initia docs",
@@ -158,18 +126,6 @@
         {
           "label": "Initia REST — iusd-vault package modules",
           "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules"
-        },
-        {
-          "label": "Initia REST — AUSD0 OFT package resources",
-          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
-        },
-        {
-          "label": "Initia REST — AUSD0 OFT package modules",
-          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/modules"
-        },
-        {
-          "label": "Initia REST — object-code deployment module ABI",
-          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x838c8daa1ba8b2e01617d4d50620cb5ea98c61a6/modules"
         }
       ]
     }

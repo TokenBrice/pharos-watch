@@ -7,6 +7,12 @@
     "summary": "EUROP uses UUPS token proxies on Ethereum, Polygon, Avalanche, and Plasma, Schuman's issuer account on XRPL, and a Token-2022 mint on Solana. The EVM deployments use chain-local admin and master-minter Safes; XRPL uses its issuer quorum; Solana uses a 1-of-3 Token-2022 mint-authority multisig.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "avalanche:0x8835a2f66a7aaccb297cb985831a616b75e2e16c",
+        "ethereum:0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+        "plasma:0x98658bd74ef231158cadc21d8aba733a4e947e6a",
+        "polygon:0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51"
+      ],
       "proxyAddresses": [
         "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
         "0x8835a2f66a7aaccb297cb985831a616b75e2e16c",
@@ -69,6 +75,9 @@
       {
         "chain": "ethereum",
         "address": "0xe1f9754ff1f714cd3d0e939f368a97f87840cd16",
+        "deploymentRefs": [
+          "ethereum:0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51"
+        ],
         "label": "EUROP Ethereum owner / DEFAULT_ADMIN_ROLE Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -89,6 +98,9 @@
       {
         "chain": "polygon",
         "address": "0x29e6fb2dd01455472da3dd962c16a37de096b8da",
+        "deploymentRefs": [
+          "polygon:0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51"
+        ],
         "label": "EUROP Polygon owner / DEFAULT_ADMIN_ROLE Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -109,6 +121,9 @@
       {
         "chain": "avalanche",
         "address": "0xe1f9754ff1f714cd3d0e939f368a97f87840cd16",
+        "deploymentRefs": [
+          "avalanche:0x8835a2f66a7aaccb297cb985831a616b75e2e16c"
+        ],
         "label": "EUROP Avalanche owner / DEFAULT_ADMIN_ROLE Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -129,6 +144,9 @@
       {
         "chain": "plasma",
         "address": "0xd8b39a57b8d6c66942f4ebb1776a501e8ef68e4b",
+        "deploymentRefs": [
+          "plasma:0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+        ],
         "label": "EUROP Plasma owner / DEFAULT_ADMIN_ROLE Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -149,6 +167,9 @@
       {
         "chain": "ethereum",
         "address": "0x04b4cb9d5a8417729231221a8ef22a1d06adb32b",
+        "deploymentRefs": [
+          "ethereum:0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51"
+        ],
         "label": "EUROP Ethereum MASTER_MINTER_ROLE Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -170,6 +191,9 @@
       {
         "chain": "polygon",
         "address": "0x3618f5a7659c299568e200e12af5371e76e35792",
+        "deploymentRefs": [
+          "polygon:0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51"
+        ],
         "label": "EUROP Polygon MASTER_MINTER_ROLE Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -191,6 +215,9 @@
       {
         "chain": "avalanche",
         "address": "0x1d55aafd7aea1ce243ec2ffc465472fe84344c40",
+        "deploymentRefs": [
+          "avalanche:0x8835a2f66a7aaccb297cb985831a616b75e2e16c"
+        ],
         "label": "EUROP Avalanche MASTER_MINTER_ROLE Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -212,6 +239,9 @@
       {
         "chain": "plasma",
         "address": "0x53ef7b6a497e893f739f03969306beb464328101",
+        "deploymentRefs": [
+          "plasma:0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+        ],
         "label": "EUROP Plasma MASTER_MINTER_ROLE Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -233,6 +263,9 @@
       {
         "chain": "solana",
         "address": "3t3X4xqXbRDksat5cPjfHoWftvTwpHEj9c7tWMVvNPAh",
+        "deploymentRefs": [
+          "solana:euro5sNHrZC2wu2RoLvy6xxoVMc3Qnd1vjxoWf4MftA"
+        ],
         "label": "EUROP Solana Token-2022 mint-authority multisig",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -269,6 +302,9 @@
       {
         "chain": "xrpl",
         "address": "rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
+        "deploymentRefs": [
+          "xrpl:EUROP.rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK"
+        ],
         "label": "EUROP XRPL issuer account",
         "role": "direct-minter",
         "authorityType": "eoa",

@@ -13,6 +13,9 @@
         "directMintAbility": "cap-limited",
         "chain": "ethereum",
         "address": "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+        "deploymentRefs": [
+          "ethereum:0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f"
+        ],
         "capDescription": "Mint is 1:1 against the current collateral basket only; supply is bounded by deposited collateral, with arbitrage holding the peg.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
@@ -31,6 +34,9 @@
         "directMintAbility": "parameter-only",
         "chain": "ethereum",
         "address": "0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064",
+        "deploymentRefs": [
+          "ethereum:0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f"
+        ],
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 5,
@@ -90,6 +96,9 @@
     },
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f"
+      ],
       "proxyAddresses": [
         "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
         "0x7697aE4dEf3C3Cd52493Ba3a6F57fc6d8c59108a"

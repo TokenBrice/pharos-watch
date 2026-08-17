@@ -3,10 +3,16 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "A shared zero-code EOA has uncapped direct-mint permission on Ethereum, Base, Arbitrum, and Monad through four chain-local RolesAuthority contracts. Each token and RolesAuthority is also owned by a same-address, no-delay Safe whose cutoff quorum varies by chain: 1-of-7 on Arbitrum, 2-of-7 on Monad, 3-of-8 on Ethereum, and 3-of-7 on Base. Those Safes can mint, replace or extend the minter set, change the authority contract, and immediately upgrade the UUPS tokens.",
+    "confidence": "manual-review",
+    "summary": "A shared zero-code EOA has uncapped direct-mint permission on four independently native rwaUSDi deployments on Ethereum, Base, Monad, and Arbitrum through chain-local RolesAuthority contracts. Current same-address Safe owners remain the native mint-governance and UUPS upgrade controls: 3-of-8 on Ethereum, 3-of-7 on Base, 4-of-8 on Monad, and 4-of-8 on Arbitrum, all with no timelock. The token's CCIP-admin/IBurnMintERC20-compatible surface is bridge-adjacent but no active TokenPool, remote-token, or lane binding is verified; those unresolved bridge facts stay in Bridge Risk and do not alter the native Mint Authority scope.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+        "base:0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
+        "arbitrum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+        "monad:0x650b616b46ff94000eb115926ab8393b90788d76"
+      ],
       "proxyAddresses": [
         "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
         "0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
@@ -14,10 +20,10 @@
         "0x650b616b46ff94000eb115926ab8393b90788d76"
       ],
       "implementationAddresses": [
-        "0x2a66bb2da3ad1c854e79307f64b862decd860d4c",
-        "0x5f0d2ae761a5eed6d7106771db846aa67be153f6",
-        "0x2a66bb2da3ad1c854e79307f64b862decd860d4c",
-        "0x524e2461234672643fd59310bd95ffe41538916d"
+        "0xec9c824543dd3d635c1d71029f385a6eba511dc0",
+        "0xec9c824543dd3d635c1d71029f385a6eba511dc0",
+        "0xec9c824543dd3d635c1d71029f385a6eba511dc0",
+        "0xec9c824543dd3d635c1d71029f385a6eba511dc0"
       ],
       "adminAddresses": [
         "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
@@ -28,7 +34,7 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "rwaUSDi deployment-wide chain-local Safe upgrade authorities",
-      "observedAt": "2026-07-13",
+      "observedAt": "2026-08-16",
       "sources": [
         {
           "label": "Ethereum rwaUSDi token and implementation",
@@ -51,6 +57,12 @@
     "controls": [
       {
         "address": "0xD60ACBBC9B249f4bb4B70A88e5c5F5Ac73B6B081",
+        "deploymentRefs": [
+          "ethereum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+          "base:0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
+          "arbitrum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+          "monad:0x650b616b46ff94000eb115926ab8393b90788d76"
+        ],
         "label": "rwaUSDi shared four-chain uncapped minter EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -64,7 +76,7 @@
         "bypassSurfaces": [
           "One EOA key can immediately create uncapped rwaUSDi on all four material deployments."
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Ethereum role-5 assignment",
@@ -83,23 +95,27 @@
             "url": "https://monadscan.com/tx/0xd36ae301753cb5da9dec0288dbb853c5660556b82d16424ebf2ff977aaf8b907"
           }
         ],
-        "evidence": "Complete UserRoleUpdated event scans through the fixed cutoff found this as the sole role-5 holder on each RolesAuthority: Ethereum assignment block 25043270, Base 45684457, Arbitrum 462083810, and Monad 68747935. At Ethereum 25526129, Base 48592766, Arbitrum 483535601, and Monad 87557233, getUserRoles returned bit 5, canCall and token isAuthorized returned true for mint(address,uint256), the address had zero code, and fixed-block mint simulations succeeded. A random address reverted UNAUTHORIZED. The token ABI exposes no supply-cap or allowance entry point."
+        "evidence": "Complete UserRoleUpdated event scans through the prior fixed cutoffs found this as the sole role-5 holder on each RolesAuthority: Ethereum assignment block 25043270, Base 45684457, Arbitrum 462083810, and Monad 68747935. At the current observations on Ethereum block 25771300, Base block 50069092, Arbitrum block 495314430, and Monad block 96636315, getUserRoles returned bit 5 and canCall/token isAuthorized returned true for mint(address,uint256) on every native deployment. The address has zero code, random callers revert UNAUTHORIZED, and the token mint surface exposes no global supply ceiling or per-minter allowance."
       },
       {
         "chain": "arbitrum",
         "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
-        "label": "rwaUSDi Arbitrum token and RolesAuthority owner — 1-of-7 Safe",
+        "deploymentRefs": [
+          "arbitrum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
+        ],
+        "label": "rwaUSDi Arbitrum token and RolesAuthority owner — 4-of-8 Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "direct",
         "canRaiseCap": false,
-        "threshold": 1,
-        "signerCount": 7,
+        "threshold": 4,
+        "signerCount": 8,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.4.1",
           "owners": [
+            "0x9934c979ebb79b0705f7497cd8c67165e8f6fda7",
             "0x8c7cc2d36d798bb196f0aa5add304fc70459f59e",
             "0xe9ed3bbac9884ca6f080a2dd7ef95c6c3c592f6d",
             "0x21790e5e1f1749fd548ce1be42009c8e40e0e259",
@@ -108,20 +124,20 @@
             "0xc57d410de0bdee7060bea55686da66b6c479d594",
             "0x0b29e5c7a2d37237f9e05074ea58466bed4d2cc2"
           ],
-          "threshold": 1,
+          "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
-          "observedBlock": 483535601,
-          "observedAt": "2026-07-13",
+          "observedBlock": 495314430,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 483535601,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495314430,
         "bypassSurfaces": [
-          "Any one of seven Safe owners can mint without a cap, authorize a new minter, replace the authority contract, or upgrade mint logic with no delay."
+          "Any four of eight Safe owners can mint without a cap, authorize a new minter, replace the authority contract, or upgrade mint logic with no delay."
         ],
         "sources": [
           {
@@ -137,23 +153,27 @@
             "url": "https://arbitrum.blockscout.com/address/0xf25c404c101d40d88b5dcd64b82583dbc918dd25"
           }
         ],
-        "evidence": "At Arbitrum block 483535601 (hash 0x45f33e882390a11b041d42014a808f848530c07e7c2d1738e8da692c4af5ca14), token owner() and RolesAuthority owner() both returned this Safe. It was Safe 1.4.1 with threshold 1, seven owners, nonce 2, no enabled modules, zero guard and moduleGuard, and fallback handler 0xfd07.... Token mint and upgrade simulations from the Safe succeeded. The ERC-1967 implementation slot held 0x2a66...0d4c; admin and beacon slots were zero; UPGRADE_INTERFACE_VERSION returned 5.0.0."
+        "evidence": "At Arbitrum block 495314430, token owner() and RolesAuthority owner() both returned this Safe. It was Safe 1.4.1 with threshold 4, eight owners including 0x9934c979ebb79b0705f7497cd8c67165e8f6fda7, no enabled modules, zero guard and moduleGuard storage, and fallback handler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99. The ERC-1967 implementation slot held 0xec9c824543dd3d635c1d71029f385a6eba511dc0; admin and beacon slots were zero; UPGRADE_INTERFACE_VERSION returned 5.0.0."
       },
       {
         "chain": "monad",
         "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
-        "label": "rwaUSDi Monad token and RolesAuthority owner — 2-of-7 Safe",
+        "deploymentRefs": [
+          "monad:0x650b616b46ff94000eb115926ab8393b90788d76"
+        ],
+        "label": "rwaUSDi Monad token and RolesAuthority owner — 4-of-8 Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "direct",
         "canRaiseCap": false,
-        "threshold": 2,
-        "signerCount": 7,
+        "threshold": 4,
+        "signerCount": 8,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.4.1",
           "owners": [
+            "0x9934c979ebb79b0705f7497cd8c67165e8f6fda7",
             "0xe9ed3bbac9884ca6f080a2dd7ef95c6c3c592f6d",
             "0x8c7cc2d36d798bb196f0aa5add304fc70459f59e",
             "0x705f44d3df6feb61b95bc1a6cbd706c9c59766d1",
@@ -162,20 +182,20 @@
             "0x4976b809f880a0c020f79889a0236d161116d248",
             "0x0b29e5c7a2d37237f9e05074ea58466bed4d2cc2"
           ],
-          "threshold": 2,
+          "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
-          "observedBlock": 87557233,
-          "observedAt": "2026-07-13",
+          "observedBlock": 96636315,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 87557233,
+        "observedAt": "2026-08-16",
+        "observedBlock": 96636315,
         "bypassSurfaces": [
-          "Any two of seven Safe owners can mint without a cap, authorize a new minter, replace the authority contract, or upgrade mint logic with no delay."
+          "Any four of eight Safe owners can mint without a cap, authorize a new minter, replace the authority contract, or upgrade mint logic with no delay."
         ],
         "sources": [
           {
@@ -191,11 +211,14 @@
             "url": "https://monadscan.com/address/0xf25c404c101d40d88b5dcd64b82583dbc918dd25"
           }
         ],
-        "evidence": "At Monad block 87557233 (hash 0x26b2e965f2a805a4c9659d05fb5fb3f6fb6d968cdc606e9ed22ed5e933e2cfbf), token owner() and RolesAuthority owner() both returned this Safe. It was Safe 1.4.1 with threshold 2, seven owners, nonce 10, no enabled modules, zero guard and moduleGuard, and fallback handler 0xfd07.... Token mint and upgrade simulations from the Safe succeeded. The ERC-1967 implementation slot held 0x524e...916d; admin and beacon slots were zero; UPGRADE_INTERFACE_VERSION returned 5.0.0."
+        "evidence": "At Monad block 96636315, token owner() and RolesAuthority owner() both returned this Safe. It was Safe 1.4.1 with threshold 4, eight owners including 0x9934c979ebb79b0705f7497cd8c67165e8f6fda7, no enabled modules, zero guard and moduleGuard storage, and fallback handler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99. The ERC-1967 implementation slot held 0xec9c824543dd3d635c1d71029f385a6eba511dc0; admin and beacon slots were zero; UPGRADE_INTERFACE_VERSION returned 5.0.0."
       },
       {
         "chain": "ethereum",
         "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
+        "deploymentRefs": [
+          "ethereum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
+        ],
         "label": "rwaUSDi Ethereum token and RolesAuthority owner — 3-of-8 Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -223,12 +246,12 @@
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
-          "observedBlock": 25526129,
-          "observedAt": "2026-07-13",
+          "observedBlock": 25771300,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526129,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771300,
         "bypassSurfaces": [
           "Any three of eight Safe owners can mint without a cap, authorize a new minter, replace the authority contract, or upgrade mint logic with no delay."
         ],
@@ -246,11 +269,14 @@
             "url": "https://eth.blockscout.com/address/0xf25c404c101d40d88b5dcd64b82583dbc918dd25"
           }
         ],
-        "evidence": "At Ethereum block 25526129 (hash 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f), token owner() and RolesAuthority owner() both returned this Safe. It was Safe 1.4.1 with threshold 3, eight owners, nonce 12, no enabled modules, zero guard and moduleGuard, and fallback handler 0xfd07.... Token mint and upgrade simulations from the Safe succeeded. The ERC-1967 implementation slot held 0x2a66...0d4c; admin and beacon slots were zero; UPGRADE_INTERFACE_VERSION returned 5.0.0."
+        "evidence": "At Ethereum block 25771300, token owner() and RolesAuthority owner() both returned this Safe. It was Safe 1.4.1 with threshold 3, eight owners, no enabled modules, zero guard and moduleGuard storage, and fallback handler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99. The ERC-1967 implementation slot held 0xec9c824543dd3d635c1d71029f385a6eba511dc0; admin and beacon slots were zero; UPGRADE_INTERFACE_VERSION returned 5.0.0."
       },
       {
         "chain": "base",
         "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
+        "deploymentRefs": [
+          "base:0xd74fb32112b1ef5b4c428fead8da8d85a0019009"
+        ],
         "label": "rwaUSDi Base token and RolesAuthority owner — 3-of-7 Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -277,12 +303,12 @@
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
-          "observedBlock": 48592766,
-          "observedAt": "2026-07-13",
+          "observedBlock": 50069092,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 48592766,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50069092,
         "bypassSurfaces": [
           "Any three of seven Safe owners can mint without a cap, authorize a new minter, replace the authority contract, or upgrade mint logic with no delay."
         ],
@@ -300,10 +326,16 @@
             "url": "https://base.blockscout.com/address/0xf25c404c101d40d88b5dcd64b82583dbc918dd25"
           }
         ],
-        "evidence": "At Base block 48592766 (hash 0xa99a4dae34debb8307285b94373592fafc63005a817dbf45d54d48607a821872), token owner() and RolesAuthority owner() both returned this Safe. It was Safe 1.4.1 with threshold 3, seven owners, nonce 8, no enabled modules, zero guard and moduleGuard, and fallback handler 0xfd07.... Token mint and upgrade simulations from the Safe succeeded. The ERC-1967 implementation slot held 0x5f0d...53f6; admin and beacon slots were zero; UPGRADE_INTERFACE_VERSION returned 5.0.0."
+        "evidence": "At Base block 50069092, token owner() and RolesAuthority owner() both returned this Safe. It was Safe 1.4.1 with threshold 3, seven owners, no enabled modules, zero guard and moduleGuard storage, and fallback handler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99. The ERC-1967 implementation slot held 0xec9c824543dd3d635c1d71029f385a6eba511dc0; admin and beacon slots were zero; UPGRADE_INTERFACE_VERSION returned 5.0.0."
       },
       {
         "label": "rwaUSDi deployment-wide chain-local Safe upgrade authorities",
+        "deploymentRefs": [
+          "ethereum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+          "base:0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
+          "arbitrum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+          "monad:0x650b616b46ff94000eb115926ab8393b90788d76"
+        ],
         "role": "proxy-admin",
         "authorityType": "issuer-backend",
         "directMintAbility": "upgrade-only",
@@ -315,7 +347,7 @@
           "safe:arbitrum:0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
           "safe:monad:0xf25c404c101d40d88b5dcd64b82583dbc918dd25"
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Ethereum rwaUSDi token",
@@ -334,7 +366,7 @@
             "url": "https://monadscan.com/address/0x650b616b46ff94000eb115926ab8393b90788d76"
           }
         ],
-        "evidence": "This umbrella record exists solely because the current upgradeability schema accepts one controlRef. It does not represent an additional authority or one common quorum: the same Safe address has independent chain-local state and thresholds of 3-of-8 on Ethereum, 3-of-7 on Base, 1-of-7 on Arbitrum, and 2-of-7 on Monad."
+        "evidence": "This umbrella record exists solely because the current upgradeability schema accepts one controlRef. It does not represent an additional authority or one common quorum: the same Safe address has independent chain-local state and current thresholds of 3-of-8 on Ethereum, 3-of-7 on Base, 4-of-8 on Arbitrum, and 4-of-8 on Monad."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -377,11 +409,27 @@
         {
           "label": "Solmate Auth and RolesAuthority source",
           "url": "https://github.com/transmissions11/solmate/tree/main/src/auth"
+        },
+        {
+          "label": "Verified predecessor RWAUSDi implementation",
+          "url": "https://eth.blockscout.com/address/0xdcaebe1c84a722b1e26d1b5093e962016f7c0b3f?tab=contract"
+        },
+        {
+          "label": "Current RWAUSDi implementation bytecode",
+          "url": "https://eth.blockscout.com/address/0xec9c824543dd3d635c1d71029f385a6eba511dc0?tab=contract"
+        },
+        {
+          "label": "Chainlink CCIP Token Manager",
+          "url": "https://tokenmanager.chain.link/"
+        },
+        {
+          "label": "Chainlink CCIP Directory",
+          "url": "https://docs.chain.link/ccip/directory"
         }
       ],
-      "evidence": "At the fixed cutoff, all four positive-supply deployments exposed the same mint, Auth, RolesAuthority, and UUPS ABI. The 23,116-byte implementations expose mint(address,uint256), authority(), isAuthorized(address,bytes4), setAuthority(address), and upgradeToAndCall(address,bytes), with no cap or minter-allowance entry point. Fixed-block simulations proved the shared role-5 EOA and each token-owner Safe can mint, while a random address reverts UNAUTHORIZED; only the Safe could execute the current upgrade path. Complete RolesAuthority event scans found one role-5 holder per chain, the same EOA, and the RolesAuthority owner is each chain-local Safe. Exact ERC-1967 slots, Safe owner lists, thresholds, module sentinels, guard slots, fallback handlers, and block hashes were checked on Ethereum, Base, Arbitrum, and Monad. External bridge or route semantics remain unresolved in bridgeRouteRisk and are not treated as reviewed by this control audit. M-2 evidence binding 2026-08-08: reconciliation periodic re-verified live - the sourced AFI POR middleware serves a current zk reserves proof and a weekly periodic-report series (Period 32, snapshot 2026-08-02, solvency verified by AFI POR Middleware) for rwaUSDi; the series is current and third-party-operated.",
-      "reviewer": "Codex Safety Score V9 evidence audit / SOL-IV calibration",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At the current fixed observations on Ethereum block 25771300, Base block 50069092, Arbitrum block 495314430, and Monad block 96636315, all four positive-supply deployments exposed the shared mint, Auth, RolesAuthority, and UUPS surfaces; each token and RolesAuthority owner() returned the chain-local Safe. The shared role-5 EOA remained authorized for mint(address,uint256), and the mint surface exposes no cap or minter-allowance entry point. The Safe observations showed 3-of-8 on Ethereum, 3-of-7 on Base, 4-of-8 on Arbitrum, and 4-of-8 on Monad, with empty module lists, zero guard/module-guard storage, the same fallback handler, and current implementation slot 0xec9c824543dd3d635c1d71029f385a6eba511dc0 on all four. The verified predecessor source and current bytecode indicate CCIP-admin/IBurnMintERC20 compatibility, but the current implementation is not source-verified and no active TokenPool, remote-token, or lane binding was established. Those bridge-evidence gaps remain in bridgeRouteRisk and do not convert the four native routes into representations. M-2 evidence binding 2026-08-08: reconciliation periodic re-verified live - the sourced AFI POR middleware serves a current zk reserves proof and a weekly periodic-report series (Period 32, snapshot 2026-08-02, solvency verified by AFI POR Middleware) for rwaUSDi; the series is current and third-party-operated.",
+      "reviewer": "Codex mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

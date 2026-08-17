@@ -4,9 +4,12 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via AccessControl tokens whose live BSC/Base/Arbitrum roles resolve to a PicWe admin/minter EOA plus a mint/redeem contract; the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
+    "summary": "WEUSD has independent native issuance on BSC, Base, Arbitrum, Plume, and Movement. The PicWe admin EOA is an uncapped EVM native minter/admin across the four EVM deployments, while the Movement package publisher controls the native mint/redeem modules and their undelayed compatible upgrades. PicWe's self-built burn/mint bridge contract, relayer, and bridge-module upgrade surface are assessed separately under bridgeRouteRisk.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "movement:0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
+      ],
       "implementationAddresses": [
         "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
       ],
@@ -16,7 +19,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "PicWe WEUSD Movement package publisher",
-      "observedAt": "2026-07-14",
+      "observedAt": "2026-08-16",
+      "observedBlock": 85281248,
       "sources": [
         {
           "label": "PicWe WEUSD contract directory",
@@ -40,34 +44,32 @@
         "directMintAbility": "direct",
         "chain": "bsc",
         "address": "0xc12233455beac4e094a5de022be692a264c0c0bc",
+        "deploymentRefs": [
+          "bsc:0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+          "base:0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+          "arbitrum:0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+          "plume:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "BSC block 103632076: hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true; eth_getCode returned empty (EOA confirmed). Same role checks on Base block 47201470 and Plume block 74174478 also returned true. Movement: the Movement contract (0xf39c2674...) uses a different architecture — minting is controlled by the deployer EOA (0xf39c267... auth key = own address, sequence_number = 3, normal EOA) through admin-gated functions in weusd_mint_redeem and weusd_cross_chain_gas modules, consistent with the same PicWe admin.",
+        "observedAt": "2026-08-16",
+        "evidence": "At BSC block 116362149, Base block 50067179, Arbitrum block 495300024, and Plume block 87694882, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) on the local WEUSD token returned true for PicWe admin EOA 0xc12233455beac4e094a5de022be692a264c0c0bc; eth_getCode is empty, confirming an EOA. getRoleAdmin(MINTER_ROLE) returns DEFAULT_ADMIN_ROLE, so this EOA can appoint another native minter on each EVM deployment. These are independent native issuance controls; Movement's separate package publisher and the EVM Cross-Chain bridge controls are not included in this Mint Authority control.",
         "sources": [
           {
             "label": "BscScan WEUSD contract",
             "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
           },
           {
-            "label": "Movement Aptos REST — WEUSD contract resources",
-            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
-          }
-        ]
-      },
-      {
-        "label": "PicWe WEUSD mint/redeem contract (EVM chains)",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "chain": "bsc",
-        "address": "0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "BSC block 103632076: hasRole(MINTER_ROLE) returned true. Same check on Base block 47201470 and Plume block 74174478 returned true. No modules or guards detected in EVM Safe API checks.",
-        "sources": [
+            "label": "Base WEUSD contract role observation",
+            "url": "https://base-rpc.publicnode.com"
+          },
           {
-            "label": "PicWe WEUSD docs",
-            "url": "https://docs.picwe.org/what-is-weusd"
+            "label": "Arbitrum WEUSD contract role observation",
+            "url": "https://arbitrum-one.publicnode.com"
+          },
+          {
+            "label": "Plume WEUSD contract role observation",
+            "url": "https://rpc.plume.org"
           }
         ]
       },
@@ -78,10 +80,14 @@
         "directMintAbility": "upgrade-only",
         "chain": "movement",
         "address": "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6",
+        "deploymentRefs": [
+          "movement:0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "evidence": "Movement REST reports an authentication key equal to the publishing account and package picwe at upgrade_number 0 with compatible upgrade policy 1. This account can publish compatible replacements for weusd, weusd_mint_redeem, and weusd_cross_chain_gas with no on-chain timelock. The EVM WEUSD contracts on BSC, Base, Arbitrum, and Plume have zero EIP-1967 implementation slots and are not proxies; PicWe's April 2026 directory separately lists the upgradeable investment modules and does not classify the WEUSD core contracts as proxies.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 85281248,
+        "evidence": "At Movement ledger version 196018785 / block height 85281248, the PicWe account 0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6 had package picwe at upgrade_number 0 with compatible upgrade policy 1 and an authentication key equal to the publishing account. This is the native Movement mint/redeem authority for weusd_mint_redeem and can publish compatible replacements with no on-chain timelock. The same package contains weusd_cross_chain_gas; that bridge-module upgrade capability is separately represented under Bridge Risk, while this Mint Authority control covers the native mint-critical package path. The EVM WEUSD contracts on BSC, Base, Arbitrum, and Plume have zero EIP-1967 implementation slots and are not proxies.",
         "sources": [
           {
             "label": "PicWe WEUSD contract directory",
@@ -94,23 +100,10 @@
           {
             "label": "Movement Aptos REST — WEUSD package registry",
             "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
-          }
-        ]
-      },
-      {
-        "label": "PicWe WEUSD Movement cross-chain minter",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "chain": "movement",
-        "address": "0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Movement Aptos REST: weusd_cross_chain_gas::GlobalManage.cross_mint_role_contract = 0x86e5136... (auth key matches address, sequence_number = 142, active operational relayer EOA). batchMintWeUSDCrossChain is gated on this address. The weusd::mint function is internal to the resource account (signer_capability_offer burned auth key at 0x16bb553...) — minting flows through weusd_mint_redeem and weusd_cross_chain_gas modules. Module upgrade controlled by deployer EOA 0xf39c267... (normal EOA, upgrade policy = 1).",
-        "sources": [
+          },
           {
-            "label": "Movement Aptos REST — WEUSD MintState resource",
-            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+            "label": "Movement WEUSD mint/redeem module ABI",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
           }
         ]
       }
@@ -119,9 +112,9 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "BSC/Base/Arbitrum/Plume role checks confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; the new PicWe contract directory independently lists the same token and mint/redeem addresses on Arbitrum. EIP-1967 implementation slots are zero on the reviewed EVM contracts. Movement REST reports cross_mint_role_contract 0x86e5136... and a publisher-controlled package with compatible upgrade policy 1. All tracked chains and the distinct Movement upgrade path are resolved; no multisig or timelock was found. Economic-posture fields reviewed 2026-08-15: issuer EOAs and an undelayed Movement upgrade path permit unbounded minting, while conflicting multi-chain reserve data has no whole-supply attestation and no prudential supervisor. Wave 2 external verification 2026-08-15: PicWe's current documentation still makes only a generic on-chain and real-time auditability claim and publishes no inventory or report reconciling all native EVM and Movement mint paths; reconciliation remains unknown. Codex wave 1 review 2026-08-15: PicWe's Mint & Redeem page describes USDC being locked in the mint contract against equal WEUSD issuance, but publishes no dated recurring reconciliation or live supply-wide reserve feed covering the native EVM and Movement minters; reconciliation remains unknown.",
-      "reviewer": "SOL-7 blocker challenge batch 01; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "2026-08-16 Mint/bridge boundary review: BSC block 116362149, Base block 50067179, Arbitrum block 495300024, and Plume block 87694882 confirm PicWe admin EOA 0xc12233455beac4e094a5de022be692a264c0c0bc as DEFAULT_ADMIN_ROLE and MINTER_ROLE holder on the four independent native EVM WEUSD deployments. The previously authored EVM mint/redeem address 0x5D54f1092FD1750A3ab96972dc1867c5B23eF22 has no code and no MINTER_ROLE on those deployments and is removed; the live Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd is bridge machinery and is authored only under bridgeRouteRisk. Movement ledger version 196018785 / block height 85281248 confirms the PicWe package at upgrade_number 0 with compatible upgrade policy 1: its publisher controls native weusd_mint_redeem mint-critical logic with no on-chain timelock. The Movement cross_mint_role_contract relayer 0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3 is bridge-only and is authored under bridgeRouteRisk, as is the publisher's bridge-module upgrade capability. All tracked native issuance surfaces are resolved; no multisig or timelock was found. Economic-posture fields reviewed 2026-08-15: issuer EOAs and an undelayed Movement upgrade path permit unbounded minting, while conflicting multi-chain reserve data has no whole-supply attestation and no prudential supervisor. Wave 2 external verification 2026-08-15: PicWe's current documentation still makes only a generic on-chain and real-time auditability claim and publishes no inventory or report reconciling all native EVM and Movement mint paths; reconciliation remains unknown. Codex wave 1 review 2026-08-15: PicWe's Mint & Redeem page describes USDC being locked in the mint contract against equal WEUSD issuance, but publishes no dated recurring reconciliation or live supply-wide reserve feed covering the native EVM and Movement minters; reconciliation remains unknown.",
+      "reviewer": "SOL-7 blocker challenge batch 01; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Mint/bridge boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "PicWe WEUSD contract directory",
@@ -142,6 +135,10 @@
         {
           "label": "PicWe WEUSD Mint & Redeem documentation",
           "url": "https://docs.picwe.org/mint-and-redeem"
+        },
+        {
+          "label": "PicWe cross-chain transfer documentation",
+          "url": "https://docs.picwe.org/cross-chain-transfer"
         }
       ]
     }

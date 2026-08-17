@@ -30,10 +30,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "frxUSD uses or is linked to LayerZero/OFT-style cross-chain token infrastructure. Because OFT/adapter routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-    "confidence": "verified",
+    "summary": "frxUSD has native issuance on Ethereum and Fraxtal, Fraxtal canonical-side lockbox and L2 bridge machinery, and established LayerZero/FraxZero OFT representations on other chains. The reviewed cross-chain routes depend on external messaging, endpoint configuration, peer/DVN/rate-limit settings, and lock/mint or burn/mint contracts outside issuer-native redemption, so Pharos scores the overall route as external lock/mint. The Tempo deployment is retained but fail-closed as unresolved because its native-versus-bridge architecture and production status are not reconciled by the reviewed primary sources.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary FIX2-07",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "l2beat",
@@ -59,6 +59,26 @@
       {
         "label": "LayerZero OFT technical reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "Frax transfer with Fraxtal lockbox flow",
+        "url": "https://docs.frax.com/frxusd/cross-chain-transfers-quickstarts/transfer-with-fraxtal"
+      },
+      {
+        "label": "Frax Tempo cross-chain architecture",
+        "url": "https://docs.frax.com/protocol/crosschain/tempo"
+      },
+      {
+        "label": "Frax Tempo project update",
+        "url": "https://news.frax.com/p/frax-finance-biweekly-project-update-b19"
+      },
+      {
+        "label": "Fraxtal RPC",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Tempo RPC",
+        "url": "https://rpc.tempo.xyz"
       }
     ],
     "routes": [
@@ -756,13 +776,19 @@
         "protocol": "Frax (Fraxtal home chain)",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "single-chain-or-native",
-        "semantics": "native-mint",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Fraxtal-native frxUSD at the Frax-published system address 0xFC00000000000000000000000000000000000001 (no LayerZero endpoint surface); Fraxtal is the Frax home chain whose lockbox backs the FraxZero OFT representations on other chains.",
+        "reviewNote": "Fraxtal-native frxUSD at the Frax-published system address 0xFC00000000000000000000000000000000000001 is reviewed as native issuance in Mint Authority, while the canonical-side Ethereum/Fraxtal lockboxes and Fraxtal L2 bridge are reviewed here as bridge machinery. At Fraxtal block 40053263 the proxy implementation was 0x0000000083bdf23788585d499eab0d92a8befb1d, ProxyAdmin was 0xfc0000000000000000000000000000000000000a, owner/timelock was 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and BRIDGE() was 0x4200000000000000000000000000000000000010. The transfer flow identifies Ethereum lockbox 0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0 and Fraxtal lockbox 0x96a394058e2b84a89bac9667b19661ed003cf5d4; their owner/admin, upgrade, peer/EID, and limit state was not independently decoded, so supply conservation is conditional on those lockbox and OFT accounting controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "failureDomainKeys": [
+          "protocol:frax-fraxtal-lockbox",
+          "contract:ethereum:0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0",
+          "contract:fraxtal:0x96a394058e2b84a89bac9667b19661ed003cf5d4"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 40053263,
         "sources": [
           {
             "label": "Frax frxUSD contract addresses",
@@ -771,6 +797,14 @@
           {
             "label": "Transfer frxUSD with Fraxtal (lockbox hub)",
             "url": "https://docs.frax.com/frxusd/cross-chain-transfers-quickstarts/transfer-with-fraxtal"
+          },
+          {
+            "label": "Frax frxUSD Fraxtal contract source",
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
           }
         ]
       },
@@ -912,28 +946,163 @@
       {
         "id": "tempo:0x20c0000000000000000000003554d28269e0f3c2",
         "destinationChain": "tempo",
-        "canonicalChain": "tempo",
         "contractAddress": "0x20c0000000000000000000003554d28269e0f3c2",
         "protocol": "Frax (Tempo TIP-20)",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "single-chain-or-native",
-        "semantics": "native-mint",
-        "scope": "canonical",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Native Tempo TIP-20 frxUSD (Frax USD, 6 decimals, supply 33.362833 matching the exact captured supply): listed on the Tempo explorer token registry and documented by Frax as a Tempo (TIP-20) deployment; DefiLlama attributes the Tempo supply as natively minted and the token exposes no LayerZero/bridge controller surface.",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Tempo frxUSD is live at the observed TIP-20 address and exposes Frax USD metadata, but its classification is fail-closed. Frax's current Tempo architecture documents FraxOFTMintableAdapterTIP20, FraxOFTUpgradeableTempo, LayerZero, supply-tracking, and a Mainnet (Presto) status of Coming Soon, while a separate Frax project update reports a Tempo mainnet launch. The reviewed evidence therefore does not establish whether this address is a canonical native issuance route, a bridge representation, or a staged deployment; no native mint authority or bridge controller is inferred.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 35101154,
         "sources": [
           {
-            "label": "Frax frxUSD documentation (Tempo TIP-20)",
-            "url": "https://docs.frax.com/frxusd/stake-and-unstake-overview"
+            "label": "Frax Tempo cross-chain architecture",
+            "url": "https://docs.frax.com/protocol/crosschain/tempo"
           },
           {
-            "label": "frxUSD on the Tempo explorer (supply probed 2026-07-20)",
+            "label": "Frax Tempo project update",
+            "url": "https://news.frax.com/p/frax-finance-biweekly-project-update-b19"
+          },
+          {
+            "label": "frxUSD on the Tempo explorer (supply probed 2026-08-16)",
             "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000003554d28269e0f3c2"
+          },
+          {
+            "label": "Tempo RPC",
+            "url": "https://rpc.tempo.xyz"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "ethereum-frxusd-fraxtal-lockbox",
+        "label": "Ethereum frxUSD/Fraxtal canonical lockbox",
+        "routeRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
+          "fraxtal:0xfc00000000000000000000000000000000000001"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0",
+        "authorityType": "contract",
+        "failureDomainKeys": [
+          "protocol:frax-fraxtal-lockbox",
+          "contract:ethereum:0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0",
+          "contract:fraxtal:0x96a394058e2b84a89bac9667b19661ed003cf5d4"
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "Frax's Fraxtal transfer guide identifies this Ethereum contract as the canonical-side lockbox used by the Fraxtal route; it is bridge escrow/mint/burn machinery, not native frxUSD issuance authority.",
+          "trustedPeerOrRemote": "The lockbox's trusted peer, endpoint ID, and messaging configuration were not independently decoded.",
+          "rateLimits": "The lockbox's rate-limit and supply-accounting configuration were not independently decoded.",
+          "pausersAdminsUpgraders": "The lockbox owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Transfer frxUSD with Fraxtal (lockbox hub)",
+            "url": "https://docs.frax.com/frxusd/cross-chain-transfers-quickstarts/transfer-with-fraxtal"
+          },
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          }
+        ],
+        "evidence": "Frax's published Fraxtal transfer flow names 0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0 as the Ethereum-side lockbox for the canonical route. This row preserves the adverse bridge dependency while leaving its controller, upgrade, peer, and limit configuration unresolved."
+      },
+      {
+        "id": "fraxtal-frxusd-lockbox",
+        "label": "Fraxtal frxUSD canonical lockbox",
+        "routeRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
+          "fraxtal:0xfc00000000000000000000000000000000000001"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x96a394058e2b84a89bac9667b19661ed003cf5d4",
+        "authorityType": "contract",
+        "failureDomainKeys": [
+          "protocol:frax-fraxtal-lockbox",
+          "contract:ethereum:0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0",
+          "contract:fraxtal:0x96a394058e2b84a89bac9667b19661ed003cf5d4"
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "Frax's Fraxtal transfer guide identifies this Fraxtal contract as the canonical-side lockbox; at block 40053263 the native token's minters(lockbox) mapping returned true, so it can use the token's minter_mint() bridge path.",
+          "trustedPeerOrRemote": "The lockbox's trusted peer, endpoint ID, and messaging configuration were not independently decoded.",
+          "rateLimits": "The lockbox's rate-limit and supply-accounting configuration were not independently decoded.",
+          "pausersAdminsUpgraders": "The lockbox owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 40053263,
+        "sources": [
+          {
+            "label": "Transfer frxUSD with Fraxtal (lockbox hub)",
+            "url": "https://docs.frax.com/frxusd/cross-chain-transfers-quickstarts/transfer-with-fraxtal"
+          },
+          {
+            "label": "Frax frxUSD Fraxtal contract source",
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "Frax's published transfer flow names 0x96a394058e2b84a89bac9667b19661ed003cf5d4 as the Fraxtal-side lockbox. At Fraxtal block 40053263, minters(0x96a394058e2b84a89bac9667b19661ed003cf5d4) returned true on native frxUSD, confirming a bridge-capable mint path; lockbox governance, upgrade, peer, and limit state remains unresolved."
+      },
+      {
+        "id": "fraxtal-l2-standard-bridge",
+        "label": "Fraxtal L2 standard bridge",
+        "routeRefs": [
+          "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
+          "fraxtal:0xfc00000000000000000000000000000000000001"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "authorityType": "contract",
+        "failureDomainKeys": [
+          "protocol:fraxtal-standard-bridge",
+          "contract:fraxtal:0x4200000000000000000000000000000000000010"
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "The native frxUSD source defines an immutable BRIDGE() and the fixed-block read returned this Fraxtal L2 StandardBridge address; it can call the token's bridge mint/burn path but is not a native minter_mint() authority.",
+          "trustedPeerOrRemote": "The bridge's cross-domain messenger and remote peer configuration were not independently decoded.",
+          "rateLimits": "The bridge's rate limits and supply-accounting configuration were not independently decoded.",
+          "pausersAdminsUpgraders": "The bridge's owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 40053263,
+        "sources": [
+          {
+            "label": "Fraxtal contract addresses",
+            "url": "https://docs.frax.com/fraxtal/addresses/fraxtal-contracts"
+          },
+          {
+            "label": "Permissioned OptiMintable source",
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "At Fraxtal block 40053263, BRIDGE() on native frxUSD returned 0x4200000000000000000000000000000000000010. The source separates this immutable bridge mint/burn path from owner-controlled minter_mint(); its messenger, limits, admin, and upgrade configuration remain unresolved."
       }
     ]
   }

@@ -22,8 +22,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "CAD Digital/Tetra announced CADD as a regulated CAD stablecoin live on Base, Ethereum, and Tempo with Solana planned. No separate bridge protocol is documented in issuer materials, so the reviewed route is issuer-native multichain issuance. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native CADD; Base row confirmed via uniform proxy implementation fingerprint.",
-    "reviewedAt": "2026-07-20",
+    "summary": "CADD is reviewed as issuer-native on Ethereum and Base. Tetra lists the same CADD deployment on both Supported Blockchains, and current reads show the same verified ERC20F implementation, issuer MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UPGRADER_ROLE on both routes. No bridge protocol, adapter, peer, escrow, or conservation accounting is identified; the native classification remains probable because public materials do not state whether cross-chain reserve ledgers are independently reconciled.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "probable",
     "sources": [
@@ -52,9 +52,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'CAD Digital Inc', symbol CADD, 18 decimals — issuer-native deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-08-16 at Ethereum block 25770164: name 'CAD Digital Inc', symbol CADD, 18 decimals; EIP-1967 implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 and issuer role graph confirm the issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770164,
         "sources": [
           {
             "label": "CADD on Etherscan",
@@ -66,28 +67,29 @@
         "id": "base:0x16f93ebc5320c89efc8701577efe49d14a276a06",
         "destinationChain": "base",
         "contractAddress": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
-        "protocol": "CADD issuer multichain deployment (uniform proxy implementation)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "CADD issuer-native issuance on Base",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: uniform deployment address on Base with EIP-1967 implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 — byte-identical to the verified Ethereum CADD implementation; name()/symbol() reads returned empty via the Base public RPC on 2026-07-20, so identity rests on the uniform proxy fingerprint plus the mint-authority review's shared ETH/Base role holders. The token contract executes mint.",
+        "reviewNote": "Verified on-chain 2026-08-16 at Base block 50062319: name 'CAD Digital Inc' and symbol CADD returned successfully; the EIP-1967 implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 is byte-identical to Ethereum, and the issuer MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UPGRADER_ROLE are active on Base. Tetra lists this address as CADD on Base; no third-party bridge or bridge-only accounting path is identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
-        "controllerChain": "base",
-        "controllerAddress": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
-        "failureDomainKeys": [
-          "protocol:cadd-multichain",
-          "contract:base:0x16f93ebc5320c89efc8701577efe49d14a276a06"
-        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50062319,
         "sources": [
           {
-            "label": "CADD on Etherscan",
-            "url": "https://etherscan.io/address/0x16f93ebc5320c89efc8701577efe49d14a276a06"
+            "label": "Tetra supported blockchains and CADD contract addresses",
+            "url": "https://tetradg.com/supported-blockchains/"
+          },
+          {
+            "label": "CADD on Base",
+            "url": "https://basescan.org/address/0x16f93ebc5320c89efc8701577efe49d14a276a06"
+          },
+          {
+            "label": "Verified CADD ERC20F implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
           }
         ]
       }

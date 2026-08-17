@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "Securitize launched STAC as issuer-administered digital fund shares on Ethereum and later expanded the same regulated fund to Solana. The reviewed deployment evidence describes native issuer issuance on both networks rather than a holder-operated third-party bridge.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge route review",
+    "summary": "Securitize administers STAC as native issuer issuance on Ethereum and Solana. Current Ethereum owner/implementation reads and Solana Token-2022 mint/freeze authority reads support two native issuance surfaces; no holder-operated third-party bridge, conserved-supply transport, or bridge-admin route is identified.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos bridge route review; FIX-04 mint-bridge-boundary",
     "confidence": "verified",
     "protocols": [
       {
@@ -54,9 +54,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Securitize Tokenized AAA CLO Fund', symbol STAC, 6 decimals; owner() = 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee — Securitize issuer-native deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-08-16 at Ethereum block 25770050: owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation slot resolves to 0x77684815f44b28726bc3efa4471b88ef3b93feb0; Securitize issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770050,
         "sources": [
           {
             "label": "Securitize",
@@ -79,17 +80,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Securitize's issuer release identifies the Solana expansion. Solana RPC verified on 2026-07-20 that the Token-2022 mint reports the STAC name/symbol, 6 decimals, and mint authority GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M; this is issuer-native issuance rather than a third-party bridge representation.",
+        "reviewNote": "Securitize's issuer release identifies the Solana expansion. At finalized Solana slot 439718934, the Token-2022 mint reports STAC metadata, 6 decimals, supply 244961.279015, and mint/freeze authority GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M; the mint is owned by TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb. This is issuer-native issuance rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439718934,
         "sources": [
           {
             "label": "Securitize STAC Solana expansion",
             "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx"
           },
           {
-            "label": "STAC on Solscan (mint authority verified 2026-07-20)",
+            "label": "STAC on Solscan (mint authority verified 2026-08-16)",
             "url": "https://solscan.io/token/u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk"
+          },
+          {
+            "label": "Solana PublicNode RPC",
+            "url": "https://solana-rpc.publicnode.com"
           }
         ]
       }

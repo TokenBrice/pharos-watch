@@ -39,6 +39,16 @@
       "chain": "ethereum",
       "address": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
       "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

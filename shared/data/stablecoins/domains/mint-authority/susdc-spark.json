@@ -8,6 +8,10 @@
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "avalanche:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "ethereum:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+      ],
       "proxyAddresses": [
         "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
       ],
@@ -51,6 +55,9 @@
       {
         "chain": "ethereum",
         "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "deploymentRefs": [
+          "ethereum:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        ],
         "label": "Spark Savings USDC vault",
         "role": "wrapper",
         "authorityType": "contract",
@@ -74,6 +81,9 @@
       {
         "chain": "avalanche",
         "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "deploymentRefs": [
+          "avalanche:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        ],
         "label": "Spark Savings USDC Avalanche vault",
         "role": "wrapper",
         "authorityType": "contract",
@@ -97,6 +107,9 @@
       {
         "chain": "ethereum",
         "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "deploymentRefs": [
+          "ethereum:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        ],
         "label": "Spark/Sky SubProxy upgrade governance (48-hour DSPause)",
         "role": "governor",
         "authorityType": "dao-governor",
@@ -130,6 +143,9 @@
       {
         "chain": "avalanche",
         "address": "0x7566DEbC906C17338524A414343fA61BcA26A843",
+        "deploymentRefs": [
+          "avalanche:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        ],
         "label": "Spark Avalanche cross-chain governance executor",
         "role": "governor",
         "authorityType": "contract",
@@ -158,6 +174,9 @@
       {
         "chain": "ethereum",
         "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "deploymentRefs": [
+          "ethereum:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        ],
         "label": "Inherited Ethereum USDC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",

@@ -17,6 +17,9 @@
         "evidence": "Reproducible primary reads 2026-07-27: the ICRC API's GLDT ledger metadata (6c7su-kiaaa-aaaar-qaira-cai) returns icrc1_minting_account.owner = 6f6ua-hqaaa-aaaar-qairq-cai with total supply 59450000000000 (8 decimals), establishing this canister as the sole ledger minting account; the IC API shows the same canister (name \"Gold DAO Dapp\") controlled solely by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai. The whitepaper fixes the mint rule at 100 GLDT per 1 g of locked GLD NFT.",
         "chain": "icp",
         "address": "6f6ua-hqaaa-aaaar-qairq-cai",
+        "deploymentRefs": [
+          "icp:6c7su-kiaaa-aaaar-qaira-cai"
+        ],
         "failureDomainKeys": [
           "icp:6f6ua-hqaaa-aaaar-qairq-cai"
         ],
@@ -42,6 +45,9 @@
       {
         "chain": "icp",
         "address": "tw2vt-hqaaa-aaaaq-aab6a-cai",
+        "deploymentRefs": [
+          "icp:6c7su-kiaaa-aaaar-qaira-cai"
+        ],
         "label": "Gold DAO SNS governance (canister controller)",
         "role": "governor",
         "authorityType": "dao-governor",
@@ -100,6 +106,9 @@
     },
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "icp:6c7su-kiaaa-aaaar-qaira-cai"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "Gold DAO SNS governance (canister controller)",
       "observedAt": "2026-07-27",

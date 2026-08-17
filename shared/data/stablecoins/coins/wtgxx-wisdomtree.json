@@ -72,11 +72,6 @@
       "chain": "plume",
       "address": "0xcf7a8813bd3bdaf70a9f46d310ce1ee8d80a4f5a",
       "decimals": 18
-    },
-    {
-      "chain": "stellar",
-      "address": "GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6",
-      "decimals": 7
     }
   ],
   "collateralQuality": "rwa",

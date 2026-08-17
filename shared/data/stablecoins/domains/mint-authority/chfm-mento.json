@@ -13,6 +13,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "celo:0xb55a79f398e759e43c95b979163f30ec87ee131d"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -34,6 +37,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "celo:0xb55a79f398e759e43c95b979163f30ec87ee131d"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -55,6 +61,9 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "celo:0xb55a79f398e759e43c95b979163f30ec87ee131d"
+        ],
         "threshold": 4,
         "signerCount": 6,
         "canRaiseCap": true,
@@ -95,6 +104,9 @@
     "supervision": "none",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "celo:0xb55a79f398e759e43c95b979163f30ec87ee131d"
+      ],
       "proxyAddresses": [
         "0xb55a79f398e759e43c95b979163f30ec87ee131d",
         "0xe604507642469be4699febdf4a701d9a104dd173"

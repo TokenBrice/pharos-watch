@@ -4,13 +4,16 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "probable",
-    "summary": "IAUon uses issuer-controlled minting across Ethereum, BSC, HyperEVM, and Solana. The three EVM tokens are BeaconProxy deployments whose shared Ondo beacons are upgradeable through 2-hour TimelockControllers; on BSC and HyperEVM those timelocks propose via a 4-of-7 Ondo Safe, execute/cancel via a 1-of-9 Ondo Safe plus one EOA, and are administered by a 5-of-9 Ondo Safe. Direct minters are the per-chain GMTokenManager (administered by the chain timelock) and the per-chain OndoOFT (owned by an OndoOwner contract whose DEFAULT_ADMIN_ROLE is the 4-of-7 Safe). On Solana the mint authority is the Ondo GM program PDA and the GM program's upgrade authority is a bare system account whose off-chain key custody is not on-chain verifiable.",
+    "summary": "IAUon has issuer-controlled native issuance on Ethereum, BSC, and Solana. Ethereum and BSC native GMTokenManager paths are administered by two-hour beacon-owner timelocks; Solana issuance is controlled by the Ondo GM program PDA whose upgrade authority is a bare system account with unverifiable off-chain custody. Ethereum and BSC OndoOFT overlays, the HyperEVM representation, LayerZero validation, route administration, rate limiting, and representation upgrades are assessed separately in bridgeRouteRisk rather than as native Mint Authority.",
     "controls": [
       {
         "label": "GMTokenManager (Ethereum) — primary minter",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+        ],
         "canRaiseCap": false,
         "evidence": "At Ethereum block 25295025, getRoleMember(MINTER_ROLE, 0) = 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c; Blockscout source: GMTokenManager. This contract handles issuer subscription/redemption minting for Ondo Global Markets.",
         "sources": [
@@ -25,24 +28,14 @@
         ]
       },
       {
-        "label": "OndoOFT (Ethereum) — LayerZero cross-chain minter",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "evidence": "At Ethereum block 25295025, getRoleMember(MINTER_ROLE, 1) = 0x8ffe0da486a4075e7bbb5763fad4732d41f9667c; Blockscout source: OndoOFT. This contract enables LayerZero-based cross-chain mint/burn for IAUon.",
-        "sources": [
-          {
-            "label": "OndoOFT (Blockscout)",
-            "url": "https://eth.blockscout.com/address/0x8ffe0da486a4075e7bbb5763fad4732d41f9667c"
-          }
-        ]
-      },
-      {
-        "label": "IAUon deployment-wide beacon-owner timelocks",
+        "label": "IAUon Ethereum/BSC beacon-owner timelocks",
         "role": "proxy-admin",
         "authorityType": "timelock",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+        ],
         "canRaiseCap": true,
         "timelockDelaySec": 7200,
         "threshold": 4,
@@ -50,11 +43,10 @@
         "failureDomainKeys": [
           "contract:ethereum:0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1",
           "contract:bsc:0x8860bbfc7a83e4788a981f4e9f30878331413b26",
-          "contract:hyperevm:0x6253fbc5bcf4f49c80745694366f05d6c7be0e83",
           "safe:bsc:0xa307e57ca7f9712af3557af8c5624bef214aa913",
           "safe:bsc:0xa3a3c71380128972f172ff4052af7b6405da6364"
         ],
-        "evidence": "Ethereum, BSC, and HyperEVM IAUon tokens resolve through UpgradeableBeacon contracts 0x985462c9..., 0xc046b05a..., and 0x258269e7.... Their owners are distinct TimelockControllers with 7,200-second delays. Follow-up enumeration on 2026-07-27: at BSC block 112486221 and HyperEVM block 41384559, both the BSC timelock 0x8860bbfc7a83e4788a981f4e9f30878331413b26 and the HyperEVM timelock 0x6253fbc5bcf4f49c80745694366f05d6c7be0e83 report getMinDelay() = 7,200 seconds, sole PROPOSER_ROLE member = Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913 (Safe 1.4.1+L2 proxy, master copy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, threshold 4-of-7, identical owner set on both chains), EXECUTOR_ROLE and CANCELLER_ROLE = a 1-of-9 Safe (0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 on BSC, 0xd484422208b1020c83a155336d2b13ce883e5a21 on HyperEVM) plus EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b, and external DEFAULT_ADMIN_ROLE member = Safe 0xa3a3c71380128972f172ff4052af7b6405da6364 (threshold 5-of-9, identical owners on both chains). Solana is outside this EVM control.",
+        "evidence": "At the current review, Ethereum and BSC IAUon tokens resolve through UpgradeableBeacon contracts 0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598 and 0xc046b05a920e4b412815934dd8e58904dda73315. Their owners are distinct TimelockControllers with 7,200-second delays; the BSC timelock proposes through the 4-of-7 Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913, executes/cancels through the 1-of-9 Safe 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 plus EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b, and is administered by the 5-of-9 Safe 0xa3a3c71380128972f172ff4052af7b6405da6364. HyperEVM representation upgradeability is assessed separately in bridgeRouteRisk.",
         "observedAt": "2026-07-27",
         "sources": [
           {
@@ -68,10 +60,6 @@
           {
             "label": "BSC PublicNode RPC",
             "url": "https://bsc-rpc.publicnode.com"
-          },
-          {
-            "label": "HyperEVM RPC",
-            "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ]
       },
@@ -82,6 +70,9 @@
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-27",
         "observedBlock": 112486221,
@@ -98,64 +89,15 @@
         ]
       },
       {
-        "chain": "bsc",
-        "address": "0xeb8ceb319463fdc97f7860211042e2e1abc81f88",
-        "label": "OndoOFT (BSC) — LayerZero cross-chain minter",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "observedAt": "2026-07-27",
-        "observedBlock": 112486221,
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:bsc:0xeb8ceb319463fdc97f7860211042e2e1abc81f88"
-        ],
-        "evidence": "At BSC block 112486221, getRoleMember(MINTER_ROLE, 1) on the BSC IAUon token returned this OFT; endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c and owner() = OndoOwner 0x4d4e562d6882dc523b8d629d2e9df9230b699933 (same verified OndoOwner.sol pattern as HyperEVM), whose sole DEFAULT_ADMIN_ROLE member is the 4-of-7 Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913.",
-        "sources": [
-          {
-            "label": "IAUon BSC token",
-            "url": "https://bscscan.com/address/0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
-          },
-          {
-            "label": "BSC PublicNode RPC",
-            "url": "https://bsc-rpc.publicnode.com"
-          }
-        ]
-      },
-      {
-        "chain": "hyperevm",
-        "address": "0xce61f9246755cc399fd7f37d6b3478590b75aace",
-        "label": "OndoOFT (HyperEVM) — sole local minter",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "observedAt": "2026-07-27",
-        "observedBlock": 41384559,
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:hyperevm:0xce61f9246755cc399fd7f37d6b3478590b75aace"
-        ],
-        "evidence": "At HyperEVM block 41384559, this OFT is the sole MINTER_ROLE member of the HyperEVM IAUon token. Its owner() = OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d (hyperscan-verified OndoOwner.sol, AccessControlEnumerable): DEFAULT_ADMIN_ROLE and MESSENGER_ADMIN_ROLE resolve to the 4-of-7 Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913, INSPECTOR_ADMIN_ROLE to the 1-of-9 Safe 0xd484422208b1020c83a155336d2b13ce883e5a21, and RATE_LIMITER_ADMIN_ROLE to EOA 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b.",
-        "sources": [
-          {
-            "label": "OndoOwner on HyperEVM (verified source)",
-            "url": "https://www.hyperscan.com/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d"
-          },
-          {
-            "label": "HyperEVM RPC",
-            "url": "https://rpc.hyperliquid.xyz/evm"
-          }
-        ]
-      },
-      {
         "chain": "solana",
         "address": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
         "label": "Ondo GM Solana program mint authority PDA",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo"
+        ],
         "canRaiseCap": false,
         "observedAt": "2026-07-27",
         "observedBlock": 435577237,
@@ -181,6 +123,9 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "solana:M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo"
+        ],
         "canRaiseCap": true,
         "observedAt": "2026-07-27",
         "observedBlock": 435577237,
@@ -202,24 +147,25 @@
     ],
     "upgradeability": {
       "model": "beacon",
+      "deploymentRefs": [
+        "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+        "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+      ],
       "proxyAddresses": [
         "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
-        "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
-        "0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
+        "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
       ],
       "implementationAddresses": [
         "0xebbcb2cee51c2fee4062c9c1270dcb98b0b22250",
-        "0x578f397ca4661d1db4d9a65065d6b284a1a850fd",
-        "0x0d25c65d0cc97af724ffd7a54eb287660e8dfad4"
+        "0x578f397ca4661d1db4d9a65065d6b284a1a850fd"
       ],
       "adminAddresses": [
         "0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598",
-        "0xc046b05a920e4b412815934dd8e58904dda73315",
-        "0x258269e782ab73aca6c0574990ff29b79aafffb6"
+        "0xc046b05a920e4b412815934dd8e58904dda73315"
       ],
       "canChangeMintLogic": true,
       "delaySec": 7200,
-      "controlRef": "IAUon deployment-wide beacon-owner timelocks",
+      "controlRef": "IAUon Ethereum/BSC beacon-owner timelocks",
       "observedAt": "2026-07-27",
       "sources": [
         {
@@ -233,10 +179,6 @@
         {
           "label": "BSC PublicNode RPC",
           "url": "https://bsc-rpc.publicnode.com"
-        },
-        {
-          "label": "HyperEVM RPC",
-          "url": "https://rpc.hyperliquid.xyz/evm"
         }
       ]
     },
@@ -244,9 +186,9 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "The prior immutable/no-proxy ruling is superseded. Sourcify and EIP-1967 beacon-slot reads show that the Ethereum, BSC, and HyperEVM IAUon tokens are BeaconProxy deployments using Ondo's shared upgradeable beacons, whose owner timelocks each report a 7,200-second delay. Follow-up enumeration on 2026-07-27 closes the remaining deployment-control gaps: at BSC block 112486221 the BSC token's MINTER_ROLE members are GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 (whose DEFAULT_ADMIN_ROLE is the BSC timelock) and OFT 0xeb8ceb319463fdc97f7860211042e2e1abc81f88 (owner OndoOwner 0x4d4e562d6882dc523b8d629d2e9df9230b699933, whose DEFAULT_ADMIN_ROLE is the 4-of-7 Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913), and the BSC token's DEFAULT_ADMIN_ROLE is the BSC timelock. At HyperEVM block 41384559 the sole minter is OFT 0xce61f9246755cc399fd7f37d6b3478590b75aace owned by hyperscan-verified OndoOwner 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d (DEFAULT_ADMIN + MESSENGER_ADMIN = 4-of-7 Safe 0xa307e57c, INSPECTOR_ADMIN = 1-of-9 Safe 0xd4844222, RATE_LIMITER_ADMIN = EOA 0xff1621ee). On both BSC and HyperEVM the 7,200-second beacon-owner TimelockControllers propose via the 4-of-7 Safe 0xa307e57c, execute/cancel via a 1-of-9 Safe plus EOA 0xff1621ee, and are administered by the 5-of-9 Safe 0xa3a3c71380128972f172ff4052af7b6405da6364 (identical owner sets on both chains). At finalized Solana slot 435577237 the Token-2022 mint authority is the Ondo GM program PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD (program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm) and the program's BPF upgrade authority is the bare system account 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM, whose off-chain key custody is not on-chain verifiable — this caps confidence at probable. Ankura's daily assets-and-liabilities verification remains valid backing evidence. Economic-posture fields reviewed 2026-08-15: the bare Solana upgrade-authority account can replace mint logic without an independent timelock, while daily Ankura verification and attestation-only supervision are retained.",
+      "evidence": "Current review evidence separates native issuance from bridge representations. Ethereum block 25770668 and BSC block 116353763 show GMTokenManager as a native IAUon minter alongside the separate OndoOFT bridge overlay; the native token beacon owners are two-hour timelocks. At finalized Solana slot 439728907, Token-2022 mint M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo is controlled by the Ondo GM program PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, and at slot 439729018 its program data reports upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM; that bare system account has no on-chain custody or quorum proof. HyperEVM is a LayerZero bridge representation and its beacon upgrade path is recorded in bridgeRouteRisk. The corrected native control set therefore retains unbounded, periodically reconciled, attestation-only economics and probable confidence.",
       "reviewer": "Claude Phase 0c continuation; OpenAI Codex NR-recovery correction; Kimi data review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {

@@ -4,9 +4,12 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "SOFID is issued by SoFi Bank, N.A. (OCC-chartered) with BitGo Bank & Trust providing Stablecoin-as-a-Service. The on-chain contract (Ethereum ERC1967 UUPS proxy) has three EOA controls operated by BitGo: DEFAULT_ADMIN, MASTER_MINTER_ROLE, and UPGRADER_ROLE. All confirmed as EOAs (no bytecode).",
+    "summary": "SOFID is natively issued by SoFi Bank, N.A. on Ethereum and Solana, with BitGo Bank & Trust providing Stablecoin-as-a-Service infrastructure. Ethereum issuance uses the ERC1967 UUPS proxy's native MINTER role plus separate DEFAULT_ADMIN, MASTER_MINTER_ROLE, and UPGRADER_ROLE controls; Solana issuance uses a live 1-of-2 Token-2022 mint-authority multisig. Both deployments are native issuance routes; no bridge representation is included in Mint Authority.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
+      ],
       "proxyAddresses": [
         "0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
       ],
@@ -18,12 +21,16 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "SOFID UPGRADER_ROLE (EOA)",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25295030,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770993,
       "sources": [
         {
           "label": "SOFID contract on Blockscout",
           "url": "https://eth.blockscout.com/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+        },
+        {
+          "label": "SOFID Stablecoin implementation on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x69edf9fa820df057e493635ed1db6b9e5f8124a0"
         }
       ]
     },
@@ -33,6 +40,10 @@
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
+          "solana:APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS"
+        ],
         "canRaiseCap": "unknown",
         "evidence": "BitGo Bank & Trust operates mint, burn, custody, and smart-contract management for SOFID on behalf of issuer SoFi Bank; supply is created 1:1 against cash at SoFi's Federal Reserve master account. No permissionless mint route.",
         "sources": [
@@ -49,8 +60,11 @@
         "address": "0xd84519fc7137e55d37674be353379a27a9bd21fe",
         "chain": "ethereum",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
+        ],
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295030, owner() returned 0xd84519fc7137e55d37674be353379a27a9bd21fe; eth_getCode returned no bytecode (EOA). Confirmed has DEFAULT_ADMIN role via hasRole(). Contract is AccessControlDefaultAdminRules; owner() returns the DEFAULT_ADMIN.",
+        "evidence": "At Ethereum block 25770993, owner() and hasRole(DEFAULT_ADMIN_ROLE, 0xd84519fc7137e55d37674be353379a27a9bd21fe) returned the authored EOA, and eth_getCode returned no bytecode. The contract is AccessControlDefaultAdminRules; owner() returns DEFAULT_ADMIN. Its 86,400-second default-admin transfer delay is not an independent delay on UUPS upgrades or native minter configuration.",
         "sources": [
           {
             "label": "SOFID contract on Etherscan",
@@ -64,9 +78,13 @@
         "authorityType": "eoa",
         "address": "0x06720dec0fa18bb540eea24c7f196c0bd0c26b7a",
         "chain": "ethereum",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "evidence": "At Ethereum block 25295030, RoleGranted event and hasRole(MASTER_MINTER_ROLE, 0x06720dec...) returned true; eth_getCode returned no bytecode (EOA). MASTER_MINTER_ROLE = 0x4d722a319ebda03eb1179096607e87f360b089b3919a0d764a65ea950521a6c9.",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
+        ],
+        "canRaiseCap": true,
+        "capDescription": "MASTER_MINTER_ROLE can configure or remove native and bridge minters and set their mint and burn limits; it is an authorizer and is not itself a successful caller of the native mint path.",
+        "evidence": "At Ethereum block 25770993, hasRole(MASTER_MINTER_ROLE, 0x06720dec0fa18bb540eea24c7f196c0bd0c26b7a) returned true and eth_getCode returned no bytecode. The verified source makes MASTER_MINTER_ROLE an authorizer for configureMinter/removeMinter and the corresponding bridge-minter functions; it can change native minter limits but is not itself a successful caller of the native mint path. MASTER_MINTER_ROLE = 0x4d722a319ebda03eb1179096607e87f360b089b3919a0d764a65ea950521a6c9.",
         "sources": [
           {
             "label": "SOFID contract on Etherscan",
@@ -81,23 +99,82 @@
         "address": "0x564fd647254ec3e0bd704c463c1d4494307e88b4",
         "chain": "ethereum",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
+        ],
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295030, RoleGranted event and hasRole(UPGRADER_ROLE, 0x564fd...) returned true; eth_getCode returned no bytecode (EOA). UPGRADER_ROLE = 0xcf6f9f892731e14b8859835f2ff35575f447fb501f46243c4eb8bac19e31a050. Can upgrade the UUPS proxy implementation.",
+        "evidence": "At Ethereum block 25770993, hasRole(UPGRADER_ROLE, 0x564fd647254ec3e0bd704c463c1d4494307e88b4) returned true and eth_getCode returned no bytecode. UPGRADER_ROLE = 0xcf6f9f892731e14b8859835f2ff35575f447fb501f46243c4eb8bac19e31a050 and can upgrade the UUPS proxy implementation without an independent timelock.",
         "sources": [
           {
             "label": "SOFID contract on Etherscan",
             "url": "https://etherscan.io/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
           }
         ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0b4a0152e0d720cc64ab1b8cd8cea7b0bbacbce6",
+        "label": "SOFID native MINTER_ROLE EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
+        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The native minter is configured with a 500000000000000-base-unit daily mint and burn limit. This EOA cannot raise its own limit; MASTER_MINTER_ROLE, DEFAULT_ADMIN, or an implementation upgrade can change the canonical issuance constraints.",
+        "observedAt": "2026-08-13",
+        "observedBlock": 25747120,
+        "sources": [
+          {
+            "label": "SOFID contract on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+          },
+          {
+            "label": "SOFID Stablecoin implementation on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x69edf9fa820df057e493635ed1db6b9e5f8124a0"
+          }
+        ],
+        "evidence": "At Ethereum block 23997691, MinterConfigured set this native minter's daily mint and burn limits to 500000000000000 base units. At block 25747120, MinterLimitUsed recorded this address with isBridge=false, a 1000000-unit mint, and 499999999000000 units remaining. A current eth_call simulation of mint succeeded, and the address returned no bytecode, confirming the direct native MINTER_ROLE EOA."
+      },
+      {
+        "chain": "solana",
+        "address": "ApCJFZLJa6ZKW5i599AQcsJbRuePvX9f8hLNzC6zq81t",
+        "label": "SOFID Solana Token-2022 mint-authority multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS"
+        ],
+        "threshold": 1,
+        "signerCount": 2,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Token-2022 mint has a live mint authority and no separate token-layer supply ceiling was identified; the 1-of-2 multisig can authorize native issuance.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439738944,
+        "sources": [
+          {
+            "label": "SOFID Solana Token-2022 metadata",
+            "url": "https://stablecoins.bitgo.com/sofid-solana/metadata.json"
+          },
+          {
+            "label": "Solana PublicNode RPC",
+            "url": "https://solana-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439738944, the Token-2022 mint APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS had mintAuthority ApCJFZLJa6ZKW5i599AQcsJbRuePvX9f8hLNzC6zq81t. That Token-2022 multisig reported numRequiredSigners=1 and numValidSigners=2, with signers 96D8v5kpP1ZyN5cmwVVVTKsYpUdACe1WcEAFtpMaeqwh and By1mEVWv9ELECbaFTAA5XZKwFSGF8AUXBCHB2QmaZtde. The mint was not paused. Freeze, permanent-delegate, pause/configuration, and metadata authorities are separate holder-control surfaces and are not included here."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "At Ethereum block 25295030: proxy 0x0CB6d03B...678092E (ERC1967 UUPS) has impl 'Stablecoin' at 0x69edf9fa820df057e493635ed1db6b9e5f8124a0. owner()/DEFAULT_ADMIN = EOA 0xd84519fc... (no bytecode confirmed). MASTER_MINTER_ROLE = EOA 0x06720dec... (no bytecode confirmed, hasRole true). UPGRADER_ROLE = EOA 0x564fd... (no bytecode confirmed, hasRole true). No proxy admin (EIP-1967 admin slot = 0x0). All three EOAs confirmed as BitGo-operated; on-chain mint surface fully addressed. Economic-posture fields reviewed 2026-08-15: BitGo-operated EOAs can mint or replace mint logic without an independent timelock, public evidence does not establish recurring whole-supply reconciliation, and the OCC supervises issuer SoFi Bank, N.A. Economic-posture fields reviewed 2026-08-15: Wave 2 external research found SoFi's official page now publishes March, April, and May 2026 independent monthly reports on assets supporting all outstanding SOFID across its supported Ethereum and Solana networks.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex Wave 2 external research 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 25770993, the ERC1967 UUPS proxy 0x0CB6d03B...678092E pointed to the verified Stablecoin implementation 0x69edf9fa820df057e493635ed1db6b9e5f8124a0; its EIP-1967 admin slot was zero. DEFAULT_ADMIN_ROLE = EOA 0xd84519fc... (no bytecode confirmed), MASTER_MINTER_ROLE = EOA 0x06720dec... (no bytecode confirmed, hasRole true), and UPGRADER_ROLE = EOA 0x564fd... (no bytecode confirmed, hasRole true). MASTER_MINTER_ROLE configures native minters and their limits but is not itself the native mint caller; the current native MINTER_ROLE EOA 0x0B4a0152...cE6 is cap-limited at 500000000000000 base units per day, with an isBridge=false usage observation. At finalized Solana slot 439738944, the Token-2022 deployment APhcqtz...HfS had a live 1-of-2 mint-authority multisig with the two recorded signers. Both authored deployments are native issuance routes for SoFi Bank, N.A.; no bridge representation or configured bridge machinery was identified. The Ethereum implementation's generic BRIDGE_MINTER code path is not treated as a bridge route without a configured role and representation. Economic-posture fields remain: BitGo-operated issuance and upgrade EOAs can mint or replace mint logic without an independent timelock, SoFi's official materials describe 1:1 backing and recurring independent monthly reports, but those periodic reports do not establish real-time whole-supply reconciliation, and the OCC supervises issuer SoFi Bank, N.A.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex Wave 2 external research 2026-08-15; Codex mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "BitGo selected by SoFi to provide stablecoin infrastructure",
@@ -114,6 +191,18 @@
         {
           "label": "SoFiUSD monthly attestation reports",
           "url": "https://www.sofi.com/crypto/sofiusd/"
+        },
+        {
+          "label": "SOFID Ethereum decoded log history",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e/logs"
+        },
+        {
+          "label": "SOFID Solana Token-2022 metadata",
+          "url": "https://stablecoins.bitgo.com/sofid-solana/metadata.json"
+        },
+        {
+          "label": "Solana PublicNode RPC",
+          "url": "https://solana-rpc.publicnode.com"
         }
       ]
     }

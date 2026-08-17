@@ -3,142 +3,284 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "GYEN uses GMO Trust's role-based fiat-token contract: a minter mints within capacity, while owner/admin roles can change privileged accounts and parameters.",
+    "confidence": "manual-review",
+    "summary": "GYEN has issuer-native issuance rails on Ethereum, Solana, and Stellar. Ethereum's current direct-minter getter state is unresolved, while the reviewed issuer role administrators, capper, proxy administrator, Solana 2-of-2 Token-2022 authority, and Stellar issuer account remain native issuance controls. Arbitrum is an Ethereum-bound canonical-rollup representation assessed separately under Bridge Risk; the 2026 wind-down removed purchases while redemption and supported-chain swaps remain scheduled through the initial redemption period.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x78AFae0A5203f27f623e4614A1cFEc8F75C5d11C",
-        "label": "GYEN current minter",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
+        "label": "GYEN Ethereum minter (current holder unresolved)",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "cap-limited",
-        "capDescription": "GMO Trust source describes a capacity limit: minter cannot mint beyond capacity, while a separate capper can adjust capacity.",
-        "canRaiseCap": false,
+        "authorityType": "unknown",
+        "directMintAbility": "unknown",
+        "capDescription": "Verified Token_v3 retains a mint path guarded by onlyMinter and describes a capacity/operator confirmation flow, but the current minter, capacity, and operator getter calls reverted at the reviewed block.",
+        "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
         "sources": [
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          },
+          {
+            "label": "Verified GYEN Token_v3 implementation",
+            "url": "https://eth.blockscout.com/address/0x9195fef5a5dde903e641bafcf56ea4382f8eeac1?tab=contract"
+          },
           {
             "label": "GMO Trust stablecoin source",
             "url": "https://github.com/trust-zcom/gmotrust-stablecoin-contract"
-          },
-          {
-            "label": "GYEN/ZUSD contract-address support",
-            "url": "https://support.stablecoin.z.com/hc/en-us/articles/360053460793-What-are-the-contract-addresses-for-GYEN-and-ZUSD"
           }
         ],
-        "evidence": "minter() (selector 0x4ffed66c) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). GMO Trust source describes minter as the role that mints tokens within capacity."
+        "evidence": "At Ethereum block 25771273, the transparent-proxy implementation was 0x9195fef5a5dde903e641bafcf56ea4382f8eeac1 (Token_v3), whose verified source contains mint guarded by onlyMinter and a two-operator confirmation path before _mint. The current minter(), capacity, and operator getter calls reverted, so the former 0x78AFae0A5203f27f623e4614A1cFEc8F75C5d11C snapshot is retired and no current direct-minter address is asserted. This unresolved state remains scoreable as a permissioned native mint path rather than being inferred from the stale address."
       },
       {
         "chain": "ethereum",
         "address": "0xfb5dAE5bF48dF4492B3101f00D844Ef1c0268C6D",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
         "label": "GYEN owner",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "owner() (selector 0x8da5cb5b) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). GMO Trust source says owner performs admin and minterAdmin assignments."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
+        "sources": [
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          },
+          {
+            "label": "Verified GYEN Token_v3 implementation",
+            "url": "https://eth.blockscout.com/address/0x9195fef5a5dde903e641bafcf56ea4382f8eeac1?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25771273, owner() returned 0xfb5dAE5bF48dF4492B3101f00D844Ef1c0268C6D. The verified Token_v3 role model gives owner/admin authority over privileged assignments and parameters, including the ability to authorize a native minter or raise the capacity path. The current direct-minter getter remains unresolved rather than being filled from the former stale snapshot."
       },
       {
         "chain": "ethereum",
         "address": "0x7037368343299af3e9a9708337F6690D65efa517",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
         "label": "GYEN admin",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "admin() (selector 0xf851a440) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
+        "sources": [
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          },
+          {
+            "label": "Verified GYEN Token_v3 implementation",
+            "url": "https://eth.blockscout.com/address/0x9195fef5a5dde903e641bafcf56ea4382f8eeac1?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25771273, admin() returned 0x7037368343299af3e9a9708337f6690d65efa517. The current Token_v3 role administration remains a native issuance control that can authorize privileged accounts or alter capacity parameters; the reverted direct-minter getter is preserved as an explicit uncertainty in the profile review."
       },
       {
         "chain": "ethereum",
         "address": "0x1e412adeac1e3a213d43a968b938ac046f506de3",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
         "label": "GYEN minterAdmin",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "minterAdmin() (selector 0xa754d48f) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
+        "sources": [
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          },
+          {
+            "label": "Verified GYEN Token_v3 implementation",
+            "url": "https://eth.blockscout.com/address/0x9195fef5a5dde903e641bafcf56ea4382f8eeac1?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25771273, minterAdmin() returned 0x1e412adeac1e3a213d43a968b938ac046f506de3. This current role is part of the native Ethereum issuance administration and can authorize the minter path; the current minter holder itself was not asserted because the related getter calls reverted."
       },
       {
         "chain": "ethereum",
         "address": "0xe73b7624652782238cbb7a590a95ded50df2fc40",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
         "label": "GYEN pauser",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "pauser() (selector 0x9fd0506d) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
+        "sources": [
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25771273, pauser() returned 0xe73b7624652782238cbb7a590a95ded50df2fc40. This is a native token pause control and is not treated as a bridge capability."
       },
       {
         "chain": "ethereum",
         "address": "0x72fe98091d3acbb31558c9f1be32071496ee90cf",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
         "label": "GYEN prohibiter",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "prohibiter() (selector 0xdd75049b) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
+        "sources": [
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25771273, prohibiter() returned 0x72fe98091d3acbb31558c9f1be32071496ee90cf. This native transfer/prohibition control remains separate from bridge-route risk."
       },
       {
         "chain": "ethereum",
         "address": "0x42757e2da169d5155addca53b6d2fa463e76cf6e",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
         "label": "GYEN wiper",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "wiper() (selector 0xdcb413c8) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA)."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
+        "sources": [
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25771273, wiper() returned 0x42757e2da169d5155addca53b6d2fa463e76cf6e. This native holder-remediation control remains separate from bridge-route risk."
       },
       {
         "chain": "ethereum",
         "address": "0xb95ab58084a131197da608e4a28511c4c8bd410a",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
         "label": "GYEN capper",
-        "role": "minter-admin",
+        "role": "cap-admin",
         "authorityType": "eoa",
         "directMintAbility": "none",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "capper() (selector 0x50a6aaf4) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). Capper can raise the minter's capacity limit."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
+        "sources": [
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          },
+          {
+            "label": "Verified GYEN Token_v3 implementation",
+            "url": "https://eth.blockscout.com/address/0x9195fef5a5dde903e641bafcf56ea4382f8eeac1?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25771273, capper() returned 0xb95ab58084a131197da608e4a28511c4c8bd410a. The Token_v3 source describes this role as able to raise the minter's capacity limit, preserving the native issuance cap-administration risk."
       },
       {
         "chain": "ethereum",
         "address": "0xe5e877ad41b61958265dc9bce2b00554c313a973",
+        "deploymentRefs": [
+          "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+        ],
         "label": "GYEN EIP-1967 proxy admin",
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-06-11",
+        "observedBlock": 25295183,
         "sources": [
           {
             "label": "GYEN Ethereum contract",
             "url": "https://etherscan.io/address/0xc08512927d12348f6620a698105e1baac6ecd911"
           }
         ],
-        "evidence": "EIP-1967 admin slot (0xb531...) returned this address at Ethereum block 25295183; eth_getCode returned no bytecode (EOA). Implementation at 0x9195fef5a5dde903e641bafcf56ea4382f8eeac1 confirmed."
+        "evidence": "The EIP-1967 admin slot on the Ethereum GYEN proxy returned this EOA at block 25295183; the implementation was 0x9195fef5a5dde903e641bafcf56ea4382f8eeac1. This is the native Ethereum mint-logic upgrade control, not an Arbitrum bridge administrator."
       },
       {
         "chain": "solana",
         "address": "7zjQfu3nmGqgxYm9p67MQje9uPDBa2uEbtUj8aAChvU6",
-        "label": "GYEN Solana SPL mint authority (2-of-2 token multisig)",
+        "deploymentRefs": [
+          "solana:Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g"
+        ],
+        "label": "GYEN Solana Token-2022 mint authority (2-of-2 token multisig)",
         "role": "direct-minter",
         "authorityType": "multisig",
         "directMintAbility": "direct",
         "threshold": 2,
         "signerCount": 2,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439747196,
         "sources": [
+          {
+            "label": "GMO Trust GYEN on Solana",
+            "url": "https://stablecoin.z.com/lp/solana/"
+          },
           {
             "label": "Solana GYEN mint",
             "url": "https://solscan.io/token/Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g"
           }
         ],
-        "evidence": "At Solana slot 425797741, getAccountInfo on mint Crn4x1Y2... returned mintAuthority 7zjQfu3n..., an initialized SPL token multisig with numRequiredSigners=2 of 2 valid signers; freezeAuthority CpMoJUPW... is a non-executable account."
+        "evidence": "At Solana slot 439747196, the Token-2022 mint Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g had mint authority 7zjQfu3nmGqgxYm9p67MQje9uPDBa2uEbtUj8aAChvU6. The initialized Token-2022 multisig required both valid signers, DBdyyyrHNc5Bx7hsk2yJZBaFGajbm6MqsFvoMYuAm7mi and CdiJkHQi1ocbroqpKJ6B5kp2nDE5xRX9nQFJE2eXJDPz. Freeze authority, permanent delegate, and metadata authorities are separate controls and are not included here."
+      },
+      {
+        "chain": "stellar",
+        "address": "GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB",
+        "deploymentRefs": [
+          "stellar:GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB"
+        ],
+        "label": "GYEN Stellar issuer account",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "The Stellar issuer account has no verified immutable numeric supply cap; issuance is controlled by the issuer account's high-threshold authorization, while revocable authorization and clawback remain separate issuer powers.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 63987778,
+        "sources": [
+          {
+            "label": "GMO Trust GYEN on Stellar",
+            "url": "https://stablecoin.z.com/lp/stellar/"
+          },
+          {
+            "label": "Stellar Horizon GYEN asset",
+            "url": "https://horizon.stellar.org/assets?asset_code=GYEN&asset_issuer=GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB"
+          }
+        ],
+        "evidence": "At Stellar ledger 63987778, the GYEN issuer account GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB had low/medium/high thresholds 5/5/10, auth_revocable=true, auth_immutable=false, and auth_clawback_enabled=true. Eight configured signers had weights 4, 2, 4, 2, 2, 2, 2, and 2, including the issuer account. Issuing the classic GYEN asset is therefore controlled by the issuer account's high-threshold authorization; revocation and clawback are distinct issuer controls."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -151,20 +293,47 @@
           "url": "https://github.com/trust-zcom/gmotrust-stablecoin-contract"
         },
         {
-          "label": "GMO Trust GYEN announcement",
-          "url": "https://www.gmo.jp/en/news/article/809/"
+          "label": "GMO Trust multi-chain GYEN and ZUSD",
+          "url": "https://stablecoin.z.com/multi-chain-gyen-and-zusd/"
         },
         {
-          "label": "GYEN Ethereum contract on Etherscan",
-          "url": "https://etherscan.io/address/0xc08512927d12348f6620a698105e1baac6ecd911"
+          "label": "GMO Trust supported-chain swaps",
+          "url": "https://support.stablecoin.z.com/hc/en-us/articles/4407274387609-Where-can-I-swap-GYEN-and-or-ZUSD"
+        },
+        {
+          "label": "GMO Trust GYEN/ZUSD wind-down notice",
+          "url": "https://medium.com/gmo-z-com-trust-company/wind-down-of-gyen-and-zusd-stablecoin-issuance-b6c32083470d"
+        },
+        {
+          "label": "Ethereum GYEN proxy on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+        },
+        {
+          "label": "Verified GYEN Token_v3 implementation",
+          "url": "https://eth.blockscout.com/address/0x9195fef5a5dde903e641bafcf56ea4382f8eeac1?tab=contract"
+        },
+        {
+          "label": "Solana GYEN mint",
+          "url": "https://solscan.io/token/Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g"
+        },
+        {
+          "label": "Stellar Horizon GYEN asset",
+          "url": "https://horizon.stellar.org/assets?asset_code=GYEN&asset_issuer=GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB"
         }
       ],
-      "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms). Solana mint authority resolved at slot 425797741: 2-of-2 SPL token multisig. Economic-posture fields reviewed 2026-08-15: issuer-controlled EOAs can raise capacity or mint, NYDFS supervises GMO Trust, and whole-supply reconciliation is unverified across all deployments. Wave 2 external research reviewed 2026-08-15: The Network Firm's monthly reports aggregate Ethereum, Stellar, and Solana supply but omit the separately mintable Arbitrum contract, so whole-supply reconciliation remains unknown.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Mint Authority boundary review completed 2026-08-16. GMO Trust identifies Ethereum, Solana, and Stellar as GYEN's issuer-native rails; the Arbitrum contract is excluded here because its l1Address binds it to Ethereum GYEN and its gateway-only bridgeMint/bridgeBurn path is assessed under Bridge Risk. Ethereum block 25771273 confirms the current owner, admin, minterAdmin, capper, pauser, prohibiter, and wiper role values and the Token_v3 implementation; minter(), capacity, and operator reads reverted, so the previous 0x78AFae... direct-minter snapshot is not carried forward. Solana slot 439747196 confirms the 2-of-2 Token-2022 mint authority. Stellar ledger 63987778 confirms the issuer account's 5/5/10 thresholds, weighted signers, revocable authorization, and clawback flag. The May 15, 2026 wind-down removed purchases while redemption and supported-chain swaps remain scheduled through November 11, 2026; commercial issuance is not inferred from still-configured on-chain authorities. Whole-supply reconciliation across the three native rails and the Arbitrum representation remains unknown.",
+      "reviewer": "Codex mint-bridge-boundary migration; gyen-gyen verified finding",
+      "reviewedAt": "2026-08-16",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "What current Ethereum contract state is behind the reverted minter(), capacity, and operator getter calls?"
+      ]
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911"
+      ],
       "adminAddresses": [
         "0xe5e877ad41b61958265dc9bce2b00554c313a973"
       ],

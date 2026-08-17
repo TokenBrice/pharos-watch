@@ -4,39 +4,73 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "JPYm is minted CDP-style via immutable BorrowerOperations on Celo; token owner on both Celo and Monad is the same 4/6 Mento Safe (Celo) / 4/7 Safe (Monad) at 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no modules or guard.",
+    "summary": "JPYm native issuance is anchored on Celo's JPYm-specific Mento V3 CDP branch. BorrowerOperationsv300JPYm and ActivePoolv300JPYm are the native minters, while the 4-of-6 Mento Safe can authorize minters and replace the Celo token implementation without delay; Monad is a Wormhole NTT representation assessed under Bridge Risk.",
     "controls": [
       {
         "chain": "celo",
-        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
-        "label": "Mento BorrowerOperations (immutable CDP minter)",
+        "address": "0x4944Fc84D675a0Cc4758A8098C1619A2E4724a7F",
+        "label": "Mento JPYm BorrowerOperationsv300JPYm debt minter",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "celo:0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "JPYm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — immutable.",
+        "capDescription": "JPYm debt mints are constrained by USDm collateral and the JPYm V3 oracle/liquidation rules; BorrowerOperationsv300JPYm is a deployed non-proxy CDP branch contract.",
         "sources": [
           {
-            "label": "Mento V3 deployments",
-            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+            "label": "Mento deployments registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/packages/contracts/contracts.json"
+          },
+          {
+            "label": "Mento StableTokenV3 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/e7884d28a5338dee4db95331d31bc0dc73165fda/contracts/tokens/StableTokenV3.sol"
           }
         ],
-        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 impl and admin slots zero — immutable, no upgrade path."
+        "evidence": "At Celo block 75024406, JPYm.isMinter(0x4944Fc84D675a0Cc4758A8098C1619A2E4724a7F) returned true. The JPYm-specific BorrowerOperationsv300JPYm branch was deployed with code and its EIP-1967 implementation and admin slots were zero, while the generic BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A was not a JPYm minter at the observation block."
+      },
+      {
+        "chain": "celo",
+        "address": "0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4",
+        "label": "Mento JPYm ActivePoolv300JPYm interest minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "celo:0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ActivePoolv300JPYm mints protocol interest/accounting amounts for the native JPYm CDP branch; it is a deployed non-proxy contract rather than an independent governance minter.",
+        "sources": [
+          {
+            "label": "Mento deployments registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/packages/contracts/contracts.json"
+          },
+          {
+            "label": "Mento StableTokenV3 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/e7884d28a5338dee4db95331d31bc0dc73165fda/contracts/tokens/StableTokenV3.sol"
+          }
+        ],
+        "evidence": "At Celo block 75024406, JPYm.isMinter(0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4) returned true. ActivePoolv300JPYm was deployed code with zero EIP-1967 implementation and admin slots at the observation block, and its role is native JPYm interest/accounting issuance."
       },
       {
         "chain": "celo",
         "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
-        "label": "Mento JPYm token owner Safe (Celo)",
+        "label": "Mento JPYm Celo token owner and minter-admin Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "celo:0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+        ],
         "threshold": 4,
         "signerCount": 6,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
-          "version": "1.4.1+L2",
           "threshold": 4,
           "owners": [
             "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
@@ -47,59 +81,33 @@
             "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
           ],
           "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "observedBlock": 69291577,
-          "source": "safe-api"
+          "observedBlock": 75024239,
+          "source": "onchain"
         },
+        "capDescription": "The Celo Safe can authorize replacement native minters and change the JPYm token's owner-controlled minter/burner set or implementation without an independent delay or global supply cap.",
+        "failureDomainKeys": [
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
         "sources": [
           {
             "label": "Safe Transaction Service - Celo",
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458"
-          }
-        ],
-        "evidence": "At Celo block 69291577, JPYm owner() = 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; Celo Safe API returned threshold 4, 6 owners (drift from prior 7 — one signer removed), no modules, zero guard. signerCount updated from 7 to 6."
-      },
-      {
-        "chain": "monad",
-        "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
-        "label": "Mento JPYm token owner Safe (Monad)",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "threshold": 4,
-        "signerCount": 7,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "version": "1.4.1+L2",
-          "threshold": 4,
-          "owners": [
-            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
-            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
-            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
-            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
-            "0x91606e52a843845669f1f25BbD5E95cb055a9707",
-            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
-            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
-          ],
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "observedBlock": 80607801,
-          "source": "safe-api"
-        },
-        "sources": [
+          },
           {
-            "label": "Safe Transaction Service - Monad",
-            "url": "https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458"
+            "label": "Celo JPYm proxy verified source and ABI",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
           }
         ],
-        "evidence": "At Monad block 80607801, JPYm Monad (0x22f6a6752800eab67b84748fefc3cc658384af72) owner() = 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; proxy admin (0xe4256e2d1a73510b72886e08afb0fc7651303016) owner = same Safe; Monad Safe API returned threshold 4, 7 owners, no modules, zero guard."
+        "observedAt": "2026-08-16",
+        "observedBlock": 75024239,
+        "evidence": "At Celo block 75024239, JPYm.owner() returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 and direct Safe reads returned threshold 4 with six owners and an empty module list; the current getGuard() probe reverted, so no fresh zero-guard conclusion is made. The verified StableTokenV3 source makes mint/burn role-gated and setMinter/setBurner owner-only, so this Safe can authorize replacement native minters and native token logic without a delay."
       }
     ],
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "celo:0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+      ],
       "proxyAddresses": [
         "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
       ],
@@ -111,12 +119,12 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "Mento JPYm token owner Safe (Celo)",
-      "observedAt": "2026-07-21",
-      "observedBlock": 72722488,
+      "controlRef": "Mento JPYm Celo token owner and minter-admin Safe",
+      "observedAt": "2026-08-16",
+      "observedBlock": 75024406,
       "sources": [
         {
-          "label": "Celo Forno RPC (owner() + standard EIP-1967 slot read)",
+          "label": "Celo Forno RPC (owner() + implementation/admin slot reads)",
           "url": "https://forno.celo.org"
         },
         {
@@ -130,25 +138,25 @@
       ]
     },
     "review": {
-      "evidence": "At Celo block 69291577 and Monad block 80607801: JPYm owner on both chains = Safe 0x58099B...; Celo Safe now 4/6 (one signer rotated out since prior review); Monad Safe 4/7; BorrowerOperations confirmed immutable on Celo. Monad proxy admin owned by same Safe. All addressable mint surfaces confirmed on both chains. Economic-control fields authored 2026-07-20: economicCapSemantics is unbounded because, unlike Mento V2 assets whose mint path sits behind the 48-hour Mento Timelock, the JPYm token owner is a plain 4-of-6 Safe on Celo and 4-of-7 Safe on Monad at 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no modules, no guard, and no delay, so it can authorize a different minter and issue without an independently enforced bound. reconciliation is continuous because JPYm is a Mento V3 CDP whose USDm collateral is held and observable on-chain rather than in an off-chain reserve requiring periodic attestation. supervision is none: Mento operates no named prudential regulator relationship for JPYm. Upgradeability authored 2026-07-21: Celo block 72722488 confirmed the standard EIP-1967 admin and implementation storage slots are both zero (Mento StableTokenV3 uses a custom, non-EIP-1967 proxy pattern) while owner() independently resolved to the same 4-of-6 Mento Safe recorded above; the implementation address is the shared StableTokenV3 logic contract also used by the sibling CHFm deployment.",
-      "reviewer": "Claude Phase 0c continuation; Pharos V9 Phase 3 curation lane cur-4 (economic-control fields, 2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Celo block 75024406, the JPYm-specific BorrowerOperationsv300JPYm 0x4944Fc84D675a0Cc4758A8098C1619A2E4724a7F and ActivePoolv300JPYm 0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4 were deployed native minters, while generic BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A was not a JPYm minter. At Celo block 75024239, JPYm owner() returned the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; its module list was empty and the current guard probe reverted. Celo is the sole native issuance chain: the CDP branch constrains borrower debt through USDm collateral and oracle/liquidation rules, but the immediate Safe can authorize another native minter and replace the current Celo token implementation without a delay or independently enforced global supply cap. Monad's NTT manager, spoke-token roles, ProxyAdmin, transceiver, peers, pause, and route limits are Bridge Risk facts and are not included in this Mint Authority scope. reconciliation remains continuous because JPYm CDP collateral and debt are observable on-chain, and supervision remains none because no named prudential supervisor was identified.",
+      "reviewer": "Codex mint-bridge boundary migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
-          "label": "Mento V3 stablecoin docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          "label": "Mento deployments registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/main/packages/contracts/contracts.json"
+        },
+        {
+          "label": "Mento StableTokenV3 source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/e7884d28a5338dee4db95331d31bc0dc73165fda/contracts/tokens/StableTokenV3.sol"
         },
         {
           "label": "Safe Transaction Service - Celo",
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458"
         },
         {
-          "label": "Safe Transaction Service - Monad",
-          "url": "https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458"
-        },
-        {
-          "label": "Mento V3 deployments",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          "label": "Celo Forno fixed-block RPC",
+          "url": "https://forno.celo.org"
         }
       ]
     },

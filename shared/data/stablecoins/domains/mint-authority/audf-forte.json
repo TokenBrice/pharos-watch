@@ -3,10 +3,17 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "manual-review",
-    "summary": "AUDF uses a 2/5 Admin Safe that holds DEFAULT_ADMIN_ROLE and MINT_ROLE on Ethereum, Polygon, Base, and Avalanche; on Redbelly the Safe holds DEFAULT_ADMIN_ROLE and MINT_ROLE is currently unassigned (granting runs through the Safe). The Ethereum MINT_ROLE also has a second holder: a StablecoinMintBurnOFTAdapter contract owned by the same Safe. ProxyAdmin across chains is owned by the Admin Safe.",
+    "confidence": "verified",
+    "summary": "AUDF uses a 2/5 Admin Safe that holds DEFAULT_ADMIN_ROLE and MINT_ROLE on Ethereum, Polygon, Base, and Avalanche; on Redbelly the Safe holds DEFAULT_ADMIN_ROLE while MINT_ROLE is currently unassigned and can be granted through the Safe. The same Safe owns the shared ProxyAdmin path across the five issuer-native deployments. Polygon and Base additionally have a separate operational EOA MINT_ROLE holder. The Ethereum LayerZero OFT adapter is bridge machinery assessed only under Bridge Risk.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+        "polygon:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+        "avalanche:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+        "base:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+        "redbelly:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+      ],
       "proxyAddresses": [
         "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
       ],
@@ -19,7 +26,7 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "AUDF Admin Safe (DEFAULT_ADMIN + MINT_ROLE, multichain)",
-      "observedAt": "2026-06-11",
+      "observedAt": "2026-08-16",
       "sources": [
         {
           "label": "AUDF Sourcify implementation",
@@ -33,8 +40,14 @@
     },
     "controls": [
       {
-        "chain": "ethereum",
         "address": "0x6929Fd915b0755EfDC255eA841B68a263A362C5A",
+        "deploymentRefs": [
+          "ethereum:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "polygon:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "avalanche:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "base:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "redbelly:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+        ],
         "label": "AUDF Admin Safe (DEFAULT_ADMIN + MINT_ROLE, multichain)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -69,32 +82,14 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6929Fd915b0755EfDC255eA841B68a263A362C5A/"
           }
         ],
-        "evidence": "At Ethereum block 25573497, Safe reads returned version 1.3.0, the listed five owners, threshold 2, and no enabled modules; prior reviewed Safe state records a zero guard. Confirmed DEFAULT_ADMIN_ROLE and MINT_ROLE on ETH via RoleGranted logs; same Safe confirmed on Polygon and Base via role logs; on Avalanche confirmed via hasRole(DEFAULT_ADMIN_ROLE) returning true and hasRole(MINT_ROLE) returning true at latest block. ProxyAdmin on ETH (0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9) is owned by this Safe; the same ProxyAdmin is confirmed on Avalanche via the proxy-admin EIP-1967 slot."
+        "evidence": "At Ethereum block 25573497, Safe reads returned version 1.3.0, the listed five owners, threshold 2, and no enabled modules; prior reviewed Safe state records a zero guard. Confirmed DEFAULT_ADMIN_ROLE and MINT_ROLE on Ethereum, Polygon, and Base via role logs; on Avalanche confirmed DEFAULT_ADMIN_ROLE and MINT_ROLE via hasRole; on Redbelly the Safe holds DEFAULT_ADMIN_ROLE while MINT_ROLE is currently unassigned. ProxyAdmin on Ethereum (0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9) is owned by this Safe, and the shared implementation/proxy-admin pattern is re-confirmed on Ethereum, Polygon, and Avalanche at the current review blocks. The Ethereum OFT adapter is not part of this native control."
       },
       {
-        "chain": "ethereum",
-        "address": "0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91",
-        "label": "AUDF Ethereum OFT adapter MINT_ROLE holder",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "AUDF Sourcify implementation",
-            "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
-          },
-          {
-            "label": "Blockscout AUDF OFT adapter",
-            "url": "https://eth.blockscout.com/address/0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91"
-          }
-        ],
-        "evidence": "Identified as StablecoinMintBurnOFTAdapter (LayerZero OFT cross-chain bridge adapter). owner() returned 0x6929Fd915b0755EfDC255eA841B68a263A362C5A — the Admin Safe. Upgrade and operational authority is therefore under the same 2/5 Safe."
-      },
-      {
-        "chain": "ethereum",
         "address": "0xfd5d8237da011a140949eb23517fbbb9edf142ce",
+        "deploymentRefs": [
+          "polygon:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+          "base:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+        ],
         "label": "AUDF Polygon/Base EOA MINT_ROLE holder",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -136,9 +131,9 @@
           "url": "https://explorer.redbelly.network/address/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
         }
       ],
-      "evidence": "2/5 Admin Safe confirmed as DEFAULT_ADMIN + MINT_ROLE holder on ETH, Polygon, Base, and Avax. ProxyAdmin owned by the same Safe on ETH and Avax. OFT adapter (ETH MINT_ROLE) owned by Safe. Operational EOA minter 0xfd5d8237 confirmed on Polygon and Base; same EOA absent from Avax (Safe-only on Avax). Redbelly re-verified 2026-07-20 at block 3075429 via governors.mainnet.redbelly.network (now publicly reachable): the token reports the same uniform implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 and proxy admin 0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9; hasRole confirms the Admin Safe 0x6929Fd915b0755EfDC255eA841B68a263A362C5A holds DEFAULT_ADMIN_ROLE on Redbelly while MINT_ROLE is held by neither the Safe, the operational EOA, nor the OFT adapter. Direct Safe/EOA mint paths and the Safe-controlled upgrade path have no independent quantitative cap, so the economic cap is unbounded. Forte publishes monthly independent audit evidence; the record identifies ASIC/AFSL conduct licensing but no named prudential issuer supervisor, so supervision remains attestation-only.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "The 2/5 Admin Safe remains the native DEFAULT_ADMIN and MINT_ROLE authority on Ethereum, Polygon, Base, and Avalanche, while Redbelly retains DEFAULT_ADMIN_ROLE with MINT_ROLE currently unassigned. The shared implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 and ProxyAdmin path are re-confirmed on Ethereum block 25770091, Polygon block 92138647, and Avalanche block 92973884; Redbelly's reviewed block 3075429 shows the same implementation and ProxyAdmin with the Safe holding DEFAULT_ADMIN_ROLE. Operational EOA minter 0xfd5d8237da011a140949eb23517fbbb9edf142ce remains scoped to Polygon and Base. The Ethereum StablecoinMintBurnOFTAdapter and its Safe ownership are assessed only under Bridge Risk. Direct Safe/EOA mint paths and the Safe-controlled upgrade path have no independent quantitative cap, so the economic cap remains unbounded. Forte's monthly independent audit evidence supports periodic reconciliation; ASIC/AFSL conduct licensing is not a named prudential issuer supervisor, so supervision remains attestation-only.",
+      "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

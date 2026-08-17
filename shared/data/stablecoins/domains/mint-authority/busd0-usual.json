@@ -5,11 +5,51 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "inheritedFrom": "usd0-usual",
-    "summary": "bUSD0 is Usual's bond-maturity wrapper of USD0; depositing 1 USD0 mints 1 bUSD0 against locked USD0, which does not create base USD0 supply, so its mint authority is inherited from USD0 (usd0-usual). Wrapper upgrade is guarded by an 8-of-15 legacy Gnosis Safe.",
+    "summary": "bUSD0's only reviewed native issuance is the Ethereum bond-leg wrapper: depositing 1 USD0 creates 1 bUSD0 plus 1 rt-bUSD0 against locked USD0 and does not create base USD0 supply. The Arbitrum deployment is a reviewed LayerZero burn/mint representation and is excluded from Mint Authority. Ethereum wrapper mint-critical logic is replaceable through ProxyAdmin owned by an 8-of-15 legacy Safe; the exact external bond contract invoking the wrapper mint operation remains unidentified.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+      ],
+      "proxyAddresses": [
+        "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+      ],
+      "implementationAddresses": [
+        "0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b"
+      ],
+      "adminAddresses": [
+        "0x65a7042460932a8e7b6aa9c765c2bae5f4535c22"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Usual bUSD0 Ethereum wrapper ProxyAdmin owner Safe",
+      "observedAt": "2026-08-16",
+      "observedBlock": 25771035,
+      "sources": [
+        {
+          "label": "Ethereum bUSD0 proxy",
+          "url": "https://etherscan.io/address/0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+        },
+        {
+          "label": "Ethereum bUSD0 implementation",
+          "url": "https://etherscan.io/address/0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b"
+        },
+        {
+          "label": "Ethereum bUSD0 ProxyAdmin",
+          "url": "https://etherscan.io/address/0x65a7042460932a8e7b6aa9c765c2bae5f4535c22"
+        },
+        {
+          "label": "Usual bUSD0 factsheet",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+        "deploymentRefs": [
+          "ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+        ],
         "label": "Usual bUSD0 bond-leg token",
         "role": "wrapper",
         "authorityType": "contract",
@@ -17,6 +57,13 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "bUSD0 is minted/burned by the Usual bond contract against locked USD0 (1 USD0 in -> 1 bUSD0 + 1 rt-bUSD0 out, redeemable at maturity); this bond accounting cannot create or destroy base USD0 supply.",
+        "failureDomainKeys": [
+          "contract:ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+          "contract:ethereum:0x65a7042460932a8e7b6aa9c765c2bae5f4535c22",
+          "safe:ethereum:0xaada24358620d4638a2ee8788244c6f4b197ca16"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771035,
         "sources": [
           {
             "label": "Usual bUSD0 fact sheet",
@@ -27,22 +74,61 @@
             "url": "https://etherscan.io/address/0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
           }
         ],
-        "evidence": "At Ethereum block 25295204: mint(address,uint256) call reverted (no privileged mint function); totalSupply=526,811,371 USD0 locked; EIP-1967 proxy admin slot = 0x65a7042460932a8e7b6aa9c765c2bae5f4535c22 (ProxyAdmin contract). ProxyAdmin.owner() = 0xaada24358620d4638a2ee8788244c6f4b197ca16 (legacy Gnosis Safe: 15 owners, threshold 8, confirmed via getOwners() and getThreshold() on-chain)."
+        "evidence": "At Ethereum block 25771035, the bUSD0 proxy 0x35d8949372d46b7a3d5a56006ae77b215fc69bc0 resolved to implementation 0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b and ProxyAdmin 0x65a7042460932a8e7b6aa9c765c2bae5f4535c22; current name and symbol are Bond USD0 and bUSD0. An older Ethereum block 25295204 observation recorded mint(address,uint256) reverting and 526,811,371 USD0 locked. The exact external bond contract that invokes the wrapper mint operation was not identified, so no arbitrary caller is inferred. Proxy replacement authority is recorded separately below and in upgradeability."
       },
       {
         "label": "Inherited USD0 (Usual) issuer mint path",
         "role": "other",
         "authorityType": "issuer-backend",
         "directMintAbility": "none",
+        "deploymentRefs": [
+          "ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+        ],
+        "controllerAssetId": "usd0-usual",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "evidence": "Underlying USD0 supply is created via Usual's protocol-operated issuer mint authority against RWA collateral (issuer-direct-mint, concentrated-admin); bUSD0 locks USD0 and inherits that base mint authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xaada24358620d4638a2ee8788244c6f4b197ca16",
+        "deploymentRefs": [
+          "ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+        ],
+        "label": "Usual bUSD0 Ethereum wrapper ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "contract:ethereum:0x65a7042460932a8e7b6aa9c765c2bae5f4535c22",
+          "safe:ethereum:0xaada24358620d4638a2ee8788244c6f4b197ca16"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771035,
+        "sources": [
+          {
+            "label": "Ethereum bUSD0 proxy",
+            "url": "https://etherscan.io/address/0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+          },
+          {
+            "label": "Ethereum bUSD0 ProxyAdmin",
+            "url": "https://etherscan.io/address/0x65a7042460932a8e7b6aa9c765c2bae5f4535c22"
+          },
+          {
+            "label": "Ethereum bUSD0 wrapper owner Safe",
+            "url": "https://etherscan.io/address/0xaada24358620d4638a2ee8788244c6f4b197ca16"
+          }
+        ],
+        "evidence": "At Ethereum block 25771035, the bUSD0 EIP-1967 admin was ProxyAdmin 0x65a7042460932a8e7b6aa9c765c2bae5f4535c22 and ProxyAdmin.owner() was legacy Safe 0xaada24358620d4638a2ee8788244c6f4b197ca16, observed as 8-of-15. This Safe can replace the wrapper implementation and thereby change mint-critical bond accounting; Safe module/guard state and the exact external bond caller remain unverified in this pass."
       }
     ],
     "review": {
-      "evidence": "bUSD0 (variantOf usd0-usual, variantKind bond-maturity) is a bond-leg wrapper whose supply tracks locked USD0. At Ethereum block 25295204: no privileged mint on wrapper (mint() reverts); EIP-1967 proxy admin chain: ProxyAdmin(0x65a704) -> legacy Gnosis Safe(0xaada24, 15 owners, threshold 8) confirmed via on-chain getOwners()/getThreshold() calls.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "bUSD0 (variantOf usd0-usual, variantKind bond-maturity) has one reviewed native issuance route on Ethereum. The product flow is 1 USD0 locked -> 1 bUSD0 + 1 rt-bUSD0 and does not create base USD0 supply. At Ethereum block 25771035, the wrapper proxy resolved to implementation 0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b with ProxyAdmin 0x65a7042460932a8e7b6aa9c765c2bae5f4535c22; its owner Safe 0xaada24358620d4638a2ee8788244c6f4b197ca16 was observed as 8-of-15 and can replace mint-critical logic. The Arbitrum deployment is a LayerZero burn/mint representation whose adapter-only mint authority is reviewed under Bridge Risk, not here. The exact external Ethereum bond caller remains unresolved.",
+      "reviewer": "Codex busd0-usual mint/bridge boundary review",
+      "reviewedAt": "2026-08-16",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Usual bUSD0 fact sheet",
@@ -51,6 +137,14 @@
         {
           "label": "Ethereum bUSD0 contract",
           "url": "https://etherscan.io/address/0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+        },
+        {
+          "label": "Usual contract deployments",
+          "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+        },
+        {
+          "label": "Usual Bond USD0 documentation",
+          "url": "https://docs.usual.money/usual-products/bond-usd0"
         }
       ]
     }

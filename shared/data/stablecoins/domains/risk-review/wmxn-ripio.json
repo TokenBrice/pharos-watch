@@ -82,18 +82,19 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "WMXN is natively issuer-minted by Ripio on all six tracked chains (same contract address everywhere; MINTER_ROLE held by the issuer EOA 0x466c02e2 plus Ripio's rate-limited minter contracts). Cross-chain transfers use Ripio's own verified burn-mint bridge (0x465e6423 depositForBridge/burnFrom -> fulfillBridgeMint -> LimitedMinterBridge 0x46167cb0 mintTo, 100,000 WMXN/day cap per chain, BRIDGE_OPERATOR EOAs 0x5ca3f8ee/0xbc924f70, admins issuer EOA + 4/7 Safe 0x2b839174), re-verified on-chain 2026-07-20. No third-party or externally validated bridge holds mint rights on any tracked deployment.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
-    "confidence": "verified",
+    "summary": "WMXN has six independent native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis; their issuer-direct native minting and UUPS upgrade paths remain in Mint Authority. Ripio's LimitedMinterBridge and BridgeDeposit form an issuer-operated burn/mint transfer rail with route-scoped bridge mint, rate-limit, pause, admin, operator, and replay/accounting controls. Celo is a probable bridge representation: its current role graph grants bridge-style minter contracts but its source-chain burn and destination fulfillment binding remain unresolved. No third-party bridge was identified.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration for WMXN",
+    "confidence": "probable",
     "protocols": [
       {
         "source": "issuer",
-        "name": "Ripio wFIAT bridge (LimitedMinterBridge + BridgeOperator)",
-        "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code",
+        "name": "Ripio wFIAT bridge (BridgeDeposit + LimitedMinterBridge)",
+        "url": "https://github.com/ripio/latam-stables",
         "bridgeTypes": [
           "burnAndMint"
-        ]
+        ],
+        "note": "Official sources define source-chain burn, operator-gated destination fulfillment, per-token daily caps, arbitrary-recipient minting, pause, and idempotency/accounting state; current Celo source-chain binding remains unresolved."
       }
     ],
     "sources": [
@@ -108,6 +109,18 @@
       {
         "label": "Ripio bridge operator contract verified source",
         "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
+      },
+      {
+        "label": "Ripio LimitedMinterBridge source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+      },
+      {
+        "label": "Ripio BridgeDeposit source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+      },
+      {
+        "label": "Ripio Celo WMXN launch announcement",
+        "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
       }
     ],
     "routes": [
@@ -285,6 +298,770 @@
             "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
           }
         ]
+      },
+      {
+        "id": "celo:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "celo",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio wMXN Celo bridge representation (probable)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "celo",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Ripio's 31 July 2026 Celo launch announcement publishes this WMXN deployment. At Celo block 75022345, the token role graph did not grant the issuer EOA 0x466c02e2 direct MINTER_ROLE; instead it granted minting to bridge-style LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 and fixed-destination LimitedMinter 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7. The route is therefore classified as a probable bridge representation, not an additional native issuer liability. A complete Celo source-chain burn and destination fulfillment trace remains unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75022345,
+        "sources": [
+          {
+            "label": "Ripio Celo WMXN launch announcement",
+            "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
+          },
+          {
+            "label": "Celo WMXN explorer address",
+            "url": "https://celoscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Celo JSON-RPC fixed-block reads",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:celo:0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "eoa:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "wmxn-ethereum-limited-minter-bridge",
+        "label": "Ripio WMXN Ethereum LimitedMinterBridge route",
+        "routeRefs": [
+          "ethereum:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:ethereum:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge mints WMXN directly to arbitrary recipients through an admin-registered token configuration and a per-token daily limit. The prior reviewed WMXN configuration recorded a 100,000 WMXN/day limit on this route; current storage was not re-enumerated in the 2026-08-16 pass.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The verified adapter source permits token registration, unregistration, and daily-limit updates by the external token admin. The prior 2026-07-20 WMXN read recorded a 100,000 WMXN/day cap; the current route-specific storage value remains an evidence gap.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WMXN, and an operator-gated fulfillBridgeMint() calls LimitedMinterBridge.mintTo() on the destination. The current source-chain binding and fulfillment trace were not established for every route.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770925, the adapter had two MINTER_ROLE members (issuer EOA 0x466c02e2 and BridgeDeposit 0x465e6423...), and paused() returned false. Token DEFAULT_ADMIN_ROLE controls token registration and limits; the adapter's own DEFAULT_ADMIN_ROLE controls pause. BridgeDeposit DEFAULT_ADMIN_ROLE can update the adapter reference and route configuration.",
+          "onchainAmountBounds": "BridgeDeposit source records totalBurnedTo, totalMintedFrom, and bridgeFulfilled idempotency state, while LimitedMinterBridge enforces the per-token daily cap. No current route-specific burn-versus-mint reconciliation read was established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770925,
+        "sources": [
+          {
+            "label": "Ethereum WMXN token",
+            "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25770925, WMXN granted MINTER_ROLE to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. The adapter's own current MINTER_ROLE members were the issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47; paused() was false. This is arbitrary-recipient bridge mint authority and is relocated from Mint Authority into this route-scoped control."
+      },
+      {
+        "id": "wmxn-base-limited-minter-bridge",
+        "label": "Ripio WMXN Base LimitedMinterBridge route",
+        "routeRefs": [
+          "base:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:base:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:base:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge mints WMXN directly to arbitrary recipients through an admin-registered token configuration and a per-token daily limit. The prior reviewed WMXN configuration recorded a 100,000 WMXN/day limit on this route; current storage was not re-enumerated in the 2026-08-16 pass.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The verified adapter source permits token registration, unregistration, and daily-limit updates by the external token admin. The prior 2026-07-20 WMXN read recorded a 100,000 WMXN/day cap; the current route-specific storage value remains an evidence gap.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WMXN, and an operator-gated fulfillBridgeMint() calls LimitedMinterBridge.mintTo() on the destination. The current source-chain binding and fulfillment trace were not established for every route.",
+          "pausersAdminsUpgraders": "At Base block 50066834, WMXN granted MINTER_ROLE to the deployed LimitedMinterBridge; the adapter's own MINTER_ROLE member count was 2 and paused() was false. Token DEFAULT_ADMIN_ROLE controls token registration and limits; the adapter's own DEFAULT_ADMIN_ROLE controls pause. BridgeDeposit DEFAULT_ADMIN_ROLE can update the adapter reference and route configuration.",
+          "onchainAmountBounds": "BridgeDeposit source records totalBurnedTo, totalMintedFrom, and bridgeFulfilled idempotency state, while LimitedMinterBridge enforces the per-token daily cap. No current route-specific burn-versus-mint reconciliation read was established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066834,
+        "sources": [
+          {
+            "label": "Base WMXN token",
+            "url": "https://basescan.org/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "At Base block 50066834, WMXN granted MINTER_ROLE to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. The adapter was deployed, had two current MINTER_ROLE members, and paused() returned false; member identities were not independently re-enumerated on Base in this pass. This is route-scoped bridge mint machinery, not native Mint Authority."
+      },
+      {
+        "id": "wmxn-worldchain-limited-minter-bridge",
+        "label": "Ripio WMXN Worldchain LimitedMinterBridge route",
+        "routeRefs": [
+          "worldchain:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:worldchain:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:worldchain:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge mints WMXN directly to arbitrary recipients through an admin-registered token configuration and a per-token daily limit. The prior reviewed WMXN configuration recorded a 100,000 WMXN/day limit on this route; current storage was not re-enumerated in the 2026-08-16 pass.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The verified adapter source permits token registration, unregistration, and daily-limit updates by the external token admin. The prior 2026-07-20 WMXN read recorded a 100,000 WMXN/day cap; the current route-specific storage value remains an evidence gap.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WMXN, and an operator-gated fulfillBridgeMint() calls LimitedMinterBridge.mintTo() on the destination. The current source-chain binding and fulfillment trace were not established for every route.",
+          "pausersAdminsUpgraders": "At Worldchain block 33793694, WMXN granted MINTER_ROLE to the deployed LimitedMinterBridge; the adapter's own MINTER_ROLE member count was 2 and paused() was false. Token DEFAULT_ADMIN_ROLE controls token registration and limits; the adapter's own DEFAULT_ADMIN_ROLE controls pause. BridgeDeposit DEFAULT_ADMIN_ROLE can update the adapter reference and route configuration.",
+          "onchainAmountBounds": "BridgeDeposit source records totalBurnedTo, totalMintedFrom, and bridgeFulfilled idempotency state, while LimitedMinterBridge enforces the per-token daily cap. No current route-specific burn-versus-mint reconciliation read was established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 33793694,
+        "sources": [
+          {
+            "label": "Worldchain WMXN token",
+            "url": "https://worldscan.org/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "At Worldchain block 33793694, WMXN granted MINTER_ROLE to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. The adapter was deployed, had two current MINTER_ROLE members, and paused() returned false; member identities were not independently re-enumerated on Worldchain in this pass. This is route-scoped bridge mint machinery, not native Mint Authority."
+      },
+      {
+        "id": "wmxn-bsc-limited-minter-bridge",
+        "label": "Ripio WMXN BSC LimitedMinterBridge route",
+        "routeRefs": [
+          "bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:bsc:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:bsc:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge mints WMXN directly to arbitrary recipients through an admin-registered token configuration and a per-token daily limit. The prior reviewed WMXN configuration recorded a 100,000 WMXN/day limit on this route; current storage was not re-enumerated in the 2026-08-16 pass.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The verified adapter source permits token registration, unregistration, and daily-limit updates by the external token admin. The prior 2026-07-20 WMXN read recorded a 100,000 WMXN/day cap; the current route-specific storage value remains an evidence gap.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WMXN, and an operator-gated fulfillBridgeMint() calls LimitedMinterBridge.mintTo() on the destination. The current source-chain binding and fulfillment trace were not established for every route.",
+          "pausersAdminsUpgraders": "At BSC block 116360770, WMXN granted MINTER_ROLE to the deployed LimitedMinterBridge; the adapter's own MINTER_ROLE member count was 2 and paused() was false. Token DEFAULT_ADMIN_ROLE controls token registration and limits; the adapter's own DEFAULT_ADMIN_ROLE controls pause. BridgeDeposit DEFAULT_ADMIN_ROLE can update the adapter reference and route configuration.",
+          "onchainAmountBounds": "BridgeDeposit source records totalBurnedTo, totalMintedFrom, and bridgeFulfilled idempotency state, while LimitedMinterBridge enforces the per-token daily cap. No current route-specific burn-versus-mint reconciliation read was established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116360770,
+        "sources": [
+          {
+            "label": "BSC WMXN token",
+            "url": "https://bscscan.com/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "At BSC block 116360770, WMXN granted MINTER_ROLE to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. The adapter was deployed, had two current MINTER_ROLE members, and paused() returned false; member identities were not independently re-enumerated on BSC in this pass. This is route-scoped bridge mint machinery, not native Mint Authority."
+      },
+      {
+        "id": "wmxn-polygon-limited-minter-bridge",
+        "label": "Ripio WMXN Polygon LimitedMinterBridge route",
+        "routeRefs": [
+          "polygon:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:polygon:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:polygon:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge mints WMXN directly to arbitrary recipients through an admin-registered token configuration and a per-token daily limit. The prior reviewed WMXN configuration recorded a 100,000 WMXN/day limit on this route; current storage was not re-enumerated in the 2026-08-16 pass.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The verified adapter source permits token registration, unregistration, and daily-limit updates by the external token admin. The prior 2026-07-20 WMXN read recorded a 100,000 WMXN/day cap; the current route-specific storage value remains an evidence gap.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WMXN, and an operator-gated fulfillBridgeMint() calls LimitedMinterBridge.mintTo() on the destination. The current source-chain binding and fulfillment trace were not established for every route.",
+          "pausersAdminsUpgraders": "At Polygon block 92145385, WMXN granted MINTER_ROLE to the deployed LimitedMinterBridge; the adapter's own MINTER_ROLE member count was 2 and paused() was false. Token DEFAULT_ADMIN_ROLE controls token registration and limits; the adapter's own DEFAULT_ADMIN_ROLE controls pause. BridgeDeposit DEFAULT_ADMIN_ROLE can update the adapter reference and route configuration.",
+          "onchainAmountBounds": "BridgeDeposit source records totalBurnedTo, totalMintedFrom, and bridgeFulfilled idempotency state, while LimitedMinterBridge enforces the per-token daily cap. No current route-specific burn-versus-mint reconciliation read was established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92145385,
+        "sources": [
+          {
+            "label": "Polygon WMXN token",
+            "url": "https://polygonscan.com/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "At Polygon block 92145385, WMXN granted MINTER_ROLE to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. The adapter was deployed, had two current MINTER_ROLE members, and paused() returned false; member identities were not independently re-enumerated on Polygon in this pass. This is route-scoped bridge mint machinery, not native Mint Authority."
+      },
+      {
+        "id": "wmxn-gnosis-limited-minter-bridge",
+        "label": "Ripio WMXN Gnosis LimitedMinterBridge route",
+        "routeRefs": [
+          "gnosis:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:gnosis:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:gnosis:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge mints WMXN directly to arbitrary recipients through an admin-registered token configuration and a per-token daily limit. The prior reviewed WMXN configuration recorded a 100,000 WMXN/day limit on this route; current storage was not re-enumerated in the 2026-08-16 pass.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The verified adapter source permits token registration, unregistration, and daily-limit updates by the external token admin. The prior 2026-07-20 WMXN read recorded a 100,000 WMXN/day cap; the current route-specific storage value remains an evidence gap.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WMXN, and an operator-gated fulfillBridgeMint() calls LimitedMinterBridge.mintTo() on the destination. The current source-chain binding and fulfillment trace were not established for every route.",
+          "pausersAdminsUpgraders": "At Gnosis block 47762454, WMXN granted MINTER_ROLE to the deployed LimitedMinterBridge; the adapter's own MINTER_ROLE member count was 2 and paused() was false. Token DEFAULT_ADMIN_ROLE controls token registration and limits; the adapter's own DEFAULT_ADMIN_ROLE controls pause. BridgeDeposit DEFAULT_ADMIN_ROLE can update the adapter reference and route configuration.",
+          "onchainAmountBounds": "BridgeDeposit source records totalBurnedTo, totalMintedFrom, and bridgeFulfilled idempotency state, while LimitedMinterBridge enforces the per-token daily cap. No current route-specific burn-versus-mint reconciliation read was established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762454,
+        "sources": [
+          {
+            "label": "Gnosis WMXN token",
+            "url": "https://gnosisscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "At Gnosis block 47762454, WMXN granted MINTER_ROLE to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. The adapter was deployed, had two current MINTER_ROLE members, and paused() returned false; member identities were not independently re-enumerated on Gnosis in this pass. This is route-scoped bridge mint machinery, not native Mint Authority."
+      },
+      {
+        "id": "wmxn-celo-limited-minter-bridge",
+        "label": "Ripio WMXN Celo LimitedMinterBridge route",
+        "routeRefs": [
+          "celo:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter-bridge",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:celo:0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "eoa:celo:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "operator:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge mints WMXN directly to arbitrary recipients through an admin-registered token configuration and a per-token daily limit. The prior reviewed WMXN configuration recorded a 100,000 WMXN/day limit per chain; the current Celo storage value was not re-enumerated.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The verified adapter source permits token registration, unregistration, and daily-limit updates by the external token admin. The prior 2026-07-20 WMXN read recorded a 100,000 WMXN/day cap per chain; the current Celo route-specific value remains an evidence gap.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WMXN, and an operator-gated fulfillBridgeMint() calls LimitedMinterBridge.mintTo() on the destination. Celo's complete source-chain binding and fulfillment trace were not established.",
+          "pausersAdminsUpgraders": "At Celo block 75022345, WMXN granted MINTER_ROLE to LimitedMinterBridge and fixed-destination LimitedMinter. LimitedMinterBridge had two current MINTER_ROLE members (operator EOA 0x5ca3f8eeba12d83408fc097c2dad79212456f20f and BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47); paused() returned false. Token DEFAULT_ADMIN_ROLE controls adapter registration and limits, while adapter and BridgeDeposit admin roles control pause and route configuration.",
+          "onchainAmountBounds": "BridgeDeposit source records totalBurnedTo, totalMintedFrom, and bridgeFulfilled idempotency state, while LimitedMinterBridge enforces a per-token daily cap. No Celo burn-versus-mint reconciliation trace was established."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 75022345,
+        "sources": [
+          {
+            "label": "Celo WMXN token",
+            "url": "https://celoscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio Celo WMXN launch announcement",
+            "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "At Celo block 75022345, WMXN granted MINTER_ROLE to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 and fixed-destination LimitedMinter 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7, while the issuer EOA lacked direct MINTER_ROLE. The adapter's own current MINTER_ROLE members were operator EOA 0x5ca3f8eeba12d83408fc097c2dad79212456f20f and BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47; paused() was false. This representation-like Celo bridge machinery remains route-scoped and does not expand native Mint Authority."
+      },
+      {
+        "id": "wmxn-ethereum-bridge-deposit",
+        "label": "Ripio WMXN Ethereum BridgeDeposit burn and fulfillment",
+        "routeRefs": [
+          "ethereum:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeDeposit routeConfigs select destination chains and the admin-controlled LimitedMinterBridge reference; BRIDGE_OPERATOR_ROLE gates fulfillBridgeMint(). Current source-chain binding was not independently traced.",
+          "onchainAmountBounds": "depositForBridge() burns source WMXN and records totalBurnedTo; fulfillBridgeMint() records totalMintedFrom and bridgeFulfilled keyed by source chain, transaction hash, and deposit ID. No current route-specific reconciliation read was established.",
+          "pausersAdminsUpgraders": "The source gives DEFAULT_ADMIN_ROLE pause, route, fee, rescue, and LimitedMinter update powers, and BRIDGE_OPERATOR_ROLE fulfillment power. The current operator roster was not fully re-enumerated in this pass."
+        },
+        "capDescription": "BridgeDeposit is the issuer-operated source burn and destination fulfillment controller; its route and idempotency checks are bridge accounting, not native issuance.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770925,
+        "sources": [
+          {
+            "label": "Ethereum WMXN token",
+            "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 was deployed on Ethereum at the reviewed block. Its verified source burns source WMXN, gates fulfillment by BRIDGE_OPERATOR_ROLE, prevents duplicate fulfillment, and records outbound burns and inbound mints; prior evidence named operators 0x5ca3f8ee and 0xbc924f70, while current full role enumeration remains deferred."
+      },
+      {
+        "id": "wmxn-base-bridge-deposit",
+        "label": "Ripio WMXN Base BridgeDeposit burn and fulfillment",
+        "routeRefs": [
+          "base:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:base:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeDeposit routeConfigs select destination chains and the admin-controlled LimitedMinterBridge reference; BRIDGE_OPERATOR_ROLE gates fulfillBridgeMint(). Current source-chain binding was not independently traced.",
+          "onchainAmountBounds": "depositForBridge() burns source WMXN and records totalBurnedTo; fulfillBridgeMint() records totalMintedFrom and bridgeFulfilled keyed by source chain, transaction hash, and deposit ID. No current route-specific reconciliation read was established.",
+          "pausersAdminsUpgraders": "The source gives DEFAULT_ADMIN_ROLE pause, route, fee, rescue, and LimitedMinter update powers, and BRIDGE_OPERATOR_ROLE fulfillment power. The current operator roster was not fully re-enumerated in this pass."
+        },
+        "capDescription": "BridgeDeposit is the issuer-operated source burn and destination fulfillment controller; its route and idempotency checks are bridge accounting, not native issuance.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066834,
+        "sources": [
+          {
+            "label": "Base WMXN token",
+            "url": "https://basescan.org/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 was deployed on Base at the reviewed block. Its verified source burns source WMXN, gates fulfillment by BRIDGE_OPERATOR_ROLE, prevents duplicate fulfillment, and records outbound burns and inbound mints; current full role enumeration remains deferred."
+      },
+      {
+        "id": "wmxn-worldchain-bridge-deposit",
+        "label": "Ripio WMXN Worldchain BridgeDeposit burn and fulfillment",
+        "routeRefs": [
+          "worldchain:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:worldchain:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeDeposit routeConfigs select destination chains and the admin-controlled LimitedMinterBridge reference; BRIDGE_OPERATOR_ROLE gates fulfillBridgeMint(). Current source-chain binding was not independently traced.",
+          "onchainAmountBounds": "depositForBridge() burns source WMXN and records totalBurnedTo; fulfillBridgeMint() records totalMintedFrom and bridgeFulfilled keyed by source chain, transaction hash, and deposit ID. No current route-specific reconciliation read was established.",
+          "pausersAdminsUpgraders": "The source gives DEFAULT_ADMIN_ROLE pause, route, fee, rescue, and LimitedMinter update powers, and BRIDGE_OPERATOR_ROLE fulfillment power. The current operator roster was not fully re-enumerated in this pass."
+        },
+        "capDescription": "BridgeDeposit is the issuer-operated source burn and destination fulfillment controller; its route and idempotency checks are bridge accounting, not native issuance.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 33793694,
+        "sources": [
+          {
+            "label": "Worldchain WMXN token",
+            "url": "https://worldscan.org/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 was deployed on Worldchain at the reviewed block. Its verified source burns source WMXN, gates fulfillment by BRIDGE_OPERATOR_ROLE, prevents duplicate fulfillment, and records outbound burns and inbound mints; current full role enumeration remains deferred."
+      },
+      {
+        "id": "wmxn-bsc-bridge-deposit",
+        "label": "Ripio WMXN BSC BridgeDeposit burn and fulfillment",
+        "routeRefs": [
+          "bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:bsc:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeDeposit routeConfigs select destination chains and the admin-controlled LimitedMinterBridge reference; BRIDGE_OPERATOR_ROLE gates fulfillBridgeMint(). Current source-chain binding was not independently traced.",
+          "onchainAmountBounds": "depositForBridge() burns source WMXN and records totalBurnedTo; fulfillBridgeMint() records totalMintedFrom and bridgeFulfilled keyed by source chain, transaction hash, and deposit ID. No current route-specific reconciliation read was established.",
+          "pausersAdminsUpgraders": "The source gives DEFAULT_ADMIN_ROLE pause, route, fee, rescue, and LimitedMinter update powers, and BRIDGE_OPERATOR_ROLE fulfillment power. The current operator roster was not fully re-enumerated in this pass."
+        },
+        "capDescription": "BridgeDeposit is the issuer-operated source burn and destination fulfillment controller; its route and idempotency checks are bridge accounting, not native issuance.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116360770,
+        "sources": [
+          {
+            "label": "BSC WMXN token",
+            "url": "https://bscscan.com/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 was deployed on BSC at the reviewed block. Its verified source burns source WMXN, gates fulfillment by BRIDGE_OPERATOR_ROLE, prevents duplicate fulfillment, and records outbound burns and inbound mints; current full role enumeration remains deferred."
+      },
+      {
+        "id": "wmxn-polygon-bridge-deposit",
+        "label": "Ripio WMXN Polygon BridgeDeposit burn and fulfillment",
+        "routeRefs": [
+          "polygon:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:polygon:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeDeposit routeConfigs select destination chains and the admin-controlled LimitedMinterBridge reference; BRIDGE_OPERATOR_ROLE gates fulfillBridgeMint(). Current source-chain binding was not independently traced.",
+          "onchainAmountBounds": "depositForBridge() burns source WMXN and records totalBurnedTo; fulfillBridgeMint() records totalMintedFrom and bridgeFulfilled keyed by source chain, transaction hash, and deposit ID. No current route-specific reconciliation read was established.",
+          "pausersAdminsUpgraders": "The source gives DEFAULT_ADMIN_ROLE pause, route, fee, rescue, and LimitedMinter update powers, and BRIDGE_OPERATOR_ROLE fulfillment power. The current operator roster was not fully re-enumerated in this pass."
+        },
+        "capDescription": "BridgeDeposit is the issuer-operated source burn and destination fulfillment controller; its route and idempotency checks are bridge accounting, not native issuance.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92145385,
+        "sources": [
+          {
+            "label": "Polygon WMXN token",
+            "url": "https://polygonscan.com/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 was deployed on Polygon at the reviewed block. Its verified source burns source WMXN, gates fulfillment by BRIDGE_OPERATOR_ROLE, prevents duplicate fulfillment, and records outbound burns and inbound mints; current full role enumeration remains deferred."
+      },
+      {
+        "id": "wmxn-gnosis-bridge-deposit",
+        "label": "Ripio WMXN Gnosis BridgeDeposit burn and fulfillment",
+        "routeRefs": [
+          "gnosis:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:gnosis:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "operator:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "operator:0xbc924f70"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeDeposit routeConfigs select destination chains and the admin-controlled LimitedMinterBridge reference; BRIDGE_OPERATOR_ROLE gates fulfillBridgeMint(). Current source-chain binding was not independently traced.",
+          "onchainAmountBounds": "depositForBridge() burns source WMXN and records totalBurnedTo; fulfillBridgeMint() records totalMintedFrom and bridgeFulfilled keyed by source chain, transaction hash, and deposit ID. No current route-specific reconciliation read was established.",
+          "pausersAdminsUpgraders": "The source gives DEFAULT_ADMIN_ROLE pause, route, fee, rescue, and LimitedMinter update powers, and BRIDGE_OPERATOR_ROLE fulfillment power. The current operator roster was not fully re-enumerated in this pass."
+        },
+        "capDescription": "BridgeDeposit is the issuer-operated source burn and destination fulfillment controller; its route and idempotency checks are bridge accounting, not native issuance.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 47762454,
+        "sources": [
+          {
+            "label": "Gnosis WMXN token",
+            "url": "https://gnosisscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 was deployed on Gnosis at the reviewed block. Its verified source burns source WMXN, gates fulfillment by BRIDGE_OPERATOR_ROLE, prevents duplicate fulfillment, and records outbound burns and inbound mints; current full role enumeration remains deferred."
+      },
+      {
+        "id": "wmxn-celo-bridge-deposit",
+        "label": "Ripio WMXN Celo BridgeDeposit burn and fulfillment",
+        "routeRefs": [
+          "celo:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint",
+          "admin",
+          "pause",
+          "validator",
+          "peer-config"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-bridge-deposit",
+          "contract:celo:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "operator:celo:0x5ca3f8eeba12d83408fc097c2dad79212456f20f"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeDeposit routeConfigs select destination chains and the admin-controlled LimitedMinterBridge reference; BRIDGE_OPERATOR_ROLE gates fulfillBridgeMint(). Celo's source-chain binding was not independently traced.",
+          "onchainAmountBounds": "depositForBridge() burns source WMXN and records totalBurnedTo; fulfillBridgeMint() records totalMintedFrom and bridgeFulfilled keyed by source chain, transaction hash, and deposit ID. No Celo burn-versus-mint reconciliation trace was established.",
+          "pausersAdminsUpgraders": "The source gives DEFAULT_ADMIN_ROLE pause, route, fee, rescue, and LimitedMinter update powers, and BRIDGE_OPERATOR_ROLE fulfillment power. The current Celo operator roster was not fully re-enumerated in this pass."
+        },
+        "capDescription": "BridgeDeposit is the issuer-operated source burn and destination fulfillment controller; its route and idempotency checks are bridge accounting, not native issuance.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75022345,
+        "sources": [
+          {
+            "label": "Celo WMXN token",
+            "url": "https://celoscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          }
+        ],
+        "evidence": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 was deployed on Celo at the reviewed block. Its verified source defines source burn, operator-gated fulfillment, duplicate-fulfillment protection, and burn/mint accounting, but the current Celo route binding and operator roster remain unresolved."
+      },
+      {
+        "id": "wmxn-celo-fixed-destination-minter",
+        "label": "Ripio WMXN Celo fixed-destination LimitedMinter route",
+        "routeRefs": [
+          "celo:0x337e7456b420bd3481e7fa61fa9850343d610d34"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+        "failureDomainKeys": [
+          "protocol:ripio-limited-minter",
+          "contract:celo:0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "contract:celo:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The fixed-destination LimitedMinter source uses a destination restriction and daily mint limit. On Celo, its WMXN MINTER_ROLE grant is treated as bridge-route machinery because the deployment is a probable representation rather than a reviewed native issuer liability.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The fixed-destination LimitedMinter source applies an administrator-controlled daily limit; the current Celo storage value was not re-enumerated in this pass.",
+          "trustedPeerOrRemote": "The Celo role graph is representation-like, but the source-chain burn and destination fulfillment binding for this fixed-destination minter remains unresolved.",
+          "pausersAdminsUpgraders": "At Celo block 75022345, WMXN granted MINTER_ROLE to fixed-destination LimitedMinter 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7. The route is retained under Bridge Risk pending a complete bridge trace rather than treated as native mint authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 75022345,
+        "sources": [
+          {
+            "label": "Celo WMXN token",
+            "url": "https://celoscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "Ripio LimitedMinter source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinter.sol"
+          },
+          {
+            "label": "Ripio Celo WMXN launch announcement",
+            "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
+          }
+        ],
+        "evidence": "At Celo block 75022345, current WMXN role reads granted MINTER_ROLE to fixed-destination LimitedMinter 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7 and not directly to issuer EOA 0x466c02e2. Because Celo is a probable bridge representation, this mint capability remains visible under Bridge Risk while its source-chain binding remains unresolved."
       }
     ]
   }

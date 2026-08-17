@@ -48,10 +48,10 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "Aegis has YUSD deployments on Ethereum, BNB Chain, and Avalanche, and issuer route evidence identifies LayerZero-powered bridging to Avalanche. The bridge route is therefore treated as external lock/burn-and-mint infrastructure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "tier": "external-validated-network",
+    "summary": "YUSD native issuance remains on independent Ethereum and BSC deployments; Ethereum and BSC YUSDMintBurnOFTAdapters, Avalanche YUSDOFT, and Katana YUSDOFT form a LayerZero V2 burn/mint mesh. Source-side adapters burn through chain-local AegisMinting and destination OFTs mint on LayerZero credit, while Safe-controlled peers, delegates, endpoint validation, DVNs, and active cross-chain operators remain Bridge Risk rather than native Mint Authority. Katana's current OFT bytecode is not explorer-verified, so its source provenance remains an explicit route gap.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex FIX2-12 mint/bridge boundary review; Kimi P2 control cohort dc-3 (lead usds-sky)",
     "confidence": "verified",
     "protocols": [
       {
@@ -73,6 +73,18 @@
       {
         "label": "LayerZero OFT reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "Aegis official contracts repository",
+        "url": "https://github.com/Aegis-im/aegis-contracts/tree/master/contracts"
+      },
+      {
+        "label": "LayerZero Katana deployment",
+        "url": "https://docs.layerzero.network/v2/deployments/chains/katana"
+      },
+      {
+        "label": "Katana LayerZero bridge documentation",
+        "url": "https://docs.katana.network/katana/how-to/bridge-to-katana-with-layerzero/"
       }
     ],
     "routes": [
@@ -88,17 +100,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native YUSD on Ethereum: minter() = AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2 and owner() = the Aegis 3/5 Safe (verified on-chain 2026-07-20); no bridge representation.",
+        "reviewNote": "Re-verified at Ethereum block 25770366 on 2026-08-16: native YUSD minter() = AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2 and owner() = the Aegis 3-of-5 Safe. This route is native issuance; its AegisMinting collateral/order and reward-mint controls are reviewed in Mint Authority, while its cross-chain adapter rail is overlaid in Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770366,
         "sources": [
           {
-            "label": "YUSD on Etherscan (minter() probed 2026-07-20)",
-            "url": "https://etherscan.io/address/0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a"
+            "label": "Ethereum YUSD verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a?fields=sources"
           },
           {
-            "label": "Aegis docs",
-            "url": "https://docs.aegis.im/"
+            "label": "Ethereum YUSD token",
+            "url": "https://etherscan.io/address/0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a#code"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum.publicnode.com/"
           }
         ]
       },
@@ -114,17 +131,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native YUSD on BSC: minter() = the BSC AegisMinting 0x02bf8f0e046f471709e578b1e633077096ce65cf (owner() = the same Aegis 3/5 Safe, aegisConfig() present, yusd() = this token; verified on-chain 2026-07-20).",
+        "reviewNote": "Re-verified at BSC block 116345704 on 2026-08-16: native YUSD minter() = BSC AegisMinting 0x02bf8f0e046f471709e578b1e633077096ce65cf; its owner/defaultAdmin and AegisConfig.owner() are the same Aegis 3-of-5 Safe. This route is native issuance; its collateral/order path and configurable native mint limit are reviewed in Mint Authority, while its cross-chain adapter rail is overlaid in Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116345704,
         "sources": [
           {
-            "label": "YUSD on BscScan (minter() probed 2026-07-20)",
+            "label": "BSC YUSD verified source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xab3dbcd9b096c3ff76275038bf58eac10d22c61f?fields=sources"
+          },
+          {
+            "label": "BSC YUSD token",
             "url": "https://bscscan.com/address/0xab3dbcd9b096c3ff76275038bf58eac10d22c61f"
           },
           {
-            "label": "Aegis docs",
-            "url": "https://docs.aegis.im/"
+            "label": "BSC JSON-RPC",
+            "url": "https://bsc.publicnode.com/"
           }
         ]
       },
@@ -137,11 +159,11 @@
         "protocol": "LayerZero OFT (Aegis)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
-        "semantics": "lock-mint",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Avalanche YUSD token returns the LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fE728c, so this deployment is the Aegis OFT and the OFT contract itself is the mint/burn authority for the representation.",
+        "reviewNote": "Re-verified at Avalanche block 92976886 on 2026-08-16: YUSD is the Aegis YUSDOFT representation, not an Aegis collateral-mint deployment. endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fE728c, owner() and EndpointV2.delegates(YUSD) = the Aegis Safe, and peers are configured for the Ethereum, BSC, and Katana EIDs 30101/30102/30375. The OFT burns on source debit and mints on LayerZero credit; this is an external-validated burn/mint route, not lock/mint.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "avalanche",
         "controllerAddress": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
@@ -149,17 +171,418 @@
           "protocol:layerzero-v2",
           "contract:avalanche:0xca2671dcd031a72359f456c212f62a9bda737cd7"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92976886,
         "sources": [
           {
-            "label": "YUSD on Snowtrace (endpoint() probed 2026-07-20)",
+            "label": "Avalanche YUSDOFT verified source",
+            "url": "https://sourcify.dev/server/v2/contract/43114/0xca2671dcd031a72359f456c212f62a9bda737cd7?fields=sources"
+          },
+          {
+            "label": "Avalanche YUSD LayerZero OFT",
             "url": "https://snowtrace.io/address/0xca2671dcd031a72359f456c212f62a9bda737cd7"
           },
           {
-            "label": "LayerZero on L2BEAT",
-            "url": "https://l2beat.com/interop/protocols/layerzero"
+            "label": "Avalanche JSON-RPC",
+            "url": "https://avalanche.publicnode.com/"
           }
         ]
+      },
+      {
+        "id": "katana:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "sourceChain": "ethereum",
+        "destinationChain": "katana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "protocol": "LayerZero OFT (Aegis)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Re-verified at Katana block 40173492 on 2026-08-16: the same YUSDOFT address is deployed on Katana with endpoint() = LayerZero EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() and EndpointV2.delegates(YUSD) = the Aegis Safe, sharedDecimals() = 6, and peers for Ethereum, BSC, and Avalanche EIDs 30101/30102/30106. The current code size is 13,161 bytes and supply was 0.239979 YUSD. It burns on source debit and mints on LayerZero credit; Katana bytecode is not explorer-verified, so exact source provenance remains an evidence gap.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "katana",
+        "controllerAddress": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:katana:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 40173492,
+        "sources": [
+          {
+            "label": "Katana LayerZero deployment",
+            "url": "https://docs.layerzero.network/v2/deployments/chains/katana"
+          },
+          {
+            "label": "Katana LayerZero bridge documentation",
+            "url": "https://docs.katana.network/katana/how-to/bridge-to-katana-with-layerzero/"
+          },
+          {
+            "label": "Katana YUSD token record",
+            "url": "https://explorer.katanarpc.com/address/0xca2671dcd031a72359f456c212f62a9bda737cd7"
+          },
+          {
+            "label": "Katana JSON-RPC",
+            "url": "https://rpc.katana.network/"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "ethereum-yusd-oft-adapter-safe",
+        "label": "Ethereum YUSD LayerZero adapter Safe owner",
+        "routeRefs": [
+          "ethereum:0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+          "bsc:0xab3dbcd9b096c3ff76275038bf58eac10d22c61f",
+          "avalanche:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+          "katana:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x4Fe78eF65BD8EDDED480efaB030BA680646503c8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xaf12b0ae5a72d7b8a8ec675f3e76e2db56143565",
+          "safe:ethereum:0x4fe78ef65bd8edded480efab030ba680646503c8"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xA09A1319ace58B466D71377b958248265420Cf6c",
+            "0x9bd53dDa93630BA2856CbbD376e3ED04D3D23d21",
+            "0x0b241D2F1A060FEAe6968f7CeD3221D4aB29D865",
+            "0x89CAFfDd8F3ca008aaeAA69BA85332Ca85D18D3e",
+            "0x7eff43566b8c7491a39f81E3BF9E4d9b2D212787"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedAt": "2026-08-16",
+          "observedBlock": 25770366,
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Ethereum adapter peers(30102) = BSC adapter 0x539e46827c37A3ef11c7cE521CC56B4d59E602e3, peers(30106) = Avalanche OFT, and peers(30375) = Katana OFT. The Safe is also the LayerZero EndpointV2 delegate for the reviewed OFT mesh.",
+          "attestorQuorum": "The representative Ethereum-to-BSC EndpointV2 config returned 20 confirmations, four required DVNs, and zero optional DVNs: 0x373a6e5c0c4e89e24819f00aa37ea370917aaff4, 0x380275805876ff19055ea900cdb2b46a94ecf20d, 0x589dedbd617e0cbcb916a9223f4d1300c294236b, and 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd. The other directed lanes were not all replayed.",
+          "pausersAdminsUpgraders": "The adapter is non-proxy and has no app-level bridge rate limiter identified; the Safe controls its owner, peer configuration, endpoint delegate, enforced options, inspector, and pre-crime settings."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770366,
+        "sources": [
+          {
+            "label": "Ethereum YUSDMintBurnOFTAdapter verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xaf12b0ae5a72d7b8a8ec675f3e76e2db56143565?fields=sources"
+          },
+          {
+            "label": "Aegis admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4Fe78eF65BD8EDDED480efaB030BA680646503c8/"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum.publicnode.com/"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Ethereum block 25770366, the YUSDMintBurnOFTAdapter was an immutable non-proxy owned by the 3-of-5 Aegis Safe, pointed to Ethereum AegisMinting through immutable aegisMinting(), and used the LayerZero V2 endpoint. Its _debit path transfers YUSD into the adapter and calls burnForCrossChain; its _credit path calls mintForCrossChain. Current peer and delegate reads cover BSC, Avalanche, and Katana destinations, while exact DVN/Executor/enforced-option replay for every lane remains an explicit gap."
+      },
+      {
+        "id": "bsc-yusd-oft-adapter-safe",
+        "label": "BSC YUSD LayerZero adapter Safe owner",
+        "routeRefs": [
+          "ethereum:0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+          "bsc:0xab3dbcd9b096c3ff76275038bf58eac10d22c61f",
+          "avalanche:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+          "katana:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4Fe78eF65BD8EDDED480efaB030BA680646503c8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:bsc:0x539e46827c37a3ef11c7ce521cc56b4d59e602e3",
+          "safe:bsc:0x4fe78ef65bd8edded480efab030ba680646503c8"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xA09A1319ace58B466D71377b958248265420Cf6c",
+            "0x9bd53dDa93630BA2856CbbD376e3ED04D3D23d21",
+            "0x0b241D2F1A060FEAe6968f7CeD3221D4aB29D865",
+            "0x89CAFfDd8F3ca008aaeAA69BA85332Ca85D18D3e",
+            "0x7eff43566b8c7491a39f81E3BF9E4d9b2D212787"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedAt": "2026-08-16",
+          "observedBlock": 25770366,
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BSC adapter peers(30101) = Ethereum adapter, peers(30106) = Avalanche OFT, and peers(30375) = Katana OFT. The common Safe is the reviewed owner/delegate for this adapter and the OFT mesh.",
+          "attestorQuorum": "The representative BSC-to-Ethereum EndpointV2 config returned 20 confirmations, four required DVNs, and zero optional DVNs: 0x247624e2143504730aec22912ed41f092498bef2, 0xf0a5c5306adbfd4e3dfd5d4b148b451c411d3878, 0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda, and 0xfd6865c841c2d64565562fcc7e05e619a30615f0. The other directed lanes were not all replayed.",
+          "pausersAdminsUpgraders": "The adapter is non-proxy and no app-level bridge rate limiter was found; the Safe controls owner, peer configuration, endpoint delegate, enforced options, inspector, and pre-crime settings."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116345704,
+        "sources": [
+          {
+            "label": "BSC YUSDMintBurnOFTAdapter verified source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x539e46827c37a3ef11c7ce521cc56b4d59e602e3?fields=sources"
+          },
+          {
+            "label": "BSC JSON-RPC",
+            "url": "https://bsc.publicnode.com/"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At BSC block 116345704, the YUSDMintBurnOFTAdapter was an immutable non-proxy owned by the same 3-of-5 Safe, pointed to BSC AegisMinting, and used the LayerZero V2 endpoint. Its _debit path transfers YUSD and calls burnForCrossChain; its _credit path calls mintForCrossChain. Current peer reads cover Ethereum, Avalanche, and Katana EIDs, and the representative BSC-to-Ethereum DVN config is recorded; complete per-lane DVN/Executor/enforced-option replay remains unresolved."
+      },
+      {
+        "id": "avalanche-yusd-oft-safe",
+        "label": "Avalanche YUSDOFT Safe owner and LayerZero delegate",
+        "routeRefs": [
+          "avalanche:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x4Fe78eF65BD8EDDED480efaB030BA680646503c8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:avalanche:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+          "safe:avalanche:0x4fe78ef65bd8edded480efab030ba680646503c8"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xA09A1319ace58B466D71377b958248265420Cf6c",
+            "0x9bd53dDa93630BA2856CbbD376e3ED04D3D23d21",
+            "0x0b241D2F1A060FEAe6968f7CeD3221D4aB29D865",
+            "0x89CAFfDd8F3ca008aaeAA69BA85332Ca85D18D3e",
+            "0x7eff43566b8c7491a39f81E3BF9E4d9b2D212787"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedAt": "2026-08-16",
+          "observedBlock": 25770366,
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Avalanche YUSDOFT peers EIDs 30101/30102/30375 to the Ethereum adapter, BSC adapter, and Katana OFT; EndpointV2.delegates(YUSD) returned the Safe.",
+          "attestorQuorum": "The representative Avalanche-to-Ethereum EndpointV2 config returned 20 confirmations, four required DVNs, and zero optional DVNs: 0x07c05eab7716acb6f83ebf6268f8eecda8892ba1, 0x962f502a63f5fbeb44dc9ab932122648e8352959, 0xbe57e9e7d9eb16b92c6383792abe28d64a18c0f1, and 0xcc49e6fca014c77e1eb604351cc1e08c84511760. Exact DVN replay for every Avalanche lane was not completed.",
+          "pausersAdminsUpgraders": "The non-proxy OFT owner and endpoint delegate are the Safe; no application-level OFT rate limiter or implementation upgrade surface was found."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92976886,
+        "sources": [
+          {
+            "label": "Avalanche YUSDOFT verified source",
+            "url": "https://sourcify.dev/server/v2/contract/43114/0xca2671dcd031a72359f456c212f62a9bda737cd7?fields=sources"
+          },
+          {
+            "label": "Avalanche JSON-RPC",
+            "url": "https://avalanche.publicnode.com/"
+          },
+          {
+            "label": "LayerZero V2 OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Avalanche block 92976886, YUSDOFT owner() and EndpointV2.delegates(YUSD) returned the Aegis Safe. The non-proxy OFT burns on source debit and mints on LayerZero credit, with peers to Ethereum, BSC, and Katana. The Safe controls peer/delegate and bridge administration; the representative DVN/confirmation read is preserved without generalizing it to every directed lane."
+      },
+      {
+        "id": "katana-yusd-oft-safe",
+        "label": "Katana YUSDOFT Safe owner and LayerZero delegate",
+        "routeRefs": [
+          "katana:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0x4Fe78eF65BD8EDDED480efaB030BA680646503c8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:katana:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+          "safe:katana:0x4fe78ef65bd8edded480efab030ba680646503c8"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xA09A1319ace58B466D71377b958248265420Cf6c",
+            "0x9bd53dDa93630BA2856CbbD376e3ED04D3D23d21",
+            "0x0b241D2F1A060FEAe6968f7CeD3221D4aB29D865",
+            "0x89CAFfDd8F3ca008aaeAA69BA85332Ca85D18D3e",
+            "0x7eff43566b8c7491a39f81E3BF9E4d9b2D212787"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedAt": "2026-08-16",
+          "observedBlock": 25770366,
+          "source": "safe-api"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Katana YUSDOFT peers EIDs 30101/30102/30106 to the Ethereum adapter, BSC adapter, and Avalanche OFT; EndpointV2.delegates(YUSD) returned the Safe.",
+          "attestorQuorum": "The representative Katana-to-Ethereum EndpointV2 config returned 20 confirmations, four required DVNs, and zero optional DVNs: 0x282b3386571f7f794450d5789911a9804fa346b4, 0x53ff818a1c492e667e2cd0b5afe0fc82c66d33c7, 0x7cc59b5062a8291804a21a2a793c6ce9ea2f0eb9, and 0x84a410a8a912e333b957680998a76e526f98e207. Exact DVN replay for every Katana lane was not completed.",
+          "pausersAdminsUpgraders": "The current Katana OFT is non-proxy by code-size/EIP-1967 reads; the Safe controls owner/delegate, peers, and bridge configuration. Katana bytecode is not explorer-verified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 40173492,
+        "sources": [
+          {
+            "label": "Katana LayerZero deployment",
+            "url": "https://docs.layerzero.network/v2/deployments/chains/katana"
+          },
+          {
+            "label": "Katana YUSD token record",
+            "url": "https://explorer.katanarpc.com/address/0xca2671dcd031a72359f456c212f62a9bda737cd7"
+          },
+          {
+            "label": "Katana JSON-RPC",
+            "url": "https://rpc.katana.network/"
+          }
+        ],
+        "evidence": "At Katana block 40173492, the same YUSDOFT address had owner() and EndpointV2.delegates(YUSD) equal to the Aegis Safe, endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, and peers to Ethereum, BSC, and Avalanche. Code size was 13,161 bytes and supply was 0.239979 YUSD. It is a burn/mint representation; the explorer does not provide verified source, so exact implementation provenance remains an evidence gap."
+      },
+      {
+        "id": "ethereum-aegis-cross-chain-operator",
+        "label": "Ethereum AegisMinting active cross-chain operator",
+        "routeRefs": [
+          "ethereum:0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+          "bsc:0xab3dbcd9b096c3ff76275038bf58eac10d22c61f",
+          "avalanche:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+          "katana:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xaf12b0ae5a72d7b8a8ec675f3e76e2db56143565",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xaf12b0ae5a72d7b8a8ec675f3e76e2db56143565",
+          "contract:ethereum:0xc4df68e592245ca5202fe8b7c438d2b799820fc2",
+          "safe:ethereum:0x4fe78ef65bd8edded480efab030ba680646503c8"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "onchainAmountBounds": "mintForCrossChain and burnForCrossChain bypass whitelist, trusted-signer, collateral-deposit, and native mintLimit checks; conservation depends on the honest source burn and LayerZero message path.",
+          "trustedPeerOrRemote": "The immutable Ethereum adapter is the active cross-chain operator and is bound to the reviewed Ethereum AegisMinting; its LayerZero peers cover BSC, Avalanche, and Katana.",
+          "pausersAdminsUpgraders": "The operator is active at the current storage-slot-25 read and crossChainPaused() was false; the Safe's native admin/settings powers can change the cross-chain operator and pause state."
+        },
+        "capDescription": "The active adapter can invoke AegisMinting.mintForCrossChain and burnForCrossChain outside the native collateral, trusted-signer, whitelist, and mint-limit path; route conservation is supplied by source burn and validated LayerZero delivery.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770366,
+        "sources": [
+          {
+            "label": "Ethereum AegisMinting verified source and storage layout",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=all"
+          },
+          {
+            "label": "Ethereum YUSDMintBurnOFTAdapter verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xaf12b0ae5a72d7b8a8ec675f3e76e2db56143565?fields=sources"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum.publicnode.com/"
+          }
+        ],
+        "evidence": "At Ethereum block 25770366, storage slot 25 (_crossChainOperatorAddress in the verified layout) returned adapter 0xaf12b0ae5a72d7b8a8ec675f3e76e2db56143565. The verified AegisMinting source restricts mintForCrossChain and burnForCrossChain to that adapter and crossChainPaused; these functions bypass native collateral, trusted signer, whitelist, and mint-limit checks. The route is conserved only when the LayerZero source burn and destination mint are both honest, so this active operator is bridge risk rather than native Mint Authority."
+      },
+      {
+        "id": "bsc-aegis-cross-chain-operator",
+        "label": "BSC AegisMinting active cross-chain operator",
+        "routeRefs": [
+          "ethereum:0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+          "bsc:0xab3dbcd9b096c3ff76275038bf58eac10d22c61f",
+          "avalanche:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+          "katana:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x539e46827c37a3ef11c7ce521cc56b4d59e602e3",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:bsc:0x539e46827c37a3ef11c7ce521cc56b4d59e602e3",
+          "contract:bsc:0x02bf8f0e046f471709e578b1e633077096ce65cf",
+          "safe:bsc:0x4fe78ef65bd8edded480efab030ba680646503c8"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "onchainAmountBounds": "mintForCrossChain and burnForCrossChain bypass whitelist, trusted-signer, collateral-deposit, and native mintLimit checks; conservation depends on the honest source burn and LayerZero message path.",
+          "trustedPeerOrRemote": "The immutable BSC adapter is the active cross-chain operator and is bound to BSC AegisMinting; its LayerZero peers cover Ethereum, Avalanche, and Katana.",
+          "pausersAdminsUpgraders": "The operator is active at the current storage-slot-25 read and crossChainPaused() was false; the Safe's native admin/settings powers can change the cross-chain operator and pause state."
+        },
+        "capDescription": "The active adapter can invoke AegisMinting.mintForCrossChain and burnForCrossChain outside the native collateral, trusted-signer, whitelist, and mint-limit path; route conservation is supplied by source burn and validated LayerZero delivery.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116345704,
+        "sources": [
+          {
+            "label": "BSC AegisMinting verified source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x02bf8f0e046f471709e578b1e633077096ce65cf?fields=all"
+          },
+          {
+            "label": "BSC YUSDMintBurnOFTAdapter verified source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x539e46827c37a3ef11c7ce521cc56b4d59e602e3?fields=sources"
+          },
+          {
+            "label": "BSC JSON-RPC",
+            "url": "https://bsc.publicnode.com/"
+          }
+        ],
+        "evidence": "At BSC block 116345704, storage slot 25 (_crossChainOperatorAddress in the verified layout) returned adapter 0x539e46827c37a3ef11c7ce521cc56b4d59e602e3. The verified BSC AegisMinting source restricts mintForCrossChain and burnForCrossChain to that adapter and crossChainPaused; these functions bypass native collateral, trusted signer, whitelist, and mint-limit checks. The route is conserved only when the LayerZero source burn and destination mint are both honest, so this active operator is bridge risk rather than native Mint Authority."
       }
     ]
   }

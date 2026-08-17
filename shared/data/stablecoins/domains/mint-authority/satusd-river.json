@@ -4,23 +4,49 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "satUSD mint authority is resolved through the fully enumerated Ethereum and Base ward histories plus the reviewed deployment inventory for every other tracked chain. Chain-local SatoshiXApp contracts mint CDP debt, while the same River owner EOA controls UUPS upgrades and can appoint unrestricted wards.",
+    "summary": "satUSD native Mint Authority covers the chain-local SatoshiXApp/CDP issuance paths, the verified Ethereum and Base ward histories, and the River owner EOA's native UUPS/rely powers across all 11 reviewed native deployments. LayerZero OFT burn/mint, peer, delegate, endpoint, and messaging machinery is assessed separately under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+        "arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
+        "bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
+        "bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
+        "bsquared:0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f",
+        "hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
+        "xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+      ],
       "proxyAddresses": [
         "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
-        "0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+        "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
+        "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
+        "0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
+        "0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f",
+        "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
+        "0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
       ],
       "implementationAddresses": [
         "0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d",
-        "0x256bd26fddc17a1d1a9b974bcd268f89bfe15789"
+        "0xb247bce6f7ca0345174ee0d3860a36e7d72b5a9d",
+        "0x256bd26fddc17a1d1a9b974bcd268f89bfe15789",
+        "0x1b6e58e9f72a8428cd8af3f8c45d509f4c5f73e3",
+        "0x094b60f2295c68a898f3f1d04348b84deb11d3f7",
+        "0x013e761f65e054d80fcfe3eced6770666d44c40f"
       ],
       "adminAddresses": [
         "0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47"
       ],
       "canChangeMintLogic": true,
       "controlRef": "satUSD UUPS owner and ward administrator",
-      "observedAt": "2026-07-20",
+      "observedAt": "2026-08-16",
       "sources": [
         {
           "label": "satUSD Ethereum proxy",
@@ -29,6 +55,22 @@
         {
           "label": "satUSD Base proxy",
           "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162#code"
+        },
+        {
+          "label": "satUSD Arbitrum/BSC/Sonic/Hemi implementation",
+          "url": "https://arbiscan.io/address/0xb247bce6f7ca0345174ee0d3860a36e7d72b5a9d#code"
+        },
+        {
+          "label": "satUSD BOB implementation",
+          "url": "https://explorer.gobob.xyz/address/0x1b6e58e9f72a8428cd8af3f8c45d509f4c5f73e3"
+        },
+        {
+          "label": "satUSD Bitlayer implementation",
+          "url": "https://www.btrscan.com/address/0x094b60f2295c68a898f3f1d04348b84deb11d3f7"
+        },
+        {
+          "label": "satUSD X Layer implementation",
+          "url": "https://www.oklink.com/xlayer/address/0x013e761f65e054d80fcfe3eced6770666d44c40f"
         }
       ]
     },
@@ -36,6 +78,9 @@
       {
         "chain": "ethereum",
         "address": "0xb8374e4DfF99202292da2FE34425e1dE665b67E6",
+        "deploymentRefs": [
+          "ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+        ],
         "label": "satUSD Ethereum SatoshiXApp mint path",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -55,6 +100,9 @@
       {
         "chain": "base",
         "address": "0x9a3c724ee9603A7550499bE73DC743B371811dd3",
+        "deploymentRefs": [
+          "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+        ],
         "label": "satUSD Base SatoshiXApp mint path",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -74,6 +122,19 @@
       {
         "chain": "ethereum",
         "address": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "deploymentRefs": [
+          "ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+          "arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
+          "bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
+          "bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
+          "bsquared:0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f",
+          "hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+          "bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
+          "xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+        ],
         "label": "satUSD UUPS owner and ward administrator",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -96,6 +157,9 @@
       {
         "chain": "ethereum",
         "address": "0x5cd923fb3a229813e53253a37dce0b1d8aee5296",
+        "deploymentRefs": [
+          "ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+        ],
         "label": "satUSD Ethereum River system contract ward (impl 0x87440b10)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -115,6 +179,9 @@
       {
         "chain": "ethereum",
         "address": "0x355961ace96134fe7ba72b24b24559e7ca4aed86",
+        "deploymentRefs": [
+          "ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+        ],
         "label": "satUSD Ethereum River system contract ward (impl 0xf3d6913b)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -134,6 +201,9 @@
       {
         "chain": "base",
         "address": "0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0",
+        "deploymentRefs": [
+          "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+        ],
         "label": "satUSD Base operational EOA ward",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -153,6 +223,9 @@
       {
         "chain": "base",
         "address": "0xc25981394d1612930c79faf083fdc3fe8d0773c7",
+        "deploymentRefs": [
+          "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+        ],
         "label": "satUSD Base operational EOA ward",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -172,6 +245,9 @@
       {
         "chain": "base",
         "address": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "deploymentRefs": [
+          "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+        ],
         "label": "satUSD Base UUPS owner and ward administrator",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -187,15 +263,256 @@
             "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
           }
         ]
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec",
+        "deploymentRefs": [
+          "arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ],
+        "label": "satUSD Arbitrum SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495310633,
+        "evidence": "River's Arbitrum deployment registry names SatoshiXApp 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec and local collateral/TroveManager branches. At Arbitrum block 495310633, the reviewed DebtTokenWithLz deployment uses the local SatoshiXApp mint path; this is native CDP issuance, not the separate LayerZero OFT path.",
+        "sources": [
+          {
+            "label": "River Arbitrum deployment",
+            "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+          },
+          {
+            "label": "satUSD Arbitrum token",
+            "url": "https://arbiscan.io/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          }
+        ]
+      },
+      {
+        "chain": "bsc",
+        "address": "0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec",
+        "deploymentRefs": [
+          "bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ],
+        "label": "satUSD BSC SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116368532,
+        "evidence": "River's deployed-contract registry names SatoshiXApp 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec and local collateral/TroveManager branches for BSC. At BSC block 116368532, the reviewed DebtTokenWithLz deployment uses the local SatoshiXApp mint path; this is native CDP issuance, not the separate LayerZero OFT path.",
+        "sources": [
+          {
+            "label": "River deployed-contract registry",
+            "url": "https://docs.river.inc/outro/deployed-contracts"
+          },
+          {
+            "label": "satUSD BSC token",
+            "url": "https://bscscan.com/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          }
+        ]
+      },
+      {
+        "chain": "sonic",
+        "address": "0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec",
+        "deploymentRefs": [
+          "sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ],
+        "label": "satUSD Sonic SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 77635658,
+        "evidence": "River's Sonic deployment registry names SatoshiXApp 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec and local collateral/TroveManager branches. At Sonic block 77635658, the reviewed DebtTokenWithLz deployment uses the local SatoshiXApp mint path; this is native CDP issuance, not the separate LayerZero OFT path.",
+        "sources": [
+          {
+            "label": "River Sonic deployment",
+            "url": "https://docs.river.inc/outro/deployed-contracts/sonic"
+          },
+          {
+            "label": "satUSD Sonic token",
+            "url": "https://sonicscan.org/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          }
+        ]
+      },
+      {
+        "chain": "bob",
+        "address": "0xec272af6e65c4d7857091225fa8ed300df787ccf",
+        "deploymentRefs": [
+          "bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f"
+        ],
+        "label": "satUSD BOB SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 37032292,
+        "evidence": "River's BOB deployment inventory names SatoshiXApp 0xec272af6e65c4d7857091225fa8ed300df787ccf and local collateral/TroveManager branches. At BOB block 37032292, the reviewed DebtTokenWithLz deployment uses the local SatoshiXApp mint path; this is native CDP issuance, not the separate LayerZero OFT path.",
+        "sources": [
+          {
+            "label": "River deployed-contract registry",
+            "url": "https://docs.river.inc/outro/deployed-contracts"
+          },
+          {
+            "label": "satUSD BOB token",
+            "url": "https://explorer.gobob.xyz/token/0xecf21b335b41f9d5a89f6186a99c19a3c467871f"
+          }
+        ]
+      },
+      {
+        "chain": "bitlayer",
+        "address": "0x95e5b977c8c33de5b3b5d2216f1097c2017bdf71",
+        "deploymentRefs": [
+          "bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783"
+        ],
+        "label": "satUSD Bitlayer SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 24883067,
+        "evidence": "River's Bitlayer deployment registry names SatoshiXApp 0x95e5b977c8c33de5b3b5d2216f1097c2017bdf71 and local collateral/TroveManager branches. At Bitlayer block 24883067, the reviewed DebtTokenWithLz deployment uses the local SatoshiXApp mint path; this is native CDP issuance, not the separate LayerZero OFT path.",
+        "sources": [
+          {
+            "label": "River Bitlayer deployment",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bitlayer"
+          },
+          {
+            "label": "satUSD Bitlayer token",
+            "url": "https://www.btrscan.com/token/0xba50ddac6b2f5482ca064efac621e0c7c0f6a783"
+          }
+        ]
+      },
+      {
+        "chain": "bsquared",
+        "address": "0x2863e3d0f29e2eec6adefc0df0d3171dad542c02",
+        "deploymentRefs": [
+          "bsquared:0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f"
+        ],
+        "label": "satUSD B² SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The reviewed DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "evidence": "River's B² deployment page and reviewed fixed-block inventory identify SatoshiXApp 0x2863e3d0f29e2eec6adefc0df0d3171dad542c02 plus local collateral/TroveManager branches. The current B² RPC endpoint did not return state during the 2026-08-16 pass, so this control relies on the official deployment evidence and does not infer any remote ward membership; the local SatoshiXApp/CDP path remains native issuance.",
+        "sources": [
+          {
+            "label": "River B² deployment",
+            "url": "https://docs.river.inc/products/editor/bsquared"
+          },
+          {
+            "label": "satUSD B² token",
+            "url": "https://explorer.bsquared.network/token/0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f"
+          }
+        ]
+      },
+      {
+        "chain": "hemi",
+        "address": "0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec",
+        "deploymentRefs": [
+          "hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ],
+        "label": "satUSD Hemi SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 5088321,
+        "evidence": "River's Hemi deployment registry names SatoshiXApp 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec and local collateral/TroveManager branches. At Hemi block 5088321, the reviewed DebtTokenWithLz deployment uses the local SatoshiXApp mint path; this is native CDP issuance, not the separate LayerZero OFT path.",
+        "sources": [
+          {
+            "label": "River Hemi deployment",
+            "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+          },
+          {
+            "label": "satUSD Hemi token",
+            "url": "https://explorer.hemi.xyz/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          }
+        ]
+      },
+      {
+        "chain": "bevm",
+        "address": "0xd4b0eecf327c0f1b43d487fecfd2ea56e746a72b",
+        "deploymentRefs": [
+          "bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478"
+        ],
+        "label": "satUSD BEVM SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The reviewed DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "evidence": "River's BEVM deployment page and reviewed fixed-block inventory identify SatoshiXApp 0xd4b0eecf327c0f1b43d487fecfd2ea56e746a72b plus local collateral/TroveManager branches. The current BEVM RPC endpoint did not return state during the 2026-08-16 pass, so this control relies on the official deployment evidence and does not infer any remote ward membership; the local SatoshiXApp/CDP path remains native issuance.",
+        "sources": [
+          {
+            "label": "River BEVM deployment",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bevm"
+          },
+          {
+            "label": "satUSD BEVM token",
+            "url": "https://scan-mainnet.bevm.io/token/0x2031c8848775a5efb7cff2a4edbe3f04c50a1478"
+          }
+        ]
+      },
+      {
+        "chain": "xlayer",
+        "address": "0xb4d4793a1cd57b6ecebadf6fcbe5aed03e8e93ec",
+        "deploymentRefs": [
+          "xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+        ],
+        "label": "satUSD X Layer SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified DebtTokenWithLz permits this local SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 68157538,
+        "evidence": "River's X Layer deployment registry names SatoshiXApp 0xb4d4793a1cd57b6ecebadf6fcbe5aed03e8e93ec and local collateral/TroveManager branches. At X Layer block 68157538, the reviewed DebtTokenWithLz deployment uses the local SatoshiXApp mint path; this is native CDP issuance, not the separate LayerZero OFT path.",
+        "sources": [
+          {
+            "label": "River X Layer deployment",
+            "url": "https://docs.river.inc/outro/deployed-contracts/xlayer"
+          },
+          {
+            "label": "satUSD X Layer token",
+            "url": "https://www.oklink.com/xlayer/token/0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "2026-07-20 full-history enumeration: every transaction to the Ethereum satUSD proxy (2,058 txs) and Base satUSD proxy (10,000 txs) was scanned for rely()/deny()/enableTroveManager() via explorer transaction APIs. Ethereum: 4 rely calls, no deny, no enableTroveManager — current wards()=true set is SatoshiXApp 0xb8374e4DfF99202292da2FE34425e1dE665b67E6, owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47, and River system UUPS proxies 0x5cd923fb3a229813e53253a37dce0b1d8aee5296 (impl 0x87440b10b933ef4cac07f3b4b1e41f1d02e50338) and 0x355961ace96134fe7ba72b24b24559e7ca4aed86 (impl 0xf3d6913b6725d7812aacf9f4f9219106470c3e20). Base: 3 rely calls, no deny, no enableTroveManager — wards()=true set is SatoshiXApp 0x9a3c724ee9603A7550499bE73DC743B371811dd3 and operational EOAs 0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0 and 0xc25981394d1612930c79faf083fdc3fe8d0773c7. The troveManager mapping is empty on both chains (enableTroveManager was never called and the mapping has no other writer). wards(address) reads at 2026-07-20 confirm every listed member is still enabled. Economic-posture fields reviewed 2026-08-15: unrestricted Ethereum and Base wards plus the owner-controlled rely and upgrade paths escape CDP collateral gating, and no whole-supply reconciliation, independent attestation, or named prudential supervisor is evidenced. Sol reconciliation adjudication 2026-08-15: the unrestricted wards can mint directly and the owner can appoint new wards or replace mint logic outside SatoshiXApp CDP collateral gating; because no whole-supply reconciliation covering those escape paths is evidenced, reconciliation is applicable but unknown.",
-      "reviewer": "P2 mint-free cohort; OpenAI Codex V9 deployment reconciliation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Boundary review 2026-08-16: chain-local SatoshiXApp/CDP issuance, verified unrestricted wards, owner-controlled rely(), and native UUPS mint-logic replacement remain Mint Authority; LayerZero OFT burn/mint, peers, delegates, endpoints, messaging, and DVN/executor machinery are scored only under bridgeRouteRisk. 2026-07-20 full-history enumeration: every transaction to the Ethereum satUSD proxy (2,058 txs) and Base satUSD proxy (10,000 txs) was scanned for rely()/deny()/enableTroveManager() via explorer transaction APIs. Ethereum: 4 rely calls, no deny, no enableTroveManager — current wards()=true set is SatoshiXApp 0xb8374e4DfF99202292da2FE34425e1dE665b67E6, owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47, and River system UUPS proxies 0x5cd923fb3a229813e53253a37dce0b1d8aee5296 (impl 0x87440b10b933ef4cac07f3b4b1e41f1d02e50338) and 0x355961ace96134fe7ba72b24b24559e7ca4aed86 (impl 0xf3d6913b6725d7812aacf9f4f9219106470c3e20). Base: 3 rely calls, no deny, no enableTroveManager — wards()=true set is SatoshiXApp 0x9a3c724ee9603A7550499bE73DC743B371811dd3 and operational EOAs 0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0 and 0xc25981394d1612930c79faf083fdc3fe8d0773c7. The troveManager mapping is empty on both chains (enableTroveManager was never called and the mapping has no other writer). wards(address) reads at 2026-07-20 confirm every listed member is still enabled. Economic-posture fields reviewed 2026-08-15: unrestricted Ethereum and Base wards plus the owner-controlled rely and upgrade paths escape CDP collateral gating, and no whole-supply reconciliation, independent attestation, or named prudential supervisor is evidenced. Sol reconciliation adjudication 2026-08-15: the unrestricted wards can mint directly and the owner can appoint new wards or replace mint logic outside SatoshiXApp CDP collateral gating; because no whole-supply reconciliation covering those escape paths is evidenced, reconciliation is applicable but unknown.",
+      "reviewer": "P2 mint-free cohort; OpenAI Codex V9 deployment reconciliation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15; Codex mint-bridge-boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "River docs",

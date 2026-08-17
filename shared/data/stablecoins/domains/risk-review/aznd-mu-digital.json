@@ -9,31 +9,32 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "AZND moves between Ethereum and Monad as a native LayerZero V2 Omnichain Fungible Token (burn-on-source / mint-on-destination), confirmed by the verified Ethereum implementation (0x2E49c14A) inheriting @layerzerolabs/oft-evm-upgradeable OFTUpgradeable whose _debit burns and _credit mints, wired to the canonical LZ V2 EndpointV2, and by a live ETH<->Monad message flow on LayerZeroScan (15+ delivered, ~24 messages/24h). It is a pure OFT, not an OFT Adapter/lockbox. The OApp runs a custom (non-default) DVN security stack on the Monad pathway (EID 30390) using named LayerZero DVNs (Deutsche Telekom, LayerZero Labs, Canary, plus Frax/Horizen), placing it in the external-validated-network tier. (Exact required/optional DVN counts and threshold were not independently byte-confirmed from getConfig.)",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-    "confidence": "probable",
+    "summary": "AZND uses a two-contract LayerZero V2 external-lock-mint route: Monad AZNDOFTAdapter 0x7b2cba10e42e33c0a91b3216f0529eacc88392a2 locks and unlocks canonical AZND, while the Ethereum UUPS OFT 0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0 burns on outbound transfer and mints on inbound credit. LayerZero V2 trusted peers connect the adapter and OFT. The route is supply-conserving only against the adapter's escrowed canonical AZND; Ethereum destination mint remains arbitrary bridge-credit risk if peer, Endpoint, or upgrade controls fail. Fixed-block ULN302 reads show 15 confirmations on Ethereum and 4 on Monad, with 3 required DVNs plus 1-of-2 optional DVNs in both directions, supporting the external-validated-network tier.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Pharos bridge-route re-verification; mint-bridge-boundary verification 2026-08-16",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "explorer",
-        "name": "LayerZero V2 OFT (Omnichain Fungible Token)",
+        "name": "LayerZero V2 OFT and OFT Adapter (MU Digital AZND)",
         "slug": "layerzero",
         "url": "https://etherscan.io/address/0x52c66B5E7f8Fde20843De900C5C8B4b0F23708A0#code",
         "bridgeTypes": [
           "burn-mint",
+          "lock-mint",
           "external-validated-network"
         ],
-        "note": "Ethereum AZND (0x52c66B5E...08A0) verified-source OFT importing @layerzerolabs/oft-evm-upgradeable; sends via LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fE728c. Standard OFT, not an Adapter/lockbox."
+        "note": "Ethereum AZND (0x52c66B5E...08A0) is a verified UUPS OFT importing @layerzerolabs/oft-evm-upgradeable and sending via LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fE728c. Its _debit burns and _credit mints. The paired Monad AZNDOFTAdapter 0x7b2cba10...392a locks and unlocks canonical AZND; the adapter is bridge machinery, not a second native issuer."
       },
       {
         "source": "explorer",
-        "name": "DVN security stack (EndpointV2.getConfig, Monad EID 30390)",
+        "name": "DVN security stack (EndpointV2.getConfig, Ethereum and Monad ULN302)",
         "slug": "layerzero-dvn",
         "url": "https://layerzeroscan.com/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
         "bridgeTypes": [
           "external-validated-network"
         ],
-        "note": "Required 3/3 DVNs: Deutsche Telekom, LayerZero Labs, Canary. Optional 1-of-2: Horizen, Frax. Custom ULN302 config (not LZDeadDVN default); confirmations 15 send / 4 receive. Peer set at eid 30390."
+        "note": "Fixed-block ULN302 reads show 3 required DVNs (Deutsche Telekom, LayerZero Labs, Canary) plus 1-of-2 optional DVNs (Horizen, Frax) in both directions. Ethereum send and receive use 15 confirmations; Monad send and receive use 4. The Ethereum peer at EID 30390 is the Monad adapter and the Monad peer at EID 30101 is the Ethereum OFT."
       }
     ],
     "sources": [
@@ -56,6 +57,26 @@
       {
         "label": "Mu Digital docs - Smart Contract Addresses (AZND on Ethereum + Monad; docs do not name the bridge)",
         "url": "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md"
+      },
+      {
+        "label": "MonadScan verified AZNDOFTAdapter proxy",
+        "url": "https://monadscan.com/address/0x7b2cba10e42e33c0a91b3216f0529eacc88392a2#code"
+      },
+      {
+        "label": "MonadScan verified AZNDOFTAdapter implementation",
+        "url": "https://monadscan.com/address/0x2288832cce65c8d627b4e6dc6ce3963e233bb14d#code"
+      },
+      {
+        "label": "Ethereum fixed-block JSON-RPC reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Monad fixed-block JSON-RPC reads",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "LayerZero V2 Endpoint DVN configuration procedure",
+        "url": "https://docs.layerzero.network/v2/developers/evm/configuration/dvn-executor-config"
       }
     ],
     "routes": [
@@ -63,33 +84,46 @@
         "id": "ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
         "destinationChain": "ethereum",
         "contractAddress": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
-        "protocol": "LayerZero OFT (MU Digital AZND)",
+        "protocol": "LayerZero V2 OFT + OFT Adapter (MU Digital AZND)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Ethereum 2026-07-20 (block 25570987): AZND token 0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0 (symbol AZND, EIP-1967 proxy to 0x2e49c14a73210356de9f23a46a98de777b8a0db6) exposes endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; the OFT contract itself is the mint/burn authority for this representation. owner() = MU Digital AccessManager default admin 0x8b5f269f68d42490dee19fc4ab275cdd80940068 (EOA, per the mint-authority review).",
+        "reviewNote": "Verified at Ethereum block 25770630 (UTC 2026-08-16 22:30:47): the AZND UUPS OFT proxy 0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0 resolves to implementation 0x2e49c14a73210356de9f23a46a98de777b8a0db6 and EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. Its _debit burns on outbound transfer and _credit mints on inbound transfer; owner() is 0x8b5f269f68d42490dee19fc4ab275cdd80940068, accessManager() is 0xe683fcd4411dde6fc2be16c2512f9109c907b520, paused() is false, and peers(30390) is Monad AZNDOFTAdapter 0x7b2cba10e42e33c0a91b3216f0529eacc88392a2. The paired Monad adapter locks and unlocks canonical AZND, so the external-lock-mint route is supply-conserving only against that escrow; the adapter is the canonical-side lockbox controller for the route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sourceChain": "monad",
         "canonicalChain": "monad",
         "controllerChain": "ethereum",
         "controllerAddress": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
-          "contract:ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"
+          "contract:ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "contract:ethereum:0x2e49c14a73210356de9f23a46a98de777b8a0db6",
+          "contract:ethereum:0xe683fcd4411dde6fc2be16c2512f9109c907b520",
+          "contract:monad:0x7b2cba10e42e33c0a91b3216f0529eacc88392a2",
+          "eoa:0x8b5f269f68d42490dee19fc4ab275cdd80940068",
+          "eoa:0xeae74c8397b033105152a7622cd9a0950e97310f"
         ],
-        "observedBlock": 25570987,
+        "observedBlock": 25770630,
         "sources": [
           {
-            "label": "AZND OFT on Etherscan (verified 2026-07-20)",
+            "label": "AZND OFT on Etherscan (verified 2026-08-16)",
             "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"
           },
           {
             "label": "MU Digital",
             "url": "https://mudigital.net/"
+          },
+          {
+            "label": "MonadScan verified AZNDOFTAdapter",
+            "url": "https://monadscan.com/address/0x7b2cba10e42e33c0a91b3216f0529eacc88392a2#code"
+          },
+          {
+            "label": "Monad fixed-block JSON-RPC reads",
+            "url": "https://rpc.monad.xyz"
           }
         ]
       },
@@ -104,21 +138,218 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical AZND on Monad (verified 2026-07-20, block 88903152): token 0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8 (symbol AZND) with no LayerZero endpoint surface; minting runs through the PrimaryMarket minter contract 0xe64730de04aeaf8d3892 per the verified mint-authority review, administered by the MU Digital AccessManager default admin 0x8b5f269f68d42490dee19fc4ab275cdd80940068.",
+        "reviewNote": "Canonical AZND on Monad (verified at block 96611302, UTC 2026-08-16 22:39:43): token 0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8 has no LayerZero endpoint surface and native minting runs through PrimaryMarket 0xe64730de04aeaf8d38925825d77d7a4c00340c89 under the MU Digital AccessManager. Separate canonical-side bridge machinery, AZNDOFTAdapter 0x7b2cba10e42e33c0a91b3216f0529eacc88392a2, locks and unlocks this token and is not an additional native issuance deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "canonicalChain": "monad",
-        "observedBlock": 88903152,
+        "observedBlock": 96611302,
         "sources": [
           {
-            "label": "AZND on Monad explorer (verified 2026-07-20)",
+            "label": "AZND on Monad explorer (verified 2026-08-16)",
             "url": "https://explorer.monad.xyz/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
           },
           {
             "label": "MU Digital",
             "url": "https://mudigital.net/"
+          },
+          {
+            "label": "MonadScan verified AZNDOFTAdapter",
+            "url": "https://monadscan.com/address/0x7b2cba10e42e33c0a91b3216f0529eacc88392a2#code"
+          },
+          {
+            "label": "Monad fixed-block JSON-RPC reads",
+            "url": "https://rpc.monad.xyz"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "aznd-ethereum-oft-mu-admin",
+        "label": "AZND Ethereum OFT Mu Digital admin",
+        "routeRefs": [
+          "ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x8b5f269f68d42490dee19fc4ab275cdd80940068",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "contract:ethereum:0x2e49c14a73210356de9f23a46a98de777b8a0db6",
+          "contract:ethereum:0xe683fcd4411dde6fc2be16c2512f9109c907b520",
+          "contract:monad:0x7b2cba10e42e33c0a91b3216f0529eacc88392a2",
+          "contract:monad:0x7b14860ecd88fb65a22a1d259d1248bf199fb47f",
+          "eoa:0x8b5f269f68d42490dee19fc4ab275cdd80940068"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25770630, the OFT owner was 0x8b5f269f...0068 and peers(30390) returned Monad AZNDOFTAdapter 0x7b2cba10...392a. The OFT owner can replace the trusted peer; the paired adapter peer at Monad EID 30101 is recorded in the canonical-side bridge control.",
+          "rateLimits": "No bridge rate-limit module was exposed by the verified Ethereum OFT ABI or source; no aggregate or per-route mint ceiling was evidenced.",
+          "caps": "The Ethereum OFT burns on outbound _debit and mints inbound _credit without a token-level amount cap. Route conservation depends on the Monad adapter's escrowed canonical AZND rather than an Ethereum native-issuance cap.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770630, paused() was false, the OFT implementation was 0x2e49c14a...0db6, accessManager() was 0xe683fcd4...b520, and that AccessManager's default admin was the same Mu Digital EOA. The OFT owner governs peer and application configuration; the AccessManager default-admin path governs UUPS replacement. No Safe or timelock was evidenced.",
+          "onchainAmountBounds": "At Ethereum block 25770630, the representation totalSupply was 15,911,609.410255 AZND. The paired Monad adapter held the same 15,911,609.410255 AZND at Monad block 96611302; this is a lock-backed route slice, not independent native issuance."
+        },
+        "bypassSurfaces": [
+          "Ethereum OFT trusted-peer replacement",
+          "Ethereum OFT UUPS implementation replacement",
+          "Ethereum AccessManager default-admin UUPS control",
+          "Inbound LayerZero _credit bridge mint"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770630,
+        "sources": [
+          {
+            "label": "Etherscan verified Ethereum AZND OFT",
+            "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+          },
+          {
+            "label": "Ethereum fixed-block JSON-RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "MonadScan verified AZNDOFTAdapter",
+            "url": "https://monadscan.com/address/0x7b2cba10e42e33c0a91b3216f0529eacc88392a2#code"
+          },
+          {
+            "label": "Monad fixed-block JSON-RPC reads",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Ethereum block 25770630, AZND proxy owner() returned 0x8b5f269f...0068, accessManager() returned 0xe683fcd4...b520, the EIP-1967 implementation was 0x2e49c14a...0db6, paused() was false, and peers(30390) returned Monad AZNDOFTAdapter 0x7b2cba10...392a. The verified OFT source burns on outbound _debit and mints on inbound _credit; the owner can change peers and the AccessManager default admin can authorize UUPS replacement. The shared EOA therefore controls the Ethereum representation's bridge mint/burn, pause, peer, admin, and upgrade surfaces. The adapter, Monad AccessManager, shared-EOA common mode, and the route's fixed Endpoint/DVN observations remain recorded in the companion Bridge Risk controls."
+      },
+      {
+        "id": "aznd-monad-oft-adapter-mu-admin",
+        "label": "AZND Monad OFT Adapter Mu Digital admin and escrow",
+        "routeRefs": [
+          "ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "pause",
+          "escrow",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x8b5f269f68d42490dee19fc4ab275cdd80940068",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0x7b2cba10e42e33c0a91b3216f0529eacc88392a2",
+          "contract:monad:0x2288832cce65c8d627b4e6dc6ce3963e233bb14d",
+          "contract:monad:0x7b14860ecd88fb65a22a1d259d1248bf199fb47f",
+          "contract:ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "eoa:0x8b5f269f68d42490dee19fc4ab275cdd80940068"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Monad block 96611302, AZNDOFTAdapter owner() returned 0x8b5f269f...0068, accessManager() returned 0x7b14860e...b47f, and peers(30101) returned Ethereum OFT 0x52c66b5e...08a0. The adapter owner can replace the trusted peer and its AccessManager default admin is the same Mu Digital EOA.",
+          "rateLimits": "No bridge rate-limit module was exposed by the verified AZNDOFTAdapter ABI or source. approvalRequired() was true and decimalConversionRate() was 1,000,000,000,000.",
+          "caps": "The adapter is a lockbox for canonical AZND and has no independently evidenced aggregate amount cap. It locks canonical AZND on outbound transfer and unlocks it on inbound transfer; arbitrary excess credit would require a peer, Endpoint, or implementation failure elsewhere in the route.",
+          "pausersAdminsUpgraders": "At Monad block 96611302, paused() was false, the adapter implementation was 0x2288832c...bb14d, and its AccessManager implementation was 0xef1776ed...5461. The shared Mu Digital EOA owns the adapter and is its AccessManager default admin; no Safe or timelock was evidenced.",
+          "onchainAmountBounds": "At Monad block 96611302, canonical AZND totalSupply was 16,326,375.99 and the adapter escrow balance was 15,911,609.410255 AZND. The Ethereum representation totalSupply was 15,911,609.410255 at block 25770630, supporting conservation for the locked slice only."
+        },
+        "capDescription": "Monad AZNDOFTAdapter escrow is the route's canonical lockbox; the adapter's bridge slice is separately escrowed from native AZND supply and no aggregate rate-limit cap was evidenced.",
+        "bypassSurfaces": [
+          "Monad AZNDOFTAdapter trusted-peer replacement",
+          "Monad AZNDOFTAdapter UUPS implementation replacement",
+          "Monad AccessManager default-admin UUPS control",
+          "Adapter escrow release and inbound unlock path"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 96611302,
+        "sources": [
+          {
+            "label": "MonadScan verified AZNDOFTAdapter proxy",
+            "url": "https://monadscan.com/address/0x7b2cba10e42e33c0a91b3216f0529eacc88392a2#code"
+          },
+          {
+            "label": "MonadScan verified AZNDOFTAdapter implementation",
+            "url": "https://monadscan.com/address/0x2288832cce65c8d627b4e6dc6ce3963e233bb14d#code"
+          },
+          {
+            "label": "Monad fixed-block JSON-RPC reads",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "LayerZero OFT burn/mint and adapter lock/unlock mechanics",
+            "url": "https://docs.layerzero.network/v2/developers/evm/oft/quickstart"
+          }
+        ],
+        "evidence": "At Monad block 96611302, AZNDOFTAdapter owner() returned 0x8b5f269f...0068, accessManager() returned 0x7b14860e...b47f, endpoint() returned 0x6f475642...dd5b, paused() was false, and peers(30101) returned Ethereum OFT 0x52c66b5e...08a0. token() returned canonical AZND 0x4917a5ec...1fe8, approvalRequired() was true, and the adapter held 15,911,609.410255 AZND. The adapter therefore preserves the adverse bridge admin, peer, pause, upgrade, and escrow facts without treating its lock/unlock machinery as independent native mint authority."
+      },
+      {
+        "id": "aznd-layerzero-endpoint-delegate",
+        "label": "AZND LayerZero Endpoint delegate and DVN configuration EOA",
+        "routeRefs": [
+          "ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "validator"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xeae74c8397b033105152a7622cd9a0950e97310f",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "endpoint:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "endpoint:monad:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "eoa:0xeae74c8397b033105152a7622cd9a0950e97310f",
+          "eoa:0x8b5f269f68d42490dee19fc4ab275cdd80940068",
+          "dvn:deutsche-telekom",
+          "dvn:layerzero-labs",
+          "dvn:canary",
+          "dvn:horizen",
+          "dvn:frax"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Ethereum Endpoint delegate was 0xeae74c8397b033105152a7622cd9a0950e97310f at block 25770630 and the Monad Endpoint delegate was the same EOA at block 96611302. The OApp owner can replace the delegate, while peer bindings connect Ethereum OFT 0x52c66b5e...08a0 and Monad AZNDOFTAdapter 0x7b2cba10...392a.",
+          "attestorQuorum": "Fixed Endpoint V2 ULN302 reads show Ethereum send and receive each use 15 confirmations and Monad send and receive each use 4 confirmations. Both directions use 3 required DVNs — Deutsche Telekom, LayerZero Labs, and Canary — plus 1-of-2 optional DVNs — Horizen and Frax. Ethereum send executor is 0x173272739bd7aa6e4e214714048a9fe699453059 and Monad send executor is 0x4208d6e27538189bb48e603d6123a94b8abe0a0b; both max message sizes are 10,000.",
+          "signingModel": "Endpoint application configuration is delegate-controlled by the code-empty EOA 0xeae74c8397b033105152a7622cd9a0950e97310f. No Safe threshold, module, guard, or multisig control was evidenced for the delegate or the shared Mu EOA.",
+          "pausersAdminsUpgraders": "The OApp owner and AccessManager paths can replace the delegate or bridge-side implementations; the delegate's DVN, library, and Endpoint configuration is a route-level validator and administration surface, not native AZND issuance."
+        },
+        "bypassSurfaces": [
+          "LayerZero Endpoint delegate replacement",
+          "ULN302 DVN quorum and confirmation configuration",
+          "LayerZero send/receive library configuration"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770630,
+        "sources": [
+          {
+            "label": "Ethereum fixed-block JSON-RPC reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Monad fixed-block JSON-RPC reads",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "LayerZero V2 Endpoint DVN configuration procedure",
+            "url": "https://docs.layerzero.network/v2/developers/evm/configuration/dvn-executor-config"
+          },
+          {
+            "label": "LayerZero V2 metadata and DVN name resolution",
+            "url": "https://metadata.layerzero-api.com/v1/metadata"
+          }
+        ],
+        "evidence": "At Ethereum block 25770630 and Monad block 96611302, the fixed Endpoint V2 reads independently resolved the shared delegate EOA and the ULN302 send/receive security configuration. Ethereum uses 15 confirmations per direction and Monad uses 4; both use a 3-of-3 required DVN set plus a 1-of-2 optional set. The delegate and OApp owner surfaces therefore remain explicitly scoreable as LayerZero validator, peer, and application-configuration risk."
       }
     ]
   }

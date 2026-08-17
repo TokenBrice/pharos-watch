@@ -23,33 +23,383 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "sUSD has reviewed Synthetix bridge evidence through the Synthetix Teleporter and Chainlink CCIP, plus the legacy native Optimism bridge path. Because the durable cross-chain route depends on external CCIP messaging for Teleporter transfers, Pharos scores it as external validated network.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "Legacy Synthetix sUSD has native-issuance deployments on Ethereum and Optimism, both suspended and retired under SIP-423. Bridge Risk separately covers the historical Ethereum↔Optimism lock-mint route, the Arbitrum canonical-rollup StandardArbERC20 gateway with its UpgradeExecutor-owned ProxyAdmin, and the Fantom AnySwap/Multichain representation whose EOA-controlled Swapin mint remains arbitrary. Synthetix Teleporter and CCIP material is V3-only and is not treated as a durable bridge route for this retired V2x token.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge boundary migration; susd-synthetix verified finding",
     "confidence": "verified",
     "protocols": [
       {
-        "source": "docs",
-        "name": "Chainlink CCIP",
-        "url": "https://docs.chain.link/resources/bridge-risks",
+        "source": "issuer",
+        "name": "Synthetix legacy Ethereum↔Optimism native bridge",
+        "url": "https://blog.synthetix.io/susd-bridge-enabled/",
         "bridgeTypes": [
-          "external-messaging",
-          "validated-network"
+          "native-lock-mint"
+        ],
+        "note": "The official bridge announcement describes the seven-day Optimism withdrawal delay; SIP-423 subsequently suspended and retired legacy sUSD."
+      },
+      {
+        "source": "docs",
+        "name": "Arbitrum standard token bridge",
+        "url": "https://github.com/OffchainLabs/token-bridge-contracts/blob/main/contracts/tokenbridge/arbitrum/gateway/L2ArbitrumGateway.sol",
+        "bridgeTypes": [
+          "canonical-rollup",
+          "lock-mint"
         ]
+      },
+      {
+        "source": "manual",
+        "name": "AnySwap/Multichain legacy DCRM bridge",
+        "url": "https://docs.multichain.org/developer-guide/how-to-integrate-front-end-bridges",
+        "bridgeTypes": [
+          "burn-mint"
+        ],
+        "note": "The Fantom representation exposes the older DCRM-style Swapin/Swapout path; current MPC signer set and route liveness are not verified."
       }
     ],
     "sources": [
       {
-        "label": "Synthetix Teleporter CCIP launch",
-        "url": "https://blog.synthetix.io/synthetix-launches-teleporters-with-chainlinks-ccip/"
+        "label": "SIP-423: sUSD Retirement & Staking Reform",
+        "url": "https://sips.synthetix.io/sips/sip-423/"
       },
       {
-        "label": "Synthetix sUSD bridge enabled",
+        "label": "Transitioning to Synthetix V3",
+        "url": "https://blog.synthetix.io/transitioning-to-synthetix-v3-scaling-susd-migrating-snx/"
+      },
+      {
+        "label": "The sUSD Bridge has been enabled",
         "url": "https://blog.synthetix.io/susd-bridge-enabled/"
       },
       {
-        "label": "Chainlink bridge-risk docs",
-        "url": "https://docs.chain.link/resources/bridge-risks"
+        "label": "Synthetix Teleporters with Chainlink CCIP (V3-only context)",
+        "url": "https://blog.synthetix.io/synthetix-launches-teleporters-with-chainlinks-ccip/"
+      },
+      {
+        "label": "Arbitrum verified sUSD representation",
+        "url": "https://arbitrum.blockscout.com/address/0xa970af1a584579b618be4d69ad6f73459d112f95?tab=contract"
+      },
+      {
+        "label": "Fantom sUSD AnySwap representation",
+        "url": "https://explorer.fantom.network/address/0x0e1694483ebb3b74d3054e383840c6cf011e518e"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+        "protocol": "Synthetix legacy sUSD native issuance (retired)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "SIP-423 identifies Ethereum as a native legacy sUSD issuance domain and suspends minting and burning. At Ethereum block 25,771,200 the ProxyERC20 target was the verified terminal RetiredSynthsUSD implementation, totalSupply() was zero, and the target exposed no issue or mint path; proxy replacement remains in Mint Authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xeb3107117fead7de89cd14d463d340a2e6917769",
+        "failureDomainKeys": [
+          "contract:ethereum:0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+          "safe:ethereum:0xeb3107117fead7de89cd14d463d340a2e6917769"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771200,
+        "sources": [
+          {
+            "label": "SIP-423: sUSD Retirement & Staking Reform",
+            "url": "https://sips.synthetix.io/sips/sip-423/"
+          },
+          {
+            "label": "Ethereum sUSD proxy",
+            "url": "https://etherscan.io/address/0x57ab1ec28d129707052df4df418d58a2d46d5f51"
+          },
+          {
+            "label": "Ethereum verified RetiredSynthsUSD implementation",
+            "url": "https://eth.blockscout.com/address/0xeb05c1de97296ae3dca16f99cd0bdf5a7910943c?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9",
+        "protocol": "Synthetix legacy sUSD native issuance + native Ethereum↔Optimism bridge (retired)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "SIP-423 identifies Optimism as a second native legacy sUSD issuance domain and suspends minting and burning. The historical Ethereum↔Optimism native bridge used lock-mint semantics with a seven-day Optimism withdrawal delay; the tracked token is now retired and its terminal target has no direct issue path.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x6d4a64c57612841c2c6745db2a4e4db34f002d20",
+        "failureDomainKeys": [
+          "contract:optimism:0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9",
+          "contract:optimism:0x6d4a64c57612841c2c6745db2a4e4db34f002d20",
+          "contract:ethereum:0x0e16a6876210841577b233c4165d7b7edf640b8a",
+          "safe:ethereum:0xeb3107117fead7de89cd14d463d340a2e6917769"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 155663777,
+        "sources": [
+          {
+            "label": "SIP-423: sUSD Retirement & Staking Reform",
+            "url": "https://sips.synthetix.io/sips/sip-423/"
+          },
+          {
+            "label": "The sUSD Bridge has been enabled",
+            "url": "https://blog.synthetix.io/susd-bridge-enabled/"
+          },
+          {
+            "label": "Optimism sUSD proxy and verified retired implementation",
+            "url": "https://optimism.blockscout.com/address/0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9?tab=contract"
+          },
+          {
+            "label": "Optimism OwnerRelayOnOptimism",
+            "url": "https://optimism.blockscout.com/address/0x6d4a64c57612841c2c6745db2a4e4db34f002d20?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xa970af1a584579b618be4d69ad6f73459d112f95",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa970af1a584579b618be4d69ad6f73459d112f95",
+        "protocol": "Arbitrum canonical-rollup StandardArbERC20 gateway",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arbitrum block 495,309,738, the verified StandardArbERC20 representation pointed to Ethereum sUSD 0x57ab1ec28d129707052df4df418d58a2d46d5f51 and L2 gateway 0x09e9222e96e7b4ae2a407b98d48e330053351eee. The gateway implementation was L2ERC20Gateway 0x1dcf7d03574fbc7c205f41f2e116ee094a652e93; its transparent ProxyAdmin 0xd570ace65c43af47101fc6250fd6fc63d1c22a86 was owned by UpgradeExecutor 0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827. Inbound mint finalization is restricted to the aliased L1 counterpart gateway 0xa3a7b6f88361f48403514059f1f16c8e78d60eec, so this is route accounting rather than independent Synthetix issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827",
+        "failureDomainKeys": [
+          "contract:arbitrum:0xa970af1a584579b618be4d69ad6f73459d112f95",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee",
+          "contract:arbitrum:0xd570ace65c43af47101fc6250fd6fc63d1c22a86",
+          "contract:arbitrum:0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495309738,
+        "sources": [
+          {
+            "label": "Arbitrum verified sUSD representation",
+            "url": "https://arbitrum.blockscout.com/address/0xa970af1a584579b618be4d69ad6f73459d112f95?tab=contract"
+          },
+          {
+            "label": "Offchain Labs L2ArbitrumGateway source",
+            "url": "https://github.com/OffchainLabs/token-bridge-contracts/blob/main/contracts/tokenbridge/arbitrum/gateway/L2ArbitrumGateway.sol"
+          },
+          {
+            "label": "Arbitrum L2 standard gateway proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x09e9222e96e7b4ae2a407b98d48e330053351eee?tab=contract"
+          },
+          {
+            "label": "Arbitrum gateway ProxyAdmin",
+            "url": "https://arbitrum.blockscout.com/address/0xd570ace65c43af47101fc6250fd6fc63d1c22a86?tab=contract"
+          },
+          {
+            "label": "Arbitrum governance ownership and upgrade overview",
+            "url": "https://github.com/ArbitrumFoundation/governance/blob/main/docs/overview.md"
+          }
+        ]
+      },
+      {
+        "id": "fantom:0x0e1694483ebb3b74d3054e383840c6cf011e518e",
+        "sourceChain": "ethereum",
+        "destinationChain": "fantom",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0e1694483ebb3b74d3054e383840c6cf011e518e",
+        "protocol": "AnySwap/Multichain legacy DCRM representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Fantom block 122,919,507, the representation had totalSupply() 58944710934226086136, owner() 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe, and AnySwap/Multichain-style Swapin, Swapout, and changeDCRMOwner selectors. Swapin is an arbitrary token-level inbound mint authority. The current DCRM/MPC signer set and whether the historical route still services requests are not verified, so the route tier remains opaque-or-unknown while the proven token-level authority stays scoreable.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "fantom",
+        "controllerAddress": "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+        "failureDomainKeys": [
+          "contract:fantom:0x0e1694483ebb3b74d3054e383840c6cf011e518e",
+          "eoa:fantom:0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+          "protocol:multichain-legacy"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 122919507,
+        "sources": [
+          {
+            "label": "Fantom sUSD AnySwap representation",
+            "url": "https://explorer.fantom.network/address/0x0e1694483ebb3b74d3054e383840c6cf011e518e"
+          },
+          {
+            "label": "AnySwap/Multichain bridge integration guide",
+            "url": "https://docs.multichain.org/developer-guide/how-to-integrate-front-end-bridges"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "susd-ethereum-optimism-native-bridge",
+        "label": "sUSD Ethereum↔Optimism legacy native bridge",
+        "routeRefs": [
+          "ethereum:0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+          "optimism:0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The official Synthetix bridge announcement describes the native Ethereum↔Optimism route and its seven-day Optimism withdrawal delay.",
+          "rateLimits": "SIP-423 suspended and retired legacy sUSD; no current live route cap or bridge liveness is asserted.",
+          "pausersAdminsUpgraders": "The historical route is not treated as a durable Teleporter/CCIP path for legacy V2x sUSD; both canonical token targets are terminal RetiredSynthsUSD implementations."
+        },
+        "capDescription": "The historical native bridge used lock-mint semantics with a seven-day Optimism withdrawal delay. It is retained as Bridge Risk evidence but is suspended/retired for the tracked legacy token.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "The sUSD Bridge has been enabled",
+            "url": "https://blog.synthetix.io/susd-bridge-enabled/"
+          },
+          {
+            "label": "SIP-423: sUSD Retirement & Staking Reform",
+            "url": "https://sips.synthetix.io/sips/sip-423/"
+          }
+        ],
+        "evidence": "Synthetix's official bridge announcement documented the Ethereum↔Optimism native bridge and seven-day Optimism withdrawal delay. SIP-423 subsequently suspended and retired legacy sUSD on both networks; the bridge fact remains structured under Bridge Risk so the historical lock-mint machinery is not silently lost."
+      },
+      {
+        "id": "susd-arbitrum-standard-gateway",
+        "label": "Arbitrum sUSD StandardArbERC20 gateway",
+        "routeRefs": [
+          "arbitrum:0xa970af1a584579b618be4d69ad6f73459d112f95"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222e96e7b4ae2a407b98d48e330053351eee",
+        "failureDomainKeys": [
+          "contract:arbitrum:0xa970af1a584579b618be4d69ad6f73459d112f95",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee",
+          "protocol:arbitrum-standard-gateway"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The verified L2 gateway finalizes inbound transfers only from its aliased L1 counterpart gateway 0xa3a7b6f88361f48403514059f1f16c8e78d60eec.",
+          "pausersAdminsUpgraders": "The L2 gateway proxy is administered by ProxyAdmin 0xd570ace65c43af47101fc6250fd6fc63d1c22a86; its UpgradeExecutor ownership and replacement powers are recorded in a separate Bridge Risk control."
+        },
+        "capDescription": "StandardArbERC20 mint and burn are route-accounting operations finalized through the canonical L1 gateway; this route does not create independent Synthetix native liabilities.",
+        "canRaiseCap": false,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495309738,
+        "sources": [
+          {
+            "label": "Arbitrum verified sUSD representation",
+            "url": "https://arbitrum.blockscout.com/address/0xa970af1a584579b618be4d69ad6f73459d112f95?tab=contract"
+          },
+          {
+            "label": "Offchain Labs L2ArbitrumGateway source",
+            "url": "https://github.com/OffchainLabs/token-bridge-contracts/blob/main/contracts/tokenbridge/arbitrum/gateway/L2ArbitrumGateway.sol"
+          }
+        ],
+        "evidence": "At Arbitrum block 495,309,738, the destination token had totalSupply() 673449472260631042410 and its verified StandardArbERC20 logic pointed to the Ethereum sUSD proxy and L2 gateway. The gateway source restricts inbound finalization to the aliased L1 counterpart, so its bridge-controlled mint/burn path is conserved route accounting rather than independent Synthetix issuance."
+      },
+      {
+        "id": "susd-arbitrum-gateway-upgrade-executor",
+        "label": "Arbitrum sUSD gateway ProxyAdmin and UpgradeExecutor",
+        "routeRefs": [
+          "arbitrum:0xa970af1a584579b618be4d69ad6f73459d112f95"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827",
+        "failureDomainKeys": [
+          "contract:arbitrum:0xd570ace65c43af47101fc6250fd6fc63d1c22a86",
+          "contract:arbitrum:0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827",
+          "protocol:arbitrum-governance"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At the reviewed block, L2 gateway ProxyAdmin 0xd570ace65c43af47101fc6250fd6fc63d1c22a86 was owned by UpgradeExecutor 0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827, whose verified implementation was 0x3d745b8815f9be5bf053858165f8ab1f58c77932. This governance chain can replace the gateway implementation and alter bridge mint/burn behavior.",
+          "unsupportedReason": "The reviewed evidence does not establish an independent bridge rate limit or timelock for this UpgradeExecutor path."
+        },
+        "capDescription": "UpgradeExecutor administration can replace the Arbitrum gateway implementation and therefore can change the route's bridge accounting or mint semantics, even though the current implementation is counterpart-gated.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 495309738,
+        "sources": [
+          {
+            "label": "Arbitrum L2 standard gateway proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x09e9222e96e7b4ae2a407b98d48e330053351eee?tab=contract"
+          },
+          {
+            "label": "Arbitrum gateway ProxyAdmin",
+            "url": "https://arbitrum.blockscout.com/address/0xd570ace65c43af47101fc6250fd6fc63d1c22a86?tab=contract"
+          },
+          {
+            "label": "Arbitrum governance ownership and upgrade overview",
+            "url": "https://github.com/ArbitrumFoundation/governance/blob/main/docs/overview.md"
+          }
+        ],
+        "evidence": "At Arbitrum block 495,309,738, the L2 gateway resolved to implementation 0x1dcf7d03574fbc7c205f41f2e116ee094a652e93, with ProxyAdmin 0xd570ace65c43af47101fc6250fd6fc63d1c22a86 owned by UpgradeExecutor 0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827. The UpgradeExecutor points to verified implementation 0x3d745b8815f9be5bf053858165f8ab1f58c77932."
+      },
+      {
+        "id": "susd-fantom-anyswap-dcrm-owner",
+        "label": "Fantom sUSD AnySwap/Multichain DCRM owner EOA",
+        "routeRefs": [
+          "fantom:0x0e1694483ebb3b74d3054e383840c6cf011e518e"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin"
+        ],
+        "controllerChain": "fantom",
+        "controllerAddress": "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+        "failureDomainKeys": [
+          "contract:fantom:0x0e1694483ebb3b74d3054e383840c6cf011e518e",
+          "eoa:fantom:0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+          "protocol:multichain-legacy"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "signingModel": "The destination token exposes older AnySwap/Multichain DCRM-style Swapin and Swapout functions; the token's current owner is an EOA and the underlying MPC/DCRM signer set is not observable from the contract.",
+          "rateLimits": "No aggregate or per-call mint ceiling was observed in the reviewed bytecode; newer isMinter, vault, and underlying methods reverted.",
+          "pausersAdminsUpgraders": "The owner controls Swapin, Swapout, and changeDCRMOwner, giving the bridge representation arbitrary inbound mint and owner-rotation authority."
+        },
+        "capDescription": "Swapin is an arbitrary token-level bridge mint with no verified cap; current MPC signer custody and historical route liveness remain unresolved, but the owner-controlled authority is scoreable under Bridge Risk.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 122919507,
+        "sources": [
+          {
+            "label": "Fantom sUSD AnySwap representation",
+            "url": "https://explorer.fantom.network/address/0x0e1694483ebb3b74d3054e383840c6cf011e518e"
+          },
+          {
+            "label": "AnySwap/Multichain bridge integration guide",
+            "url": "https://docs.multichain.org/developer-guide/how-to-integrate-front-end-bridges"
+          }
+        ],
+        "evidence": "At Fantom block 122,919,507, the token had totalSupply() 58944710934226086136, owner() 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe, and bytecode selectors for Swapin(bytes32,address,uint256), Swapout(uint256,address), and changeDCRMOwner(address). The owner EOA had no bytecode at the current read. The exact MPC/DCRM signer set behind it could not be verified, and route liveness is not proven; the arbitrary token-level Swapin mint remains adverse evidence."
       }
     ]
   }

@@ -22,6 +22,10 @@
     },
     "controls": [
       {
+        "deploymentRefs": [
+          "ethereum:0xe820c06321e60d36257c666643fa5436643445e3",
+          "tron:TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG"
+        ],
         "label": "Gold Dollar issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -46,6 +50,9 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0xcf355ad32abf378f067fa93a28d96a767feb7377",
+        "deploymentRefs": [
+          "ethereum:0xe820c06321e60d36257c666643fa5436643445e3"
+        ],
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 7,
@@ -71,6 +78,9 @@
         "directMintAbility": "can-authorize",
         "chain": "tron",
         "address": "TEmt2RaL2w6x51Lkx75hsDpBv63aPYA8jd",
+        "deploymentRefs": [
+          "tron:TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG"
+        ],
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 7,

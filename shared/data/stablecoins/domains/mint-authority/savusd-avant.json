@@ -5,7 +5,7 @@
     "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "avusd-avant",
-    "summary": "savUSD is an immutable, deposit-only receipt over avUSD on Avalanche. Its local share minting is bounded by deposited avUSD, its base-asset mint authority is inherited from the separately reviewed avUSD profile, and its active peripheral burn/mint controllers are covered by the reviewed bridge-route inventory.",
+    "summary": "savUSD has one canonical native issuance route on Avalanche: immutable, deposit-only StakedAvUSDV2 share minting is bounded by deposited avUSD, while base avUSD issuance is the separately reviewed cap-limited AvantMintingV2 path. Cross-chain CCIP and LayerZero representation machinery is Bridge Risk only and is not counted as canonical Mint Authority.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -30,6 +30,9 @@
         "directMintAbility": "none",
         "chain": "avalanche",
         "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
+        "deploymentRefs": [
+          "avalanche:0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -47,6 +50,9 @@
       {
         "chain": "avalanche",
         "address": "0xcb43139E90f019624e3B76C56FB05394B162A49c",
+        "deploymentRefs": [
+          "avalanche:0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+        ],
         "label": "Inherited avUSD issuer mint authority",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -90,9 +96,9 @@
           "url": "https://etherscan.io/address/0xb8d89678e75a973e74698c976716308abb8a46a4"
         }
       ],
-      "evidence": "At Avalanche block 87752599, the canonical StakedAvUSDV2 contract returned avUSD as its asset, exposed deposit-only share issuance with no privileged mint function, and had zero EIP-1967 implementation and admin slots. The current avUSD parent review independently resolves the sole active AvantMintingV2 gateway through Avalanche block 90283689. The 2026-07-20 bridge-route review separately enumerates every tracked peripheral savUSD deployment and its Chainlink CCIP burn/mint pool, so those routes are not an unresolved local wrapper authority.",
+      "evidence": "Reviewed 2026-08-16: the official Avant registry identifies Avalanche 0x06d47f3fb376649c3a9dafe069b3d6e35572219e as the native Staked avUSD deployment and the other authored EVM deployments as bridged. At Avalanche block 92981175, the native wrapper returned avUSD as its asset, remained non-proxy and immutable, and its deposit-only share issuance was bounded by avUSD deposited. The separately reviewed avUSD parent establishes the sole cap-limited AvantMintingV2 base-asset path. Avalanche CCIP LockRelease and LayerZero adapter machinery, plus all destination representation minters, remain exclusively under bridgeRouteRisk and are not canonical Mint Authority.",
       "reviewer": "P2 mint-free cohort; OpenAI Codex V9 curation",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

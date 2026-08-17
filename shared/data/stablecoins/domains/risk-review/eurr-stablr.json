@@ -8,24 +8,89 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "EURR is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
-    "protocols": [
-      {
-        "source": "issuer",
-        "name": "EURR issuer-operated multichain issuance",
-        "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
-      }
-    ],
+    "tier": "opaque-or-unknown",
+    "summary": "Ethereum is the verified canonical EURR native-issuance route and its owner/proxy-admin controls remain in Mint Authority. StablR's smart-contract page also lists a Solana SPL deployment, but no issuer evidence identifies whether it creates independent liabilities, mirrors Ethereum supply, or uses a bridge; no bridge protocol or route control is therefore asserted, and the aggregate bridge posture remains unresolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
+    "confidence": "manual-review",
     "sources": [
       {
-        "label": "StablR stablecoins",
-        "url": "https://www.stablr.com/"
+        "label": "StablR EURR overview",
+        "url": "https://www.stablr.com/eurr"
+      },
+      {
+        "label": "StablR EURR guide",
+        "url": "https://docs.stablr.com/docs/what-is-eurr"
+      },
+      {
+        "label": "StablR smart-contract documentation",
+        "url": "https://docs.stablr.com/docs/smart-contract"
+      },
+      {
+        "label": "Ethereum EURR proxy and verified source",
+        "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
+      },
+      {
+        "label": "Solana EURR mint",
+        "url": "https://explorer.solana.com/address/HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x50753cfaf86c094925bf976f218d043f8791e408",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x50753cfaf86c094925bf976f218d043f8791e408",
+        "protocol": "StablR EURR Ethereum native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "StablR's current EURR page and guide describe EURR as Ethereum-based. At Ethereum block 25770841 on 2026-08-16, the proxy implementation, token owner, and proxy-admin surfaces were read; this is the verified canonical native-issuance deployment. No bridge route is asserted for this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770841,
+        "sources": [
+          {
+            "label": "StablR EURR overview",
+            "url": "https://www.stablr.com/eurr"
+          },
+          {
+            "label": "StablR EURR guide",
+            "url": "https://docs.stablr.com/docs/what-is-eurr"
+          },
+          {
+            "label": "Ethereum EURR proxy and verified source",
+            "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
+          }
+        ]
+      },
+      {
+        "id": "solana:HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ",
+        "destinationChain": "solana",
+        "contractAddress": "HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "StablR's current EURR page and guide say EURR is on Ethereum, while the smart-contract page only lists the Solana SPL address and gives no liability or bridge semantics. The finalized Solana mint read showed supply 0 and issuer-like mint/freeze wallet authorities, but it does not establish independent native issuance or a supply-conserving representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "StablR smart-contract documentation",
+            "url": "https://docs.stablr.com/docs/smart-contract"
+          },
+          {
+            "label": "Solana EURR mint",
+            "url": "https://explorer.solana.com/address/HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ"
+          }
+        ]
       }
     ]
   }

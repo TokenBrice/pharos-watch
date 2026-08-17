@@ -4,7 +4,7 @@
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USR minting was gated by an off-chain backend: users deposited collateral on-chain via requestSwap, then an off-chain SERVICE_ROLE signer attested the USR amount and completed the mint via completeSwap. The minting contract performed no oracle, ratio, per-tx, or max-supply check, and the SERVICE_ROLE was a single EOA whose compromise let an attacker mint 80M unbacked USR in March 2026.",
+    "summary": "USR has one reviewed native issuance deployment on Ethereum. Its off-chain SERVICE_ROLE backend can mint directly without an on-chain oracle, ratio, per-transaction, or max-supply check; a compromised signer minted 80M unbacked USR in March 2026. The Ethereum LayerZero adapter and six remote SimpleOFT deployments are bridge machinery assessed separately under bridgeRouteRisk and do not change the native issuance posture.",
     "mintIncidents": [
       {
         "date": "2026-03-22",
@@ -28,6 +28,9 @@
         "role": "backend-signer",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
@@ -42,6 +45,9 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "chain": "ethereum",
@@ -82,9 +88,9 @@
     "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295177: USR token (0x66a1e37…) is a TransparentUpgradeableProxy; impl = 0xef4c4bc… (ContractName 'SimpleToken', SERVICE_ROLE-gated mint/burn); proxy admin = 0x44a41b… (ProxyAdmin contract), ProxyAdmin owner = 0x290d954… (large contract, 16090 bytes). Token owner() = 0xd6889f… (GnosisSafeProxy): 6 owners, 4/6 threshold, Safe v1.3, no modules (getModulesPaginated returned empty), no guard (storage slot = 0x0). DEFAULT_ADMIN RoleGranted: originally 0x8729dae (revoked) + 0xd6889f (Safe, active). SERVICE_ROLE: 13 RoleGranted, 5 RoleRevoked; current active holders: 0xa27a69 (contract 24938 bytes), 0xac85ef (contract 27892 bytes), 0x60a7b7, 0x9f805f, 0x36c9b5, 0xd6889f (Safe), 0x1202f5. Multiple backend signers remain post-exploit; coin is frozen since 2026-04-27. Economic-posture fields reviewed 2026-08-15: backend signers can mint without an on-chain economic bound, the exploited mint path escaped Apostro reconciliation, and Apostro is an attestor rather than a prudential supervisor.",
+      "evidence": "At Ethereum block 25295177: USR token (0x66a1e37…) is a TransparentUpgradeableProxy; impl = 0xef4c4bc… (ContractName 'SimpleToken', SERVICE_ROLE-gated mint/burn); proxy admin = 0x44a41b… (ProxyAdmin contract), ProxyAdmin owner = 0x290d954… (large contract, 16090 bytes). Token owner() = 0xd6889f… (GnosisSafeProxy): 6 owners, 4/6 threshold, Safe v1.3, no modules (getModulesPaginated returned empty), no guard (storage slot = 0x0). DEFAULT_ADMIN RoleGranted: originally 0x8729dae (revoked) + 0xd6889f (Safe, active). SERVICE_ROLE: 13 RoleGranted, 5 RoleRevoked; current active holders: 0xa27a69 (contract 24938 bytes), 0xac85ef (contract 27892 bytes), 0x60a7b7, 0x9f805f, 0x36c9b5, 0xd6889f (Safe), 0x1202f5. Multiple backend signers remain post-exploit; coin is frozen since 2026-04-27. Economic-posture fields reviewed 2026-08-15: backend signers can mint without an on-chain economic bound, the exploited mint path escaped Apostro reconciliation, and Apostro is an attestor rather than a prudential supervisor. This native review is limited to Ethereum issuance at 0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110; the LayerZero adapter and remote SimpleOFT mint surfaces are bridge machinery and are reviewed separately under bridgeRouteRisk.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "USR token (Blockscout)",

@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "XO is a Solana M extension, not native unbridged issuance. Its mint-authority PDA wraps Portal-delivered M in an extension vault; M0 documents that Solana M is minted by the M0 Portal against M locked in the Ethereum HubPortal through Wormhole NTT.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex bridge route curation",
+    "summary": "XO is a Solana M0 extension, not native unbridged issuance. M0 documents the route as Ethereum hub lock → Wormhole message → Solana Portal mint, after which the XO extension wraps Solana M and mints the XO representation. The Portal, XO extension mint/burn PDA, and shared Solana program-upgrade authority remain scoreable here rather than in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration RELOC-02",
     "confidence": "verified",
     "protocols": [
       {
@@ -95,6 +95,121 @@
             "url": "https://explorer.solana.com/address/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "xo-solana-portal-bridge-admin",
+        "label": "M0 Solana Portal bridge administration and mint",
+        "routeRefs": [
+          "solana:xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "validator",
+          "admin"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "failureDomainKeys": [
+          "program:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "lockboxOrEscrow": "XO Cash is a Solana extension of M0 M; base M supply remains governed by the Ethereum MinterGateway.",
+          "trustedPeerOrRemote": "M0 Solana Portal program is confirmed executable, but token-specific remote-peer config was not independently enumerated.",
+          "caps": "Effective Solana extension capacity is bounded by the portal route and base M supply, not by an immutable Solana token cap.",
+          "pausersAdminsUpgraders": "Solana portal/program administration remains under the M0 program-upgrade authority reviewed for this token."
+        },
+        "capDescription": "The Portal validates Wormhole messages and mints the Solana-side M route used by the XO extension; its effective capacity is route- and base-supply-dependent.",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 432836017,
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 cross-chain architecture",
+            "url": "https://docs.m0.org/build/cross-chain"
+          },
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://explorer.solana.com/address/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432836017, Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY was executable under BPFLoaderUpgradeable; its ProgramData upgrade authority was 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. M0 documents that the Portal validates Wormhole messages and mints Solana M backed by M locked in the Ethereum HubPortal, which is the upstream bridge leg for the XO route."
+      },
+      {
+        "id": "xo-solana-extension-mint-pda",
+        "label": "XO Solana extension mint authority PDA",
+        "routeRefs": [
+          "solana:xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "XO mint authority is an off-curve PDA derived from the M0 XO extension program with seeds=[\"mint_authority\"].",
+          "caps": "No immutable token-level mint cap was observed; effective capacity depends on the extension program, portal route, and underlying M supply.",
+          "pausersAdminsUpgraders": "Extension program upgrade authority is the shared M0 Solana EOA; XO extension authorities point to a MoonPay-funded System account where checked."
+        },
+        "capDescription": "The XO extension wraps Portal-delivered Solana M and mints the XO representation; its paired unwrap path burns the representation against the underlying M route.",
+        "canRaiseCap": true,
+        "sources": [
+          {
+            "label": "XO Solana token",
+            "url": "https://solscan.io/token/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
+          },
+          {
+            "label": "M0 on Solana technical documentation",
+            "url": "https://docs.m0.org/protocol/solana"
+          }
+        ],
+        "evidence": "At Solana slot 425799131, XO mintAuthority=F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu. Ed25519 curve check confirms this address is off-curve and is a PDA derived from M0 XO extension program mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C with seeds=[\"mint_authority\"], nonce=255. M0's extension model provides wrap and unwrap operations, so the representation mint/burn remains a bridge-route capability."
+      },
+      {
+        "id": "xo-solana-program-upgrade-authority",
+        "label": "M0 Solana XO program upgrade authority keypair",
+        "routeRefs": [
+          "solana:xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "failureDomainKeys": [
+          "program:solana:mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C",
+          "program:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The shared Solana keypair can replace the XO extension and Portal programs and thereby change their bridge-mint logic or route constraints.",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-20",
+        "observedBlock": 425799131,
+        "sources": [
+          {
+            "label": "XO extension ProgramData",
+            "url": "https://solscan.io/account/Bb93m5PsfN7LGeKd2LanP3k8MbfdQUSc75rdq5Cg4jAS"
+          },
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://explorer.solana.com/address/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+          }
+        ],
+        "evidence": "At Solana slot 425799131, the M0 XO extension program's ProgramData account named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. The same EOA was observed as the Portal program upgrade authority at finalized slot 432836017, so it can replace both bridge programs and their mint-critical logic."
       }
     ]
   }

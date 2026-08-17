@@ -8,11 +8,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "USDP is Paxos-issued and Paxos documentation describes the asset as available on multiple blockchains, with Paxos expansion to Solana separately announced. The multichain route is reviewed as issuer-native issuance/redemption.",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-    "confidence": "verified",
+    "tier": "external-lock-mint",
+    "summary": "USDP has native issuer-controlled burn/mint branches on Ethereum and Solana, a canonical-rollup Linea lock/mint representation, and a Binance-Peg external lock/mint representation on BSC. Structured bridge controls retain the BSC owner/proxy-admin and Linea TokenBridge/ProxyAdmin powers; the BSC external route sets the aggregate tier to external-lock-mint. Native issuance controls are assessed only in mintAuthority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex mint/bridge boundary review; usdp-paxos finding 2026-08-16",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "Paxos USDP overview",
@@ -25,6 +25,30 @@
       {
         "label": "Paxos Solana expansion",
         "url": "https://www.prnewswire.com/news-releases/paxos-expands-to-the-solana-blockchain-302021494.html"
+      },
+      {
+        "label": "BSC Binance-Peg USDP proxy and implementation",
+        "url": "https://bscscan.com/address/0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094#code"
+      },
+      {
+        "label": "Binance B-Tokens collateral documentation",
+        "url": "https://www.binance.com/en/collateral-btokens"
+      },
+      {
+        "label": "Linea USDP token",
+        "url": "https://lineascan.build/address/0xd2bc272EA0154A93bf00191c8a1DB23E67643EC5#code"
+      },
+      {
+        "label": "Linea L2 TokenBridge",
+        "url": "https://lineascan.build/address/0x353012dc4a9a6cf55c941badc267f82004a8ceb9#code"
+      },
+      {
+        "label": "Linea TokenBridge implementation",
+        "url": "https://lineascan.build/address/0x4a496167f187a97379e763f693a499ce1182848b#code"
+      },
+      {
+        "label": "Linea TokenBridge ProxyAdmin",
+        "url": "https://lineascan.build/address/0x1e1f6f22f97b4a7522d8b62e983953639239774e#code"
       }
     ],
     "routes": [
@@ -158,6 +182,195 @@
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paxos-standard/index.ts"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdp-bsc-binance-peg-owner",
+        "label": "USDP BSC Binance-Peg token owner",
+        "routeRefs": [
+          "bsc:0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d",
+        "failureDomainKeys": [
+          "protocol:binance-peg",
+          "contract:bsc:0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d",
+          "bsc:0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "Binance B-Tokens documentation describes Binance-Peg representations as backed by assets held in Binance vaults; this BSC token is external lock/mint representation machinery rather than a Paxos native liability ledger.",
+          "pausersAdminsUpgraders": "At BSC block 116355472, getOwner() returned this no-code Binance-labeled EOA and mintable() returned true. The verified BEP20TokenImplementation exposes owner-only mint(uint256), burn(uint256), and ownership-transfer functions.",
+          "onchainAmountBounds": "The generic BEP20 implementation applies no hard cap to owner minting while mintable is true."
+        },
+        "capDescription": "The generic BEP20 implementation exposes owner-only mint(uint256) with no hard cap while mintable is true.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116355472,
+        "sources": [
+          {
+            "label": "BSC Binance-Peg USDP proxy",
+            "url": "https://bscscan.com/address/0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094#code"
+          },
+          {
+            "label": "BSC Binance-Peg USDP implementation source",
+            "url": "https://bscscan.com/address/0xba5fe23f8a3a24bed3236f05f2fcf35fd0bf0b5c#code"
+          },
+          {
+            "label": "Binance B-Tokens collateral documentation",
+            "url": "https://www.binance.com/en/collateral-btokens"
+          },
+          {
+            "label": "BSC public JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BSC block 116355472, the authored proxy's EIP-1967 implementation/admin slots returned 0xba5fe23f8a3a24bed3236f05f2fcf35fd0bf0b5c and 0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4. The implementation's getOwner() returned this no-code Binance-labeled EOA and mintable() returned true. Its owner-only mint(uint256) and burn(uint256) powers govern the BSC Binance-Peg representation, not Paxos native issuance."
+      },
+      {
+        "id": "usdp-bsc-binance-peg-proxy-admin",
+        "label": "USDP BSC Binance-Peg proxy-admin EOA",
+        "routeRefs": [
+          "bsc:0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4",
+        "failureDomainKeys": [
+          "protocol:binance-peg",
+          "contract:bsc:0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4",
+          "bsc:0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At BSC block 116355472, the EIP-1967 admin slot returned this no-code Binance-labeled EOA. The transparent proxy admin can replace the Binance-Peg representation logic immediately, independently of token owner 0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d."
+        },
+        "capDescription": "The separate transparent proxy admin can replace BSC representation mint/burn logic immediately.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116355472,
+        "sources": [
+          {
+            "label": "BSC Binance-Peg USDP proxy",
+            "url": "https://bscscan.com/address/0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094#code"
+          },
+          {
+            "label": "BSC proxy admin",
+            "url": "https://bscscan.com/address/0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4"
+          },
+          {
+            "label": "BSC public JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BSC block 116355472, the authored token's EIP-1967 implementation slot returned 0xba5fe23f8a3a24bed3236f05f2fcf35fd0bf0b5c and its admin slot returned this no-code EOA. The separate transparent proxy admin can replace the BSC representation logic immediately, independently of the Binance-Peg owner."
+      },
+      {
+        "id": "usdp-linea-tokenbridge",
+        "label": "USDP Linea canonical TokenBridge",
+        "routeRefs": [
+          "linea:0xd2bc272ea0154a93bf00191c8a1db23e67643ec5"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "pause",
+          "peer-config",
+          "admin"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x353012dc4a9a6cf55c941badc267f82004a8ceb9",
+        "failureDomainKeys": [
+          "protocol:linea-canonical-messaging",
+          "contract:linea:0x353012dc4a9a6cf55c941badc267f82004a8ceb9"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Linea block 31737670, USDP bridge() returned 0x353012dc4a9a6cf55c941badc267f82004a8ceb9. The verified Linea L2 TokenBridge exposes bridgeToken, completeBridging, and remote-token deployment/configuration for the representation route.",
+          "pausersAdminsUpgraders": "The verified Linea TokenBridge implementation exposes pause and AccessControl role administration for the canonical messaging route; those roles govern the representation bridge rather than Paxos native issuance.",
+          "onchainAmountBounds": "The Linea token is a canonical lock/mint representation with approximately 2.0054597191056933 USDP at the observation block, not an independent Paxos native issuance branch."
+        },
+        "capDescription": "The Linea L2 TokenBridge controls minting and burning of the canonical Linea USDP representation and its remote-token configuration.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 31737670,
+        "sources": [
+          {
+            "label": "Linea USDP token",
+            "url": "https://lineascan.build/address/0xd2bc272EA0154A93bf00191c8a1DB23E67643EC5#code"
+          },
+          {
+            "label": "Linea L2 TokenBridge",
+            "url": "https://lineascan.build/address/0x353012dc4a9a6cf55c941badc267f82004a8ceb9#code"
+          },
+          {
+            "label": "Linea TokenBridge implementation",
+            "url": "https://lineascan.build/address/0x4a496167f187a97379e763f693a499ce1182848b#code"
+          },
+          {
+            "label": "Linea public JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Linea block 31737670, the authored token returned name() = Pax Dollar, symbol() = USDP, 18 decimals, totalSupply() = 2.0054597191056933, and bridge() = 0x353012dc4a9a6cf55c941badc267f82004a8ceb9. The TokenBridge implementation at 0x4a496167f187a97379e763f693a499ce1182848b exposes bridgeToken, completeBridging, remote-token deployment/configuration, pause, and AccessControl role administration. This is canonical Linea representation machinery, not independent Paxos native issuance."
+      },
+      {
+        "id": "usdp-linea-tokenbridge-proxy-admin",
+        "label": "USDP Linea TokenBridge ProxyAdmin",
+        "routeRefs": [
+          "linea:0xd2bc272ea0154a93bf00191c8a1db23e67643ec5"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x1e1f6f22f97b4a7522d8b62e983953639239774e",
+        "failureDomainKeys": [
+          "protocol:linea-canonical-messaging",
+          "contract:linea:0x1e1f6f22f97b4a7522d8b62e983953639239774e",
+          "timelock:linea:0xc808bfcbed34d90fa9579caa664e67b9a03c56ca"
+        ],
+        "authorityType": "contract",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Linea block 31737670, the TokenBridge proxy implementation was 0x4a496167f187a97379e763f693a499ce1182848b and its admin was ProxyAdmin 0x1e1f6f22f97b4a7522d8b62e983953639239774e. ProxyAdmin.owner() returned L2Timelock 0xc808bfcbed34d90fa9579caa664e67b9a03c56ca and getMinDelay() returned zero, so bridge logic replacement is immediately executable by the route's role holders."
+        },
+        "capDescription": "The Linea ProxyAdmin can replace canonical TokenBridge mint/burn logic; its L2Timelock owner currently has zero minimum delay.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 31737670,
+        "sources": [
+          {
+            "label": "Linea L2 TokenBridge",
+            "url": "https://lineascan.build/address/0x353012dc4a9a6cf55c941badc267f82004a8ceb9#code"
+          },
+          {
+            "label": "Linea TokenBridge implementation",
+            "url": "https://lineascan.build/address/0x4a496167f187a97379e763f693a499ce1182848b#code"
+          },
+          {
+            "label": "Linea TokenBridge ProxyAdmin",
+            "url": "https://lineascan.build/address/0x1e1f6f22f97b4a7522d8b62e983953639239774e#code"
+          },
+          {
+            "label": "Linea public JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Linea block 31737670, the TokenBridge proxy implementation was 0x4a496167f187a97379e763f693a499ce1182848b and admin 0x1e1f6f22f97b4a7522d8b62e983953639239774e. The ProxyAdmin owner was L2Timelock 0xc808bfcbed34d90fa9579caa664e67b9a03c56ca, whose getMinDelay() returned zero. This immediate upgrade/admin path governs Linea bridge representation logic, not Paxos native issuance."
       }
     ]
   }

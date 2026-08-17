@@ -4,9 +4,15 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "eurSPKCC mint is gated by a Spiko PermissionManager on every chain. On Ethereum, Polygon, Arbitrum and Base the token's mint selector accepts group 0 (a 3/8 Safe on Ethereum, 3/6 elsewhere) or group 2, whose members are Spiko's two-step Minter contract (5,000,000 eurSPKCC daily limit, initiator + approver) and the Chainlink CCIP BurnWithFromMintTokenPool, itself owned by an EOA. Starknet mint requires MINTER_ROLE, held by a 3/5 Argent multisig plus three single-key accounts. Stellar mint requires the MINTER role, held by three single-key accounts, and the owner is a single-key account that can upgrade the wasm. Cross-chain the Safe-gated EVM admin is the bound; Starknet and Stellar are single-key surfaces.",
+    "summary": "eurSPKCC has issuer-native mint paths on Ethereum, Polygon, Arbitrum, Base, Starknet, and Stellar. On the four EVM deployments, Spiko's PermissionManager group 0 is a 3/6 Safe that can grant minter groups, set the two-step Minter's daily limit, and replace mint logic; the separate Spiko Minter is daily-limited to 5,000,000 eurSPKCC per chain, while the token-level mint function has no supply cap. Starknet mint requires MINTER_ROLE held by a 3/5 Argent multisig plus three single-key accounts, and Stellar mint requires MINTER held by three single-key accounts under a single-key owner. CCIP pool mint/burn is conserved bridge-route accounting and is assessed only under Bridge Risk, not as global native mint authority.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x3868d4e336d14d38031cf680329d31e4712e11cc",
+        "polygon:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+        "arbitrum:0x0e389c83bc1d16d86412476f6103027555c03265",
+        "base:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+      ],
       "proxyAddresses": [
         "0x3868d4e336d14d38031cf680329d31e4712e11cc",
         "0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
@@ -53,6 +59,9 @@
       {
         "chain": "ethereum",
         "address": "0x3868d4e336d14d38031cf680329d31e4712e11cc",
+        "deploymentRefs": [
+          "ethereum:0x3868d4e336d14d38031cf680329d31e4712e11cc"
+        ],
         "label": "eurSPKCC token restricted mint (ethereum)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -72,18 +81,21 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At ethereum block 25530961: token owner() = 0x0, authority() = 0x344278aff344d6fb960705dc18a4912221608472, EIP-1967 admin slot = 0x0 (UUPS). PermissionManager.getRequirements(token, 0x40c10f19 mint) = groups {0, 2}; getRequirements(token, 0x9dc29fac burn) = groups {0, 4}. No cap variable exists in the implementation ABI."
+        "evidence": "At ethereum block 25530961: token owner() = 0x0, authority() = 0x344278aff344d6fb960705dc18a4912221608472, EIP-1967 admin slot = 0x0 (UUPS). PermissionManager.getRequirements(token, 0x40c10f19 mint) = groups {0, 2}; group 2's CCIP pool member is a conserved bridge return path reviewed under Bridge Risk, not independent native issuance authority. getRequirements(token, 0x9dc29fac burn) = groups {0, 4}. No cap variable exists in the implementation ABI."
       },
       {
         "chain": "ethereum",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": [
+          "ethereum:0x3868d4e336d14d38031cf680329d31e4712e11cc"
+        ],
         "label": "Spiko PermissionManager admin group Safe (ethereum)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "threshold": 3,
-        "signerCount": 8,
+        "signerCount": 6,
         "capDescription": "Group 0 satisfies the token mint requirement mask directly and can addGroup any address into the minter group; it also sets the Minter daily limit.",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
@@ -92,10 +104,11 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "source": "onchain",
-          "observedBlock": 25530961
+          "observedBlock": 25770521,
+          "observedAt": "2026-08-16"
         },
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530961,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770521,
         "sources": [
           {
             "label": "Blockscout Spiko PermissionManager implementation",
@@ -106,11 +119,14 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At ethereum block 25530961: PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 getGroups(0x4eaa52b6280593a8820c45ce38f974290ae52cea) = {0 (ADMIN), 255 (PUBLIC)}; Safe getThreshold()/getOwners() = 3/8, VERSION 1.4.1. getRequirements(PermissionManager, addGroup / setRequirements / setGroupAdmins / upgradeToAndCall) = group {0}; getRequirements(token, upgradeToAndCall) = group {0}. canCall(0x4eaa52b6280593a8820c45ce38f974290ae52cea, token, 0x40c10f19) = true."
+        "evidence": "At ethereum block 25770521: PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 getGroups(0x4eaa52b6280593a8820c45ce38f974290ae52cea) = {0 (ADMIN), 255 (PUBLIC)}; Safe getThreshold()/getOwners() = 3/6, VERSION 1.4.1, getModulesPaginated returns no enabled modules, and guard and module-guard storage slots are zero. getRequirements(PermissionManager, addGroup / setRequirements / setGroupAdmins / upgradeToAndCall) = group {0}; getRequirements(token, upgradeToAndCall) = group {0}. canCall(0x4eaa52b6280593a8820c45ce38f974290ae52cea, token, 0x40c10f19) = true."
       },
       {
         "chain": "ethereum",
         "address": "0x5ed5a75eeed1934ea060186e35187eaa73331366",
+        "deploymentRefs": [
+          "ethereum:0x3868d4e336d14d38031cf680329d31e4712e11cc"
+        ],
         "label": "Spiko two-step Minter with daily limit (ethereum)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -133,32 +149,11 @@
         "evidence": "At ethereum block 25530961: Minter proxy 0x5ed5a75eeed1934ea060186e35187eaa73331366 is a UUPS ERC-1967 proxy (admin slot 0x0) and is in PermissionManager group 2, so canCall(minter, token, mint) = true. Verified implementation (\"Minter\") exposes initiateMint/approveMint/cancelMint (restricted) plus dailyLimit/getMintedToday. dailyLimit(eurSPKCC) = 500000000000, getMintedToday = 0, maxDelay = 86400s. getRequirements(minter, initiateMint) = group {0, 10}; approveMint = {0, 9}; setDailyLimit = {0}."
       },
       {
-        "chain": "ethereum",
-        "address": "0x57fa613b284f05421f78c8bd579555d5c0d7783d",
-        "label": "Chainlink CCIP eurSPKCC BurnWithFromMintTokenPool (ethereum)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "capDescription": "Pool mints only against a burn on the source lane and is bounded by per-lane CCIP rate limiters; the pool owner EOA sets those limiters.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530961,
-        "sources": [
-          {
-            "label": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 (eurSPKCC, Ethereum)",
-            "url": "https://eth.blockscout.com/address/0x57fa613b284f05421f78c8bd579555d5c0d7783d"
-          },
-          {
-            "label": "Ethereum PublicNode RPC",
-            "url": "https://ethereum-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At ethereum block 25530961: typeAndVersion() = \"BurnWithFromMintTokenPool 1.6.1\", getToken() = 0x3868d4e336d14d38031cf680329d31e4712e11cc (eurSPKCC), owner() = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375. The pool is in PermissionManager group 2 (getGroups = {2,4,6,255}), so canCall(pool, token, 0x40c10f19) = true."
-      },
-      {
         "chain": "polygon",
         "address": "0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+        "deploymentRefs": [
+          "polygon:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da"
+        ],
         "label": "eurSPKCC token restricted mint (polygon)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -178,11 +173,14 @@
             "url": "https://polygon-bor-rpc.publicnode.com"
           }
         ],
-        "evidence": "At polygon block 90218705: token owner() = 0x0, authority() = 0x344278aff344d6fb960705dc18a4912221608472, EIP-1967 admin slot = 0x0 (UUPS). PermissionManager.getRequirements(token, 0x40c10f19 mint) = groups {0, 2}; getRequirements(token, 0x9dc29fac burn) = groups {0, 4}. No cap variable exists in the implementation ABI."
+        "evidence": "At polygon block 90218705: token owner() = 0x0, authority() = 0x344278aff344d6fb960705dc18a4912221608472, EIP-1967 admin slot = 0x0 (UUPS). PermissionManager.getRequirements(token, 0x40c10f19 mint) = groups {0, 2}; group 2's CCIP pool member is a conserved bridge return path reviewed under Bridge Risk, not independent native issuance authority. getRequirements(token, 0x9dc29fac burn) = groups {0, 4}. No cap variable exists in the implementation ABI."
       },
       {
         "chain": "polygon",
         "address": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "deploymentRefs": [
+          "polygon:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da"
+        ],
         "label": "Spiko PermissionManager admin group Safe (polygon)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -217,6 +215,9 @@
       {
         "chain": "polygon",
         "address": "0xaead1f7c9b189816cb845363d142cfcf339084c2",
+        "deploymentRefs": [
+          "polygon:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da"
+        ],
         "label": "Spiko two-step Minter with daily limit (polygon)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -239,32 +240,11 @@
         "evidence": "At polygon block 90218705: Minter proxy 0xaead1f7c9b189816cb845363d142cfcf339084c2 is a UUPS ERC-1967 proxy (admin slot 0x0) and is in PermissionManager group 2, so canCall(minter, token, mint) = true. Verified implementation (\"Minter\") exposes initiateMint/approveMint/cancelMint (restricted) plus dailyLimit/getMintedToday. dailyLimit(eurSPKCC) = 500000000000, getMintedToday = 0, maxDelay = 86400s. getRequirements(minter, initiateMint) = group {0, 10}; approveMint = {0, 9}; setDailyLimit = {0}."
       },
       {
-        "chain": "polygon",
-        "address": "0xc9d26a02bfb80e177af352c3defe68ef5ea924fb",
-        "label": "Chainlink CCIP eurSPKCC BurnWithFromMintTokenPool (polygon)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "capDescription": "Pool mints only against a burn on the source lane and is bounded by per-lane CCIP rate limiters; the pool owner EOA sets those limiters.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 90218705,
-        "sources": [
-          {
-            "label": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 (eurSPKCC, Ethereum)",
-            "url": "https://eth.blockscout.com/address/0x57fa613b284f05421f78c8bd579555d5c0d7783d"
-          },
-          {
-            "label": "Polygon PublicNode RPC",
-            "url": "https://polygon-bor-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At polygon block 90218705: typeAndVersion() = \"BurnWithFromMintTokenPool 1.6.1\", getToken() = 0x99f70a0e1786402a6796c6b0aa997ef340a5c6da (eurSPKCC), owner() = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375. The pool is in PermissionManager group 2 (getGroups = {2,4,6,255}), so canCall(pool, token, 0x40c10f19) = true."
-      },
-      {
         "chain": "arbitrum",
         "address": "0x0e389c83bc1d16d86412476f6103027555c03265",
+        "deploymentRefs": [
+          "arbitrum:0x0e389c83bc1d16d86412476f6103027555c03265"
+        ],
         "label": "eurSPKCC token restricted mint (arbitrum)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -284,11 +264,14 @@
             "url": "https://arbitrum-one-rpc.publicnode.com"
           }
         ],
-        "evidence": "At arbitrum block 483768450: token owner() = 0x0, authority() = 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A, EIP-1967 admin slot = 0x0 (UUPS). PermissionManager.getRequirements(token, 0x40c10f19 mint) = groups {0, 2}; getRequirements(token, 0x9dc29fac burn) = groups {0, 4}. No cap variable exists in the implementation ABI."
+        "evidence": "At arbitrum block 483768450: token owner() = 0x0, authority() = 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A, EIP-1967 admin slot = 0x0 (UUPS). PermissionManager.getRequirements(token, 0x40c10f19 mint) = groups {0, 2}; group 2's CCIP pool member is a conserved bridge return path reviewed under Bridge Risk, not independent native issuance authority. getRequirements(token, 0x9dc29fac burn) = groups {0, 4}. No cap variable exists in the implementation ABI."
       },
       {
         "chain": "arbitrum",
         "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "deploymentRefs": [
+          "arbitrum:0x0e389c83bc1d16d86412476f6103027555c03265"
+        ],
         "label": "Spiko PermissionManager admin group Safe (arbitrum)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -323,6 +306,9 @@
       {
         "chain": "arbitrum",
         "address": "0x4640a8bf08d5917dcaef42edb14d3e06e1b23f39",
+        "deploymentRefs": [
+          "arbitrum:0x0e389c83bc1d16d86412476f6103027555c03265"
+        ],
         "label": "Spiko two-step Minter with daily limit (arbitrum)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -345,32 +331,11 @@
         "evidence": "At arbitrum block 483768450: Minter proxy 0x4640a8bf08d5917dcaef42edb14d3e06e1b23f39 is a UUPS ERC-1967 proxy (admin slot 0x0) and is in PermissionManager group 2, so canCall(minter, token, mint) = true. Verified implementation (\"Minter\") exposes initiateMint/approveMint/cancelMint (restricted) plus dailyLimit/getMintedToday. dailyLimit(eurSPKCC) = 500000000000, getMintedToday = 0, maxDelay = 86400s. getRequirements(minter, initiateMint) = group {0, 10}; approveMint = {0, 9}; setDailyLimit = {0}."
       },
       {
-        "chain": "arbitrum",
-        "address": "0xc9d26a02bfb80e177af352c3defe68ef5ea924fb",
-        "label": "Chainlink CCIP eurSPKCC BurnWithFromMintTokenPool (arbitrum)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "capDescription": "Pool mints only against a burn on the source lane and is bounded by per-lane CCIP rate limiters; the pool owner EOA sets those limiters.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 483768450,
-        "sources": [
-          {
-            "label": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 (eurSPKCC, Ethereum)",
-            "url": "https://eth.blockscout.com/address/0x57fa613b284f05421f78c8bd579555d5c0d7783d"
-          },
-          {
-            "label": "Arbitrum One PublicNode RPC",
-            "url": "https://arbitrum-one-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At arbitrum block 483768450: typeAndVersion() = \"BurnWithFromMintTokenPool 1.6.1\", getToken() = 0x0e389c83bc1d16d86412476f6103027555c03265 (eurSPKCC), owner() = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375. The pool is in PermissionManager group 2 (getGroups = {2,4,6,255}), so canCall(pool, token, 0x40c10f19) = true."
-      },
-      {
         "chain": "base",
         "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "deploymentRefs": [
+          "base:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        ],
         "label": "eurSPKCC token restricted mint (base)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -390,11 +355,14 @@
             "url": "https://base-rpc.publicnode.com"
           }
         ],
-        "evidence": "At base block 48621853: token owner() = 0x0, authority() = 0x344278aff344d6fb960705dc18a4912221608472, EIP-1967 admin slot = 0x0 (UUPS). PermissionManager.getRequirements(token, 0x40c10f19 mint) = groups {0, 2}; getRequirements(token, 0x9dc29fac burn) = groups {0, 4}. No cap variable exists in the implementation ABI."
+        "evidence": "At base block 48621853: token owner() = 0x0, authority() = 0x344278aff344d6fb960705dc18a4912221608472, EIP-1967 admin slot = 0x0 (UUPS). PermissionManager.getRequirements(token, 0x40c10f19 mint) = groups {0, 2}; group 2's CCIP pool member is a conserved bridge return path reviewed under Bridge Risk, not independent native issuance authority. getRequirements(token, 0x9dc29fac burn) = groups {0, 4}. No cap variable exists in the implementation ABI."
       },
       {
         "chain": "base",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": [
+          "base:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        ],
         "label": "Spiko PermissionManager admin group Safe (base)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -429,6 +397,9 @@
       {
         "chain": "base",
         "address": "0xaead1f7c9b189816cb845363d142cfcf339084c2",
+        "deploymentRefs": [
+          "base:0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+        ],
         "label": "Spiko two-step Minter with daily limit (base)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -451,62 +422,11 @@
         "evidence": "At base block 48621853: Minter proxy 0xaead1f7c9b189816cb845363d142cfcf339084c2 is a UUPS ERC-1967 proxy (admin slot 0x0) and is in PermissionManager group 2, so canCall(minter, token, mint) = true. Verified implementation (\"Minter\") exposes initiateMint/approveMint/cancelMint (restricted) plus dailyLimit/getMintedToday. dailyLimit(eurSPKCC) = 500000000000, getMintedToday = 0, maxDelay = 86400s. getRequirements(minter, initiateMint) = group {0, 10}; approveMint = {0, 9}; setDailyLimit = {0}."
       },
       {
-        "chain": "base",
-        "address": "0x1cd239b73ff2ed0a10767f7b6d4880ac399a3896",
-        "label": "Chainlink CCIP eurSPKCC BurnWithFromMintTokenPool (base)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "capDescription": "Pool mints only against a burn on the source lane and is bounded by per-lane CCIP rate limiters; the pool owner EOA sets those limiters.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 48621853,
-        "sources": [
-          {
-            "label": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 (eurSPKCC, Ethereum)",
-            "url": "https://eth.blockscout.com/address/0x57fa613b284f05421f78c8bd579555d5c0d7783d"
-          },
-          {
-            "label": "Base PublicNode RPC",
-            "url": "https://base-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At base block 48621853: typeAndVersion() = \"BurnWithFromMintTokenPool 1.6.1\", getToken() = 0x4f33acf823e6eeb697180d553ce0c710124c8d59 (eurSPKCC), owner() = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375. The pool is in PermissionManager group 2 (getGroups = {2,4,6,255}), so canCall(pool, token, 0x40c10f19) = true."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xEd608cf38968C0ba09676843D90B33Dd59dd7375",
-        "label": "Spiko CCIP token-pool owner EOA (deployment-wide)",
-        "role": "bridge-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": false,
-        "capDescription": "Owner of every eurSPKCC CCIP pool on Ethereum, Polygon, Arbitrum and Base; can applyChainUpdates (add remote lanes/pools) and setChainRateLimiterConfig, i.e. can widen or remove the bridge-mint bound.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "failureDomainKeys": [
-          "eoa:ethereum:0xed608cf38968c0ba09676843d90b33dd59dd7375",
-          "eoa:polygon:0xed608cf38968c0ba09676843d90b33dd59dd7375",
-          "eoa:arbitrum:0xed608cf38968c0ba09676843d90b33dd59dd7375",
-          "eoa:base:0xed608cf38968c0ba09676843d90b33dd59dd7375"
-        ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530961,
-        "sources": [
-          {
-            "label": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 (eurSPKCC, Ethereum)",
-            "url": "https://eth.blockscout.com/address/0x57fa613b284f05421f78c8bd579555d5c0d7783d"
-          },
-          {
-            "label": "Ethereum PublicNode RPC",
-            "url": "https://ethereum-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "Ethereum block 25530961: owner() of the eurSPKCC pool 0x57fa613b284f05421f78c8bd579555d5c0d7783d (and of the EUTBL/USTBL/UKTBL/SPKCC pools, and of the corresponding pools on Polygon, Arbitrum and Base) = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, an EOA (getCode = 0x). Its recorded calls to the pool are applyChainUpdates and setChainRateLimiterConfig. It was PermissionManager group 0 at deployment and was removed from group 0 in the same transaction batch (block 19690268)."
-      },
-      {
         "chain": "starknet",
         "address": "0x06472cabc51a3805975b9c60c7dec63897c9a287f2db173a1d6c589d18dd1e07",
+        "deploymentRefs": [
+          "starknet:0x06472cabc51a3805975b9c60c7dec63897c9a287f2db173a1d6c589d18dd1e07"
+        ],
         "label": "eurSPKCC Starknet token role-gated mint",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -531,6 +451,9 @@
       {
         "chain": "starknet",
         "address": "0x07c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3",
+        "deploymentRefs": [
+          "starknet:0x06472cabc51a3805975b9c60c7dec63897c9a287f2db173a1d6c589d18dd1e07"
+        ],
         "label": "Spiko Starknet PermissionManager (AccessControl)",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -551,6 +474,9 @@
       {
         "chain": "starknet",
         "address": "0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d",
+        "deploymentRefs": [
+          "starknet:0x06472cabc51a3805975b9c60c7dec63897c9a287f2db173a1d6c589d18dd1e07"
+        ],
         "label": "Spiko Starknet owner Argent multisig (3/5)",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -577,6 +503,9 @@
       {
         "chain": "starknet",
         "address": "0x02d5ad99f66e018e2708e40c52724f04278cbee65ed74aa5b144a7f884f54d7b",
+        "deploymentRefs": [
+          "starknet:0x06472cabc51a3805975b9c60c7dec63897c9a287f2db173a1d6c589d18dd1e07"
+        ],
         "label": "Starknet MINTER_ROLE single-key accounts (3)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -602,6 +531,9 @@
       {
         "chain": "stellar",
         "address": "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
+        "deploymentRefs": [
+          "stellar:CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A"
+        ],
         "label": "eurSPKCC Soroban token role-gated mint",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -626,6 +558,9 @@
       {
         "chain": "stellar",
         "address": "CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M",
+        "deploymentRefs": [
+          "stellar:CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A"
+        ],
         "label": "Spiko Stellar PermissionManager (AccessControl)",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -650,6 +585,9 @@
       {
         "chain": "stellar",
         "address": "GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
+        "deploymentRefs": [
+          "stellar:CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A"
+        ],
         "label": "Spiko Stellar owner and PermissionManager admin (single-key account)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -674,6 +612,9 @@
       {
         "chain": "stellar",
         "address": "GD2ELXTHZQORSH75SJE6XRTCKXNDGJFIZ4R2SZ4MMXDOBT52GK26X4EO",
+        "deploymentRefs": [
+          "stellar:CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A"
+        ],
         "label": "Stellar MINTER role single-key accounts (3)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -706,9 +647,9 @@
     "supervision": "prudential",
     "review": {
       "disposition": "scoreable",
-      "reviewedAt": "2026-08-15",
-      "reviewer": "Claude V9 CTRL sweep; Sol economic-posture batch 2026-08-15",
-      "evidence": "Every chain in the coin file was read on-chain. EVM (Ethereum 25530961, Polygon 90218705, Arbitrum 483768450, Base 48621853): PermissionManager.getRequirements(token, mint) = groups {0,2} on all four; group membership enumerated from the complete GroupAdded/GroupRemoved log history (Blockscout etherscan-compatible logs API) and every candidate re-checked with getGroups() at head. Group 0 = Spiko admin Safe (3/8 on Ethereum, 3/6 on Polygon/Arbitrum/Base, all Safe v1.4.1, no modules, no guard); group 2 = the Spiko Minter proxy (dailyLimit 500000000000, initiator group 10 + approver group 9) and the Chainlink CCIP BurnWithFromMintTokenPool for each Spiko fund token, all owned by EOA 0xEd608cf3.... Starknet (block 11841234): MINTER_ROLE holders enumerated from a full RoleGranted/RoleRevoked scan and confirmed with has_role — a 3/5 ArgentMultisig plus three single-key accounts. Stellar (Soroban ledger 63473407): the PermissionManager is enumerable, get_role_member(MINTER, 0..2) returns three accounts, and Horizon shows all three plus the owner/admin are single-signer accounts. Upgradeability: all four EVM token proxies are UUPS (EIP-1967 admin slot = 0x0) and getRequirements(token, upgradeToAndCall) = group {0}, so the admin Safe can replace mint logic; Ethereum/Polygon/Base share implementation 0x15ea0ec4..., Arbitrum runs 0xa0769f7a...; the Starknet class is OZ-Upgradeable and owner-gated (simulated upgrade from the 3/5 Argent multisig succeeds) and the Soroban wasm upgrade is owner-gated to single-key account GBYIQXBK... (simulated upgrade succeeds for the owner, fails for a MINTER holder). The open question about the non-Ethereum deployments is resolved and removed. Evidence challenge completed 2026-07-15: the official product page identifies CACEIS as depositary and accountant and states that PwC performs recurring statutory audits, but it still showed allocation data last updated 2025-11-21 and exposed no dated PwC report or other current independent supply-to-assets reconciliation. Those role and cadence claims do not establish a qualifying recurring report, so reconciliation remains unknown. The exact AMF GECO registry evidence is retained in the sources, but supervision is intentionally not authored while reconciliation evidence is absent. Reconciliation review (2026-08-08): same fund as SPKCC, EUR share class (ISIN FR0014010ON7). The prospectus supersedes the product-page claims the 2026-07-15 pass could not qualify: CACEIS Fund Administration is the delegated accounting agent striking the NAV daily on a D+1 basis, CACEIS Bank is the ACPR-authorised depositary, and PricewaterhouseCoopers Audit is statutory auditor. Supervision is prudential through the AMF-authorised manager Twenty First Capital SAS (GP-11000029) and the ACPR-authorised depositary rather than through the fund vehicle, which the prospectus states is not AMF-authorised. Economic-posture fields reviewed 2026-08-15: uncapped mint paths remain issuer-controlled across EVM, Starknet, and Stellar while periodic fund accounting and named AMF/ACPR supervision are retained.",
+      "reviewedAt": "2026-08-16",
+      "reviewer": "Codex mint-bridge-boundary migration FIX2-06",
+      "evidence": "Current native issuance review performed 2026-08-16 from the verified work-order observations. On Ethereum, Polygon, Arbitrum, and Base, token mint requirements are groups {0,2}; group 0 is the issuer admin Safe (3/6 on every EVM deployment, with no enabled modules, guard, or module guard), while group 2 contains the Spiko two-step Minter and the CCIP pool. The Minter is the native daily-limited issuer path; the CCIP pool's group-2 mint is a conserved burn-and-mint bridge return path reviewed under bridgeRouteRisk, not global native authority. Starknet at current head 13404810 has the Spiko 3/5 Argent owner and three routed single-key MINTER accounts; the latest owner read is current, while the three-member role enumeration remains the routed ledger 63473407 observation. Stellar's latest owner read is ledger 63986064 and its MINTER enumeration is the routed ledger 63473407 observation; the owner is a single-key account that can upgrade the wasm. The four EVM token proxies are UUPS with group-0 upgrade authority, Starknet class replacement is owner-gated, and Soroban wasm replacement is owner-gated. Native paths therefore remain unbounded with periodic fund accounting and prudential supervision. The CCIP pool owner EOA, remote lanes, rate limits, OffRamp/source-pool checks, and bridge common-mode facts are excluded from this native evidence and are retained in structured Bridge Risk controls.",
       "sources": [
         {
           "label": "Spiko documentation",

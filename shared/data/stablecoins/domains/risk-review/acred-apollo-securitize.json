@@ -14,10 +14,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "ACRED has issuer-native Securitize deployments on all six tracked chains. Wormhole supplies the external validated messaging layer for near-instant native transfers through Securitize's own smart contracts; it does not create wrapped representations or control ordinary local issuance.",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "verified",
+    "summary": "ACRED has one probable canonical native issuance route on Ethereum and five probable Securitize/Wormhole bridge representations on Avalanche, Ink, Polygon, Solana, and Aptos. Wormhole supplies an external validated messaging layer, but the ACRED-specific manager, adapter, peers, validator threshold, rate limits, and conservation invariant remain unidentified. Destination issuer, administration, and upgrade surfaces are retained below as adverse bridge/common-mode controls rather than counted as independent canonical liabilities.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration",
+    "confidence": "probable",
     "protocols": [
       {
         "source": "docs",
@@ -68,8 +68,8 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x7c64925002bfa705834b118a923e9911bee32875",
         "protocol": "Securitize / Wormhole",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
@@ -93,8 +93,8 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3",
         "protocol": "Securitize / Wormhole",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
@@ -118,8 +118,8 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xfce60bbc52a5705cec5b445501fbaf3274dc43d0",
         "protocol": "Securitize / Wormhole",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
@@ -143,8 +143,8 @@
         "canonicalChain": "ethereum",
         "contractAddress": "FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
         "protocol": "Securitize / Wormhole",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
@@ -168,8 +168,8 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88",
         "protocol": "Securitize / Wormhole",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
@@ -186,6 +186,354 @@
             "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "acred-avalanche-destination-master",
+        "label": "ACRED Avalanche destination master and upgrade owner",
+        "routeRefs": [
+          "avalanche:0x7c64925002bfa705834b118a923e9911bee32875"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "failureDomainKeys": [
+          "eoa:evm:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "contract:avalanche:0x7c64925002bfa705834b118a923e9911bee32875"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "The Avalanche destination cap() returned zero, which the verified implementation treats as uncapped; no aggregate bridge conservation bound was verified.",
+          "pausersAdminsUpgraders": "The shared EOA was owner or MASTER for the Avalanche token and trust service and could immediately replace both implementations. The ACRED-specific Wormhole manager, adapter, peer, and route upgrade owner were not identified."
+        },
+        "capDescription": "The Avalanche local issuance surface is uncapped at the observed token contract; public ACRED/Wormhole material does not prove that it is restricted to validated transfer receipts.",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Avalanche ACRED token",
+            "url": "https://snowtrace.io/address/0x7c64925002bfa705834b118a923e9911bee32875/contract/43114/code"
+          },
+          {
+            "label": "Wormhole Securitize case study",
+            "url": "https://wormhole.com/case-studies/securitize"
+          }
+        ],
+        "evidence": "At the fixed exact cutoff, this zero-code EOA was owner or MASTER for the Avalanche ACRED token and trust-service deployments. It could call issueTokens, grant or revoke ISSUER, set the one-time token cap, and immediately replace both implementations. cap() returned zero on the destination deployment, which the verified implementation treats as uncapped. The public ACRED/Wormhole material does not prove that these local issuance calls are restricted to Wormhole-validated receipts, so this remains adverse bridge-representation/common-mode exposure rather than a second canonical Mint Authority route."
+      },
+      {
+        "id": "acred-ink-destination-master",
+        "label": "ACRED Ink destination master and upgrade owner",
+        "routeRefs": [
+          "ink:0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ink",
+        "controllerAddress": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "failureDomainKeys": [
+          "eoa:evm:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "contract:ink:0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "The Ink destination cap() returned zero, which the verified implementation treats as uncapped; no aggregate bridge conservation bound was verified.",
+          "pausersAdminsUpgraders": "The shared EOA was owner or MASTER for the Ink token and trust service and could immediately replace both implementations. The ACRED-specific Wormhole manager, adapter, peer, and route upgrade owner were not identified."
+        },
+        "capDescription": "The Ink local issuance surface is uncapped at the observed token contract; public ACRED/Wormhole material does not prove that it is restricted to validated transfer receipts.",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ink ACRED token",
+            "url": "https://explorer.inkonchain.com/address/0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3?tab=contract"
+          },
+          {
+            "label": "Wormhole Securitize case study",
+            "url": "https://wormhole.com/case-studies/securitize"
+          }
+        ],
+        "evidence": "At the fixed exact cutoff, this zero-code EOA was owner or MASTER for the Ink ACRED token and trust-service deployments. It could call issueTokens, grant or revoke ISSUER, set the one-time token cap, and immediately replace both implementations. cap() returned zero on the destination deployment, which the verified implementation treats as uncapped. The public ACRED/Wormhole material does not prove that these local issuance calls are restricted to Wormhole-validated receipts, so this remains adverse bridge-representation/common-mode exposure rather than a second canonical Mint Authority route."
+      },
+      {
+        "id": "acred-polygon-destination-master",
+        "label": "ACRED Polygon destination master and upgrade owner",
+        "routeRefs": [
+          "polygon:0xfce60bbc52a5705cec5b445501fbaf3274dc43d0"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "failureDomainKeys": [
+          "eoa:evm:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "contract:polygon:0xfce60bbc52a5705cec5b445501fbaf3274dc43d0"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "The Polygon destination cap() returned zero, which the verified implementation treats as uncapped; no aggregate bridge conservation bound was verified.",
+          "pausersAdminsUpgraders": "The shared EOA was owner or MASTER for the Polygon token and trust service and could immediately replace both implementations. The ACRED-specific Wormhole manager, adapter, peer, and route upgrade owner were not identified."
+        },
+        "capDescription": "The Polygon local issuance surface is uncapped at the observed token contract; public ACRED/Wormhole material does not prove that it is restricted to validated transfer receipts.",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Polygon ACRED token",
+            "url": "https://polygonscan.com/address/0xfce60bbc52a5705cec5b445501fbaf3274dc43d0#code"
+          },
+          {
+            "label": "Wormhole Securitize case study",
+            "url": "https://wormhole.com/case-studies/securitize"
+          }
+        ],
+        "evidence": "At the fixed exact cutoff, this zero-code EOA was owner or MASTER for the Polygon ACRED token and trust-service deployments. It could call issueTokens, grant or revoke ISSUER, set the one-time token cap, and immediately replace both implementations. cap() returned zero on the destination deployment, which the verified implementation treats as uncapped. The public ACRED/Wormhole material does not prove that these local issuance calls are restricted to Wormhole-validated receipts, so this remains adverse bridge-representation/common-mode exposure rather than a second canonical Mint Authority route."
+      },
+      {
+        "id": "acred-solana-issuer-signer",
+        "label": "ACRED Solana issuer signer for bridge representation",
+        "routeRefs": [
+          "solana:FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "4BjYWQ9MgvE4haFXa5mjtCb75SoFoAiukk4j5NwTZH8a",
+        "failureDomainKeys": [
+          "eoa:solana:4bjywq9mgve4hafxa5mjtcb75sofoaiukk4j5nwtzh8a"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "No finite Token-2022 token cap applies to this issuer path; the exact ACRED Wormhole receipt validation and route-level conservation bound were not identified."
+        },
+        "canRaiseCap": false,
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "sources": [
+          {
+            "label": "Solana ACRED mint",
+            "url": "https://solscan.io/token/FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8"
+          },
+          {
+            "label": "Pre-cutoff Solana ACRED issue transaction",
+            "url": "https://solscan.io/tx/58ndZvZQN8gHjQR6zzxLwcfVfZkBTEjcnHtjNbc3xMRikQcXUVkiTSa6bPTbLRvUMJyhkGBE1R468RgBM5JSSzbs"
+          }
+        ],
+        "evidence": "At Solana slot 432714278, this on-curve signer was a decoded member of ACRED ISSUER role account 8TpJ...2JTV. Transaction 58nd...Szbs at pre-cutoff slot 419520045 proves it invoking the Securitize issuer program, which CPI-minted Token-2022 ACRED through controller PDA Fr3R...TYbH. No finite token cap applies. This issuer surface is retained as adverse bridge-representation exposure because the public sources do not prove that its mint path is restricted to validated Wormhole transfers."
+      },
+      {
+        "id": "acred-solana-onramp-issuer-pda",
+        "label": "ACRED Solana Securitize on-ramp issuer PDA",
+        "routeRefs": [
+          "solana:FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "A2m2kmZ1Tf1WLY1dXTBb9dFMiyFYA3hfUymXJtXHBWTj",
+        "failureDomainKeys": [
+          "program:solana:gqdbgv5oyttovrdju7b2w87pbtvqd7dgjjsztqh5us4w"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "present",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "sources": [
+          {
+            "label": "Solana ACRED issuer role account",
+            "url": "https://solscan.io/account/8TpJJVPJhQ54vv4deLjt2SnzD78v9p7mEyzLVTqo2JTV"
+          },
+          {
+            "label": "Solana ACRED on-ramp program",
+            "url": "https://solscan.io/account/GQDbgV5oYTtovRDJU7b2w87PbTVqD7dGjJSZtqH5uS4w"
+          }
+        ],
+        "evidence": "The ACRED ISSUER role also contained this off-curve PDA. It derives exactly from Securitize on-ramp program GQDbg...uS4w with seeds [\"on_ramp_authority\", WCAg...UEBn] and bump 255. The deployed program's SubscribeDsToken path builds an IssueTokens CPI, subject to its configured subscription, NAV, asset-provider, and compliance checks. The exact Wormhole receipt and conservation path is not identified, so this local issuer remains scoreable under Bridge Risk."
+      },
+      {
+        "id": "acred-solana-onramp-admin",
+        "label": "ACRED Solana on-ramp admin",
+        "routeRefs": [
+          "solana:FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8"
+        ],
+        "capabilities": [
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "D2kGPFTyGSeeTSCA1kEzKZNrdMvYKPLdZtrmAnnK6jCS",
+        "failureDomainKeys": [
+          "eoa:solana:d2kgpftygseetsca1kezkznrdmvykpldztrmannk6jcs"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The system-owned EOA is the on-ramp state admin and can pause the path or change operators, the NAV provider, and the asset-provider configuration governing use of the authorized issuer PDA."
+        },
+        "canRaiseCap": false,
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "sources": [
+          {
+            "label": "Solana ACRED on-ramp state",
+            "url": "https://solscan.io/account/WCAg15hGdRdgZYwULnC5CaSDns5PKTZKKdewBZzUEBn"
+          },
+          {
+            "label": "Solana ACRED on-ramp admin change",
+            "url": "https://solscan.io/tx/4ozM13yb8cwkkgUVNQYYJEBPPczaGSy5BhzyDN15E5N2ZCgMbc5PNcpiWbhgodj8X6zasprPaBdRNhsR714ATRYb"
+          }
+        ],
+        "evidence": "Before the cutoff, ChangeAdmin set this system-owned EOA as the on-ramp state admin, and the state had no later writes. The deployed program lets the admin pause the path and change operators, the NAV provider, and the asset-provider configuration that governs use of the authorized issuer PDA."
+      },
+      {
+        "id": "acred-solana-shared-program-upgrade-authority",
+        "label": "ACRED Solana shared program upgrade authority",
+        "routeRefs": [
+          "solana:FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
+        "failureDomainKeys": [
+          "eoa:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "sources": [
+          {
+            "label": "Solana ACRED issuer program",
+            "url": "https://solscan.io/account/3g6fUgMsJQhjPUYxNjEU5PyzGf8DerbDx8p5Qh4yMnRR"
+          },
+          {
+            "label": "Solana ACRED controller program",
+            "url": "https://solscan.io/account/7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
+          },
+          {
+            "label": "Solana ACRED transfer-hook program",
+            "url": "https://solscan.io/account/FsE8mCJyvgMzqJbfHbJQm3iuf3cRZC6n2vZi1Q8rQCy2"
+          },
+          {
+            "label": "Solana ACRED on-ramp program",
+            "url": "https://solscan.io/account/GQDbgV5oYTtovRDJU7b2w87PbTVqD7dGjJSZtqH5uS4w"
+          }
+        ],
+        "evidence": "At Solana slot 432714278, the issuer, PDA controller, transfer-hook, and ACRED on-ramp programs were all BPF-upgradeable and shared this system-owned single-account upgrade authority. Their ProgramData accounts had no post-cutoff writes, and the authority could replace all four programs immediately with no on-chain delay. This upgrade domain is retained for the Solana bridge representation, not canonical Mint Authority."
+      },
+      {
+        "id": "acred-aptos-issuer-one",
+        "label": "ACRED Aptos issuer 1",
+        "routeRefs": [
+          "aptos:0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "aptos",
+        "controllerAddress": "0x193e9ac9c96cec19030155cfe4c9340ba064bdec5a1a5439e43e0ec91baf6299",
+        "failureDomainKeys": [
+          "eoa:aptos:0x193e9ac9c96cec19030155cfe4c9340ba064bdec5a1a5439e43e0ec91baf6299"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-13",
+        "observedBlock": 6262999136,
+        "sources": [
+          {
+            "label": "Aptos ACRED trust store",
+            "url": "https://explorer.aptoslabs.com/account/0x904f16acd72ba779f6a9ba91cef1d5e4b4d16e6f3a7f4556446836cc8b318edf?network=mainnet"
+          }
+        ],
+        "evidence": "At Aptos ledger version 6262999136, this ordinary account was one of two Roles.issuers entries. The deployed trust_service code permits an issuer or master to call issue_tokens. CustomMetadata.cap was zero, which the deployed ds_token logic treats as uncapped. The public sources do not prove that this local issuer is restricted to validated Wormhole transfers, so it remains adverse bridge-representation exposure."
+      },
+      {
+        "id": "acred-aptos-issuer-two",
+        "label": "ACRED Aptos issuer 2",
+        "routeRefs": [
+          "aptos:0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "aptos",
+        "controllerAddress": "0x2414a407080aa7092c9986fd3be3a6ec6768f2cc8fd131a3fb468657ccbefa85",
+        "failureDomainKeys": [
+          "eoa:aptos:0x2414a407080aa7092c9986fd3be3a6ec6768f2cc8fd131a3fb468657ccbefa85"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-13",
+        "observedBlock": 6262999136,
+        "sources": [
+          {
+            "label": "Aptos ACRED trust store",
+            "url": "https://explorer.aptoslabs.com/account/0x904f16acd72ba779f6a9ba91cef1d5e4b4d16e6f3a7f4556446836cc8b318edf?network=mainnet"
+          }
+        ],
+        "evidence": "At Aptos ledger version 6262999136, this ordinary account was the second Roles.issuers entry. The deployed trust_service code permits an issuer or master to call issue_tokens. CustomMetadata.cap was zero, which the deployed ds_token logic treats as uncapped. The public sources do not prove that this local issuer is restricted to validated Wormhole transfers, so it remains adverse bridge-representation exposure."
+      },
+      {
+        "id": "acred-aptos-master-package-owner",
+        "label": "ACRED Aptos master and package owner",
+        "routeRefs": [
+          "aptos:0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "aptos",
+        "controllerAddress": "0xc35dd2252c745bac5aced78b9087a1165ecf5003723d29dcc41bb8c88206aec7",
+        "failureDomainKeys": [
+          "eoa:aptos:0xc35dd2252c745bac5aced78b9087a1165ecf5003723d29dcc41bb8c88206aec7",
+          "contract:aptos:0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "CustomMetadata.cap was zero, which the deployed ds_token logic treats as uncapped; this account could set the one-time cap, and no bridge conservation invariant was verified.",
+          "pausersAdminsUpgraders": "This account was trust_service master and owner of the package object. It could administer roles and publish compatible package upgrades immediately; no multisig resource or on-chain timelock was present."
+        },
+        "capDescription": "The Aptos master can set the one-time cap and issue locally; public ACRED/Wormhole material does not prove that those capabilities are restricted to validated transfer receipts.",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-13",
+        "observedBlock": 6262999136,
+        "sources": [
+          {
+            "label": "Aptos ACRED package object",
+            "url": "https://explorer.aptoslabs.com/account/0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a?network=mainnet"
+          },
+          {
+            "label": "Wormhole Securitize case study",
+            "url": "https://wormhole.com/case-studies/securitize"
+          }
+        ],
+        "evidence": "At Aptos ledger version 6262999136, this ordinary single account was trust_service master and owner of package object 0x13816cd4...f06a. It could mint, administer roles, set the one-time cap, and publish compatible package upgrades immediately; no multisig resource or on-chain timelock was present. The exact ACRED Wormhole receipt and conservation path is not identified, so this remains scoreable as adverse bridge/common-mode representation exposure rather than canonical Mint Authority."
       }
     ]
   }

@@ -7,6 +7,12 @@
     "summary": "AUDX is issued by TAU Pty Ltd (trading as AUDX Token); minting and 1:1 AUD redemption run through the issuer's centralized backend against AUD cash and government-backed instruments held in reserve.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+      ],
       "proxyAddresses": [
         "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
         "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
@@ -61,6 +67,12 @@
     },
     "controls": [
       {
+        "deploymentRefs": [
+          "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+          "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+          "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+          "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        ],
         "label": "TAU Pty Ltd issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -76,6 +88,12 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "deploymentRefs": [
+          "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+          "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+          "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+          "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xc9d8...) and hasRole(MINTER_ROLE=0x9f2df0..., 0xc9d8...) both returned true on the AUDX ERC1967 proxy (impl: AussieDollarToken). Same confirmed on Polygon at block 88323844. XDC (rpc.xinfin.network, block 0x62dbc1a): hasRole(DEFAULT_ADMIN, 0xc9d8...) = true, hasRole(MINTER_ROLE, 0xc9d8...) = true on the same contract address 0xd687...e00c. eth_getCode returns no bytecode → EOA. Confirmed via RoleGranted events in creation tx (0x8dfc8be2...): all roles (DEFAULT_ADMIN, PAUSER, MINTER, BLACKLISTER, SALVAGER, UPGRADER) granted to this deployer address.",
@@ -95,6 +113,12 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "address": "0x1274d87337eb9091e22b9686ae34ad54c989c883",
+        "deploymentRefs": [
+          "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+          "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+          "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+          "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "evidence": "Conflux eSpace (evm.confluxrpc.com, block 0x8eb4a2f / 149,717,551): RoleGranted events for DEFAULT_ADMIN_ROLE and MINTER_ROLE on AUDX proxy 0x47a365e29697c700c75d58936b3d93a8a20a43c9 all grant to 0x1274d87337eb9091e22b9686ae34ad54c989c883 in deployment tx 0xa4be8387... No RoleRevoked events. hasRole(DEFAULT_ADMIN, 0x1274...) = true, hasRole(MINTER_ROLE, 0x1274...) = true confirmed via eth_call. Note: this is a different EOA from the Ethereum/Polygon/XDC deployer, consistent with per-chain key management.",
@@ -108,6 +132,9 @@
       {
         "chain": "ethereum",
         "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "deploymentRefs": [
+          "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        ],
         "label": "AUDX UUPS UPGRADER_ROLE (Ethereum)",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -131,6 +158,9 @@
       {
         "chain": "polygon",
         "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "deploymentRefs": [
+          "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        ],
         "label": "AUDX UUPS UPGRADER_ROLE (Polygon)",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -154,6 +184,9 @@
       {
         "chain": "conflux",
         "address": "0x1274d87337eb9091e22b9686ae34ad54c989c883",
+        "deploymentRefs": [
+          "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9"
+        ],
         "label": "AUDX UUPS UPGRADER_ROLE (Conflux eSpace)",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -173,6 +206,9 @@
       {
         "chain": "xdc",
         "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "deploymentRefs": [
+          "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        ],
         "label": "AUDX UUPS UPGRADER_ROLE (XDC)",
         "role": "proxy-admin",
         "authorityType": "eoa",

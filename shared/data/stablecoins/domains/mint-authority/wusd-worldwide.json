@@ -7,6 +7,11 @@
     "summary": "WUSD is issuer-minted by WSPN on Ethereum, Polygon, and Viction through ERC20F AccessControl tokens: a single WSPN DEFAULT_ADMIN EOA governs roles on every chain, mint rights sit with one WSPN operator EOA plus chain-local mint/burn operator contracts, and no supply cap exists in the token. The UUPS upgrade role is unassigned on Ethereum/Polygon and held by the deployer EOA on Viction.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+        "polygon:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+        "viction:0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+      ],
       "proxyAddresses": [
         "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
         "0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
@@ -31,6 +36,9 @@
       {
         "chain": "ethereum",
         "address": "0x1a41b5922e926cca1eaa8afac55bddce40fdbe61",
+        "deploymentRefs": [
+          "ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+        ],
         "label": "WSPN minter EOA (Ethereum)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -49,6 +57,9 @@
       {
         "chain": "ethereum",
         "address": "0x171ac757879d9f5004992159fc9bf3344f82d5c3",
+        "deploymentRefs": [
+          "ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+        ],
         "label": "WSPN mint/burn operator 0x171ac757 (Ethereum)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -67,6 +78,9 @@
       {
         "chain": "ethereum",
         "address": "0x80c0a17d45049016a02a16d2b77a9003320fb9e0",
+        "deploymentRefs": [
+          "ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+        ],
         "label": "WSPN mint/burn operator 0x80c0a17d (Ethereum)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -85,6 +99,9 @@
       {
         "chain": "polygon",
         "address": "0x1a41b5922e926cca1eaa8afac55bddce40fdbe61",
+        "deploymentRefs": [
+          "polygon:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+        ],
         "label": "WSPN minter EOA (Polygon)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -103,6 +120,9 @@
       {
         "chain": "polygon",
         "address": "0xff5fd9d00fab52b197a8e20a01c151026b57559b",
+        "deploymentRefs": [
+          "polygon:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+        ],
         "label": "WSPN mint/burn operator 0xff5fd9d0 (Polygon)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -121,6 +141,9 @@
       {
         "chain": "viction",
         "address": "0x1a41b5922e926cca1eaa8afac55bddce40fdbe61",
+        "deploymentRefs": [
+          "viction:0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+        ],
         "label": "WSPN minter EOA (Viction)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -139,6 +162,9 @@
       {
         "chain": "viction",
         "address": "0x2f5a9cb393ecbacf205c72ec8ed367460959b025",
+        "deploymentRefs": [
+          "viction:0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+        ],
         "label": "WSPN mint/burn operator 0x2f5a9cb3 (Viction)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -157,6 +183,9 @@
       {
         "chain": "ethereum",
         "address": "0x731efdc933464ed81bf3ea961e9fdadc62e83bd1",
+        "deploymentRefs": [
+          "ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+        ],
         "label": "WSPN token DEFAULT_ADMIN EOA (Ethereum)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -175,6 +204,9 @@
       {
         "chain": "polygon",
         "address": "0x731efdc933464ed81bf3ea961e9fdadc62e83bd1",
+        "deploymentRefs": [
+          "polygon:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+        ],
         "label": "WSPN token DEFAULT_ADMIN EOA (Polygon)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -193,6 +225,9 @@
       {
         "chain": "viction",
         "address": "0x731efdc933464ed81bf3ea961e9fdadc62e83bd1",
+        "deploymentRefs": [
+          "viction:0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+        ],
         "label": "WSPN token DEFAULT_ADMIN EOA (Viction)",
         "role": "minter-admin",
         "authorityType": "eoa",

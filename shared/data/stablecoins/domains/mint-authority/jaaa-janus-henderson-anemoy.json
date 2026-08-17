@@ -44,7 +44,10 @@
         ],
         "evidence": "At Ethereum block 25,296,225, the JAAA Tranche token wards are: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f, contract), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e, contract), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, contract). No EOA has direct ward access. Root's ProtocolGuardian (0xCEb7eD5d5B3bAD3088f6A1697738B60d829635c6) routes to the Centrifuge protocol Safe.",
         "chain": "ethereum",
-        "address": "0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f"
+        "address": "0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f",
+        "deploymentRefs": [
+          "ethereum:0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
+        ]
       },
       {
         "label": "Centrifuge protocol Gnosis Safe (4-of-9)",
@@ -83,9 +86,20 @@
         ],
         "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Root's ProtocolGuardian has onlySafe modifier routing control to this Safe.",
         "chain": "ethereum",
-        "address": "0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
+        "address": "0x9711730060C73Ee7Fcfe1890e8A0993858a7D225",
+        "deploymentRefs": [
+          "ethereum:0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
+        ]
       },
       {
+        "deploymentRefs": [
+          "avalanche:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
+          "base:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
+          "bsc:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
+          "ethereum:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
+          "monad:0xad48f183e586e92a591a610397ebf534609df797",
+          "solana:AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG"
+        ],
         "label": "Anemoy / Janus Henderson issuer rail",
         "role": "direct-minter",
         "authorityType": "issuer-backend",

@@ -4,27 +4,17 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "DGLD is issued by Gold Token SA. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a single issuer EOA that also owns the ProxyAdmin. After retiring the compromised Ethereum-Base bridge, the issuer deployed an independently gold-backed native Base token whose MINTER_ROLE, DEFAULT_ADMIN_ROLE, and ProxyAdmin owner are separately identified.",
-    "mintIncidents": [
-      {
-        "date": "2026-02-23",
-        "status": "resolved",
-        "resolvedAt": "2026-07-15",
-        "summary": "An exploit of the former Ethereum-Base bridge enabled unauthorized unbacked DGLD minting on Base. Gold Token SA retired that bridge, deployed a separately backed native Base token on June 30, and completed the legacy Base balance reset on July 15.",
-        "sources": [
-          {
-            "label": "DGLD post-incident report and July 15 update",
-            "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
-          }
-        ]
-      }
-    ],
+    "summary": "Gold Token SA issues DGLD through two independent native deployments on Ethereum and Base. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d, which also owns the Ethereum ProxyAdmin; on Base the corresponding roles and ProxyAdmin ownership are held by issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Neither native deployment has a contract-enforced aggregate supply ceiling or execution delay, so issuance remains unbounded subject to issuer-operated gold backing and reconciliation.",
     "controls": [
       {
         "label": "Gold Token SA issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
+          "base:0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a"
+        ],
         "canRaiseCap": true,
         "failureDomainKeys": [
           "issuer-backend:dgld-gold-token-sa:gold-token-sa-issuance-backend"
@@ -44,6 +34,9 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0xa9299c296d7830a99414d1e5546f5171fa01e9c8"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -67,6 +60,9 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "base:0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
@@ -90,6 +86,9 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0xa9299c296d7830a99414d1e5546f5171fa01e9c8"
+        ],
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
         "observedBlock": 25712296,
@@ -112,6 +111,9 @@
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "base:0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a"
+        ],
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-08-08",
         "observedBlock": 49713744,
@@ -130,6 +132,10 @@
     ],
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
+        "base:0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a"
+      ],
       "proxyAddresses": [
         "0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
         "0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a"
@@ -172,9 +178,9 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Fresh reads at Ethereum block 25712296 and Base block 49713744 confirmed the two chain-local issuer EOAs still hold MINTER_ROLE, DEFAULT_ADMIN_ROLE, and their respective ProxyAdmin ownership. Both proxy paths remain immediate and neither implementation enforces an aggregate supply ceiling, so economic cap semantics are unbounded. The February 2026 bridge-mint incident remains resolved through bridge retirement and the replacement Base deployment. On 2026-08-08, Gold Token SA's live bar registry reconciled the displayed Ethereum and Base supplies to named PAMP bar serials with no displayed gap, supporting continuous issuer-operated reconciliation; this is self-reported rather than independent assurance. VQF AML self-regulatory membership is not prudential supervision.",
-      "reviewer": "Codex deployment-control review; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-08-08",
+      "evidence": "Fresh reads at Ethereum block 25770769 and Base block 50065888 confirmed the two chain-local issuer EOAs still hold MINTER_ROLE, DEFAULT_ADMIN_ROLE, and their respective ProxyAdmin ownership. Both proxy paths remain immediate and neither implementation enforces an aggregate supply ceiling, so economic cap semantics are unbounded. On 2026-08-08, Gold Token SA's live bar registry reconciled the displayed Ethereum and Base supplies to named PAMP bar serials with no displayed gap, supporting continuous issuer-operated reconciliation; this is self-reported rather than independent assurance. VQF AML self-regulatory membership is not prudential supervision.",
+      "reviewer": "Codex mint/bridge boundary migration review",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {

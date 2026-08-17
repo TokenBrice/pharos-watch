@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "nWISDOM is a Nest BoringVault share whose ERC20 (identical CREATE2 address 0x29bf...0240 on Plume and Ethereum) contains no LayerZero code itself. Cross-chain movement runs through Plume's SkyLink on LayerZero's OVault standard, orchestrated by the Plume-side NestVaultComposer (LayerZero OVaultComposer, 0x312a0219...). Plume is the canonical accounting/settlement hub. Per LayerZero's OVault Share mesh design, vault shares move via a ShareOFTAdapter (lockbox) on the hub chain plus standard ShareOFT mint/burn on spokes, with deposits/redemptions routed through the hub ERC-4626 vault (ABA pattern). This is an external LayerZero OFT-Adapter/lockbox route with a third-party control surface (composer + OFT peers), not a pure validated-network burn/mint, so it maps to external-lock-mint. The specific adapter contract and the named DVN set were not enumerated, hence probable rather than verified. 2026-07-20 cohort dc-1 pass: Plume and Ethereum rows both confirmed issuer-native Nest deployments (uniform address + uniform owner reads).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "summary": "nWISDOM has issuer-native local issuance on Ethereum, Plume, BNB Chain, and Solana; those native deployment rows and their local deposit/mint authorities remain in Mint Authority. Cross-chain share movement is a separate LayerZero OFT/OVault burn/debit-and-mint/credit rail, and Solana settlement additionally uses CCTP through the Plume-side NestVaultComposer. The known composer and route semantics are preserved here, while the exact adapter, peers, DVN/validator set, rate limits, pause/upgrade controls, and administrators remain unresolved; external-lock-mint therefore remains provisional.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
     "confidence": "probable",
     "protocols": [
       {
@@ -28,7 +28,7 @@
           "burn-mint-oft",
           "external-validated-network"
         ],
-        "note": "Nest cross-chain doc: vault share movement via LayerZero OFT burn/mint messaging; Plume is the canonical accounting hub, Ethereum/Solana are spokes. No lock/mint adapter."
+        "note": "Nest documents LayerZero OFT burn/debit on the source and mint/credit on the destination for EVM share movement. The route-level adapter, peer set, DVNs, and administrators were not enumerated in the reviewed sources."
       },
       {
         "source": "docs",
@@ -38,7 +38,7 @@
         "bridgeTypes": [
           "ovault-composer"
         ],
-        "note": "Composer on Plume at 0x312a0219E8af66C4e8849a3fEF4047415c3b4974; Solana OFT store listed - LayerZero OVault/OFT terminology confirming the route."
+        "note": "The current smart-contract registry identifies the nWISDOM Solana OFT store and Plume composer at 0x312a0219e8af66c4e8849a3fef4047415c3b4974; the composer is the known Plume settlement contract, not a native Mint Authority control."
       },
       {
         "source": "explorer",
@@ -48,33 +48,29 @@
         "bridgeTypes": [
           "erc20-share"
         ],
-        "note": "Ethereum token is a plain BoringVault ERC20 (enter()/exit(), authority access control, no LayerZero code in-token); identical CREATE2 address on Plume signals omnichain token standard with OFT logic in composer/peer layer."
+        "note": "The EVM share token is the issuer-native vault share; cross-chain OFT logic is in the share movement/composer layer rather than being treated as native issuance in this profile."
       }
     ],
     "sources": [
       {
-        "label": "Nest docs - Cross-Chain Architecture (LayerZero OFT burn/mint, Plume hub)",
+        "label": "Nest docs - Cross-Chain Architecture",
         "url": "https://docs.nest.credit/about/cross-chain"
       },
       {
-        "label": "Nest docs - Smart Contracts (NestVaultComposer on Plume, Solana OFT store)",
+        "label": "Nest docs - Smart Contracts",
         "url": "https://docs.nest.credit/developers/smart-contracts"
       },
       {
-        "label": "Nest blog - How Nest vaults work (BoringVault + SkyLink/LayerZero cross-chain)",
-        "url": "https://blog.nest.credit/blog/how-nest-vaults-work"
+        "label": "Nest nWISDOM integration guide",
+        "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
       },
       {
-        "label": "Plume blog - SkyLink x LayerZero (RWA yield streaming over LayerZero)",
-        "url": "https://plume.org/blog/skylink"
-      },
-      {
-        "label": "LayerZero - OVault standard (share OFT mesh: OFT burn/mint via Composer)",
+        "label": "LayerZero OVault standard",
         "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
       },
       {
-        "label": "Etherscan - nWISDOM share token (BoringVault ERC20)",
-        "url": "https://etherscan.io/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        "label": "nWISDOM Solana OFT mint",
+        "url": "https://solscan.io/token/77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT"
       }
     ],
     "routes": [
@@ -89,13 +85,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Nest WisdomTree Vault', symbol nWISDOM, 6 decimals on ethereum; uniform address with uniform owner() 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a on both Plume and Ethereum — issuer-native Nest deployment.",
+        "reviewNote": "Verified as an issuer-native local Nest deployment. At Ethereum block 25770023, the share token and local USDC NestVault owner() reads returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; LayerZero share movement is a separate bridge rail.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770023,
         "sources": [
           {
-            "label": "Nest",
-            "url": "https://nest.credit/"
+            "label": "Nest nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+          },
+          {
+            "label": "Ethereum nWISDOM token",
+            "url": "https://etherscan.io/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
           }
         ]
       },
@@ -110,15 +111,164 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Nest WisdomTree Vault', symbol nWISDOM, 6 decimals on plume; uniform address with uniform owner() 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a on both Plume and Ethereum — issuer-native Nest deployment.",
+        "reviewNote": "Verified as an issuer-native local Nest deployment. At Plume block 87667298, the share token and local USDC NestVault owner() reads returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; LayerZero share movement is a separate bridge rail.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 87667298,
         "sources": [
           {
-            "label": "Nest",
-            "url": "https://nest.credit/"
+            "label": "Nest nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+          },
+          {
+            "label": "Plume nWISDOM token",
+            "url": "https://explorer.plume.org/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
           }
         ]
+      },
+      {
+        "id": "bsc:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "destinationChain": "bsc",
+        "contractAddress": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "protocol": "Nest nWISDOM (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Nest's current smart-contract and integration pages list the BNB nWISDOM share token and local USDT NestVault. At BNB block 116342916, owner() on the share token and USDT NestVault returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; LayerZero share movement is a separate bridge rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116342916,
+        "sources": [
+          {
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "BNB nWISDOM token",
+            "url": "https://bscscan.com/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+          }
+        ]
+      },
+      {
+        "id": "solana:77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT",
+        "destinationChain": "solana",
+        "contractAddress": "77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT",
+        "protocol": "Nest nWISDOM Solana mint and OFT deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Nest's current integration guide and smart-contract registry identify the Solana nWISDOM mint, OFT store, and Plume composer. The user-facing Solana mint is described as native on Solana, but its settlement uses CCTP to Plume and LayerZero OFT to return shares; those transfer-rail controls are recorded separately below.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439718375,
+        "sources": [
+          {
+            "label": "Nest nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+          },
+          {
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "nWISDOM Solana mint",
+            "url": "https://solscan.io/token/77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "nwisdom-layerzero-evm-share-mesh",
+        "label": "Nest nWISDOM LayerZero OFT share mesh across EVM routes",
+        "routeRefs": [
+          "ethereum:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+          "plume:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+          "bsc:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "authorityType": "contract",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "bridge:nwisdom-evm-share-mesh"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "Nest documents source-share burn/debit and destination-share mint/credit through LayerZero OFT. The exact EVM OFT adapter, peer set, and remote identifiers were not enumerated.",
+          "rateLimits": "No route-specific LayerZero rate limits were enumerated in the reviewed Nest or LayerZero sources.",
+          "pausersAdminsUpgraders": "The exact OFT/share adapter pause, upgrade, and administrator graph was not enumerated; those unknowns remain bridge-route risk rather than native Mint Authority facts."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          },
+          {
+            "label": "LayerZero OVault standard",
+            "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
+          },
+          {
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "The current Nest architecture states that EVM share movement burns or debits the source representation and mints or credits the destination representation through LayerZero OFT messaging. This control preserves that arbitrary bridge-mint/burn capability under Bridge Risk without compiling it as a global native minter."
+      },
+      {
+        "id": "nwisdom-solana-cctp-oft-settlement",
+        "label": "Nest nWISDOM Solana CCTP and LayerZero OFT settlement",
+        "routeRefs": [
+          "solana:77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT",
+          "plume:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x312a0219e8af66c4e8849a3fef4047415c3b4974",
+        "failureDomainKeys": [
+          "contract:plume:0x312a0219e8af66c4e8849a3fef4047415c3b4974",
+          "protocol:circle-cctp",
+          "protocol:layerzero-oft"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Nest documents Solana USDC transfer through CCTP to Plume, the Plume NestVaultComposer, and return of nWISDOM through the Solana OFT store. The exact LayerZero peer and DVN set were not enumerated.",
+          "rateLimits": "No route-specific CCTP, LayerZero, composer, or OFT-store rate limits were enumerated.",
+          "pausersAdminsUpgraders": "The composer is identified, but its exact pause, upgrade, role-administrator, and keeper/relayer control graph was not enumerated."
+        },
+        "capDescription": "This is the Solana-to-Plume transfer rail for a native Solana route; its cross-chain mint/burn capability is scored here separately from the Solana SPL mint-authority multisig in Mint Authority.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Nest nWISDOM integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nwisdom"
+          },
+          {
+            "label": "Nest cross-chain architecture",
+            "url": "https://docs.nest.credit/about/cross-chain"
+          },
+          {
+            "label": "Nest smart-contract deployments",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          },
+          {
+            "label": "nWISDOM Solana OFT store",
+            "url": "https://solscan.io/account/RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq"
+          }
+        ],
+        "evidence": "Nest's current integration guide identifies the nWISDOM Solana OFT store RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq and the Plume NestVaultComposer 0x312a0219e8af66c4e8849a3fef4047415c3b4974. The documented mint flow deposits Solana USDC through CCTP, settles the vault action on Plume, and returns nWISDOM through LayerZero OFT; the exact controller and validator graph remains an evidence gap."
       }
     ]
   }

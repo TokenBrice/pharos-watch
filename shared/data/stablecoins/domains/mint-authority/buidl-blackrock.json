@@ -7,6 +7,15 @@
     "summary": "BUIDL is uncapped across all reviewed issuance deployments. Six EVM token and trust-service pairs share one immediate EOA master/upgrader. Solana issuance uses an issuer-signed PDA path whose three mint-critical programs share a separate immediate EOA upgrade key. Aptos issuance is controlled by an issuer and a master/package-owner account with compatible immediate upgrades.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "aptos:0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
+        "arbitrum:0xa6525ae43edcd03dc08e775774dcabd3bb925872",
+        "avalanche:0x53fc82f14f009009b440a706e31c9021e1196a2f",
+        "bsc:0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
+        "ethereum:0x7712c34205737192402172409a8f7ccef8aa2aec",
+        "optimism:0xa1cdab15bba75a80df4089cafba013e376957cf5",
+        "polygon:0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99"
+      ],
       "proxyAddresses": [
         "0x7712c34205737192402172409a8f7ccef8aa2aec",
         "0x3a68756d0335E75C909bA1e8fEFC1D4832C36c60",
@@ -90,6 +99,16 @@
     "controls": [
       {
         "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+        "deploymentRefs": [
+          "aptos:0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
+          "arbitrum:0xa6525ae43edcd03dc08e775774dcabd3bb925872",
+          "avalanche:0x53fc82f14f009009b440a706e31c9021e1196a2f",
+          "bsc:0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
+          "ethereum:0x7712c34205737192402172409a8f7ccef8aa2aec",
+          "optimism:0xa1cdab15bba75a80df4089cafba013e376957cf5",
+          "polygon:0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99",
+          "solana:GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr"
+        ],
         "label": "BUIDL EVM master and upgrade owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -135,6 +154,9 @@
       {
         "chain": "solana",
         "address": "CyNjNKD8zeaLvHVU95ZnS4PK1c1M63CaojLzMPFEUbN2",
+        "deploymentRefs": [
+          "solana:GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr"
+        ],
         "label": "BUIDL Solana issuer signer",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -161,6 +183,9 @@
       {
         "chain": "solana",
         "address": "8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
+        "deploymentRefs": [
+          "solana:GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr"
+        ],
         "label": "BUIDL Solana shared program upgrade authority",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -191,6 +216,9 @@
       {
         "chain": "aptos",
         "address": "0x193e9ac9c96cec19030155cfe4c9340ba064bdec5a1a5439e43e0ec91baf6299",
+        "deploymentRefs": [
+          "aptos:0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89"
+        ],
         "label": "BUIDL Aptos issuer",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -213,6 +241,9 @@
       {
         "chain": "aptos",
         "address": "0x91840004a08dbf21c9ad96ee1c8ef40a6aca24fba6ff23b6ded5a8d17028977b",
+        "deploymentRefs": [
+          "aptos:0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89"
+        ],
         "label": "BUIDL Aptos master and package owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -233,6 +264,16 @@
         "evidence": "At Aptos ledger version 6262999136, this ordinary single account was trust_service master and owner of package object 0x4de5876d...e808a. It could mint, administer roles, and publish compatible package upgrades immediately; no multisig resource or on-chain timelock was present."
       },
       {
+        "deploymentRefs": [
+          "aptos:0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
+          "arbitrum:0xa6525ae43edcd03dc08e775774dcabd3bb925872",
+          "avalanche:0x53fc82f14f009009b440a706e31c9021e1196a2f",
+          "bsc:0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
+          "ethereum:0x7712c34205737192402172409a8f7ccef8aa2aec",
+          "optimism:0xa1cdab15bba75a80df4089cafba013e376957cf5",
+          "polygon:0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99",
+          "solana:GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr"
+        ],
         "label": "BUIDL deployment-wide immediate upgrade authorities",
         "role": "proxy-admin",
         "authorityType": "issuer-backend",

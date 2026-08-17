@@ -57,6 +57,11 @@
       "chain": "gnosis",
       "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
       "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

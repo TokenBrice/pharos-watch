@@ -9,6 +9,9 @@
       {
         "chain": "ethereum",
         "address": "0x9c745cdf09cd2627290ae2db6421da451d1c8c1b",
+        "deploymentRefs": [
+          "ethereum:0x14913815bcfde78baead2111f463d038ac9c2949"
+        ],
         "label": "Telcoin eUSD MINTER_ROLE + DEFAULT_ADMIN Safe (6/3)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -47,6 +50,9 @@
       {
         "chain": "ethereum",
         "address": "0x238fb46093128f4d8d6d21cbfd448455478d9b87",
+        "deploymentRefs": [
+          "ethereum:0x14913815bcfde78baead2111f463d038ac9c2949"
+        ],
         "label": "Beacon upgrade admin Safe (7/2)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -86,6 +92,9 @@
       {
         "chain": "solana",
         "address": "DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG",
+        "deploymentRefs": [
+          "solana:HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L"
+        ],
         "label": "Solana SPL mint authority",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -103,6 +112,11 @@
     ],
     "upgradeability": {
       "model": "beacon",
+      "deploymentRefs": [
+        "base:0x14913815bcfde78baead2111f463d038ac9c2949",
+        "ethereum:0x14913815bcfde78baead2111f463d038ac9c2949",
+        "polygon:0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
       "proxyAddresses": [
         "0x14913815bcfde78baead2111f463d038ac9c2949"
       ],

@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "PYUSD has issuer-backed native deployments on Ethereum, Solana, Arbitrum, and Stellar; all other EVM/Tron expansion is the PYUSD0 omnichain representation minted by Stargate Hydra (LayerZero) adapters that hold supply-controller rights on each PaxosTokenV2 deployment. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "summary": "PYUSD has four issuer-backed native deployments on Ethereum, Arbitrum, Solana, and Stellar. All other authored EVM/Tron expansion is PYUSD0 omnichain representation minted by Stargate Hydra (LayerZero) adapters or NativeOFT machinery. The canonical Ethereum OFTWrapper's bridge mint/burn, owner, peer, and rate-limit powers are assessed as a separate Bridge Risk control, while native issuer controls remain in Mint Authority. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); migration FIX2-14",
     "confidence": "verified",
     "protocols": [
       {
@@ -39,6 +39,14 @@
       {
         "label": "LayerZero on L2BEAT",
         "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "Ethereum verified PYUSD OFTWrapper",
+        "url": "https://eth.blockscout.com/address/0xa2c323fe5a74adffad2bf3e007e36bb029606444?tab=contract"
+      },
+      {
+        "label": "Paxos PYUSD contract repository",
+        "url": "https://github.com/paxosglobal/pyusd-contract"
       }
     ],
     "routes": [
@@ -53,6 +61,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Ethereum is a reviewed native Paxos issuance route. Its canonical-side LayerZero OFTWrapper ingress/egress and owner-controlled bridge machinery are represented by bridgeRouteRisk.controls[0]; the wrapper is not counted as native Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13",
         "sources": [
@@ -687,6 +696,53 @@
             "url": "https://bridge-api.wanchain.org/api/smgID"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "pyusd-ethereum-oft-wrapper",
+        "label": "PYUSD Ethereum OFTWrapper bridge controller",
+        "routeRefs": [
+          "ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:ethereum:0xa2c323fe5a74adffad2bf3e007e36bb029606444"
+        ],
+        "authorityType": "eoa",
+        "capDescription": "SupplyControl recorded a 560,000,000 PYUSD rolling capacity with a 6,482 PYUSD-per-second refill for the OFTWrapper at block 25711753; the SupplyControl manager can change that route-level configuration.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "The verified LayerZero OFT Adapter ABI exposes endpoint(), peers(), isPeer(), setPeer(), delegate, enforced-option, pre-crime, and message-inspector machinery; the full current peer/EID/DVN state was not re-read in this screen.",
+          "rateLimits": "At Ethereum block 25711753, the wrapper's SupplyControl rolling capacity was 560,000,000 PYUSD with a 6,482 PYUSD-per-second refill. The Paxos SupplyControl manager can change the controller capacity and recipient policy.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770456, owner() on the verified OFTWrapper returned Paxos EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. The wrapper is bridge machinery; its SupplyControl mint permission is canonical-side ingress/egress accounting and is not native Mint Authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770456,
+        "sources": [
+          {
+            "label": "Ethereum verified PYUSD OFTWrapper",
+            "url": "https://eth.blockscout.com/address/0xa2c323fe5a74adffad2bf3e007e36bb029606444?tab=contract"
+          },
+          {
+            "label": "Paxos PYUSD contract repository",
+            "url": "https://github.com/paxosglobal/pyusd-contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "The verified Ethereum OFTWrapper at 0xa2c323fe5a74adffad2bf3e007e36bb029606444 is a LayerZero OFT Adapter, not a generic Paxos issuer controller. Its ABI exposes bridge send/receive, peer, delegate, enforced-option, pre-crime/message-inspector, and rate-limit functions. At block 25770456 its owner was the Paxos EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b; at block 25711753 SupplyControl listed it as an active controller with the dated 560,000,000 rolling capacity and 6,482 PYUSD-per-second refill. This adverse bridge mint/burn and administrator exposure remains scoreable here while the same EOA's separately evidenced native controller-manager powers remain in Mint Authority."
       }
     ]
   }

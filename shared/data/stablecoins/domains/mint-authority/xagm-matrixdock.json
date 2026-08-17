@@ -4,9 +4,12 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "XAGm has issuer-controlled Ethereum and Sui operator paths. Each operator can add local mint budget through a manual budget-receive path, while durable mint execution requires the current four-hour request/execute delay. Ethereum's owner controls delayed UUPS upgrades; Sui's State owner holds the MToken package UpgradeCap.",
+    "summary": "XAGm has two genuinely native issuer-liability paths: the Ethereum MToken proxy and the Sui XAGM coin type. Each operator can add local mint budget through a manual budget-receive path, while durable mint execution requires the current four-hour request/execute delay; Ethereum's owner controls delayed UUPS upgrades and Sui's State owner holds the MToken package UpgradeCap. The Ethereum/Sui MTokenMessenger transfer rail is bridge machinery scored only under bridgeRouteRisk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+      ],
       "proxyAddresses": [
         "0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
       ],
@@ -40,6 +43,9 @@
       {
         "chain": "ethereum",
         "address": "0x89Bb23E4a82E04a253d9f11767feDf321C127799",
+        "deploymentRefs": [
+          "ethereum:0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+        ],
         "label": "Matrixdock Ethereum XAGm operator",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -72,6 +78,9 @@
       {
         "chain": "ethereum",
         "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
+        "deploymentRefs": [
+          "ethereum:0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+        ],
         "label": "Matrixdock Ethereum MToken owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -100,6 +109,9 @@
       {
         "chain": "ethereum",
         "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
+        "deploymentRefs": [
+          "ethereum:0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+        ],
         "label": "Matrixdock Ethereum MToken UUPS upgrade authority",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -127,6 +139,9 @@
       {
         "chain": "sui",
         "address": "0xdb0769b530e4425b9872de332a9e17104128cafde3dd5fdf80ea881b4134aee2",
+        "deploymentRefs": [
+          "sui:0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM"
+        ],
         "label": "Matrixdock Sui XAGm operator",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -159,6 +174,9 @@
       {
         "chain": "sui",
         "address": "0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8",
+        "deploymentRefs": [
+          "sui:0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM"
+        ],
         "label": "Matrixdock Sui XAGm State owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -191,6 +209,9 @@
       {
         "chain": "sui",
         "address": "0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8",
+        "deploymentRefs": [
+          "sui:0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM"
+        ],
         "label": "Matrixdock Sui MToken UpgradeCap holder",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -263,6 +284,10 @@
           "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain"
         },
         {
+          "label": "Matrixdock XAGm Sui expansion announcement",
+          "url": "https://www.matrixdock.com/blog/announcements/matrixdock-expands-tokenized-silver-xagm-to-sui-enabling-institutional-grade"
+        },
+        {
           "label": "Matrixdock licences and certificates",
           "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/licenses-and-certificates"
         },
@@ -271,9 +296,9 @@
           "url": "https://www.prnewswire.com/apac/news-releases/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification-302829449.html"
         }
       ],
-      "evidence": "At Ethereum block 25535946, the XAGm proxy resolved to implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744, owner() was 0xb573c94260582f0715FC477928B04A2708dd36D7, operator() was 0x89Bb23E4a82E04a253d9f11767feDf321C127799, mintBudget() was 0, and delay() was 14,400 seconds. Verified source shows operator-only manual local-budget increases, delayed mint execution, and owner-authorized delayed UUPS replacement. At Sui checkpoint 298761036, shared State 0xc2aa...2b4c listed owner 0x567d...6fb8, operator 0xdb07...aee2, mint_budget 0, delay 14,400, and UpgradeCap 0x1a8d...43ee. That policy-0 UpgradeCap was address-owned by the State owner and controls current MToken package 0x951c...bf02. On-chain data does not disclose the controllers' signer arrangements or off-chain key custody. No completed recurring reconciliation was established as of review. Matrixdock says Bureau Veritas will perform semiannual physical-silver audits, but XAGm launched on 2026-03-17 and the reviewed XAGm underlying-assets page did not expose a dated Bureau Veritas reserve report; the linked smart-contract audit does not reconcile token supply to silver. Matrixdock's dealer certificate is an AML/dealer registration, not exact prudential supervision of the XAGm issuer or product. Reviewed 2026-07-15. Economic-posture fields reviewed 2026-08-15: manual mint-budget paths and the undelayed Sui UpgradeCap leave issuance economically unbounded; the asset-only silver audit does not reconcile token liabilities and no prudential supervisor is evidenced. Wave 2 external review 2026-08-15 resolved reconciliation as periodic and supervision as attestation-only: Matrixdock's July 2026 publication combines Bureau Veritas' dated physical inspection with Ethereum and Sui supply totals and states that reserves matched circulating XAGm after applying ozPerToken under the semi-annual audit programme.",
-      "reviewer": "OpenAI Codex deployment-controls review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Reviewed 2026-08-16: Matrixdock's Ethereum XAGm MToken proxy and Sui XAGM coin type are both native issuer-liability deployments, not wrapped representations. At Ethereum block 25535946, the proxy resolved to implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744, owner() was 0xb573c94260582f0715FC477928B04A2708dd36D7, operator() was 0x89Bb23E4a82E04a253d9f11767feDf321C127799, mintBudget() was 0, and delay() was 14,400 seconds. Verified source shows operator-only manual local-budget increases, delayed mint execution, and owner-authorized delayed UUPS replacement. At Sui checkpoint 298761036, shared State 0xc2aa...2b4c listed owner 0x567d...6fb8, operator 0xdb07...aee2, mint_budget 0, delay 14,400, and UpgradeCap 0x1a8d...43ee. That policy-0 UpgradeCap was address-owned by the State owner and controls current MToken package 0x951c...bf02. The Ethereum MTokenMessenger and Sui messenger package are transfer-rail controls and are excluded from Mint Authority; their LayerZero bridge mint/burn, peer, pause, and admin facts are authored under bridgeRouteRisk. Native issuance remains economically unbounded because the manual mint-budget paths and undelayed Sui UpgradeCap are independently adverse. On-chain data does not disclose controller signer arrangements or off-chain key custody. Wave 2 external review 2026-08-15 resolved reconciliation as periodic and supervision as attestation-only from the July 2026 reserve publication.",
+      "reviewer": "OpenAI Codex deployment-controls review; Sol economic-posture batch 2026-08-15; mint-bridge boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

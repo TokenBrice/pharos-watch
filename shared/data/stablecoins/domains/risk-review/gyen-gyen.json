@@ -8,19 +8,331 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "GYEN is issued by GMO-Z.com Trust and tracked across Ethereum, Arbitrum, Solana, and Stellar-style issuer rails. No third-party bridge route was verified; the reviewed posture is issuer-native mint/redeem across supported networks.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "canonical-rollup-bridge",
+    "summary": "GYEN has issuer-native issuance rails on Ethereum, Solana, and Stellar, with issuer-operated swaps among those rails. Arbitrum is not an independent issuer rail: its verified ArbToken_v1 binds l1Address() to Ethereum GYEN and exposes gateway-only bridgeMint/bridgeBurn through the Arbitrum L2 custom gateway. The Arbitrum canonical-rollup representation's gateway mint/burn, token administration, and proxy-upgrade controls are assessed here; current escrow balances, pause state, and end-to-end execution were not independently replayed.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration; gyen-gyen verified finding",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "GYEN and ZUSD docs",
-        "url": "https://stablecoin.z.com/what-are-gyen-and-zusd/"
+        "label": "GMO Trust multi-chain GYEN and ZUSD",
+        "url": "https://stablecoin.z.com/multi-chain-gyen-and-zusd/"
       },
       {
-        "label": "GMO-Z.com Trust",
-        "url": "https://stablecoin.z.com/"
+        "label": "GMO Trust supported-chain swaps",
+        "url": "https://support.stablecoin.z.com/hc/en-us/articles/4407274387609-Where-can-I-swap-GYEN-and-or-ZUSD"
+      },
+      {
+        "label": "GMO Trust GYEN/ZUSD wind-down notice",
+        "url": "https://medium.com/gmo-z-com-trust-company/wind-down-of-gyen-and-zusd-stablecoin-issuance-b6c32083470d"
+      },
+      {
+        "label": "Arbitrum GYEN token",
+        "url": "https://arbitrum.blockscout.com/address/0x589d35656641d6ab57a545f08cf473ecd9b6d5f7?tab=contract"
+      },
+      {
+        "label": "Arbitrum ArbToken_v1 implementation",
+        "url": "https://arbitrum.blockscout.com/address/0x6cce9e550fc376641d98e4e76e346779b585bf99?tab=contract"
+      },
+      {
+        "label": "Arbitrum L2 custom gateway",
+        "url": "https://arbitrum.blockscout.com/address/0x096760f208390250649e3e8763348e783aef5562?tab=contract"
+      },
+      {
+        "label": "Arbitrum custom gateway implementation",
+        "url": "https://arbitrum.blockscout.com/address/0x190274fea8f30e3f48ce43adcbd9a74110118284?tab=contract"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc08512927d12348f6620a698105e1baac6ecd911",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xc08512927d12348f6620a698105e1baac6ecd911",
+        "protocol": "GMO Trust GYEN issuer-native Ethereum rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "GMO Trust identifies the Ethereum ERC-20 as a native GYEN deployment; native minter and role administration are reviewed in Mint Authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771273,
+        "sources": [
+          {
+            "label": "GMO Trust multi-chain GYEN and ZUSD",
+            "url": "https://stablecoin.z.com/multi-chain-gyen-and-zusd/"
+          },
+          {
+            "label": "Ethereum GYEN proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xc08512927d12348f6620a698105e1baac6ecd911?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "solana:Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g",
+        "destinationChain": "solana",
+        "contractAddress": "Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g",
+        "protocol": "GMO Trust GYEN issuer-native Solana Token-2022 rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "GMO Trust identifies the Solana Token-2022 mint as an issuer-native GYEN deployment; its 2-of-2 mint authority is reviewed in Mint Authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439747196,
+        "sources": [
+          {
+            "label": "GMO Trust GYEN on Solana",
+            "url": "https://stablecoin.z.com/lp/solana/"
+          },
+          {
+            "label": "Solana GYEN mint",
+            "url": "https://solscan.io/token/Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g"
+          }
+        ]
+      },
+      {
+        "id": "stellar:GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB",
+        "destinationChain": "stellar",
+        "contractAddress": "GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB",
+        "protocol": "GMO Trust GYEN issuer-native Stellar asset rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "GMO Trust identifies the Stellar issued asset as a native GYEN deployment; issuer-account authorization and clawback are reviewed in Mint Authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 63987778,
+        "sources": [
+          {
+            "label": "GMO Trust GYEN on Stellar",
+            "url": "https://stablecoin.z.com/lp/stellar/"
+          },
+          {
+            "label": "Stellar Horizon GYEN asset",
+            "url": "https://horizon.stellar.org/assets?asset_code=GYEN&asset_issuer=GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+        "protocol": "Arbitrum custom gateway",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arbitrum block 495313166, verified ArbToken_v1 l1Address() binds this route to Ethereum GYEN and l2Gateway() binds it to the Arbitrum L2 custom gateway; gateway-only bridgeMint/bridgeBurn make this a canonical-rollup representation rather than an independent issuer rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x096760f208390250649e3e8763348e783aef5562",
+        "failureDomainKeys": [
+          "contract:arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+          "bridge:arbitrum:0x096760f208390250649e3e8763348e783aef5562",
+          "bridge:ethereum:0xcee284f754e854890e311e3280b767f80797180d"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495313166,
+        "sources": [
+          {
+            "label": "Arbitrum GYEN token",
+            "url": "https://arbitrum.blockscout.com/address/0x589d35656641d6ab57a545f08cf473ecd9b6d5f7?tab=contract"
+          },
+          {
+            "label": "Arbitrum ArbToken_v1 implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x6cce9e550fc376641d98e4e76e346779b585bf99?tab=contract"
+          },
+          {
+            "label": "Arbitrum L2 custom gateway",
+            "url": "https://arbitrum.blockscout.com/address/0x096760f208390250649e3e8763348e783aef5562?tab=contract"
+          },
+          {
+            "label": "Arbitrum custom gateway implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x190274fea8f30e3f48ce43adcbd9a74110118284?tab=contract"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "arbitrum-gyen-custom-gateway",
+        "label": "Arbitrum GYEN L2 custom gateway bridge mint-burn",
+        "routeRefs": [
+          "arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x096760f208390250649e3e8763348e783aef5562",
+        "failureDomainKeys": [
+          "contract:arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+          "bridge:arbitrum:0x096760f208390250649e3e8763348e783aef5562",
+          "bridge:ethereum:0xcee284f754e854890e311e3280b767f80797180d",
+          "router:arbitrum:0x5288c571fd7ad117bea99bf60fe0846c4e84f933"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Arbitrum custom gateway is the route's L2 bridge endpoint; the reviewed path is an Ethereum L1 custom-gateway deposit/escrow plus gateway-controlled mint on Arbitrum and burn on withdrawal. The L1 counterpart is 0xcee284f754e854890e311e3280b767f80797180d and the router is 0x5288c571fd7ad117bea99bf60fe0846c4e84f933.",
+          "trustedPeerOrRemote": "ArbToken_v1 l1Address() returned Ethereum GYEN 0xc08512927d12348f6620a698105e1baac6ecd911 and l2Gateway() returned 0x096760f208390250649e3e8763348e783aef5562; the verified L2CustomGateway implementation points to counterpart L1 custom gateway 0xcee284f754e854890e311e3280b767f80797180d.",
+          "onchainAmountBounds": "The observed mechanics are consistent with a canonical lock-mint route, but current L1 escrow balances and end-to-end deposit/withdraw execution were not independently replayed; whole-supply reconciliation remains unknown.",
+          "pausersAdminsUpgraders": "The L2 gateway proxy admin slot returned 0xd570ace65c43af47101fc6250fd6fc63d1c22a86 at the observation block; current route pause state was not independently replayed."
+        },
+        "capDescription": "Arbitrum GYEN bridgeMint and bridgeBurn are gateway-only on the representation token; route-level supply conservation depends on the paired L1 custom gateway and escrow/deposit accounting.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495313166,
+        "sources": [
+          {
+            "label": "Arbitrum GYEN token",
+            "url": "https://arbitrum.blockscout.com/address/0x589d35656641d6ab57a545f08cf473ecd9b6d5f7?tab=contract"
+          },
+          {
+            "label": "Arbitrum ArbToken_v1 implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x6cce9e550fc376641d98e4e76e346779b585bf99?tab=contract"
+          },
+          {
+            "label": "Arbitrum L2 custom gateway",
+            "url": "https://arbitrum.blockscout.com/address/0x096760f208390250649e3e8763348e783aef5562?tab=contract"
+          },
+          {
+            "label": "Arbitrum custom gateway implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x190274fea8f30e3f48ce43adcbd9a74110118284?tab=contract"
+          }
+        ],
+        "evidence": "At Arbitrum block 495313166, verified ArbToken_v1 at 0x589d35656641d6ab57a545f08cf473ecd9b6d5f7 returned l1Address() = 0xc08512927d12348f6620a698105e1baac6ecd911 and l2Gateway() = 0x096760f208390250649e3e8763348e783aef5562. Its verified bridgeMint and bridgeBurn functions are restricted to that L2 custom gateway. The verified gateway implementation 0x190274fea8f30e3f48ce43adcbd9a74110118284 points to counterpart L1 custom gateway 0xcee284f754e854890e311e3280b767f80797180d and router 0x5288c571fd7ad117bea99bf60fe0846c4e84f933."
+      },
+      {
+        "id": "arbitrum-gyen-token-owner",
+        "label": "Arbitrum GYEN representation token owner",
+        "routeRefs": [
+          "arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x3af9654636ecd171c4a1889b6fe5dbd1f1f09fd5",
+        "failureDomainKeys": [
+          "contract:arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+          "owner:arbitrum:0x3af9654636ecd171c4a1889b6fe5dbd1f1f09fd5"
+        ],
+        "authorityType": "eoa",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495313166,
+        "sources": [
+          {
+            "label": "Arbitrum GYEN token",
+            "url": "https://arbitrum.blockscout.com/address/0x589d35656641d6ab57a545f08cf473ecd9b6d5f7?tab=contract"
+          }
+        ],
+        "evidence": "At Arbitrum block 495313166, the representation token owner() returned 0x3af9654636ecd171c4a1889b6fe5dbd1f1f09fd5, and eth_getCode returned no bytecode. This token-level owner is an Arbitrum bridge-representation admin and is not an independent native GYEN issuer."
+      },
+      {
+        "id": "arbitrum-gyen-token-admin",
+        "label": "Arbitrum GYEN representation token admin",
+        "routeRefs": [
+          "arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x0a0ed47c65af638121359a9df72807377233ecd3",
+        "failureDomainKeys": [
+          "contract:arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+          "admin:arbitrum:0x0a0ed47c65af638121359a9df72807377233ecd3"
+        ],
+        "authorityType": "eoa",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495313166,
+        "sources": [
+          {
+            "label": "Arbitrum GYEN token",
+            "url": "https://arbitrum.blockscout.com/address/0x589d35656641d6ab57a545f08cf473ecd9b6d5f7?tab=contract"
+          }
+        ],
+        "evidence": "At Arbitrum block 495313166, the representation token admin() returned 0x0a0ed47c65af638121359a9df72807377233ecd3, and eth_getCode returned no bytecode. This token-level admin is an Arbitrum bridge-representation control and is not an independent native GYEN issuer."
+      },
+      {
+        "id": "arbitrum-gyen-token-proxy-admin",
+        "label": "Arbitrum GYEN representation token proxy admin",
+        "routeRefs": [
+          "arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x42053501c1c6ff52341a89f7301c60a8b9c30dd9",
+        "failureDomainKeys": [
+          "contract:arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+          "proxy-admin:arbitrum:0x42053501c1c6ff52341a89f7301c60a8b9c30dd9"
+        ],
+        "authorityType": "eoa",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495313166,
+        "sources": [
+          {
+            "label": "Arbitrum GYEN token",
+            "url": "https://arbitrum.blockscout.com/address/0x589d35656641d6ab57a545f08cf473ecd9b6d5f7?tab=contract"
+          },
+          {
+            "label": "Arbitrum ArbToken_v1 implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x6cce9e550fc376641d98e4e76e346779b585bf99?tab=contract"
+          }
+        ],
+        "evidence": "At Arbitrum block 495313166, the representation token EIP-1967 admin slot returned 0x42053501c1c6ff52341a89f7301c60a8b9c30dd9, and eth_getCode returned no bytecode. The implementation slot held 0x6cce9e550fc376641d98e4e76e346779b585bf99, so this EOA can replace bridge-representation logic through the token proxy path."
+      },
+      {
+        "id": "arbitrum-gyen-gateway-proxy-admin",
+        "label": "Arbitrum GYEN L2 custom gateway proxy admin",
+        "routeRefs": [
+          "arbitrum:0x589d35656641d6ab57a545f08cf473ecd9b6d5f7"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd570ace65c43af47101fc6250fd6fc63d1c22a86",
+        "failureDomainKeys": [
+          "bridge:arbitrum:0x096760f208390250649e3e8763348e783aef5562",
+          "proxy-admin:arbitrum:0xd570ace65c43af47101fc6250fd6fc63d1c22a86",
+          "proxy-admin-owner:arbitrum:0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At the observation block, the L2 custom gateway proxy admin was 0xd570ace65c43af47101fc6250fd6fc63d1c22a86; its owner() path returned 0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827. Replacing the gateway implementation can alter the route's bridge mint/burn behavior; current pause state was not independently replayed."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495313166,
+        "sources": [
+          {
+            "label": "Arbitrum L2 custom gateway",
+            "url": "https://arbitrum.blockscout.com/address/0x096760f208390250649e3e8763348e783aef5562?tab=contract"
+          },
+          {
+            "label": "Arbitrum custom gateway implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x190274fea8f30e3f48ce43adcbd9a74110118284?tab=contract"
+          }
+        ],
+        "evidence": "At Arbitrum block 495313166, the L2 custom gateway proxy implementation slot held 0x190274fea8f30e3f48ce43adcbd9a74110118284 and its EIP-1967 proxy-admin slot returned 0xd570ace65c43af47101fc6250fd6fc63d1c22a86. The proxy-admin's owner() path returned 0xcf57572261c7c2bcf21ffd220ea7d1a27d40a827. This is bridge-route upgrade/admin authority over the canonical Arbitrum representation path."
       }
     ]
   }

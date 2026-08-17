@@ -3,21 +3,78 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "EURE is minted via Monerium's licensed EMI flow; the Ethereum token owner is a 3/6 Safe (Monerium-operated); proxy admin slot is zero; all addressable mint-capable surfaces confirmed.",
+    "confidence": "manual-review",
+    "summary": "EURE is issuer-backend minted across nine native deployments: seven EVM UUPS tokens, Noble's native Cosmos-SDK module, and Algorand ASA 83209012. Monerium's EVM owner Safes can replace mint logic, set maximum mint allowances, and add or remove system/admin accounts; the Noble issuer account and EVM system-account identities are not publicly disclosed. Algorand's live manager/reserve path has a uint64 maximum total. Osmosis is only an IBC representation and remains in Bridge Risk.",
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "observedAt": "2026-06-11",
-      "observedBlock": 25294789,
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x39b8b6385416f4ca36a20319f70d28621895279d",
+        "gnosis:0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
+        "base:0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c",
+        "linea:0x3ff47c5bf409c86533fe1f4907524d304062428d",
+        "scroll:0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21",
+        "arbitrum:0x0c06ccf38114ddfc35e07427b9424adcca9f44f8",
+        "polygon:0xe0aea583266584dafbb3f9c3211d5588c73fea8d"
+      ],
+      "proxyAddresses": [
+        "0x39b8b6385416f4ca36a20319f70d28621895279d",
+        "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
+        "0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c",
+        "0x3ff47c5bf409c86533fe1f4907524d304062428d",
+        "0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21",
+        "0x0c06ccf38114ddfc35e07427b9424adcca9f44f8",
+        "0xe0aea583266584dafbb3f9c3211d5588c73fea8d"
+      ],
+      "implementationAddresses": [
+        "0x6f916c6eaa99073dfafeb7f210235acb6028f437",
+        "0x60cb9fdd0fcfd9bb3b2b721864db5e7c07f4635d",
+        "0x89ab57c789b8a9ea44296cc63b0071bf73b22c1f",
+        "0x0f04844cf6426b854466953e1ba89710bf7cf4ad",
+        "0x6ef160df8226761c1035ccd25f4ce1486eeeb507",
+        "0xddfe2c5f94909420cf55827fffa09a7ff9b2ab77",
+        "0xd1cfa02a1785f3ca0a5602b18649b7ca5439681b"
+      ],
+      "adminAddresses": [
+        "0x5591a6495d726c7efafb9a9dad32695d137b4d9f",
+        "0x8001ea269cb9715bf7acff89c664ffc134a519ec",
+        "0xd4d43a82708261f2995f7ba65319d8664b992a96"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "EURE Ethereum UUPS owner Safe",
+      "observedAt": "2026-08-16",
       "sources": [
         {
-          "label": "Monerium smart-contract source",
-          "url": "https://github.com/monerium/smart-contracts"
+          "label": "Monerium Token.sol source",
+          "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
         },
         {
-          "label": "EURE token owner Safe",
-          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
+          "label": "Ethereum public JSON-RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Gnosis public JSON-RPC",
+          "url": "https://gnosis-rpc.publicnode.com"
+        },
+        {
+          "label": "Base public JSON-RPC",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "Linea public JSON-RPC",
+          "url": "https://linea-rpc.publicnode.com"
+        },
+        {
+          "label": "Scroll public JSON-RPC",
+          "url": "https://scroll-rpc.publicnode.com"
+        },
+        {
+          "label": "Arbitrum public JSON-RPC",
+          "url": "https://arbitrum-one-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon public JSON-RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
         }
       ]
     },
@@ -27,6 +84,17 @@
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x39b8b6385416f4ca36a20319f70d28621895279d",
+          "gnosis:0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
+          "base:0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c",
+          "linea:0x3ff47c5bf409c86533fe1f4907524d304062428d",
+          "scroll:0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21",
+          "arbitrum:0x0c06ccf38114ddfc35e07427b9424adcca9f44f8",
+          "polygon:0xe0aea583266584dafbb3f9c3211d5588c73fea8d",
+          "noble:ueure",
+          "algorand:83209012"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -39,19 +107,23 @@
             "url": "https://github.com/monerium/smart-contracts"
           }
         ],
-        "evidence": "Monerium docs describe SEPA bank deposits as issuance orders; EURE is minted by the Monerium backend after KYC/AML. Issuer-backend model corroborated: on-chain owner is a Monerium-operated 3/6 Safe; no other mint-capable surface exists."
+        "evidence": "Monerium Token.sol defines mint(address,uint256) as onlySystemAccounts, consumes a per-system-account mint allowance, and lets the owner set the maximum allowance and add/remove system and admin accounts. Monerium docs describe SEPA bank deposits as issuance orders and EURE is minted by the issuer backend after KYC/AML. The backend system-account identities are not publicly disclosed; the owner Safe controls their authorization on EVM, while Noble's chain-specific issuer account remains unresolved."
       },
       {
         "chain": "ethereum",
         "address": "0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f",
-        "label": "EURE token owner Safe",
-        "role": "minter-admin",
+        "label": "EURE Ethereum UUPS owner Safe",
+        "role": "proxy-admin",
         "authorityType": "safe",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0x39b8b6385416f4ca36a20319f70d28621895279d"
+        ],
         "threshold": 3,
         "signerCount": 6,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Monerium owner Safe authorizes UUPS mint-logic replacement, sets the maximum mint allowance, and adds or removes system/admin accounts for the Ethereum native deployment; no on-chain timelock was evidenced.",
         "safe": {
           "version": "1.3.0",
           "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
@@ -67,7 +139,7 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "observedBlock": 25294789,
+          "observedBlock": 25770440,
           "source": "safe-api"
         },
         "sources": [
@@ -76,7 +148,355 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
           }
         ],
-        "evidence": "At Ethereum block 25294789: owner() returned 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f. Safe API (api.safe.global) confirmed threshold 3, 6 owners, no modules, zero guard, fallbackHandler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, masterCopy 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552 (v1.3.0). EIP-1967 proxy admin slot = zero."
+        "bypassSurfaces": [
+          "The Safe can replace the Ethereum UUPS implementation with no on-chain timelock.",
+          "The Safe can set the maximum mint allowance and add or remove system/admin accounts."
+        ],
+        "evidence": "At Ethereum block 25770440, EURe owner() returned 0x5591a6495d726c7efafb9a9dad32695d137b4d9f and the EIP-1967 implementation slot was nonzero while the transparent-admin slot was zero. The current Safe service reports threshold 3, six owners, no enabled modules, and a zero guard. Monerium Token.sol makes owner() the UUPS upgrade and system/admin-role authority; no on-chain timelock was evidenced."
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x8001ea269cb9715bf7acff89c664ffc134a519ec",
+        "label": "EURE Gnosis UUPS owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "gnosis:0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430"
+        ],
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Monerium owner Safe authorizes UUPS mint-logic replacement, sets the maximum mint allowance, and adds or removes system/admin accounts for the Gnosis native deployment; no on-chain timelock was evidenced.",
+        "safe": {
+          "owners": [
+            "0x98f3Ae9569F88513cf260b850730d42d9470CFe2",
+            "0x431d580632d95804Ccb74B4F2DFA22ef58eCF027",
+            "0x02C4D14022F7779e5f1eD4224a4BDE3e166E35F0",
+            "0xcb124a864489382d072aaA19F715C4CD836e57bE",
+            "0x63bD39AC130879203766663D0408da306C553263",
+            "0x26338dc69fC608719F444d5B8726f7Fd2c7a4787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 47761298,
+          "source": "onchain"
+        },
+        "bypassSurfaces": [
+          "The Safe can replace the Gnosis UUPS implementation with no on-chain timelock.",
+          "The Safe can set the maximum mint allowance and add or remove system/admin accounts."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 47761298,
+        "sources": [
+          {
+            "label": "Monerium Token.sol source",
+            "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+          },
+          {
+            "label": "Gnosis public JSON-RPC",
+            "url": "https://gnosis-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Gnosis block 47761298, EURe owner() returned 0x8001ea269cb9715bf7acff89c664ffc134a519ec, the implementation slot was nonzero, and the transparent-admin slot was zero. Current reads returned threshold 3; the existing Safe evidence records six owners, no enabled modules, and a zero guard. Monerium Token.sol makes this owner the UUPS upgrade and system/admin-role authority."
+      },
+      {
+        "chain": "base",
+        "address": "0x8001ea269cb9715bf7acff89c664ffc134a519ec",
+        "label": "EURE Base UUPS owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "base:0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c"
+        ],
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Monerium owner Safe authorizes UUPS mint-logic replacement, sets the maximum mint allowance, and adds or removes system/admin accounts for the Base native deployment; no on-chain timelock was evidenced.",
+        "safe": {
+          "owners": [
+            "0x98f3Ae9569F88513cf260b850730d42d9470CFe2",
+            "0x431d580632d95804Ccb74B4F2DFA22ef58eCF027",
+            "0x02C4D14022F7779e5f1eD4224a4BDE3e166E35F0",
+            "0xcb124a864489382d072aaA19F715C4CD836e57bE",
+            "0x63bD39AC130879203766663D0408da306C553263",
+            "0x26338dc69fC608719F444d5B8726f7Fd2c7a4787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 50063923,
+          "source": "onchain"
+        },
+        "bypassSurfaces": [
+          "The Safe can replace the Base UUPS implementation with no on-chain timelock.",
+          "The Safe can set the maximum mint allowance and add or remove system/admin accounts."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063923,
+        "sources": [
+          {
+            "label": "Monerium Token.sol source",
+            "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+          },
+          {
+            "label": "Base public JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50063923, EURe owner() returned 0x8001ea269cb9715bf7acff89c664ffc134a519ec, the implementation slot was nonzero, and the transparent-admin slot was zero. Current reads returned threshold 3; the existing Safe evidence records six owners, no enabled modules, and a zero guard. Monerium Token.sol makes this owner the UUPS upgrade and system/admin-role authority."
+      },
+      {
+        "chain": "linea",
+        "address": "0x8001ea269cb9715bf7acff89c664ffc134a519ec",
+        "label": "EURE Linea UUPS owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "linea:0x3ff47c5bf409c86533fe1f4907524d304062428d"
+        ],
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Monerium owner Safe authorizes UUPS mint-logic replacement, sets the maximum mint allowance, and adds or removes system/admin accounts for the Linea native deployment; no on-chain timelock was evidenced.",
+        "safe": {
+          "owners": [
+            "0x98f3Ae9569F88513cf260b850730d42d9470CFe2",
+            "0x431d580632d95804Ccb74B4F2DFA22ef58eCF027",
+            "0x02C4D14022F7779e5f1eD4224a4BDE3e166E35F0",
+            "0xcb124a864489382d072aaA19F715C4CD836e57bE",
+            "0x63bD39AC130879203766663D0408da306C553263",
+            "0x26338dc69fC608719F444d5B8726f7Fd2c7a4787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 31737321,
+          "source": "onchain"
+        },
+        "bypassSurfaces": [
+          "The Safe can replace the Linea UUPS implementation with no on-chain timelock.",
+          "The Safe can set the maximum mint allowance and add or remove system/admin accounts."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 31737321,
+        "sources": [
+          {
+            "label": "Monerium Token.sol source",
+            "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+          },
+          {
+            "label": "Linea public JSON-RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Linea block 31737321, EURe owner() returned 0x8001ea269cb9715bf7acff89c664ffc134a519ec, the implementation slot was nonzero, and the transparent-admin slot was zero. Current reads returned threshold 3; the existing Safe evidence records six owners, no enabled modules, and a zero guard. Monerium Token.sol makes this owner the UUPS upgrade and system/admin-role authority."
+      },
+      {
+        "chain": "scroll",
+        "address": "0x8001ea269cb9715bf7acff89c664ffc134a519ec",
+        "label": "EURE Scroll UUPS owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "scroll:0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21"
+        ],
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Monerium owner Safe authorizes UUPS mint-logic replacement, sets the maximum mint allowance, and adds or removes system/admin accounts for the Scroll native deployment; no on-chain timelock was evidenced.",
+        "safe": {
+          "owners": [
+            "0x98f3Ae9569F88513cf260b850730d42d9470CFe2",
+            "0x431d580632d95804Ccb74B4F2DFA22ef58eCF027",
+            "0x02C4D14022F7779e5f1eD4224a4BDE3e166E35F0",
+            "0xcb124a864489382d072aaA19F715C4CD836e57bE",
+            "0x63bD39AC130879203766663D0408da306C553263",
+            "0x26338dc69fC608719F444d5B8726f7Fd2c7a4787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 34662051,
+          "source": "onchain"
+        },
+        "bypassSurfaces": [
+          "The Safe can replace the Scroll UUPS implementation with no on-chain timelock.",
+          "The Safe can set the maximum mint allowance and add or remove system/admin accounts."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 34662051,
+        "sources": [
+          {
+            "label": "Monerium Token.sol source",
+            "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+          },
+          {
+            "label": "Scroll public JSON-RPC",
+            "url": "https://scroll-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Scroll block 34662051, EURe owner() returned 0x8001ea269cb9715bf7acff89c664ffc134a519ec, the implementation slot was nonzero, and the transparent-admin slot was zero. Current reads returned threshold 3; the existing Safe evidence records six owners, no enabled modules, and a zero guard. Monerium Token.sol makes this owner the UUPS upgrade and system/admin-role authority."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xd4d43a82708261f2995f7ba65319d8664b992a96",
+        "label": "EURE Arbitrum UUPS owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "arbitrum:0x0c06ccf38114ddfc35e07427b9424adcca9f44f8"
+        ],
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Monerium owner Safe authorizes UUPS mint-logic replacement, sets the maximum mint allowance, and adds or removes system/admin accounts for the Arbitrum native deployment; no on-chain timelock was evidenced.",
+        "safe": {
+          "owners": [
+            "0x98f3Ae9569F88513cf260b850730d42d9470CFe2",
+            "0x431d580632d95804Ccb74B4F2DFA22ef58eCF027",
+            "0x02C4D14022F7779e5f1eD4224a4BDE3e166E35F0",
+            "0xcb124a864489382d072aaA19F715C4CD836e57bE",
+            "0x63bD39AC130879203766663D0408da306C553263",
+            "0x26338dc69fC608719F444d5B8726f7Fd2c7a4787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 495273806,
+          "source": "onchain"
+        },
+        "bypassSurfaces": [
+          "The Safe can replace the Arbitrum UUPS implementation with no on-chain timelock.",
+          "The Safe can set the maximum mint allowance and add or remove system/admin accounts."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 495273806,
+        "sources": [
+          {
+            "label": "Monerium Token.sol source",
+            "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+          },
+          {
+            "label": "Arbitrum public JSON-RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 495273806, EURe owner() returned 0xd4d43a82708261f2995f7ba65319d8664b992a96, the implementation slot was nonzero, and the transparent-admin slot was zero. Current reads returned threshold 3; the existing Safe evidence records six owners, no enabled modules, and a zero guard. Monerium Token.sol makes this owner the UUPS upgrade and system/admin-role authority."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x8001ea269cb9715bf7acff89c664ffc134a519ec",
+        "label": "EURE Polygon UUPS owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "polygon:0xe0aea583266584dafbb3f9c3211d5588c73fea8d"
+        ],
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Monerium owner Safe authorizes UUPS mint-logic replacement, sets the maximum mint allowance, and adds or removes system/admin accounts for the Polygon native deployment; no on-chain timelock was evidenced.",
+        "safe": {
+          "owners": [
+            "0x98f3Ae9569F88513cf260b850730d42d9470CFe2",
+            "0x431d580632d95804Ccb74B4F2DFA22ef58eCF027",
+            "0x02C4D14022F7779e5f1eD4224a4BDE3e166E35F0",
+            "0xcb124a864489382d072aaA19F715C4CD836e57bE",
+            "0x63bD39AC130879203766663D0408da306C553263",
+            "0x26338dc69fC608719F444d5B8726f7Fd2c7a4787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 92141470,
+          "source": "onchain"
+        },
+        "bypassSurfaces": [
+          "The Safe can replace the Polygon UUPS implementation with no on-chain timelock.",
+          "The Safe can set the maximum mint allowance and add or remove system/admin accounts."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 92141470,
+        "sources": [
+          {
+            "label": "Monerium Token.sol source",
+            "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+          },
+          {
+            "label": "Polygon public JSON-RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 92141470, EURe owner() returned 0x8001ea269cb9715bf7acff89c664ffc134a519ec, the implementation slot was nonzero, and the transparent-admin slot was zero. Current reads returned threshold 3; the existing Safe evidence records six owners, no enabled modules, and a zero guard. Monerium Token.sol makes this owner the UUPS upgrade and system/admin-role authority."
+      },
+      {
+        "chain": "noble",
+        "label": "EURE Noble native issuer module",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "noble:ueure"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Monerium's MiCA material identifies ueure as native Noble/Cosmos-SDK issuance operated by the issuer. Public sources do not expose the Noble module's current issuer account, key set, or allowance controls.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 57129253,
+        "sources": [
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "Noble latest block REST API",
+            "url": "https://rest.cosmos.directory/noble/cosmos/base/tendermint/v1beta1/blocks/latest"
+          }
+        ],
+        "evidence": "At Noble latest block 57129253 on 2026-08-16, the native ueure denomination was present. Monerium's EURe MiCA material identifies Noble as native Cosmos-SDK issuance rather than an EVM wrapper; the issuer-operated module is therefore a native mint surface, but its exact account/key authority remains an evidence gap."
+      },
+      {
+        "chain": "algorand",
+        "address": "WDZGUOESONZCBTQQNF6WHBMJ3O34MGIASSN4OQENUOLHH2GUL5HCH2E4ZQ",
+        "label": "EURE Algorand ASA manager/reserve authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "algorand:83209012"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ASA 83209012 has the uint64 maximum total 18446744073709551615. The live Monerium manager controls the ASA supply/reserve configuration; the ASA is native Algorand issuance, not an IBC return path.",
+        "failureDomainKeys": [
+          "account:algorand:WDZGUOESONZCBTQQNF6WHBMJ3O34MGIASSN4OQENUOLHH2GUL5HCH2E4ZQ"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 64135589,
+        "sources": [
+          {
+            "label": "EURE ASA on Algorand indexer",
+            "url": "https://mainnet-idx.algonode.cloud/v2/assets/83209012"
+          },
+          {
+            "label": "Algorand current round",
+            "url": "https://mainnet-api.algonode.cloud/v2/blocks/64135589"
+          }
+        ],
+        "evidence": "At Algorand round 64135589, ASA 83209012 was Monerium EUR emoney/EURe with manager WDZGUOESONZCBTQQNF6WHBMJ3O34MGIASSN4OQENUOLHH2GUL5HCH2E4ZQ, reserve/freeze account XSAED32VYAQK42TQHKCRHYK7P6LBBPQ2237PALQZAGL2XJTNNOPD523CNA, and Monerium as creator/clawback authority. The protocol-level total maximum is 18446744073709551615 and the manager remains live; the manager account's signer model is not exposed by the reviewed indexer data."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -89,6 +509,14 @@
           "url": "https://monerium.dev/docs/contracts-v2"
         },
         {
+          "label": "Monerium Token.sol source",
+          "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+        },
+        {
+          "label": "EURe MiCA white paper",
+          "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+        },
+        {
           "label": "Safe Transaction Service",
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
         },
@@ -99,11 +527,19 @@
         {
           "label": "Central Bank of Iceland Monerium EMI authorization",
           "url": "https://sedlabanki.is/frettir-og-utgefid-efni/grein/2019-06-14-fjarmalaeftirlitid-veitir-monerium-emi-ehf-starfsleyfi-sem-rafeyrisfyrirtaeki"
+        },
+        {
+          "label": "Noble latest block and balances REST API",
+          "url": "https://rest.cosmos.directory/noble/cosmos/base/tendermint/v1beta1/blocks/latest"
+        },
+        {
+          "label": "Algorand EURe ASA indexer",
+          "url": "https://mainnet-idx.algonode.cloud/v2/assets/83209012"
         }
       ],
-      "evidence": "At Ethereum block 25294789: EURE Ethereum owner() = 3/6 Safe 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f (threshold 3, 6 owners, no modules, no guard). EIP-1967 proxy admin slot = zero. Every addressable mint-capable on-chain surface is confirmed. Issuer-backend model corroborated by Monerium docs and the Safe being the sole control point. Monerium reports annual audits and semi-annual statements, but the latest published table ends at 2024 and aggregates all Monerium e-money rather than independently reconciling EURe token supply; the same page says regular public safeguarded-fund attestations are still being prepared. No qualifying attestor, cadence, or latest EURe report date was found, so reconciliation is unknown. The Central Bank of Iceland authorization matches Monerium EMI ehf. and the issuer page expressly identifies prudential EMI supervision, supporting prudential supervision despite the reconciliation gap. Economic-posture fields reviewed 2026-08-15: Monerium's issuer backend and Safe can authorize uncapped minting, published statements do not reconcile EURe supply, and the Central Bank of Iceland supervises the EMI issuer.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "On 2026-08-16, current reads covered all nine native deployments: the seven EVM EURe proxies had nonzero implementation slots and zero transparent-admin slots, with owners Ethereum 0x5591a6495d726c7efafb9a9dad32695d137b4d9f, Gnosis/Base/Linea/Scroll/Polygon 0x8001ea269cb9715bf7acff89c664ffc134a519ec, and Arbitrum 0xd4d43a82708261f2995f7ba65319d8664b992a96; each current Safe threshold read was 3 of 6, with the reviewed Safe evidence recording no enabled modules and a zero guard. Monerium Token.sol confirms that owner() controls UUPS upgrades, maximum mint allowances, and system/admin account authorization, while onlySystemAccounts can mint against per-account allowances. Noble block 57129253 confirms the native ueure denomination, but the Noble issuer account/key set is not public. Algorand round 64135589 confirms ASA 83209012 with a live Monerium manager, reserve/freeze authority, and uint64 maximum total. The issuer-backend identities are not disclosed, and Monerium does not publish a current per-chain EURe reserve/liability reconciliation, so reconciliation remains unknown. The Central Bank of Iceland authorization supports prudential supervision. Osmosis is the only IBC bridge representation and its conserved Noble escrow route remains solely under Bridge Risk. Economic-posture fields reviewed 2026-08-16: the native set remains unbounded, with owner-controlled UUPS and role/allowance administration across EVM, a live Algorand manager, an unresolved Noble issuer account, and no complete whole-supply reconciliation.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15; FIX2-17 canonical mint coverage migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

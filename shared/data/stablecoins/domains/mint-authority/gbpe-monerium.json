@@ -7,6 +7,14 @@
     "summary": "GBPe is minted through Monerium's licensed EMI flow. Ethereum is a direct token and the five other tracked deployments are UUPS proxies; three chain-local 3-of-6 Safes with the same six owners control the complete deployment set.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "arbitrum:0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f",
+        "base:0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
+        "ethereum:0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd",
+        "gnosis:0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
+        "linea:0x3bce82cf1a2bc357f956dd494713fe11dc54780f",
+        "polygon:0x646beea7a02fdada34c8e118949fe32350ab2206"
+      ],
       "proxyAddresses": [
         "0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
         "0x3bce82cf1a2bc357f956dd494713fe11dc54780f",
@@ -62,6 +70,9 @@
       {
         "chain": "ethereum",
         "address": "0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f",
+        "deploymentRefs": [
+          "ethereum:0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd"
+        ],
         "label": "GBPe deployment-wide Monerium owner Safes",
         "role": "proxy-admin",
         "authorityType": "issuer-backend",
@@ -109,6 +120,14 @@
         "evidence": "Current owner() and EIP-1967 reads covered all six deployments. Ethereum is direct code with owner Safe 0x5591...; Gnosis, Linea, Base, and Polygon use Safe 0x8001...; Arbitrum uses Safe 0xd4d43.... Each Safe returned threshold 3 and the same six owners. The five non-Ethereum tokens resolve to the implementation addresses listed in the upgradeability record; Ethereum's implementation slot is zero."
       },
       {
+        "deploymentRefs": [
+          "arbitrum:0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f",
+          "base:0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
+          "ethereum:0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd",
+          "gnosis:0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
+          "linea:0x3bce82cf1a2bc357f956dd494713fe11dc54780f",
+          "polygon:0x646beea7a02fdada34c8e118949fe32350ab2206"
+        ],
         "label": "Monerium issuer-operated mint authority",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -130,6 +149,9 @@
       {
         "chain": "ethereum",
         "address": "0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f",
+        "deploymentRefs": [
+          "ethereum:0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd"
+        ],
         "label": "GBPe token owner Safe",
         "role": "minter-admin",
         "authorityType": "safe",

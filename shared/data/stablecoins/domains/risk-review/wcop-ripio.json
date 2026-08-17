@@ -81,10 +81,10 @@
     "reviewedAt": "2026-07-15"
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "wCOP has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement. The route is scored as liquidity/intent because execution and available bridge liquidity are material to cross-chain movement.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "tier": "issuer-native-burn-mint",
+    "summary": "wCOP has six independent native issuance deployments, plus a separate issuer-operated burn/mint bridge route. Ripio's LimitedMinterBridge and BridgeDeposit machinery burns source WCOP and fulfills destination minting through a daily-limited adapter, with issuer EOA/Safe administration, pause, and arbitrary-recipient mint surfaces; this route is assessed here and excluded from native Mint Authority. Across remains a separate liquidity/intent route.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); Codex mint-bridge-boundary migration 2026-08-16",
     "confidence": "probable",
     "protocols": [
       {
@@ -96,6 +96,16 @@
           "intent",
           "liquidity"
         ]
+      },
+      {
+        "source": "issuer",
+        "name": "Ripio latam-stables issuer bridge",
+        "url": "https://github.com/ripio/latam-stables",
+        "bridgeTypes": [
+          "burn-mint",
+          "issuer-operated"
+        ],
+        "note": "The official BridgeDeposit, LimitedMinterBridge, and LatamStable sources define source burn, destination fulfillment, daily-limited minting, and route accounting for the issuer-operated WCOP bridge."
       }
     ],
     "sources": [
@@ -110,6 +120,30 @@
       {
         "label": "Across developer docs",
         "url": "https://docs.across.to/"
+      },
+      {
+        "label": "Ripio latam-stables repository",
+        "url": "https://github.com/ripio/latam-stables"
+      },
+      {
+        "label": "Ripio LimitedMinterBridge source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+      },
+      {
+        "label": "Ripio BridgeDeposit source",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+      },
+      {
+        "label": "Ethereum LimitedMinterBridge verified contract",
+        "url": "https://eth.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+      },
+      {
+        "label": "Ethereum BridgeDeposit verified contract",
+        "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+      },
+      {
+        "label": "Ethereum JSON-RPC fixed reads",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
     "routes": [
@@ -124,7 +158,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the ethereum wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 25570796), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the ethereum wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 25570796), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held by Ripio's own accounts (EOA 0x466c02e2cc... and the separate native LimitedMinter at 0xd168cfbb...), administered by the 4-of-7 Ripio Safe 0x2b839174fe.... The issuer's LimitedMinterBridge and BridgeDeposit are separate burn/mint machinery reviewed in the Bridge Risk controls below and do not change this native issuance classification.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -152,7 +186,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the base wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 48861713), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the base wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 48861713), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held by Ripio's issuer EOA and administered by the 4-of-7 Ripio Safe 0x2b839174fe.... The issuer's LimitedMinterBridge and BridgeDeposit are separate burn/mint machinery reviewed in the Bridge Risk controls below and do not change this native issuance classification.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -180,7 +214,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the worldchain wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 32588567), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the worldchain wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 32588567), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held by Ripio's issuer EOA and administered by the 4-of-7 Ripio Safe 0x2b839174fe.... The issuer's LimitedMinterBridge and BridgeDeposit are separate burn/mint machinery reviewed in the Bridge Risk controls below and do not change this native issuance classification.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -208,7 +242,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the bsc wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 111007307), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the bsc wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 111007307), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held by Ripio's issuer EOA and administered by the 4-of-7 Ripio Safe 0x2b839174fe.... The issuer's LimitedMinterBridge and BridgeDeposit are separate burn/mint machinery reviewed in the Bridge Risk controls below and do not change this native issuance classification.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -236,7 +270,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the polygon wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 90538518), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the polygon wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 90538518), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held by Ripio's issuer EOA and administered by the 4-of-7 Ripio Safe 0x2b839174fe.... The issuer's LimitedMinterBridge and BridgeDeposit are separate burn/mint machinery reviewed in the Bridge Risk controls below and do not change this native issuance classification.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -264,7 +298,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the gnosis wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 47292203), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the gnosis wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 47292203), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held by Ripio's issuer EOA and administered by the 4-of-7 Ripio Safe 0x2b839174fe.... The issuer's LimitedMinterBridge and BridgeDeposit are separate burn/mint machinery reviewed in the Bridge Risk controls below and do not change this native issuance classification.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sourceChain": "ethereum",
@@ -280,6 +314,342 @@
             "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "wcop-limited-minter-bridge",
+        "label": "Ripio WCOP LimitedMinterBridge adapter",
+        "routeRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "rate-limit",
+          "admin",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "failureDomainKeys": [
+          "protocol:ripio-latam-stables-bridge",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:celo:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "safe:celo:0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "LimitedMinterBridge tokenConfigs(wCOP) returned exists = true and dailyMaxMint = 1,580,416,570,821,698,384 raw units (1.580416570821698384 WCOP) on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis, and Celo at the 2026-08-16 reads. The source permits an administrator to register tokens, change daily limits, pause, and mint to an arbitrary recipient.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The issuer EOA held MINTER_ROLE on the Ethereum adapter and can call its arbitrary-recipient mintTo() path without BridgeDeposit burn proof; the token-level issuer MINTER_ROLE remains a separate native issuance surface."
+        ],
+        "routeChecks": {
+          "caps": "The adapter's wCOP dailyMaxMint was 1.580416570821698384 WCOP at the reviewed reads, and the source permits an administrator to change token registration and daily limits.",
+          "trustedPeerOrRemote": "BridgeDeposit.depositForBridge() burns source WCOP and an authorized operator fulfills destination minting through LimitedMinterBridge; Ethereum route configurations to Base, Worldchain, BSC, Polygon, Gnosis, and Celo were enabled with a fixed 57 WCOP fee.",
+          "pausersAdminsUpgraders": "LimitedMinterBridge is source-verified and non-upgradeable. Its admin surface controls token registration, daily limits, and pause; Ethereum DEFAULT_ADMIN_ROLE was held by the issuer EOA and Ripio Safe, with no timelock evidenced.",
+          "onchainAmountBounds": "BridgeDeposit exposes totalBurnedTo/totalMintedFrom accounting and the Worldchain counters were nonzero at the observed Ethereum block, but paired source/destination reconciliation was not completed. The issuer EOA's adapter MINTER_ROLE creates a capped arbitrary-recipient bypass of burn proof.",
+          "unsupportedReason": "Ripio's July 31, 2026 Celo announcement publishes this wCOP adapter address; at Celo block 75019312, the Ripio Safe held DEFAULT_ADMIN_ROLE and MINTER_ROLE while the issuer EOA did not. The Safe-controlled direct mint leaves Celo's canonical-versus-conserved provenance unresolved, and Celo is not an authored WCOP token route."
+        },
+        "timelockDelaySec": 0,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770680,
+        "sources": [
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum LimitedMinterBridge verified contract",
+            "url": "https://eth.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Celo LimitedMinterBridge verified contract",
+            "url": "https://celo.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "Celo JSON-RPC fixed reads",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At the fixed 2026-08-16 reads, LimitedMinterBridge 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 held WCOP MINTER_ROLE on the six authored native deployments and Celo, and its wCOP configuration returned the daily cap above. The verified source defines issuer-operated bridge minting, per-token daily limits, admin-controlled registration and limits, pause, and arbitrary-recipient minting. Ethereum role enumeration found the issuer EOA and BridgeDeposit as MINTER_ROLE holders and the issuer EOA and Safe as DEFAULT_ADMIN_ROLE holders. Celo's Safe-controlled direct MINTER_ROLE remains an unresolved canonicality and conservation question; its evidence is retained here rather than as a non-token route row. The adapter is therefore route-scoped Bridge Risk and is not global native Mint Authority."
+      },
+      {
+        "id": "wcop-bridge-admin-safe",
+        "label": "Ripio WCOP bridge administrator Safe",
+        "routeRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "pause"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "failureDomainKeys": [
+          "protocol:ripio-latam-stables-bridge",
+          "safe:ethereum:0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "timelockDelaySec": 0,
+        "safe": {
+          "owners": [
+            "0x067823401127ca6647481c68011805b90d42231e",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295015,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The 4-of-7 Safe held DEFAULT_ADMIN_ROLE on the Ethereum LimitedMinterBridge and BridgeDeposit. It can administer bridge roles and raise the adapter's daily limit; no bridge timelock was evidenced.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The Safe's DEFAULT_ADMIN_ROLE can grant bridge roles and change LimitedMinterBridge token registration and daily limits.",
+          "pausersAdminsUpgraders": "At Ethereum block 25770680 the Safe was a 4-of-7 Safe with no enabled modules; the bridge contracts are not governed by a timelock in the reviewed source and the adapter is non-upgradeable."
+        },
+        "observedBlock": 25770680,
+        "sources": [
+          {
+            "label": "Ripio Safe multisig",
+            "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+          },
+          {
+            "label": "Ethereum LimitedMinterBridge verified contract",
+            "url": "https://eth.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "Ethereum BridgeDeposit verified contract",
+            "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          }
+        ],
+        "evidence": "At the reviewed Ethereum role enumeration, Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 held DEFAULT_ADMIN_ROLE on both bridge contracts. The existing fixed Safe read recorded four approvals from seven owners, no enabled modules, and no guard; its admin capability is preserved here as bridge administration and is not counted a second time as native issuance."
+      },
+      {
+        "id": "wcop-bridge-admin-minter-eoa",
+        "label": "Ripio WCOP bridge administrator and minter EOA",
+        "routeRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "failureDomainKeys": [
+          "protocol:ripio-latam-stables-bridge",
+          "eoa:0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The issuer EOA held DEFAULT_ADMIN_ROLE and MINTER_ROLE on the Ethereum LimitedMinterBridge. Its adapter mintTo() path is bounded by the current daily cap but does not require proof of a prior BridgeDeposit burn.",
+        "canRaiseCap": true,
+        "routeChecks": {
+          "caps": "The issuer EOA's DEFAULT_ADMIN_ROLE can change adapter token configuration and daily limits; its MINTER_ROLE can mint to an arbitrary recipient up to the current route cap.",
+          "pausersAdminsUpgraders": "Ethereum role enumeration at the observed block found the issuer EOA as both DEFAULT_ADMIN_ROLE and MINTER_ROLE on LimitedMinterBridge; no timelock was evidenced."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770680,
+        "sources": [
+          {
+            "label": "Ethereum LimitedMinterBridge verified contract",
+            "url": "https://eth.blockscout.com/address/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+          },
+          {
+            "label": "Ripio LimitedMinterBridge source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At the contemporaneous Ethereum role enumeration, issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b held DEFAULT_ADMIN_ROLE and MINTER_ROLE on LimitedMinterBridge. The EOA's arbitrary-recipient mintTo() path is capped by the adapter's daily limit but bypasses BridgeDeposit burn proof; this adverse bridge fact is retained here rather than in native Mint Authority."
+      },
+      {
+        "id": "wcop-bridge-deposit",
+        "label": "Ripio WCOP BridgeDeposit source burn and destination fulfillment",
+        "routeRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "failureDomainKeys": [
+          "protocol:ripio-latam-stables-bridge",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "bridge-operator:ethereum:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "bridge-operator:ethereum:0xbc924f707ca021f9b220088afe56c85b9cb43085"
+        ],
+        "authorityType": "contract",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "BridgeDeposit.depositForBridge() burns source WCOP and fulfillBridgeMint() invokes destination LimitedMinterBridge minting; the route uses burn/mint accounting rather than a reserve lockbox.",
+          "trustedPeerOrRemote": "The official BridgeDeposit source binds source-chain burn records to destination fulfillment and documents idempotency plus totalBurnedTo/totalMintedFrom counters; the current paired route reconciliation remains incomplete.",
+          "onchainAmountBounds": "At Ethereum block 25770680, getBridgeStats(wCOP, 480) returned nonzero totalBurnedTo and totalMintedFrom counters. Those counters evidence live route accounting but do not by themselves prove paired conservation."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770680,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum BridgeDeposit verified contract",
+            "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          },
+          {
+            "label": "Ethereum JSON-RPC fixed reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 is source-verified and its limitedMinter() points to LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. The source separates source burn from destination fulfillment, while Ethereum route configuration enables Base, Worldchain, BSC, Polygon, Gnosis, and Celo. Current counters show live Worldchain accounting, but no paired source/destination reconciliation was completed."
+      },
+      {
+        "id": "wcop-bridge-operator-5ca3f8",
+        "label": "Ripio WCOP BridgeDeposit operator 0x5ca3f8",
+        "routeRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+        "failureDomainKeys": [
+          "protocol:ripio-latam-stables-bridge",
+          "bridge-operator:ethereum:0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The operator is authorized by BridgeDeposit to fulfill the source-burn/destination-mint workflow across the enabled route configuration; current per-destination operator histories were not separately enumerated.",
+          "onchainAmountBounds": "BridgeDeposit maintains totalBurnedTo/totalMintedFrom route counters, with nonzero Worldchain counters observed at Ethereum block 25770680; paired reconciliation remains incomplete."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770680,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum BridgeDeposit verified contract",
+            "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          }
+        ],
+        "evidence": "Ethereum role enumeration at the current 2026-08-16 read found EOA 0x5ca3f8eeba12d83408fc097c2dad79212456f20f as a BRIDGE_OPERATOR_ROLE holder on BridgeDeposit; eth_getCode returned no bytecode. This operator can execute the documented BridgeDeposit fulfillment path, while route-level conservation remains an evidence gap."
+      },
+      {
+        "id": "wcop-bridge-operator-bc924f",
+        "label": "Ripio WCOP BridgeDeposit operator 0xbc924f",
+        "routeRefs": [
+          "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
+          "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xbc924f707ca021f9b220088afe56c85b9cb43085",
+        "failureDomainKeys": [
+          "protocol:ripio-latam-stables-bridge",
+          "bridge-operator:ethereum:0xbc924f707ca021f9b220088afe56c85b9cb43085",
+          "contract:ethereum:0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+        ],
+        "authorityType": "eoa",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The operator is authorized by BridgeDeposit to fulfill the source-burn/destination-mint workflow across the enabled route configuration; current per-destination operator histories were not separately enumerated.",
+          "onchainAmountBounds": "BridgeDeposit maintains totalBurnedTo/totalMintedFrom route counters, with nonzero Worldchain counters observed at Ethereum block 25770680; paired reconciliation remains incomplete."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770680,
+        "sources": [
+          {
+            "label": "Ripio BridgeDeposit source",
+            "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/BridgeDeposit.sol"
+          },
+          {
+            "label": "Ethereum BridgeDeposit verified contract",
+            "url": "https://eth.blockscout.com/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
+          }
+        ],
+        "evidence": "Ethereum role enumeration at the current 2026-08-16 read found EOA 0xbc924f707ca021f9b220088afe56c85b9cb43085 as a BRIDGE_OPERATOR_ROLE holder on BridgeDeposit; eth_getCode returned no bytecode. This operator can execute the documented BridgeDeposit fulfillment path, while route-level conservation remains an evidence gap."
       }
     ]
   }

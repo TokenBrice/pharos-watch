@@ -48,30 +48,62 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "YUSD is deployed on many chains and L2BEAT points its route signal at Across. Across is an intent/liquidity framework with non-minting route execution, so Pharos scores this as a liquidity-or-intent route rather than a canonical bridge or issuer-native path. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native YToken; other-chain rows confirmed YieldFi yUSD LayerZero OFT representations with uniform deployment/admin reads.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "YieldFi yUSD has ten local native YToken/YTokenL2 issuance routes and a separate YieldFi BridgeCCIP transfer rail using Chainlink CCIP. BridgeCCIP burns local L2 shares before sending and mints them on a validated return message; Ethereum locks and unlocks yUSD through the verified LockBox. The shared Administrator controls BRIDGE and LOCKBOX role assignment, each BridgeCCIP enforces an allowed peer and processed-message check, and Chainlink CCIP supplies the external validation layer. This route-level accounting is supply-conserving when its peer and message checks hold, but it does not erase the independent local liability boundary of any YToken/YTokenL2 deployment. The current allowed-peer matrix and a complete per-chain consolidated NAV reconciliation were not independently enumerated.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge boundary migration 2026-08-16",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "issuer",
+        "name": "YieldFi BridgeCCIP",
+        "slug": "yieldfi-bridge-ccip",
+        "url": "https://docs.yield.fi/resources/contract-addresses",
         "bridgeTypes": [
-          "Non-minting"
-        ]
+          "Issuer-native burn/mint",
+          "Issuer-native lock/mint"
+        ],
+        "note": "YieldFi's current Bridge contracts are verified BridgeCCIP deployments; the route contracts are separate from the local YToken/YTokenL2 issuance contracts."
+      },
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "slug": "chainlink-ccip",
+        "url": "https://docs.chain.link/ccip",
+        "bridgeTypes": [
+          "External validated network"
+        ],
+        "note": "Chainlink CCIP provides the router and decentralized oracle-network message validation layer used by BridgeCCIP."
       }
     ],
     "sources": [
       {
-        "label": "YieldFi YUSD terms",
-        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+        "label": "YieldFi official current contract directory",
+        "url": "https://docs.yield.fi/resources/contract-addresses"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "YieldFi yTokens architecture",
+        "url": "https://docs.yield.fi/technical-docs/ytokens"
+      },
+      {
+        "label": "YieldFi yUSD terms",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
+      },
+      {
+        "label": "Chainlink official CCIP documentation",
+        "url": "https://docs.chain.link/ccip"
+      },
+      {
+        "label": "Ethereum BridgeCCIP verified source",
+        "url": "https://eth.blockscout.com/address/0x6Be164Af10879A86E4643089638b6864eF12b1eE?tab=contract"
+      },
+      {
+        "label": "Arbitrum BridgeCCIP verified source",
+        "url": "https://arbitrum.blockscout.com/address/0x8a264A32d73D12E597E9532f1D16baC12948f066?tab=contract"
+      },
+      {
+        "label": "Ethereum LockBox verified source",
+        "url": "https://eth.blockscout.com/address/0x659b5bc7F2F888dB3D5901b78Cdb34DF270E2231?tab=contract"
       }
     ],
     "routes": [
@@ -79,24 +111,31 @@
         "id": "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
         "destinationChain": "ethereum",
         "contractAddress": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
-        "protocol": "YieldFi yUSD (Ethereum native YToken)",
+        "protocol": "YieldFi yUSD native YToken with BridgeCCIP",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'YieldFi yUSD', symbol yUSD, 18 decimals; EIP-1967 implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493 is the YieldFi YToken (Sourcify full match) — native issuance on Ethereum.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "reviewNote": "At Ethereum token read block 25770723, the authored deployment was a live native YieldFi YToken with local ERC-4626 share issuance over USDC and the common Manager and Administrator. The separate Ethereum BridgeCCIP at 0x6be164af10879a86e4643089638b6864ef12b1ee held BRIDGE at block 25770717 and uses the LockBox route for bridge accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770717,
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x6be164af10879a86e4643089638b6864ef12b1ee",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x6be164af10879a86e4643089638b6864ef12b1ee"
+        ],
         "sources": [
           {
-            "label": "YieldFi yUSD token terms",
-            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
           },
           {
-            "label": "yUSD on Etherscan",
-            "url": "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb"
+            "label": "Ethereum BridgeCCIP verified source",
+            "url": "https://eth.blockscout.com/address/0x6Be164Af10879A86E4643089638b6864eF12b1eE?tab=contract"
           }
         ]
       },
@@ -104,28 +143,35 @@
         "id": "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "arbitrum",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including arbitrum; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At Arbitrum token read block 495287056, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over Arbitrum USDC and the common Manager and Administrator; its verified implementation is 0x5d83b88f8770de1788e89cc1ec5b2cda8287212c. The separate BridgeCCIP at 0x8a264a32d73d12e597e9532f1d16bac12948f066 held BRIDGE at block 495286801 and burns local shares before validated return minting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495286801,
         "controllerChain": "arbitrum",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0x8a264a32d73d12e597e9532f1d16bac12948f066",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0x8a264a32d73d12e597e9532f1d16bac12948f066"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Arbitrum YTokenL2 verified source",
+            "url": "https://arbitrum.blockscout.com/address/0x4772d2e014f9fc3a820c444e3313968e9a5c8121?tab=contract"
+          },
+          {
+            "label": "Arbitrum BridgeCCIP verified source",
+            "url": "https://arbitrum.blockscout.com/address/0x8a264A32d73D12E597E9532f1D16baC12948f066?tab=contract"
           }
         ]
       },
@@ -133,28 +179,31 @@
         "id": "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "base",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including base; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At Base token read block 50065610, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over Base USDC and the common Manager and Administrator; its verified implementation is 0x5d83b88f8770de1788e89cc1ec5b2cda8287212c. The separate BridgeCCIP at 0xb3138a82c715cab9ea8247631b653f6e48385c30 held BRIDGE at block 50065577 and uses supply-conserving local burn/return mint accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065577,
         "controllerChain": "base",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0xb3138a82c715cab9ea8247631b653f6e48385c30",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:base:0xb3138a82c715cab9ea8247631b653f6e48385c30"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "YieldFi yTokens architecture",
+            "url": "https://docs.yield.fi/technical-docs/ytokens"
           }
         ]
       },
@@ -162,28 +211,31 @@
         "id": "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "optimism",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including optimism; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At Optimism token read block 155660895, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over Optimism USDC and the common Manager and Administrator; its verified implementation is 0x5d83b88f8770de1788e89cc1ec5b2cda8287212c. The separate BridgeCCIP at 0xa358f0e78dd6cafa810b6f08e248ba1bf1770604 held BRIDGE at block 155660862 and uses supply-conserving local burn/return mint accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 155660862,
         "controllerChain": "optimism",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0xa358f0e78dd6cafa810b6f08e248ba1bf1770604",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:optimism:0xa358f0e78dd6cafa810b6f08e248ba1bf1770604"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "YieldFi yTokens architecture",
+            "url": "https://docs.yield.fi/technical-docs/ytokens"
           }
         ]
       },
@@ -191,28 +243,31 @@
         "id": "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "sonic",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including sonic; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At Sonic token read block 77633025, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over Sonic's configured stablecoin asset and the common Manager and Administrator; its verified implementation is 0x5d83b88f8770de1788e89cc1ec5b2cda8287212c. The separate BridgeCCIP at 0x321520f89076836a0e306e4a41bccd1bfd2189d9 held BRIDGE at block 77632993 and uses supply-conserving local burn/return mint accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 77632993,
         "controllerChain": "sonic",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0x321520f89076836a0e306e4a41bccd1bfd2189d9",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:sonic:0x321520f89076836a0e306e4a41bccd1bfd2189d9"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "YieldFi yTokens architecture",
+            "url": "https://docs.yield.fi/technical-docs/ytokens"
           }
         ]
       },
@@ -220,28 +275,31 @@
         "id": "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "plume",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including plume; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At Plume token read block 87687089, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over Plume's configured stablecoin asset and the common Manager and Administrator; its verified implementation is 0x5d83b88f8770de1788e89cc1ec5b2cda8287212c. The separate BridgeCCIP at 0x4bc428f585acbe46b428c487cecb11b3d008bf22 held BRIDGE at block 87686934 and uses supply-conserving local burn/return mint accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 87686934,
         "controllerChain": "plume",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0x4bc428f585acbe46b428c487cecb11b3d008bf22",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:plume:0x4bc428f585acbe46b428c487cecb11b3d008bf22"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "YieldFi yTokens architecture",
+            "url": "https://docs.yield.fi/technical-docs/ytokens"
           }
         ]
       },
@@ -249,28 +307,31 @@
         "id": "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "katana",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including katana; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At Katana token read block 40177756, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over Katana's configured stablecoin asset and the common Manager and Administrator; its verified implementation is 0x52cb1a9a9154f0e0a3c7ce08f95caee6062dbca9. The separate BridgeCCIP at 0x0e58736907261c379198783b1e42541da4d14fb7 held BRIDGE at block 40177692 and uses supply-conserving local burn/return mint accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40177692,
         "controllerChain": "katana",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0x0e58736907261c379198783b1e42541da4d14fb7",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:katana:0x0e58736907261c379198783b1e42541da4d14fb7"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "YieldFi yTokens architecture",
+            "url": "https://docs.yield.fi/technical-docs/ytokens"
           }
         ]
       },
@@ -278,28 +339,31 @@
         "id": "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "bsc",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including bsc; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At BNB token read block 116355206, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over BNB USDT and the common Manager and Administrator; its verified implementation is 0x52cb1a9a9154f0e0a3c7ce08f95caee6062dbca9. The separate BridgeCCIP at 0x383d63d824eb3758a721fda66932f160c56924ce held BRIDGE at block 116355059 and uses supply-conserving local burn/return mint accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116355059,
         "controllerChain": "bsc",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0x383d63d824eb3758a721fda66932f160c56924ce",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x383d63d824eb3758a721fda66932f160c56924ce"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "YieldFi yTokens architecture",
+            "url": "https://docs.yield.fi/technical-docs/ytokens"
           }
         ]
       },
@@ -307,28 +371,31 @@
         "id": "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "avalanche",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including avalanche; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At Avalanche token read block 92980816, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over Avalanche USDC.e and the common Manager and Administrator; its verified implementation is 0x52cb1a9a9154f0e0a3c7ce08f95caee6062dbca9. The separate BridgeCCIP at 0xf6aebdeb2add0ab53a0090dc8714719604a9f9df held BRIDGE at block 92980757 and uses supply-conserving local burn/return mint accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92980757,
         "controllerChain": "avalanche",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0xf6aebdeb2add0ab53a0090dc8714719604a9f9df",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xf6aebdeb2add0ab53a0090dc8714719604a9f9df"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "YieldFi yTokens architecture",
+            "url": "https://docs.yield.fi/technical-docs/ytokens"
           }
         ]
       },
@@ -336,30 +403,531 @@
         "id": "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "destinationChain": "plasma",
         "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
-        "protocol": "YieldFi yUSD (LayerZero OFT)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
+        "protocol": "YieldFi yUSD native YTokenL2 with BridgeCCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including plasma; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum",
+        "reviewNote": "At Plasma token read block 29980022, the authored deployment was a live native YTokenL2 with local ERC-4626 share issuance over Plasma's configured stablecoin asset and the common Manager and Administrator; its verified implementation is 0x52cb1a9a9154f0e0a3c7ce08f95caee6062dbca9. The separate BridgeCCIP at 0xe582262bc5c35dc213388a928da5162753d9ef2e held BRIDGE at block 29979956 and uses supply-conserving local burn/return mint accounting; it is not a LayerZero OFT endpoint.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "observedAt": "2026-08-16",
+        "observedBlock": 29979956,
         "controllerChain": "plasma",
-        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "controllerAddress": "0xe582262bc5c35dc213388a928da5162753d9ef2e",
         "failureDomainKeys": [
-          "protocol:layerzero-oft",
-          "contract:plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+          "protocol:chainlink-ccip",
+          "contract:plasma:0xe582262bc5c35dc213388a928da5162753d9ef2e"
         ],
         "sources": [
           {
-            "label": "YieldFi documentation",
-            "url": "https://docs.yield.fi/"
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "YieldFi yTokens architecture",
+            "url": "https://docs.yield.fi/technical-docs/ytokens"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "yusd-administrator-bridge-role-registry",
+        "label": "YieldFi Administrator BRIDGE and LOCKBOX role registry",
+        "routeRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x10472f91f67c49260bdd65f016ea0757bb1fc91e",
+        "failureDomainKeys": [
+          "contract:ethereum:0x10472f91f67c49260bdd65f016ea0757bb1fc91e",
+          "protocol:yieldfi-bridge-role-registry"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The common Administrator role registry controls which BridgeCCIP and LockBox contracts hold the BRIDGE or LOCKBOX roles used by the transfer rail. Its bridge-role administration is separate from the native YIELD role path retained in Mint Authority.",
+          "unsupportedReason": "The complete current allowed-peer matrix was not independently enumerated; this control preserves the common role-registry failure domain without treating role membership as peer validation."
+        },
+        "capDescription": "Granting or revoking BRIDGE and LOCKBOX roles changes which contracts may invoke route-level burn/mint accounting or LockBox unlock. The Administrator can change this bridge authorization immediately through its ADMIN-controlled registry.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770718,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Verified YieldFi Administrator implementation",
+            "url": "https://eth.blockscout.com/address/0xccaa27e3db44e06bd9001958de5b41301fd28002?tab=contract"
+          },
+          {
+            "label": "YieldFi Administrator role replay and current reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25770718, the common Administrator 0x10472f91f67c49260bdd65f016ea0757bb1fc91e remained the role registry for the reviewed BridgeCCIP and LockBox path. The prior complete role replay at block 25575158 recorded BRIDGE holders 0x7cccd8ef51227a6c76c3824ed5e176cdc9598f7b, 0xce6beb6b0d349161a71cf547be769900ebcde358, 0x6d4f2f0a647c29983afb77ce3d35c085e851a97f, 0x6be164af10879a86e4643089638b6864ef12b1ee, and 0xace45ffffafb20a5b0b68ff3c4cf312551d4cfff, plus LOCKBOX holder 0x659b5bc7f2f888db3d5901b78cdb34df270e2231. Current BRIDGE reads independently returned true for each of the ten BridgeCCIP addresses at the route-specific blocks below. Non-ADMIN role changes are immediate; the exact allowed-peer matrix remains an evidence gap."
+      },
+      {
+        "id": "yusd-ethereum-bridge-ccip",
+        "label": "YieldFi Ethereum BridgeCCIP transfer controller",
+        "routeRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x6be164af10879a86e4643089638b6864ef12b1ee",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x6be164af10879a86e4643089638b6864ef12b1ee",
+          "router:ethereum:0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "BridgeCCIP send() locks yUSD in the Ethereum LockBox and receive processing unlocks or synchronizes the corresponding locked balance through the bridge-only path.",
+          "trustedPeerOrRemote": "send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "The Ethereum route is lock/unlock accounting through the LockBox; it is supply-conserving when the configured peer and validated CCIP message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770717,
+        "sources": [
+          {
+            "label": "Ethereum BridgeCCIP verified source",
+            "url": "https://eth.blockscout.com/address/0x6Be164Af10879A86E4643089638b6864eF12b1eE?tab=contract"
+          },
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          }
+        ],
+        "evidence": "At Ethereum block 25770717, 0x6be164af10879a86e4643089638b6864ef12b1ee held the Administrator's BRIDGE role. The verified BridgeCCIP source checks the configured LockBox and peer on send(), validates processed messages and the allowed peer on _ccipReceive(), and delegates the Ethereum lock/unlock accounting to the LockBox. This is bridge machinery, not an independent native mint authority."
+      },
+      {
+        "id": "yusd-arbitrum-bridge-ccip",
+        "label": "YieldFi Arbitrum BridgeCCIP transfer controller",
+        "routeRefs": [
+          "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x8a264a32d73d12e597e9532f1d16bac12948f066",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0x8a264a32d73d12e597e9532f1d16bac12948f066",
+          "router:arbitrum:0x141fa059441e0ca23ce184b6a78bafd2a517dde8"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "The L2 send path calls Manager manageAssetAndShares with isMint=false and updateAsset=false, while a validated return calls it with isMint=true and updateAsset=false; this is supply-conserving route accounting when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 495286801,
+        "sources": [
+          {
+            "label": "Arbitrum BridgeCCIP verified source",
+            "url": "https://arbitrum.blockscout.com/address/0x8a264A32d73D12E597E9532f1D16baC12948f066?tab=contract"
+          },
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          }
+        ],
+        "evidence": "At Arbitrum block 495286801, 0x8a264a32d73d12e597e9532f1d16bac12948f066 held the Administrator's BRIDGE role. The verified BridgeCCIP burns local YTokenL2 shares before sending and invokes the corresponding manager accounting return only after validated CCIP receipt; it is not an OFT token contract."
+      },
+      {
+        "id": "yusd-base-bridge-ccip",
+        "label": "YieldFi Base BridgeCCIP transfer controller",
+        "routeRefs": [
+          "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xb3138a82c715cab9ea8247631b653f6e48385c30",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0xb3138a82c715cab9ea8247631b653f6e48385c30",
+          "router:base:0x881e3a65b4d4a04dd529061dd0071cf975f58bcd"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeCCIP send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "Base BridgeCCIP uses manager burn and validated return mint calls with updateAsset=false, preserving the route-level burn/mint boundary when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 50065577,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Base block 50065577, 0xb3138a82c715cab9ea8247631b653f6e48385c30 held the Administrator's BRIDGE role. Its route-level manager burn/mint calls are distinct from the local Base YTokenL2 deposit/mint issuance path."
+      },
+      {
+        "id": "yusd-optimism-bridge-ccip",
+        "label": "YieldFi Optimism BridgeCCIP transfer controller",
+        "routeRefs": [
+          "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0xa358f0e78dd6cafa810b6f08e248ba1bf1770604",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:optimism:0xa358f0e78dd6cafa810b6f08e248ba1bf1770604",
+          "router:optimism:0x3206695cae29952f4b0c22a169725a865bc8ce0f"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeCCIP send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "Optimism BridgeCCIP uses manager burn and validated return mint calls with updateAsset=false, preserving the route-level burn/mint boundary when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 155660862,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Optimism block 155660862, 0xa358f0e78dd6cafa810b6f08e248ba1bf1770604 held the Administrator's BRIDGE role. Its route-level manager burn/mint calls are distinct from the local Optimism YTokenL2 deposit/mint issuance path."
+      },
+      {
+        "id": "yusd-sonic-bridge-ccip",
+        "label": "YieldFi Sonic BridgeCCIP transfer controller",
+        "routeRefs": [
+          "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x321520f89076836a0e306e4a41bccd1bfd2189d9",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sonic:0x321520f89076836a0e306e4a41bccd1bfd2189d9",
+          "router:sonic:0xb4e1ff7882474bb93042be9ad5e1fa387949b860"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeCCIP send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "Sonic BridgeCCIP uses manager burn and validated return mint calls with updateAsset=false, preserving the route-level burn/mint boundary when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 77632993,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Sonic block 77632993, 0x321520f89076836a0e306e4a41bccd1bfd2189d9 held the Administrator's BRIDGE role. Its route-level manager burn/mint calls are distinct from the local Sonic YTokenL2 deposit/mint issuance path."
+      },
+      {
+        "id": "yusd-plume-bridge-ccip",
+        "label": "YieldFi Plume BridgeCCIP transfer controller",
+        "routeRefs": [
+          "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x4bc428f585acbe46b428c487cecb11b3d008bf22",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:plume:0x4bc428f585acbe46b428c487cecb11b3d008bf22",
+          "router:plume:0x5c4f4622ad0ec4a47e04840db7e9eca8354109af"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeCCIP send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "Plume BridgeCCIP uses manager burn and validated return mint calls with updateAsset=false, preserving the route-level burn/mint boundary when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 87686934,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Plume block 87686934, 0x4bc428f585acbe46b428c487cecb11b3d008bf22 held the Administrator's BRIDGE role. Its route-level manager burn/mint calls are distinct from the local Plume YTokenL2 deposit/mint issuance path."
+      },
+      {
+        "id": "yusd-katana-bridge-ccip",
+        "label": "YieldFi Katana BridgeCCIP transfer controller",
+        "routeRefs": [
+          "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0x0e58736907261c379198783b1e42541da4d14fb7",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:katana:0x0e58736907261c379198783b1e42541da4d14fb7",
+          "router:katana:0x7c19b79d2a054114ab36ad758a36e92376e267da"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeCCIP send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "Katana BridgeCCIP uses manager burn and validated return mint calls with updateAsset=false, preserving the route-level burn/mint boundary when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 40177692,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Katana block 40177692, 0x0e58736907261c379198783b1e42541da4d14fb7 held the Administrator's BRIDGE role. Its route-level manager burn/mint calls are distinct from the local Katana YTokenL2 deposit/mint issuance path."
+      },
+      {
+        "id": "yusd-bsc-bridge-ccip",
+        "label": "YieldFi BNB Chain BridgeCCIP transfer controller",
+        "routeRefs": [
+          "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x383d63d824eb3758a721fda66932f160c56924ce",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x383d63d824eb3758a721fda66932f160c56924ce",
+          "router:bsc:0x34b03cb9086d7d758ac55af71584f81a598759fe"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeCCIP send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "BNB Chain BridgeCCIP uses manager burn and validated return mint calls with updateAsset=false, preserving the route-level burn/mint boundary when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116355059,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At BNB Chain block 116355059, 0x383d63d824eb3758a721fda66932f160c56924ce held the Administrator's BRIDGE role. Its route-level manager burn/mint calls are distinct from the local BNB YTokenL2 deposit/mint issuance path."
+      },
+      {
+        "id": "yusd-avalanche-bridge-ccip",
+        "label": "YieldFi Avalanche BridgeCCIP transfer controller",
+        "routeRefs": [
+          "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xf6aebdeb2add0ab53a0090dc8714719604a9f9df",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xf6aebdeb2add0ab53a0090dc8714719604a9f9df",
+          "router:avalanche:0xf4c7e640eda248ef95972845a62bdc74237805db3"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeCCIP send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "Avalanche BridgeCCIP uses manager burn and validated return mint calls with updateAsset=false, preserving the route-level burn/mint boundary when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92980757,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Avalanche block 92980757, 0xf6aebdeb2add0ab53a0090dc8714719604a9f9df held the Administrator's BRIDGE role. Its route-level manager burn/mint calls are distinct from the local Avalanche YTokenL2 deposit/mint issuance path."
+      },
+      {
+        "id": "yusd-plasma-bridge-ccip",
+        "label": "YieldFi Plasma BridgeCCIP transfer controller",
+        "routeRefs": [
+          "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0xe582262bc5c35dc213388a928da5162753d9ef2e",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:plasma:0xe582262bc5c35dc213388a928da5162753d9ef2e",
+          "router:plasma:0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "BridgeCCIP send() and _ccipReceive() enforce the configured allowed peer and processed-message checks; the complete current allowed-peer matrix was not independently enumerated.",
+          "onchainAmountBounds": "Plasma BridgeCCIP uses manager burn and validated return mint calls with updateAsset=false, preserving the route-level burn/mint boundary when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 29979956,
+        "sources": [
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          },
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ],
+        "evidence": "At Plasma block 29979956, 0xe582262bc5c35dc213388a928da5162753d9ef2e held the Administrator's BRIDGE role. Its route-level manager burn/mint calls are distinct from the local Plasma YTokenL2 deposit/mint issuance path."
+      },
+      {
+        "id": "yusd-ethereum-lockbox",
+        "label": "YieldFi Ethereum LockBox bridge escrow",
+        "routeRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x659b5bc7f2f888db3d5901b78cdb34df270e2231",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x659b5bc7f2f888db3d5901b78cdb34df270e2231"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The verified Ethereum LockBox is a proxy whose unlock() surface is bridge-only; its _sync path delegates the corresponding lock/unlock accounting update to the YieldFi Manager.",
+          "onchainAmountBounds": "LockBox unlock and synchronization represent the Ethereum side of BridgeCCIP accounting and are bounded by the prior lock/validated route message when peer and message checks hold."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770717,
+        "sources": [
+          {
+            "label": "Ethereum LockBox verified source",
+            "url": "https://eth.blockscout.com/address/0x659b5bc7F2F888dB3D5901b78Cdb34DF270E2231?tab=contract"
+          },
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          }
+        ],
+        "evidence": "The Ethereum LockBox 0x659b5bc7f2f888db3d5901b78cdb34df270e2231 is the verified bridge escrow for the L1 route. Its bridge-only unlock() and Manager-delegating _sync path preserve the adverse escrow and accounting failure domain without treating the LockBox as a global native minter."
+      },
+      {
+        "id": "yusd-chainlink-ccip-validation",
+        "label": "Chainlink CCIP Router and DON message validation",
+        "routeRefs": [
+          "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+          "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "protocol:chainlink-ccip-don"
+        ],
+        "authorityType": "unknown",
+        "routeChecks": {
+          "attestorQuorum": "Chainlink CCIP's Router and decentralized oracle network provide the external message-validation layer used by BridgeCCIP. A yUSD-specific DON quorum and route-level validator set were not independently enumerated.",
+          "unsupportedReason": "The external CCIP validation layer is protocol-level evidence rather than a single issuer-controlled address; exact yUSD route configuration remains an evidence gap."
+        },
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Chainlink official CCIP documentation",
+            "url": "https://docs.chain.link/ccip"
+          },
+          {
+            "label": "YieldFi official current contract directory",
+            "url": "https://docs.yield.fi/resources/contract-addresses"
+          }
+        ],
+        "evidence": "The reviewed BridgeCCIP contracts use Chainlink CCIP Router message delivery and external DON validation rather than LayerZero OFT endpoints. The control preserves the external validator failure domain and does not infer a yUSD-specific quorum or peer matrix that was not independently reviewed."
       }
     ]
   }

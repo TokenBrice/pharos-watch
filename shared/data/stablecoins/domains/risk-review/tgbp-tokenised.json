@@ -8,20 +8,20 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "tGBP uses the issuer-deployed StableTokenV1OFT on seven EVM chains (LayerZero EndpointV2 and owner verified on-chain) and a native Solana mint administered by the reviewed SPL multisig.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex static correction review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "tGBP has issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum, and Gnosis plus an issuer-native Solana SPL mint. LayerZero V2 supplies a separate direct OFT burn/mint mesh: EVM owners configure peers and bridge options, while the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb is one signer of the 1-of-2 mint multisig for inbound bridge credits. Recent LayerZero Scan observations show V302, ten confirmations, three required DVNs, and route-specific executors; the OFT route is therefore externally validated, while direct native minting remains independently scored under Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "explorer",
+        "source": "docs",
         "name": "LayerZero OFT",
         "slug": "layerzero",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
         "bridgeTypes": [
           "oft",
-          "lockAndMint"
+          "burnAndMint"
         ]
       }
     ],
@@ -37,6 +37,22 @@
       {
         "label": "LayerZero OFT technical reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "tGBP StableTokenV1OFT source repository",
+        "url": "https://github.com/bcp-markets/tGBPv2"
+      },
+      {
+        "label": "LayerZero Solana OFT account model",
+        "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"
+      },
+      {
+        "label": "LayerZero Scan tGBP OApp data",
+        "url": "https://scan.layerzero-api.com/v1/messages/oapp/30101/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+      },
+      {
+        "label": "LayerZero Endpoint V2 deployments",
+        "url": "https://docs.layerzero.network/v2/deployments/deployed-contracts"
       }
     ],
     "routes": [
@@ -49,26 +65,25 @@
         "routeClass": "native",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on ethereum at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on ethereum: endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified at block 25771292 on 2026-08-16. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771292,
         "sources": [
           {
-            "label": "Tokenised GBP",
-            "url": "https://tokenised.com/"
+            "label": "Ethereum tGBP token",
+            "url": "https://eth.blockscout.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ],
         "failureDomainKeys": [
           "layerzero:oft:tgbp-tokenised"
-        ],
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum"
+        ]
       },
       {
         "id": "base:0x27f6c8289550fce67f6b50bed1f519966afe5287",
@@ -79,26 +94,25 @@
         "routeClass": "native",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on base at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on base: endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified at block 50069042 on 2026-08-16. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50069042,
         "sources": [
           {
-            "label": "Tokenised GBP",
-            "url": "https://tokenised.com/"
+            "label": "Base tGBP token",
+            "url": "https://basescan.org/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ],
         "failureDomainKeys": [
           "layerzero:oft:tgbp-tokenised"
-        ],
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum"
+        ]
       },
       {
         "id": "bsc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
@@ -109,26 +123,25 @@
         "routeClass": "native",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on bsc at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on bsc: endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified at block 116370461 on 2026-08-16. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116370461,
         "sources": [
           {
-            "label": "Tokenised GBP",
-            "url": "https://tokenised.com/"
+            "label": "BSC tGBP token",
+            "url": "https://bscscan.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ],
         "failureDomainKeys": [
           "layerzero:oft:tgbp-tokenised"
-        ],
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum"
+        ]
       },
       {
         "id": "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
@@ -139,26 +152,25 @@
         "routeClass": "native",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on polygon at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on polygon: endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified at block 92148275 on 2026-08-16. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92148275,
         "sources": [
           {
-            "label": "Tokenised GBP",
-            "url": "https://tokenised.com/"
+            "label": "Polygon tGBP token",
+            "url": "https://polygonscan.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ],
         "failureDomainKeys": [
           "layerzero:oft:tgbp-tokenised"
-        ],
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum"
+        ]
       },
       {
         "id": "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
@@ -169,111 +181,324 @@
         "routeClass": "native",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on avalanche at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on avalanche: endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified at block 92987083 on 2026-08-16. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92987083,
         "sources": [
           {
-            "label": "Tokenised GBP",
-            "url": "https://tokenised.com/"
+            "label": "Avalanche tGBP token",
+            "url": "https://snowscan.xyz/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ],
         "failureDomainKeys": [
           "layerzero:oft:tgbp-tokenised"
-        ],
-        "sourceChain": "ethereum",
-        "canonicalChain": "ethereum"
+        ]
       },
       {
         "id": "solana:2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW",
         "destinationChain": "solana",
         "contractAddress": "2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW",
-        "protocol": "Tokenised native Solana issuance",
+        "protocol": "Tokenised native Solana SPL mint with LayerZero OFT Store",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Solana tGBP mint authority = 1-of-2 SPL multisig 3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs (getAccountInfo verified at 2026-07-20), matching the reviewed mint-authority control.",
+        "reviewNote": "Solana tGBP mint authority = 1-of-2 SPL multisig 3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs at slot 439747729 on 2026-08-16. The LayerZero OFT Store is one signer of this native mint authority; its bridge mint boundary and route-state controls are scored separately in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439747729,
         "sources": [
           {
-            "label": "Tokenised GBP",
-            "url": "https://tokenised.com/"
+            "label": "Solana tGBP mint",
+            "url": "https://explorer.solana.com/address/2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "Solana tGBP mint-authority multisig",
+            "url": "https://explorer.solana.com/address/3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs"
+          },
+          {
+            "label": "LayerZero Solana OFT account model",
+            "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"
           }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised",
+          "program:solana:GWJaQfjcxxEqmrYME74bPVfyueN4wWrB14CNyfRZcXNY"
         ]
       },
       {
         "id": "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
-        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
-        "canonicalChain": "ethereum",
         "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "failureDomainKeys": [
           "layerzero:oft:tgbp-tokenised"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on arbitrum at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on arbitrum: endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified at block 495314108 on 2026-08-16. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495314108,
         "sources": [
           {
-            "label": "Tokenised GBP",
-            "url": "https://tokenised.com/"
+            "label": "Arbitrum tGBP token",
+            "url": "https://arbiscan.io/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ]
       },
       {
-        "id": "gnosis:0x1F34490F8e8E776FFc547b39B864364035Eaf44F",
-        "sourceChain": "ethereum",
+        "id": "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f",
         "destinationChain": "gnosis",
-        "canonicalChain": "ethereum",
-        "contractAddress": "0x1F34490F8e8E776FFc547b39B864364035Eaf44F",
+        "contractAddress": "0x1f34490f8e8e776ffc547b39b864364035eaf44f",
         "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "failureDomainKeys": [
           "layerzero:oft:tgbp-tokenised"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on gnosis at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on gnosis: endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified at block 47763307 on 2026-08-16. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 47763307,
         "sources": [
           {
-            "label": "Tokenised GBP",
-            "url": "https://tokenised.com/"
+            "label": "Gnosis tGBP token",
+            "url": "https://gnosisscan.io/address/0x1f34490f8e8e776ffc547b39b864364035eaf44f"
           },
           {
-            "label": "LayerZero docs",
-            "url": "https://docs.layerzero.network/"
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "tgbp-evm-layerzero-oft-owner",
+        "label": "tGBP EVM LayerZero OFT owner bridge controls",
+        "routeRefs": [
+          "ethereum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "base:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "bsc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "pause",
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0xAF4fCE2984Fb307a368f3Ff01f900909956595C0",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "eoa:0xaf4fce2984fb307a368f3ff01f900909956595c0",
+          "contract:ethereum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "contract:base:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "contract:bsc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "contract:polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "contract:avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "contract:arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "contract:gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "lockboxOrEscrow": "LayerZero V2 direct OFT burn/mint: source transfers debit or burn tGBP and destination transfers credit or mint tGBP. No independent lockbox or escrow was identified.",
+          "trustedPeerOrRemote": "All seven EVM StableTokenV1OFT deployments use Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c and current nonzero peers to the other authored EVM deployments plus the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb; the owner can replace setPeer configuration and enforced options.",
+          "attestorQuorum": "LayerZero Scan observations show V302 with ten confirmations, three required DVNs (LayerZero Labs, Nethermind, and Google), no optional DVNs, no optional threshold, and route-specific executors. The active route is externally validated by this DVN stack.",
+          "rateLimits": "Exact live remaining token-specific route quotas were not available from the reviewed OFT interfaces; the LayerZero Scan observations provide active DVN and executor configuration, not those remaining quotas.",
+          "pausersAdminsUpgraders": "The common issuer EOA controls owner-only bridge surfaces including setPeer, enforced options, Endpoint delegate/OApp configuration, pause/unpause, and upgrade surfaces on the seven EVM OFT deployments. These bridge capabilities are separate from its native owner-only mint/burn capability.",
+          "signingModel": "The EVM bridge controller is the issuer EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0; no Safe, timelock, module, guard, or delay was verified."
+        },
+        "capDescription": "No aggregate bridge mint cap was verified; OFT route-level conservation is supplied by source debit/burn and destination credit/mint, not by a native issuance cap.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Verified StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "LayerZero Scan tGBP OApp data",
+            "url": "https://scan.layerzero-api.com/v1/messages/oapp/30101/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+          },
+          {
+            "label": "Ethereum tGBP token",
+            "url": "https://eth.blockscout.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+          }
+        ],
+        "evidence": "At the 2026-08-16 observations (Ethereum block 25771292, Base 50069042, BSC 116370461, Polygon 92148275, Avalanche 92987083, Arbitrum 495314108, and Gnosis 47763307), owner() on every authored EVM StableTokenV1OFT returned issuer EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 and endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c. Current peers bind the EVM deployments to one another and to the Solana OFT Store. The owner's setPeer, enforced-options, endpoint delegate/OApp, pause, and upgrade surfaces are bridge machinery; native direct mint/burn remains separately authored in Mint Authority. A recent Solana-to-Ethereum LayerZero message delivered on Ethereum block 25753011 used ULN V302, ten confirmations, required LayerZero Labs, Nethermind, and Google DVNs, no optional DVNs or optional threshold, and a route-specific executor."
+      },
+      {
+        "id": "tgbp-solana-oft-mint-multisig",
+        "label": "tGBP Solana OFT destination mint-authority multisig",
+        "routeRefs": [
+          "solana:2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "solana:mint-multisig:3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs",
+          "solana:oft-store:9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb"
+        ],
+        "authorityType": "multisig",
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "LayerZero Solana OFT credit is a direct bridge burn/mint route; no independent lockbox or escrow was identified.",
+          "trustedPeerOrRemote": "At Solana slot 439747729, the 1-of-2 SPL Token Program multisig signers were the LayerZero OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb and an additional issuer signer. The Store is the route-bound bridge signer; the second signer means the token-level authority also remains a native issuer control.",
+          "caps": "No numeric SPL mint or bridge route cap was verified. Because the multisig threshold is 1, the Store can participate in inbound bridge credit minting; the additional issuer signer is a separate token-level mint surface outside the LayerZero route.",
+          "pausersAdminsUpgraders": "The multisig is both the native Solana mint/freeze authority and a bridge boundary. Its native direct mint capability remains in Mint Authority; this control scores only the Store-backed bridge mint capability."
+        },
+        "capDescription": "No numeric SPL mint cap was verified; the 1-of-2 authority can authorize bridge credits without an on-chain amount ceiling.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The additional issuer signer can participate in SPL Token Program minting outside LayerZero route validation; operational separation from bridge credits is not proven."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439747729,
+        "sources": [
+          {
+            "label": "Solana tGBP mint",
+            "url": "https://explorer.solana.com/address/2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
+          },
+          {
+            "label": "Solana tGBP mint-authority multisig",
+            "url": "https://explorer.solana.com/address/3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs"
+          },
+          {
+            "label": "LayerZero Solana OFT account model",
+            "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"
+          }
+        ],
+        "evidence": "At Solana slot 439747729 on 2026-08-16, the tGBP SPL mint had mint and freeze authority 3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs, an initialized 1-of-2 Token Program multisig. Its signers were the LayerZero OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb and the additional issuer signer DN5dhdTVSbTenTb7fPDFWhbfwFsAUBCAogA1kEAxB3Qn. The Store's bridge signing power is scored here, while the same multisig's native issuer mint ability remains in Mint Authority."
+      },
+      {
+        "id": "tgbp-solana-oft-store",
+        "label": "tGBP Solana OFT Store bridge state and signer",
+        "routeRefs": [
+          "solana:2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "program:solana:GWJaQfjcxxEqmrYME74bPVfyueN4wWrB14CNyfRZcXNY",
+          "solana:oft-store:9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Solana OFT Store participates in LayerZero direct burn/mint accounting; no independent lockbox or escrow was identified.",
+          "trustedPeerOrRemote": "The Store account is owned by LayerZero OFT program GWJaQfjcxxEqmrYME74bPVfyueN4wWrB14CNyfRZcXNY. LayerZero's Solana account model places remote peers and enforced options in PeerConfig accounts owned by the Store's bridge state.",
+          "rateLimits": "LayerZero's Solana OFT account model includes route rate limiters and fee settings in bridge state. Exact live remaining tGBP quotas were not available from the reviewed interfaces.",
+          "pausersAdminsUpgraders": "The Store is one signer of the 1-of-2 SPL mint-authority multisig, so it can participate in inbound bridge credit authorization; the separate OFT program upgrade authority is scored in tgbp-solana-oft-program-upgrade-authority."
+        },
+        "capDescription": "No numeric route cap was verified; the Store is a bridge-state controller and one signer of the token's 1-of-2 mint-authority multisig.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439748066,
+        "sources": [
+          {
+            "label": "Solana tGBP OFT Store",
+            "url": "https://explorer.solana.com/address/9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb"
+          },
+          {
+            "label": "LayerZero Solana OFT account model",
+            "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"
+          },
+          {
+            "label": "Solana JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana slot 439748066 on 2026-08-16, OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb was owned by LayerZero OFT program GWJaQfjcxxEqmrYME74bPVfyueN4wWrB14CNyfRZcXNY and was the bridge signer in the tGBP 1-of-2 mint-authority multisig. The Store's PeerConfig, enforced-option, rate-limit, and fee-setting boundary is bridge machinery and remains separate from the native issuer mint control."
+      },
+      {
+        "id": "tgbp-solana-oft-program-upgrade-authority",
+        "label": "tGBP Solana OFT program upgrade authority",
+        "routeRefs": [
+          "solana:2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "Chf6s8wPRzhXtjqcNNqye4e8JTFU8ntSQA6CScvSuajH",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "program:solana:GWJaQfjcxxEqmrYME74bPVfyueN4wWrB14CNyfRZcXNY",
+          "programdata:solana:7fQxz4rpgF4CHKynjBstoLevN2UhZqozyRrr4tydjGsP",
+          "solana:upgrade-authority:Chf6s8wPRzhXtjqcNNqye4e8JTFU8ntSQA6CScvSuajH"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "LayerZero OFT program GWJaQfjcxxEqmrYME74bPVfyueN4wWrB14CNyfRZcXNY points to ProgramData 7fQxz4rpgF4CHKynjBstoLevN2UhZqozyRrr4tydjGsP, whose non-null upgrade authority is Chf6s8wPRzhXtjqcNNqye4e8JTFU8ntSQA6CScvSuajH. That authority can replace Solana bridge program logic."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439748101,
+        "sources": [
+          {
+            "label": "LayerZero Solana OFT program",
+            "url": "https://explorer.solana.com/address/GWJaQfjcxxEqmrYME74bPVfyueN4wWrB14CNyfRZcXNY"
+          },
+          {
+            "label": "LayerZero Solana OFT ProgramData",
+            "url": "https://explorer.solana.com/address/7fQxz4rpgF4CHKynjBstoLevN2UhZqozyRrr4tydjGsP"
+          },
+          {
+            "label": "LayerZero Solana OFT account model",
+            "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"
+          },
+          {
+            "label": "Solana JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana slot 439748101 on 2026-08-16, LayerZero OFT program GWJaQfjcxxEqmrYME74bPVfyueN4wWrB14CNyfRZcXNY pointed to ProgramData 7fQxz4rpgF4CHKynjBstoLevN2UhZqozyRrr4tydjGsP with non-null upgrade authority Chf6s8wPRzhXtjqcNNqye4e8JTFU8ntSQA6CScvSuajH. This is the Solana bridge program replacement surface and is scored under Bridge Risk, not as native SPL mint logic."
       }
     ]
   }

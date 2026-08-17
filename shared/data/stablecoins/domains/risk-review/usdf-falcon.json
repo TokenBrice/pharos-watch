@@ -65,8 +65,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDf uses Chainlink CCIP BurnMintTokenPools on BSC, Base, and XDC. Each verified pool directly holds the local MINTER_ROLE and is owned by a chain-local instance of the same reviewed 4/6 Safe; supply movement remains dependent on CCIP validation.",
-    "reviewedAt": "2026-07-14",
+    "summary": "Ethereum is the only proven native USDf issuance route and remains in Mint Authority. Chainlink CCIP uses an Ethereum Lock/Release escrow pool plus BSC, Base, and XDC Burn/Mint representations; their local mint/burn roles, pool administration, peer configuration, rate limits, and shared 4-of-6 Safe are Bridge Risk, with normal supply movement dependent on external CCIP validation and conserved lock/burn accounting.",
+    "reviewedAt": "2026-08-16",
     "reviewer": "Codex Safety Score V9 bridge review",
     "confidence": "verified",
     "protocols": [
@@ -74,28 +74,54 @@
         "source": "docs",
         "name": "Chainlink CCIP",
         "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+      },
+      {
+        "source": "docs",
+        "name": "Chainlink CCT",
+        "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/overview",
+        "note": "Burn/Mint routes burn source units and mint equivalent destination units after validated cross-chain transfer, while the Ethereum Lock/Release route holds canonical USDf in escrow."
       }
     ],
     "sources": [
+      {
+        "label": "Chainlink USDf CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+      },
       {
         "label": "Falcon Finance CCIP announcement",
         "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
       },
       {
-        "label": "Falcon Finance smart contracts",
-        "url": "https://docs.falcon.finance/resources/smart-contracts"
+        "label": "Falcon Finance smart-contract addresses",
+        "url": "https://docs.falcon.finance/resources/app-smart-contracts"
+      },
+      {
+        "label": "Ethereum USDf LockReleaseTokenPool",
+        "url": "https://etherscan.io/address/0xEcf61D6fAA3B9faE7195AF3bc9891450C1733f78#code"
+      },
+      {
+        "label": "BSC USDf BurnMintERC20",
+        "url": "https://bscscan.com/address/0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2#code"
       },
       {
         "label": "BSC USDf BurnMintTokenPool",
         "url": "https://bscscan.com/address/0x4b66431f9e5f5cd026ae48e617902207b43048d4#code"
       },
       {
+        "label": "Base USDf BurnMintERC20",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8210c0634ab8f273806e4b7866e9db353773c44b"
+      },
+      {
         "label": "Base USDf BurnMintTokenPool",
-        "url": "https://basescan.org/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x33570299e0d73f07c82d005de75de54cf4582fcc"
+      },
+      {
+        "label": "XDC USDf BurnMintERC20",
+        "url": "https://xdcscan.com/address/0x8210c0634ab8f273806e4b7866e9db353773c44b#code"
       },
       {
         "label": "XDC USDf BurnMintTokenPool",
-        "url": "https://xdcscan.com/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+        "url": "https://xdcscan.com/address/0x33570299e0d73f07c82d005de75de54cf4582fcc#code"
       }
     ],
     "routes": [
@@ -111,16 +137,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Ethereum is the only proven native USDf issuance deployment. Its CCIP Lock/Release pool is canonical-side escrow and transfer machinery, not an independent native minter; that pool and its owner are reviewed under the structured bridge controls below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770829,
         "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
           {
             "label": "Falcon Finance CCIP announcement",
             "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
           },
           {
-            "label": "Falcon Finance smart contracts",
-            "url": "https://docs.falcon.finance/resources/smart-contracts"
+            "label": "Falcon Finance smart-contract addresses",
+            "url": "https://docs.falcon.finance/resources/app-smart-contracts"
           }
         ]
       },
@@ -143,17 +175,22 @@
           "contract:bsc:0x4b66431f9e5f5cd026ae48e617902207b43048d4"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "At BSC block 116358048 on 2026-08-16, the verified BurnMintERC20 representation had maxSupply() = 0, the source's unlimited-supply sentinel. Its local MINTER_ROLE and BURNER_ROLE were held by BurnMintTokenPool 0x4b66431f9e5f5cd026ae48e617902207b43048d4; the pool owner and token DEFAULT_ADMIN_ROLE were the reviewed Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. The pool supported only the Ethereum selector and getRemotePools() returned the Ethereum LockRelease pool; current EVM-to-EVM inbound and outbound rate-limit buckets were disabled with zero capacity and rate. Normal CCIP movement remains supply-conserving: source USDf is locked and destination units are burned or minted only on the validated route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-13",
-        "observedBlock": 109823336,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116358048,
         "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
           {
             "label": "Falcon Finance CCIP announcement",
             "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
           },
           {
-            "label": "Falcon Finance smart contracts",
-            "url": "https://docs.falcon.finance/resources/smart-contracts"
+            "label": "Falcon Finance smart-contract addresses",
+            "url": "https://docs.falcon.finance/resources/app-smart-contracts"
           },
           {
             "label": "BSC USDf BurnMintERC20",
@@ -184,25 +221,30 @@
           "contract:base:0x33570299e0d73f07c82d005de75de54cf4582fcc"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "At Base block 50066251 on 2026-08-16, the verified BurnMintERC20 representation had maxSupply() = 0, the source's unlimited-supply sentinel. Its local MINTER_ROLE and BURNER_ROLE were held by BurnMintTokenPool 0x33570299e0d73f07c82d005de75de54cf4582fcc; the pool owner and token DEFAULT_ADMIN_ROLE were the reviewed Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. The pool supported only the Ethereum selector and getRemotePools() returned the Ethereum LockRelease pool; current EVM-to-EVM inbound and outbound rate-limit buckets were disabled with zero capacity and rate. Normal CCIP movement remains supply-conserving: source USDf is locked and destination units are burned or minted only on the validated route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-13",
-        "observedBlock": 48595298,
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066251,
         "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
           {
             "label": "Falcon Finance CCIP announcement",
             "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
           },
           {
-            "label": "Falcon Finance smart contracts",
-            "url": "https://docs.falcon.finance/resources/smart-contracts"
+            "label": "Falcon Finance smart-contract addresses",
+            "url": "https://docs.falcon.finance/resources/app-smart-contracts"
           },
           {
             "label": "Base USDf BurnMintERC20",
-            "url": "https://basescan.org/address/0x8210c0634AB8f273806e4b7866E9Db353773c44B#code"
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8210c0634ab8f273806e4b7866e9db353773c44b"
           },
           {
             "label": "Base USDf BurnMintTokenPool",
-            "url": "https://basescan.org/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x33570299e0d73f07c82d005de75de54cf4582fcc"
           }
         ]
       },
@@ -225,27 +267,327 @@
           "contract:xdc:0x33570299e0d73f07c82d005de75de54cf4582fcc"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "At XDC block 106142724 on 2026-08-16, the verified BurnMintERC20 representation had maxSupply() = 0, the source's unlimited-supply sentinel. Its local MINTER_ROLE and BURNER_ROLE were held by BurnMintTokenPool 0x33570299e0d73f07c82d005de75de54cf4582fcc; the pool owner and token DEFAULT_ADMIN_ROLE were the reviewed Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. The pool supported only the Ethereum selector and getRemotePools() returned the Ethereum LockRelease pool; current EVM-to-EVM inbound and outbound rate-limit buckets were disabled with zero capacity and rate. Normal CCIP movement remains supply-conserving: source USDf is locked and destination units are burned or minted only on the validated route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-13",
-        "observedBlock": 104892489,
+        "observedAt": "2026-08-16",
+        "observedBlock": 106142724,
         "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
           {
             "label": "Falcon Finance CCIP announcement",
             "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
           },
           {
-            "label": "Falcon Finance smart contracts",
-            "url": "https://docs.falcon.finance/resources/smart-contracts"
+            "label": "Falcon Finance smart-contract addresses",
+            "url": "https://docs.falcon.finance/resources/app-smart-contracts"
           },
           {
             "label": "XDC USDf BurnMintERC20",
-            "url": "https://xdcscan.com/address/0x8210c0634AB8f273806e4b7866E9Db353773c44B#code"
+            "url": "https://xdcscan.com/address/0x8210c0634ab8f273806e4b7866e9db353773c44b#code"
           },
           {
             "label": "XDC USDf BurnMintTokenPool",
-            "url": "https://xdcscan.com/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+            "url": "https://xdcscan.com/address/0x33570299e0d73f07c82d005de75de54cf4582fcc#code"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdf-falcon-ethereum-lock-release-pool",
+        "label": "USDf Ethereum CCIP LockReleaseTokenPool owner Safe",
+        "routeRefs": [
+          "ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2"
+        ],
+        "capabilities": [
+          "escrow",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0xecf61d6faa3b9fae7195af3bc9891450c1733f78",
+          "safe:ethereum:0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x804016c31e52805eb00e0ef42126fd3e980a0b33",
+            "0xf4161ed9cfa2ac91068556387f9ce225fce6893f",
+            "0xe313dbd8693d656fe760ba3e766c80eb08f06734",
+            "0xa91472acc85272fd4119a946796aaf6c8392b0c0",
+            "0x276c580545293da6c7c0fdd12038cc75accbd211",
+            "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25770829,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Ethereum block 25770829 on 2026-08-16, LockReleaseTokenPool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 had typeAndVersion() = LockReleaseTokenPool 1.5.1, getToken() = the native USDf proxy, and owner() = the reviewed 4-of-6 Safe. It escrows canonical USDf for CCIP and is not a native USDf minter.",
+          "trustedPeerOrRemote": "The Ethereum pool's reviewed remote-pool mapping covers BSC 0x4b66431f9e5f5cd026ae48e617902207b43048d4, Base/XDC 0x33570299e0d73f07c82d005de75de54cf4582fcc, and the separately untracked Solana pool from the current Chainlink directory. The authored EVM routes are restricted to the reviewed EVM mappings.",
+          "rateLimits": "At the current EVM pool reads, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate; getRateLimitAdmin() returned zero on the Ethereum pool. The pool owner remains the route administrator for supported CCIP lane configuration.",
+          "pausersAdminsUpgraders": "The Safe owns the Ethereum LockRelease pool and its bridge administration, including router, remote-pool, and route configuration. Native USDf mint authority and the Ethereum token ProxyAdmin remain separately recorded in Mint Authority."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770829,
+        "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
+          {
+            "label": "Ethereum USDf LockReleaseTokenPool",
+            "url": "https://etherscan.io/address/0xEcf61D6fAA3B9faE7195AF3bc9891450C1733f78#code"
+          },
+          {
+            "label": "Ethereum USDf owner Safe",
+            "url": "https://etherscan.io/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25770829 on 2026-08-16, LockReleaseTokenPool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78 was the canonical CCIP escrow and owner() returned Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. getToken() returned the native USDf proxy and the pool does not call the native token's privileged mint path. The pool's remote mappings, router, and lane configuration are bridge-route controls; the normal route locks native USDf and relies on CCIP validation for remote burn/mint accounting."
+      },
+      {
+        "id": "usdf-falcon-bsc-burn-mint-pool",
+        "label": "USDf BSC CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "bsc:0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4b66431f9e5f5cd026ae48e617902207b43048d4",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x4b66431f9e5f5cd026ae48e617902207b43048d4",
+          "safe:bsc:0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At BSC block 116358048 on 2026-08-16, the pool supported only the Ethereum selector and getRemotePools(Ethereum) returned the Ethereum LockRelease pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78. The route is subject to CCIP message validation.",
+          "rateLimits": "At the reviewed BSC pool read, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate. The pool owner can change per-lane rate-limit configuration.",
+          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap.",
+          "pausersAdminsUpgraders": "The pool was the sole local MINTER_ROLE and BURNER_ROLE holder. owner() returned Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7, which also held the token DEFAULT_ADMIN_ROLE and can replace local role assignments and pool route administration."
+        },
+        "capDescription": "BSC USDf is an immutable BurnMintERC20 representation with maxSupply() = 0, the source's unlimited-supply sentinel; normal pool minting remains dependent on validated CCIP ingress.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116358048,
+        "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
+          {
+            "label": "BSC USDf BurnMintERC20",
+            "url": "https://bscscan.com/address/0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2#code"
+          },
+          {
+            "label": "BSC USDf BurnMintTokenPool",
+            "url": "https://bscscan.com/address/0x4b66431f9e5f5cd026ae48e617902207b43048d4#code"
+          }
+        ],
+        "evidence": "At BSC block 116358048 on 2026-08-16, this verified direct Chainlink BurnMintTokenPool 1.5.1 was the sole local MINTER_ROLE and BURNER_ROLE holder. getToken() returned BSC USDf, owner() returned the reviewed 4-of-6 USDf Safe, and the pool mapped back to the Ethereum LockRelease pool; the representation's maxSupply() returned zero. These bridge mint/burn, owner, peer, and rate-limit powers are retained here rather than compiled as global Mint Authority."
+      },
+      {
+        "id": "usdf-falcon-base-burn-mint-pool",
+        "label": "USDf Base CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "base:0x8210c0634ab8f273806e4b7866e9db353773c44b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x33570299e0d73f07c82d005de75de54cf4582fcc",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x33570299e0d73f07c82d005de75de54cf4582fcc",
+          "safe:base:0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Base block 50066251 on 2026-08-16, the pool supported only the Ethereum selector and getRemotePools(Ethereum) returned the Ethereum LockRelease pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78. The route is subject to CCIP message validation.",
+          "rateLimits": "At the reviewed Base pool read, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate. The pool owner can change per-lane rate-limit configuration.",
+          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap.",
+          "pausersAdminsUpgraders": "The pool was the sole local MINTER_ROLE and BURNER_ROLE holder. owner() returned Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7, which also held the token DEFAULT_ADMIN_ROLE and can replace local role assignments and pool route administration."
+        },
+        "capDescription": "Base USDf is an immutable BurnMintERC20 representation with maxSupply() = 0, the source's unlimited-supply sentinel; normal pool minting remains dependent on validated CCIP ingress.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50066251,
+        "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
+          {
+            "label": "Base USDf BurnMintERC20",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8210c0634ab8f273806e4b7866e9db353773c44b"
+          },
+          {
+            "label": "Base USDf BurnMintTokenPool",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x33570299e0d73f07c82d005de75de54cf4582fcc"
+          }
+        ],
+        "evidence": "At Base block 50066251 on 2026-08-16, this verified direct Chainlink BurnMintTokenPool 1.5.1 was the sole local MINTER_ROLE and BURNER_ROLE holder. getToken() returned Base USDf, owner() returned the reviewed 4-of-6 USDf Safe, and the pool mapped back to the Ethereum LockRelease pool; the representation's maxSupply() returned zero. These bridge mint/burn, owner, peer, and rate-limit powers are retained here rather than compiled as global Mint Authority."
+      },
+      {
+        "id": "usdf-falcon-xdc-burn-mint-pool",
+        "label": "USDf XDC CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "xdc:0x8210c0634ab8f273806e4b7866e9db353773c44b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "xdc",
+        "controllerAddress": "0x33570299e0d73f07c82d005de75de54cf4582fcc",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:xdc:0x33570299e0d73f07c82d005de75de54cf4582fcc",
+          "safe:xdc:0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At XDC block 106142724 on 2026-08-16, the pool supported only the Ethereum selector and getRemotePools(Ethereum) returned the Ethereum LockRelease pool 0xecf61d6faa3b9fae7195af3bc9891450c1733f78. The route is subject to CCIP message validation.",
+          "rateLimits": "At the reviewed XDC pool read, EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate. The pool owner can change per-lane rate-limit configuration.",
+          "caps": "The local BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. This is a token-level bridge representation property, not an independent native USDf liability cap.",
+          "pausersAdminsUpgraders": "The pool was the sole local MINTER_ROLE and BURNER_ROLE holder. owner() returned Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7, which also held the token DEFAULT_ADMIN_ROLE and can replace local role assignments and pool route administration."
+        },
+        "capDescription": "XDC USDf is an immutable BurnMintERC20 representation with maxSupply() = 0, the source's unlimited-supply sentinel; normal pool minting remains dependent on validated CCIP ingress.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 106142724,
+        "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
+          {
+            "label": "XDC USDf BurnMintERC20",
+            "url": "https://xdcscan.com/address/0x8210c0634ab8f273806e4b7866e9db353773c44b#code"
+          },
+          {
+            "label": "XDC USDf BurnMintTokenPool",
+            "url": "https://xdcscan.com/address/0x33570299e0d73f07c82d005de75de54cf4582fcc#code"
+          }
+        ],
+        "evidence": "At XDC block 106142724 on 2026-08-16, this verified direct Chainlink BurnMintTokenPool 1.5.1 was the sole local MINTER_ROLE and BURNER_ROLE holder. getToken() returned XDC USDf, owner() returned the reviewed 4-of-6 USDf Safe, and the pool mapped back to the Ethereum LockRelease pool; the representation's maxSupply() returned zero. These bridge mint/burn, owner, peer, and rate-limit powers are retained here rather than compiled as global Mint Authority."
+      },
+      {
+        "id": "usdf-falcon-shared-bridge-safe",
+        "label": "USDf shared CCIP representation-admin Safe",
+        "routeRefs": [
+          "ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
+          "bsc:0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2",
+          "base:0x8210c0634ab8f273806e4b7866e9db353773c44b",
+          "xdc:0x8210c0634ab8f273806e4b7866e9db353773c44b"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "safe:ethereum:0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+          "safe:bsc:0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+          "safe:base:0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+          "safe:xdc:0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"
+        ],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x804016c31e52805eb00e0ef42126fd3e980a0b33",
+            "0xf4161ed9cfa2ac91068556387f9ce225fce6893f",
+            "0xe313dbd8693d656fe760ba3e766c80eb08f06734",
+            "0xa91472acc85272fd4119a946796aaf6c8392b0c0",
+            "0x276c580545293da6c7c0fdd12038cc75accbd211",
+            "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25770829,
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The shared Safe owns the reviewed Ethereum LockRelease pool and the BSC, Base, and XDC BurnMintTokenPools. Those pools' current remote mappings point back to the Ethereum LockRelease pool; the Safe can change the remote-pool mappings and router configuration.",
+          "rateLimits": "Current EVM-to-EVM inbound and outbound USDf rate-limit buckets were disabled with zero capacity and rate on the reviewed pools. The pool owner Safe can change per-lane rate-limit configuration; the Ethereum pool reported getRateLimitAdmin() = zero.",
+          "caps": "BSC, Base, and XDC BurnMintERC20 maxSupply() returned zero, the source's unlimited-supply sentinel. The Safe can administer local roles and pool owners but does not turn those representations into independent native issuance routes.",
+          "pausersAdminsUpgraders": "The same 4-of-6 Safe held DEFAULT_ADMIN_ROLE on the BSC, Base, and XDC representation tokens, owned their CCIP pools, and could grant or replace local MINTER_ROLE and BURNER_ROLE assignments. Native Ethereum token upgrade and native minter authority remain separately recorded in Mint Authority."
+        },
+        "capDescription": "The shared Safe administers representation-token roles and CCIP pool owners across the reviewed EVM routes; these controls can authorize bridge mint/burn machinery but do not define independent native USDf liabilities.",
+        "bypassSurfaces": [
+          "Chainlink CCIP DON/RMN validator configuration and message execution are external failure domains and were not independently enumerated in this review."
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770829,
+        "sources": [
+          {
+            "label": "Chainlink USDf CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
+          {
+            "label": "Ethereum USDf owner Safe",
+            "url": "https://etherscan.io/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          },
+          {
+            "label": "Safe official API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1E482B60bf19Cb1cc859389e0eA3DED153f16Bd7"
+          },
+          {
+            "label": "BSC USDf default-admin Safe",
+            "url": "https://bscscan.com/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          },
+          {
+            "label": "Base USDf default-admin Safe",
+            "url": "https://basescan.org/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          },
+          {
+            "label": "XDC USDf default-admin Safe",
+            "url": "https://xdcscan.com/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          }
+        ],
+        "evidence": "At the reviewed 2026-08-16 block heads (Ethereum 25770829, BSC 116358048, Base 50066251, and XDC 106142724), the same Safe address 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7 had the same six owners and 4-of-6 threshold on each reviewed EVM deployment; current module reads were empty, while getGuard() calls reverted and no current guard value is assumed. It held DEFAULT_ADMIN_ROLE on each destination BurnMintERC20 and owned the local CCIP BurnMintTokenPools, giving it the ability to administer representation roles, pool owners, remote mappings, routers, and rate limits. The BSC, Base, and XDC representation controls previously present in Mint Authority are retained here as bridge risk; the Ethereum Safe's native issuance powers remain separately scored in Mint Authority."
       }
     ]
   }

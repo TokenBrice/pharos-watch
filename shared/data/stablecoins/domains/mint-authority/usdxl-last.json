@@ -4,9 +4,12 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM) in wind-down: pooled new borrows are suspended and settlement targets July 15, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power.",
+    "summary": "USDXL's only independently native issuance surface is the HypurrFi GHO-style CDP on HyperEVM, now in wind-down: pooled new borrows are suspended and settlement targets July 15, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power. HyperCore is excluded from Mint Authority because official HIP-1 documentation links its spot representation to HyperEVM through the system address and corresponding supply, rather than identifying an independent liability surface.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "hyperevm:0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+      ],
       "proxyAddresses": [
         "0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
       ],
@@ -50,6 +53,9 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "hyperevm",
+        "deploymentRefs": [
+          "hyperevm:0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+        ],
         "canRaiseCap": false,
         "failureDomainKeys": [
           "hyperevm:0x7911c2c9c5f5a6f4bef58d7df35903abd3ee9dd6",
@@ -67,6 +73,9 @@
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
         "chain": "hyperevm",
+        "deploymentRefs": [
+          "hyperevm:0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+        ],
         "address": "0xf050623d497be7ea6653fd205a537d10300b4c6e",
         "canRaiseCap": true,
         "threshold": 2,
@@ -110,9 +119,9 @@
       }
     ],
     "review": {
-      "evidence": "The USDXL proxy at 0xca79db4b49f608ef54a5cb813fbed3a6387bc645 uses an immutable-admin transparent proxy. The earlier description of its admin as an EIP-1967 storage-slot value was corrected on 2026-08-08: at HyperEVM block 42660797, the EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f, the standard admin storage slot was zero, and an admin-only admin() call from 0xf050623d497be7ea6653fd205a537d10300b4c6e returned that 2-of-2 Safe. Safe getOwners() returned [0x67a6d918c3adfc36b047a8684491481114f6b3a6, 0xae04ce2f38377b3cc7273231cfafcbe1ca831545], getThreshold() returned 2, and getModulesPaginated() returned no enabled modules. Prior fixed-block review established three facilitators (market loans, flash loans, USDT0 PSM), exhausted buckets, zero members for DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE across reviewed candidates, and no RoleGranted history; the contract-level facilitator configuration is frozen. The sole remaining path to restore or expand minting is the 2-of-2 proxy-admin Safe replacing the implementation. economicCapSemantics is unbounded because that upgrade path can reinstate uncapped issuance without a timelock. reconciliation is not-applicable because USDXL is a CDP against on-chain HypurrFi collateral with no off-chain reserve to attest. supervision is none: Last publishes no named financial-regulator relationship for USDXL.",
+      "evidence": "The USDXL proxy at 0xca79db4b49f608ef54a5cb813fbed3a6387bc645 uses an immutable-admin transparent proxy and is the only independently native issuance surface reviewed for this asset. At HyperEVM block 42660797, the EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f, the standard admin storage slot was zero, and an admin-only admin() call from 0xf050623d497be7ea6653fd205a537d10300b4c6e returned that 2-of-2 Safe. Safe getOwners() returned [0x67a6d918c3adfc36b047a8684491481114f6b3a6, 0xae04ce2f38377b3cc7273231cfafcbe1ca831545], getThreshold() returned 2, and getModulesPaginated() returned no enabled modules. Prior fixed-block review established three facilitators (market loans, flash loans, USDT0 PSM), exhausted buckets, zero members for DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE across reviewed candidates, and no RoleGranted history; the contract-level facilitator configuration is frozen. Official Hyperliquid HIP-1 and Core/EVM transfer documentation describe HyperCore USDXL as a system-address-linked, supply-conserving representation of the HyperEVM asset, so its platform route is retained only in Bridge Risk and does not expand canonical Mint Authority. The sole remaining path to restore or expand native minting is the 2-of-2 proxy-admin Safe replacing the implementation. economicCapSemantics is unbounded because that upgrade path can reinstate uncapped issuance without a timelock. reconciliation is not-applicable because USDXL is a CDP against on-chain HypurrFi collateral with no off-chain reserve to attest. supervision is none: Last publishes no named financial-regulator relationship for USDXL.",
       "reviewer": "OpenAI Codex C07 control correction; Codex CTRL curation batch 18; Pharos V9 Phase 3 curation lane cur-4",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {
@@ -126,6 +135,14 @@
         {
           "label": "HypurrFi USDXL docs",
           "url": "https://docs.hypurrfi.com/products/usdxl"
+        },
+        {
+          "label": "Hyperliquid HIP-1 native token standard",
+          "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-1-native-token-standard"
+        },
+        {
+          "label": "HyperCore <> HyperEVM transfers",
+          "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers"
         },
         {
           "label": "HyperEVM JSON-RPC",

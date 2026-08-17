@@ -15,5 +15,67 @@
     "evidence": "At finalized Solana slot 432913343, the live MOVEUSD mint lists 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm as both its freezeAuthority and mintAuthority. Under the SPL Token Program, a current freeze authority can freeze individual token accounts, preventing transfers, burns, and delegate changes until thawed.",
     "reviewer": "OpenAI Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Solana is the only verified native MOVEUSD issuance deployment. CFX and Wormhole describe Base and Ethereum as NTT burn-and-mint representations, but the exact destination token contracts and current asset-specific NTT Manager, Transceiver, owner, peer, rate-limit, pause, upgrade, and Guardian-verifier state remain unresolved; no asset-specific bridge control is authored until those primary reads are available.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint/bridge boundary migration",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole Native Token Transfers",
+        "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/",
+        "bridgeTypes": [
+          "ntt",
+          "burn-mint",
+          "guardian-attestation"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wormhole MOVEUSD NTT announcement",
+        "url": "https://wormhole.com/blog/moveusd-stablecoin-chooses-wormholes-ntt-standard-for-multichain-expansion"
+      },
+      {
+        "label": "Wormhole NTT overview",
+        "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/"
+      },
+      {
+        "label": "Wormhole NTT security and Global Accountant",
+        "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/concepts/security/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "solana:3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
+        "protocol": "CFX native MOVEUSD issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Solana is the only authored deployment with verified native issuance: finalized SPL state and a successful current program-controlled mint establish the live native route. Base and Ethereum NTT destinations are not assigned this route identity because their exact token contracts and asset-specific controls remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-16",
+        "observedBlock": 439710929,
+        "sources": [
+          {
+            "label": "Solana finalized MOVEUSD mint state",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Wormhole MOVEUSD NTT announcement",
+            "url": "https://wormhole.com/blog/moveusd-stablecoin-chooses-wormholes-ntt-standard-for-multichain-expansion"
+          }
+        ]
+      }
+    ]
   }
 }

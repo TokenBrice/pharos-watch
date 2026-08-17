@@ -17,10 +17,10 @@
     "reviewedAt": "2026-05-24"
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "SLVon is an Ondo Global Markets token, and Ondo documents its token bridge as a LayerZero-based bridge for Global Markets assets, including bridging to HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "tier": "external-validated-network",
+    "summary": "SLVon has issuer-native GM issuance on Ethereum, BSC, and Solana, plus a HyperEVM bridge representation. Ethereum and BSC also expose separate OndoOFT burn/mint bridge minters, and Ondo documents LayerZero DVN validation for its bridge. No SLVon-specific lockbox is proven; the verified bridge lanes are therefore scored as external-validated-network. Current OFT owners, endpoints, token mappings, and representation upgrade administration remain in structured Bridge Risk controls, while unresolved peer, DVN, and route-limit values remain explicit evidence gaps.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route boundary migration",
     "confidence": "verified",
     "protocols": [
       {
@@ -61,64 +61,80 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native SLVon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
+        "reviewNote": "At Ethereum block 25770488, MINTER_ROLE included the Ondo GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c for native GM issuance and a separate OndoOFT 0xf9deffd6164d2b6714f3344cfc35c4f766fa9d6e for the LayerZero bridge overlay. The GMTokenManager path is canonical native issuance; the OFT capability is scored separately under Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770488,
         "sources": [
           {
-            "label": "Ondo Global Markets",
-            "url": "https://ondo.finance/"
+            "label": "Ondo official contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
       {
         "id": "bsc:0x8b872732b07be325a8803cdb480d9d20b6f8d11b",
         "destinationChain": "bsc",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "bsc",
         "contractAddress": "0x8b872732b07be325a8803cdb480d9d20b6f8d11b",
         "protocol": "Ondo Global Markets native issuance",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
-        "scope": "peripheral",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native SLVon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
+        "reviewNote": "At BSC block 116349076, MINTER_ROLE included the Ondo GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 for native GM issuance and a separate OndoOFT 0x02a4144f5f84fcfbca63f89f1c0038d3053ea525 for the LayerZero bridge overlay. Ondo's GM API supports the native bsc-56 path; the GMTokenManager route is canonical native issuance and the OFT capability is scored separately under Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116349076,
         "sources": [
           {
-            "label": "Ondo Global Markets",
-            "url": "https://ondo.finance/"
+            "label": "Ondo official contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "BSC JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
           }
         ]
       },
       {
         "id": "solana:iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo",
-        "sourceChain": "ethereum",
         "destinationChain": "solana",
-        "canonicalChain": "ethereum",
+        "canonicalChain": "solana",
         "contractAddress": "iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo",
-        "protocol": "OndoOFT on Solana (LayerZero)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "Ondo Global Markets native GM issuance / Solana Token-2022",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "SLVon on Solana shares the Ondo program mint authority PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD (no SOL account exists at the address — a program-derived mint authority, read 2026-07-20 via Solana RPC); freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is Ondo's. DefiLlama attributes Solana SLVon supply to Ondo's cross-chain deployment.",
+        "reviewNote": "At finalized Solana slot 439724580 on 2026-08-16, the SLVon Token-2022 mint authority remained Ondo's GM program PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD. Ondo's GM API supports the native solana-900 mint path, and the Zellic GM Solana audit documents attestation-backed user minting and administrative mint_gm controls. The separate question of a Solana SLVon OFT adapter remains unresolved and is not used to demote this native route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "controllerChain": "solana",
-        "controllerAddress": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:solana:9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD"
-        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 439724580,
         "sources": [
           {
-            "label": "Ondo Global Markets",
-            "url": "https://ondo.finance/"
+            "label": "Ondo GM API overview",
+            "url": "https://docs.ondo.finance/api-reference/overview"
+          },
+          {
+            "label": "Ondo official contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Zellic GM Solana audit",
+            "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/GM-Solana-Zellic-12-29-2025.pdf"
+          },
+          {
+            "label": "Solana finalized JSON-RPC",
+            "url": "https://solana-rpc.publicnode.com"
           }
         ]
       },
@@ -135,9 +151,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "SLVon on HyperEVM is minted solely by the OndoOFT contract 0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85 (sole MINTER_ROLE member, read 2026-07-20): a 6,152-byte LayerZero OApp with endpoint() = HyperEVM LZ V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 and token() = this deployment.",
+        "reviewNote": "At HyperEVM block 43372762, SLVon on HyperEVM is minted solely by the OndoOFT contract 0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85. The OFT owner() is 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d, endpoint() is the HyperEVM LayerZero V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, token() points to this deployment, and approvalRequired() is false. This is a bridge representation, not an independent native issuance chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 43372762,
         "controllerChain": "hyperevm",
         "controllerAddress": "0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85",
         "failureDomainKeys": [
@@ -146,10 +163,309 @@
         ],
         "sources": [
           {
-            "label": "Ondo Global Markets",
-            "url": "https://ondo.finance/"
+            "label": "Ondo Bridge",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "HyperEVM JSON-RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "HyperEVM OndoOFT contract",
+            "url": "https://hyperevmscan.io/address/0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "slvon-ethereum-ondo-oft",
+        "label": "SLVon Ethereum OndoOFT bridge minter",
+        "routeRefs": [
+          "ethereum:0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf9deffd6164d2b6714f3344cfc35c4f766fa9d6e",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0xf9deffd6164d2b6714f3344cfc35c4f766fa9d6e"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The OndoOFT route uses LayerZero OFT burn/mint semantics; no SLVon-specific lockbox is evidenced.",
+          "trustedPeerOrRemote": "At Ethereum block 25770488, owner() returned 0xbc6d5c103a3f586e68bd475942a49d041b171c3e. Current SLVon-specific peer and DVN values were not fully enumerated and are not asserted here.",
+          "rateLimits": "Ondo documents route rate limits, but the current SLVon-specific inbound/outbound values were not read in this review.",
+          "pausersAdminsUpgraders": "The OFT token() returned the Ethereum SLVon deployment, endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, and approvalRequired() was false. The deployed owner is retained as a separate Bridge Risk admin control."
+        },
+        "capDescription": "The OndoOFT can mint and burn SLVon for the Ethereum LayerZero route. No current route-specific cap was read; its route-level conservation and external validation remain distinct from native GM issuance.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770488,
+        "sources": [
+          {
+            "label": "Ondo Bridge",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "SLVon Ethereum token",
+            "url": "https://etherscan.io/address/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4"
+          }
+        ],
+        "evidence": "At Ethereum block 25770488, MINTER_ROLE on SLVon included OndoOFT 0xf9deffd6164d2b6714f3344cfc35c4f766fa9d6e. Its token() pointed to Ethereum SLVon, endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, owner() returned 0xbc6d5c103a3f586e68bd475942a49d041b171c3e, and approvalRequired() was false. This bridge mint/burn capability is preserved here rather than compiled as native Mint Authority."
+      },
+      {
+        "id": "slvon-ethereum-ondo-oft-owner",
+        "label": "SLVon Ethereum OndoOFT owner administration",
+        "routeRefs": [
+          "ethereum:0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xbc6d5c103a3f586e68bd475942a49d041b171c3e",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:ethereum:0xbc6d5c103a3f586e68bd475942a49d041b171c3e"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The Ethereum OndoOFT owner() returned 0xbc6d5c103a3f586e68bd475942a49d041b171c3e at block 25770488. The owner is deployed code, but this review did not complete Safe/proxy identity, signer threshold, module/guard, peer, DVN, or rate-limit replay for the owner."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770488,
+        "sources": [
+          {
+            "label": "Ethereum JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ondo Bridge",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          }
+        ],
+        "evidence": "At Ethereum block 25770488, the Ethereum OndoOFT owner() returned deployed contract 0xbc6d5c103a3f586e68bd475942a49d041b171c3e. Its route-administration identity and any downstream signer controls remain unresolved, so this exact owner address is retained as Bridge Risk admin evidence without inventing a Safe or timelock posture."
+      },
+      {
+        "id": "slvon-bsc-ondo-oft",
+        "label": "SLVon BSC OndoOFT bridge minter",
+        "routeRefs": [
+          "bsc:0x8b872732b07be325a8803cdb480d9d20b6f8d11b"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x02a4144f5f84fcfbca63f89f1c0038d3053ea525",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0x02a4144f5f84fcfbca63f89f1c0038d3053ea525"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The OndoOFT route uses LayerZero OFT burn/mint semantics; no SLVon-specific lockbox is evidenced.",
+          "trustedPeerOrRemote": "At BSC block 116349076, owner() returned 0x4d4e562d6882dc523b8d629d2e9df9230b699933. Current SLVon-specific peer and DVN values were not fully enumerated and are not asserted here.",
+          "rateLimits": "Ondo documents route rate limits, but the current SLVon-specific inbound/outbound values were not read in this review.",
+          "pausersAdminsUpgraders": "The OFT token() returned the BSC SLVon deployment, endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, and approvalRequired() was false. The deployed owner is retained as a separate Bridge Risk admin control."
+        },
+        "capDescription": "The OndoOFT can mint and burn SLVon for the BSC LayerZero route. No current route-specific cap was read; its route-level conservation and external validation remain distinct from native GM issuance.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 116349076,
+        "sources": [
+          {
+            "label": "Ondo Bridge",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "BSC JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "Ondo official contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          }
+        ],
+        "evidence": "At BSC block 116349076, MINTER_ROLE on SLVon included OndoOFT 0x02a4144f5f84fcfbca63f89f1c0038d3053ea525. Its token() pointed to BSC SLVon, endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, owner() returned 0x4d4e562d6882dc523b8d629d2e9df9230b699933, and approvalRequired() was false. This bridge mint/burn capability is preserved here rather than compiled as native Mint Authority."
+      },
+      {
+        "id": "slvon-bsc-ondo-oft-owner",
+        "label": "SLVon BSC OndoOFT owner administration",
+        "routeRefs": [
+          "bsc:0x8b872732b07be325a8803cdb480d9d20b6f8d11b"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4d4e562d6882dc523b8d629d2e9df9230b699933",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0x4d4e562d6882dc523b8d629d2e9df9230b699933"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The BSC OndoOFT owner() returned 0x4d4e562d6882dc523b8d629d2e9df9230b699933 at block 116349076. The owner is deployed code, but this review did not complete Safe/proxy identity, signer threshold, module/guard, peer, DVN, or rate-limit replay for the owner."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 116349076,
+        "sources": [
+          {
+            "label": "BSC JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "Ondo Bridge",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          }
+        ],
+        "evidence": "At BSC block 116349076, the BSC OndoOFT owner() returned deployed contract 0x4d4e562d6882dc523b8d629d2e9df9230b699933. Its route-administration identity and any downstream signer controls remain unresolved, so this exact owner address is retained as Bridge Risk admin evidence without inventing a Safe or timelock posture."
+      },
+      {
+        "id": "slvon-hyperevm-ondo-oft",
+        "label": "SLVon HyperEVM OndoOFT bridge minter",
+        "routeRefs": [
+          "hyperevm:0xd53d98d13d93c817011645442c2e4d46e499b460"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "lockboxOrEscrow": "The HyperEVM OndoOFT route uses LayerZero OFT burn/mint semantics; no SLVon-specific lockbox is evidenced.",
+          "trustedPeerOrRemote": "At HyperEVM block 43372762, owner() returned 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d. Current SLVon-specific peer and DVN values were not fully enumerated and are not asserted here.",
+          "rateLimits": "Ondo documents route rate limits, but the current SLVon-specific inbound/outbound values were not read in this review.",
+          "pausersAdminsUpgraders": "The OFT token() returned the HyperEVM SLVon deployment, endpoint() returned 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, and approvalRequired() was false. The deployed owner is retained as a separate Bridge Risk admin control; the token beacon upgrade path is also represented separately below."
+        },
+        "capDescription": "The OndoOFT is the sole verified minter of the HyperEVM SLVon representation and can burn/mint for the LayerZero route. No current route-specific cap was read; this is bridge representation risk, not native issuance.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 43372762,
+        "sources": [
+          {
+            "label": "Ondo Bridge",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "HyperEVM JSON-RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "HyperEVM OndoOFT contract",
+            "url": "https://hyperevmscan.io/address/0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85"
+          }
+        ],
+        "evidence": "At HyperEVM block 43372762, the sole MINTER_ROLE member on the SLVon representation was OndoOFT 0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85. Its token() pointed to HyperEVM SLVon, endpoint() returned 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, owner() returned 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d, and approvalRequired() was false. This bridge representation remains under Bridge Risk and is not compiled as native Mint Authority."
+      },
+      {
+        "id": "slvon-hyperevm-ondo-oft-owner",
+        "label": "SLVon HyperEVM OndoOFT owner administration",
+        "routeRefs": [
+          "hyperevm:0xd53d98d13d93c817011645442c2e4d46e499b460"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The HyperEVM OndoOFT owner() returned 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d at block 43372762. The owner is deployed code, but this review did not complete Safe/proxy identity, signer threshold, module/guard, peer, DVN, or rate-limit replay for the owner."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 43372762,
+        "sources": [
+          {
+            "label": "HyperEVM JSON-RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "Ondo Bridge",
+            "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          }
+        ],
+        "evidence": "At HyperEVM block 43372762, the HyperEVM OndoOFT owner() returned deployed contract 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d. Its route-administration identity and any downstream signer controls remain unresolved, so this exact owner address is retained as Bridge Risk admin evidence without inventing a Safe or timelock posture."
+      },
+      {
+        "id": "slvon-hyperevm-beacon-admin",
+        "label": "SLVon HyperEVM representation beacon administration",
+        "routeRefs": [
+          "hyperevm:0xd53d98d13d93c817011645442c2e4d46e499b460"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xa3a3c71380128972f172ff4052af7b6405da6364",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0xd53d98d13d93c817011645442c2e4d46e499b460",
+          "timelock:hyperevm:0x6253fbc5bcf4f49c80745694366f05d6c7be0e83",
+          "safe:hyperevm:0xa3a3c71380128972f172ff4052af7b6405da6364"
+        ],
+        "authorityType": "safe",
+        "threshold": 5,
+        "signerCount": 9,
+        "timelockDelaySec": 7200,
+        "safe": {
+          "owners": [
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0xece6bc29f718085a30b7bc14162b0fad4737e5d0",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x6a95a204ad4a6842b2f0ae3bbb59f35e85594f46",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 41089839,
+          "observedAt": "2026-07-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "The HyperEVM SLVon beacon owner timelock can replace representation mint-critical logic after its 7,200-second delay. The timelock's DEFAULT_ADMIN_ROLE included itself and the 5-of-9 Safe 0xa3a3c71380128972f172ff4052af7b6405da6364 at the pinned review block; this representation upgrade path is Bridge Risk, not native Mint Authority."
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 41089839,
+        "sources": [
+          {
+            "label": "HyperEVM JSON-RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "Sourcify SLVon HyperEVM beacon",
+            "url": "https://sourcify.dev/server/v2/contract/999/0x258269e782ab73aca6c0574990ff29b79aafffb6?fields=compilation,proxyResolution"
+          }
+        ],
+        "evidence": "At the pinned HyperEVM block 41089839, beacon 0x258269e782ab73aca6c0574990ff29b79aafffb6 was owned by timelock 0x6253fbc5bcf4f49c80745694366f05d6c7be0e83 with getMinDelay() = 7200. The timelock's default-admin graph included itself and the 5-of-9 Safe 0xa3a3c71380128972f172ff4052af7b6405da6364, whose owners, threshold, modules, and guard are preserved above. This upgrade/admin risk is retained for the HyperEVM bridge representation and removed from Mint Authority."
       }
     ]
   }

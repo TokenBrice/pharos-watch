@@ -4,16 +4,25 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "nOPAL Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard) — same Safe as nBASIS. owner() confirmed for both contracts at Ethereum block 25295023.",
+    "summary": "nOPAL has independent native issuance on Ethereum, Plume, and BSC. On each native deployment, the nOPAL BoringVault is owned by the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (172,800-second minimum delay), while the Teller and Manager are owned by the same current 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. These are native issuance controls on three independent liability surfaces, not bridge-admin controls; issuance remains unbounded and no independent whole-supply reconciliation or prudential supervision was found.",
     "upgradeability": {
       "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "plume:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+      ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-06-11",
-      "observedBlock": 25295023,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25770766,
       "sources": [
         {
           "label": "nOPAL BoringVault verified source (Blockscout)",
           "url": "https://eth.blockscout.com/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165?tab=contract"
+        },
+        {
+          "label": "Nest current vault registry API",
+          "url": "https://api.nest.credit/v1/vaults"
         },
         {
           "label": "Nest smart contracts",
@@ -27,45 +36,67 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
         "chain": "ethereum",
         "address": "0xA5F8e5843dd597a179453bF782844e8Bf808A90b",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "Nest smart contracts (Teller/Manager addresses)",
-            "url": "https://docs.nest.credit/developers/smart-contracts"
+            "label": "Nest current vault registry API",
+            "url": "https://api.nest.credit/v1/vaults"
+          },
+          {
+            "label": "Ethereum nOPAL Teller verified source",
+            "url": "https://eth.blockscout.com/address/0xa5f8e5843dd597a179453bf782844e8bf808a90b?tab=contract"
           }
         ],
-        "evidence": "At Ethereum block 25295023, owner() on 0xA5F8e5843dd597a179453bF782844e8Bf808A90b returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6 Safe, same as nBASIS vault)."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770766,
+        "evidence": "At Ethereum block 25770766, owner() on the nOPAL Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin)",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "chain": "ethereum",
-        "address": "0xea452B14FC86847182F8DD0486206eb56dDA0393",
+        "deploymentRefs": [
+          "ethereum:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "chain": "ethereum",
+        "address": "0xea452B14FC86847182F8DD0486206eb56dDA0393",
         "sources": [
           {
-            "label": "Nest smart contracts (Teller/Manager addresses)",
-            "url": "https://docs.nest.credit/developers/smart-contracts"
+            "label": "Nest current vault registry API",
+            "url": "https://api.nest.credit/v1/vaults"
+          },
+          {
+            "label": "Ethereum nOPAL Manager verified source",
+            "url": "https://eth.blockscout.com/address/0xea452b14fc86847182f8dd0486206eb56dda0393?tab=contract"
           }
         ],
-        "evidence": "At Ethereum block 25295023, owner() on 0xea452B14FC86847182F8DD0486206eb56dDA0393 returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (same 3-of-6 Safe as Teller owner)."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770766,
+        "evidence": "At Ethereum block 25770766, owner() on the nOPAL Manager 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, which can authorize the Manager's vault-management issuance path."
       },
       {
-        "label": "Nest vault owner Safe (3-of-6)",
+        "label": "Nest vault owner Safe (3-of-6) — Ethereum",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": "unknown",
         "chain": "ethereum",
         "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
-        "canRaiseCap": "unknown",
         "threshold": 3,
         "signerCount": 6,
+        "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
@@ -73,7 +104,7 @@
             "0x98be74d3d5604904d0686eef9b4267f681f9520a",
             "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
             "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
-            "0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a",
+            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
             "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           ],
           "threshold": 3,
@@ -81,33 +112,336 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "1.3.0",
-          "observedBlock": 25295023,
+          "observedBlock": 25770766,
           "source": "onchain"
         },
         "sources": [
           {
-            "label": "Nest smart contracts (Teller/Manager addresses)",
-            "url": "https://docs.nest.credit/developers/smart-contracts"
+            "label": "Ethereum nOPAL Timelock role reads",
+            "url": "https://eth.blockscout.com/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a?tab=contract"
+          },
+          {
+            "label": "Ethereum nOPAL Safe",
+            "url": "https://eth.blockscout.com/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982?tab=contract"
           }
         ],
-        "evidence": "At Ethereum block 25295023, getOwners() returned 6 addresses; getThreshold() = 3. modules() returned sentinel only (no modules). guard slot (0x4a204f...) = 0x00. masterCopy slot = 0xfb1bffc9d739b8d520daf37df666da4c687191ea (Safe v1.3.0 L1 mainnet). Shared with nBASIS vault."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770766,
+        "evidence": "At Ethereum block 25770766, the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 owns the nOPAL Teller and Manager and has PROPOSER_ROLE and CANCELLER_ROLE on the nOPAL Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. getThreshold() returned 3, getOwners() returned the six listed signers, and getModulesPaginated() returned no enabled modules; the Timelock getMinDelay() returned 172800 seconds."
+      },
+      {
+        "label": "Nest nOPAL token owner Timelock — Ethereum",
+        "role": "direct-minter",
+        "authorityType": "timelock",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "ethereum",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "sources": [
+          {
+            "label": "Ethereum nOPAL token verified source",
+            "url": "https://eth.blockscout.com/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165?tab=contract"
+          },
+          {
+            "label": "Ethereum nOPAL Timelock verified source",
+            "url": "https://eth.blockscout.com/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a?tab=contract"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770766,
+        "evidence": "At Ethereum block 25770766, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. Its getMinDelay() returned 172800 seconds; the verified BoringVault owner-authenticated enter() path has no supply cap, so this owner-controlled path is direct native issuance after the Timelock delay."
+      },
+      {
+        "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption) — Plume",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "plume:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "chain": "plume",
+        "address": "0xA5F8e5843dd597a179453bF782844e8Bf808A90b",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Nest current vault registry API",
+            "url": "https://api.nest.credit/v1/vaults"
+          },
+          {
+            "label": "Plume nOPAL Teller verified source",
+            "url": "https://explorer.plumenetwork.xyz/address/0xa5f8e5843dd597a179453bf782844e8bf808a90b?tab=contract"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 87688297,
+        "evidence": "At Plume block 87688297, owner() on the nOPAL Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. The official Nest registry lists this same Teller for the nOPAL vault's Plume deployment."
+      },
+      {
+        "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin) — Plume",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "plume:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "plume",
+        "address": "0xea452B14FC86847182F8DD0486206eb56dDA0393",
+        "sources": [
+          {
+            "label": "Plume nOPAL Manager verified source",
+            "url": "https://explorer.plumenetwork.xyz/address/0xea452b14fc86847182f8dd0486206eb56dda0393?tab=contract"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 87688297,
+        "evidence": "At Plume block 87688297, owner() on the verified ManagerWithMerkleVerification 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, and vault() returned the Plume nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165."
+      },
+      {
+        "label": "Nest vault owner Safe (3-of-6) — Plume",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "plume:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": "unknown",
+        "chain": "plume",
+        "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "threshold": 3,
+        "signerCount": 6,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
+            "0x98be74d3d5604904d0686eef9b4267f681f9520a",
+            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
+            "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
+            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
+            "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "version": "1.3.0",
+          "observedBlock": 87688297,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Plume nOPAL Timelock role reads",
+            "url": "https://explorer.plumenetwork.xyz/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a?tab=contract"
+          },
+          {
+            "label": "Plume nOPAL Safe",
+            "url": "https://explorer.plumenetwork.xyz/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982?tab=contract"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 87688297,
+        "evidence": "At Plume block 87688297, the Safe threshold is 3 and getOwners() returned the six listed signers; getModulesPaginated() returned no enabled modules. The Safe owns the Plume nOPAL Teller and Manager and has PROPOSER_ROLE and CANCELLER_ROLE on the Plume nOPAL Timelock, whose minimum delay is 172800 seconds."
+      },
+      {
+        "label": "Nest nOPAL token owner Timelock — Plume",
+        "role": "direct-minter",
+        "authorityType": "timelock",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "plume:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "plume",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "sources": [
+          {
+            "label": "Plume nOPAL token verified source",
+            "url": "https://explorer.plumenetwork.xyz/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165?tab=contract"
+          },
+          {
+            "label": "Plume nOPAL Timelock verified source",
+            "url": "https://explorer.plumenetwork.xyz/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a?tab=contract"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 87688297,
+        "evidence": "At Plume block 87688297, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. The same Safe is the current proposer and canceller, while the verified BoringVault owner-authenticated enter() path has no supply cap."
+      },
+      {
+        "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption) — BSC",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "chain": "bsc",
+        "address": "0xA5F8e5843dd597a179453bF782844e8Bf808A90b",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Nest current vault registry API",
+            "url": "https://api.nest.credit/v1/vaults"
+          },
+          {
+            "label": "BSC nOPAL Teller verified source",
+            "url": "https://bscscan.com/address/0xa5f8e5843dd597a179453bf782844e8bf808a90b"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356466,
+        "evidence": "At BSC block 116356466, owner() on the nOPAL Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. The official Nest registry lists this same Teller for the nOPAL vault's BSC deployment."
+      },
+      {
+        "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin) — BSC",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "bsc",
+        "address": "0xea452B14FC86847182F8DD0486206eb56dDA0393",
+        "sources": [
+          {
+            "label": "BSC nOPAL Manager verified source",
+            "url": "https://bscscan.com/address/0xea452b14fc86847182f8dd0486206eb56dda0393"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356466,
+        "evidence": "At BSC block 116356466, owner() on the verified ManagerWithMerkleVerification 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, and vault() returned the BSC nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165."
+      },
+      {
+        "label": "Nest vault owner Safe (3-of-6) — BSC",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": "unknown",
+        "chain": "bsc",
+        "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "threshold": 3,
+        "signerCount": 6,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
+            "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
+            "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
+            "0x98be74d3d5604904d0686eef9b4267f681f9520a",
+            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
+            "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "version": "1.3.0",
+          "observedBlock": 116356466,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "BSC nOPAL Timelock role reads",
+            "url": "https://bscscan.com/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a"
+          },
+          {
+            "label": "BSC nOPAL Safe",
+            "url": "https://bscscan.com/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356466,
+        "evidence": "At BSC block 116356466, the Safe threshold is 3 and getOwners() returned the six listed signers; current getModulesPaginated() returned no enabled modules. The Safe owns the BSC nOPAL Teller and Manager and has PROPOSER_ROLE and CANCELLER_ROLE on the BSC nOPAL Timelock, whose minimum delay is 172800 seconds."
+      },
+      {
+        "label": "Nest nOPAL token owner Timelock — BSC",
+        "role": "direct-minter",
+        "authorityType": "timelock",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "bsc",
+        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "sources": [
+          {
+            "label": "BSC nOPAL token verified source",
+            "url": "https://bscscan.com/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+          },
+          {
+            "label": "BSC nOPAL Timelock verified source",
+            "url": "https://bscscan.com/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a"
+          }
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 116356466,
+        "evidence": "At BSC block 116356466, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. The same Safe is the current proposer and canceller, while the verified BoringVault owner-authenticated enter() path has no supply cap."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Both nOPAL Teller (0xA5F8e5...) and Manager (0xea452B...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. This is the same Safe that owns the nBASIS vault contracts. No modules, no guard. All reads on-chain via publicnode ETH RPC. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nOPAL supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Economic-posture fields reviewed 2026-08-15: the owner Safe controls issuance authorization without an independent cap, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision. Wave 2 external review 2026-08-15: Nest's live positions, price, NAV, vault, flow-of-funds, and terms pages remain issuer-operated, and no reserve-attestor report was found that independently reconciles total nOPAL liabilities across deployments. Reconciliation review 2026-08-15: Nest's dated Available Vaults snapshot describes nOPAL as a multi-asset vault share and its Audits register lists smart-contract audits, but no named third-party report or recurring attestation reconciling total nOPAL liabilities across its EVM and Solana deployments to the portfolio was found; the available evidence therefore remains insufficient for periodic reconciliation.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Reviewed 2026-08-16 across the complete native scope: Nest's current vault registry identifies the nOPAL share token and Teller, while verified Manager contracts on Ethereum, Plume, and BSC return the nOPAL deployment from vault(); direct owner() reads confirm the same per-chain control graph. The nOPAL token owner Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a returned a 172800-second minimum delay on all three chains; the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 is the current proposer and canceller on each Timelock, with no enabled Safe modules. Fixed observations on 2026-08-16 recorded nonzero totalSupply on Ethereum (19,094,202.277440 at block 25770421), Plume (12,981,544.220067 at block 87678480), and BSC (13,997,699.499774 at block 116347230). These are three independent native liabilities; the route inventory's Plume and BSC rows are native-issuance routes, not bridge representations. Nest's issuer-operated hourly NAV, live vault composition, and flow-of-funds pages do not provide independent recurring reconciliation of total nOPAL liabilities across deployments, and Nest DAO LLC is not a prudentially supervised fund issuer. No public bridge topology, OFT, lockbox, adapter, or destination-token mint role was identified. The owner Safe controls the Teller and Manager issuance path, and the owner Timelock can call the owner-authenticated BoringVault enter() path; no economic cap was verified. The existing evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nOPAL supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Wave 2 external review 2026-08-15: Nest's live positions, price, NAV, vault, flow-of-funds, and terms pages remain issuer-operated, and no reserve-attestor report was found that independently reconciles total nOPAL liabilities across deployments. Reconciliation review 2026-08-15: Nest's dated Available Vaults snapshot describes nOPAL as a multi-asset vault share and its Audits register lists smart-contract audits, but no named third-party report or recurring attestation reconciling total nOPAL liabilities across its EVM and Solana deployments to the portfolio was found; the available evidence therefore remains insufficient for periodic reconciliation.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; FIX2-09 Mint/Bridge boundary migration 2026-08-16",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {
-          "label": "Nest smart contracts (Teller/Manager addresses)",
+          "label": "Nest current vault registry API",
+          "url": "https://api.nest.credit/v1/vaults"
+        },
+        {
+          "label": "Nest smart contracts",
           "url": "https://docs.nest.credit/developers/smart-contracts"
         },
         {
-          "label": "How Nest vaults work (BoringVault/Teller/Manager roles)",
+          "label": "Ethereum nOPAL verified source",
+          "url": "https://eth.blockscout.com/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165?tab=contract"
+        },
+        {
+          "label": "Plume nOPAL verified source",
+          "url": "https://explorer.plumenetwork.xyz/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        },
+        {
+          "label": "BSC nOPAL verified source",
+          "url": "https://bscscan.com/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        },
+        {
+          "label": "Ethereum public JSON-RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Plume public JSON-RPC",
+          "url": "https://rpc.plume.org"
+        },
+        {
+          "label": "BNB Chain public JSON-RPC",
+          "url": "https://bsc-dataseed.binance.org"
+        },
+        {
+          "label": "How Nest vaults work",
           "url": "https://blog.nest.credit/blog/how-nest-vaults-work"
         },
         {

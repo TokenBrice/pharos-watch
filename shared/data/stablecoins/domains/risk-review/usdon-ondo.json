@@ -17,23 +17,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "USDon is an Ondo Global Markets asset, and Ondo documents a LayerZero-based token bridge for Global Markets assets across Ethereum, BNB Chain, Solana, and HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-    "confidence": "verified",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "LayerZero",
-        "slug": "layerzero",
-        "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": [
-          "Lock & Mint",
-          "Burn & Mint"
-        ]
-      }
-    ],
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDon's Ethereum, BNB Chain, and Solana deployments remain issuer-native routes with separately reviewed mint authorities. Ondo's current bridge documentation describes LayerZero/OFT adapters for other assets but does not identify a USDon-specific route, adapter binding, or peer configuration; no USDon bridge risk is scored until that asset-specific evidence is verified.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge boundary migration; Ondo USDon route review",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "Ondo Token Bridge",
@@ -46,6 +34,10 @@
       {
         "label": "L2BEAT LayerZero",
         "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "Ondo contract addresses",
+        "url": "https://docs.ondo.finance/addresses"
       }
     ],
     "routes": [

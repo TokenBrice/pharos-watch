@@ -6,5 +6,131 @@
     "evidence": "Inferred review retained: KAU resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Ethereum KAU is an issuer/custody-based representation of native Kinesis KAU: KMS Labs issues ERC-20 claims against native-KAU reserves, and redemption is subject to KMS Labs terms and compliance onboarding. The reviewed materials do not identify a trustless bridge, lockbox, escrow, messaging protocol, peer, validator, or route-level conservation mechanism. The Ethereum representation's uncapped minter and role administrator are assessed here and are excluded from native Kinesis Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration FIX-03",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Kinesis Gold (KAU) official product page",
+        "url": "https://kinesis.money/gold/"
+      },
+      {
+        "label": "Kinesis standalone-wallet support article",
+        "url": "https://support.kinesis.money/hc/en-gb/articles/12404378472349-What-is-the-purpose-of-the-standalone-wallet"
+      },
+      {
+        "label": "KAU token proxy on Etherscan",
+        "url": "https://etherscan.io/address/0x14dab79fd7b7b3f748d434812fd6a9aac460ea52"
+      },
+      {
+        "label": "ERC20F verified implementation source (Blockscout)",
+        "url": "https://eth.blockscout.com/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62?tab=contract"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x14dab79fd7b7b3f748d434812fd6a9aac460ea52",
+        "sourceChain": "kinesis",
+        "destinationChain": "ethereum",
+        "canonicalChain": "kinesis",
+        "contractAddress": "0x14dab79fd7b7b3f748d434812fd6a9aac460ea52",
+        "protocol": "KMS Labs issuer-custody representation",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "third-party",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "other",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Kinesis identifies Ethereum KAU as a 1:1 claim on native KAU held in reserve by KMS Labs, with redemption subject to KMS Labs terms and compliance onboarding. No trustless bridge, reserve lock, redemption burn, escrow, or route-level conservation contract was identified in the reviewed materials.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530887,
+        "sources": [
+          {
+            "label": "Kinesis Gold (KAU) official product page",
+            "url": "https://kinesis.money/gold/"
+          },
+          {
+            "label": "KAU token proxy on Etherscan",
+            "url": "https://etherscan.io/address/0x14dab79fd7b7b3f748d434812fd6a9aac460ea52"
+          },
+          {
+            "label": "ERC20F verified implementation source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62?tab=contract"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "kau-ethereum-minter-eoa",
+        "label": "KAU Ethereum representation MINTER_ROLE EOA",
+        "routeRefs": [
+          "ethereum:0x14dab79fd7b7b3f748d434812fd6a9aac460ea52"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x4b1f9e5b20e8b9949b3db4b3ef5887f49d69c8dd",
+        "authorityType": "eoa",
+        "capDescription": "ERC20F mint() has no numeric supply cap or per-minter allowance.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "caps": "The verified ERC20F source exposes mint(address,uint256) to MINTER_ROLE without an aggregate or per-call ceiling."
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530887,
+        "sources": [
+          {
+            "label": "KAU token proxy on Etherscan",
+            "url": "https://etherscan.io/address/0x14dab79fd7b7b3f748d434812fd6a9aac460ea52"
+          },
+          {
+            "label": "ERC20F verified implementation source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25530887, hasRole(MINTER_ROLE, 0x4b1f9e5b20e8b9949b3db4b3ef5887f49d69c8dd) on the KAU representation proxy returned true and eth_getCode returned 0x, identifying a single EOA. The verified ERC20F source defines mint(address,uint256) as onlyRole(MINTER_ROLE) with no supply cap or per-minter allowance. The role was granted at deployment block 23337251 and had not been revoked at the observation block."
+      },
+      {
+        "id": "kau-ethereum-default-admin-eoa",
+        "label": "KAU Ethereum representation DEFAULT_ADMIN_ROLE EOA",
+        "routeRefs": [
+          "ethereum:0x14dab79fd7b7b3f748d434812fd6a9aac460ea52"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xe584e152bed254a177351cea587aa44c2a83a8ae",
+        "authorityType": "eoa",
+        "capDescription": "DEFAULT_ADMIN_ROLE can grant MINTER_ROLE and can self-grant UPGRADER_ROLE, which can replace mint-critical logic.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE is the administrator of MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE, and PAUSER_ROLE. No timelock, Safe, or guard was found in front of the representation controls; the role replay also found PAUSER_ROLE held by one EOA."
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530887,
+        "sources": [
+          {
+            "label": "KAU token proxy on Etherscan",
+            "url": "https://etherscan.io/address/0x14dab79fd7b7b3f748d434812fd6a9aac460ea52"
+          },
+          {
+            "label": "ERC20F verified implementation source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25530887, hasRole(DEFAULT_ADMIN_ROLE, 0xe584e152bed254a177351cea587aa44c2a83a8ae) and hasRole(CONTRACT_ADMIN_ROLE, 0xe584e152bed254a177351cea587aa44c2a83a8ae) both returned true and eth_getCode returned 0x. getRoleAdmin() for MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE, and PAUSER_ROLE returned DEFAULT_ADMIN_ROLE, so this EOA can grant MINTER_ROLE to any address and self-grant UPGRADER_ROLE to replace the UUPS implementation. No timelock, multisig Safe, or guard was found."
+      }
+    ]
   }
 }

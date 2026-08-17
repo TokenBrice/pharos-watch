@@ -7,6 +7,9 @@
     "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator. Ethereum and Sui State controls confirmed: owner EOA and operator verified on both chains.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+      ],
       "proxyAddresses": [
         "0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
       ],
@@ -35,6 +38,9 @@
       {
         "chain": "ethereum",
         "address": "0x2103e845c5e135493bb6c2a4f0b8651956ea8682",
+        "deploymentRefs": [
+          "ethereum:0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+        ],
         "label": "XAUm MToken operator mint path",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -57,6 +63,9 @@
       {
         "chain": "ethereum",
         "address": "0x67dcC9C33363Cc0e650738528Fe4Fef1d658C7EE",
+        "deploymentRefs": [
+          "ethereum:0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+        ],
         "label": "XAUm receipt NFT mint path",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -75,6 +84,9 @@
       {
         "chain": "ethereum",
         "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
+        "deploymentRefs": [
+          "ethereum:0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+        ],
         "label": "Matrixdock token owner",
         "role": "minter-admin",
         "authorityType": "eoa",

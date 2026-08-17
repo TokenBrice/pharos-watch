@@ -4,14 +4,17 @@
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "Ethereum USN minting is routed through the verified MinterHandlerV2 contract. Whitelisted direct mints and MINTER_ROLE order mints are capped on-chain, while the 3-of-6 Noon admin Safe holds both MINTER_ROLE and DEFAULT_ADMIN_ROLE and can raise those caps. The USN transparent proxy is separately upgradeable through a Safe-owned 48-hour timelock. These structured controls cover issuer-originated Ethereum minting; Noon documents USN on other chains as cross-chain burn/mint representations whose messaging and peer authority remains separately reviewed under bridgeRouteRisk.",
+    "summary": "Ethereum USN minting is routed through the verified MinterHandlerV2 contract. Whitelisted direct mints and MINTER_ROLE order mints are capped on-chain, while the 3-of-6 Noon admin Safe holds both MINTER_ROLE and DEFAULT_ADMIN_ROLE and can raise those caps. The current USN transparent proxy implementation is separately upgradeable through a Safe-owned 48-hour timelock. These structured controls cover issuer-originated Ethereum minting only; Noon documents USN on Sophon, zkSync, TAC, and Starknet as cross-chain burn/mint representations whose Hyperlane and LayerZero messaging and peer authority are separately scored under bridgeRouteRisk.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed"
+      ],
       "proxyAddresses": [
         "0xdA67B4284609d2d48e5d10cfAc411572727dc1eD"
       ],
       "implementationAddresses": [
-        "0x6bdc8104ec827cd48b9cac526420b59a31bc8397"
+        "0x961e78b26f6984a2ddac42e4ce5b8014a311608e"
       ],
       "adminAddresses": [
         "0x55f39512cb43111a13e8440ee3e3602e72628239",
@@ -20,8 +23,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "USN Ethereum upgrade timelock",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25531363,
+      "observedAt": "2026-08-16",
+      "observedBlock": 25771119,
       "sources": [
         {
           "label": "Noon contracts and addresses",
@@ -30,6 +33,10 @@
         {
           "label": "USN proxy on Etherscan",
           "url": "https://etherscan.io/address/0xda67b4284609d2d48e5d10cfac411572727dc1ed#code"
+        },
+        {
+          "label": "Current verified USN implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x961e78b26f6984a2ddac42e4ce5b8014a311608e?fields=abi,sources,metadata"
         },
         {
           "label": "Noon upgrade timelock source",
@@ -49,24 +56,21 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "At Ethereum block 25530462, mintLimitPerBlock and directMintLimitPerDay were each 10,000,000 USN; mintAndRebase had a separate 25,000 USN per-call limit. The handler cannot change its own limits.",
-        "routeChecks": {
-          "signingModel": "mint(Order,signature) validates the whitelisted order.user's EIP-712 signature via ECDSA for EOAs or ERC-1271 for contract wallets; it does not rely on an unidentified issuer backend signer.",
-          "caps": "mintLimitPerBlock and directMintLimitPerDay both read as 10,000,000 USN at block 25530462; rebaseLimit read as 25,000 USN",
-          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE can set limits, whitelisted users/collateral, price feeds, custody wallet, and sUSN vault",
-          "unsupportedReason": "This control covers primary issuer minting on Ethereum only. LayerZero and Hyperlane destination-mint messaging and peer authority remains separately unresolved under bridgeRouteRisk."
-        },
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530462,
+        "capDescription": "At Ethereum block 25771119 on 2026-08-16, mintLimitPerBlock and directMintLimitPerDay were each 10,000,000 USN; mintAndRebase had a separate 25,000 USN per-call limit. The handler cannot change its own limits, while DEFAULT_ADMIN_ROLE can change them.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771119,
         "sources": [
           {
             "label": "MinterHandlerV2 implementation",
             "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
           }
         ],
-        "evidence": "At block 25530462, USN.admin() returned MinterHandlerV2. Verified source shows mint(Order,signature) and mintAndRebase require MINTER_ROLE, directMint requires a whitelisted user and collateral, and all three paths enforce the reviewed on-chain limits. Limit setters require DEFAULT_ADMIN_ROLE, which the handler itself does not hold."
+        "evidence": "At Ethereum block 25771119, USN.admin() returned MinterHandlerV2. Verified source shows mint(Order,signature) and mintAndRebase require MINTER_ROLE, directMint requires a whitelisted user and collateral, and all three paths enforce the reviewed on-chain limits. The order path validates the whitelisted order.user EIP-712/ERC-1271 signature; limit setters require DEFAULT_ADMIN_ROLE, which the handler itself does not hold."
       },
       {
         "chain": "ethereum",
@@ -75,15 +79,14 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed"
+        ],
         "threshold": 3,
         "signerCount": 6,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "routeChecks": {
-          "caps": "Noon admin Safe controls MinterHandlerV2 limits and holds MINTER_ROLE; current per-block/per-day caps live on the handler.",
-          "signingModel": "As MINTER_ROLE holder, the Safe can submit order mints, but each order also requires the whitelisted order.user's valid EIP-712 signature. The Safe can independently call mintAndRebase within its per-call cap.",
-          "pausersAdminsUpgraders": "Safe is 3-of-6 with no modules and zero guard; as DEFAULT_ADMIN_ROLE it can change handler caps and role membership."
-        },
+        "capDescription": "The Noon admin Safe controls MinterHandlerV2 limits and holds MINTER_ROLE; current per-block/per-day caps live on the handler. As MINTER_ROLE holder it can submit order mints, subject to the whitelisted order.user's EIP-712/ERC-1271 signature, and it can independently call mintAndRebase within its per-call cap. As DEFAULT_ADMIN_ROLE it can change handler caps and role membership.",
         "safe": {
           "threshold": 3,
           "owners": [
@@ -97,19 +100,19 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "observedBlock": 25530462,
-          "observedAt": "2026-07-14",
+          "observedBlock": 25771119,
+          "observedAt": "2026-08-16",
           "source": "safe-api"
         },
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530462,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771119,
         "sources": [
           {
             "label": "Noon admin Safe API",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
           }
         ],
-        "evidence": "At block 25530462, this Safe was USN.owner() and MinterHandlerV2 returned true for both DEFAULT_ADMIN_ROLE and MINTER_ROLE. Direct Safe reads and the Safe API returned threshold 3, six current owners, no enabled modules, and a zero guard."
+        "evidence": "At Ethereum block 25771119, this Safe was USN.owner() and MinterHandlerV2 returned true for both DEFAULT_ADMIN_ROLE and MINTER_ROLE. Direct Safe reads and the Safe API returned threshold 3, six current owners, no enabled modules, and the existing Safe evidence records a zero guard."
       },
       {
         "chain": "ethereum",
@@ -118,6 +121,9 @@
         "role": "custodian",
         "authorityType": "safe",
         "directMintAbility": "none",
+        "deploymentRefs": [
+          "ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed"
+        ],
         "threshold": 4,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
@@ -137,6 +143,9 @@
           "observedAt": "2026-07-14",
           "source": "safe-api"
         },
+        "failureDomainKeys": [
+          "safe:shared:noon-four-owner-overlap"
+        ],
         "observedAt": "2026-07-14",
         "observedBlock": 25530462,
         "sources": [
@@ -161,8 +170,11 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25531363,
+        "deploymentRefs": [
+          "ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771119,
         "failureDomainKeys": [
           "safe:ethereum:0x1ea169ecccf7714e7ba04900e1a3357cca77327f"
         ],
@@ -184,7 +196,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25531363, the USN proxy implementation slot was 0x6bdc8104...8397 and the canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x55f39512...8239. The OpenZeppelin v5 transparent-proxy runtime independently embeds the same immutable ProxyAdmin address. ProxyAdmin.owner() returned this verified timelock; delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe. Verified source requires the owner to schedule an exact upgrade and wait for the delay before execution."
+        "evidence": "At Ethereum block 25771119, the USN proxy implementation slot was 0x961e78b26f6984a2ddac42e4ce5b8014a311608e and the canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x55f39512...8239. The OpenZeppelin v5 transparent-proxy runtime independently embeds the same immutable ProxyAdmin address. ProxyAdmin.owner() returned this verified timelock; delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe. Verified source requires the owner to schedule an exact upgrade and wait for the delay before execution."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -198,7 +210,7 @@
         },
         {
           "label": "USN implementation",
-          "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata"
+          "url": "https://sourcify.dev/server/v2/contract/1/0x961e78b26f6984a2ddac42e4ce5b8014a311608e?fields=abi,sources,metadata"
         },
         {
           "label": "MinterHandlerV2 implementation",
@@ -225,9 +237,9 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f?fields=sources,abi,metadata"
         }
       ],
-      "evidence": "Mint-path reads at Ethereum block 25530462 identify MinterHandlerV2 as USN's mint admin, the Noon 3-of-6 Safe as handler MINTER_ROLE and DEFAULT_ADMIN_ROLE, and the 4-of-5 collateral Safe as the handler custody destination. The order signer is the whitelisted user, checked through ECDSA or ERC-1271. Upgrade provenance was independently reverified at block 25531363: the canonical EIP-1967 admin slot and the OpenZeppelin v5 proxy runtime both identify ProxyAdmin 0x55f39512...8239, controlled through a verified 48-hour timelock owned by the same admin Safe. In the exact V9 capture used for this review, Ethereum held 99.56% of USN supply and Sophon plus ZKsync Era held 0.44%; Noon documents non-Ethereum USN as burn/mint bridge representations rather than independent issuer mint routes. This review is scoped to issuer-originated Ethereum minting. LayerZero and Hyperlane destination-mint peer, DVN, and ISM controls remain separately unresolved in bridgeRouteRisk and are not asserted reviewed here. Economic-posture fields reviewed 2026-08-15: the Noon Safe can raise MinterHandler limits directly outside the upgrade timelock, while Accountable continuously reconciles global USN reserves and supply as an independent attestor and no named prudential regulator is evidenced.",
-      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Mint-path reads at Ethereum block 25771119 identify MinterHandlerV2 as USN's mint admin, the Noon 3-of-6 Safe as handler MINTER_ROLE and DEFAULT_ADMIN_ROLE, and the 4-of-5 collateral Safe as the handler custody destination. The order signer is the whitelisted user, checked through ECDSA or ERC-1271. Upgrade provenance was independently reverified at the same block: the canonical EIP-1967 admin slot and the OpenZeppelin v5 proxy runtime identify current implementation 0x961e78b26f6984a2ddac42e4ce5b8014a311608e and ProxyAdmin 0x55f39512...8239, controlled through a verified 48-hour timelock owned by the same admin Safe. Noon documents non-Ethereum USN as burn/mint bridge representations rather than independent issuer mint routes. This review is scoped to issuer-originated Ethereum minting; the live Ethereum implementation exposes Hyperlane remote-token/ISM configuration and LayerZero Endpoint V2 peer configuration, whose route security controls remain separately reviewed and partially unresolved under bridgeRouteRisk. Economic-posture fields remain supportable: the Noon Safe can raise MinterHandler limits directly outside the upgrade timelock, while Accountable continuously reconciles global USN reserves and supply as an independent attestor and no named prudential regulator is evidenced.",
+      "reviewer": "Pharos mint-bridge boundary migration; Codex usn-noon",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

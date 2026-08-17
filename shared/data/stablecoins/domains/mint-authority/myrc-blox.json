@@ -29,6 +29,9 @@
       {
         "chain": "ethereum",
         "address": "0xcca0793222422e8ac1dd48db1aa691f9d360a1c2",
+        "deploymentRefs": [
+          "ethereum:0xbed7d999f1d71ac70c263f64c7c7e009d691be2e"
+        ],
         "label": "Blox MYRC minter/admin Safe (Ethereum)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -66,6 +69,9 @@
       {
         "chain": "solana",
         "address": "Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z",
+        "deploymentRefs": [
+          "solana:myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
+        ],
         "label": "MYRC Solana mint and freeze authority (issuer keypair)",
         "role": "direct-minter",
         "authorityType": "eoa",

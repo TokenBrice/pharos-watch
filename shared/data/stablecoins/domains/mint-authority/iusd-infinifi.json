@@ -4,9 +4,12 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "IUSD receipt-token minting is gated by RECEIPT_TOKEN_MINTER in the infiniFi Core. Four protocol contracts hold the role; only YieldSharing is upgradeable. Mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all require the 4-of-7 admin Safe to schedule an action through a seven-day timelock.",
+    "summary": "IUSD receipt-token minting is gated by RECEIPT_TOKEN_MINTER in the infiniFi Core. Four protocol contracts hold the native role; the fifth current role holder, OutlandVault, is cross-chain portal reconciliation machinery assessed in Bridge Risk. Only YieldSharing is upgradeable. Mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all require the 4-of-8 admin Safe to schedule an action through a seven-day timelock.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+      ],
       "proxyAddresses": [
         "0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b"
       ],
@@ -43,58 +46,73 @@
       {
         "chain": "ethereum",
         "address": "0x49877d937b9a00d50557bdc3d87287b5c3a4c256",
+        "deploymentRefs": [
+          "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
         "label": "infiniFi MintController",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25527135,
-        "evidence": "At Ethereum block 25527135, Core role enumeration returned MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
+        "evidence": "At Ethereum block 25771089, Core role enumeration returned MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment and remains a native collateral/accounting minter."
       },
       {
         "chain": "ethereum",
         "address": "0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b",
+        "deploymentRefs": [
+          "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
         "label": "infiniFi mint path proxy (TransparentUpgradeableProxy)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25527135,
-        "evidence": "At Ethereum block 25527135, Core role enumeration returned YieldSharing proxy 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b as a RECEIPT_TOKEN_MINTER. Its ProxyAdmin is owned by the seven-day infiniFi Timelock."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
+        "evidence": "At Ethereum block 25771089, Core role enumeration returned YieldSharing proxy 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b as a RECEIPT_TOKEN_MINTER. Its ProxyAdmin is owned by the seven-day infiniFi Timelock, and this is a native protocol mint path."
       },
       {
         "chain": "ethereum",
         "address": "0xc324569141697045b9ede54b5d4623a691ed57a4",
+        "deploymentRefs": [
+          "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
         "label": "infiniFi PLSmoother",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25527135,
-        "evidence": "At Ethereum block 25527135, Core role enumeration returned PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
+        "evidence": "At Ethereum block 25771089, Core role enumeration returned PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment and remains a native protocol mint path."
       },
       {
         "chain": "ethereum",
         "address": "0x5f5403656e4db95accf1064a714b1bce351839f8",
+        "deploymentRefs": [
+          "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
         "label": "infiniFi MigrationController",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25527135,
-        "evidence": "At Ethereum block 25527135, Core role enumeration returned MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment."
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
+        "evidence": "At Ethereum block 25771089, Core role enumeration returned MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment and remains a native migration/accounting mint path."
       },
       {
         "chain": "ethereum",
         "address": "0x80608f852d152024c0a2087b16939235fec2400c",
+        "deploymentRefs": [
+          "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        ],
         "label": "infiniFi admin Safe (PROPOSER_ROLE + MINOR_ROLES_MANAGER)",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -103,9 +121,10 @@
         "timelockDelaySec": 604800,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 4,
-        "signerCount": 7,
+        "signerCount": 8,
         "safe": {
           "owners": [
+            "0xcc30e7d9dfbc29613e2a1e272cd624afc3abe1e9",
             "0x7a823623b18335a9c1284ac45315fe89972fd421",
             "0xdadb38219425c761dd0f3a4d684fc36f533af7bd",
             "0xa9bdbeb17c81677cb1830b74b1832c16ec5cef61",
@@ -119,18 +138,13 @@
           "guard": null,
           "fallbackHandler": null,
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedBlock": 25527135,
-          "observedAt": "2026-07-13",
+          "observedBlock": 25771089,
+          "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "routeChecks": {
-          "signingModel": "The 4-of-7 Safe is the Timelock's sole proposer; no enabled Safe modules or transaction guard were detected.",
-          "rateLimits": "RECEIPT_TOKEN_MINTER administration, ReceiptToken.setCore calls, and YieldSharing proxy upgrades initiated by this Safe must traverse Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 with getMinDelay() = 604800 seconds.",
-          "pausersAdminsUpgraders": "The Safe is not a Core GOVERNOR and does not own ProxyAdmin directly. The Timelock holds GOVERNOR and owns ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb."
-        },
-        "observedAt": "2026-07-13",
-        "observedBlock": 25527135,
-        "evidence": "At Ethereum block 25527135, RECEIPT_TOKEN_MINTER's admin was GOVERNOR. Safe 0x80608f852d152024c0a2087b16939235fec2400c had MINOR_ROLES_MANAGER but not GOVERNOR; direct Safe grantRole/revokeRole calls reverted requiring GOVERNOR, and ReceiptToken.setCore reverted UNAUTHORIZED. Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 held GOVERNOR, had getMinDelay() = 604800, and the Safe was its sole proposer. YieldSharing ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb was owned by that Timelock; a direct Safe upgrade call reverted as unauthorized.",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771089,
+        "evidence": "At Ethereum block 25771089, RECEIPT_TOKEN_MINTER's admin was GOVERNOR. Safe 0x80608f852d152024c0a2087b16939235fec2400c had MINOR_ROLES_MANAGER but not GOVERNOR; direct Safe grantRole/revokeRole calls reverted requiring GOVERNOR, and ReceiptToken.setCore reverted UNAUTHORIZED. Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 held GOVERNOR, had getMinDelay() = 604800, and the current 4-of-8 Safe was its sole proposer. Core role enumeration listed the four native protocol minters plus OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3; OutlandVault's portal reconciliation is bridge machinery and is therefore excluded from native Mint Authority scoring. YieldSharing ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb was owned by that Timelock; a direct Safe upgrade call reverted as unauthorized.",
         "sources": [
           {
             "label": "infiniFi Core verified source",
@@ -161,6 +175,10 @@
           "url": "https://eth.blockscout.com/address/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
         },
         {
+          "label": "infiniFi OutlandVault verified source",
+          "url": "https://eth.blockscout.com/address/0xf0d0f1fdee5595628de17b37e4134a5bac4441c3"
+        },
+        {
           "label": "infiniFi Timelock verified source",
           "url": "https://eth.blockscout.com/address/0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9"
         },
@@ -169,9 +187,9 @@
           "url": "https://eth.blockscout.com/address/0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b"
         }
       ],
-      "evidence": "At Ethereum block 25527135, ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, Core 0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490, MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256, PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4, and MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 were direct non-proxy deployments. YieldSharing 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b was a transparent proxy with implementation 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 and ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The 4-of-7 Safe had no immediate GOVERNOR or ProxyAdmin-owner path: mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all converged on Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 with a 604800-second minimum delay. IUSD is receipt-token issuance through the fixed protocol minters, and every path to replace the receipt core, add a minter, or change the upgradeable mint module traverses that seven-day delay; economic cap semantics are therefore raiseable rather than unbounded. Economic-posture fields reviewed 2026-08-15: the seven-day timelock independently bounds mint-path changes, the real-time protocol feed covers the full reserve composition, and no regulator or independent attestor is evidenced.",
-      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "At Ethereum block 25771089, ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, Core 0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490, MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256, PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4, and MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 were direct non-proxy deployments. Core also listed OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3 as a fifth RECEIPT_TOKEN_MINTER; its portal reconciliation can mirror remote supply and is authored in Bridge Risk, not counted as native Mint Authority. YieldSharing 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b was a transparent proxy with implementation 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 and ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The current 4-of-8 admin Safe has no immediate GOVERNOR or ProxyAdmin-owner path: mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all converge on Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 with a 604800-second minimum delay. IUSD native issuance remains receipt-token issuance through the four protocol minters and is separate from the BNB, Tempo, and Outland bridge machinery; every path to replace the receipt core, add a minter, or change the upgradeable mint module traverses that seven-day delay, so economic cap semantics remain raiseable rather than unbounded. Economic-posture fields reviewed 2026-08-16: the seven-day timelock bounds mint-path changes, the real-time protocol feed covers the full reserve composition, and no regulator or independent attestor is evidenced.",
+      "reviewer": "Codex Safety Score V9 registry pass; RELOC-07 mint/bridge boundary migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

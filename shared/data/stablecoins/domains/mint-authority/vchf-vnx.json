@@ -4,17 +4,44 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "VCHF minting remains controlled by VNXManager 0xCdB386...c9AE and its sole observed minter, EOA 0x7b0c15...9403. The Ethereum transparent proxy is administered by custom VNXProxyAdmin 0x817f8a...8165: upgrade() and upgradeAndCall() require role 1 in separate VNXManager 0x2B535E...114b, whose role 1 currently has no bearers. Self-administered role 0 is held by two independent EOAs, 0x45a149...545a and 0xAcC56E...311A, either of which can grant itself role 1 without delay; 0x45a149...545a also owns VNXProxyAdmin and can redirect the proxy admin through changeProxyAdmin().",
+    "summary": "VCHF is issuer-native across all 12 authored deployments: Ethereum, Base, Arbitrum, Avalanche, Solana, Celo, Polygon, Tezos, XRPL, Fraxtal, ICP, and Stellar. Ethereum retains the fully reconstructed VNXManager and no-delay proxy-admin graph; each other route has its chain-local issuer mint/admin evidence and EVM proxy implementation/admin evidence. Native mint capacity remains unbounded or raiseable across issuer-controlled routes, and current whole-supply reconciliation is not established. No bridge representation is claimed in this mint review.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+        "base:0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8",
+        "arbitrum:0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969",
+        "avalanche:0x228a48df6819ccc2eca01e2192ebafffdad56c19",
+        "celo:0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+        "polygon:0xcdb3867935247049e87c38ea270edd305d84c9ae",
+        "fraxtal:0x418126bb59457afdba1ecf376f97400b4157425d"
+      ],
       "proxyAddresses": [
-        "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+        "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+        "0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8",
+        "0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969",
+        "0x228a48df6819ccc2eca01e2192ebafffdad56c19",
+        "0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+        "0xcdb3867935247049e87c38ea270edd305d84c9ae",
+        "0x418126bb59457afdba1ecf376f97400b4157425d"
       ],
       "implementationAddresses": [
-        "0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc"
+        "0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc",
+        "0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1",
+        "0xd3bfc79d720bc625d02dc46d822040ac7cb5045a",
+        "0x832cba8c924b4e3128ab509a803d66738bc51708",
+        "0xf3e535d35b662015765a2d73e81db5735562b569",
+        "0x5cb0365674da4d167755bd3fb99a09916258ef32",
+        "0x1891291474fe677cb63e47cc347e6b8bc0c43b4a"
       ],
       "adminAddresses": [
-        "0x817f8afee1a758faf4492f4844b08dcb57658165"
+        "0x817f8afee1a758faf4492f4844b08dcb57658165",
+        "0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4",
+        "0x3d38309d072d2b6125fca946f78b6ebf950a7165",
+        "0x9b357fac02e035159dffad8dd21333e39f25a660",
+        "0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4",
+        "0xed69422ba3813968371ce9a55a8b40965725a117",
+        "0x516fec20679a41b591780613b28449f2a813af5b"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
@@ -48,6 +75,9 @@
       {
         "chain": "ethereum",
         "address": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+        "deploymentRefs": [
+          "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+        ],
         "label": "VCHF VNX token proxy",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -69,6 +99,9 @@
       {
         "chain": "ethereum",
         "address": "0xCdB3867935247049e87c38eA270edD305D84c9AE",
+        "deploymentRefs": [
+          "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+        ],
         "label": "VNXManager RBAC contract",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -86,6 +119,9 @@
       {
         "chain": "ethereum",
         "address": "0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403",
+        "deploymentRefs": [
+          "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+        ],
         "label": "VNX minter / VNXManager owner EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -103,6 +139,9 @@
       {
         "chain": "ethereum",
         "address": "0x2B535Eb09Fc06431B8C69782E2c2D3A1a175114b",
+        "deploymentRefs": [
+          "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+        ],
         "label": "VNXProxyAdmin RBAC manager",
         "role": "proxy-admin",
         "authorityType": "contract",
@@ -134,6 +173,9 @@
       {
         "chain": "ethereum",
         "address": "0x45a149f42ff0b77d148d05904dd7577df36a545a",
+        "deploymentRefs": [
+          "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+        ],
         "label": "VNXProxyAdmin role-0 superadmin / Ownable owner EOA 0x45a1...545a",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -168,6 +210,9 @@
       {
         "chain": "ethereum",
         "address": "0xAcC56EBcC391108A725F269FDD82D6cbe65b311A",
+        "deploymentRefs": [
+          "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+        ],
         "label": "VNXProxyAdmin role-0 superadmin EOA 0xAcC5...311A",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -197,6 +242,668 @@
           }
         ],
         "evidence": "At Ethereum block 25531301, this code-empty EOA was the second role-0 bearer in VNXProxyAdmin's RBAC manager. Upgrade role 1 had zero bearers, but self-administered role 0 administers role 1, so this EOA can grant itself direct upgrade authority without delay."
+      },
+      {
+        "chain": "base",
+        "address": "0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8",
+        "deploymentRefs": [
+          "base:0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8"
+        ],
+        "label": "VCHF Base token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063130,
+        "sources": [
+          {
+            "label": "VCHF Base verified implementation",
+            "url": "https://base.blockscout.com/address/0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 50063130, the proxy resolves to VNXCToken implementation 0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1. Verified source gates mint() through isMinter() and a per-minter allowance; the chain-local issuer owner is confirmed as the active minter/admin. The allowance is not treated as an immutable economic cap because the issuer admin can reconfigure it and mint logic is upgradeable."
+      },
+      {
+        "chain": "base",
+        "address": "0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+        "deploymentRefs": [
+          "base:0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8"
+        ],
+        "label": "VCHF Base VNX issuer owner / minter-admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063130,
+        "sources": [
+          {
+            "label": "VCHF Base verified token",
+            "url": "https://basescan.org/address/0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8"
+          }
+        ],
+        "evidence": "At Base block 50063130, owner() returned 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6 and owner-context isAdmin() and isMinter() reads returned true. The verified VNXCToken source gates configureMinter(), setMinterRole(), and mint() through the issuer-controlled authority path, with no timelock or fixed aggregate cap."
+      },
+      {
+        "chain": "base",
+        "address": "0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+        "deploymentRefs": [
+          "base:0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8"
+        ],
+        "label": "VCHF Base proxy-admin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50063130,
+        "sources": [
+          {
+            "label": "VCHF Base proxy",
+            "url": "https://basescan.org/address/0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8"
+          }
+        ],
+        "evidence": "At Base block 50063130, the EIP-1967 admin slot resolved to ProxyAdmin 0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4, whose owner() returned 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6. The reviewed ProxyAdmin path has no timelock delay and can replace the mint-critical implementation."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969",
+        "deploymentRefs": [
+          "arbitrum:0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969"
+        ],
+        "label": "VCHF Arbitrum token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495267437,
+        "sources": [
+          {
+            "label": "VCHF Arbitrum verified implementation",
+            "url": "https://arbitrum.blockscout.com/address/0xd3bfc79d720bc625d02dc46d822040ac7cb5045a"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 495267437, the proxy resolves to VNXCToken implementation 0xd3bfc79d720bc625d02dc46d822040ac7cb5045a. Verified source gates mint() through isMinter() and a per-minter allowance; the chain-local issuer owner is confirmed as the active minter/admin. The allowance is not treated as an immutable economic cap because the issuer admin can reconfigure it and mint logic is upgradeable."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xd5086f514af5d820ee58a73e9628b5d21f3ba54a",
+        "deploymentRefs": [
+          "arbitrum:0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969"
+        ],
+        "label": "VCHF Arbitrum VNX issuer owner / minter-admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495267437,
+        "sources": [
+          {
+            "label": "VCHF Arbitrum verified token",
+            "url": "https://arbiscan.io/address/0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969"
+          }
+        ],
+        "evidence": "At Arbitrum block 495267437, owner() returned 0xd5086f514af5d820ee58a73e9628b5d21f3ba54a and owner-context isAdmin() and isMinter() reads returned true. The verified VNXCToken source gates configureMinter(), setMinterRole(), and mint() through the issuer-controlled authority path, with no timelock or fixed aggregate cap."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xd5086f514af5d820ee58a73e9628b5d21f3ba54a",
+        "deploymentRefs": [
+          "arbitrum:0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969"
+        ],
+        "label": "VCHF Arbitrum proxy-admin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495267437,
+        "sources": [
+          {
+            "label": "VCHF Arbitrum proxy",
+            "url": "https://arbiscan.io/address/0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969"
+          }
+        ],
+        "evidence": "At Arbitrum block 495267437, the EIP-1967 admin slot resolved to ProxyAdmin 0x3d38309d072d2b6125fca946f78b6ebf950a7165, whose owner() returned 0xd5086f514af5d820ee58a73e9628b5d21f3ba54a. The reviewed ProxyAdmin path has no timelock delay and can replace the mint-critical implementation."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x228a48df6819ccc2eca01e2192ebafffdad56c19",
+        "deploymentRefs": [
+          "avalanche:0x228a48df6819ccc2eca01e2192ebafffdad56c19"
+        ],
+        "label": "VCHF Avalanche token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92976263,
+        "sources": [
+          {
+            "label": "VCHF Avalanche verified implementation",
+            "url": "https://snowtrace.io/address/0x832cba8c924b4e3128ab509a803d66738bc51708"
+          },
+          {
+            "label": "Avalanche C-Chain JSON-RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "At Avalanche C-Chain block 92976263, the proxy resolves to VNXCToken implementation 0x832cba8c924b4e3128ab509a803d66738bc51708. Verified source gates mint() through isMinter() and a per-minter allowance; the chain-local issuer owner is confirmed as the active minter/admin. The allowance is not treated as an immutable economic cap because the issuer admin can reconfigure it and mint logic is upgradeable."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xe13eb54fc8bcd06aed4c1ea13692ba85dc94fd8c",
+        "deploymentRefs": [
+          "avalanche:0x228a48df6819ccc2eca01e2192ebafffdad56c19"
+        ],
+        "label": "VCHF Avalanche VNX issuer owner / minter-admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92976263,
+        "sources": [
+          {
+            "label": "VCHF Avalanche verified token",
+            "url": "https://snowtrace.io/address/0x228a48df6819ccc2eca01e2192ebafffdad56c19"
+          }
+        ],
+        "evidence": "At Avalanche C-Chain block 92976263, owner() returned 0xe13eb54fc8bcd06aed4c1ea13692ba85dc94fd8c and owner-context isAdmin() and isMinter() reads returned true. The verified VNXCToken source gates configureMinter(), setMinterRole(), and mint() through the issuer-controlled authority path, with no timelock or fixed aggregate cap."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xe13eb54fc8bcd06aed4c1ea13692ba85dc94fd8c",
+        "deploymentRefs": [
+          "avalanche:0x228a48df6819ccc2eca01e2192ebafffdad56c19"
+        ],
+        "label": "VCHF Avalanche proxy-admin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92976263,
+        "sources": [
+          {
+            "label": "VCHF Avalanche proxy",
+            "url": "https://snowtrace.io/address/0x228a48df6819ccc2eca01e2192ebafffdad56c19"
+          }
+        ],
+        "evidence": "At Avalanche C-Chain block 92976263, the EIP-1967 admin slot resolved to custom admin 0x9b357fac02e035159dffad8dd21333e39f25a660, whose owner() returned 0xe13eb54fc8bcd06aed4c1ea13692ba85dc94fd8c. The custom proxy-admin path exposes no timelock delay and can replace the mint-critical implementation."
+      },
+      {
+        "chain": "celo",
+        "address": "0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+        "deploymentRefs": [
+          "celo:0xc5ebea9984c485ec5d58ca5a2d376620d93af871"
+        ],
+        "label": "VCHF Celo token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75014861,
+        "sources": [
+          {
+            "label": "VCHF Celo verified implementation",
+            "url": "https://celoscan.io/address/0xf3e535d35b662015765a2d73e81db5735562b569"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 75014861, the proxy resolves to VNXCToken implementation 0xf3e535d35b662015765a2d73e81db5735562b569. Verified source gates mint() through isMinter() and a per-minter allowance; the chain-local issuer owner is confirmed as the active minter/admin. The allowance is not treated as an immutable economic cap because the issuer admin can reconfigure it and mint logic is upgradeable."
+      },
+      {
+        "chain": "celo",
+        "address": "0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+        "deploymentRefs": [
+          "celo:0xc5ebea9984c485ec5d58ca5a2d376620d93af871"
+        ],
+        "label": "VCHF Celo VNX issuer owner / minter-admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75014861,
+        "sources": [
+          {
+            "label": "VCHF Celo verified token",
+            "url": "https://celoscan.io/address/0xc5ebea9984c485ec5d58ca5a2d376620d93af871"
+          }
+        ],
+        "evidence": "At Celo block 75014861, owner() returned 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6 and owner-context isAdmin() and isMinter() reads returned true. The verified VNXCToken source gates configureMinter(), setMinterRole(), and mint() through the issuer-controlled authority path, with no timelock or fixed aggregate cap."
+      },
+      {
+        "chain": "celo",
+        "address": "0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+        "deploymentRefs": [
+          "celo:0xc5ebea9984c485ec5d58ca5a2d376620d93af871"
+        ],
+        "label": "VCHF Celo proxy-admin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 75014861,
+        "sources": [
+          {
+            "label": "VCHF Celo proxy",
+            "url": "https://celoscan.io/address/0xc5ebea9984c485ec5d58ca5a2d376620d93af871"
+          }
+        ],
+        "evidence": "At Celo block 75014861, the EIP-1967 admin slot resolved to ProxyAdmin 0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4, whose owner() returned 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6. The reviewed ProxyAdmin path has no timelock delay and can replace the mint-critical implementation."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xcdb3867935247049e87c38ea270edd305d84c9ae",
+        "deploymentRefs": [
+          "polygon:0xcdb3867935247049e87c38ea270edd305d84c9ae"
+        ],
+        "label": "VCHF Polygon token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92140615,
+        "sources": [
+          {
+            "label": "VCHF Polygon verified implementation",
+            "url": "https://polygon.blockscout.com/address/0x5cb0365674da4d167755bd3fb99a09916258ef32"
+          },
+          {
+            "label": "Polygon dRPC JSON-RPC",
+            "url": "https://polygon.drpc.org"
+          }
+        ],
+        "evidence": "At Polygon block 92140615, the proxy resolves to VNXCToken implementation 0x5cb0365674da4d167755bd3fb99a09916258ef32. Verified source gates mint() through isMinter() and a per-minter allowance; the chain-local issuer owner is confirmed as the active minter/admin. The allowance is not treated as an immutable economic cap because the issuer admin can reconfigure it and mint logic is upgradeable."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403",
+        "deploymentRefs": [
+          "polygon:0xcdb3867935247049e87c38ea270edd305d84c9ae"
+        ],
+        "label": "VCHF Polygon VNX issuer owner / minter-admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92140615,
+        "sources": [
+          {
+            "label": "VCHF Polygon verified token",
+            "url": "https://polygonscan.com/address/0xcdb3867935247049e87c38ea270edd305d84c9ae"
+          }
+        ],
+        "evidence": "At Polygon block 92140615, owner() returned 0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403 and owner-context isAdmin() and isMinter() reads returned true. The verified VNXCToken source gates configureMinter(), setMinterRole(), and mint() through the issuer-controlled authority path, with no timelock or fixed aggregate cap."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x88f239d6629e98d6828fdba8f8f415d4b903af4a",
+        "deploymentRefs": [
+          "polygon:0xcdb3867935247049e87c38ea270edd305d84c9ae"
+        ],
+        "label": "VCHF Polygon proxy-admin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 92140615,
+        "sources": [
+          {
+            "label": "VCHF Polygon proxy",
+            "url": "https://polygonscan.com/address/0xcdb3867935247049e87c38ea270edd305d84c9ae"
+          }
+        ],
+        "evidence": "At Polygon block 92140615, the EIP-1967 admin slot resolved to ProxyAdmin 0xed69422ba3813968371ce9a55a8b40965725a117, whose owner() returned 0x88f239d6629e98d6828fdba8f8f415d4b903af4a. The reviewed ProxyAdmin path has no timelock delay and can replace the mint-critical implementation."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x418126bb59457afdba1ecf376f97400b4157425d",
+        "deploymentRefs": [
+          "fraxtal:0x418126bb59457afdba1ecf376f97400b4157425d"
+        ],
+        "label": "VCHF Fraxtal token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40052621,
+        "sources": [
+          {
+            "label": "VCHF Fraxtal verified implementation",
+            "url": "https://fraxscan.com/address/0x1891291474fe677cb63e47cc347e6b8bc0c43b4a"
+          },
+          {
+            "label": "Fraxtal PublicNode RPC",
+            "url": "https://fraxtal-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Fraxtal block 40052621, the proxy resolves to VNXCToken implementation 0x1891291474fe677cb63e47cc347e6b8bc0c43b4a. Verified source gates mint() through isMinter() and a per-minter allowance; the chain-local issuer owner is confirmed as the active minter/admin. The allowance is not treated as an immutable economic cap because the issuer admin can reconfigure it and mint logic is upgradeable."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xd5086f514af5d820ee58a73e9628b5d21f3ba54a",
+        "deploymentRefs": [
+          "fraxtal:0x418126bb59457afdba1ecf376f97400b4157425d"
+        ],
+        "label": "VCHF Fraxtal VNX issuer owner / minter-admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40052621,
+        "sources": [
+          {
+            "label": "VCHF Fraxtal verified token",
+            "url": "https://fraxscan.com/address/0x418126bb59457afdba1ecf376f97400b4157425d"
+          }
+        ],
+        "evidence": "At Fraxtal block 40052621, owner() returned 0xd5086f514af5d820ee58a73e9628b5d21f3ba54a and owner-context isAdmin() and isMinter() reads returned true. The verified VNXCToken source gates configureMinter(), setMinterRole(), and mint() through the issuer-controlled authority path, with no timelock or fixed aggregate cap."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xd5086f514af5d820ee58a73e9628b5d21f3ba54a",
+        "deploymentRefs": [
+          "fraxtal:0x418126bb59457afdba1ecf376f97400b4157425d"
+        ],
+        "label": "VCHF Fraxtal proxy-admin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 40052621,
+        "sources": [
+          {
+            "label": "VCHF Fraxtal proxy",
+            "url": "https://fraxscan.com/address/0x418126bb59457afdba1ecf376f97400b4157425d"
+          }
+        ],
+        "evidence": "At Fraxtal block 40052621, the EIP-1967 admin slot resolved to ProxyAdmin 0x516fec20679a41b591780613b28449f2a813af5b, whose owner() returned 0xd5086f514af5d820ee58a73e9628b5d21f3ba54a. The reviewed ProxyAdmin path has no timelock delay and can replace the mint-critical implementation."
+      },
+      {
+        "chain": "solana",
+        "address": "51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY",
+        "deploymentRefs": [
+          "solana:AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch"
+        ],
+        "label": "VCHF Solana SPL mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "VCHF Solana mint",
+            "url": "https://solscan.io/token/AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "The Solana mainnet parsed mint account read on 2026-08-16 reports mintAuthority and freezeAuthority as 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY. This is the issuer signer, not a bridge program, and SPL mint authority can increase supply without a protocol cap."
+      },
+      {
+        "chain": "tezos",
+        "address": "KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq",
+        "deploymentRefs": [
+          "tezos:KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq"
+        ],
+        "label": "VCHF Tezos FA2 mint entrypoint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "VCHF Tezos contract",
+            "url": "https://api.tzkt.io/v1/contracts/KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq"
+          },
+          {
+            "label": "VCHF Tezos contract code",
+            "url": "https://api.tzkt.io/v1/contracts/KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq/code"
+          }
+        ],
+        "evidence": "TzKT identifies the authored deployment as a VNX FA2 asset with an explicit mint entrypoint. Current storage names owner tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3 and RBAC KT1KL1zq1BG4UHSagHDqXDhRuNtYnCY6u3qd; the mint path is issuer-controlled and no quantitative cap is exposed in the reviewed storage."
+      },
+      {
+        "chain": "tezos",
+        "address": "tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3",
+        "deploymentRefs": [
+          "tezos:KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq"
+        ],
+        "label": "VCHF Tezos owner / minter-admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "VCHF Tezos storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq/storage"
+          }
+        ],
+        "evidence": "Current TzKT storage identifies tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3 as the FA2 owner and the RBAC contract owner. The owner is therefore the issuer-side authority for the mint path and can change the reviewed RBAC/implementation boundary without a recorded timelock."
+      },
+      {
+        "chain": "tezos",
+        "address": "KT1KL1zq1BG4UHSagHDqXDhRuNtYnCY6u3qd",
+        "deploymentRefs": [
+          "tezos:KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq"
+        ],
+        "label": "VCHF Tezos RBAC contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "VCHF Tezos RBAC contract",
+            "url": "https://api.tzkt.io/v1/contracts/KT1KL1zq1BG4UHSagHDqXDhRuNtYnCY6u3qd"
+          },
+          {
+            "label": "VCHF Tezos RBAC bearers",
+            "url": "https://api.tzkt.io/v1/bigmaps/616627/keys?limit=100"
+          }
+        ],
+        "evidence": "The current RBAC storage has two active bearer records, tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3 and tz1cHbzZQwRiThsmCjSPodiv9SWoHEtnciWH, and a role-admin relation in the live bigmaps. The RBAC contract is the route's mint authorization boundary; its bearer set is retained here rather than collapsed into bridge risk."
+      },
+      {
+        "chain": "tezos",
+        "address": "tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3",
+        "deploymentRefs": [
+          "tezos:KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq"
+        ],
+        "label": "VCHF Tezos owner / implementation authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "VCHF Tezos storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq/storage"
+          },
+          {
+            "label": "VCHF Tezos contract code",
+            "url": "https://api.tzkt.io/v1/contracts/KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq/code"
+          }
+        ],
+        "evidence": "Current FA2 storage exposes implementation KT1AT3k4NuZgjYpnCuETDyCykACNiSrHY8dp and owner tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3. The reviewed owner/RBAC upgrade boundary has no recorded delay and can replace mint-critical FA2 logic."
+      },
+      {
+        "chain": "xrpl",
+        "address": "rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+        "deploymentRefs": [
+          "xrpl:VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3"
+        ],
+        "label": "VCHF XRPL issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "observedBlock": 106341793,
+        "sources": [
+          {
+            "label": "VCHF XRPL issuer account",
+            "url": "https://livenet.xrpl.org/accounts/VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3"
+          },
+          {
+            "label": "XRPL validated account_info",
+            "url": "https://xrplcluster.com"
+          }
+        ],
+        "evidence": "At validated XRPL ledger 106341793, account_info confirms rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3 as the issuer account for the VCHF currency. XRPL issued-currency supply is created by the issuer through trustline balances rather than a fixed token cap, so this remains an issuer-direct mint path."
+      },
+      {
+        "chain": "icp",
+        "address": "cpbhu-5iaaa-aaaad-aalta-cai",
+        "deploymentRefs": [
+          "icp:ly36x-wiaaa-aaaai-aqj7q-cai"
+        ],
+        "label": "VCHF ICP ledger controller cpbhu",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "ICP VCHF Ledger controller state",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/ly36x-wiaaa-aaaai-aqj7q-cai"
+          }
+        ],
+        "evidence": "The current ICP dashboard API lists cpbhu-5iaaa-aaaad-aalta-cai as one of three controllers of the VCHF Ledger canister. A canister controller can replace ledger code and thereby alter mint-critical logic; no bridge program or route-level conservation mechanism is evidenced."
+      },
+      {
+        "chain": "icp",
+        "address": "klvbi-oehqk-57py5-nwtdd-y54c7-bzj4v-4bepc-7ebp4-rhgkm-73w2s-lqe",
+        "deploymentRefs": [
+          "icp:ly36x-wiaaa-aaaai-aqj7q-cai"
+        ],
+        "label": "VCHF ICP ledger controller klvbi",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "ICP VCHF Ledger controller state",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/ly36x-wiaaa-aaaai-aqj7q-cai"
+          }
+        ],
+        "evidence": "The current ICP dashboard API lists klvbi-oehqk-57py5-nwtdd-y54c7-bzj4v-4bepc-7ebp4-rhgkm-73w2s-lqe as one of three controllers of the VCHF Ledger canister. A canister controller can replace ledger code and thereby alter mint-critical logic; no bridge program or route-level conservation mechanism is evidenced."
+      },
+      {
+        "chain": "icp",
+        "address": "54s52-xw4bt-zckmp-2gi6w-m2xtm-vdb7t-vwcdh-5bzie-y52et-fyewx-aae",
+        "deploymentRefs": [
+          "icp:ly36x-wiaaa-aaaai-aqj7q-cai"
+        ],
+        "label": "VCHF ICP ledger controller 54s52",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "ICP VCHF Ledger controller state",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/ly36x-wiaaa-aaaai-aqj7q-cai"
+          }
+        ],
+        "evidence": "The current ICP dashboard API lists 54s52-xw4bt-zckmp-2gi6w-m2xtm-vdb7t-vwcdh-5bzie-y52et-fyewx-aae as one of three controllers of the VCHF Ledger canister. A canister controller can replace ledger code and thereby alter mint-critical logic; no bridge program or route-level conservation mechanism is evidenced."
+      },
+      {
+        "chain": "stellar",
+        "address": "GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+        "deploymentRefs": [
+          "stellar:VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN"
+        ],
+        "label": "VCHF Stellar issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "VCHF Stellar issuer account",
+            "url": "https://horizon.stellar.org/accounts/GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN"
+          },
+          {
+            "label": "VCHF Stellar asset",
+            "url": "https://stellar.expert/explorer/public/asset/VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN"
+          }
+        ],
+        "evidence": "The current Horizon account read confirms the VCHF issuer account has two weight-1 signers and zero low, medium, and high thresholds, with auth_revocable and clawback enabled. The issuer account is therefore a direct, unbounded native issuance authority rather than a bridge representation."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -229,6 +936,50 @@
           "url": "https://ethereum.publicnode.com"
         },
         {
+          "label": "VCHF Base verified implementation",
+          "url": "https://base.blockscout.com/address/0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1"
+        },
+        {
+          "label": "VCHF Arbitrum verified implementation",
+          "url": "https://arbitrum.blockscout.com/address/0xd3bfc79d720bc625d02dc46d822040ac7cb5045a"
+        },
+        {
+          "label": "VCHF Avalanche verified implementation",
+          "url": "https://snowtrace.io/address/0x832cba8c924b4e3128ab509a803d66738bc51708"
+        },
+        {
+          "label": "VCHF Celo verified implementation",
+          "url": "https://celoscan.io/address/0xf3e535d35b662015765a2d73e81db5735562b569"
+        },
+        {
+          "label": "VCHF Polygon verified implementation",
+          "url": "https://polygon.blockscout.com/address/0x5cb0365674da4d167755bd3fb99a09916258ef32"
+        },
+        {
+          "label": "VCHF Fraxtal verified implementation",
+          "url": "https://fraxscan.com/address/0x1891291474fe677cb63e47cc347e6b8bc0c43b4a"
+        },
+        {
+          "label": "VCHF Solana parsed mint state",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "VCHF Tezos storage and code",
+          "url": "https://api.tzkt.io/v1/contracts/KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq/storage"
+        },
+        {
+          "label": "VCHF XRPL validated issuer account",
+          "url": "https://xrplcluster.com"
+        },
+        {
+          "label": "VCHF ICP Ledger controller state",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/ly36x-wiaaa-aaaai-aqj7q-cai"
+        },
+        {
+          "label": "VCHF Stellar Horizon issuer account",
+          "url": "https://horizon.stellar.org/accounts/GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN"
+        },
+        {
           "label": "AREVA VNX fiat-token report for 2024",
           "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
         },
@@ -245,9 +996,9 @@
           "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
         }
       ],
-      "evidence": "Mint-path findings remain supported at Ethereum block 25295081: token rbacManager 0xCdB386...c9AE and 118 successful mint() calls identify EOA 0x7b0c15...9403 as the sole observed minter. Upgrade-path review at block 25531301 confirmed VNXProxyAdmin 0x817f8a...8165 as the EIP-1967 admin and showed that upgrade() and upgradeAndCall() require role 1 in manager 0x2B535E...114b rather than Ownable owner(). Role 1 had zero bearers, while self-administered role 0 had two code-empty EOA bearers, 0x45a149...545a and 0xAcC56E...311A, either able to self-grant role 1 without delay. The first EOA also owned VNXProxyAdmin and could independently redirect the proxy admin through changeProxyAdmin(). Mint-tier review (2026-07-15): AREVA General Auditing and Trust Company Limited issued annual agreed-upon-procedures reports for 2023 and 2024, but the latest covers 2024-12-31 and was published 2025-02-05; the expected 2025 annual report is overdue as of 2026-07-15, so current recurring reconciliation is not established. Liechtenstein FMA's register matches VNX Commodities AG only as a TT Service Provider, not a prudential EMT issuer. Economic-posture fields reviewed 2026-08-15: issuer-controlled EOAs can mint or alter mint logic without delay, and the stale partial annual report does not establish current whole-supply reconciliation. Wave 2 external verification 2026-08-15: VNX's transparency and report inventory still exposes no later VCHF whole-supply report, while the issuer has suspended exchange and bridging operations; reconciliation remains unknown. Sol reconciliation adjudication 2026-08-15: the two historical annual AUP reports do not establish a current recurring control because the 2025 report is missing relative to the claimed cadence and the operations that produced the reports have been suspended.",
-      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Mint-path review on 2026-08-16 confirms that all 12 authored routes are issuer-native and none is a bridge representation. Ethereum remains fully reconstructed at block 25295081 for the VNXManager minter path and at block 25531301 for the VNXProxyAdmin no-delay upgrade path: role 1 had zero bearers, while self-administered role 0 had two code-empty EOA bearers able to self-grant upgrade access. Current RPC and verified-source reads re-confirmed the Base, Arbitrum, Avalanche, Celo, Polygon, and Fraxtal VNXCToken implementations, chain-local owner-context mint/admin authority, EIP-1967 proxy admins, and zero-delay admin ownership at the recorded 2026-08-16 blocks. Solana parsed mint state identifies issuer signer 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY as mint authority; Tezos storage identifies the FA2 owner, RBAC contract, active RBAC bearer set, and mutable implementation; XRPL validated account_info identifies the VCHF issuer account; ICP dashboard state lists all three VCHF Ledger controllers; and Stellar Horizon confirms the issuer account's two signers and zero thresholds. These controls are native issuance evidence and are intentionally not duplicated as bridge controls. The latest AREVA fiat-token report still covers 2024-12-31 and the expected 2025 annual report remains unavailable, so current whole-supply reconciliation is unknown. Issuer-controlled EOAs and canister/FA2 administrators can mint directly or replace mint logic without a recorded delay, preserving the unbounded-or-compromised posture.",
+      "reviewer": "Codex FIX-05 vchf-vnx mint-authority migration",
+      "reviewedAt": "2026-08-16"
     }
   }
 }

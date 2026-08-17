@@ -22,18 +22,26 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "EURC uses Circle CCTP V2 native burn-and-mint transfers across supported networks including Ethereum, Avalanche, Base, and Solana, so durable cross-chain movement depends on Circle issuer-native mint/burn infrastructure rather than a third-party liquidity bridge.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "summary": "EURC's seven Circle native issuer deployments are not evidence of a CCTP route. No current EURC CCTP v1/v2 burn-mint path was verified: the official V2 TokenMinter 0xfd78EE919681417d192449715b2594ab58f5D002 returned zero EURC minterAllowance at Ethereum block 25770757, Base block 50066185, and Avalanche block 92981816, while the official Ethereum V1 TokenMinter 0xc4922d64a24675E16e1586e3e3Aa56C06fABe907 also returned zero EURC allowance at Ethereum block 25770757. Polygon and Sonic remain reviewed bridge representations; Tempo's Stargate pool, peers, and controller are incomplete; Cardano's Wanchain route is unresolved after the current token-pairs API omitted Cardano. Bridge exposure therefore remains conservatively classified as single-chain-or-native.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex EURC mint-bridge-boundary migration",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Circle EURC",
-        "url": "https://www.circle.com/eurc"
+        "label": "Circle current EURC contract addresses",
+        "url": "https://developers.circle.com/stablecoins/eurc-contract-addresses"
       },
       {
-        "label": "Circle EURC supported blockchains",
-        "url": "https://help.circle.com/s/article/What-blockchains-is-Euro-Coin-available-on"
+        "label": "Circle CCTP supported chains and domains",
+        "url": "https://developers.circle.com/cctp/concepts/supported-chains-and-domains"
+      },
+      {
+        "label": "Circle CCTP contract addresses",
+        "url": "https://developers.circle.com/cctp/references/contract-addresses"
+      },
+      {
+        "label": "Circle CCTP technical guide",
+        "url": "https://developers.circle.com/cctp/references/technical-guide"
       }
     ],
     "routes": [
@@ -41,15 +49,16 @@
         "id": "ethereum:0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
         "destinationChain": "ethereum",
         "contractAddress": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
-        "protocol": "Circle CCTP v2",
+        "protocol": "Circle native EURC",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Verified Circle FiatToken native EURC issuance. No EURC CCTP route was verified: official V2 and V1 TokenMinter minterAllowance(EURC) calls returned zero at Ethereum block 25770757.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Circle EURC",
@@ -59,21 +68,23 @@
             "label": "Circle EURC supported blockchains",
             "url": "https://help.circle.com/s/article/What-blockchains-is-Euro-Coin-available-on"
           }
-        ]
+        ],
+        "observedBlock": 25770830
       },
       {
         "id": "base:0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
         "destinationChain": "base",
         "contractAddress": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
-        "protocol": "Circle CCTP v2",
+        "protocol": "Circle native EURC",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Verified Circle FiatToken native EURC issuance. No EURC CCTP route was verified: official V2 TokenMinter minterAllowance(EURC) returned zero at Base block 50066185.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Circle EURC",
@@ -83,21 +94,23 @@
             "label": "Circle EURC supported blockchains",
             "url": "https://help.circle.com/s/article/What-blockchains-is-Euro-Coin-available-on"
           }
-        ]
+        ],
+        "observedBlock": 50066257
       },
       {
         "id": "avalanche:0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
         "destinationChain": "avalanche",
         "contractAddress": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
-        "protocol": "Circle CCTP v2",
+        "protocol": "Circle native EURC",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Verified Circle FiatToken native EURC issuance. No EURC CCTP route was verified: official V2 TokenMinter minterAllowance(EURC) returned zero at Avalanche block 92981816.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Circle EURC",
@@ -107,7 +120,8 @@
             "label": "Circle EURC supported blockchains",
             "url": "https://help.circle.com/s/article/What-blockchains-is-Euro-Coin-available-on"
           }
-        ]
+        ],
+        "observedBlock": 92981952
       },
       {
         "id": "worldchain:0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b",
@@ -116,24 +130,24 @@
         "protocol": "Circle native EURC",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on World Chain at block 32587782: EURC token 0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b is Circle's FiatToken proxy (symbol EURC, 6 decimals; masterMinter() = 0x97820edc2c2fb07b0f1309b9523a2232507c3fce, owner() = 0x6d2e0adc8251244e33220dbd8dea20186ad8537d, blacklister/pauser set; FiatToken impl 0x8378ae07072d24fc8f572fbce35700352d0aae6a, proxy admin 0xf40086691722eec331624cd15f82c89b87b65e36). Circle-native EURC issuance.",
+        "reviewNote": "Verified on World Chain at block 33793117: EURC token 0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b is Circle's FiatToken proxy (symbol EURC, 6 decimals; masterMinter() = 0x97820edc2c2fb07b0f1309b9523a2232507c3fce, owner() = 0x6d2e0adc8251244e33220dbd8dea20186ad8537d, blacklister/pauser set; FiatToken impl 0x8378ae07072d24fc8f572fbce35700352d0aae6a, proxy admin 0xf40086691722eec331624cd15f82c89b87b65e36). Circle-native EURC issuance; no EURC CCTP path was verified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Circle EURC",
             "url": "https://www.circle.com/eurc"
           },
           {
-            "label": "EURC on World Chain explorer (verified 2026-07-20)",
+            "label": "EURC on World Chain explorer (verified 2026-08-16)",
             "url": "https://worldscan.org/address/0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b"
           }
         ],
-        "observedBlock": 32587782
+        "observedBlock": 33793117
       },
       {
         "id": "stellar:EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
@@ -142,13 +156,13 @@
         "protocol": "Circle native EURC",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Circle-native EURC issuance on Stellar: asset EURC issued by Circle's Stellar issuer account GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2 (same issuer-address convention as the reviewed native Stellar USDC row in usdc-circle.json).",
+        "reviewNote": "Circle-native EURC issuance on Stellar: asset EURC issued by Circle's Stellar issuer account GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2, with the current issuer account retaining its 2-of-4 signer policy at ledger 63986693. No EURC CCTP attestation or mint path was verified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Circle EURC",
@@ -158,21 +172,23 @@
             "label": "EURC issuer account on Stellar Expert",
             "url": "https://stellar.expert/explorer/public/asset/EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2"
           }
-        ]
+        ],
+        "observedBlock": 63986693
       },
       {
         "id": "solana:HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
         "destinationChain": "solana",
         "contractAddress": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
-        "protocol": "Circle CCTP v2",
+        "protocol": "Circle native EURC",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "burn-mint",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Verified Circle native EURC SPL issuance at finalized Solana slot 439732481: mint authority remains the issuer's 2-of-4 multisig. Circle's current CCTP documentation describes USDC, not EURC, and no EURC CCTP attestation or mint path was verified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Circle EURC",
@@ -182,7 +198,8 @@
             "label": "Circle EURC supported blockchains",
             "url": "https://help.circle.com/s/article/What-blockchains-is-Euro-Coin-available-on"
           }
-        ]
+        ],
+        "observedBlock": 439732481
       },
       {
         "id": "cronos:0xa6de01a2d62c6b5f3525d768f34d276652c554c8",
@@ -191,24 +208,24 @@
         "protocol": "Circle native EURC",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
+        "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Cronos at block 83679942: EURC token 0xa6de01a2d62c6b5f3525d768f34d276652c554c8 is Circle's FiatToken proxy (symbol EURC, 6 decimals; masterMinter() = 0x39fba46699f2e93fbe6bd2df6c9c91b523b40455, owner() = 0x192e362b2810f604e0618b5033d26f3b85e05af9, blacklister/pauser set; FiatToken impl 0x007f588ca3ffe53f20cb03553ca38bb13542ff89, proxy admin 0xbd13d015904514a5da1e2ee493a6fe15d0260785). Circle-native EURC issuance.",
+        "reviewNote": "Verified on Cronos at block 88620633: EURC token 0xa6de01a2d62c6b5f3525d768f34d276652c554c8 is a live Circle FiatToken proxy (symbol EURC, 6 decimals; masterMinter() = 0x39fba46699f2e93fbe6bd2df6c9c91b523b40455, owner() = 0x192e362b2810f604e0618b5033d26f3b85e05af9, FiatToken impl 0x007f588ca3ffe53f20cb03553ca38bb13542ff89, proxy admin 0xbd13d015904514a5da1e2ee493a6fe15d0260785). Circle-native EURC issuance; Circle's current public EURC contract list omits Cronos, so current support documentation remains an evidence gap. No EURC CCTP path was verified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
             "label": "Circle EURC",
             "url": "https://www.circle.com/eurc"
           },
           {
-            "label": "EURC on Cronoscan (verified 2026-07-20)",
+            "label": "EURC on Cronoscan (verified 2026-08-16)",
             "url": "https://cronoscan.com/address/0xa6de01a2d62c6b5f3525d768f34d276652c554c8"
           }
         ],
-        "observedBlock": 83679942
+        "observedBlock": 88620633
       },
       {
         "id": "polygon:0x8a037dbca8134ffc72c362e394e35e0cad618f85",
@@ -223,7 +240,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Polygon 2026-07-20 (block 90544043): token 0x8a037dbca8134ffc72c362e394e35e0cad618f85 reports name 'Euro Coin (PoS)', symbol EUROC; its sole DEPOSITOR_ROLE member is 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa (the Polygon PoS bridge ChildChainManagerProxy), making the canonical Polygon bridge the mint authority for this lock-mint representation of Ethereum EURC.",
+        "reviewNote": "Verified on Polygon 2026-08-16 (block 92144134): token 0x8a037dbca8134ffc72c362e394e35e0cad618f85 reports name 'Euro Coin (PoS)', symbol EUROC; its sole DEPOSITOR_ROLE member is 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa (the Polygon PoS bridge ChildChainManagerProxy), making the canonical Polygon bridge the mint authority for this lock-mint representation of Ethereum EURC.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "polygon",
         "controllerAddress": "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
@@ -231,11 +248,11 @@
           "protocol:polygon-pos-bridge",
           "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 90544043,
+        "observedAt": "2026-08-16",
+        "observedBlock": 92144134,
         "sources": [
           {
-            "label": "EURC.e on Polygonscan (DEPOSITOR_ROLE verified 2026-07-20)",
+            "label": "EURC.e on Polygonscan (DEPOSITOR_ROLE verified 2026-08-16)",
             "url": "https://polygonscan.com/address/0x8a037dbca8134ffc72c362e394e35e0cad618f85"
           },
           {
@@ -257,7 +274,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Sonic 2026-07-20 (block 76217432): token 0xe715cba7b5ccb33790cebff1436809d36cb17e57 reports name 'Bridged EURC (Sonic Labs)', symbol EURC.e; masterMinter() = 0x589cfd082b670998f4181cc6007931966f94bec7 (the mint authority), whose owner() = 0x45fbf50f13f4491ca1f5931f24525c3583cfaf15, a Safe multisig with getThreshold/getOwners = 3-of-4, also the token's pauser/blacklister. DefiLlama attributes the route to the Sonic bridge from Ethereum.",
+        "reviewNote": "Verified on Sonic 2026-08-16 (block 77633367): token 0xe715cba7b5ccb33790cebff1436809d36cb17e57 reports name 'Bridged EURC (Sonic Labs)', symbol EURC.e; masterMinter() = 0x589cfd082b670998f4181cc6007931966f94bec7 (the mint authority), whose owner() = 0x45fbf50f13f4491ca1f5931f24525c3583cfaf15, a Safe multisig with getThreshold/getOwners = 3-of-4, also the token's pauser/blacklister. Sonic's official Gateway is 0x9Ef7629F9B930168b76283AdD7120777b3c895b3, and the route is a bridge representation from Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "sonic",
         "controllerAddress": "0x589cfd082b670998f4181cc6007931966f94bec7",
@@ -265,11 +282,11 @@
           "protocol:sonic-gateway",
           "contract:sonic:0x589cfd082b670998f4181cc6007931966f94bec7"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 76217432,
+        "observedAt": "2026-08-16",
+        "observedBlock": 77633367,
         "sources": [
           {
-            "label": "Bridged EURC on Sonicscan (masterMinter verified 2026-07-20)",
+            "label": "Bridged EURC on Sonicscan (masterMinter verified 2026-08-16)",
             "url": "https://sonicscan.org/address/0xe715cba7b5ccb33790cebff1436809d36cb17e57"
           },
           {
@@ -291,19 +308,17 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Tempo 2026-07-20 (block 30819524): TIP-20 token 0x20c0000000000000000000001621e21f71cf12fb reports name 'Bridged EURC (Stargate)', symbol EURC.e — the Stargate-bridged EURC representation (DefiLlama EURC chain balances attribute the Tempo route to Stargate). TIP-20 role administration lives in Tempo's precompile interface, so the pool's signer set is not enumerable via standard EVM calls; the token contract is the mint/burn authority for the representation.",
+        "reviewNote": "Verified on Tempo 2026-08-16 (block 35108454): TIP-20 token 0x20c0000000000000000000001621e21f71cf12fb reports name 'Bridged EURC (Stargate)', symbol EURC.e, supporting its classification as the Stargate-bridged EURC representation. LayerZero's current Stargate documentation confirms the generic pool/OFT and messaging model, but a current EURC-specific pool, peer set, or controller was not identified; Tempo TIP-20 role administration is exposed through a precompile and is not enumerable from standard EVM calls. Controller and peer evidence remains incomplete.",
         "mappingVersion": "bridge-route-facts-v1",
-        "controllerChain": "tempo",
-        "controllerAddress": "0x20c0000000000000000000001621e21f71cf12fb",
         "failureDomainKeys": [
           "protocol:layerzero-stargate",
           "contract:tempo:0x20c0000000000000000000001621e21f71cf12fb"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 30819524,
+        "observedAt": "2026-08-16",
+        "observedBlock": 35108454,
         "sources": [
           {
-            "label": "EURC.e on Tempo explorer (verified 2026-07-20)",
+            "label": "EURC.e on Tempo explorer (verified 2026-08-16)",
             "url": "https://explore.tempo.xyz/address/0x20c0000000000000000000001621e21f71cf12fb"
           },
           {
@@ -318,32 +333,35 @@
         "destinationChain": "cardano",
         "canonicalChain": "ethereum",
         "contractAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff93545555243",
-        "protocol": "Wanchain bridge (EURC)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
-        "semantics": "lock-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Cardano via Koios 2026-07-20: asset EURC under policy 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935 (Wanchain's Cardano bridge policy, tokenPairID 894 per mint metadata) has total supply 178,479,391 (= 178.48 EURC at 6 decimals), matching DefiLlama's reported Cardano EURC supply exactly. Mint/burn of the representation is performed by the Wanchain bridge's validator group under this policy against locked Ethereum EURC.",
+        "protocol": "Wanchain EURC route (unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Cardano Koios at block 13818175 confirms nonzero EURC asset supply of 178,479,391 units under policy 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935, and token metadata identifies a Wanchain mapping. However, Wanchain's current tokenPairs API returned no Cardano EURC pair, so the current Wanchain route, validator group, lockbox, and supply-conserving mint/burn invariant are not verified. This route remains stale/unresolved until a current pair or primary Wanchain policy/deployment source proves those facts.",
         "mappingVersion": "bridge-route-facts-v1",
-        "controllerChain": "cardano",
-        "controllerAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935",
         "failureDomainKeys": [
           "protocol:wanchain-bridge",
           "contract:cardano:25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "Koios EURC asset info (supply verified 2026-07-20)",
+            "label": "Koios EURC asset info (supply verified 2026-08-16)",
             "url": "https://api.koios.rest/api/v1/asset_info?_asset_policy=25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935&_asset_name=45555243"
+          },
+          {
+            "label": "Wanchain current token-pairs API (Cardano pair absent)",
+            "url": "https://bridge-api.wanchain.org/api/tokenPairs"
           },
           {
             "label": "DefiLlama EURC chain balances",
             "url": "https://stablecoins.llama.fi/stablecoin/50"
           }
-        ]
+        ],
+        "observedBlock": 13818175
       }
     ]
   }

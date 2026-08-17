@@ -5,11 +5,14 @@
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
-    "summary": "syrupUSDC is Maple's ERC-4626 strategy-vault receipt for USDC lent to institutional borrowers; shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",
+    "summary": "syrupUSDC is Maple's ERC-4626 strategy-vault receipt for USDC lent to institutional borrowers; Ethereum is the sole canonical native-issuance deployment, where shares are minted against USDC deposits and do not create base USDC supply, so durable mint authority is inherited from USDC (usdc-circle). Base, Arbitrum, and Solana are CCIP bridge representations assessed under Bridge Risk, not additional Mint Authority deployments.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        "deploymentRefs": [
+          "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+        ],
         "label": "Maple syrupUSDC ERC-4626 vault token",
         "role": "wrapper",
         "authorityType": "contract",
@@ -22,6 +25,9 @@
       {
         "chain": "ethereum",
         "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "deploymentRefs": [
+          "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+        ],
         "label": "Inherited USDC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -39,6 +45,9 @@
       {
         "chain": "ethereum",
         "address": "0xFcb19e6a322b27c06842A71e8c725399f049AE3a",
+        "deploymentRefs": [
+          "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+        ],
         "label": "Inherited USDC token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -58,9 +67,9 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295167: syrupUSDC asset() = USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 confirmed; EIP-1967 impl slot = 0x0, admin slot = 0x0 (not upgradeable, no proxy admin surface). Wrapper is a non-upgradeable ERC-4626 vault; durable mint authority inherits from reviewed parent USDC (usdc-circle). Economic-control evidence reviewed 2026-07-15: Maple launched recurring The Network Firm reports on 2026-05-07, sourcing loan collateral directly from custodians and onchain activity for syrupUSDC; the current report dashboard was reviewed 2026-07-15. No exact issuer/product prudential registry entry was found. Economic-posture fields reviewed 2026-08-15: local syrupUSDC shares are immutably deposit-gated by USDC; Maple's recurring third-party reporting supports periodic attestation-only posture.",
+      "evidence": "At Ethereum block 25771046 on 2026-08-16, syrupUSDC asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalAssets() = 1,049,015,912.169937 USDC, and totalSupply() = 890,051,815.053496 shares; EIP-1967 implementation and admin slots were both zero, confirming the non-upgradeable MaplePool wrapper. Base 0x660975730059246a68521a3e2fbd4740173100f5, Arbitrum 0x41ca7586cc1311807b4605fbb748a3b8862b42b5, and Solana AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj are CCIP burn/mint representations rather than independent native-issuance deployments, so their token roles, pools, receiver, timelocks, and Solana authorities are assessed under bridgeRouteRisk. Durable mint authority inherits from reviewed parent USDC (usdc-circle). Economic-control evidence reviewed 2026-07-15: Maple launched recurring The Network Firm reports on 2026-05-07, sourcing loan collateral directly from custodians and onchain activity for syrupUSDC; the current report dashboard was reviewed 2026-07-15. No exact issuer/product prudential registry entry was found. Economic-posture fields reviewed 2026-08-15: local syrupUSDC shares are immutably deposit-gated by USDC; Maple's recurring third-party reporting supports periodic attestation-only posture.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {

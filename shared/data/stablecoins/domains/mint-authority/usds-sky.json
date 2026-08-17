@@ -7,6 +7,9 @@
     "summary": "USDS ERC-20 supply is minted through USDS_JOIN against Vat.dai balances, while Sky governance/Pause Proxy remains authorized to change system modules, parameters, and USDS permissions.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+      ],
       "proxyAddresses": [
         "0xdC035D45d973E3EC169d2276DDab16f1e407384F"
       ],
@@ -40,6 +43,9 @@
       {
         "chain": "ethereum",
         "address": "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB",
+        "deploymentRefs": [
+          "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+        ],
         "label": "USDS_JOIN token adapter",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -62,6 +68,9 @@
       {
         "chain": "ethereum",
         "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "deploymentRefs": [
+          "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+        ],
         "label": "Sky Pause Proxy governance executor",
         "role": "governor",
         "authorityType": "dao-governor",

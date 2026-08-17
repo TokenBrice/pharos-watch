@@ -4,9 +4,12 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "USSD is a Sonic Labs dollar built on Frax's frxUSD infrastructure. The tracked direct mint path is a BrandedCustodian that accepts local frxUSD and calls the USSD token's MINTER_ROLE; external Frax routes expose a broader issuer-administered set of approved USD assets and tokenized Treasury reserves.",
+    "summary": "USSD's canonical native issuance is Sonic-only: the Sonic BrandedCustodian accepts local frxUSD and the BrandedFactory/terminal Safe control minter authorization, mint cap, and immediate proxy upgrades. Ethereum, Base, Arbitrum, Optimism, and Scroll use uniform branded-token deployments whose local custodians, factories, and ProxyAdmin owners are representation-side bridge controls; their approved-collateral and LayerZero governance is reviewed in bridgeRouteRisk, not canonical Mint Authority.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "sonic:0x000000000eccff26b795f73fb0a70d48da657fef"
+      ],
       "proxyAddresses": [
         "0x000000000eccff26b795f73fb0a70d48da657fef"
       ],
@@ -45,6 +48,9 @@
         "canRaiseCap": false,
         "chain": "sonic",
         "address": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+        "deploymentRefs": [
+          "sonic:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
         "capDescription": "BrandedCustodian.mintCap() returned uint256.max at Sonic block 75932905. Its public deposit/mint path takes local frxUSD, calls USSD mint(), and enforces the cap after minting; the custodian owner controls setMintCap().",
         "observedAt": "2026-07-14",
         "observedBlock": 75932905,
@@ -76,6 +82,9 @@
         "canRaiseCap": true,
         "chain": "sonic",
         "address": "0x63e89638743a409e2389f06a3f778a4570314d7d",
+        "deploymentRefs": [
+          "sonic:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The live BrandedCustodian owner is this BrandedFactory, so it is the on-chain owner authority for setMintCap(). The token's FACTORY_ROLE is also held by this address, and the verified GeniusDollar source sets FACTORY_ROLE as MINTER_ROLE's admin role.",
         "observedAt": "2026-07-14",
@@ -111,8 +120,12 @@
         "threshold": 3,
         "signerCount": 6,
         "canRaiseCap": true,
+        "capDescription": "This Safe owns BrandedFactory, which owns the direct BrandedCustodian and holds FACTORY_ROLE, the MINTER_ROLE administrator; it is the terminal authority for the custodian mint-cap and minter-authorization path. The same Safe owns ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. Its immediate upgradeAndCall path can replace USSD mint-critical implementation logic without a timelock.",
         "chain": "sonic",
         "address": "0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac",
+        "deploymentRefs": [
+          "sonic:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
         "modulesOrGuardsStatus": "none-detected",
         "observedAt": "2026-07-14",
         "observedBlock": 75932905,
@@ -137,10 +150,6 @@
         "failureDomainKeys": [
           "sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
         ],
-        "routeChecks": {
-          "caps": "This Safe owns BrandedFactory, which owns the direct BrandedCustodian and holds FACTORY_ROLE, the MINTER_ROLE administrator; it is the terminal authority for the custodian mint-cap and minter-authorization path.",
-          "pausersAdminsUpgraders": "The same Safe owns ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. Its immediate upgradeAndCall path can replace USSD mint-critical implementation logic without a timelock."
-        },
         "evidence": "At Sonic block 75932905, both BrandedFactory.owner() and ProxyAdmin.owner() returned this Safe. BrandedFactory is the direct BrandedCustodian owner and the token's sole FACTORY_ROLE holder, so this is the terminal authority for authorizing minters and changing the direct-custodian mint-cap path. The same 3-of-6 Safe can authorize the ProxyAdmin's immediate upgradeAndCall path. Safe reads returned VERSION() = 1.4.1, the six listed owners, threshold 3, an empty module list, and a zero guard.",
         "sources": [
           {
@@ -170,9 +179,9 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At current blocks on Sonic (75932905), Ethereum (25531120), Base (48622804), Arbitrum (483776104), Optimism (154218090), and Scroll (34361168), all six tracked USSD deployments resolve to implementation 0x155384be… and ProxyAdmin 0x95081db6…. On Sonic, the verified implementation and role-grant logs resolve MINTER_ROLE to BrandedCustodian 0x54e144…, FACTORY_ROLE and the custodian owner to BrandedFactory 0x63e896…, and the ProxyAdmin owner to 0x87c7…. The token-side mint, cap, role-admin, and upgrade surfaces are therefore structured and current; the broader approved-collateral roster used by external Frax frxUSD routes remains a separate unresolved governance surface. The BrandedCustodian mintCap is uint256.max and its Factory owner can reset it, while ProxyAdmin upgrades have no enforced delay, so the economic cap is unbounded. Frax publishes the cited real-time balance-sheet view, supporting continuous reconciliation; reviewed sources do not identify a named prudential supervisor. The tracked token's direct minter, role administrator, and proxy upgrade controller are resolved on-chain, so the deployment-control review is scoreable; the collateral-roster question stays with the reserve review. modulesOrGuardsStatus recorded as not-applicable on 1 control(s) in this profile that are not Gnosis Safes (an issuer backend, a plain contract gateway, or a TimelockController expose no Safe module or guard surface); reviewed 2026-07-20.",
-      "reviewer": "P2 mint-free cohort; Claude V9 Phase 3 curation lane cur-14 (2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Sonic block 77630948 on 2026-08-16, the verified GeniusDollar implementation exposes mint(address,uint256) onlyRole(MINTER_ROLE), with FACTORY_ROLE as the MINTER_ROLE admin. MINTER_ROLE is held by Sonic BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03; its public deposit/mint path accepts local frxUSD and enforces a mintCap that currently reads uint256.max, while BrandedFactory 0x63e89638743a409e2389f06a3f778a4570314d7d owns the custodian and holds FACTORY_ROLE. The Sonic ProxyAdmin owner is Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac, a reviewed 3-of-6 Safe with an immediate upgradeAndCall path. These facts establish the canonical Sonic native mint path and preserve unbounded, continuously reconciled, unsupervised native annotations. Ethereum, Base, Arbitrum, Optimism, and Scroll have local branded custodians and factories for the cross-chain representation system; those destination authorities, ProxyAdmin owners, CrossChainRouter, RemoteHop, FraxtalHop, and LayerZero validation surfaces are bridge controls and are excluded from Mint Authority.",
+      "reviewer": "Codex FIX2-02 USSD Sonic Labs mint-authority migration",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "USSD docs",

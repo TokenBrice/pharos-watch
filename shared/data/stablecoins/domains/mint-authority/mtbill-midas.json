@@ -4,9 +4,16 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "mTBILL has independently mintable deployments on Ethereum, Base, Rootstock, Plume, and Etherlink. Five deposit vaults, two shared EOAs, and two chain-specific Safes currently hold M_TBILL_MINT_OPERATOR_ROLE. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and the shared admin EOA can change those grants immediately, while proxy upgrades pass through a two-day chain-local timelock.",
+    "summary": "mTBILL has independently issuer-native deployments on Ethereum, Base, Rootstock, Plume, and Etherlink. Five deposit vaults, two shared EOAs, and two chain-specific Safes currently hold M_TBILL_MINT_OPERATOR_ROLE. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and the shared admin EOA can change those grants immediately, while proxy upgrades pass through a two-day chain-local timelock. No production bridge representation is included in Mint Authority.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
+        "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+      ],
       "proxyAddresses": [
         "0xdd629e5241cbc5919847783e6c96b2de4754e438",
         "0xe85f2b707ec5ae8e07238f99562264f304e30109",
@@ -82,6 +89,13 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "ethereum:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
+          "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+        ],
         "canRaiseCap": false,
         "capDescription": "No on-chain supply cap was identified; each chain-local vault holds M_TBILL_MINT_OPERATOR_ROLE.",
         "address": "0x99361435420711723af805f08187c9e6bf796683",
@@ -112,6 +126,10 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+        ],
         "canRaiseCap": false,
         "capDescription": "No on-chain supply cap was identified; this EOA holds M_TBILL_MINT_OPERATOR_ROLE directly on both chains.",
         "address": "0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a",
@@ -139,6 +157,11 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
+          "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+        ],
         "canRaiseCap": false,
         "capDescription": "No on-chain supply cap was identified; this EOA holds M_TBILL_MINT_OPERATOR_ROLE directly on all three chains.",
         "address": "0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd",
@@ -171,6 +194,9 @@
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+        ],
         "canRaiseCap": false,
         "capDescription": "No on-chain supply cap was identified; this Safe holds M_TBILL_MINT_OPERATOR_ROLE directly.",
         "address": "0x5b087db30433bcf5781f385312b1114e8c4819cc",
@@ -213,6 +239,9 @@
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+        ],
         "canRaiseCap": false,
         "capDescription": "No on-chain supply cap was identified; this Safe holds M_TBILL_MINT_OPERATOR_ROLE directly.",
         "address": "0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5",
@@ -253,6 +282,13 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
+          "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+        ],
         "canRaiseCap": true,
         "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
         "threshold": 1,
@@ -296,6 +332,13 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "ethereum:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
+          "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+        ],
         "canRaiseCap": true,
         "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
         "timelockDelaySec": 0,
@@ -326,6 +369,13 @@
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
+        "deploymentRefs": [
+          "ethereum:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+          "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
+          "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
+        ],
         "canRaiseCap": true,
         "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
         "threshold": 1,
@@ -342,11 +392,6 @@
           "plume:0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b",
           "etherlink:0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
         ],
-        "routeChecks": {
-          "signingModel": "Each chain-local upgrade Safe is 1-of-3 with no enabled modules and a zero guard. The owner sets differ by chain, so the failure-domain keys retain each Safe independently.",
-          "rateLimits": "Every current ProxyAdmin is owned by a chain-local MidasTimelockController whose getMinDelay() returned 172800 seconds.",
-          "pausersAdminsUpgraders": "Each local Safe was the timelock's sole proposer, executor, and canceller; the delayed proxy-upgrade route is separate from immediate MidasAccessControl role administration."
-        },
         "observedAt": "2026-07-13",
         "sources": [
           {
@@ -377,9 +422,9 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Pinned chain state was reviewed at Ethereum 25527148, Base 48598894, Rootstock 9049318, Plume 80928370, and Etherlink 48212139. M_TBILL_MINT_OPERATOR_ROLE holders were: Ethereum vault 0x99361435420711723af805f08187c9e6bf796683; Base EOA 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a plus vault 0x8978e327fe7c72fa4eaf4649c23147e279ae1470; Rootstock 3-of-7 Safe 0x5b087db30433bcf5781f385312b1114e8c4819cc, vault 0xf454a52da2157686ef99702c0c19c0e8d66bc03c, and EOAs 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a and 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd; Plume EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd plus vault 0xb05f6aa8c2ea9ab8537cf09a9b765a21de249224; Etherlink 2-of-5 Safe 0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5, EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd, and vault 0xd65bfeb71271a4408ff335e59ecf6c5b21a33a70. Every chain also retained its local 1-of-3 Safe and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 as immediate DEFAULT_ADMIN_ROLE holders. All current mint-critical transparent proxies resolved through chain-local ProxyAdmins to two-day timelocks controlled by those local Safes. Economic-control evidence reviewed 2026-07-15: Ankura Trust Company has read-only collateral-account access and independently verifies mTBILL collateral eligibility and NAV daily; current reports remain available through the Midas transparency dashboard. FMA approval applies to the prospectus and is not prudential licensing of Midas Software GmbH. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Boundary migration review on 2026-08-16 confirms that all five authored deployment refs resolve only to reviewed native-issuance routes; no production bridge representation or bridge-only control is included in Mint Authority. Pinned chain state was reviewed at Ethereum 25527148, Base 48598894, Rootstock 9049318, Plume 80928370, and Etherlink 48212139. M_TBILL_MINT_OPERATOR_ROLE holders were: Ethereum vault 0x99361435420711723af805f08187c9e6bf796683; Base EOA 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a plus vault 0x8978e327fe7c72fa4eaf4649c23147e279ae1470; Rootstock 3-of-7 Safe 0x5b087db30433bcf5781f385312b1114e8c4819cc, vault 0xf454a52da2157686ef99702c0c19c0e8d66bc03c, and EOAs 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a and 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd; Plume EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd plus vault 0xb05f6aa8c2ea9ab8537cf09a9b765a21de249224; Etherlink 2-of-5 Safe 0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5, EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd, and vault 0xd65bfeb71271a4408ff335e59ecf6c5b21a33a70. Every chain also retained its local 1-of-3 Safe and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 as immediate DEFAULT_ADMIN_ROLE holders. All current mint-critical transparent proxies resolved through chain-local ProxyAdmins to two-day timelocks controlled by those local Safes. Economic-control evidence reviewed 2026-07-15: Ankura Trust Company has read-only collateral-account access and independently verifies mTBILL collateral eligibility and NAV daily; current reports remain available through the Midas transparency dashboard. FMA approval applies to the prospectus and is not prudential licensing of Midas Software GmbH. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex Mint/Bridge boundary migration RELOC-10",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {

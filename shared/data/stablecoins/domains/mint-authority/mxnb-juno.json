@@ -13,6 +13,9 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0xcf3783abaf4a11da1382f0c49748fa87a1b6b739",
+        "deploymentRefs": [
+          "ethereum:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -30,6 +33,9 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca",
+        "deploymentRefs": [
+          "ethereum:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -74,6 +80,13 @@
     "economicCapSemantics": "unbounded",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "arbitrum:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "avalanche:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "base:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "ethereum:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "polygon:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+      ],
       "proxyAddresses": [
         "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
       ],

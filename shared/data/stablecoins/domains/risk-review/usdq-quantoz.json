@@ -8,11 +8,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "Quantoz announced LayerZero and Stargate interoperability for USDQ and EURQ, but on-chain reads on 2026-07-20 confirm the live Ethereum and Polygon HadronToken deployments have no OFT/bridge endpoint functions and are issuer-owned, and the XRPL and Algorand deployments are issuer-native (XRPL issued currency, Algorand ASA); no active bridge representation carries USDQ supply today.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex static correction review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-    "confidence": "verified",
+    "tier": "liquidity-or-intent-route",
+    "summary": "USDQ is issuer-native on Ethereum, Polygon, XRPL, and Algorand, while the official LayerZero Value Transfer API currently supports bidirectional Ethereum-to-Polygon USDQ transfers through a Stargate V2 Taxi liquidity route. The route is third-party liquidity settlement around the two native USDQ deployments, not native Mint Authority. Direction-specific VTA controls preserve the TransferDelegate and LZMulticall failure domains; the USDQ-specific pool or transaction, peer/DVN/executor set, rate limits, pause and upgrade controls, and administrator identities remain unresolved.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "OpenAI Codex mint-bridge-boundary migration",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "issuer",
@@ -20,10 +20,21 @@
         "slug": "layerzero",
         "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq",
         "bridgeTypes": [
-          "oft",
-          "lockAndMint"
+          "STARGATE_V2_TAXI",
+          "liquidity-settlement"
         ],
-        "note": "Quantoz announced LayerZero messaging and Stargate liquidity transport for EURQ/USDQ cross-chain transfers; final on-chain adapter topology remains to be re-reviewed."
+        "note": "Quantoz announced LayerZero messaging and Stargate liquidity transport for EURQ/USDQ cross-chain transfers. The current Value Transfer API supports USDQ in both directions between Ethereum and Polygon; it is a third-party liquidity route rather than evidence that the HadronToken deployments are bridge representations."
+      },
+      {
+        "source": "docs",
+        "name": "LayerZero Value Transfer API",
+        "slug": "layerzero-value-transfer-api",
+        "url": "https://docs.layerzero.network/v2/developers/value-transfer-api/overview",
+        "bridgeTypes": [
+          "STARGATE_V2_TAXI",
+          "liquidity-settlement"
+        ],
+        "note": "LayerZero's official Value Transfer API documentation identifies Stargate V2 Taxi as a unified pool/liquidity transfer path with LayerZero messaging. USDQ-specific quote execution requires an API key, so the concrete pool transaction and route configuration remain unresolved."
       }
     ],
     "sources": [
@@ -38,6 +49,26 @@
       {
         "label": "Quantoz transparency",
         "url": "https://www.quantoz.com/transparency"
+      },
+      {
+        "label": "LayerZero VTA USDQ token-route discovery",
+        "url": "https://transfer.layerzero-api.com/v1/tokens"
+      },
+      {
+        "label": "LayerZero VTA deployment metadata",
+        "url": "https://transfer.layerzero-api.com/v1/metadata"
+      },
+      {
+        "label": "LayerZero VTA overview",
+        "url": "https://docs.layerzero.network/v2/developers/value-transfer-api/overview"
+      },
+      {
+        "label": "LayerZero VTA contract architecture",
+        "url": "https://docs.layerzero.network/v2/developers/value-transfer-api/contracts/overview"
+      },
+      {
+        "label": "LayerZero VTA token route reference",
+        "url": "https://docs.layerzero.network/v2/developers/value-transfer-api/api-reference/tokens"
       }
     ],
     "routes": [
@@ -141,6 +172,104 @@
             "url": "https://www.quantoz.com/products/eurq-usdq"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "layerzero-vta-ethereum-polygon-transfer-delegate",
+        "label": "LayerZero VTA / Stargate V2 Taxi Ethereum-to-Polygon TransferDelegate",
+        "routeRefs": [
+          "ethereum:0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+          "polygon:0xb291996477504506bf5f583102b5b5ea5d1e40e0"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x72faebf58a62e33c044c37d8d973a961633ea294",
+        "failureDomainKeys": [
+          "protocol:layerzero-vta-stargate-v2",
+          "contract:ethereum:0x72faebf58a62e33c044c37d8d973a961633ea294",
+          "contract:ethereum:0xacddac6c77318b615f7f6b9bb67c6833e9c05f1"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The official LayerZero Value Transfer API lists Ethereum USDQ as a supported source to Polygon USDQ through a STARGATE_V2_TAXI route. The route-specific peer, DVN, and executor configuration was not independently enumerated.",
+          "rateLimits": "The USDQ-specific pool or transaction and route-level rate limits were not independently verified.",
+          "pausersAdminsUpgraders": "The route-specific pause, upgrade, and administrator identities were not independently enumerated; no authority is inferred from the Quantoz native owner multisig.",
+          "onchainAmountBounds": "Stargate V2 Taxi is documented as a unified pool/liquidity transfer path. The USDQ-specific pool and precise conservation invariant remain unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 25771117,
+        "sources": [
+          {
+            "label": "LayerZero VTA USDQ token-route discovery",
+            "url": "https://transfer.layerzero-api.com/v1/tokens"
+          },
+          {
+            "label": "LayerZero VTA deployment metadata",
+            "url": "https://transfer.layerzero-api.com/v1/metadata"
+          },
+          {
+            "label": "LayerZero VTA overview",
+            "url": "https://docs.layerzero.network/v2/developers/value-transfer-api/overview"
+          },
+          {
+            "label": "Quantoz LayerZero/Stargate announcement",
+            "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq"
+          }
+        ],
+        "evidence": "The official Value Transfer API supports Ethereum USDQ 0xc83e27f270cce0a3a3a29521173a83f402c1768b to Polygon USDQ 0xb291996477504506bf5f583102b5b5ea5d1e40e0 through a STARGATE_V2_TAXI liquidity-settlement route. Ethereum TransferDelegate 0x72faebf58a62e33c044c37d8d973a961633ea294 and LZMulticall 0xacddac6c77318b615f7f6b9bb67c6833e9c05f1 had deployed code at block 25771117. These are bridge-route machinery, not authored USDQ token deployments; their route-specific permissions and administration remain unresolved."
+      },
+      {
+        "id": "layerzero-vta-polygon-ethereum-transfer-delegate",
+        "label": "LayerZero VTA / Stargate V2 Taxi Polygon-to-Ethereum TransferDelegate",
+        "routeRefs": [
+          "polygon:0xb291996477504506bf5f583102b5b5ea5d1e40e0",
+          "ethereum:0xc83e27f270cce0a3a3a29521173a83f402c1768b"
+        ],
+        "capabilities": [
+          "bridge-burn",
+          "bridge-mint"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x60fccb9b58d5e806ca5cb8bfce721c2274609de4",
+        "failureDomainKeys": [
+          "protocol:layerzero-vta-stargate-v2",
+          "contract:polygon:0x60fccb9b58d5e806ca5cb8bfce721c2274609de4",
+          "contract:polygon:0x8e60b7b64b63cd56b18ebcecadcb79b04919286e"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The official LayerZero Value Transfer API lists Polygon USDQ as a supported source to Ethereum USDQ through a STARGATE_V2_TAXI route. The route-specific peer, DVN, and executor configuration was not independently enumerated.",
+          "rateLimits": "The USDQ-specific pool or transaction and route-level rate limits were not independently verified.",
+          "pausersAdminsUpgraders": "The route-specific pause, upgrade, and administrator identities were not independently enumerated; no authority is inferred from the Quantoz native owner multisig.",
+          "onchainAmountBounds": "Stargate V2 Taxi is documented as a unified pool/liquidity transfer path. The USDQ-specific pool and precise conservation invariant remain unresolved."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 92146874,
+        "sources": [
+          {
+            "label": "LayerZero VTA USDQ token-route discovery",
+            "url": "https://transfer.layerzero-api.com/v1/tokens"
+          },
+          {
+            "label": "LayerZero VTA deployment metadata",
+            "url": "https://transfer.layerzero-api.com/v1/metadata"
+          },
+          {
+            "label": "LayerZero VTA overview",
+            "url": "https://docs.layerzero.network/v2/developers/value-transfer-api/overview"
+          },
+          {
+            "label": "Quantoz LayerZero/Stargate announcement",
+            "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq"
+          }
+        ],
+        "evidence": "The official Value Transfer API supports Polygon USDQ 0xb291996477504506bf5f583102b5b5ea5d1e40e0 to Ethereum USDQ 0xc83e27f270cce0a3a3a29521173a83f402c1768b through a STARGATE_V2_TAXI liquidity-settlement route. Polygon TransferDelegate 0x60fccb9b58d5e806ca5cb8bfce721c2274609de4 and LZMulticall 0x8e60b7b64b63cd56b18ebcecadcb79b04919286e had deployed code at block 92146874. These are bridge-route machinery, not authored USDQ token deployments; their route-specific permissions and administration remain unresolved."
       }
     ]
   }

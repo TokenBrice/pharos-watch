@@ -4,11 +4,12 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "UKTBL is issuer-minted through Spiko PermissionManagers on five EVM deployments, with two-step Minters on Ethereum, Polygon, Base, Etherlink, and Arbitrum plus UKTBL-specific Chainlink CCIP pools on Ethereum, Polygon, Base, and Arbitrum. Each EVM ADMIN Safe can mint directly, change role membership and limits, and upgrade mint-critical logic. Starknet has a 3-of-5 Argent owner/admin multisig plus three additional direct single-key MINTER accounts; Stellar has a single-visible-signer owner/admin plus three direct single-visible-signer MINTER accounts, with no pending Soroban owner/admin transfer at ledger 63675179. The source code has no aggregate supply cap, so configured EVM daily limits are operational throttles rather than economic issuance bounds.",
+    "summary": "UKTBL is issuer-minted through Spiko PermissionManagers on five EVM deployments, with two-step Minters on Ethereum, Polygon, Base, Etherlink, and Arbitrum. Each EVM ADMIN Safe can mint directly, change role membership and limits, and upgrade mint-critical logic. Starknet has a 3-of-5 Argent owner/admin multisig plus three additional direct single-key MINTER accounts; Stellar has a single-visible-signer owner/admin plus three direct single-visible-signer MINTER accounts, with no pending Soroban owner/admin transfer at ledger 63675179. The source code has no aggregate supply cap, so configured EVM daily limits are operational throttles rather than economic issuance bounds. Chainlink CCIP pools are transfer-rail controls reviewed separately under Bridge Risk.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "deploymentRefs": ["ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e"],
         "label": "UKTBL token restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -33,6 +34,7 @@
       {
         "chain": "ethereum",
         "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "deploymentRefs": ["ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e"],
         "label": "Spiko PermissionManager authority contract",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -52,6 +54,7 @@
       {
         "chain": "ethereum",
         "address": "0x5ed5a75eeed1934ea060186e35187eaa73331366",
+        "deploymentRefs": ["ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e"],
         "label": "Spiko two-step Minter with daily limit (Ethereum)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -75,50 +78,8 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xb114e0e00622ffe5800004a98c8e01cd2c0c393b",
-        "label": "Chainlink CCIP UKTBL BurnWithFromMintTokenPool (Ethereum)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "canRaiseCap": false,
-        "capDescription": "The pool has UKTBL mint authority through its CCIP execution path, but this review did not capture current per-lane rate-limit values; its owner can change route and rate-limit parameters.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-26",
-        "observedBlock": 25618364,
-        "sources": [
-          {
-            "label": "Ethereum UKTBL CCIP pool",
-            "url": "https://eth.blockscout.com/address/0xb114e0e00622ffe5800004a98c8e01cd2c0c393b"
-          }
-        ],
-        "evidence": "At Ethereum block 25618364, typeAndVersion() = BurnWithFromMintTokenPool 1.6.1, getToken() = UKTBL 0xf695df6c0f3bb45918a7a82e83348fc59517734e, owner() = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, and the pool is in group 2, so it can call UKTBL mint."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xEd608cf38968C0ba09676843D90B33Dd59dd7375",
-        "label": "Spiko UKTBL CCIP token-pool owner EOA",
-        "role": "bridge-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "capDescription": "Owner of the identified UKTBL CCIP pools; can change router, remote-pool, and rate-limit configuration, so CCIP rate limits are not an immutable aggregate issuance cap.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "failureDomainKeys": [
-          "eoa:0xed608cf38968c0ba09676843d90b33dd59dd7375"
-        ],
-        "observedAt": "2026-07-26",
-        "observedBlock": 25618364,
-        "sources": [
-          {
-            "label": "Ethereum UKTBL CCIP pool",
-            "url": "https://eth.blockscout.com/address/0xb114e0e00622ffe5800004a98c8e01cd2c0c393b"
-          }
-        ],
-        "evidence": "owner() of the UKTBL Ethereum pool is this EOA. The verified BurnWithFromMintTokenPool interface exposes owner-controlled router, remote-pool, and chain-rate-limiter configuration."
-      },
-      {
-        "chain": "ethereum",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": ["ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e"],
         "label": "Spiko PermissionManager ADMIN Safe (Ethereum)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -163,6 +124,7 @@
       {
         "chain": "polygon",
         "address": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "deploymentRefs": ["polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"],
         "label": "Spiko UKTBL PermissionManager ADMIN Safe (Polygon)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -198,6 +160,7 @@
       {
         "chain": "base",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": ["base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"],
         "label": "Spiko UKTBL PermissionManager ADMIN Safe (Base)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -233,6 +196,7 @@
       {
         "chain": "etherlink",
         "address": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+        "deploymentRefs": ["etherlink:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"],
         "label": "Spiko UKTBL PermissionManager ADMIN Safe (Etherlink)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -268,6 +232,7 @@
       {
         "chain": "arbitrum",
         "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "deploymentRefs": ["arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474"],
         "label": "Spiko UKTBL PermissionManager ADMIN Safe (Arbitrum)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -303,6 +268,7 @@
       {
         "chain": "starknet",
         "address": "0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "deploymentRefs": ["starknet:0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395"],
         "label": "UKTBL Starknet restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -327,6 +293,7 @@
       {
         "chain": "starknet",
         "address": "0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d",
+        "deploymentRefs": ["starknet:0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395"],
         "label": "UKTBL Starknet token owner (Argent Multisig, 3-of-5)",
         "role": "minter-admin",
         "authorityType": "multisig",
@@ -353,6 +320,7 @@
       {
         "chain": "stellar",
         "address": "CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
+        "deploymentRefs": ["stellar:CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"],
         "label": "UKTBL Stellar Soroban restricted mint/burn",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -381,6 +349,7 @@
       {
         "chain": "stellar",
         "address": "GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
+        "deploymentRefs": ["stellar:CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"],
         "label": "Spiko UKTBL Stellar contract owner and PermissionManager admin (single-key account)",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -411,6 +380,7 @@
       {
         "chain": "polygon",
         "address": "0xaead1f7c9b189816cb845363d142cfcf339084c2",
+        "deploymentRefs": ["polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"],
         "label": "Spiko two-step Minter with daily limit (Polygon)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -433,32 +403,9 @@
         "evidence": "The complete Polygon PermissionManager group-2 add/remove history and a live canCall read identify this proxy as a current UKTBL minter. Its implementation is 0x465bc3e57a76905699df6772ee2571058a55f37a; the verified Minter source defines the initiator, approver, daily-limit, and upgrade paths."
       },
       {
-        "chain": "polygon",
-        "address": "0x7ba5d85d9f7460fcaf514ae2553296905cb91423",
-        "label": "Chainlink CCIP UKTBL BurnMintTokenPool (Polygon)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "canRaiseCap": false,
-        "capDescription": "The pool has UKTBL mint authority through its CCIP execution path, but this review did not capture current per-lane rate-limit values; its EOA owner can change router, remote-pool, and inbound-rate configuration.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-26",
-        "observedBlock": 90920481,
-        "sources": [
-          {
-            "label": "Polygon PermissionManager logs",
-            "url": "https://polygon.blockscout.com/api/v2/addresses/0x344278aff344d6fb960705dc18a4912221608472/logs"
-          },
-          {
-            "label": "Polygon public RPC",
-            "url": "https://polygon-bor-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "Full Polygon group-2 history plus live reads show getToken() = Polygon UKTBL 0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d, owner() = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, and canCall(pool, UKTBL, mint) = true. Other Polygon group-2 pools target other Spiko assets and are excluded."
-      },
-      {
         "chain": "base",
         "address": "0xaead1f7c9b189816cb845363d142cfcf339084c2",
+        "deploymentRefs": ["base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"],
         "label": "Spiko two-step Minter with daily limit (Base)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -481,32 +428,9 @@
         "evidence": "At Base head, this group-2 proxy can call UKTBL mint; dailyLimit=500000000000 and maxDelay=86400. getRequirements(initiateMint)={ADMIN,group 10}, approveMint={ADMIN,group 9}, and setDailyLimit/upgrade={ADMIN}."
       },
       {
-        "chain": "base",
-        "address": "0xd88110bf8bac4f5315c340a841dd2898f9d8e8b9",
-        "label": "Chainlink CCIP UKTBL BurnWithFromMintTokenPool (Base)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "canRaiseCap": false,
-        "capDescription": "The pool has UKTBL mint authority through its CCIP execution path, but this review did not capture current per-lane rate-limit values; its EOA owner can change router, remote-pool, and rate-limit configuration.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-26",
-        "observedBlock": 49148186,
-        "sources": [
-          {
-            "label": "Base UKTBL CCIP pool creation record",
-            "url": "https://base.blockscout.com/api?module=contract&action=getcontractcreation&contractaddresses=0xd88110bf8bac4f5315c340a841dd2898f9d8e8b9"
-          },
-          {
-            "label": "Base public RPC",
-            "url": "https://base-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "Live Base reads show getToken() = Base UKTBL 0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068, typeAndVersion() = BurnWithFromMintTokenPool 1.6.1, owner() = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, and group-2 mint authority."
-      },
-      {
         "chain": "etherlink",
         "address": "0x3690367edd22ede1fe827258352f900fbd05b8dc",
+        "deploymentRefs": ["etherlink:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"],
         "label": "Spiko two-step Minter with daily limit (Etherlink)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -531,6 +455,7 @@
       {
         "chain": "arbitrum",
         "address": "0x4640a8bf08d5917dcaef42edb14d3e06e1b23f39",
+        "deploymentRefs": ["arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474"],
         "label": "Spiko two-step Minter with daily limit (Arbitrum)",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -553,28 +478,9 @@
         "evidence": "Complete Arbitrum group-2 add/remove reconciliation and live reads identify this Minter as a current UKTBL minter with authority 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a, dailyLimit=500000000000, and maxDelay=86400."
       },
       {
-        "chain": "arbitrum",
-        "address": "0x7ba5d85d9f7460fcaf514ae2553296905cb91423",
-        "label": "Chainlink CCIP UKTBL BurnWithFromMintTokenPool (Arbitrum)",
-        "role": "bridge-admin",
-        "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "canRaiseCap": false,
-        "capDescription": "The pool has UKTBL mint authority through its CCIP execution path, but this review did not capture current per-lane rate-limit values; its EOA owner can change route and rate-limit configuration.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-26",
-        "observedBlock": 487976733,
-        "sources": [
-          {
-            "label": "Arbitrum UKTBL CCIP pool",
-            "url": "https://arbitrum.blockscout.com/address/0x7ba5d85d9f7460fcaf514ae2553296905cb91423"
-          }
-        ],
-        "evidence": "Live Arbitrum reads show getToken() = Arbitrum UKTBL 0x903d5990119bc799423e9c25c56518ba7dd19474, typeAndVersion() = BurnWithFromMintTokenPool 1.6.1, owner() = 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, and group-2 mint authority."
-      },
-      {
         "chain": "starknet",
         "address": "0x07c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3",
+        "deploymentRefs": ["starknet:0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395"],
         "label": "Spiko Starknet PermissionManager (UKTBL)",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -599,6 +505,7 @@
       {
         "chain": "starknet",
         "address": "0x02d5ad99f66e018e2708e40c52724f04278cbee65ed74aa5b144a7f884f54d7b",
+        "deploymentRefs": ["starknet:0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395"],
         "label": "UKTBL Starknet MINTER_ROLE single-key accounts (3)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -624,6 +531,7 @@
       {
         "chain": "stellar",
         "address": "CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M",
+        "deploymentRefs": ["stellar:CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"],
         "label": "Spiko Stellar PermissionManager (UKTBL)",
         "role": "minter-admin",
         "authorityType": "contract",
@@ -648,6 +556,7 @@
       {
         "chain": "stellar",
         "address": "GD2ELXTHZQORSH75SJE6XRTCKXNDGJFIZ4R2SZ4MMXDOBT52GK26X4EO",
+        "deploymentRefs": ["stellar:CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"],
         "label": "UKTBL Stellar MINTER role single-visible-signer accounts (3)",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -684,6 +593,7 @@
       },
       {
         "chain": "ethereum",
+        "deploymentRefs": ["ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e"],
         "label": "Spiko Minter group-10 initiator EOAs (Ethereum; 2)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -706,6 +616,7 @@
       },
       {
         "chain": "ethereum",
+        "deploymentRefs": ["ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e"],
         "label": "Spiko Minter group-9 approvers (Ethereum; six EOAs plus Safe)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -732,6 +643,7 @@
       },
       {
         "chain": "polygon",
+        "deploymentRefs": ["polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"],
         "label": "Spiko Minter group-10 initiator EOAs (Polygon; 2)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -754,6 +666,7 @@
       },
       {
         "chain": "polygon",
+        "deploymentRefs": ["polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"],
         "label": "Spiko Minter group-9 approvers (Polygon; six EOAs plus Safe)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -780,6 +693,7 @@
       },
       {
         "chain": "base",
+        "deploymentRefs": ["base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"],
         "label": "Spiko Minter group-10 initiator EOAs (Base; 2)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -802,6 +716,7 @@
       },
       {
         "chain": "base",
+        "deploymentRefs": ["base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"],
         "label": "Spiko Minter group-9 approvers (Base; six EOAs plus Safe)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -828,6 +743,7 @@
       },
       {
         "chain": "etherlink",
+        "deploymentRefs": ["etherlink:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"],
         "label": "Spiko Minter group-10 initiator EOAs (Etherlink; 2)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -850,6 +766,7 @@
       },
       {
         "chain": "etherlink",
+        "deploymentRefs": ["etherlink:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"],
         "label": "Spiko Minter group-9 approvers (Etherlink; six EOAs plus Safe)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -876,6 +793,7 @@
       },
       {
         "chain": "arbitrum",
+        "deploymentRefs": ["arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474"],
         "label": "Spiko Minter group-10 initiator EOAs (Arbitrum; 2)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -898,6 +816,7 @@
       },
       {
         "chain": "arbitrum",
+        "deploymentRefs": ["arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474"],
         "label": "Spiko Minter group-9 approvers (Arbitrum; six EOAs plus Safe)",
         "role": "backend-signer",
         "authorityType": "eoa",
@@ -928,6 +847,15 @@
     "supervision": "prudential",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": [
+        "arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+        "etherlink:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "starknet:0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "stellar:CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"
+      ],
       "proxyAddresses": [
         "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
         "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
@@ -1053,9 +981,9 @@
           "url": "https://horizon.stellar.org/accounts/GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
         }
       ],
-      "evidence": "Full deployment-to-head GroupAdded/GroupRemoved reconciliation plus live role reads enumerated every EVM UKTBL mint path: group 0 is the recorded 3-of-6 chain-local Safe and group 2 is the chain-local Minter plus the UKTBL CCIP pool on Ethereum, Polygon, Base, and Arbitrum; Etherlink has only its Minter. All non-UKTBL group-2 pools were classified by getToken() and excluded. Minter group-10 initiators and group-9 approvers are explicitly recorded for every EVM chain. EIP-1967 reads at the cited heads resolve all five chain-level Minter proxy paths to their implementations; the recorded group-0 ADMIN Safes authorize their UUPS upgrades. On Starknet, complete RoleGranted/RoleRevoked history and live has_role reads at block 12329657 yield exactly four MINTER_ROLE holders: the 3-of-5 Argent owner/admin multisig and three single-key account contracts. On Stellar at ledger 63659619, enumerable PermissionManager reads yield exactly three MINTER accounts; Horizon shows those accounts and the owner/admin each have one visible ed25519 signer and zero transaction thresholds. EVM Minter daily limits are not hard bounds because group 9 can approve an over-limit pending request and ADMIN can change limits or logic. Public sources do not identify the operating entities or custody arrangements for the terminal EVM signer addresses. The current active Stellar roles are enumerated, and on 2026-07-27 Kimi data review independently decoded the Soroban pending-transfer state via mainnet.sorobanrpc.com getLedgerEntries at ledger 63675179: the token CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR instance storage still lists Owner GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H with no PendingOwner key, the PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M instance storage still lists Admin GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H with no PendingAdmin key, and the temporary-storage PendingOwner and PendingAdmin contract-data entries are absent on two independent public RPCs. Because the OpenZeppelin stellar-access 0.4.1 role-transfer helper stores pending transfers only in temporary storage, no pending owner or admin transfer exists at the pinned ledger and no future authority transition is staged.",
+    "evidence": "Full deployment-to-head GroupAdded/GroupRemoved reconciliation plus live role reads enumerate every native EVM UKTBL mint path: group 0 is the recorded 3-of-6 chain-local Safe and group 2 contains the chain-local Minter on Ethereum, Polygon, Base, Etherlink, and Arbitrum. The four EVM CCIP pools are transfer-rail return paths and are intentionally excluded from this native Mint Authority inventory; their bridge mint/burn, owner, peer, and rate-limit facts are preserved under bridgeRouteRisk.controls. All non-UKTBL group-2 pools were classified by getToken() and excluded. Minter group-10 initiators and group-9 approvers are explicitly recorded for every EVM chain. EIP-1967 reads at the cited heads resolve all five chain-level Minter proxy paths to their implementations; the recorded group-0 ADMIN Safes authorize their UUPS upgrades. On Starknet, complete RoleGranted/RoleRevoked history and live has_role reads at block 12329657 yield exactly four MINTER_ROLE holders: the 3-of-5 Argent owner/admin multisig and three single-key account contracts. On Stellar at ledger 63659619, enumerable PermissionManager reads yield exactly three MINTER accounts; Horizon shows those accounts and the owner/admin each have one visible ed25519 signer and zero transaction thresholds. EVM Minter daily limits are not hard bounds because group 9 can approve an over-limit pending request and ADMIN can change limits or logic. Public sources do not identify the operating entities or custody arrangements for the terminal EVM signer addresses. The current active Stellar roles are enumerated, and on 2026-07-27 Kimi data review independently decoded the Soroban pending-transfer state via mainnet.sorobanrpc.com getLedgerEntries at ledger 63675179: the token CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR instance storage still lists Owner GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H with no PendingOwner key, the PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M instance storage still lists Admin GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H with no PendingAdmin key, and the temporary-storage PendingOwner and PendingAdmin contract-data entries are absent on two independent public RPCs. Because the OpenZeppelin stellar-access 0.4.1 role-transfer helper stores pending transfers only in temporary storage, no pending owner or admin transfer exists at the pinned ledger and no future authority transition is staged.",
       "reviewer": "OpenAI Codex CTRL-uktbl-spiko static control inventory; Kimi data review",
-      "reviewedAt": "2026-07-27",
+    "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

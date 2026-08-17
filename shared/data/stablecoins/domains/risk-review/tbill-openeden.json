@@ -8,11 +8,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "OpenEden TBILL is issued on multiple chains for eligible investors; reviewed sources show issuer-controlled tokenization and mint/redeem access rather than a public third-party bridge route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "single-chain-or-native",
+    "summary": "The four authored TBILL deployments are reviewed as independent native-issuance routes: Ethereum and Arbitrum OpenEdenVaultV5 vaults, the Solana Token-2022 mint, and the XRPL TBL issuer. No public bridge contract, representation token, lockbox, adapter, relay, validator/DVN, rate limit, or burn-before-mint route was identified in the reviewed primary sources, so no bridge controls are authored. Whether OpenEden operates an off-chain issuer-native burn/mint service remains unresolved and is not asserted by this profile.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex mint-bridge-boundary migration",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "OpenEden TBILL page",
@@ -27,62 +27,106 @@
       {
         "id": "ethereum:0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OpenEdenVaultV5 native Ethereum vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native TBILL liability: OpenEdenVaultV5 deposit and maintainer-controlled mintTo issue shares against the Ethereum vault's USDC accounting; no bridge representation was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770864,
+        "sources": [
+          {
+            "label": "OpenEden Ethereum vault",
+            "url": "https://etherscan.io/address/0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a"
+          },
+          {
+            "label": "Ethereum verified OpenEdenVaultV5 source",
+            "url": "https://eth.blockscout.com/address/0xc4545bf80f935894cbe138d86b506923dab7c048?tab=contract"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
         "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OpenEdenVaultV5 native Arbitrum vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native TBILL liability: OpenEdenVaultV5 deposit and maintainer-controlled mintTo issue shares against the Arbitrum vault's USDC accounting; no bridge representation was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 495293895,
+        "sources": [
+          {
+            "label": "OpenEden Arbitrum vault",
+            "url": "https://arbiscan.io/address/0xf84d28a8d28292842dd73d1c5f99476a80b6666a"
+          },
+          {
+            "label": "Arbitrum verified OpenEdenVaultV5 source",
+            "url": "https://arbitrum.blockscout.com/address/0x78365404fc5edabef6eca2f6b2f1ba1471727a07?tab=contract"
+          }
+        ]
       },
       {
         "id": "solana:4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OpenEden Token-2022 native mint",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native TBILL liability: the Token-2022 mint retains a live issuer mintAuthority; its transfer hook is not a bridge route and no cross-chain mint program was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 439734298,
+        "sources": [
+          {
+            "label": "OpenEden Solana token metadata",
+            "url": "https://raw.githubusercontent.com/OpenEdenHQ/tbill-info/refs/heads/main/token.json"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
       },
       {
         "id": "xrpl:TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
         "destinationChain": "xrpl",
+        "canonicalChain": "xrpl",
         "contractAddress": "TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OpenEden XRPL TBL issuer",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Independent native TBILL liability: the XRPL issuer account creates TBL under its signer list; no cross-ledger burn/mint or bridge machinery was identified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-08-16",
+        "observedBlock": 106343204,
+        "sources": [
+          {
+            "label": "XRPL validated JSON-RPC",
+            "url": "https://xrplcluster.com"
+          }
+        ]
       }
     ]
   }

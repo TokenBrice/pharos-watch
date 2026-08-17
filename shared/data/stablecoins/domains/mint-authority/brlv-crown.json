@@ -4,44 +4,34 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "BRLV is issued by Crown on Base and Ethereum through UUPS/AccessControl deployments. The Base and Ethereum tokens share DEFAULT_ADMIN EOA 0x239d4a, whose role can authorize minting and can create token UPGRADE_ROLE holders. Base's live direct minters are two EIP-7702 delegated EOAs plus Crown's canonical gateway and rewards proxies; the latter two have separate immediate UUPS role-admin paths.",
+    "summary": "BRLV's canonical native issuance is on Base. Crown's issuer relay, the Base token DEFAULT_ADMIN and UPGRADE_ROLE paths, and the canonical-domain BRLVRewards branch remain in Mint Authority; Ethereum bridgedBRLV, the Base canonical gateway's cross-chain branch, and bridge-only role administrators are scored under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+      ],
       "proxyAddresses": [
         "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
-        "0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
-        "0x7e0d3f1a390209d87d9e1425d03066eb567a9844",
         "0x5315c03f8cf027d1b67dac72ef9eec8988d80f88"
       ],
       "implementationAddresses": [
         "0x1750731729b27cfd00ea55bc61e9dcfade2273f3",
-        "0x57323db6d883811c17877d075e05ad9e2ed41519",
-        "0xc25f26268c634057611151e76b4e8a3b51a35688",
         "0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
       ],
       "adminAddresses": [
         "0x239d4a24efa36a8987b86184c080ace26b3a8968",
         "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
-        "0xc2f5fc350f579b8990180dab115ab6e0a3e118c3",
         "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
         "0x548634f237eae194f5e20982c9819d917fe17f04"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "BRLV Base DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0x239d4a",
-      "observedAt": "2026-07-15",
+      "observedAt": "2026-08-16",
       "sources": [
         {
           "label": "BRLV Base token verified implementation",
           "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
-        },
-        {
-          "label": "BRLV Ethereum token verified implementation",
-          "url": "https://eth.blockscout.com/address/0x57323db6d883811c17877d075e05ad9e2ed41519"
-        },
-        {
-          "label": "BRLV CanonicalGateway verified implementation",
-          "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
         },
         {
           "label": "BRLVRewards verified implementation",
@@ -55,6 +45,9 @@
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "deploymentRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
         "canRaiseCap": "unknown",
         "failureDomainKeys": [
           "issuer-backend:brlv-crown:crown-issuance-backend"
@@ -70,6 +63,9 @@
       {
         "chain": "base",
         "address": "0x239d4a24efa36a8987b86184c080ace26b3a8968",
+        "deploymentRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
         "label": "BRLV Base DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0x239d4a",
         "role": "minter-admin",
         "authorityType": "eoa",
@@ -94,6 +90,9 @@
       {
         "chain": "base",
         "address": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
+        "deploymentRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
         "label": "BRLV Base MINTER_ROLE — gasless relay EOA 0x8e7e9b",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -112,37 +111,19 @@
       },
       {
         "chain": "base",
-        "address": "0x7e0d3f1a390209d87d9e1425d03066eb567a9844",
-        "label": "BRLV Base MINTER_ROLE — BRLVCanonicalGateway proxy 0x7e0d3f",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "observedAt": "2026-07-15",
-        "observedBlock": 48678900,
-        "evidence": "At Base block 48678900, hasRole(MINTER_ROLE, 0x7e0d3f1a390209d87d9e1425d03066eb567a9844) returned true. Its ERC-1967 implementation slot resolved to verified BRLVCanonicalGateway implementation 0xc25f26268c634057611151e76b4e8a3b51a35688; this Crown gateway mints BRLV for KYC-gated users.",
-        "sources": [
-          {
-            "label": "BRLVCanonicalGateway Base",
-            "url": "https://basescan.org/address/0x7e0d3f1a390209d87d9e1425d03066eb567a9844#code"
-          },
-          {
-            "label": "BRLVCanonicalGateway verified implementation",
-            "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
-          }
-        ]
-      },
-      {
         "chain": "base",
         "address": "0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
-        "label": "BRLV Base MINTER_ROLE — BRLVRewards proxy 0x5315c0",
+        "deploymentRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
+        "label": "BRLV Base MINTER_ROLE — BRLVRewards canonical-domain reward branch",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "observedAt": "2026-07-15",
         "observedBlock": 48678900,
-        "evidence": "At Base block 48678900, hasRole(MINTER_ROLE, 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88) returned true. Its ERC-1967 implementation slot resolved to verified BRLVRewards implementation 0x6818b4b2c3cc572726aed81a836b5e069519ad0a; this Crown rewards contract can mint BRLV for its reward flow.",
+        "evidence": "At Base block 48678900, hasRole(MINTER_ROLE, 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88) returned true. Its ERC-1967 implementation slot resolved to verified BRLVRewards implementation 0x6818b4b2c3cc572726aed81a836b5e069519ad0a. The canonical-domain reward branch calls brlv.mintShares against gateway.availableSurplus(), so this role remains in Mint Authority for surplus-bounded canonical reward issuance; its remote-domain gateway.bridgedSharesMint branch is separately scored under Bridge Risk.",
         "sources": [
           {
             "label": "BRLVRewards Base",
@@ -155,51 +136,11 @@
         ]
       },
       {
-        "chain": "ethereum",
-        "address": "0x239d4a24efa36a8987b86184c080ace26b3a8968",
-        "label": "BRLV Ethereum DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0x239d4a",
-        "role": "minter-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "timelockDelaySec": 0,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-15",
-        "observedBlock": 25540452,
-        "evidence": "At Ethereum block 25540452, hasRole(DEFAULT_ADMIN_ROLE, 0x239d4a24efa36a8987b86184c080ace26b3a8968) returned true on bridgedBRLV 0xd7ca0e2c36d647446b782d1b72308e598373e2f5 and eth_getCode returned 0x. getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE while hasRole(UPGRADE_ROLE, 0x239d4a...) returned false, so this EOA can grant the currently required role before calling the verified UUPS upgrade path. The same EOA is the Base token's DEFAULT_ADMIN_ROLE holder.",
-        "sources": [
-          {
-            "label": "BRLV Ethereum bridged token",
-            "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5#code"
-          },
-          {
-            "label": "BRLV Ethereum token verified implementation",
-            "url": "https://eth.blockscout.com/address/0x57323db6d883811c17877d075e05ad9e2ed41519"
-          }
-        ]
-      },
-      {
-        "chain": "ethereum",
-        "address": "0x039b419dafc801c3e375046efabd00813b0c48b6",
-        "label": "BRLV Ethereum MINTER_ROLE — gasless relay EOA 0x039b41",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-15",
-        "observedBlock": 25540452,
-        "evidence": "At Ethereum block 25540452, hasRole(MINTER_ROLE, 0x039b419dafc801c3e375046efabd00813b0c48b6) returned true. Its EIP-7702 designation code is 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b, so the signer remains an EOA account delegated to UniversalGaslessDelegate rather than an independently governed contract.",
-        "sources": [
-          {
-            "label": "BRLV Ethereum bridged token",
-            "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5#code"
-          }
-        ]
-      },
-      {
         "chain": "base",
         "address": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
+        "deploymentRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
         "label": "BRLV Base active UPGRADE_ROLE - EOA 0xcdfc72",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -222,30 +163,10 @@
       },
       {
         "chain": "base",
-        "address": "0xc2f5fc350f579b8990180dab115ab6e0a3e118c3",
-        "label": "BRLVCanonicalGateway DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0xc2f5fc",
-        "role": "proxy-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "upgrade-only",
-        "timelockDelaySec": 0,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-15",
-        "observedBlock": 48678900,
-        "sources": [
-          {
-            "label": "BRLVCanonicalGateway Base",
-            "url": "https://basescan.org/address/0x7e0d3f1a390209d87d9e1425d03066eb567a9844#code"
-          },
-          {
-            "label": "BRLVCanonicalGateway verified implementation",
-            "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
-          }
-        ],
-        "evidence": "At Base block 48678900, hasRole(DEFAULT_ADMIN_ROLE, 0xc2f5fc350f579b8990180dab115ab6e0a3e118c3) returned true, hasRole(UPGRADE_ROLE, that EOA) returned false, getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE, and eth_getCode returned 0x. The verified gateway implementation's _authorizeUpgrade requires UPGRADE_ROLE, so this zero-delay EOA can grant that role and replace the minter gateway implementation."
-      },
-      {
-        "chain": "base",
         "address": "0x548634f237eae194f5e20982c9819d917fe17f04",
+        "deploymentRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
         "label": "BRLVRewards active UPGRADE_ROLE - EOA 0x548634",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -264,11 +185,14 @@
             "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
           }
         ],
-        "evidence": "At Base block 48678900, hasRole(UPGRADE_ROLE, 0x548634f237eae194f5e20982c9819d917fe17f04) returned true and eth_getCode returned 0x. The zero-admin-slot rewards proxy resolves to implementation 0x6818b4b2c3cc572726aed81a836b5e069519ad0a, whose verified _authorizeUpgrade requires UPGRADE_ROLE, giving this EOA an immediate upgrade path over a BRLV minter."
+        "evidence": "At Base block 48678900, hasRole(UPGRADE_ROLE, 0x548634f237eae194f5e20982c9819d917fe17f04) returned true and eth_getCode returned 0x. The zero-admin-slot rewards proxy resolves to implementation 0x6818b4b2c3cc572726aed81a836b5e069519ad0a, whose verified _authorizeUpgrade requires UPGRADE_ROLE, giving this EOA an immediate upgrade path over the canonical reward minter; any remote-domain bridgedSharesMint change is separately scored under Bridge Risk."
       },
       {
         "chain": "base",
         "address": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
+        "deploymentRefs": [
+          "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+        ],
         "label": "BRLVRewards DEFAULT_ADMIN / UPGRADE_ROLE manager - EOA 0x7ecf4c",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -287,7 +211,7 @@
             "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
           }
         ],
-        "evidence": "At Base block 48678900, hasRole(DEFAULT_ADMIN_ROLE, 0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f) returned true and eth_getCode returned 0x. getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE; therefore this zero-delay EOA can grant or revoke the rewards implementation's UPGRADE_ROLE, independently of the current 0x548634 holder."
+        "evidence": "At Base block 48678900, hasRole(DEFAULT_ADMIN_ROLE, 0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f) returned true and eth_getCode returned 0x. getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE; therefore this zero-delay EOA can grant or revoke the rewards implementation's UPGRADE_ROLE, independently of the current 0x548634 holder. Its remote-domain upgrade surface is separately scored under Bridge Risk."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -304,20 +228,8 @@
           "url": "https://basescan.org/address/0xd2047ebdb205ee6862b69ae9fb3501652cc97d36#code"
         },
         {
-          "label": "BRLV Ethereum bridged token",
-          "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5#code"
-        },
-        {
           "label": "BRLV Base token verified implementation",
           "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
-        },
-        {
-          "label": "BRLV Ethereum token verified implementation",
-          "url": "https://eth.blockscout.com/address/0x57323db6d883811c17877d075e05ad9e2ed41519"
-        },
-        {
-          "label": "BRLVCanonicalGateway verified implementation",
-          "url": "https://base.blockscout.com/address/0xc25f26268c634057611151e76b4e8a3b51a35688"
         },
         {
           "label": "BRLVRewards verified implementation",
@@ -332,9 +244,9 @@
           "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
         }
       ],
-      "evidence": "At Base blocks 48678900-48679023 and Ethereum block 25540452, both token proxies resolved through zero EIP-1967 admin slots to the listed verified UUPS implementations. The shared DEFAULT_ADMIN EOA 0x239d4a can manage minters and grant UPGRADE_ROLE on both tokens; the Base token also has active UPGRADE_ROLE EOA 0xcdfc72. The Base gateway and rewards minters each resolve to verified UUPS implementations, with their active and role-admin upgrade EOAs recorded. Direct EIP-7702 relay minters are recorded as delegated EOA accounts, not unreviewed proxy administrators. Crown backs BRLV with segregated Brazilian federal Treasury bonds and Tesouro Selic ETFs; Fact Finance performs daily independent reserve verification with full liability reconciliation published on Crown's transparency page (latest report 2026-05-31, ~100.2% backing), so supply is continuously reconciled. Reserve custody sits at BCB-regulated banks, but that is custodial regulation, not issuer supervision: no BCB or CVM registry names Crown/BRLV as a licensed stablecoin issuer, so supervision is attestation-only and BRLV sits in the high tier. Economic-posture fields reviewed 2026-08-15: issuer EOAs directly mint or can immediately grant minter and upgrade roles across token and backend proxies; daily independent full-liability verification covers supply without prudential issuer supervision.",
-      "reviewer": "Codex deployment-control review; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+        "evidence": "At Base block 50068610, the canonical BRLV proxy resolves through a zero EIP-1967 admin slot to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3; the shared DEFAULT_ADMIN EOA 0x239d4a can manage Base minters and grant UPGRADE_ROLE, while active Base UPGRADE_ROLE EOA 0xcdfc72 provides an immediate token upgrade path. Base's issuer relay directly mints, and BRLVRewards retains its canonical-domain surplus-bounded reward branch; the rewards proxy has active and role-admin upgrade EOAs with zero delay. Ethereum bridgedBRLV, the Base canonical gateway's remote mint/burn machinery, and their bridge administrators are retained as structured Bridge Risk controls rather than compiled into canonical Mint Authority. Crown backs BRLV with segregated Brazilian federal Treasury bonds and Tesouro Selic ETFs; Fact Finance performs daily independent reserve verification with full liability reconciliation published on Crown's transparency page, so supply is continuously reconciled. Reserve custody sits at BCB-regulated banks, but that is custodial regulation, not issuer supervision: no BCB or CVM registry names Crown/BRLV as a licensed stablecoin issuer, so supervision is attestation-only and BRLV remains in the high tier.",
+        "reviewer": "Codex mint/bridge boundary migration; verified finding 2026-08-16",
+        "reviewedAt": "2026-08-16",
       "disposition": "scoreable"
     }
   }

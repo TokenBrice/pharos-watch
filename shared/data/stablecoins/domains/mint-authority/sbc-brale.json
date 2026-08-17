@@ -35,7 +35,10 @@
           }
         ],
         "chain": "ethereum",
-        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110"
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "deploymentRefs": [
+          "ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        ]
       },
       {
         "label": "Proxy upgrade authority — Ethereum Safe (6 signers, threshold 3, UPGRADER_ROLE)",
@@ -86,11 +89,17 @@
           }
         ],
         "chain": "ethereum",
-        "address": "0x4d16d9e3358b68638e25f631ac861fa40a8fb87e"
+        "address": "0x4d16d9e3358b68638e25f631ac861fa40a8fb87e",
+        "deploymentRefs": [
+          "ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        ]
       },
       {
         "chain": "polygon",
         "address": "0xcf64b5d44f6aa845d857a008d3c5465cfa80214a",
+        "deploymentRefs": [
+          "polygon:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+        ],
         "label": "Proxy upgrade authority — Polygon Safe (6 signers, threshold 3, UPGRADER_ROLE)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -138,6 +147,9 @@
       {
         "chain": "avalanche",
         "address": "0xa8cdd1c1d889bff3e8c149c7cf2059e5a3dcb7ac",
+        "deploymentRefs": [
+          "avalanche:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        ],
         "label": "Proxy upgrade authority — Avalanche Safe (6 signers, threshold 3, UPGRADER_ROLE)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -185,6 +197,9 @@
       {
         "chain": "arbitrum",
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "deploymentRefs": [
+          "arbitrum:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+        ],
         "label": "Proxy upgrade authority — Brale EOA (Arbitrum UPGRADER_ROLE)",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -207,6 +222,9 @@
       {
         "chain": "optimism",
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "deploymentRefs": [
+          "optimism:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        ],
         "label": "Proxy upgrade authority — Brale EOA (Optimism UPGRADER_ROLE)",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -229,6 +247,9 @@
       {
         "chain": "base",
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "deploymentRefs": [
+          "base:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+        ],
         "label": "Proxy upgrade authority — Brale EOA (Base UPGRADER_ROLE)",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -251,6 +272,9 @@
       {
         "chain": "celo",
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "deploymentRefs": [
+          "celo:0xde093684c796204224bc081f937aa059d903c52a"
+        ],
         "label": "Proxy upgrade authority — Brale EOA (Celo UPGRADER_ROLE)",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -273,6 +297,9 @@
       {
         "chain": "ethereum-classic",
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "deploymentRefs": [
+          "ethereum-classic:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+        ],
         "label": "Proxy upgrade authority — Brale EOA (Ethereum Classic UPGRADER_ROLE)",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -299,6 +326,9 @@
       {
         "chain": "solana",
         "address": "8Dn2V6HX6gTwkCid2MUiv3mXvMkTcyxQeqTychdBRBSj",
+        "deploymentRefs": [
+          "solana:DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA"
+        ],
         "label": "SBC Solana SPL mint authority (1-of-2 Token Program multisig)",
         "role": "direct-minter",
         "authorityType": "multisig",
@@ -328,6 +358,9 @@
       {
         "chain": "stellar",
         "address": "GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+        "deploymentRefs": [
+          "stellar:SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
+        ],
         "label": "SBC Stellar native issuer account",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -355,6 +388,9 @@
       {
         "chain": "tempo",
         "address": "0x9b2ac01262756f76cd49a60060b43471c8473e7f",
+        "deploymentRefs": [
+          "tempo:0x20c000000000000000000000ae247a1130450f09"
+        ],
         "label": "SBC Tempo TIP-20 issuer and default-admin EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -452,6 +488,16 @@
     },
     "upgradeability": {
       "model": "uups",
+      "deploymentRefs": [
+        "arbitrum:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "avalanche:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "base:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "celo:0xde093684c796204224bc081f937aa059d903c52a",
+        "ethereum-classic:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "optimism:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "polygon:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+      ],
       "proxyAddresses": [
         "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
         "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",

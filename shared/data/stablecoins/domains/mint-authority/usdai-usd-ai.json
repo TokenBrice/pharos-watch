@@ -7,6 +7,9 @@
     "summary": "USDai's canonical Arbitrum hub mints against PYUSD received by the hub and mints accrued base yield only while pulling the matching PYUSD from its escrow. The transparent proxy can change mint logic only through a 48-hour DVNTimelock whose sole proposer and canceller is a 3-of-3 Safe. Satellite OToken and LayerZero controls are reviewed separately in the bridge-risk module.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+      ],
       "proxyAddresses": [
         "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
       ],
@@ -44,6 +47,9 @@
       {
         "chain": "arbitrum",
         "address": "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF",
+        "deploymentRefs": [
+          "arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+        ],
         "label": "USDai canonical PYUSD-backed hub",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -75,6 +81,9 @@
       {
         "chain": "arbitrum",
         "address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
+        "deploymentRefs": [
+          "arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+        ],
         "label": "USDai Arbitrum ProxyAdmin timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
@@ -106,6 +115,9 @@
       {
         "chain": "arbitrum",
         "address": "0x783b08aa21de056717173f72e04be0e91328a07b",
+        "deploymentRefs": [
+          "arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+        ],
         "label": "USDai Arbitrum timelock proposer Safe",
         "role": "governor",
         "authorityType": "safe",

@@ -8,6 +8,10 @@
     "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD — no privileged mint surface. Fraxtal's DStakeProxyAdmin is owned by a separate 24-hour TimelockController (0x0bafaDA2...) whose proposer/executor/canceller role is a 3-of-5 Safe (0xFC2f89f9...) holding the identical five-owner set as the Ethereum Safe.",
     "upgradeability": {
       "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x7cb20517776636ed76b68edb3d99dcce356abf02",
+        "fraxtal:0x58acc2600835211dcb5847c5fa422791fd492409"
+      ],
       "proxyAddresses": [
         "0x7cb20517776636ed76b68edb3d99dcce356abf02",
         "0x58acc2600835211dcb5847c5fa422791fd492409"
@@ -43,6 +47,9 @@
         "directMintAbility": "upgrade-only",
         "chain": "ethereum",
         "address": "0xe83c188a7be46b90715c757a06cf917175f30262",
+        "deploymentRefs": [
+          "ethereum:0x7cb20517776636ed76b68edb3d99dcce356abf02"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 3,
@@ -90,6 +97,9 @@
         "directMintAbility": "none",
         "chain": "ethereum",
         "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+        "deploymentRefs": [
+          "ethereum:0x7cb20517776636ed76b68edb3d99dcce356abf02"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Ethereum sdUSD shares are minted only against deposited local dUSD and do not create base dUSD supply.",
@@ -108,6 +118,9 @@
         "directMintAbility": "none",
         "chain": "ethereum",
         "address": "0xE83c188a7BE46B90715C757A06cF917175f30262",
+        "deploymentRefs": [
+          "ethereum:0x7cb20517776636ed76b68edb3d99dcce356abf02"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 3,
@@ -151,6 +164,9 @@
         "directMintAbility": "upgrade-only",
         "chain": "fraxtal",
         "address": "0xFC2f89f9982Be98A9672CEfc3eA6dbBDd88Bc8e9",
+        "deploymentRefs": [
+          "fraxtal:0x58acc2600835211dcb5847c5fa422791fd492409"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 3,

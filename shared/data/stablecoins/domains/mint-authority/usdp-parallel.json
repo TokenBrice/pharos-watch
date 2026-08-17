@@ -3,10 +3,35 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "verified",
-    "summary": "USDp's Ethereum Parallelizer diamond mints and burns against a governed collateral basket under a 5/8 Safe-controlled AccessManager. All 23 deployments resolve to the same 5/8 Parallel team signer set: the Ethereum Safe 0x25Fc7ffa, the shared non-Ethereum Safe 0xc5201ffe on 18 chains, 0x2046c041 on Polygon, 0xd22b9e8e on Plume, 0xF6Cd93af on Fraxtal, and 0x1AD681fa on Sei. The team Safe can re-authorize minters and diamondCut mint-critical logic without a configured delay, so the mint is economically unbounded.",
+    "confidence": "manual-review",
+    "summary": "USDp is natively issued through the Parallelizer collateral basket on all 23 reviewed deployments. Their chain-local ParallelAccessManagers assign mint(address,uint256) to role 110, with the Ethereum diamond and the reviewed non-Ethereum minter inventory behind those gates. Parallel 5/8 Safes hold the manager admin path: the Ethereum Safe, shared Safe 0xc5201ffe on 18 routes, and chain-specific Safes on Polygon, Plume, Fraxtal, and Sei. These admins can re-authorize role 110 and change mint-critical diamond logic without a configured delay, so canonical mint risk remains economically unbounded; the exact current role-110 holder is unresolved on Sonic and Polygon and incomplete on other routes.",
     "upgradeability": {
       "model": "diamond",
+      "deploymentRefs": [
+        "ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459",
+        "base:0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+        "arbitrum:0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+        "optimism:0x90337e484b1cb02132fc150d3afa262147348545",
+        "avalanche:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "sonic:0x08417cdb7f52a5021bb4eb6e0deaf3f295c3f182",
+        "sei:0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+        "hyperliquid:0xbe65f0f410a72bec163dc65d46c83699e957d588",
+        "scroll:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "ink:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "worldchain:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "bsc:0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+        "xlayer:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "polygon:0x1250304f66404cd153fa39388ddcdaec7e0f1707",
+        "berachain:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "gnosis:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "unichain:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "linea:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "plume:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "plasma:0xc2f8b5d893217462ae9c9879c9285a5a3aabcb8f",
+        "katana:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "fraxtal:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "hemi:0x8fcf9118fdd359f6277cdd143c2da206e64140f3"
+      ],
       "proxyAddresses": [
         "0x6efeddf9269c3683ba516cb0e2124fe335f262a2"
       ],
@@ -15,7 +40,16 @@
       ],
       "adminAddresses": [
         "0x94ea8800444017695345156319e96bdb1e355f7a",
-        "0x25fc7ffa8f9da3582a36633d04804f0004706f9b"
+        "0x25fc7ffa8f9da3582a36633d04804f0004706f9b",
+        "0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46",
+        "0xc5201ffe258a95af986e7cd1fcad54f3f63f2c95",
+        "0xfd28f108e95f4d41daae9dbfff707d677985998e",
+        "0x8efb3ded78fbaef2a4efe01e01bbd911e4094b78",
+        "0x7df74bbb6f82ec1bcb1562a30ef5bf5c326e2811",
+        "0x2046c0416a558c40cb112e5ebb0ca764c3c5c32a",
+        "0xd22b9e8ee5b6490c667d90c6819e53e9503ee139",
+        "0xf6cd93af204947c9aaf55b15d907f8f4d08b91a3",
+        "0x1ad681fa147f35ab7b35c7a289b1938bc0171e8b"
       ],
       "canChangeMintLogic": true,
       "controlRef": "Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
@@ -46,6 +80,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459"
+        ],
         "canRaiseCap": false,
         "capDescription": "Mint at oracle value against the whitelisted basket, bounded by per-asset exposure limits and adaptive fees that widen on depeg; redemption is proportional across the basket.",
         "evidence": "Re-verified at Ethereum block 25712339 on 2026-08-08: ParallelAccessManager 0x94ea8800444017695345156319e96bdb1e355f7a returned hasRole(110, 0x6efeddf9269c3683ba516cb0e2124fe335f262a2) = true with zero execution delay, and the USDp token maps mint(address,uint256) to role 110. The diamond is therefore the direct token minter. User mint remains bounded by its governed collateral-list, oracle-value, exposure-limit, and adaptive-fee logic; the diamond cannot grant itself roles or raise those bounds without the external AccessManager admin.",
@@ -104,12 +141,35 @@
         ],
         "chain": "ethereum",
         "address": "0x25fc7ffa8f9da3582a36633d04804f0004706f9b",
+        "deploymentRefs": [
+          "ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459"
+        ],
         "observedAt": "2026-08-08",
         "observedBlock": 25712340
       },
       {
         "chain": "base",
         "address": "0xc5201ffe258a95af986e7cd1fcad54f3f63f2c95",
+        "deploymentRefs": [
+          "base:0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+          "arbitrum:0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+          "optimism:0x90337e484b1cb02132fc150d3afa262147348545",
+          "avalanche:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "sonic:0x08417cdb7f52a5021bb4eb6e0deaf3f295c3f182",
+          "hyperliquid:0xbe65f0f410a72bec163dc65d46c83699e957d588",
+          "scroll:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "ink:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "worldchain:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "bsc:0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+          "xlayer:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "berachain:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "gnosis:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "unichain:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "linea:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "plasma:0xc2f8b5d893217462ae9c9879c9285a5a3aabcb8f",
+          "katana:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "hemi:0x8fcf9118fdd359f6277cdd143c2da206e64140f3"
+        ],
         "label": "Parallel team Safe 5/8 (non-Ethereum ParallelAccessManager ADMIN_ROLE)",
         "role": "governor",
         "authorityType": "safe",
@@ -152,15 +212,379 @@
             "url": "https://base.blockscout.com/address/0xc5201FfE258a95Af986e7CD1FCaD54f3F63f2c95"
           }
         ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x94ea8800444017695345156319e96bdb1e355f7a",
+        "deploymentRefs": [
+          "ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459"
+        ],
+        "label": "Ethereum ParallelAccessManager role-110 mint gate",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "capDescription": "The USDp mint selector is assigned to AccessManager role 110. The manager gates the direct minter, while role 10 administration can reassign role 110 without a configured delay.",
+        "failureDomainKeys": [
+          "contract:ethereum:0x94ea8800444017695345156319e96bdb1e355f7a"
+        ],
+        "bypassSurfaces": [
+          "role-10-admin-can-reassign-role-110",
+          "diamond-upgrade-can-change-mint-path"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "ParallelAccessManager (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x94Ea8800444017695345156319e96bdB1E355F7a"
+          },
+          {
+            "label": "Current Ethereum USDp explorer source",
+            "url": "https://etherscan.io/address/0x9b3a8f7cec208e247d97dee13313690977e24459"
+          }
+        ],
+        "evidence": "At Ethereum block 0x1893cfa on 2026-08-16, USDp mint(address,uint256) mapped to AccessManager role 110 and the Parallelizer diamond held role 110. Role 10 is the administrator for role 110, and the manager path had zero execution delay."
+      },
+      {
+        "chain": "base",
+        "address": "0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46",
+        "deploymentRefs": [
+          "base:0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+          "arbitrum:0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+          "optimism:0x90337e484b1cb02132fc150d3afa262147348545"
+        ],
+        "label": "Base, Arbitrum, and Optimism ParallelAccessManager role-110 mint gate",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "capDescription": "Each referenced USDp mint selector is assigned to AccessManager role 110. The chain-local manager gates direct minters, while role 10 administration can reassign role 110 without a configured delay.",
+        "failureDomainKeys": [
+          "contract:base:0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46",
+          "contract:arbitrum:0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46",
+          "contract:optimism:0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46"
+        ],
+        "bypassSurfaces": [
+          "role-10-admin-can-reassign-role-110",
+          "diamond-upgrade-can-change-mint-path"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "ParallelAccessManager (Base)",
+            "url": "https://base.blockscout.com/address/0x0e4e7ca9D7b1e6293D0713EfEFB4bcA010DEbf46"
+          },
+          {
+            "label": "Current Base USDp explorer source",
+            "url": "https://basescan.org/address/0x76a9a0062ec6712b99b4f63bd2b4270185759dd5"
+          }
+        ],
+        "evidence": "The reviewed deployment map returns this manager from authority() on Base, Arbitrum, and OP Mainnet. Current representative reads assign the USDp mint selector to role 110. Base block 0x2fbfd6a confirmed the manager/role path; the complete current role-110 holder list was not re-resolved for every referenced route."
+      },
+      {
+        "chain": "sonic",
+        "address": "0x8efb3ded78fbaef2a4efe01e01bbd911e4094b78",
+        "deploymentRefs": [
+          "sonic:0x08417cdb7f52a5021bb4eb6e0deaf3f295c3f182"
+        ],
+        "label": "Sonic ParallelAccessManager role-110 mint gate",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "capDescription": "The Sonic USDp mint selector is assigned to AccessManager role 110; role 10 administration can reassign role 110 without a configured delay.",
+        "failureDomainKeys": [
+          "contract:sonic:0x8efb3ded78fbaef2a4efe01e01bbd911e4094b78"
+        ],
+        "bypassSurfaces": [
+          "role-10-admin-can-reassign-role-110",
+          "diamond-upgrade-can-change-mint-path"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Sonic USDp route and authority read",
+            "url": "https://sonicscan.org/address/0x08417cdb7f52a5021bb4eb6e0deaf3f295c3f182"
+          },
+          {
+            "label": "Parallelizer module docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ],
+        "evidence": "The current Sonic USDp authority() read returned this ParallelAccessManager and the token-side mint selector mapped to role 110. An older documented role-110 holder failed the current hasRole check at Sonic block 0x4a0a117; the current holder remains unresolved."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xfd28f108e95f4d41daae9dbfff707d677985998e",
+        "deploymentRefs": [
+          "avalanche:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "sei:0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+          "hyperliquid:0xbe65f0f410a72bec163dc65d46c83699e957d588",
+          "scroll:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "ink:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "worldchain:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "bsc:0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+          "xlayer:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "berachain:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "gnosis:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "unichain:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+          "linea:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "plume:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "plasma:0xc2f8b5d893217462ae9c9879c9285a5a3aabcb8f",
+          "katana:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "fraxtal:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+          "hemi:0x8fcf9118fdd359f6277cdd143c2da206e64140f3"
+        ],
+        "label": "Avalanche and shared non-Ethereum ParallelAccessManager role-110 mint gate",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "capDescription": "Each referenced USDp mint selector is assigned to AccessManager role 110. The chain-local manager gates direct minters, while role 10 administration can reassign role 110 without a configured delay.",
+        "failureDomainKeys": [
+          "contract:shared-non-ethereum-parallel-access-manager:0xfd28f108e95f4d41daae9dbfff707d677985998e"
+        ],
+        "bypassSurfaces": [
+          "role-10-admin-can-reassign-role-110",
+          "diamond-upgrade-can-change-mint-path"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Current Avalanche USDp explorer source",
+            "url": "https://snowtrace.io/address/0x9ee1963f05553ef838604dd39403be21cef26aa4"
+          },
+          {
+            "label": "Parallelizer module docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ],
+        "evidence": "Current authority() reads return this manager for Avalanche, Sei, HyperEVM, Scroll, Ink, Worldchain, BNB Chain, X Layer, Berachain, Gnosis, Unichain, Linea, Plume, Plasma, Katana, Fraxtal, and Hemi. Representative current token reads assign mint(address,uint256) to role 110; the exact current role-110 holder was not fully re-resolved for every referenced route."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x7df74bbb6f82ec1bcb1562a30ef5bf5c326e2811",
+        "deploymentRefs": [
+          "polygon:0x1250304f66404cd153fa39388ddcdaec7e0f1707"
+        ],
+        "label": "Polygon ParallelAccessManager role-110 mint gate",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "capDescription": "The Polygon USDp mint selector is assigned to AccessManager role 110; role 10 administration can reassign role 110 without a configured delay.",
+        "failureDomainKeys": [
+          "contract:polygon:0x7df74bbb6f82ec1bcb1562a30ef5bf5c326e2811"
+        ],
+        "bypassSurfaces": [
+          "role-10-admin-can-reassign-role-110",
+          "diamond-upgrade-can-change-mint-path"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Polygon USDp route and authority read",
+            "url": "https://polygonscan.com/address/0x1250304f66404cd153fa39388ddcdaec7e0f1707"
+          },
+          {
+            "label": "Parallelizer module docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ],
+        "evidence": "The current Polygon USDp authority() read returned this ParallelAccessManager and the token-side mint selector mapped to role 110. The current Polygon role-110 holder was not identified in the review and remains unresolved."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x2046c0416a558c40cb112e5ebb0ca764c3c5c32a",
+        "deploymentRefs": [
+          "polygon:0x1250304f66404cd153fa39388ddcdaec7e0f1707"
+        ],
+        "label": "Polygon Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 8,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x35b3e718aafd5f932450eeb8690d022a96aad78a",
+            "0x8222624ae36fa6d21e32801cca2b5af54669e290",
+            "0xd758e17c0d96a6c753995d86e891e07286858130",
+            "0x79603115df2ba00659adc63192325cf104ca529c",
+            "0xbabb038737a7ae0dca02075e79ed5b7704c29827",
+            "0x244a875233a8898aa97753cd919857271079682c",
+            "0x06c24d990eaac2659565827788bddb8c8fe31142",
+            "0x4c5d1029c2c64fc6477529d5a391ca667a514b4c"
+          ],
+          "threshold": 5,
+          "observedAt": "2026-08-16",
+          "source": "manual"
+        },
+        "failureDomainKeys": [
+          "safe:polygon:0x2046c0416a558c40cb112e5ebb0ca764c3c5c32a"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Parallel governance Safe inventory",
+            "url": "https://docs.parallel.best/governance/dao-multisigs"
+          },
+          {
+            "label": "Polygon USDp route",
+            "url": "https://polygonscan.com/address/0x1250304f66404cd153fa39388ddcdaec7e0f1707"
+          }
+        ],
+        "evidence": "The reviewed Polygon admin path records Safe 0x2046c0416a558c40cb112e5ebb0ca764c3c5c32a as the chain-specific 5/8 Parallel team Safe for AccessManager administration. The current role-110 holder and a fresh per-chain Safe role replay remain unresolved."
+      },
+      {
+        "chain": "plume",
+        "address": "0xd22b9e8ee5b6490c667d90c6819e53e9503ee139",
+        "deploymentRefs": [
+          "plume:0x8fcf9118fdd359f6277cdd143c2da206e64140f3"
+        ],
+        "label": "Plume Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 8,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x35b3e718aafd5f932450eeb8690d022a96aad78a",
+            "0x8222624ae36fa6d21e32801cca2b5af54669e290",
+            "0xd758e17c0d96a6c753995d86e891e07286858130",
+            "0x79603115df2ba00659adc63192325cf104ca529c",
+            "0xbabb038737a7ae0dca02075e79ed5b7704c29827",
+            "0x244a875233a8898aa97753cd919857271079682c",
+            "0x06c24d990eaac2659565827788bddb8c8fe31142",
+            "0x4c5d1029c2c64fc6477529d5a391ca667a514b4c"
+          ],
+          "threshold": 5,
+          "observedAt": "2026-08-16",
+          "source": "manual"
+        },
+        "failureDomainKeys": [
+          "safe:plume:0xd22b9e8ee5b6490c667d90c6819e53e9503ee139"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Parallel governance Safe inventory",
+            "url": "https://docs.parallel.best/governance/dao-multisigs"
+          },
+          {
+            "label": "Plume USDp route",
+            "url": "https://explorer.plume.org/address/0x8fcf9118fdd359f6277cdd143c2da206e64140f3"
+          }
+        ],
+        "evidence": "The reviewed Plume admin path records Safe 0xd22b9e8ee5b6490c667d90c6819e53e9503ee139 as the chain-specific 5/8 Parallel team Safe for AccessManager administration. A fresh per-chain Safe role replay and the current role-110 holder remain unresolved."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xf6cd93af204947c9aaf55b15d907f8f4d08b91a3",
+        "deploymentRefs": [
+          "fraxtal:0x8fcf9118fdd359f6277cdd143c2da206e64140f3"
+        ],
+        "label": "Fraxtal Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 8,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x35b3e718aafd5f932450eeb8690d022a96aad78a",
+            "0x8222624ae36fa6d21e32801cca2b5af54669e290",
+            "0xd758e17c0d96a6c753995d86e891e07286858130",
+            "0x79603115df2ba00659adc63192325cf104ca529c",
+            "0xbabb038737a7ae0dca02075e79ed5b7704c29827",
+            "0x244a875233a8898aa97753cd919857271079682c",
+            "0x06c24d990eaac2659565827788bddb8c8fe31142",
+            "0x4c5d1029c2c64fc6477529d5a391ca667a514b4c"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "safe:fraxtal:0xf6cd93af204947c9aaf55b15d907f8f4d08b91a3"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Parallel governance Safe inventory",
+            "url": "https://docs.parallel.best/governance/dao-multisigs"
+          },
+          {
+            "label": "Fraxtal Parallel team Safe",
+            "url": "https://fraxscan.com/address/0xF6Cd93af204947c9aAF55B15d907f8F4D08b91A3#code"
+          }
+        ],
+        "evidence": "At the reviewed Fraxtal head state, Safe 0xf6cd93af204947c9aaf55b15d907f8f4d08b91a3 held ADMIN_ROLE and role 10 on ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e. The Safe returned threshold 5, the shared eight Parallel signers, no enabled modules, and no guard; role 110 remains the USDp mint selector assignment."
+      },
+      {
+        "chain": "sei",
+        "address": "0x1ad681fa147f35ab7b35c7a289b1938bc0171e8b",
+        "deploymentRefs": [
+          "sei:0x048c4e07d170eedee8772ca76aee1c4e2d133d5c"
+        ],
+        "label": "Sei Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 8,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x35b3e718aafd5f932450eeb8690d022a96aad78a",
+            "0x8222624ae36fa6d21e32801cca2b5af54669e290",
+            "0xd758e17c0d96a6c753995d86e891e07286858130",
+            "0x79603115df2ba00659adc63192325cf104ca529c",
+            "0xbabb038737a7ae0dca02075e79ed5b7704c29827",
+            "0x244a875233a8898aa97753cd919857271079682c",
+            "0x06c24d990eaac2659565827788bddb8c8fe31142",
+            "0x4c5d1029c2c64fc6477529d5a391ca667a514b4c"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-16",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "safe:sei:0x1ad681fa147f35ab7b35c7a289b1938bc0171e8b"
+        ],
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Parallel governance Safe inventory",
+            "url": "https://docs.parallel.best/governance/dao-multisigs"
+          },
+          {
+            "label": "Sei Parallel team Safe",
+            "url": "https://seitrace.com/address/0x1AD681fa147f35AB7B35c7a289B1938Bc0171e8b?tab=contract"
+          }
+        ],
+        "evidence": "At the reviewed Sei head state, Safe 0x1ad681fa147f35ab7b35c7a289b1938bc0171e8b held ADMIN_ROLE and role 10 on ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e. The Safe returned threshold 5, the shared eight Parallel signers, no enabled modules, and no guard; role 110 remains the USDp mint selector assignment."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Verified on-chain 2026-07-20: Ethereum USDp authority() = ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a; the Parallelizer diamond holds its minter role and the 5/8 team Safe holds ADMIN_ROLE and can diamondCut its mint-critical module logic. The non-Ethereum route inventory was enumerated on 2026-07-20: all 22 non-Ethereum deployments resolve to just four AccessManagers, each gating mint(address,uint256) behind role 110 with role 10 as its role admin, and on 20 of the 22 chains the terminal ADMIN_ROLE holder is a Parallel team 5/8 Safe carrying the same eight signers as the Ethereum Safe (0xc5201ffe... on 18 chains, 0x2046c041... on Polygon, 0xd22b9e8e... on Plume). Role-110 membership is chain-specific rather than shared: on Base four contracts hold it (0x08417cdb, 0xc3bef21e, 0x472ed57b, 0x4dde0e30) while the same manager grants none of them on OP Mainnet. Follow-up 2026-07-27 resolves the two remaining chains. On Fraxtal (head block 39180535), full-range event enumeration on ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (OZ AccessManager v5 RoleGranted(uint64,address,uint32,uint48,bool) topic) shows ADMIN_ROLE granted to the deployer EOA 0x66ccec236bbce5f1bbd1b2fc0a4014e57a55ad02 at deployment (block 33117174), re-granted together with roles 10/11/20/21/30/31 to Safe 0xF6Cd93af204947c9aAF55B15d907f8F4D08b91A3 at block 33165703, and the deployer's ADMIN_ROLE revoked at block 34899269; no other ADMIN_ROLE grant exists. Current state: hasRole(0, Safe)=true, hasRole(10, Safe)=true, getTargetFunctionRole(USDp, mint)=110 and getRoleAdmin(110)=0. The Fraxtal Safe (EIP-1167 proxy) returns threshold 5 and the identical eight Parallel team signers, no enabled modules, and no guard (pre-GuardManager Safe version); Parallel's own governance docs name it the Fraxtal Protocol & DAO Treasury 5-of-8 multisig. On Sei (head block 222569346), public RPCs expose no archive before block 206599999 so grant history is not enumerable, but current-state reads show hasRole(0, 0x1AD681fa147f35AB7B35c7a289B1938Bc0171e8b)=true and hasRole(10, same)=true while the deployer EOA no longer holds ADMIN_ROLE; getTargetFunctionRole(USDp, mint)=110 and getRoleAdmin(110)=10. The issuer's governance docs name 0x1AD681fa as the Sei Protocol & DAO Treasury 5-of-8 multisig, and on-chain it returns threshold 5 with the same eight signers, no enabled modules, and no guard. All 23 deployments' terminal mint-grant authority is therefore the same 5/8 Parallel team signer set.. Economic-posture fields reviewed 2026-08-15: the shared 5-of-8 signer set can authorize or replace minters across 23 deployments without delay, while the live reserve path covers only Ethereum and no prudential supervisor or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: Parallel's live proof-of-solvency dashboard and production frontend enumerate issued and circulating USDp by deployment chain, compare total reserves with total supply, and source independent reserve portfolios through DeBank and Octav, resolving the prior Ethereum-only scope gap.",
-      "reviewer": "P2 mint-free cohort; V9 Phase 3 curation lane cur-3 (2026-07-20); Kimi data review (2026-07-27); Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Verified on-chain 2026-07-20: Ethereum USDp authority() = ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a; the Parallelizer diamond holds its minter role and the 5/8 team Safe holds ADMIN_ROLE and can diamondCut its mint-critical module logic. The non-Ethereum route inventory was enumerated on 2026-07-20: all 22 non-Ethereum deployments resolve to just four AccessManagers, each gating mint(address,uint256) behind role 110 with role 10 as its role admin, and on 20 of the 22 chains the terminal ADMIN_ROLE holder is a Parallel team 5/8 Safe carrying the same eight signers as the Ethereum Safe (0xc5201ffe... on 18 chains, 0x2046c041... on Polygon, 0xd22b9e8e... on Plume). Role-110 membership is chain-specific rather than shared: on Base four contracts hold it (0x08417cdb, 0xc3bef21e, 0x472ed57b, 0x4dde0e30) while the same manager grants none of them on OP Mainnet. Follow-up 2026-07-27 resolves the two remaining chains. On Fraxtal (head block 39180535), full-range event enumeration on ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (OZ AccessManager v5 RoleGranted(uint64,address,uint32,uint48,bool) topic) shows ADMIN_ROLE granted to the deployer EOA 0x66ccec236bbce5f1bbd1b2fc0a4014e57a55ad02 at deployment (block 33117174), re-granted together with roles 10/11/20/21/30/31 to Safe 0xF6Cd93af204947c9aAF55B15d907f8F4D08b91A3 at block 33165703, and the deployer's ADMIN_ROLE revoked at block 34899269; no other ADMIN_ROLE grant exists. Current state: hasRole(0, Safe)=true, hasRole(10, Safe)=true, getTargetFunctionRole(USDp, mint)=110 and getRoleAdmin(110)=0. The Fraxtal Safe (EIP-1167 proxy) returns threshold 5 and the identical eight Parallel team signers, no enabled modules, and no guard (pre-GuardManager Safe version); Parallel's own governance docs name it the Fraxtal Protocol & DAO Treasury 5-of-8 multisig. On Sei (head block 222569346), public RPCs expose no archive before block 206599999 so grant history is not enumerable, but current-state reads show hasRole(0, 0x1AD681fa147f35AB7B35c7a289B1938Bc0171e8b)=true and hasRole(10, same)=true while the deployer EOA no longer holds ADMIN_ROLE; getTargetFunctionRole(USDp, mint)=110 and getRoleAdmin(110)=10. The issuer's governance docs name 0x1AD681fa as the Sei Protocol & DAO Treasury 5-of-8 multisig, and on-chain it returns threshold 5 with the same eight signers, no enabled modules, and no guard. All 23 deployments' terminal mint-grant authority is therefore the same 5/8 Parallel team signer set.. Economic-posture fields reviewed 2026-08-15: the shared 5-of-8 signer set can authorize or replace minters across 23 deployments without delay, while the live reserve path covers only Ethereum and no prudential supervisor or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: Parallel's live proof-of-solvency dashboard and production frontend enumerate issued and circulating USDp by deployment chain, compare total reserves with total supply, and source independent reserve portfolios through DeBank and Octav, resolving the prior Ethereum-only scope gap. Boundary migration reviewed 2026-08-16: all 23 route rows are reviewed native-issuance deployments and are now explicitly referenced by the Mint Authority upgrade path and grouped native controls. Sonic's current role-110 holder and Polygon's current role-110 holder remain unresolved; the current holder inventory is incomplete on other routes as documented in the scoped controls.",
+      "reviewer": "P2 mint-free cohort; V9 Phase 3 curation lane cur-3 (2026-07-20); Kimi data review (2026-07-27); Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; Codex mint/bridge boundary migration (2026-08-16)",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {

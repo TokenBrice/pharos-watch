@@ -4,7 +4,7 @@
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "USDh mints only after a two-step backend attestation: a KYC-whitelisted minter calls request-mint and deposits BTC, then Hermetica's trader opens the delta-neutral hedge off-chain and calls confirm-mint to release USDh, making supply gated by Hermetica's off-chain operator.",
+    "summary": "USDh's sole authored Stacks deployment is the canonical native-issuance route. Mints require a two-step backend attestation: a KYC-whitelisted minter calls request-mint and deposits BTC, then Hermetica's trader opens the delta-neutral hedge off-chain and calls confirm-mint to release USDh, making supply gated by Hermetica's off-chain operator. No bridge representation or bridge administrator is evidenced, so bridge machinery is outside Mint Authority.",
     "upgradeability": {
       "model": "custom",
       "implementationAddresses": [
@@ -48,12 +48,7 @@
         "chain": "stacks",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "signingModel": "USDh minting is two-step: KYC-whitelisted minter request/deposit first, then Hermetica confirm-mint operators release USDh after off-chain hedge execution.",
-          "onchainAmountBounds": "hq-v1 minting-contracts map limits active mint routes to reviewed contracts; no permissionless mint path exists.",
-          "pausersAdminsUpgraders": "New minting contracts and owner changes are subject to the hq-v1 1008-block timelock."
-        },
-        "evidence": "Hiro API read of hq-v1 minting-contracts map: two contracts are currently active — minting-otc-v1-1 (burn-block-height=some(927047)) and emergency-recover-v1 (burn-block-height=some(862013)), both deployed by SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG (Hermetica deployer). minting-otc-v1-1 is the primary OTC minting route; emergency-recover-v1 is an emergency recovery contract. minting-auto-v1-1 was deactivated 2026-03-23 and removed. No permissionless mint path exists.",
+        "evidence": "Hiro API read of hq-v1 minting-contracts map: two contracts are currently active — minting-otc-v1-1 (burn-block-height=some(927047)) and emergency-recover-v1 (burn-block-height=some(862013)), both deployed by SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG (Hermetica deployer). minting-otc-v1-1 is the primary OTC minting route; emergency-recover-v1 is an emergency recovery contract. minting-auto-v1-1 was deactivated 2026-03-23 and removed. No permissionless mint path exists. Native issuance route checks retained from the former routeChecks block: signingModel = \"USDh minting is two-step: KYC-whitelisted minter request/deposit first, then Hermetica confirm-mint operators release USDh after off-chain hedge execution.\"; onchainAmountBounds = \"hq-v1 minting-contracts map limits active mint routes to reviewed contracts; no permissionless mint path exists.\"; pausersAdminsUpgraders = \"New minting contracts and owner changes are subject to the hq-v1 1008-block timelock.\" These checks govern Stacks-native issuance, not a bridge route.",
         "sources": [
           {
             "label": "Hermetica minting contract docs",
@@ -82,11 +77,7 @@
         "address": "SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "pausersAdminsUpgraders": "hq-v1 owner is a Stacks P2SH/multisig address and owner changes/new minting contracts use a 1008-block timelock.",
-          "unsupportedReason": "Stacks P2SH signer set and threshold were not enumerated on-chain."
-        },
-        "evidence": "Hiro API get-owner read on hq-v1: owner data-var returns Clarity bytes 0x05146fdf77f03a1ace4bf29f8090067a98c65000e1e2, decoded via c32check (version byte 20 = SM P2SH/multisig prefix) to SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT. This is a Stacks P2SH multisig address (SM prefix) — signers and threshold not enumerated on-chain. Ownership transferred from deployer SP1N0K23NJTRK19SV9BFP8SVXQQFQ7XGGBFJ8DBVX via 2-step timelock (request-owner-update nonce 24, activate-next-owner nonce 25, executed 2026-02-02 to 2026-02-10). hq-v1 enforces a 1008-block (~7 day) timelock on owner changes and minting-contract additions.",
+        "evidence": "Hiro API get-owner read on hq-v1: owner data-var returns Clarity bytes 0x05146fdf77f03a1ace4bf29f8090067a98c65000e1e2, decoded via c32check (version byte 20 = SM P2SH/multisig prefix) to SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT. This is a Stacks P2SH multisig address (SM prefix) — signers and threshold not enumerated on-chain. Ownership transferred from deployer SP1N0K23NJTRK19SV9BFP8SVXQQFQ7XGGBFJ8DBVX via 2-step timelock (request-owner-update nonce 24, activate-next-owner nonce 25, executed 2026-02-02 to 2026-02-10). hq-v1 enforces a 1008-block (~7 day) timelock on owner changes and minting-contract additions. Native issuance route checks retained from the former routeChecks block: pausersAdminsUpgraders = \"hq-v1 owner is a Stacks P2SH/multisig address and owner changes/new minting contracts use a 1008-block timelock.\"; unsupportedReason = \"Stacks P2SH signer set and threshold were not enumerated on-chain.\" These checks govern native hq-v1 administration, not bridge machinery.",
         "sources": [
           {
             "label": "Hiro API — hq-v1 owner data-var",
@@ -104,11 +95,7 @@
         "directMintAbility": "can-authorize",
         "chain": "stacks",
         "canRaiseCap": false,
-        "routeChecks": {
-          "signingModel": "Only KYC/KYB-approved participants can request direct mints/redemptions; Hermetica administers this off-chain whitelist.",
-          "unsupportedReason": "The off-chain whitelist administration process and signer controls are issuer-operated and not enumerated on-chain."
-        },
-        "evidence": "Only KYC/KYB-approved participants whitelisted by Hermetica can request mints/redemptions directly; access to the mint route is administered off-chain by the issuer.",
+        "evidence": "Only KYC/KYB-approved participants whitelisted by Hermetica can request mints/redemptions directly; access to the mint route is administered off-chain by the issuer. Native issuance route checks retained from the former routeChecks block: signingModel = \"Only KYC/KYB-approved participants can request direct mints/redemptions; Hermetica administers this off-chain whitelist.\"; unsupportedReason = \"The off-chain whitelist administration process and signer controls are issuer-operated and not enumerated on-chain.\" These checks govern the native KYC/KYB gate, not bridge machinery.",
         "capDescription": "The minter whitelist gates who may request a mint (minting-state-v1 whitelist map, whitelist-enabled = true); it carries no cap-setting function.",
         "failureDomainKeys": [
           "stacks:SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.minting-state-v1",
@@ -132,9 +119,9 @@
     "reconciliation": "periodic",
     "supervision": "none",
     "review": {
-      "evidence": "Hiro API reads on hq-v1 (SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1): (1) owner = SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT (SM-prefix P2SH multisig, transferred 2026-02-10 via 1008-block timelock); (2) active minting-contracts: minting-otc-v1-1 (primary OTC route) and emergency-recover-v1, both deployed by Hermetica deployer; minting-auto-v1-1 deactivated 2026-03-23. No permissionless mint path. hq-v1 enforces 7-day timelock on owner changes and new minting-contract activations. Minting model confirmed as backend-attested OTC with a multisig-governed admin layer. Economic-posture fields reviewed 2026-08-15: activating a replacement minting contract requires the enforced 1008-block delay, monthly dated custodian reports reconcile supply to backing, and no named regulator or independent assurance provider is evidenced.",
+      "evidence": "Hiro API reads on hq-v1 (SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1): (1) owner = SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT (SM-prefix P2SH multisig, transferred 2026-02-10 via 1008-block timelock); (2) active minting-contracts: minting-otc-v1-1 (primary OTC route) and emergency-recover-v1, both deployed by Hermetica deployer; minting-auto-v1-1 deactivated 2026-03-23. No permissionless mint path. hq-v1 enforces 7-day timelock on owner changes and new minting-contract activations. Minting model confirmed as backend-attested OTC with a multisig-governed admin layer. Economic-posture fields reviewed 2026-08-15: activating a replacement minting contract requires the enforced 1008-block delay, monthly dated custodian reports reconcile supply to backing, and no named regulator or independent assurance provider is evidenced. Boundary migration (2026-08-16): all three controls and the hq-v1 upgradeability entry govern the sole Stacks native-issuance deployment; their former routeChecks are native issuance checks preserved in control evidence, not bridge machinery. No bridge representation, bridge administrator, or bridgeRouteRisk route is evidenced.",
       "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-08-16",
       "sources": [
         {
           "label": "Hermetica mint mechanism",

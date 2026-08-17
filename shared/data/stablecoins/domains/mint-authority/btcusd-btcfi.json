@@ -4,41 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "BtcUSD's canonical Bifrost issuance runs through the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647, a non-proxy contract that holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral; the token's DEFAULT_ADMIN_ROLE EOA can grant or revoke that role but cannot mint directly. On Base, the ERC20_Bridged proxy's two owners mint the bridged representation, and its proxy admin resolves to an EOA. The Bifrost AccessControl is non-enumerable and public Bifrost RPCs cannot serve full-history role-grant logs, so membership exclusivity and the unverified Base owner contract cap this review at manual-review.",
-    "upgradeability": {
-      "model": "transparent-proxy",
-      "proxyAddresses": [
-        "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
-      ],
-      "implementationAddresses": [
-        "0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9"
-      ],
-      "adminAddresses": [
-        "0x55506bcc5fa9b2e702848aa110b5a6987a735060"
-      ],
-      "canChangeMintLogic": true,
-      "controlRef": "BtcUSD Base proxy admin (unverified contract)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 48621895,
-      "sources": [
-        {
-          "label": "BtcUSD Base token proxy",
-          "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
-        },
-        {
-          "label": "BtcUSD Base verified implementation",
-          "url": "https://basescan.org/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9#code"
-        },
-        {
-          "label": "BtcUSD Base proxy admin contract",
-          "url": "https://basescan.org/address/0x55506bcc5fa9b2e702848aa110b5a6987a735060#code"
-        },
-        {
-          "label": "Base PublicNode RPC",
-          "url": "https://base-rpc.publicnode.com"
-        }
-      ]
-    },
+    "summary": "BtcUSD's canonical issuance is confined to the Bifrost native BtcUSD deployment: the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647 holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral, while token owner/default admin 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5 can authorize additional minters but cannot mint directly. Base is a Bifrost Bridge representation and its owner/admin/proxy controls are authored under Bridge Risk. Bifrost AccessControl membership is non-enumerable through the reviewed public RPC and the native token/CDP implementation is not source-verified; those role-enumeration and source gaps keep this review at manual-review.",
     "controls": [
       {
         "chain": "bifrost",
@@ -47,6 +13,9 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
+        "deploymentRefs": [
+          "bifrost:0x6906ccda405926fc3f04240187dd4fad5df6d555"
+        ],
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-20",
@@ -65,6 +34,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
+        "deploymentRefs": [
+          "bifrost:0x6906ccda405926fc3f04240187dd4fad5df6d555"
+        ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The handler mints BtcUSD only through the BTCFi CDP borrow path against deposited BTC-variant collateral, bounded by collateral balances, the 50% maximum LTV, and oracle pricing; it holds no role-admin capability.",
@@ -85,73 +57,15 @@
           }
         ],
         "evidence": "BTCFi's own getAvailableBtcfiHandlers API identifies this contract (chainId 3068) as the BtcUSD token handler. At Bifrost block 37087890 (2026-07-27): hasRole(keccak256(\"Minter\") = 0x6e58ad548d72b425ea94c15f453bf26caddb061d82b2551db7fdd3cefe0e9940, this contract) returned true on the native BtcUSD token, and an eth_call simulation of mint(address,uint256) from this address succeeded while identical simulations from the token owner EOA and the four collateral handler contracts reverted with AccessControlUnauthorizedAccount(account, Minter). The handler is a 5,266-byte non-proxy contract (EIP-1967 implementation slot zero, no owner())."
-      },
-      {
-        "chain": "base",
-        "address": "0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe",
-        "label": "BtcUSD Base bridge owner contract",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "observedAt": "2026-07-14",
-        "observedBlock": 48621895,
-        "sources": [
-          {
-            "label": "BtcUSD Base token",
-            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
-          }
-        ],
-        "evidence": "At Base block 48621895, get_owners() on the ERC20_Bridged token returned this contract as one of two current owners. The verified bridge implementation permits token owners to mint bridged BtcUSD directly; the owner contract is not verified as a Safe or bounded multisig."
-      },
-      {
-        "chain": "base",
-        "address": "0xf98e8601a1eef3bce943f9b002e83db8a0951aa5",
-        "label": "BtcUSD Base bridge owner EOA",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "observedAt": "2026-07-14",
-        "observedBlock": 48621895,
-        "sources": [
-          {
-            "label": "BtcUSD Base token",
-            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
-          }
-        ],
-        "evidence": "At Base block 48621895, get_owners() on the ERC20_Bridged token returned this EOA as one of two current owners. The verified bridge implementation permits token owners to mint bridged BtcUSD directly."
-      },
-      {
-        "chain": "base",
-        "address": "0x55506bcc5fa9b2e702848aa110b5a6987a735060",
-        "label": "BtcUSD Base proxy admin (unverified contract)",
-        "role": "proxy-admin",
-        "authorityType": "contract",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-07-14",
-        "observedBlock": 48621895,
-        "sources": [
-          {
-            "label": "BtcUSD Base proxy admin contract",
-            "url": "https://basescan.org/address/0x55506bcc5fa9b2e702848aa110b5a6987a735060#code"
-          },
-          {
-            "label": "BtcUSD Base token",
-            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
-          }
-        ],
-        "evidence": "At Base block 48621895, the EIP-1967 admin slot of the BtcUSD bridge proxy returned this deployed contract and the implementation slot returned 0x6e9070b8. 2026-07-20 follow-up: the admin is a 10.25KB contract whose slot-0 owner reads as EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001 (no contract code), so the upgrade authority chain resolves to that EOA; the admin contract itself remains source-unverified, so its delay and signer policy are unknown."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Base block 48621895, BtcUSD is a TransparentUpgradeableProxy with enumerable direct bridge-token mint owners 0x26fce52a and 0xf98e8601. The Base proxy admin and its slot-0 EOA owner are also identified. On Bifrost, native BtcUSD owner() returns 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; it is the DEFAULT_ADMIN_ROLE holder and can grant the mint role, but cannot mint directly. Follow-up at Bifrost block 37087890 (2026-07-27): the token's mint gate is keccak256(\"Minter\") (not OZ's MINTER_ROLE — getRoleMemberCount reverts because the token uses plain, non-enumerable AccessControl). BTCFi's own handler API names 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD token handler; hasRole(Minter, handler) returned true and a mint simulation from the handler succeeded, while simulations from the owner EOA and all four collateral handlers reverted AccessControlUnauthorizedAccount. The handler is a non-proxy 5,266-byte contract, so the canonical CDP mint path is resolved. Two limits cap confidence at manual-review: (1) plain AccessControl membership cannot be enumerated without grant-event history, and both public Bifrost RPC families (public-01/02.mainnet.bifrostnetwork.com, public-01/02.mainnet.thebifrost.io) time out on getLogs beyond single-block ranges, so a second Minter member cannot be excluded on-chain; (2) the Base bridge owner contract 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe is source-unverified on Blockscout/Basescan/Sourcify and exposes no Safe or owner() interface (getOwners/getThreshold/owner all return empty), so its internal signer policy is unknown. M-2 evidence review 2026-08-08: reconciliation downgraded continuous -> unknown - the review evidences the mint-role topology (bridge-token owners, handler role) but states no mechanism reconciling BtcUSD supply against BTC backing, no reserve endpoint is sourced, and no artefact names what is reconciled against what. A reconciled posture is therefore unsupported; V9 grades it conservatively while reconciliation is unknown. Economic-posture fields reviewed 2026-08-15: the Base bridge owners can mint directly and the native admin can add minters; no reserve artefact covers both native and bridged supply, and no prudential supervisor is named. Sol reconciliation adjudication 2026-08-15: the contract-gated canonical CDP path does not make reconciliation structurally inapplicable because Base bridge owners can mint directly and the native admin can authorize additional minters outside that collateral math; absent a reserve artefact covering native and bridged supply, reconciliation remains unknown and the authority posture remains unbounded-or-compromised.",
-      "reviewer": "P2 mint-free cohort; Kimi data review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Bifrost block 37710739 (2026-08-16), native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 owner() returned 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; hasRole(DEFAULT_ADMIN_ROLE, owner) returned true, hasRole(keccak256(\"Minter\"), owner) returned false, a direct mint simulation from the owner reverted, getRoleAdmin(Minter) returned DEFAULT_ADMIN_ROLE, and a grantRole(Minter, owner) simulation returned success. BTCFi's supported-handler API identifies 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD CDP handler; hasRole(Minter, handler) returned true and a mint simulation from the handler succeeded. The native token and handler are non-proxy deployments. Bifrost AccessControl membership is not enumerable through the reviewed public RPC: getRoleMemberCount reverts and historical role-grant logs were unavailable, so another native Minter cannot be excluded. The native token and CDP implementation are not source-verified, leaving the full collateral/accounting invariant and hidden native mint paths unverified. The native default admin can authorize a minter outside the handler's collateral math; therefore authorityPosture remains unbounded-or-compromised, economicCapSemantics remains unbounded, reconciliation remains unknown, and supervision remains none.",
+      "reviewer": "P2 mint-free cohort; Kimi data review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15; Codex mint-bridge-boundary review",
+      "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
         {
@@ -163,8 +77,8 @@
           "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
         },
         {
-          "label": "BtcUSD Base token on Blockscout",
-          "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+          "label": "BTCFi supported-handler API",
+          "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
         },
         {
           "label": "Bifrost public EVM RPC",
