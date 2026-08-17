@@ -1359,6 +1359,109 @@ describe("Safety Score v9 normalized fact protocol", () => {
     });
   });
 
+  it("keeps a shared upgrade-control ceiling adverse when one member is bounded-unknown", () => {
+    const evaluateSharedUpgrade = (boundedUnknownAssetId: string | null) => {
+      const input = coreFixture();
+      const assets = input.assets as unknown as V9AssetFactsV2[];
+      const controlTemplate = structuredClone(
+        assets[0]!.controls.find((control) => control.controlKey === "control:admin")!,
+      );
+      const sharedDomain = { kind: "upgrade-control" as const, key: "platform:fixture" };
+
+      for (const asset of assets) {
+        asset.assetIssuerKey = `issuer:${asset.assetId}`;
+        const controlKey = `control:shared-upgrade:${asset.assetId}`;
+        const deploymentKey = `deployment:${asset.assetId}`;
+        const boundedGapId = `${asset.assetId}:gap:shared-upgrade-bounded`;
+        const status =
+          asset.assetId === boundedUnknownAssetId
+            ? createV9FactStatus({
+                applicability: requiredV9Applicability("control.upgrade.shared"),
+                observationState: "bounded-unknown",
+                evidenceRefIds: ["evidence:base"],
+                gapIds: [boundedGapId],
+              })
+            : knownStatus("evidence:base", "control.upgrade.shared");
+        if (asset.assetId === boundedUnknownAssetId) {
+          asset.gaps.push(
+            createV9FactGap({
+              gapId: boundedGapId,
+              reasonCode: "unknown-upgrade-authority",
+              ownerDomain: "control",
+              policyRuleId: "control.upgrade.shared",
+              observationState: "bounded-unknown",
+              path: { kind: "deployment-control", deploymentKey, controlKey },
+              message: "The shared upgrade authority was re-verified, but its custody is not established.",
+              evidenceRefIds: ["evidence:base"],
+            }),
+          );
+        }
+        const control = {
+          ...controlTemplate,
+          controlKey,
+          deploymentKey,
+          status,
+          failureDomains: [sharedDomain],
+          ...(asset.assetId === boundedUnknownAssetId
+            ? {
+                authority: {
+                  authorityKey: `programdata:${asset.assetId}`,
+                  model: "unknown" as const,
+                  threshold: null,
+                },
+                capSemantics: { kind: "unknown" as const, bound: null },
+                claimImpairment: "unknown" as const,
+                economicLossScope: "unknown" as const,
+                keyCustody: "unknown" as const,
+                modulesOrGuards: "unknown" as const,
+              }
+            : {}),
+        };
+        asset.controls.push(control);
+        if (asset.assetId !== "alpha") asset.controlStatus = status;
+      }
+
+      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+    };
+    const signal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
+      evaluated.assets
+        .find((asset) => asset.assetId === assetId)!
+        .scoreInput.dependencyStructuralSignals.find((candidate) =>
+          candidate.failureDomainKeys.includes("upgrade-control:platform:fixture"),
+        );
+    const asset = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
+      evaluated.assets.find((candidate) => candidate.assetId === assetId)!;
+
+    const allKnown = evaluateSharedUpgrade(null);
+    const degraded = evaluateSharedUpgrade("gamma");
+    for (const assetId of ["alpha", "beta"]) {
+      expect(signal(degraded, assetId)).toMatchObject({
+        severity: "high",
+        responsibility: "measured-adverse",
+        evidenceConfidence: "high",
+      });
+      expect(asset(degraded, assetId).trace.caps).toContainEqual(
+        expect.objectContaining({
+          kind: "signal:critical-dependency:high",
+          limit: 64,
+        }),
+      );
+      expect(asset(degraded, assetId).trace.finalScore).toBe(
+        asset(allKnown, assetId).trace.finalScore,
+      );
+      expect(signal(degraded, assetId)?.reason).toContain("bounded-unknown");
+    }
+
+    expect(signal(degraded, "gamma")).toMatchObject({
+      severity: "high",
+      responsibility: "measured-adverse",
+      evidenceConfidence: "low",
+    });
+    expect(asset(degraded, "gamma").trace.finalScore).toBeLessThanOrEqual(
+      asset(allKnown, "gamma").trace.finalScore!,
+    );
+  });
+
   it("derives bridge share bounds through reviewed control and deployment joins", () => {
     type BridgeJoinVariant =
       | "known"
