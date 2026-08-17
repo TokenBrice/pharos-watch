@@ -2,59 +2,12 @@
   "id": "cngn-compliant-naira",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "cNGN is issued by the Africa Stablecoin Consortium. On EVM chains the token owners are Gnosis Safe 2/2 multisigs of the same two consortium signers (re-verified on all four chains 2026-07-20; Polygon Safe 0xce6720dd9076aa67053abb27ecbd613a5867d1ba enumerated for the first time). The Base contract additionally has an EOA-owned ProxyAdmin enabling upgrades. On Solana the Token-2022 mint authority is a PDA of the issuer's issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28 (operational authority EOA 88ifu36R...; program upgradeable by EOA 8Ng3h97W...), with freeze/delegate held by an SPL 2-of-2 multisig.",
-    "upgradeability": {
-      "model": "custom",
-      "deploymentRefs": [
-        "base:0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
-        "bsc:0xa8aea66b361a8d53e8865c62d142167af28af058",
-        "ethereum:0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab",
-        "polygon:0x52828daa48c1a9a06f37500882b42daf0be04c3b",
-        "solana:3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
-      ],
-      "proxyAddresses": [
-        "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
-        "9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28"
-      ],
-      "implementationAddresses": [
-        "0x941360b66ccb94012e85225639476b43999c6cf3"
-      ],
-      "adminAddresses": [
-        "0xdd3446ce5aa397fd957460ba03e4538caeeff22e",
-        "8Ng3h97WUFx1QoQFadVTUTC2YKDdr4h1xGNETqsqvYZx"
-      ],
-      "canChangeMintLogic": true,
-      "delaySec": 0,
-      "controlRef": "cNGN deployment-wide immediate upgrade authorities",
-      "observedAt": "2026-07-21",
-      "observedBlock": 48863611,
-      "sources": [
-        {
-          "label": "cNGN contract addresses",
-          "url": "https://docs.cngn.co/guides/contract-addresses"
-        },
-        {
-          "label": "cNGN Base proxy",
-          "url": "https://basescan.org/address/0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
-        },
-        {
-          "label": "cNGN Solana issuance program",
-          "url": "https://solscan.io/account/9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28"
-        }
-      ]
-    },
+    "summary": "cNGN's verified native issuance surface is the Africa Stablecoin Consortium issuer account for the CNGN credit asset on Bantu. The Bantu ledger is the stated source of truth for supply; the authored EVM deployments are destination representations under the Bantu lock-and-mint model, while the Solana deployment is conservatively treated as a representation because independent native liability and reconciliation are not proven. No separate issuer-side economic cap or timelock was evidenced, and no dated whole-supply reconciliation covering the destination representations is accessible.",
     "controls": [
       {
-        "deploymentRefs": [
-          "base:0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
-          "bsc:0xa8aea66b361a8d53e8865c62d142167af28af058",
-          "ethereum:0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab",
-          "polygon:0x52828daa48c1a9a06f37500882b42daf0be04c3b",
-          "solana:3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
-        ],
-        "label": "Africa Stablecoin Consortium issuance backend (multi-party authorized)",
+        "label": "Africa Stablecoin Consortium Bantu CNGN issuer account",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
@@ -62,186 +15,75 @@
         "failureDomainKeys": [
           "issuer:africa-stablecoin-consortium"
         ],
-        "evidence": "Mint requests require treasury verification of the naira deposit plus approval by authorized consortium staff before tokens are created; burn occurs on redemption. Supply is fully issuer/consortium-controlled."
-      },
-      {
-        "label": "cNGN Ethereum owner — Gnosis Safe v1.3.0 (2/2)",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "none",
-        "canRaiseCap": true,
-        "threshold": 2,
-        "signerCount": 2,
-        "modulesOrGuardsStatus": "present",
-        "safe": {
-          "owners": [
-            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
-            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
-          "version": "1.3.0",
-          "observedBlock": 25571110,
-          "source": "onchain"
-        },
-        "evidence": "At Ethereum block 25571110 (re-verified 2026-07-20): owner() on 0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab = 0x57da45ee907f9d58d781c6ed5abf730eb6673d80; getOwners() returned 2 signers (0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f, 0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a); getThreshold() = 2; Safe proxy bytecode = 171 bytes. Modules = empty and guard = 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 per the 2026-06-11 pass (block 25295039; slot0 = Safe 1.3.0 singleton 0xd9db270c1b5e3bd161e8c8503c55ceabee709552).",
-        "chain": "ethereum",
-        "address": "0x57da45ee907f9d58d781c6ed5abf730eb6673d80",
-        "deploymentRefs": [
-          "ethereum:0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab"
-        ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 25571110
-      },
-      {
-        "label": "cNGN BSC owner — Gnosis Safe L2 v1.3.0 (2/2)",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "none",
-        "canRaiseCap": true,
-        "threshold": 2,
-        "signerCount": 2,
-        "modulesOrGuardsStatus": "present",
-        "safe": {
-          "owners": [
-            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
-            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
-          "version": "1.3.0-L2",
-          "observedBlock": 111015741,
-          "source": "onchain"
-        },
-        "evidence": "At BSC block 111015741 (re-verified 2026-07-20): owner() on 0xa8aea66b361a8d53e8865c62d142167af28af058 = 0x555ad4b8aacdb16afd2ed4d334f51614222a9f0b; getOwners() returned the same 2 signers as Ethereum (0x7493c024..., 0x98cf8488...); getThreshold() = 2; Safe proxy bytecode = 171 bytes. Modules = empty and guard = 0xf48f2b2d... per the 2026-06-11 pass (slot0 = Safe L2 1.3.0 singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e).",
-        "chain": "bsc",
-        "address": "0x555ad4b8aacdb16afd2ed4d334f51614222a9f0b",
-        "deploymentRefs": [
-          "bsc:0xa8aea66b361a8d53e8865c62d142167af28af058"
-        ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 111015741
-      },
-      {
-        "label": "cNGN Base owner — Gnosis Safe v1.3.0 (2/2) + EOA proxy admin",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "none",
-        "canRaiseCap": true,
-        "threshold": 2,
-        "signerCount": 2,
-        "modulesOrGuardsStatus": "present",
-        "safe": {
-          "owners": [
-            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
-            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
-          "version": "1.3.0",
-          "observedBlock": 48863611,
-          "source": "onchain"
-        },
-        "evidence": "At Base block 48863611 (re-verified 2026-07-20): owner() on 0x46c85152bfe9f96829aa94755d9f915f9b10ef5f = 0xc3ebca72b6e3c06833ba81c824de685eb2eff21e; same 2-signer Safe (0x7493c024..., 0x98cf8488...), getThreshold() = 2; guard = 0x017062a1de2fe6b99be3d9d37841fed19f573804 per the 2026-06-11 pass. EIP-1967 slots re-read 2026-07-20: implementation 0x941360b66ccb94012e85225639476b43999c6cf3; admin = ProxyAdmin 0x639e6756f129b3bb67961488e10dad3a3380af83 whose owner() = EOA 0xdd3446ce5aa397fd957460ba03e4538caeeff22e (0-byte code). The EOA also holds an upgrade path over Base cNGN.",
-        "chain": "base",
-        "address": "0xc3ebca72b6e3c06833ba81c824de685eb2eff21e",
-        "deploymentRefs": [
-          "base:0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
-        ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 48863611
-      },
-      {
-        "label": "cNGN Solana Token-2022 mint — issuer issuance-program PDA",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "evidence": "At Solana mainnet 2026-07-20 (slot ~434019689, getAccountInfo jsonParsed + getProgramAccounts): the Token-2022 mint 3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8 has mintAuthority = GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM, a 137-byte config account owned by issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28; the config references the mint and operational authority 88ifu36RXwpEUtz4qRWhm4eVz2jGtR7W1iuBuotum5DN (a system-account EOA). Minting is therefore program-gated (CPI-signed PDA), not a raw key. The program is BPF-upgradeable with upgrade authority = EOA 8Ng3h97WUFx1QoQFadVTUTC2YKDdr4h1xGNETqsqvYZx (0-byte system account). freezeAuthority and permanentDelegate = 5FtrPVACw11cGGEMGGiUbXRiaVS7SEd9Q9wpBAajWmfL, an SPL 2-of-2 multisig (m=2, n=2; signers 8D5AMNdRzemN9neywV8wtgB9nagrChdP1gvHCRiUjrpH, 3eTux7LTD3HiGy7q2Es5hQiJsZo8ybGQgsBfN8zV8GqQ).",
-        "chain": "solana",
-        "address": "9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28",
-        "deploymentRefs": [
-          "solana:3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
-        ],
-        "observedAt": "2026-07-20"
-      },
-      {
-        "deploymentRefs": [
-          "base:0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
-          "bsc:0xa8aea66b361a8d53e8865c62d142167af28af058",
-          "ethereum:0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab",
-          "polygon:0x52828daa48c1a9a06f37500882b42daf0be04c3b",
-          "solana:3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
-        ],
-        "label": "cNGN deployment-wide immediate upgrade authorities",
-        "role": "proxy-admin",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "failureDomainKeys": [
-          "eoa:base:0xdd3446ce5aa397fd957460ba03e4538caeeff22e",
-          "eoa:solana:8ng3h97wufx1qoqfadvtutc2ykddr4h1xgnetqsqvyzx"
-        ],
-        "observedAt": "2026-07-21",
-        "observedBlock": 48863611,
+        "observedAt": "2026-08-16",
+        "observedBlock": 34127652,
         "sources": [
           {
-            "label": "cNGN Base proxy",
-            "url": "https://basescan.org/address/0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
+            "label": "cNGN FAQ — native Bantu issuance",
+            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
           },
           {
-            "label": "cNGN Solana issuance program",
-            "url": "https://solscan.io/account/9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28"
+            "label": "Bantu Foundation cNGN case study",
+            "url": "https://bantufoundation.org/case-studies/cngn"
+          },
+          {
+            "label": "Bantu issuer account",
+            "url": "https://expansion.bantu.network/accounts/GD6G2NT7CQHPIYHA52KZHWB6ONNWTSGZOOLTRLRASENM2VWSF6CHYFRX"
+          },
+          {
+            "label": "Bantu CNGN asset record",
+            "url": "https://expansion.bantu.network/assets?asset_code=CNGN&asset_issuer=GD6G2NT7CQHPIYHA52KZHWB6ONNWTSGZOOLTRLRASENM2VWSF6CHYFRX"
           }
         ],
-        "evidence": "This umbrella record exists because the upgradeability schema accepts one controlRef; it does not represent a shared controller. At Base block 48863611, cNGN proxy 0x46c85152bfe9f96829aa94755d9f915f9b10ef5f resolved to implementation 0x941360b66ccb94012e85225639476b43999c6cf3 and ProxyAdmin 0x639e6756f129b3bb67961488e10dad3a3380af83, whose owner was EOA 0xdd3446ce5aa397fd957460ba03e4538caeeff22e. At finalized Solana slot 434276320, issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28 resolved to ProgramData BqJQj1J5a89WxEPf5TM8ppV5fbCKZFMGVGJNefB9Copb with upgrade authority EOA 8Ng3h97WUFx1QoQFadVTUTC2YKDdr4h1xGNETqsqvYZx. Both paths can change mint-critical logic without a contract-enforced delay."
+        "evidence": "At Bantu ledger 34,127,652, which closed at 2026-08-16T23:02:58Z, the official issuer account GD6G2NT7CQHPIYHA52KZHWB6ONNWTSGZOOLTRLRASENM2VWSF6CHYFRX had low/medium/high thresholds 2/2/3, its master key at weight 3, and three additional live signers at weight 1: GC2VTKYPQWTLCFTJKIWE2EPS5CRCAKPOUNQK34QDDJIN4TA2UX37HJVX, GCBWCKIW4GXWP7OPSCPCXU7IJ5W4A7ZM5YDGF3GETMRLZSW6YXCKMZKE, and GCRIACITUDK7ATFOM2P2ZJBO6FTYZKF2DX2PDE4IS3QNYOL2SWSBNURF. The CNGN asset record reported 887,344.1732650 units across 217 accounts with auth_required, auth_revocable, and auth_clawback_enabled. cNGN's FAQ and the Bantu Foundation identify this Bantu asset as the native issuance ledger; no issuer-side cap or timelock was evidenced."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "2026-07-20 dc-8 re-verification: all four EVM owners confirmed by owner()/getOwners()/getThreshold() at Ethereum 25571110, Base 48863611, BSC 111015741, Polygon 90541049 — identical 2/2 Gnosis Safe structure with signers 0x7493c024... and 0x98cf8488...; Polygon owner Safe 0xce6720dd9076aa67053abb27ecbd613a5867d1ba enumerated for the first time (previously assumed). Base EIP-1967 ProxyAdmin 0x639e6756f129b3bb67961488e10dad3a3380af83 still owned by EOA 0xdd3446ce5aa397fd957460ba03e4538caeeff22e. Solana (slot ~434019689): mintAuthority is the PDA config account GWM5Gk... of issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28 (ops authority EOA 88ifu36R..., upgrade authority EOA 8Ng3h97W...); freeze/delegate held by SPL 2-of-2 multisig 5FtrPVAC... (8D5AMNdR.../3eTux7LT...). Prior mint-tier findings retained: no accessible primary recurring independent reserve report located; issuer claims monthly audits; Nigeria SEC 2026-07-02 ARIP approval-in-principle is not a final license. Economic-posture fields reviewed 2026-08-15: issuer-controlled mint and immediate-upgrade paths are unbounded, no dated whole-supply attestation is accessible, and ARIP approval-in-principle is not prudential product supervision.",
-      "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "The cNGN FAQ and Bantu Foundation case study identify Bantu as the native issuance ledger and state that Bantu remains the source of truth for total supply while bridge contracts lock Bantu cNGN and mint equivalent destination representations. The Bantu issuer account and CNGN asset were re-read at ledger 34,127,652 on 2026-08-16. No dated whole-supply attestation reconciling Bantu issuance to all destination representations was accessible, so the native posture remains unbounded-or-compromised with reconciliation unknown. The Solana Token-2022 program can mint its deployment, but the reviewed primary sources do not prove whether that deployment is an AMTP representation or an independently reconciled native liability chain; it is therefore not used to support native issuance.",
+      "reviewer": "Codex mint-bridge-boundary canonicality verification",
+      "reviewedAt": "2026-08-17",
       "sources": [
         {
-          "label": "cNGN docs",
+          "label": "cNGN FAQ — native Bantu issuance",
+          "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
+        },
+        {
+          "label": "Bantu Foundation cNGN case study",
+          "url": "https://bantufoundation.org/case-studies/cngn"
+        },
+        {
+          "label": "cNGN contract addresses",
           "url": "https://docs.cngn.co/guides/contract-addresses"
         },
         {
-          "label": "cNGN Ethereum contract",
-          "url": "https://etherscan.io/address/0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab"
-        },
-        {
-          "label": "cNGN Base contract",
-          "url": "https://basescan.org/address/0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
-        },
-        {
-          "label": "cNGN Solana mint",
-          "url": "https://solscan.io/token/3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
-        },
-        {
-          "label": "cNGN transparency page",
-          "url": "https://cngn.co/transparency"
-        },
-        {
-          "label": "Nigeria Auditor-General accredited audit firms",
-          "url": "https://oaugf.ng/images/downloads/Audit-Firms-10-06-24.pdf.pdf"
-        },
-        {
-          "label": "Nigeria SEC ARIP admission for Wrapped CBDC Ltd",
-          "url": "https://sec.gov.ng/for-investors/keep-track-of-circulars/sec-clears-seven-new-fintech-firms-for-admission-into-the-accelerated-regulatory-incubation-programme-arip/"
+          "label": "Bantu ledger 34,127,652",
+          "url": "https://expansion.bantu.network/ledgers/34127652"
         }
       ],
-      "disposition": "scoreable"
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Does the Solana Token-2022 mint belong to the Bantu AMTP representation route or to an independently reconciled native issuance ledger?",
+        "When will the verified Bantu native asset be represented by a registered chain identifier in the catalog?"
+      ],
+      "noLocalIssuance": {
+        "kind": "external-only-representation",
+        "reviewedAt": "2026-08-17",
+        "reviewer": "Codex mint-bridge-boundary canonicality verification",
+      "rationale": "Every deployment currently authored in the catalog is a destination representation: the five EVM routes are supported by the Bantu lock-and-mint architecture, and Solana is conservatively classified as a representation because independent native issuance is unproven. Native issuance is verified on Bantu, but bantu is not a registered catalog chain identifier and therefore cannot be authored as a route or contract row within this scoped migration. This explicit exception prevents the untracked Bantu issuer control from implicitly targeting a destination route.",
+        "sources": [
+          {
+            "label": "cNGN FAQ — native Bantu issuance",
+            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
+          },
+          {
+            "label": "Bantu Foundation cNGN case study",
+            "url": "https://bantufoundation.org/case-studies/cngn"
+          }
+        ]
+      }
     }
   }
 }

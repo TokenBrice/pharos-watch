@@ -5,6 +5,73 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "Synthetix legacy sUSD has reviewed native-issuance deployments on Ethereum and Optimism, both now retired under SIP-423. Their terminal RetiredSynthsUSD targets have zero supply and no direct issue path, but proxy replacement remains a native issuance control; the Ethereum V3 Core owner and shared 4-of-7 Safe remain in Mint Authority. Arbitrum and Fantom representations are assessed only under bridgeRouteRisk.",
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+        "optimism:0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9"
+      ],
+      "proxyAddresses": [
+        "0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+        "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9"
+      ],
+      "implementationAddresses": [
+        "0xeb05c1de97296ae3dca16f99cd0bdf5a7910943c",
+        "0xc63442d483f8082eef3bcbaeddf80e0b004ca684"
+      ],
+      "adminAddresses": [
+        "0xeb3107117fead7de89cd14d463d340a2e6917769",
+        "0x6d4a64c57612841c2c6745db2a4e4db34f002d20",
+        "0x0e16a6876210841577b233c4165d7b7edf640b8a"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Synthetix governance multisig (4-of-7 Gnosis Safe)",
+      "observedAt": "2026-08-17",
+      "observedBlock": 25775088,
+      "sources": [
+        {
+          "label": "Synthetix Proxy source (owner-gated setTarget)",
+          "url": "https://raw.githubusercontent.com/Synthetixio/synthetix/master/contracts/Proxy.sol"
+        },
+        {
+          "label": "Ethereum verified sUSD ProxyERC20 source",
+          "url": "https://eth.blockscout.com/address/0x57ab1ec28d129707052df4df418d58a2d46d5f51?tab=contract"
+        },
+        {
+          "label": "Ethereum verified RetiredSynthsUSD source",
+          "url": "https://eth.blockscout.com/address/0xeb05c1de97296ae3dca16f99cd0bdf5a7910943c?tab=contract"
+        },
+        {
+          "label": "Optimism verified sUSD ProxyERC20 source",
+          "url": "https://optimism.blockscout.com/address/0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9?tab=contract"
+        },
+        {
+          "label": "Optimism verified RetiredSynthsUSD source",
+          "url": "https://optimism.blockscout.com/address/0xc63442d483f8082eef3bcbaeddf80e0b004ca684?tab=contract"
+        },
+        {
+          "label": "Synthetix OwnerRelayOnOptimism source",
+          "url": "https://raw.githubusercontent.com/Synthetixio/synthetix/master/contracts/OwnerRelayOnOptimism.sol"
+        },
+        {
+          "label": "Synthetix OwnerRelayOnEthereum source",
+          "url": "https://raw.githubusercontent.com/Synthetixio/synthetix/master/contracts/OwnerRelayOnEthereum.sol"
+        },
+        {
+          "label": "Ethereum governance Safe live JSON-RPC observation at block 25775088 (2026-08-17 UTC)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Optimism proxy and relay live JSON-RPC observation at block 155687189 (2026-08-17 UTC)",
+          "url": "https://optimism-rpc.publicnode.com"
+        },
+        {
+          "label": "Synthetix governance Safe",
+          "url": "https://etherscan.io/address/0xeb3107117fead7de89cd14d463d340a2e6917769#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

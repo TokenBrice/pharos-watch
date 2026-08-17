@@ -2,38 +2,22 @@
   "id": "usdz-anzen",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
-    "summary": "USDz has four reviewed native-issuance deployments with immutable bytecode and chain-local control planes. Ethereum deposit minting is SPCT-gated under a 2/6 admin Safe; 2/6 Arbitrum, 2/7 Blast, and 2/6 Manta owner Safes can replace each chain's currently uncapped direct minter. The Base LayerZero OFT owner and peer controls are reviewed separately in Bridge Risk.",
+    "summary": "USDz has one reviewed native-issuance deployment: immutable Ethereum bytecode with SPCT-gated deposit minting under a 2-of-6 admin Safe. Base, Arbitrum, Blast, and Manta are representations of the Ethereum liability connected by LayerZero/rollup burn-and-mint machinery; their adapters, minters, peers, and administrators are reviewed separately in Bridge Risk.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530822,
+      "observedAt": "2026-08-17",
+      "observedBlock": 25771000,
       "sources": [
         {
           "label": "USDz Ethereum verified source (non-proxy)",
           "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067?tab=contract"
         },
         {
-          "label": "ChildUSDz Base verified source (non-proxy)",
-          "url": "https://base.blockscout.com/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
-        },
-        {
-          "label": "ChildUSDzV2 Arbitrum verified source (non-proxy)",
-          "url": "https://arbitrum.blockscout.com/address/0x5018609ab477cc502e170a5accf5312b86a4b94f?tab=contract"
-        },
-        {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
-        },
-        {
-          "label": "Base PublicNode RPC",
-          "url": "https://base-rpc.publicnode.com"
-        },
-        {
-          "label": "Manta Pacific RPC",
-          "url": "https://pacific-rpc.manta.network/http"
         }
       ]
     },
@@ -88,289 +72,43 @@
         "deploymentRefs": [
           "ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
         ],
-        "capDescription": "deposit() and depositBySPCT() are callable by any holder of the permissioned SPCT token; mint supply is bounded by SPCT availability (issuer-controlled RWA).",
-        "evidence": "Blockscout ABI shows deposit(uint256) and depositBySPCT(uint256) on the USDz contract with no role guard visible in the ABI — supply expansion is bounded by SPCT access, which is issuer-controlled.",
+        "capDescription": "deposit() and depositBySPCT() are callable by approved, permissioned SPCT holders; mint supply is bounded by SPCT availability and the issuer-controlled collateral/oracle path.",
+        "evidence": "The verified Ethereum USDz source exposes deposit(uint256) and depositBySPCT(uint256), which call internal _mintUSDz and increment totalPooledSPCT. The constructor binds the SPCT pool and price oracle; no privileged arbitrary mint function or proxy upgrade path was evidenced.",
         "sources": [
           {
             "label": "Anzen USDz overview",
-            "url": "https://docs.anzen.finance/usdz-101/overview"
-          }
-        ]
-      },
-      {
-        "label": "Anzen Arbitrum minter-admin Safe",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "chain": "arbitrum",
-        "address": "0x0E5ec65ea055937646Ab029ef3644DE3dE67766A",
-        "deploymentRefs": [
-          "arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f"
-        ],
-        "signerCount": 6,
-        "threshold": 2,
-        "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 483807177,
-        "safe": {
-          "owners": [
-            "0x1103956Dfe7846332e7F4b1d86786107B7903Ac3",
-            "0xa464980f8ea9d2b88258FBf9BC878F989B2c5DCA",
-            "0x00000000051CBcE3fD04148CcE2c0adc7c651829",
-            "0x82e09977ced7dE0F93548D89C227D2E1BF8F3337",
-            "0x380c2798660B9289279Db77F1b5821fD7542456C",
-            "0x68f5549648ec500056319474F88a71619eEA57D0"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "version": "1.3.0",
-          "observedBlock": 483807177,
-          "observedAt": "2026-07-14",
-          "source": "onchain"
-        },
-        "evidence": "At Arbitrum block 483807177, ChildUSDzV2 owner() returned this Safe. getOwners() returned six owners and getThreshold() returned 2; live VERSION(), module, and guard reads confirmed Safe 1.3.0 with no enabled modules and a zero guard. The verified token source makes grantMintRole and revokeMintRole owner-only.",
-        "sources": [
-          {
-            "label": "Arbitrum ChildUSDzV2 verified source",
-            "url": "https://arbitrum.blockscout.com/address/0x5018609ab477cc502e170a5accf5312b86a4b94f?tab=contract"
+            "url": "https://docs.anzen.finance/usdz-101/overview.md"
           },
           {
-            "label": "Anzen Arbitrum owner Safe",
-            "url": "https://arbitrum.blockscout.com/address/0x0E5ec65ea055937646Ab029ef3644DE3dE67766A"
-          },
-          {
-            "label": "Arbitrum One RPC",
-            "url": "https://arb1.arbitrum.io/rpc"
-          }
-        ]
-      },
-      {
-        "label": "Anzen Arbitrum direct minter",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "chain": "arbitrum",
-        "address": "0xdd216101D84d513A12CB7bFB109F7abCF330D58e",
-        "deploymentRefs": [
-          "arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f"
-        ],
-        "capDescription": "ChildUSDzV2 maxSupply() returned zero; its verified implementation applies a maximum only when maxSupply is nonzero.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 483807177,
-        "evidence": "At Arbitrum block 483807177, getMinters() returned only this address. It can call the token's mint(address,uint256) function without a numeric maximum while its mint role remains active.",
-        "sources": [
-          {
-            "label": "Arbitrum ChildUSDzV2 verified source",
-            "url": "https://arbitrum.blockscout.com/address/0x5018609ab477cc502e170a5accf5312b86a4b94f?tab=contract"
-          },
-          {
-            "label": "Arbitrum direct minter",
-            "url": "https://arbitrum.blockscout.com/address/0xdd216101D84d513A12CB7bFB109F7abCF330D58e"
-          },
-          {
-            "label": "Arbitrum One RPC",
-            "url": "https://arb1.arbitrum.io/rpc"
-          }
-        ]
-      },
-      {
-        "label": "Anzen Blast minter-admin Safe",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "chain": "blast",
-        "address": "0x9076e336e9d0901A3Aca0D559124884E114D7B48",
-        "deploymentRefs": [
-          "blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
-        ],
-        "signerCount": 7,
-        "threshold": 2,
-        "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 37616444,
-        "safe": {
-          "owners": [
-            "0x00000000051CBcE3fD04148CcE2c0adc7c651829",
-            "0x1103956Dfe7846332e7F4b1d86786107B7903Ac3",
-            "0x380c2798660B9289279Db77F1b5821fD7542456C",
-            "0x68f5549648ec500056319474F88a71619eEA57D0",
-            "0x82e09977ced7dE0F93548D89C227D2E1BF8F3337",
-            "0xa464980f8ea9d2b88258FBf9BC878F989B2c5DCA",
-            "0xbBEE3d18c8Ea290Ff6F7E05fC7ce7BB0f81d34a8"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "version": "1.4.1",
-          "observedBlock": 37616444,
-          "observedAt": "2026-07-14",
-          "source": "onchain"
-        },
-        "evidence": "At Blast block 37616444, token owner() returned this Safe. getOwners() returned seven owners, getThreshold() returned 2, VERSION() returned 1.4.1, getModulesPaginated returned no modules, and the guard slot was zero. The ChildUSDzV2 implementation gives the owner immediate grantMintRole and revokeMintRole authority.",
-        "sources": [
-          {
-            "label": "USDz Blast token",
-            "url": "https://blastscan.io/address/0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
-          },
-          {
-            "label": "Anzen Blast owner Safe",
-            "url": "https://blastscan.io/address/0x9076e336e9d0901A3Aca0D559124884E114D7B48"
-          },
-          {
-            "label": "Blast RPC",
-            "url": "https://rpc.blast.io"
-          }
-        ]
-      },
-      {
-        "label": "Anzen Blast direct minter",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "chain": "blast",
-        "address": "0x5A1b8C0e9fE27b9DB4913df6B361deA5e96EA129",
-        "deploymentRefs": [
-          "blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
-        ],
-        "capDescription": "ChildUSDzV2 maxSupply() returned zero; its implementation applies a maximum only when maxSupply is nonzero.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 37616444,
-        "evidence": "At Blast block 37616444, getMinters() returned only this address and maxSupply() returned zero. The active role can call mint(address,uint256) without a numeric maximum.",
-        "sources": [
-          {
-            "label": "USDz Blast token",
-            "url": "https://blastscan.io/address/0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
-          },
-          {
-            "label": "Anzen Blast direct minter",
-            "url": "https://blastscan.io/address/0x5A1b8C0e9fE27b9DB4913df6B361deA5e96EA129"
-          },
-          {
-            "label": "Blast RPC",
-            "url": "https://rpc.blast.io"
-          }
-        ]
-      },
-      {
-        "label": "Anzen Manta minter-admin Safe",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "chain": "manta",
-        "address": "0x349D4B7580aBC27cD9fBA78C0e7A62865eF51da6",
-        "deploymentRefs": [
-          "manta:0x73d23f3778a90be8846e172354a115543df2a7e4"
-        ],
-        "signerCount": 6,
-        "threshold": 2,
-        "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 8981874,
-        "safe": {
-          "owners": [
-            "0x00000000051CBcE3fD04148CcE2c0adc7c651829",
-            "0xa464980f8ea9d2b88258FBf9BC878F989B2c5DCA",
-            "0x1103956Dfe7846332e7F4b1d86786107B7903Ac3",
-            "0x82e09977ced7dE0F93548D89C227D2E1BF8F3337",
-            "0x380c2798660B9289279Db77F1b5821fD7542456C",
-            "0x68f5549648ec500056319474F88a71619eEA57D0"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "version": "1.3.0",
-          "observedBlock": 8981874,
-          "observedAt": "2026-07-14",
-          "source": "onchain"
-        },
-        "evidence": "At Manta block 8981874, token owner() returned this Safe. getOwners() returned six owners, getThreshold() returned 2, VERSION() returned 1.3.0, getModulesPaginated returned no modules, and the guard slot was zero. The ChildUSDzV2 implementation gives the owner immediate grantMintRole and revokeMintRole authority.",
-        "sources": [
-          {
-            "label": "Manta ChildUSDzV2 verified source",
-            "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4?tab=contract"
-          },
-          {
-            "label": "Anzen Manta owner Safe",
-            "url": "https://pacific-explorer.manta.network/address/0x349D4B7580aBC27cD9fBA78C0e7A62865eF51da6"
-          },
-          {
-            "label": "Manta Pacific RPC",
-            "url": "https://pacific-rpc.manta.network/http"
-          }
-        ]
-      },
-      {
-        "label": "Anzen Manta direct minter",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "chain": "manta",
-        "address": "0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938",
-        "deploymentRefs": [
-          "manta:0x73d23f3778a90be8846e172354a115543df2a7e4"
-        ],
-        "capDescription": "ChildUSDzV2 maxSupply() returned zero; its verified implementation applies a maximum only when maxSupply is nonzero.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 8981874,
-        "evidence": "At Manta block 8981874, getMinters() returned only this address and maxSupply() returned zero. The active role can call mint(address,uint256) without a numeric maximum.",
-        "sources": [
-          {
-            "label": "Manta ChildUSDzV2 verified source",
-            "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4?tab=contract"
-          },
-          {
-            "label": "Anzen Manta direct minter",
-            "url": "https://pacific-explorer.manta.network/address/0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938"
-          },
-          {
-            "label": "Manta Pacific RPC",
-            "url": "https://pacific-rpc.manta.network/http"
+            "label": "USDz Ethereum verified source",
+            "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067?tab=contract"
           }
         ]
       }
     ],
-    "economicCapSemantics": "unbounded",
+    "economicCapSemantics": "bounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-        "evidence": "The four USDz native deployments retain immutable runtime bytecode, and the complete native authority graph is chain-local. Ethereum uses its 2/6 DEFAULT_ADMIN Safe and SPCT-gated deposit path. At pinned Arbitrum 483807177, Blast 37616444, and Manta 8981874 blocks, owner() resolved respectively to 2/6, 2/7, and 2/6 chain-local Safes with no enabled modules or guard. Arbitrum, Blast, and Manta owners can grant or revoke mint roles immediately; their sole current minters were 0xdd216101D84d513A12CB7bFB109F7abCF330D58e, 0x5A1b8C0e9fE27b9DB4913df6B361deA5e96EA129, and 0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938, and each token returned maxSupply() = 0. The Base OFT owner and LayerZero peer, pause, and delegate controls are excluded from native Mint Authority and retained in bridgeRouteRisk. No tracked native control is omitted. Economic-posture fields reviewed 2026-08-15: chain-local issuer Safes can install uncapped minters immediately, the real-time SPCT disclosure is checked against aggregate multichain supply, and no independent attestor or prudential supervisor is evidenced.",
-      "reviewer": "Codex USDz canonical mint-authority boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Canonicality verification at Ethereum block 25771000 on 2026-08-17 identifies Ethereum as the only independently issued USDz liability source. The verified non-proxy USDz source exposes SPCT-backed deposit() and depositBySPCT() paths that call _mintUSDz and increment totalPooledSPCT; its constructor binds the SPCT pool and price oracle. owner() is the Anzen 2-of-6 Safe, endpoint() is LayerZero V2, and no privileged arbitrary mint or native upgrade path was evidenced. Base, Arbitrum, Blast, and Manta are bridge representations whose adapter/minter, peer, pause, and owner controls are retained in bridgeRouteRisk rather than global Mint Authority. No independent prudential supervisor for the SPCT disclosure was evidenced.",
+      "reviewer": "Codex USDz canonical mint-authority boundary verification",
+      "reviewedAt": "2026-08-17",
       "sources": [
         {
-          "label": "USDz token (Blockscout)",
-          "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
-        },
-        {
           "label": "Anzen USDz overview",
-          "url": "https://docs.anzen.finance/usdz-101/overview"
+          "url": "https://docs.anzen.finance/usdz-101/overview.md"
         },
         {
-          "label": "How to mint USDz",
-          "url": "https://docs.anzen.finance/overview/anzen-protocol/getting-started/how-to-mint-usdz"
+          "label": "Anzen verified smart-contract registry",
+          "url": "https://docs.anzen.finance/developer-resources/smart-contracts.md"
         },
         {
-          "label": "Base ChildUSDz verified source",
-          "url": "https://base.blockscout.com/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
+          "label": "USDz Ethereum verified source",
+          "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067?tab=contract"
         },
         {
-          "label": "Arbitrum ChildUSDzV2 verified source",
-          "url": "https://arbitrum.blockscout.com/address/0x5018609ab477cc502e170a5accf5312b86a4b94f?tab=contract"
-        },
-        {
-          "label": "Blast RPC",
-          "url": "https://rpc.blast.io"
-        },
-        {
-          "label": "Manta ChildUSDzV2 verified source",
-          "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4?tab=contract"
+          "label": "Ethereum JSON-RPC fixed-block reads",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
     }

@@ -69,11 +69,11 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Plasma is the only reviewed native syzUSD issuance route. Ethereum is a verified BridgeableTokenAdapterUpgradeable representation with a lockbox and owner-only locked-token withdrawal surface; Monad's current implementation is bridgeable/OFT code exposing CCIP mint/burn role surfaces, but its current pool, router, role grants, allowlists, limits, and message traces were not verified. Current LayerZero peers read as zero on both representations, so the historical OVault architecture is retained as evidence but no active LayerZero lane or CCIP conservation invariant is claimed. Bridge upgrade/admin controls remain explicitly scored here, with the route tier kept opaque-or-unknown until the live machinery is resolved.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "OpenAI Codex syzUSD bridge-boundary correction",
-    "confidence": "manual-review",
+    "tier": "external-validated-network",
+    "summary": "Plasma is the only reviewed native syzUSD issuance route. Its CCIP LockReleaseTokenPool is cross-chain escrow and remains Bridge Risk rather than native Mint Authority. Ethereum and Monad are bridge representations with active Chainlink CCIP BurnMintTokenPool 1.6.1 routes: each pool is the local token's verified CCIP minter and burner, with the Yuzu owner controlling pool administration and rate limits, configured remote pools/tokens, and Chainlink routers. The historical LayerZero OVault architecture remains evidence only; current LayerZero peers read as zero. Bridge upgrade/admin and pool controls are explicitly scored here, with an external-validated-network tier.",
+    "reviewedAt": "2026-08-17",
+    "reviewer": "OpenAI Codex syzUSD bridge-boundary canonicality verification",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
@@ -107,7 +107,7 @@
           "burnAndMint",
           "lockAndRelease"
         ],
-        "note": "The current Monad implementation exposes CCIP minter/burner role constants, but this review did not verify the live pool, router, role holders, allowlists, limits, or message traces."
+        "note": "The current syzUSD representations use Chainlink CCIP BurnMintTokenPool 1.6.1 pools. At the 2026-08-17 observations, each pool was the live token CCIP_MINTER_ROLE and CCIP_BURNER_ROLE holder, with Yuzu-owned router, remote-pool, and rate-limit configuration verified; LayerZero peers remain zero."
       }
     ],
     "sources": [
@@ -146,6 +146,18 @@
       {
         "label": "Current syzUSD fixed-block RPC reads",
         "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Chainlink CCIP Ethereum directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/chain/ethereum-mainnet"
+      },
+      {
+        "label": "Chainlink CCIP Monad directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/chain/monad-mainnet"
+      },
+      {
+        "label": "Chainlink CCIP Plasma directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/chain/plasma-mainnet"
       }
     ],
     "routes": [
@@ -160,10 +172,15 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Plasma block 29981334 on 2026-08-16, the transparent-proxy syzUSD ERC-4626 vault resolves to implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8 and ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, whose owner is the 4-of-5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d. asset() returns yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, so current share issuance is native and deposit-bounded; the vault owner() EOA is operational-only. Native wrapper issuance is kept separate from bridge controls.",
+        "reviewNote": "At Plasma block 30024507 on 2026-08-17, the transparent-proxy syzUSD ERC-4626 vault resolves to implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8 and ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, whose owner is the 4-of-5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d. asset() returns yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, so current share issuance is native and deposit-bounded; the vault owner() EOA is operational-only. The separate Plasma CCIP LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2 escrows syzUSD for bridge egress and validates configured remote pools/tokens; it does not create independent native syzUSD liabilities.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 29981334,
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+        ],
+        "observedAt": "2026-08-17",
+        "observedBlock": 30024507,
         "sources": [
           {
             "label": "syzUSD vault on Plasmascan",
@@ -172,6 +189,10 @@
           {
             "label": "Yuzu documentation",
             "url": "https://docs.yuzu.money/"
+          },
+          {
+            "label": "Plasma syzUSD CCIP pool",
+            "url": "https://plasmascan.to/address/0x31672de4726227feb22f2dfbcfa985c71bea86b2"
           }
         ]
       },
@@ -181,22 +202,24 @@
         "destinationChain": "ethereum",
         "canonicalChain": "plasma",
         "contractAddress": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
-        "protocol": "Yuzu syzUSD BridgeableTokenAdapterUpgradeable representation",
+        "protocol": "Yuzu syzUSD BridgeableTokenAdapterUpgradeable representation with Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "lock-mint",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Ethereum block 25770862 on 2026-08-16, this verified syzUSD representation resolves to BridgeableTokenAdapterUpgradeable implementation 0x692d91e94b55ec1360f20970010538263ce29b58, an OFT adapter with an underlying lockbox and owner-only locked-token withdrawal. The adapter is not a canonical native issuance deployment. LayerZero peers for the checked Plasma and Monad EIDs returned zero, and no current CCIP pool, router, role grant, allowlist, limit, or message trace was verified; the representation role is reviewed but an active lane and conservation invariant remain unresolved.",
+        "reviewNote": "At Ethereum block 25774413 on 2026-08-17, this representation resolves to BridgeableTokenAdapterUpgradeable implementation 0x692d91e94b55ec1360f20970010538263ce29b58. Chainlink TokenAdminRegistry 0xb22764f98dd05c789929716d677382df22c05cb6 maps it to BurnMintTokenPool 0xd915adf1b64854dd312550f6831afa151e7b2590 (typeAndVersion 1.6.1), whose getToken() returns this token, getRouter() returns 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, and owner/rate-limit administrator is 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool holds both CCIP_MINTER_ROLE and CCIP_BURNER_ROLE; it validates inbound CCIP route machinery and is not a canonical native issuance deployment. The pool has one configured Plasma remote pool/token and active inbound/outbound rate limits. LayerZero peers for the checked EIDs remain zero.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
+          "protocol:chainlink-ccip",
           "protocol:layerzero-ovault",
           "contract:ethereum:0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+          "contract:ethereum:0xd915adf1b64854dd312550f6831afa151e7b2590",
           "proxy-admin:ethereum:0xab08de77a15ae9dc675eeeb89b3bd558069341a9"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770862,
+        "observedAt": "2026-08-17",
+        "observedBlock": 25774413,
         "sources": [
           {
             "label": "Current syzUSD Ethereum adapter proxy",
@@ -209,6 +232,14 @@
           {
             "label": "Ethereum public RPC",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Chainlink CCIP Ethereum directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/ethereum-mainnet"
+          },
+          {
+            "label": "Ethereum syzUSD CCIP pool",
+            "url": "https://etherscan.io/address/0xd915adf1b64854dd312550f6831afa151e7b2590"
           }
         ]
       },
@@ -221,21 +252,22 @@
         "protocol": "Yuzu syzUSD bridgeable/OFT representation with CCIP surfaces",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "opaque-or-unknown",
+        "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Monad block 96617731 on 2026-08-16, the current proxy resolves to bridgeable/OFT implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53. The implementation exposes CCIP_MINTER_ROLE and CCIP_BURNER_ROLE constants plus OFT mint/burn surfaces, while the cataloged asset() and paused() wrapper selectors revert. LayerZero peers for EIDs 30101, 30383, 30390, and 30109 returned zero, and the current CCIP pool, router, role holders, allowlists, limits, and message traces were not verified; this is a reviewed representation candidate, not a verified active native or bridge lane.",
+        "reviewNote": "At Monad block 96717731 on 2026-08-17, the current proxy resolves to bridgeable/OFT implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53. Chainlink TokenAdminRegistry 0x11acd984dd680363117b310f6ebdf78fd6c0195f maps it to BurnMintTokenPool 0x012247950ee154dc26d4514b84b3b60336c55ea5 (typeAndVersion 1.6.1), whose getToken() returns this token, getRouter() returns 0x33566fe5976aaa420f3d5c64996641fc3858cadb, and owner/rate-limit administrator is 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool holds both CCIP_MINTER_ROLE and CCIP_BURNER_ROLE; it validates inbound CCIP route machinery and is not a canonical native issuance deployment. The pool has one configured Plasma remote pool/token and active inbound/outbound rate limits. LayerZero peers for EIDs 30101, 30383, 30390, and 30109 remain zero; the route is a verified CCIP representation, not a native wrapper.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "protocol:layerzero",
           "contract:monad:0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+          "contract:monad:0x012247950ee154dc26d4514b84b3b60336c55ea5",
           "proxy-admin:monad:0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331",
           "timelock:monad:0xd32ab76a165f1a716986ba8c58344e3df4397f5e"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 96617731,
+        "observedAt": "2026-08-17",
+        "observedBlock": 96717731,
         "sources": [
           {
             "label": "Current syzUSD Monad proxy",
@@ -248,11 +280,165 @@
           {
             "label": "Monad public RPC",
             "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Chainlink CCIP Monad directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/monad-mainnet"
+          },
+          {
+            "label": "Monad syzUSD CCIP pool",
+            "url": "https://monadscan.com/address/0x012247950ee154dc26d4514b84b3b60336c55ea5"
           }
         ]
       }
     ],
     "controls": [
+      {
+        "id": "syzusd-plasma-ccip-lock-release-pool",
+        "label": "syzUSD Plasma CCIP LockReleaseTokenPool",
+        "routeRefs": [
+          "plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+        ],
+        "capabilities": [
+          "escrow",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0x31672de4726227feb22f2dfbcfa985c71bea86b2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+          "router:plasma:0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3",
+          "rmn:plasma:0xaef7a922931848d2e731d5914f428b4e851d1ad5"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "At Plasma block 30024507, this Chainlink CCIP LockReleaseTokenPool 1.6.1 returned getToken() = syzUSD and getRebalancer() = zero; it escrows canonical syzUSD for cross-chain release and is not an independent native issuance controller.",
+          "trustedPeerOrRemote": "The pool's supported-chain configuration includes the Ethereum and Monad selectors with remote pools 0xd915adf1b64854dd312550f6831afa151e7b2590 and 0x012247950ee154dc26d4514b84b3b60336c55ea5, both mapping back to their syzUSD representations and the canonical Plasma token.",
+          "rateLimits": "At Plasma block 30024507, the pool's Ethereum and Monad routes had enabled inbound capacity 3,300,000 syzUSD and outbound capacity 3,000,000 syzUSD; getRateLimitAdmin() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae.",
+          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae; the deployed pool reports typeAndVersion LockReleaseTokenPool 1.6.1 and no separate pool proxy was observed."
+        },
+        "capDescription": "The pool can escrow and release canonical syzUSD through authenticated CCIP routes subject to configured per-route rate limits; it does not mint independent native liabilities.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 30024507,
+        "sources": [
+          {
+            "label": "Plasma syzUSD CCIP pool",
+            "url": "https://plasmascan.to/address/0x31672de4726227feb22f2dfbcfa985c71bea86b2"
+          },
+          {
+            "label": "Chainlink CCIP Plasma directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/plasma-mainnet"
+          },
+          {
+            "label": "Plasma public RPC",
+            "url": "https://rpc.plasma.to"
+          }
+        ],
+        "evidence": "At Plasma block 30024507 on 2026-08-17, the official CCIP registry mapped syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 to LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2. The pool returned typeAndVersion LockReleaseTokenPool 1.6.1, owner() and getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, router() = 0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3, and configured the Ethereum and Monad representation pools and tokens."
+      },
+      {
+        "id": "syzusd-ethereum-ccip-burn-mint-pool",
+        "label": "syzUSD Ethereum CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "ethereum:0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd915adf1b64854dd312550f6831afa151e7b2590",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0xd915adf1b64854dd312550f6831afa151e7b2590",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+          "router:ethereum:0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
+          "rmn:ethereum:0x411de17f12d1a34ecc7f45f49844626267c75e81"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At Ethereum block 25774413, the pool had one supported Plasma route with remote pool 0x31672de4726227feb22f2dfbcfa985c71bea86b2 and remote token 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6.",
+          "rateLimits": "At Ethereum block 25774413, inbound limits were enabled at capacity 3,300,000 syzUSD with refill 38.19444 syzUSD/s and outbound limits at capacity 3,000,000 syzUSD with refill 34.72222 syzUSD/s; getRateLimitAdmin() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae.",
+          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool is the token's CCIP_MINTER_ROLE and CCIP_BURNER_ROLE holder; the token's default admin role is held by the same EOA."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, while the Yuzu owner can reconfigure the pool and raise or reconfigure those limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 25774413,
+        "sources": [
+          {
+            "label": "Ethereum syzUSD CCIP pool",
+            "url": "https://etherscan.io/address/0xd915adf1b64854dd312550f6831afa151e7b2590"
+          },
+          {
+            "label": "Chainlink CCIP Ethereum directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/ethereum-mainnet"
+          },
+          {
+            "label": "Ethereum public RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25774413 on 2026-08-17, TokenAdminRegistry 0xb22764f98dd05c789929716d677382df22c05cb6 mapped syzUSD 0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12 to BurnMintTokenPool 0xd915adf1b64854dd312550f6831afa151e7b2590. The pool returned getToken() = this token, typeAndVersion BurnMintTokenPool 1.6.1, getRouter() = 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, owner()/getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, and hasRole(CCIP_MINTER_ROLE/BURNER_ROLE, pool) = true."
+      },
+      {
+        "id": "syzusd-monad-ccip-burn-mint-pool",
+        "label": "syzUSD Monad CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "monad:0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "rate-limit"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x012247950ee154dc26d4514b84b3b60336c55ea5",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0x012247950ee154dc26d4514b84b3b60336c55ea5",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+          "router:monad:0x33566fe5976aaa420f3d5c64996641fc3858cadb",
+          "rmn:monad:0x99dfca5d88f4d9c023531f4403966b8d61562acd"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "This BurnMintTokenPool is supply-conserving CCIP burn/mint route machinery, not independent issuer-native mint authority.",
+          "trustedPeerOrRemote": "At Monad block 96717731, the pool had one supported Plasma route with remote pool 0x31672de4726227feb22f2dfbcfa985c71bea86b2 and remote token 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6.",
+          "rateLimits": "At Monad block 96717731, inbound limits were enabled at capacity 3,300,000 syzUSD with refill 38.19444 syzUSD/s and outbound limits at capacity 3,000,000 syzUSD with refill 34.72222 syzUSD/s; getRateLimitAdmin() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae.",
+          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The pool is the token's CCIP_MINTER_ROLE and CCIP_BURNER_ROLE holder; the token's default admin role is held by the same EOA."
+        },
+        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, while the Yuzu owner can reconfigure the pool and raise or reconfigure those limits.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 96717731,
+        "sources": [
+          {
+            "label": "Monad syzUSD CCIP pool",
+            "url": "https://monadscan.com/address/0x012247950ee154dc26d4514b84b3b60336c55ea5"
+          },
+          {
+            "label": "Chainlink CCIP Monad directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/monad-mainnet"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 96717731 on 2026-08-17, TokenAdminRegistry 0x11acd984dd680363117b310f6ebdf78fd6c0195f mapped syzUSD 0x484be0540ad49f351eaa04eeb35df0f937d4e73f to BurnMintTokenPool 0x012247950ee154dc26d4514b84b3b60336c55ea5. The pool returned getToken() = this token, typeAndVersion BurnMintTokenPool 1.6.1, getRouter() = 0x33566fe5976aaa420f3d5c64996641fc3858cadb, owner()/getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, and hasRole(CCIP_MINTER_ROLE/BURNER_ROLE, pool) = true."
+      },
       {
         "id": "syzusd-ethereum-proxy-admin-owner",
         "label": "Yuzu Ethereum syzUSD adapter ProxyAdmin owner",

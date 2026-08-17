@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "wM has one canonical Ethereum wrapper deployment; Arbitrum, Base, Plume, and Solana are bridge representations reached through M0 issuer-native burn/mint routes. Current Arbitrum and Base SpokePortal admins/operators, route paths, pause state, and upgrade implementations are structured below; Plume uses an owner-controlled Hyperlane Portal/Bridge with a separate pauser; Solana Portal message validation and Portal upgrade authority are separate from the local m_ext M-backed wrapper mint recorded in Mint Authority. The route tier remains issuer-native-lock-mint.",
+    "summary": "wM has one canonical Ethereum wrapper deployment; Arbitrum, Base, Plume, and Solana are bridge representations reached through M0 issuer-native burn/mint routes. Current Arbitrum and Base SpokePortal admins/operators, route paths, pause state, and upgrade implementations are structured below; Plume uses an owner-controlled Hyperlane Portal/Bridge with a separate pauser; Solana Portal message validation, Portal upgrade authority, and m_ext ProgramData upgrade authority are route-scoped separately from the local M-backed wrapper mint recorded in Mint Authority. The route tier remains issuer-native-lock-mint.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
@@ -199,7 +199,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "wM on Solana is the Token-2022 $wM extension mint documented in M0's Solana technical documentation. M0's Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY validates the Wormhole message and reaches the Solana route; the local m_ext wrapper then transfers canonical M into its extension vault before minting wM. Portal bridge controls and m_ext wrapper-local authority are scored separately.",
+        "reviewNote": "wM on Solana is the Token-2022 $wM extension mint documented in M0's Solana technical documentation. M0's Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY validates the Wormhole message and reaches the Solana route; the local m_ext wrapper then transfers canonical M into its extension vault before minting wM. The m_ext mint authority remains in Mint Authority, while its ProgramData upgrade authority and Portal controls are scored separately under Bridge Risk.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 439806760,
@@ -641,7 +641,47 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At finalized Solana slot 439806760, the Portal ProgramData account identified 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. It is modeled as bridge-program upgrade risk for the Solana representation, separate from the local m_ext wrapper upgrade control in Mint Authority."
+        "evidence": "At finalized Solana slot 439806760, the Portal ProgramData account identified 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. It is modeled as bridge-program upgrade risk for the Solana representation, separate from the m_ext wrapper upgrade control below."
+      },
+      {
+        "id": "wm-solana-m-ext-upgrade-authority",
+        "label": "wM Solana m_ext ProgramData upgrade authority",
+        "routeRefs": [
+          "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "program:solana:wMXX1K1nca5W4pZr1piETe78gcAVVrEFi9f4g46uXko",
+          "programdata:solana:BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The m_ext upgrade authority can replace the wrapper program and remove or relax the observed M-vault-before-mint invariant without an independent delay."
+        ],
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At finalized Solana slot 439806760, m_ext ProgramData BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. The EOA can replace local wrapper logic for the Solana representation; the observed Portal and m_ext upgrade authorities are separately authored despite sharing this identity."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439806760,
+        "sources": [
+          {
+            "label": "Solana M Extensions repository",
+            "url": "https://github.com/m0-foundation/solana-m-extensions"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439806760, m_ext ProgramData BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. This EOA can replace the local wrapper logic and change the current deposit-before-mint bound; it is bridge-representation upgrade risk, not an issuer of native M."
       }
     ]
   }

@@ -229,9 +229,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USBD has six independent native Bima CDP issuance deployments on Ethereum, Hemi, Plume, Sonic, BSC, and Nibiru. Each local DebtToken/BorrowerOperations stack can create native liabilities through collateralized CDP mechanics, while the same DebtToken deployments also carry a LayerZero OFT burn-on-source / mint-on-destination overlay. The separate code-empty EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 is the deployment-wide OFT owner/delegate and controls bridge peer and application configuration; it is not the native BimaCore authorizedMint owner. Fixed-block reads on 2026-08-16 found Ethereum peers for Hemi, Sonic, and Plume, while the BSC and Nibiru Ethereum peers were zero; Hemi, Plume, and Sonic had nonzero Ethereum peers. Per-application DVN/ULN, executor, and numeric route-limit settings were not replayed, so the LayerZero overlay remains external-validated-network. The raw GOAT and CORE supply labels remain an unresolved policy-maintainer routing gap outside this coin edit.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Pharos mint/bridge boundary migration; Codex FIX2-03",
+    "summary": "USBD has one reviewed canonical native Bima CDP issuance deployment on Ethereum and five LayerZero OFT bridge-representation routes to Hemi, Plume, Sonic, BSC, and Nibiru. The official Bima registry/source and fixed-block reads confirm local BorrowerOperations, Factory, DebtToken, and collateral-market wiring on the destination chains, but the same byte-identical regular OFT mints destination balances through authenticated LayerZero delivery and no per-chain reserve/liability reconciliation isolates those balances from incoming OFT supply. Under the conservative mint/bridge boundary, Ethereum remains the only Mint Authority deployment; the five destination routes remain Bridge Risk representations. The code-empty EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 administers the OFT owner/delegate and peer/application configuration, while each LayerZero Endpoint delivery path is separately authored as the bridge-mint holder. Fixed 2026-08-16 peer reads found Ethereum peers for Hemi, Sonic, and Plume, while BSC and Nibiru's Ethereum peers were zero; current 2026-08-17 checks also found zero supply and zero local Trove debt on BSC and Nibiru. Per-application DVN/ULN, executor, endpoint-admin, and numeric route-limit settings remain evidence gaps, so the route tier remains external-validated-network.",
+    "reviewedAt": "2026-08-17",
+    "reviewer": "Pharos mint/bridge boundary migration; Codex canonicality re-open",
     "confidence": "verified",
     "protocols": [
       {
@@ -270,19 +270,19 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "Bima USBD native CDP issuance with LayerZero OFT overlay",
+        "protocol": "Bima USBD native issuance (Liquity-v1-fork CDP) with LayerZero OFT source/destination overlay",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native Ethereum Bima CDP deployment (27.4% of supply). Verified at Ethereum block 25770562: local BorrowerOperations creates native liabilities through the collateralized CDP path, while this 19,637-byte DebtToken is also a LayerZero OFT endpoint with burn/mint bridge behavior. owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (eth_getCode = 0), whose peer/delegate authority is scored under the bridge control below; native authorizedMint authority remains the separately modeled BimaCore owner.",
+        "reviewNote": "Canonical USBD home deployment (27.4% of supply). Fixed-block reads at Ethereum blocks 25,770,562 and 25,770,566 (2026-08-16) confirmed local BorrowerOperations/Factory/DebtToken wiring and the documented collateralized CDP mint path. The same direct 19,637-byte DebtToken is also a regular LayerZero OFT: endpoint() = 0x1a44076050125825900e736c501f859c50fe728c and owner() = code-empty EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. This route remains native for the reviewed Ethereum liability surface; its OFT inbound/outbound bridge machinery is scored separately under the endpoint and owner controls below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "USBD DebtToken on Ethereum (endpoint/owner reads, 2026-07-20)",
+            "label": "USBD DebtToken on Ethereum (endpoint/owner reads, 2026-08-16)",
             "url": "https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c#readContract"
           },
           {
@@ -297,25 +297,27 @@
         "destinationChain": "hemi",
         "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "Bima USBD native CDP issuance with LayerZero OFT overlay",
-        "issuanceModel": "native-issuance",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified at Hemi block 5087661: this byte-identical 19,637-byte DebtToken has a local BorrowerOperations/TroveManager CDP stack that creates native liabilities on Hemi, while its LayerZero OFT burn/mint behavior remains a third-party bridge overlay. endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (eid 30329); owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, whose bridge peer/delegate authority is scored under the structured control. Hemi's Ethereum peer was nonzero at block 5087665.",
+        "reviewNote": "At Hemi blocks 5,087,661 and 5,087,665 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented iBTC collateral market; the DebtToken totalSupply was 5,447,824,812,365,803,018,146,460 while aggregate local Trove-manager debt was nonzero but not reconciled to the full destination balance. The same byte-identical DebtToken is a regular LayerZero OFT: endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (EID 30329), peers(30101) was nonzero, and owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. Because the local liability ledger does not isolate all destination supply from authenticated OFT delivery, this route is conservatively a bridge representation; the documented local CDP path is retained as evidence but is not admitted to Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "hemi",
         "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
         "failureDomainKeys": [
           "protocol:layerzero",
-          "contract:hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          "contract:hemi:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "USBD DebtToken on hemi (endpoint/owner reads, 2026-07-20)",
+            "label": "USBD DebtToken on hemi (endpoint/owner reads, 2026-08-16)",
             "url": "https://explorer.hemi.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
           },
           {
@@ -330,25 +332,27 @@
         "destinationChain": "plume",
         "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "Bima USBD native CDP issuance with LayerZero OFT overlay",
-        "issuanceModel": "native-issuance",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified at Plume block 87682632: this byte-identical 19,637-byte DebtToken has a local BorrowerOperations/TroveManager CDP stack that creates native liabilities on Plume, while its LayerZero OFT burn/mint behavior remains a third-party bridge overlay. endpoint() = 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 (eid 30370); owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, whose bridge peer/delegate authority is scored under the structured control. Plume's Ethereum peer was nonzero at the cited observation.",
+        "reviewNote": "At Plume blocks 87,682,495 and 87,682,632 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented enzoBTC collateral market, but the local TroveManager getEntireSystemDebt() was 0 while DebtToken.totalSupply was 30,479,000,000,000,000. The same byte-identical DebtToken is a regular LayerZero OFT: endpoint() = 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 (EID 30370), peers(30101) was nonzero, and owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. The nonzero balance without local Trove debt is direct evidence that the destination balance cannot be treated as independently native; this route remains a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plume",
         "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
         "failureDomainKeys": [
           "protocol:layerzero",
-          "contract:plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          "contract:plume:0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36",
+          "contract:plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "USBD DebtToken on plume (endpoint/owner reads, 2026-07-20)",
+            "label": "USBD DebtToken on plume (endpoint/owner reads, 2026-08-16)",
             "url": "https://explorer.plumenetwork.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
           },
           {
@@ -363,25 +367,27 @@
         "destinationChain": "sonic",
         "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "Bima USBD native CDP issuance with LayerZero OFT overlay",
-        "issuanceModel": "native-issuance",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified at Sonic block 77632123: this byte-identical 19,637-byte DebtToken has a local BorrowerOperations/TroveManager CDP stack that creates native liabilities on Sonic, while its LayerZero OFT burn/mint behavior remains a third-party bridge overlay. endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (eid 30332); the Ethereum token's peers(30332) read this address at block 77632147. owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, whose bridge peer/delegate authority is scored under the structured control.",
+        "reviewNote": "At Sonic blocks 77,632,123 and 77,632,147 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented LBTC collateral market, but the local TroveManager getEntireSystemDebt() was 0 while DebtToken.totalSupply was 9,182,000,000,000,000. The same byte-identical DebtToken is a regular LayerZero OFT: endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (EID 30332), the Ethereum token's peers(30332) was nonzero, and owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. The nonzero balance without local Trove debt is direct evidence that the destination balance cannot be treated as independently native; this route remains a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "sonic",
         "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
         "failureDomainKeys": [
           "protocol:layerzero",
-          "contract:sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          "contract:sonic:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "USBD DebtToken on sonic (endpoint/owner reads, 2026-07-20)",
+            "label": "USBD DebtToken on sonic (endpoint/owner reads, 2026-08-16)",
             "url": "https://sonicscan.org/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
           },
           {
@@ -396,25 +402,27 @@
         "destinationChain": "bsc",
         "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "Bima USBD native CDP issuance with LayerZero OFT overlay",
-        "issuanceModel": "native-issuance",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified at BSC block 116350940: this byte-identical 19,637-byte DebtToken has a local BorrowerOperations/TroveManager CDP stack that creates native liabilities on BSC, while its LayerZero OFT burn/mint behavior remains a third-party bridge overlay. endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, whose bridge peer/delegate authority is scored under the structured control. The BSC token's Ethereum peer was zero at block 116351071.",
+        "reviewNote": "At BSC blocks 116,350,940 and 116,351,071 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented bfBTC collateral market; the Ethereum peer for EID 30102 was zero. A latest 2026-08-17 read at BSC block 116,455,172 returned DebtToken.totalSupply() = 0 and local TroveManager debt = 0. The same byte-identical DebtToken is a regular LayerZero OFT with endpoint() = 0x1a44076050125825900e736c501f859c50fe728c (EID 30102), owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, and no fixed-block evidence proving an independent native liability ledger. This route remains conservatively a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bsc",
         "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
         "failureDomainKeys": [
           "protocol:layerzero",
-          "contract:bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          "contract:bsc:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "USBD DebtToken on bsc (endpoint/owner reads, 2026-07-20)",
+            "label": "USBD DebtToken on bsc (endpoint/owner reads, 2026-08-16)",
             "url": "https://bscscan.com/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
           },
           {
@@ -429,25 +437,27 @@
         "destinationChain": "nibiru",
         "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "Bima USBD native CDP issuance with LayerZero OFT overlay",
-        "issuanceModel": "native-issuance",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified at Nibiru block 44572760: this byte-identical 19,637-byte DebtToken has a local BorrowerOperations/TroveManager CDP stack that creates native liabilities on Nibiru, while its LayerZero OFT burn/mint behavior remains a third-party bridge overlay. endpoint() = 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (eid 30369); owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, whose bridge peer/delegate authority is scored under the structured control. The Nibiru token's Ethereum peer was zero at block 44572793.",
+        "reviewNote": "At Nibiru blocks 44,572,760 and 44,572,793 (2026-08-16), the official Bima registry and live reads confirmed a local BorrowerOperations/Factory/DebtToken stack and the documented uBTC collateral market; the Ethereum peer for EID 30369 was zero. A latest 2026-08-17 read at Nibiru block 44,599,106 returned DebtToken.totalSupply() = 0 and local TroveManager debt = 0. The same byte-identical DebtToken is a regular LayerZero OFT with endpoint() = 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (EID 30369), owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, and no fixed-block evidence proving an independent native liability ledger. This route remains conservatively a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "nibiru",
         "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
         "failureDomainKeys": [
           "protocol:layerzero",
-          "contract:nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          "contract:nibiru:0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd",
+          "contract:nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
         "sources": [
           {
-            "label": "USBD DebtToken on nibiru (endpoint/owner reads, 2026-07-20)",
+            "label": "USBD DebtToken on nibiru (endpoint/owner reads, 2026-08-16)",
             "url": "https://explorer.nibiru.fi/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
           },
           {
@@ -460,14 +470,9 @@
     "controls": [
       {
         "id": "usbd-oft-owner-delegate",
-        "label": "USBD OFT owner/delegate (deployment-wide EOA)",
+        "label": "USBD Ethereum OFT owner/delegate (common deployment EOA)",
         "routeRefs": [
-          "ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-          "hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-          "plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-          "sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-          "bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-          "nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          "ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
         ],
         "capabilities": [
           "admin",
@@ -482,8 +487,8 @@
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "At the fixed 2026-08-16 observations, Ethereum peers for Hemi (EID 30329), Sonic (EID 30332), and Plume (EID 30370) were nonzero and resolved to the reviewed USBD token; BSC EID 30102 and Nibiru EID 30369 were zero. Hemi, Plume, and Sonic independently returned nonzero peers for Ethereum EID 30101, while BSC and Nibiru returned zero.",
-          "pausersAdminsUpgraders": "The DebtToken owner/delegate EOA controls LayerZero OFT peer and application/delegate configuration across the six deployments. Ethereum and BSC use endpoint 0x1a44076050125825900e736c501f859c50fe728c; Hemi and Sonic use 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; Plume uses 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36; Nibiru uses 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd. Per-application DVN/ULN, executor, and numeric route-limit settings were not independently replayed."
+          "trustedPeerOrRemote": "At Ethereum block 25,770,566 (2026-08-16), peers(30329), peers(30332), and peers(30370) were nonzero and resolved to the reviewed USBD token, while peers(30102) and peers(30369) were zero. The code-empty owner/delegate EOA can change the Ethereum OFT peer and delegate/application configuration.",
+          "pausersAdminsUpgraders": "The same EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 was read as owner() on the six USBD DebtToken/OFT deployments. Ethereum and BSC use endpoint 0x1a44076050125825900e736c501f859c50fe728c; Hemi and Sonic use 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; Plume uses 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36; Nibiru uses 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd. This control is scoped to the canonical Ethereum route so peer administration is not misattributed as the representation minter. Per-application DVN/ULN, executor, endpoint-admin, and numeric route-limit settings were not independently replayed."
         },
         "canRaiseCap": false,
         "observedAt": "2026-08-16",
@@ -517,7 +522,271 @@
             "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
           }
         ],
-        "evidence": "At the fixed 2026-08-16 reads, owner() on all six USBD DebtToken/OFT deployments returned the same code-empty EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. It controls the OFT peer/delegate and application configuration, including the observed sparse peer mesh: Ethereum peers for Hemi, Sonic, and Plume were nonzero at block 25770566 while BSC and Nibiru peers were zero at that block; Hemi block 5087665, Plume block 87682632, and Sonic block 77632147 returned nonzero Ethereum peers, while BSC block 116351071 and Nibiru block 44572793 returned zero. This is bridge administration over the burn/mint OFT overlay, not the native BimaCore owner-only authorizedMint path, which remains separately scored in Mint Authority."
+        "evidence": "At Ethereum block 25,770,566 (2026-08-16), owner() on the USBD DebtToken/OFT returned code-empty EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4. It controls the OFT peer/delegate and application configuration; the destination route rows retain the same owner and failure-domain evidence, while the direct LayerZero Endpoint delivery paths below own bridge-mint attribution. This is bridge administration over the OFT overlay, not the native BimaCore owner-only authorizedMint path."
+      },
+      {
+        "id": "usbd-ethereum-layerzero-endpoint",
+        "label": "USBD Ethereum LayerZero OFT Endpoint delivery path",
+        "routeRefs": [
+          "ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:ethereum:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The canonical Ethereum OFT endpoint() is 0x1a44076050125825900e736c501f859c50fe728c; its authenticated delivery path accepts LayerZero messages for the configured Hemi, Sonic, and Plume peers. EIDs 30329, 30332, and 30370 were nonzero peers on the Ethereum token at block 25770566; EIDs 30102 and 30369 were zero.",
+          "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
+          "onchainAmountBounds": "The Ethereum DebtToken also has a local native CDP mint path. This control covers only inbound OFT delivery, which credits/mints tokens after source-side OFT debit/burn; it does not replace the separately scored BimaCore native mint control. The official LayerZero OFT standard describes source debit/burn and destination credit/mint as one unified cross-chain supply movement.",
+          "pausersAdminsUpgraders": "The OFT owner/delegate EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 administers token peer/delegate/application configuration. The DebtToken deployment was direct rather than EIP-1967 proxy at the fixed observations; no separate OFT pause or token upgrade admin was identified. LayerZero Endpoint/DVN administrator state remains an evidence gap."
+        },
+        "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 25770566,
+        "sources": [
+          {
+            "label": "USBD ethereum DebtToken endpoint/peer reads (2026-08-16)",
+            "url": "https://etherscan.io/address/0x6bede1c6009a78c222d9bdb7974bb67847fdB68c#code"
+          },
+          {
+            "label": "Bima DebtToken official source",
+            "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/DebtToken.sol"
+          },
+          {
+            "label": "LayerZero OFT standard",
+            "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+          }
+        ],
+        "evidence": "At Ethereum fixed observation block 25770566 (2026-08-16), 0x1a44076050125825900e736c501f859c50fe728c was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+      },
+      {
+        "id": "usbd-hemi-layerzero-endpoint",
+        "label": "USBD Hemi LayerZero OFT Endpoint delivery path",
+        "routeRefs": [
+          "hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "hemi",
+        "controllerAddress": "0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:hemi:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Hemi OFT endpoint() is 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (EID 30329), and the verified lzReceive delivery path accepts the endpoint as caller for the configured Ethereum peer. At Hemi block 5087665, peers(30101) returned the Ethereum USBD token; the Ethereum token's peers(30329) was nonzero at block 25770566.",
+          "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
+          "onchainAmountBounds": "LayerZero OFT delivery debits/burns source USBD and credits/mints Hemi USBD. Hemi's local CDP debt was not reconciled to the complete destination supply, so this is bridge accounting rather than admitted native Mint Authority. The official LayerZero OFT standard describes source debit/burn and destination credit/mint as one unified cross-chain supply movement.",
+          "pausersAdminsUpgraders": "The OFT owner/delegate EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 administers token peer/delegate/application configuration. The DebtToken deployment was direct rather than EIP-1967 proxy at the fixed observations; no separate OFT pause or token upgrade admin was identified. LayerZero Endpoint/DVN administrator state remains an evidence gap."
+        },
+        "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 5087665,
+        "sources": [
+          {
+            "label": "USBD hemi DebtToken endpoint/peer reads (2026-08-16)",
+            "url": "https://explorer.hemi.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdB68c"
+          },
+          {
+            "label": "Bima DebtToken official source",
+            "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/DebtToken.sol"
+          },
+          {
+            "label": "LayerZero OFT standard",
+            "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+          }
+        ],
+        "evidence": "At Hemi fixed observation block 5087665 (2026-08-16), 0x6f475642a6e85809b1c36fa62763669b1b48dd5b was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+      },
+      {
+        "id": "usbd-plume-layerzero-endpoint",
+        "label": "USBD Plume LayerZero OFT Endpoint delivery path",
+        "routeRefs": [
+          "plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:plume:0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36",
+          "contract:plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Plume OFT endpoint() is 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 (EID 30370), and the verified lzReceive delivery path accepts the endpoint as caller for the configured Ethereum peer. At Plume block 87682632, peers(30101) returned the Ethereum USBD token; the Ethereum token's peers(30370) was nonzero at block 25770566.",
+          "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
+          "onchainAmountBounds": "LayerZero OFT delivery debits/burns source USBD and credits/mints Plume USBD. At Plume block 87682495, local TroveManager debt was 0 while DebtToken.totalSupply was nonzero, so this route is bridge accounting rather than admitted native Mint Authority. The official LayerZero OFT standard describes source debit/burn and destination credit/mint as one unified cross-chain supply movement.",
+          "pausersAdminsUpgraders": "The OFT owner/delegate EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 administers token peer/delegate/application configuration. The DebtToken deployment was direct rather than EIP-1967 proxy at the fixed observations; no separate OFT pause or token upgrade admin was identified. LayerZero Endpoint/DVN administrator state remains an evidence gap."
+        },
+        "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 87682632,
+        "sources": [
+          {
+            "label": "USBD plume DebtToken endpoint/peer reads (2026-08-16)",
+            "url": "https://explorer.plumenetwork.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdB68c"
+          },
+          {
+            "label": "Bima DebtToken official source",
+            "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/DebtToken.sol"
+          },
+          {
+            "label": "LayerZero OFT standard",
+            "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+          }
+        ],
+        "evidence": "At Plume fixed observation block 87682632 (2026-08-16), 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+      },
+      {
+        "id": "usbd-sonic-layerzero-endpoint",
+        "label": "USBD Sonic LayerZero OFT Endpoint delivery path",
+        "routeRefs": [
+          "sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:sonic:0x6f475642a6e85809b1c36fa62763669b1b48dd5b",
+          "contract:sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Sonic OFT endpoint() is 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (EID 30332), and the verified lzReceive delivery path accepts the endpoint as caller for the configured Ethereum peer. At Sonic block 77632147, peers(30101) returned the Ethereum USBD token; the Ethereum token's peers(30332) was nonzero at block 25770566.",
+          "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
+          "onchainAmountBounds": "LayerZero OFT delivery debits/burns source USBD and credits/mints Sonic USBD. At Sonic block 77632123, local TroveManager debt was 0 while DebtToken.totalSupply was nonzero, so this route is bridge accounting rather than admitted native Mint Authority. The official LayerZero OFT standard describes source debit/burn and destination credit/mint as one unified cross-chain supply movement.",
+          "pausersAdminsUpgraders": "The OFT owner/delegate EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 administers token peer/delegate/application configuration. The DebtToken deployment was direct rather than EIP-1967 proxy at the fixed observations; no separate OFT pause or token upgrade admin was identified. LayerZero Endpoint/DVN administrator state remains an evidence gap."
+        },
+        "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 77632147,
+        "sources": [
+          {
+            "label": "USBD sonic DebtToken endpoint/peer reads (2026-08-16)",
+            "url": "https://sonicscan.org/address/0x6bede1c6009a78c222d9bdb7974bb67847fdB68c"
+          },
+          {
+            "label": "Bima DebtToken official source",
+            "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/DebtToken.sol"
+          },
+          {
+            "label": "LayerZero OFT standard",
+            "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+          }
+        ],
+        "evidence": "At Sonic fixed observation block 77632147 (2026-08-16), 0x6f475642a6e85809b1c36fa62763669b1b48dd5b was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+      },
+      {
+        "id": "usbd-bsc-layerzero-endpoint",
+        "label": "USBD Bsc LayerZero OFT Endpoint delivery path",
+        "routeRefs": [
+          "bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x1a44076050125825900e736c501f859c50fe728c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:bsc:0x1a44076050125825900e736c501f859c50fe728c",
+          "contract:bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The BSC OFT endpoint() is 0x1a44076050125825900e736c501f859c50fe728c (EID 30102). The route is a deployed regular OFT endpoint even though the reviewed Ethereum peer was zero at the fixed observation. At BSC block 116351071, peers(30101) returned zero; the Ethereum token's peers(30102) was zero at block 25770566.",
+          "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
+          "onchainAmountBounds": "If authenticated LayerZero delivery is configured, the regular OFT credits/mints BSC USBD after source-side debit/burn. Latest BSC block 116455172 returned totalSupply() = 0 and local TroveManager debt = 0; no independent native-liability reconciliation was found. The official LayerZero OFT standard describes source debit/burn and destination credit/mint as one unified cross-chain supply movement.",
+          "pausersAdminsUpgraders": "The OFT owner/delegate EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 administers token peer/delegate/application configuration. The DebtToken deployment was direct rather than EIP-1967 proxy at the fixed observations; no separate OFT pause or token upgrade admin was identified. LayerZero Endpoint/DVN administrator state remains an evidence gap."
+        },
+        "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 116351071,
+        "sources": [
+          {
+            "label": "USBD bsc DebtToken endpoint/peer reads (2026-08-16)",
+            "url": "https://bscscan.com/address/0x6bede1c6009a78c222d9bdb7974bb67847fdB68c"
+          },
+          {
+            "label": "Bima DebtToken official source",
+            "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/DebtToken.sol"
+          },
+          {
+            "label": "LayerZero OFT standard",
+            "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+          }
+        ],
+        "evidence": "At Bsc fixed observation block 116351071 (2026-08-16), 0x1a44076050125825900e736c501f859c50fe728c was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
+      },
+      {
+        "id": "usbd-nibiru-layerzero-endpoint",
+        "label": "USBD Nibiru LayerZero OFT Endpoint delivery path",
+        "routeRefs": [
+          "nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "nibiru",
+        "controllerAddress": "0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:nibiru:0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd",
+          "contract:nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "eoa:0xe3fbba95bb35be804696624dd1e9344a86e3cbc4"
+        ],
+        "authorityType": "bridge",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Nibiru OFT endpoint() is 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (EID 30369). The route is a deployed regular OFT endpoint even though the reviewed Ethereum peer was zero at the fixed observation. At Nibiru block 44572793, peers(30101) returned zero; the Ethereum token's peers(30369) was zero at block 25770566.",
+          "rateLimits": "No current aggregate or per-route LayerZero DVN/ULN, executor, or numeric rate-limit setting was independently replayed at the observation block.",
+          "onchainAmountBounds": "If authenticated LayerZero delivery is configured, the regular OFT credits/mints Nibiru USBD after source-side debit/burn. Latest Nibiru block 44599106 returned totalSupply() = 0 and local TroveManager debt = 0; no independent native-liability reconciliation was found. The official LayerZero OFT standard describes source debit/burn and destination credit/mint as one unified cross-chain supply movement.",
+          "pausersAdminsUpgraders": "The OFT owner/delegate EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 administers token peer/delegate/application configuration. The DebtToken deployment was direct rather than EIP-1967 proxy at the fixed observations; no separate OFT pause or token upgrade admin was identified. LayerZero Endpoint/DVN administrator state remains an evidence gap."
+        },
+        "capDescription": "LayerZero Endpoint V2 is the direct delivery caller accepted by the regular USBD OFT lzReceive path for representation minting. Authenticated messages can mint arbitrary token units at the OFT layer; route-level transfer semantics rely on source-side debit/burn and peer/message validation.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "observedBlock": 44572793,
+        "sources": [
+          {
+            "label": "USBD nibiru DebtToken endpoint/peer reads (2026-08-16)",
+            "url": "https://explorer.nibiru.fi/address/0x6bede1c6009a78c222d9bdb7974bb67847fdB68c"
+          },
+          {
+            "label": "Bima DebtToken official source",
+            "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/DebtToken.sol"
+          },
+          {
+            "label": "LayerZero OFT standard",
+            "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+          }
+        ],
+        "evidence": "At Nibiru fixed observation block 44572793 (2026-08-16), 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd was the USBD DebtToken endpoint and the reviewed peer state was read as described above. The regular OFT lzReceive delivery path accepts the LayerZero Endpoint as caller and credits/mints this route's representation after authenticated cross-chain delivery. The owner/delegate EOA is retained as the peer/application administrator; this endpoint, not that EOA, is the authored bridge-mint holder."
       }
     ]
   }

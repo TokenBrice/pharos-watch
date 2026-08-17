@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Anzen's USDz route inventory separates four issuer-native deployments (Ethereum, Arbitrum, Blast, and Manta) from the Base LayerZero OFT representation. The Base OFT owner Safe controls trusted peers, pause, and delegate configuration; these bridge-administration capabilities are scored here rather than as native Mint Authority. The LayerZero route is an external lock/burn-and-mint path.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena); Codex USDz mint/bridge boundary migration",
+    "summary": "Anzen has one Ethereum native USDz liability source and four reviewed representations: a Base LayerZero OFT plus Arbitrum, Blast, and Manta ChildUSDzV2 burn-and-mint contracts. The Base OFT and child LayerZero adapters are independently authored as bridge-mint/bridge-burn holders; their owner Safes control peers, pause, delegates, and mint-role administration. Child maxSupply() is zero, so token-level bridge minting is uncapped even though the route is intended to conserve supply through outbound burn and inbound mint.",
+    "reviewedAt": "2026-08-17",
+    "reviewer": "Codex USDz canonicality and bridge-risk verification",
     "confidence": "verified",
     "protocols": [
       {
@@ -23,16 +23,34 @@
           "oft",
           "lockOrBurnAndMint"
         ]
+      },
+      {
+        "source": "issuer",
+        "name": "Anzen USDz contract registry",
+        "url": "https://docs.anzen.finance/developer-resources/smart-contracts.md",
+        "bridgeTypes": [
+          "oft",
+          "lockOrBurnAndMint"
+        ],
+        "note": "The official registry lists USDz on Ethereum, Base, Arbitrum, Blast, and Manta, and separately identifies the Arbitrum, Blast, and Manta USDz OFT adapters."
       }
     ],
     "sources": [
       {
-        "label": "Anzen USDz bridge docs",
-        "url": "https://docs.anzen.finance/user-guide/how-to-bridge-usdz-and-susdz"
+        "label": "Anzen USDz bridge guide",
+        "url": "https://docs.anzen.finance/user-guide/how-to-bridge-usdz-and-susdz.md"
+      },
+      {
+        "label": "Anzen verified smart-contract registry",
+        "url": "https://docs.anzen.finance/developer-resources/smart-contracts.md"
       },
       {
         "label": "LayerZero OFT reference",
         "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "LayerZero OFT metadata for USDz",
+        "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDz"
       }
     ],
     "routes": [
@@ -47,23 +65,23 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical USDz on Ethereum (verified 2026-07-20, block 25570986): user-callable SPCT-gated deposit mint per the verified mint-authority review; the token also exposes endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and is the OFT hub for the Base representation (LayerZero OFT registry lists USDz only on ethereum and base). owner() = Anzen DEFAULT_ADMIN Safe 0xc88729a8f57cd88fda7f94478985e5df108fd679 (2-of-6).",
+        "reviewNote": "Ethereum is the only independently issued USDz liability source. At block 25771000 on 2026-08-17, the verified non-proxy USDz source had SPCT-backed deposit() and depositBySPCT() paths calling _mintUSDz and incrementing totalPooledSPCT; owner() was the Anzen 2-of-6 Safe and endpoint() was LayerZero V2. The pre-mission bridge-representation classification was wrong because these SPCT/collateral deposit mechanics create the native liability; the endpoint is a separate transfer rail.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-17",
         "canonicalChain": "ethereum",
-        "observedBlock": 25570986,
+        "observedBlock": 25771000,
         "sources": [
           {
-            "label": "Anzen docs",
-            "url": "https://docs.anzen.finance/"
+            "label": "Anzen USDz overview",
+            "url": "https://docs.anzen.finance/usdz-101/overview.md"
           },
           {
-            "label": "USDz on Etherscan (verified 2026-07-20)",
-            "url": "https://etherscan.io/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+            "label": "USDz Ethereum verified source",
+            "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067?tab=contract"
           },
           {
-            "label": "LayerZero OFT metadata API (USDz)",
-            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDz"
+            "label": "Ethereum JSON-RPC fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
@@ -71,16 +89,16 @@
         "id": "base:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
         "destinationChain": "base",
         "contractAddress": "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
-        "protocol": "LayerZero OFT (Anzen USDz)",
+        "protocol": "LayerZero OFT (Anzen USDz Base representation)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",
-        "semantics": "lock-mint",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Base 2026-07-20 (block 48862865): USDz OFT symbol()='USDz', endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c, owner() = Anzen Safe 0x0e5ec65ea055937646ab029ef3644de3de67766a (getThreshold/getOwners = 2-of-7); the LayerZero OFT registry lists USDz only on ethereum and base. The OFT contract itself is the mint/burn authority for this representation.",
+        "reviewNote": "At Base block 50067288 on 2026-08-17, the verified ChildUSDz source was explicitly for bridging and exposed OFT debit/credit plus owner-controlled pause/configuration, not an SPCT deposit path. endpoint() was LayerZero V2 and peers(30101) pointed to Ethereum USDz; the Ethereum peer(30184) pointed back to this Base token at Ethereum block 25771000. Debit burns the representation and credit mints it, so this is a bridge representation rather than independent native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-17",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "controllerChain": "base",
@@ -90,15 +108,23 @@
           "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
           "contract:base:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938"
         ],
-        "observedBlock": 48862865,
+        "observedBlock": 50067288,
         "sources": [
+          {
+            "label": "Anzen verified smart-contract registry",
+            "url": "https://docs.anzen.finance/developer-resources/smart-contracts.md"
+          },
           {
             "label": "LayerZero OFT metadata API (USDz)",
             "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDz"
           },
           {
-            "label": "USDz OFT on Basescan (verified 2026-07-20)",
-            "url": "https://basescan.org/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938"
+            "label": "Base ChildUSDz verified source",
+            "url": "https://base.blockscout.com/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
+          },
+          {
+            "label": "Base JSON-RPC fixed-block reads",
+            "url": "https://mainnet.base.org"
           }
         ]
       },
@@ -106,27 +132,43 @@
         "id": "arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f",
         "destinationChain": "arbitrum",
         "contractAddress": "0x5018609ab477cc502e170a5accf5312b86a4b94f",
-        "protocol": "Anzen issuer-deployed USDz",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "LayerZero adapter / Chainlink ChildUSDzV2 (Arbitrum representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on arbitrum 2026-07-20 (block 485696014): USDz token 0x5018609ab477cc502e170a5accf5312b86a4b94f (symbol USDz) has no LayerZero endpoint surface — it is not the OFT — and owner() = Anzen Safe 0x0e5ec65ea055937646ab029ef3644de3de67766a (getThreshold/getOwners = 2-of-7). Anzen issuer-deployed deployment administered by the issuer Safe.",
+        "reviewNote": "At Arbitrum block 495300287 on 2026-08-17, verified ChildUSDzV2/OpStackBurnMintERC677 source identified this contract as a bridge representation with immutable remoteToken() equal to Ethereum USDz. getMinters() returned only adapter 0xdd216101d84d513a12cb7bfb109f7abcf330d58e, and it was both isMinter and isBurner. The adapter burns on debit and calls privileged mint on credit; it is not an independent SPCT-backed issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-17",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
-        "observedBlock": 485696014,
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x5018609ab477cc502e170a5accf5312b86a4b94f",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+          "contract:arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f",
+          "contract:arbitrum:0xdd216101d84d513a12cb7bfb109f7abcf330d58e"
+        ],
+        "observedBlock": 495300287,
         "sources": [
           {
-            "label": "Anzen docs",
-            "url": "https://docs.anzen.finance/"
+            "label": "Anzen verified smart-contract registry",
+            "url": "https://docs.anzen.finance/developer-resources/smart-contracts.md"
           },
           {
-            "label": "USDz on arbitrum explorer (owner verified 2026-07-20)",
-            "url": "https://arbiscan.io/address/0x5018609ab477cc502e170a5accf5312b86a4b94f"
+            "label": "Arbitrum ChildUSDzV2 verified source",
+            "url": "https://arbitrum.blockscout.com/address/0x5018609ab477cc502e170a5accf5312b86a4b94f?tab=contract"
+          },
+          {
+            "label": "Arbitrum LayerZero adapter verified source",
+            "url": "https://arbitrum.blockscout.com/address/0xdd216101d84d513a12cb7bfb109f7abcf330d58e?tab=contract"
+          },
+          {
+            "label": "Arbitrum JSON-RPC fixed-block reads",
+            "url": "https://arb1.arbitrum.io/rpc"
           }
         ]
       },
@@ -134,27 +176,43 @@
         "id": "blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
         "destinationChain": "blast",
         "contractAddress": "0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
-        "protocol": "Anzen issuer-deployed USDz",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "LayerZero adapter / Chainlink ChildUSDzV2 (Blast representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on blast 2026-07-20 (block 37852633): USDz token 0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6 (symbol USDz) has no LayerZero endpoint surface — it is not the OFT — and owner() = Anzen Safe 0x9076e336e9d0901a3aca0d559124884e114d7b48 (getThreshold/getOwners = 2-of-7). Anzen issuer-deployed deployment administered by the issuer Safe.",
+        "reviewNote": "At Blast block 39057071 on 2026-08-17, verified ChildUSDzV2/OpStackBurnMintERC677 source identified this contract as a bridge representation with immutable remoteToken() equal to Ethereum USDz. getMinters() returned only adapter 0x5a1b8c0e9fe27b9db4913df6b361dea5e96ea129, and it was both minter and burner. The adapter burns on debit and calls privileged mint on credit; it is not an independent native issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-17",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
-        "observedBlock": 37852633,
+        "controllerChain": "blast",
+        "controllerAddress": "0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+          "contract:blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
+          "contract:blast:0x5a1b8c0e9fe27b9db4913df6b361dea5e96ea129"
+        ],
+        "observedBlock": 39057071,
         "sources": [
           {
-            "label": "Anzen docs",
-            "url": "https://docs.anzen.finance/"
+            "label": "Anzen verified smart-contract registry",
+            "url": "https://docs.anzen.finance/developer-resources/smart-contracts.md"
           },
           {
-            "label": "USDz on blast explorer (owner verified 2026-07-20)",
-            "url": "https://blastscan.io/address/0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
+            "label": "Blast ChildUSDzV2 verified source",
+            "url": "https://blastscan.io/address/0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6#code"
+          },
+          {
+            "label": "Blast LayerZero adapter verified source",
+            "url": "https://blastscan.io/address/0x5a1b8c0e9fe27b9db4913df6b361dea5e96ea129#code"
+          },
+          {
+            "label": "Blast JSON-RPC fixed-block reads",
+            "url": "https://rpc.blast.io"
           }
         ]
       },
@@ -162,27 +220,43 @@
         "id": "manta:0x73d23f3778a90be8846e172354a115543df2a7e4",
         "destinationChain": "manta",
         "contractAddress": "0x73d23f3778a90be8846e172354a115543df2a7e4",
-        "protocol": "Anzen issuer-deployed USDz",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "LayerZero adapter / Chainlink ChildUSDzV2 (Manta representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on manta 2026-07-20 (block 9029112): USDz token 0x73d23f3778a90be8846e172354a115543df2a7e4 (symbol USDz) has no LayerZero endpoint surface — it is not the OFT — and owner() = Anzen Safe 0x349d4b7580abc27cd9fba78c0e7a62865ef51da6 (getThreshold/getOwners = 2-of-6). Anzen issuer-deployed deployment administered by the issuer Safe.",
+        "reviewNote": "At Manta block 9270007 on 2026-08-17, verified ChildUSDzV2/OpStackBurnMintERC677 source identified this contract as a bridge representation with immutable remoteToken() equal to Ethereum USDz. getMinters() returned only adapter 0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938, and it was both minter and burner. The adapter burns on debit and calls privileged mint on credit; it is not an independent native issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-17",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
-        "observedBlock": 9029112,
+        "controllerChain": "manta",
+        "controllerAddress": "0x73d23f3778a90be8846e172354a115543df2a7e4",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+          "contract:manta:0x73d23f3778a90be8846e172354a115543df2a7e4",
+          "contract:manta:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938"
+        ],
+        "observedBlock": 9270007,
         "sources": [
           {
-            "label": "Anzen docs",
-            "url": "https://docs.anzen.finance/"
+            "label": "Anzen verified smart-contract registry",
+            "url": "https://docs.anzen.finance/developer-resources/smart-contracts.md"
           },
           {
-            "label": "USDz on manta explorer (owner verified 2026-07-20)",
-            "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4"
+            "label": "Manta ChildUSDzV2 verified source",
+            "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4?tab=contract"
+          },
+          {
+            "label": "Manta LayerZero adapter verified source",
+            "url": "https://pacific-explorer.manta.network/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
+          },
+          {
+            "label": "Manta JSON-RPC fixed-block reads",
+            "url": "https://pacific-rpc.manta.network/http"
           }
         ]
       }
@@ -224,19 +298,19 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "version": "1.3.0",
-          "observedBlock": 48626678,
-          "observedAt": "2026-07-14",
+          "observedBlock": 50067288,
+          "observedAt": "2026-08-17",
           "source": "onchain"
         },
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
-          "trustedPeerOrRemote": "ChildUSDz setPeer(uint32,bytes32) is owner-only; the owner can replace trusted LayerZero peers.",
+          "trustedPeerOrRemote": "At Base block 50067288, peers(30101) pointed to the Ethereum USDz address; owner-only setPeer(uint32,bytes32) can replace the trusted LayerZero peer.",
           "caps": "No owner-independent per-peer issuance cap was identified in the verified ChildUSDz source.",
-          "pausersAdminsUpgraders": "The verified ChildUSDz source gates setPeer, pause, and delegate configuration through the owner."
+          "pausersAdminsUpgraders": "The verified Base source gates pause, delegate, enforced options, inspector, pre-crime, and peer configuration through this owner Safe."
         },
         "canRaiseCap": true,
-        "observedAt": "2026-07-14",
-        "observedBlock": 48626678,
+        "observedAt": "2026-08-17",
+        "observedBlock": 50067288,
         "sources": [
           {
             "label": "Base ChildUSDz verified source",
@@ -247,11 +321,355 @@
             "url": "https://base.blockscout.com/address/0x0E5ec65ea055937646Ab029ef3644DE3dE67766A"
           },
           {
-            "label": "Base PublicNode RPC",
-            "url": "https://base-rpc.publicnode.com"
+            "label": "Base JSON-RPC fixed-block reads",
+            "url": "https://mainnet.base.org"
           }
         ],
-        "evidence": "At Base block 48626678, ChildUSDz owner() returned this Safe. getOwners() returned seven owners, getThreshold() returned 2, VERSION() returned 1.3.0, getModulesPaginated returned no modules, and the Safe guard slot was zero. The verified ChildUSDz source gates setPeer, pause, and delegate configuration through the owner. The Base route is a LayerZero OFT representation, so this owner-controlled bridge administration is retained under Bridge Risk rather than native Mint Authority."
+        "evidence": "At Base block 50067288, the 2-of-7 Safe controlled the ChildUSDz owner-only bridge configuration. This control is bridge administration only; the Base OFT representation's actual bridge mint/burn capability is authored separately in usdz-base-oft-mint-burn."
+      },
+      {
+        "id": "usdz-base-oft-mint-burn",
+        "label": "Anzen Base OFT representation mint/burn contract",
+        "routeRefs": [
+          "base:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+          "contract:base:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The Base ChildUSDz OFT debits by burning the representation and credits by minting it; the route is not an independent SPCT-backed issuance path.",
+          "trustedPeerOrRemote": "LayerZero peers bind Base to Ethereum USDz, subject to the Base owner Safe's peer-config capability.",
+          "caps": "No independent aggregate or per-call representation cap was evidenced; route-level conservation depends on the paired burn-and-mint messaging path."
+        },
+        "capDescription": "The OFT contract can mint the Base representation on LayerZero credit without a native collateral cap; route-level supply is intended to be conserved by paired debit/burn and credit/mint accounting.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 50067288,
+        "sources": [
+          {
+            "label": "Base ChildUSDz verified source",
+            "url": "https://base.blockscout.com/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "The verified Base ChildUSDz source is an OFT representation for bridging and exposes the debit/credit burn-and-mint rail. It has no SPCT deposit path; its bridge mint is therefore retained as Bridge Risk rather than compiled into native Mint Authority."
+      },
+      {
+        "id": "usdz-arbitrum-child-owner-safe",
+        "label": "Anzen Arbitrum ChildUSDzV2 owner Safe",
+        "routeRefs": [
+          "arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x0E5ec65ea055937646Ab029ef3644DE3dE67766A",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f",
+          "contract:arbitrum:0xdd216101d84d513a12cb7bfb109f7abcf330d58e",
+          "safe:arbitrum:0x0e5ec65ea055937646ab029ef3644de3de67766a"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x1103956Dfe7846332e7F4b1d86786107B7903Ac3",
+            "0xa464980f8ea9d2b88258FBf9BC878F989B2c5DCA",
+            "0x00000000051CBcE3fD04148CcE2c0adc7c651829",
+            "0x82e09977ced7dE0F93548D89C227D2E1BF8F3337",
+            "0x380c2798660B9289279Db77F1b5821fD7542456C",
+            "0x68f5549648ec500056319474F88a71619eEA57D0"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 495300287,
+          "observedAt": "2026-08-17",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner-controlled LayerZero adapter can change peer/delegate configuration for the Arbitrum representation.",
+          "caps": "ChildUSDzV2 maxSupply() returned zero; the owner can grant or revoke the role used by the adapter, with no owner-independent numeric cap.",
+          "pausersAdminsUpgraders": "At Arbitrum block 495300287, owner() was this 2-of-6 Safe and the verified ChildUSDzV2 source made grantMintRole and revokeMintRole owner-only."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 495300287,
+        "sources": [
+          {
+            "label": "Arbitrum ChildUSDzV2 verified source",
+            "url": "https://arbitrum.blockscout.com/address/0x5018609ab477cc502e170a5accf5312b86a4b94f?tab=contract"
+          },
+          {
+            "label": "Arbitrum JSON-RPC fixed-block reads",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Arbitrum block 495300287, this Safe administered the bridge representation and could replace its sole adapter minter role. That role-administration power remains Bridge Risk; it is not native issuance authority."
+      },
+      {
+        "id": "usdz-arbitrum-layerzero-adapter",
+        "label": "Anzen Arbitrum LayerZero USDz adapter",
+        "routeRefs": [
+          "arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xdd216101d84d513a12cb7bfb109f7abcf330d58e",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f",
+          "contract:arbitrum:0xdd216101d84d513a12cb7bfb109f7abcf330d58e",
+          "safe:arbitrum:0x0e5ec65ea055937646ab029ef3644de3de67766a"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The LayerZero adapter burns the ChildUSDzV2 representation on debit and invokes privileged mint on credit; inbound mint is intended to correspond to outbound burn rather than create an independent native liability.",
+          "trustedPeerOrRemote": "At the observed block the adapter was the sole active minter and burner; its owner-controlled LayerZero peer/delegate surface is administered by the Arbitrum Safe.",
+          "caps": "ChildUSDzV2 maxSupply() returned zero, so the active adapter can call mint(address,uint256) without a numeric token cap."
+        },
+        "capDescription": "The adapter is the sole observed minter and burner; ChildUSDzV2 maxSupply() is zero, so token-level bridge minting is uncapped while the role is active even though the route is burn-and-mint.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 495300287,
+        "sources": [
+          {
+            "label": "Arbitrum ChildUSDzV2 verified source",
+            "url": "https://arbitrum.blockscout.com/address/0x5018609ab477cc502e170a5accf5312b86a4b94f?tab=contract"
+          },
+          {
+            "label": "Arbitrum LayerZero adapter verified source",
+            "url": "https://arbitrum.blockscout.com/address/0xdd216101d84d513a12cb7bfb109f7abcf330d58e?tab=contract"
+          }
+        ],
+        "evidence": "At Arbitrum block 495300287, getMinters() returned only 0xdd216101d84d513a12cb7bfb109f7abcf330d58e, and isMinter(adapter) and isBurner(adapter) were true. This is the actual representation bridge-mint holder and is authored separately from the owner Safe's admin capability."
+      },
+      {
+        "id": "usdz-blast-child-owner-safe",
+        "label": "Anzen Blast ChildUSDzV2 owner Safe",
+        "routeRefs": [
+          "blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "blast",
+        "controllerAddress": "0x9076e336e9d0901A3Aca0D559124884E114D7B48",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
+          "contract:blast:0x5a1b8c0e9fe27b9db4913df6b361dea5e96ea129",
+          "safe:blast:0x9076e336e9d0901a3aca0d559124884e114d7b48"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0x00000000051CBcE3fD04148CcE2c0adc7c651829",
+            "0x1103956Dfe7846332e7F4b1d86786107B7903Ac3",
+            "0x380c2798660B9289279Db77F1b5821fD7542456C",
+            "0x68f5549648ec500056319474F88a71619eEA57D0",
+            "0x82e09977ced7dE0F93548D89C227D2E1BF8F3337",
+            "0xa464980f8ea9d2b88258FBf9BC878F989B2c5DCA",
+            "0xbBEE3d18c8Ea290Ff6F7E05fC7ce7BB0f81d34a8"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 39057071,
+          "observedAt": "2026-08-17",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner-controlled LayerZero adapter can change peer/delegate configuration for the Blast representation.",
+          "caps": "ChildUSDzV2 maxSupply() returned zero; the owner can grant or revoke the role used by the adapter, with no owner-independent numeric cap.",
+          "pausersAdminsUpgraders": "At Blast block 39057071, owner() was this 2-of-7 Safe and the verified ChildUSDzV2 source made grantMintRole and revokeMintRole owner-only."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 39057071,
+        "sources": [
+          {
+            "label": "Blast ChildUSDzV2 verified source",
+            "url": "https://blastscan.io/address/0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6#code"
+          },
+          {
+            "label": "Blast JSON-RPC fixed-block reads",
+            "url": "https://rpc.blast.io"
+          }
+        ],
+        "evidence": "At Blast block 39057071, this Safe administered the bridge representation and could replace its sole adapter minter role. That role-administration power remains Bridge Risk; it is not native issuance authority."
+      },
+      {
+        "id": "usdz-blast-layerzero-adapter",
+        "label": "Anzen Blast LayerZero USDz adapter",
+        "routeRefs": [
+          "blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "blast",
+        "controllerAddress": "0x5a1b8c0e9fe27b9db4913df6b361dea5e96ea129",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
+          "contract:blast:0x5a1b8c0e9fe27b9db4913df6b361dea5e96ea129",
+          "safe:blast:0x9076e336e9d0901a3aca0d559124884e114d7b48"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The LayerZero adapter burns the ChildUSDzV2 representation on debit and invokes privileged mint on credit; inbound mint is intended to correspond to outbound burn rather than create an independent native liability.",
+          "trustedPeerOrRemote": "At the observed block the adapter was the sole active minter and burner; its owner-controlled LayerZero peer/delegate surface is administered by the Blast Safe.",
+          "caps": "ChildUSDzV2 maxSupply() returned zero, so the active adapter can call mint(address,uint256) without a numeric token cap."
+        },
+        "capDescription": "The adapter is the sole observed minter and burner; ChildUSDzV2 maxSupply() is zero, so token-level bridge minting is uncapped while the role is active even though the route is burn-and-mint.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 39057071,
+        "sources": [
+          {
+            "label": "Blast ChildUSDzV2 verified source",
+            "url": "https://blastscan.io/address/0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6#code"
+          },
+          {
+            "label": "Blast LayerZero adapter verified source",
+            "url": "https://blastscan.io/address/0x5a1b8c0e9fe27b9db4913df6b361dea5e96ea129#code"
+          }
+        ],
+        "evidence": "At Blast block 39057071, getMinters() returned only 0x5a1b8c0e9fe27b9db4913df6b361dea5e96ea129, and it was both minter and burner. This is the actual representation bridge-mint holder and is authored separately from the owner Safe's admin capability."
+      },
+      {
+        "id": "usdz-manta-child-owner-safe",
+        "label": "Anzen Manta ChildUSDzV2 owner Safe",
+        "routeRefs": [
+          "manta:0x73d23f3778a90be8846e172354a115543df2a7e4"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "manta",
+        "controllerAddress": "0x349D4B7580aBC27cD9fBA78C0e7A62865eF51da6",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:manta:0x73d23f3778a90be8846e172354a115543df2a7e4",
+          "contract:manta:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
+          "safe:manta:0x349d4b7580abc27cd9fba78c0e7a62865ef51da6"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x00000000051CBcE3fD04148CcE2c0adc7c651829",
+            "0xa464980f8ea9d2b88258FBf9BC878F989B2c5DCA",
+            "0x1103956Dfe7846332e7F4b1d86786107B7903Ac3",
+            "0x82e09977ced7dE0F93548D89C227D2E1BF8F3337",
+            "0x380c2798660B9289279Db77F1b5821fD7542456C",
+            "0x68f5549648ec500056319474F88a71619eEA57D0"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 9270007,
+          "observedAt": "2026-08-17",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner-controlled LayerZero adapter can change peer/delegate configuration for the Manta representation.",
+          "caps": "ChildUSDzV2 maxSupply() returned zero; the owner can grant or revoke the role used by the adapter, with no owner-independent numeric cap.",
+          "pausersAdminsUpgraders": "At Manta block 9270007, owner() was this 2-of-6 Safe and the verified ChildUSDzV2 source made grantMintRole and revokeMintRole owner-only."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 9270007,
+        "sources": [
+          {
+            "label": "Manta ChildUSDzV2 verified source",
+            "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4?tab=contract"
+          },
+          {
+            "label": "Manta JSON-RPC fixed-block reads",
+            "url": "https://pacific-rpc.manta.network/http"
+          }
+        ],
+        "evidence": "At Manta block 9270007, this Safe administered the bridge representation and could replace its sole adapter minter role. That role-administration power remains Bridge Risk; it is not native issuance authority."
+      },
+      {
+        "id": "usdz-manta-layerzero-adapter",
+        "label": "Anzen Manta LayerZero USDz adapter",
+        "routeRefs": [
+          "manta:0x73d23f3778a90be8846e172354a115543df2a7e4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "manta",
+        "controllerAddress": "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:manta:0x73d23f3778a90be8846e172354a115543df2a7e4",
+          "contract:manta:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
+          "safe:manta:0x349d4b7580abc27cd9fba78c0e7a62865ef51da6"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "lockboxOrEscrow": "The LayerZero adapter burns the ChildUSDzV2 representation on debit and invokes privileged mint on credit; inbound mint is intended to correspond to outbound burn rather than create an independent native liability.",
+          "trustedPeerOrRemote": "At the observed block the adapter was the sole active minter and burner; its owner-controlled LayerZero peer/delegate surface is administered by the Manta Safe.",
+          "caps": "ChildUSDzV2 maxSupply() returned zero, so the active adapter can call mint(address,uint256) without a numeric token cap."
+        },
+        "capDescription": "The adapter is the sole observed minter and burner; ChildUSDzV2 maxSupply() is zero, so token-level bridge minting is uncapped while the role is active even though the route is burn-and-mint.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-17",
+        "observedBlock": 9270007,
+        "sources": [
+          {
+            "label": "Manta ChildUSDzV2 verified source",
+            "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4?tab=contract"
+          },
+          {
+            "label": "Manta LayerZero adapter verified source",
+            "url": "https://pacific-explorer.manta.network/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
+          }
+        ],
+        "evidence": "At Manta block 9270007, getMinters() returned only 0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938, and it was both minter and burner. This is the actual representation bridge-mint holder and is authored separately from the owner Safe's admin capability."
       }
     ]
   }

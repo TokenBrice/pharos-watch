@@ -9,8 +9,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "YLDS native issuance is reviewed on Provenance (uylds.fcc) and Stellar; Solana and Ethereum are Hastra wYLDS bridge/wrapper representations moving over Chainlink CCIP. The Solana SPL mint key can create wYLDS without a protocol-enforced cap and a separate freeze key can impair accounts, with signer custody unresolved. On Ethereum, verified YieldVaultV2 bridge roles are held by TimelockController 0x4acd2c83616d42b87788ecef4039e7355dd23a39 with a 86,400-second delay; the former Safe remains proposer/admin and execution is open after delay. These representation controls remain exclusively under Bridge Risk, not Figure's native Mint Authority.",
-    "reviewedAt": "2026-08-16",
+    "summary": "YLDS native issuance is reviewed on Provenance (uylds.fcc) and Stellar; Solana and Ethereum are Hastra wYLDS bridge/wrapper representations moving over Chainlink CCIP. The Solana SPL mint key can create wYLDS without a protocol-enforced cap and a separate freeze key can impair accounts, with signer custody unresolved. On Ethereum, verified YieldVaultV2 exposes direct mintRewards issuance to the StakingVault and SMBStakingVault REWARDS_ADMIN_ROLE holders, while upgrade/admin roles are held by TimelockController 0x4acd2c83616d42b87788ecef4039e7355dd23a39 with a 86,400-second delay; the former Safe remains proposer/admin and execution is open after delay. These representation controls remain exclusively under Bridge Risk, not Figure's native Mint Authority.",
+    "reviewedAt": "2026-08-17",
     "reviewer": "Codex bridge route review; FIX2-18 ylds-figure migration",
     "confidence": "verified",
     "sources": [
@@ -173,27 +173,25 @@
     ],
     "controls": [
       {
-        "id": "ylds-solana-wylds-spl-authorities",
-        "label": "Hastra Solana wYLDS SPL mint and freeze authorities",
+        "id": "ylds-solana-wylds-spl-mint-authority",
+        "label": "Hastra Solana wYLDS SPL mint authority",
         "routeRefs": [
           "solana:8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih"
         ],
         "capabilities": [
-          "bridge-mint",
-          "pause"
+          "bridge-mint"
         ],
         "controllerChain": "solana",
         "controllerAddress": "AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM",
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
-          "signer:solana:AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM",
-          "signer:solana:8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6"
+          "signer:solana:AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM"
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "caps": "At finalized Solana slot 439721114 on 2026-08-16, SPL mint 8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih had 171,231,691.550686 wYLDS supply and no protocol-enforced aggregate or per-call mint cap.",
-          "pausersAdminsUpgraders": "The SPL mint authority AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM can mint directly, while freeze authority 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6 can freeze token accounts. Both authority keys returned no account state at the reviewed RPC read, so signer identity and custody remain unverified."
+          "onchainAmountBounds": "The SPL mint authority AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM can mint directly with one signature and no protocol-enforced cap. The authority key returned no account state at the reviewed RPC read, so signer identity and custody remain unverified."
         },
         "capDescription": "No configured supply cap beyond the standard SPL Token integer bound.",
         "canRaiseCap": true,
@@ -213,7 +211,127 @@
             "url": "https://solscan.io/token/8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih"
           }
         ],
-        "evidence": "At finalized Solana slot 439721114 on 2026-08-16, the SPL mint had decimals 6, supply 171,231,691.550686 wYLDS, mint authority AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM, and freeze authority 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6. The mint authority is a direct SPL mint key with no protocol-enforced cap; account reads continued through approximately slot 439721151. Both authority addresses returned no account state from the public RPC. The earlier review also recorded sixty-six successful post-cutoff mint-touching transactions and no SetAuthority transaction, preserving the direct-key failure-domain warning. No address-bound public evidence establishes either legal signer identity or off-chain custody."
+        "evidence": "At finalized Solana slot 439721114 on 2026-08-16, the SPL mint had decimals 6, supply 171,231,691.550686 wYLDS, and mint authority AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM. The mint authority is a direct SPL mint key with no protocol-enforced cap; account reads continued through approximately slot 439721151. The mint authority returned no account state from the public RPC. The earlier review also recorded sixty-six successful post-cutoff mint-touching transactions and no SetAuthority transaction, preserving the direct-key failure-domain warning. No address-bound public evidence establishes the legal signer identity or off-chain custody."
+      },
+      {
+        "id": "ylds-solana-wylds-spl-freeze-authority",
+        "label": "Hastra Solana wYLDS SPL freeze authority",
+        "routeRefs": [
+          "solana:8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih"
+        ],
+        "capabilities": [
+          "pause"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "signer:solana:8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At finalized Solana slot 439721114 on 2026-08-16, freeze authority 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6 could freeze token accounts. The authority key returned no account state at the reviewed RPC read, so signer identity and custody remain unverified."
+        },
+        "observedAt": "2026-08-16",
+        "observedBlock": 439721114,
+        "sources": [
+          {
+            "label": "Solana current RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "SPL Token program source",
+            "url": "https://github.com/solana-program/token"
+          },
+          {
+            "label": "wYLDS Solana mint",
+            "url": "https://solscan.io/token/8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih"
+          }
+        ],
+        "evidence": "At finalized Solana slot 439721114 on 2026-08-16, the SPL mint's freeze authority was 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6. The freeze authority returned no account state from the public RPC, so no address-bound public evidence establishes the legal signer identity or off-chain custody."
+      },
+      {
+        "id": "ylds-ethereum-wylds-staking-vault-minter",
+        "label": "Hastra Ethereum wYLDS StakingVault reward minter",
+        "routeRefs": [
+          "ethereum:0x6ad038ca6c04e885630851278ca0a856ad9a66cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+          "timelock:ethereum:0x4acd2c83616d42b87788ecef4039e7355dd23a39",
+          "safe:ethereum:0x8d358b8ae881f8ea92c3d07783abca21727c6309"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At current Ethereum block 25774400 (2026-08-17), this verified StakingVault contract held REWARDS_ADMIN_ROLE. DEFAULT_ADMIN_ROLE, which administers that role, was held by TimelockController 0x4acd2c83616d42b87788ecef4039e7355dd23a39; the former Safe remains its proposer/admin.",
+          "onchainAmountBounds": "Verified YieldVaultV2 source exposes mintRewards(address,uint256) gated by REWARDS_ADMIN_ROLE; it rejects only zero amounts and then calls _mint, with no function-level amount cap."
+        },
+        "observedAt": "2026-08-17",
+        "observedBlock": 25774400,
+        "sources": [
+          {
+            "label": "Ethereum current RPC role reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum verified YieldVaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x06e0b9155a3cf07f41ac826ccfee7ef8413a9723"
+          },
+          {
+            "label": "Ethereum wYLDS implementation",
+            "url": "https://etherscan.io/address/0x6aD038cA6C04e885630851278ca0a856Ad9a66Cc"
+          }
+        ],
+        "evidence": "At Ethereum block 25770387 on 2026-08-16, wYLDS 0x6ad038ca6c04e885630851278ca0a856ad9a66cc pointed to verified YieldVaultV2. Its source defines mintRewards(address,uint256) as an external REWARDS_ADMIN_ROLE function that directly calls _mint after only a nonzero-amount check. A current role read at block 25774400 on 2026-08-17 found REWARDS_ADMIN_ROLE held by StakingVault 0x19ebb35279a16207ec4ba82799cc64715065f7f6; the role administrator is the Timelock-controlled DEFAULT_ADMIN_ROLE."
+      },
+      {
+        "id": "ylds-ethereum-wylds-smb-staking-vault-minter",
+        "label": "Hastra Ethereum wYLDS SMBStakingVault reward minter",
+        "routeRefs": [
+          "ethereum:0x6ad038ca6c04e885630851278ca0a856ad9a66cc"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x997e2efbce91d170b00ea402e35a66c887ee1da9",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x997e2efbce91d170b00ea402e35a66c887ee1da9",
+          "timelock:ethereum:0x4acd2c83616d42b87788ecef4039e7355dd23a39",
+          "safe:ethereum:0x8d358b8ae881f8ea92c3d07783abca21727c6309"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At current Ethereum block 25774400 (2026-08-17), this verified SMBStakingVault contract held REWARDS_ADMIN_ROLE. DEFAULT_ADMIN_ROLE, which administers that role, was held by TimelockController 0x4acd2c83616d42b87788ecef4039e7355dd23a39; the former Safe remains its proposer/admin.",
+          "onchainAmountBounds": "Verified YieldVaultV2 source exposes mintRewards(address,uint256) gated by REWARDS_ADMIN_ROLE; it rejects only zero amounts and then calls _mint, with no function-level amount cap."
+        },
+        "observedAt": "2026-08-17",
+        "observedBlock": 25774400,
+        "sources": [
+          {
+            "label": "Ethereum current RPC role reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum verified YieldVaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x06e0b9155a3cf07f41ac826ccfee7ef8413a9723"
+          },
+          {
+            "label": "Ethereum wYLDS implementation",
+            "url": "https://etherscan.io/address/0x6aD038cA6C04e885630851278ca0a856Ad9a66Cc"
+          }
+        ],
+        "evidence": "At Ethereum block 25770387 on 2026-08-16, wYLDS 0x6ad038ca6c04e885630851278ca0a856ad9a66cc pointed to verified YieldVaultV2. Its source defines mintRewards(address,uint256) as an external REWARDS_ADMIN_ROLE function that directly calls _mint after only a nonzero-amount check. A current role read at block 25774400 on 2026-08-17 found REWARDS_ADMIN_ROLE held by SMBStakingVault 0x997e2efbce91d170b00ea402e35a66c887ee1da9; the role administrator is the Timelock-controlled DEFAULT_ADMIN_ROLE."
       },
       {
         "id": "ylds-ethereum-wylds-timelock",

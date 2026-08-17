@@ -978,7 +978,7 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "MONEY has independent native CDP issuance on Arbitrum, Base, and Optimism through chain-local MainController deployments. The same-address token deployments also carry a LayerZero OFT burn/mint rail; cross-chain movement depends on external LayerZero message validation rather than a lockbox or canonical rollup bridge. Native CDP controls remain in Mint Authority, while the OFT bridge mint/burn controls are scored here as external-validated-network exposure.",
-    "reviewedAt": "2026-08-16",
+    "reviewedAt": "2026-08-17",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
     "protocols": [
@@ -1020,15 +1020,16 @@
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "external-validated-network",
-        "semantics": "native-mint",
+        "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The official deployment registry lists the Arbitrum MainController at 0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD, and the reviewed Arbitrum markets at finalized block 483808699 provide an independent collateralized CDP path that creates native MONEY. The same-address MONEY token also carries the LayerZero OFT rail and executes bridge mint on verified LayerZero messages; that cross-chain capability is represented by the structured Bridge Risk control below.",
+        "reviewNote": "The official deployment registry lists the Arbitrum MainController at 0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD, and the reviewed Arbitrum markets at block 495410695 provide an independent collateralized CDP path that creates native MONEY. The same-address MONEY token also carries the LayerZero OFT burn/mint rail and executes bridge mint on verified LayerZero messages; that cross-chain capability is represented by the structured Bridge Risk controls below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 483808699,
+        "observedAt": "2026-08-17",
+        "observedBlock": 495410695,
         "canonicalChain": "arbitrum",
         "failureDomainKeys": [
+          "protocol:layerzero-v2",
           "protocol:layerzero-oft",
           "contract:arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496"
         ],
@@ -1046,8 +1047,8 @@
             "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
           },
           {
-            "label": "Finalized Arbitrum block 483808699",
-            "url": "https://arbiscan.io/block/483808699"
+            "label": "Arbitrum block 495410695",
+            "url": "https://arbiscan.io/block/495410695"
           },
           {
             "label": "LayerZero OFT reference",
@@ -1063,15 +1064,16 @@
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "external-validated-network",
-        "semantics": "native-mint",
+        "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The official deployment registry lists the Optimism MainController at 0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD, and the reviewed Optimism markets at finalized block 154221898 provide an independent collateralized CDP path that creates native MONEY. The same-address MONEY token also carries the LayerZero OFT rail and executes bridge mint on verified LayerZero messages; that cross-chain capability is represented by the structured Bridge Risk control below.",
+        "reviewNote": "The official deployment registry lists the Optimism MainController at 0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD, and the reviewed Optimism markets at block 155676713 provide an independent collateralized CDP path that creates native MONEY. The same-address MONEY token also carries the LayerZero OFT burn/mint rail and executes bridge mint on verified LayerZero messages; that cross-chain capability is represented by the structured Bridge Risk controls below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 154221898,
+        "observedAt": "2026-08-17",
+        "observedBlock": 155676713,
         "canonicalChain": "optimism",
         "failureDomainKeys": [
+          "protocol:layerzero-v2",
           "protocol:layerzero-oft",
           "contract:optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496"
         ],
@@ -1089,8 +1091,8 @@
             "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
           },
           {
-            "label": "Finalized Optimism block 154221898",
-            "url": "https://optimistic.etherscan.io/block/154221898"
+            "label": "Optimism block 155676713",
+            "url": "https://optimistic.etherscan.io/block/155676713"
           },
           {
             "label": "LayerZero OFT reference",
@@ -1106,15 +1108,16 @@
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "external-validated-network",
-        "semantics": "native-mint",
+        "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The official deployment registry lists the Base MainController at 0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD, and the reviewed Base markets at finalized block 48626666 provide an independent collateralized CDP path that creates native MONEY. The same-address MONEY token also carries the LayerZero OFT rail and executes bridge mint on verified LayerZero messages; that cross-chain capability is represented by the structured Bridge Risk control below.",
+        "reviewNote": "The official deployment registry lists the Base MainController at 0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD, and the reviewed Base markets at block 50081434 provide an independent collateralized CDP path that creates native MONEY. The same-address MONEY token also carries the LayerZero OFT burn/mint rail and executes bridge mint on verified LayerZero messages; that cross-chain capability is represented by the structured Bridge Risk controls below.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 48626666,
+        "observedAt": "2026-08-17",
+        "observedBlock": 50081434,
         "canonicalChain": "base",
         "failureDomainKeys": [
+          "protocol:layerzero-v2",
           "protocol:layerzero-oft",
           "contract:base:0x69420f9e38a4e60a62224c489be4bf7a94402496"
         ],
@@ -1132,8 +1135,8 @@
             "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
           },
           {
-            "label": "Finalized Base block 48626666",
-            "url": "https://basescan.org/block/48626666"
+            "label": "Base block 50081434",
+            "url": "https://basescan.org/block/50081434"
           },
           {
             "label": "LayerZero OFT reference",
@@ -1156,11 +1159,13 @@
         "controllerChain": "arbitrum",
         "controllerAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
         "failureDomainKeys": [
+          "protocol:layerzero-v2",
           "protocol:layerzero-oft",
           "contract:arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496"
         ],
         "authorityType": "contract",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-17",
+        "observedBlock": 495410695,
         "sources": [
           {
             "label": "Arbitrum MONEY token",
@@ -1186,11 +1191,13 @@
         "controllerChain": "optimism",
         "controllerAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
         "failureDomainKeys": [
+          "protocol:layerzero-v2",
           "protocol:layerzero-oft",
           "contract:optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496"
         ],
         "authorityType": "contract",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-17",
+        "observedBlock": 155676713,
         "sources": [
           {
             "label": "Optimism MONEY token",
@@ -1216,11 +1223,13 @@
         "controllerChain": "base",
         "controllerAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
         "failureDomainKeys": [
+          "protocol:layerzero-v2",
           "protocol:layerzero-oft",
           "contract:base:0x69420f9e38a4e60a62224c489be4bf7a94402496"
         ],
         "authorityType": "contract",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-17",
+        "observedBlock": 50081434,
         "sources": [
           {
             "label": "Base MONEY token",
@@ -1232,6 +1241,104 @@
           }
         ],
         "evidence": "The reviewed Base MONEY deployment is an OFT-style token that burns on the source route and executes bridge mint on verified LayerZero messages. This transfer-rail capability is separate from the Base MainController's collateralized native issuance."
+      },
+      {
+        "id": "money-layerzero-bridge-admin-safe",
+        "label": "MONEY LayerZero peer, pause, and delegate admin Safe",
+        "routeRefs": [
+          "arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+          "optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+          "base:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "capabilities": [
+          "admin",
+          "pause",
+          "peer-config"
+        ],
+        "controllerAddress": "0x222d2B30EcD382a058618d9F1ee01F147666E48b",
+        "failureDomainKeys": [
+          "safe:arbitrum:0x222d2b30ecd382a058618d9f1ee01f147666e48b",
+          "safe:optimism:0x222d2b30ecd382a058618d9f1ee01f147666e48b",
+          "safe:base:0x222d2b30ecd382a058618d9f1ee01f147666e48b",
+          "protocol:layerzero-v2"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x3E254c201c2fF0097F87fa02f415c82a244450cA",
+            "0x334dEb1bC3bEdb88f20b77dCC5F1C624a8b8eDd5",
+            "0xcA88c5D43BB11edBcbc1436FEFa9d578D8d64489",
+            "0x31DAdB64d665d66665Bc026A18758663e88711FB",
+            "0x86Cf559F9bf1Bc9A9eFB9c77694D310f356Cf856",
+            "0xDef1c4Ad4A9C6BCD718c91E6Ab79958217FA27Da",
+            "0xBaDbabeFa66bfA6e01C4918229EA65e20Bbc79E2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Arbitrum block 495410695, Optimism block 155676713, and Base block 50081434, the MONEY token peer table included LayerZero EIDs 30101 (Ethereum), 30110 (Arbitrum), 30111 (Optimism), and 30184 (Base). The Safe is the active owner path for peer configuration.",
+          "pausersAdminsUpgraders": "At the reviewed deployments, the Safe controls setPeer, setBridgeEnabled, setDefaultOptions, and setDelegate on the local MONEY token. The guardian and bridgeRelay reads were zero, so no separate fast pause or peer authority was evidenced."
+        },
+        "observedAt": "2026-08-17",
+        "sources": [
+          {
+            "label": "Arbitrum Safe state",
+            "url": "https://safe-transaction-arbitrum.safe.global/api/v1/safes/0x222d2B30EcD382a058618d9F1ee01F147666E48b/"
+          },
+          {
+            "label": "Optimism Safe state",
+            "url": "https://safe-transaction-optimism.safe.global/api/v1/safes/0x222d2B30EcD382a058618d9F1ee01F147666E48b/"
+          },
+          {
+            "label": "Base Safe state",
+            "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x222d2B30EcD382a058618d9F1ee01F147666E48b/"
+          }
+        ],
+        "evidence": "The same 3-of-7 Safe address is deployed on Arbitrum, Optimism, and Base. Safe observations at blocks 495412172, 155676732, and 50081448 found 7 owners, threshold 3, no enabled modules, and zero guard. This control governs the LayerZero peer, pause, options, and delegate surfaces; it does not itself execute MONEY bridge mint."
+      },
+      {
+        "id": "money-layerzero-v2-validation-domain",
+        "label": "MONEY LayerZero V2 Endpoint, DVN, and Executor validation domain",
+        "routeRefs": [
+          "arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+          "optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496",
+          "base:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "capabilities": [
+          "validator"
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "protocol:layerzero-v2-endpoint",
+          "protocol:layerzero-v2-dvns",
+          "protocol:layerzero-v2-executor"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The LayerZero V2 receive path validates the configured MONEY peer for each remote EID before the destination OFT credit path executes.",
+          "attestorQuorum": "LayerZero V2 external DVN validation is required; the exact per-path DVN set and quorum were not fully decoded at the reviewed blocks.",
+          "signingModel": "Endpoint V2 message libraries, external DVNs, and an Executor provide the validation and execution domain; no named DVN set or numeric bridge cap is inferred without the endpoint configuration read."
+        },
+        "observedAt": "2026-08-17",
+        "sources": [
+          {
+            "label": "LayerZero V2 OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "LayerZero V2 architecture",
+            "url": "https://docs.layerzero.network/v2/developers/evm/protocol-gas-settings"
+          }
+        ],
+        "evidence": "The MONEY BridgeToken burns on source debit and mints on destination credit only after the LayerZero V2 receive path accepts a verified message from a configured peer. The token controls above retain the bridge-mint and bridge-burn capabilities; this separate control retains the external validator/DVN/Executor failure domain."
       }
     ]
   }

@@ -143,7 +143,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At finalized NEAR height 211645512 on 2026-08-16, cusd.token.a11bd.near is the Allbridge cUSD representation and has exactly one FullAccess key, ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb. That key can redeploy the representation contract; the route is bridge machinery rather than local Celo issuance.",
+        "reviewNote": "At finalized NEAR height 211645512 on 2026-08-16, cusd.token.a11bd.near is the Allbridge cUSD representation and has exactly one FullAccess key, ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb. That key can redeploy the representation contract; the route is bridge machinery rather than local Celo issuance. The exact Allbridge message or locking contract that currently mints this representation was not identified from primary sources, so no structured controller is asserted for bridge-mint and the conservative route-derived bridge-mint fallback remains in force.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 211645512,
@@ -552,52 +552,6 @@
           }
         ],
         "evidence": "At Monad block 96614639, the Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458 owned the Monad NTT Manager, registered transceiver, and Monad StableTokenSpoke ProxyAdmin. The Safe copy returned six owners and threshold 4; no current guard value is claimed because the reviewed SafeL2 ABI did not expose a guard getter. This bridge control is separate from the Safe's canonical Celo token-owner control in Mint Authority."
-      },
-      {
-        "id": "cusd-near-fullaccess-key",
-        "label": "NEAR cUSD representation FullAccess key",
-        "routeRefs": [
-          "near:cusd.token.a11bd.near"
-        ],
-        "capabilities": [
-          "upgrade",
-          "admin"
-        ],
-        "controllerChain": "near",
-        "controllerAddress": "cusd.token.a11bd.near",
-        "failureDomainKeys": [
-          "near-access-key:ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb",
-          "contract:near:cusd.token.a11bd.near",
-          "protocol:allbridge"
-        ],
-        "authorityType": "eoa",
-        "modulesOrGuardsStatus": "not-applicable",
-        "routeChecks": {
-          "pausersAdminsUpgraders": "At finalized NEAR height 211645512, the representation account had one FullAccess key. NEAR's official semantics allow that key to call arbitrary methods, add keys, and redeploy contract code, so it can replace bridge-token mint logic.",
-          "onchainAmountBounds": "The exact Allbridge message/locking contract and a route-level supply-conservation proof were not re-established in this pass."
-        },
-        "capDescription": "The single FullAccess key can redeploy and administer the NEAR representation, including replacing its bridge-token mint logic; this is bridge upgrade/admin risk, not local Celo issuance.",
-        "canRaiseCap": true,
-        "bypassSurfaces": [
-          "The key can add another FullAccess key or redeploy arbitrary representation code without a separately identified timelock."
-        ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 211645512,
-        "sources": [
-          {
-            "label": "NEAR RPC account view",
-            "url": "https://rpc.mainnet.near.org"
-          },
-          {
-            "label": "NEAR FullAccess key semantics",
-            "url": "https://docs.near.org/protocol/accounts-contracts/access-keys"
-          },
-          {
-            "label": "NEAR contract-upgrade semantics",
-            "url": "https://docs.near.org/smart-contracts/release/upgrade"
-          }
-        ],
-        "evidence": "At finalized NEAR height 211645512, cusd.token.a11bd.near had deployed code hash 2K5PmiMQgfCZWirws2FS5mUNVc1UfHQdQD5ZSRUQB2GR and exactly one FullAccess key, ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb. The same key is also present on a11bd.near, while a separate parent key does not automatically control the child. NEAR's primary documentation confirms that FullAccess can call any method, add keys, and redeploy code, so this key can replace bridge-token mint logic even though the current contract exposes no owner view. This is the relocated fact formerly authored as mintAuthority.controls[2]."
       },
       {
         "id": "cusd-ethereum-moss-minter",

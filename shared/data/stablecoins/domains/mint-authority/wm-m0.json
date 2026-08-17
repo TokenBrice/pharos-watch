@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "wM is a pure M-backed wrapper: Ethereum wrap/unwrap transfers M before minting or burns wM before returning M, while the Solana m_ext path mints Token-2022 wM only after M is deposited into its extension vault. Wrapper-local logic remains mutable: Ethereum migration requires a TTG-registered migrator and the current one-of-two migrationAdmin Safe, while the Solana m_ext ProgramData is upgradeable by a bare EOA. Base M issuance is inherited from reviewed m-m0 and is not a second direct wM controller.",
+    "summary": "wM is a pure M-backed wrapper: Ethereum wrap/unwrap transfers M before minting or burns wM before returning M, while the Solana m_ext path mints Token-2022 wM only after M is deposited into its extension vault. Wrapper-local logic remains mutable: Ethereum migration requires a TTG-registered migrator and the current one-of-two migrationAdmin Safe, while the Solana m_ext ProgramData upgrade authority is scored on the Solana bridge-representation route in Bridge Risk. Base M issuance is inherited from reviewed m-m0 and is not a second direct wM controller.",
     "inheritedFrom": "m-m0",
     "upgradeability": {
       "model": "custom",
@@ -118,41 +118,7 @@
         ],
         "observedAt": "2026-08-16",
         "observedBlock": 439806760,
-        "evidence": "At finalized Solana slot 439806760, the Token-2022 mint mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp had mint authority PDA Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv and freeze authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. Official m_ext wrap.rs transfers M into the extension vault before invoking Token-2022 mintTo, so the PDA is currently M-backed and cap-limited; the upgradeable m_ext ProgramData names the same EOA as upgrade authority."
-      },
-      {
-        "chain": "solana",
-        "address": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
-        "deploymentRefs": [
-          "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291"
-        ],
-        "label": "Solana wM m_ext ProgramData upgrade authority",
-        "role": "proxy-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": true,
-        "failureDomainKeys": [
-          "program:solana:wMXX1K1nca5W4pZr1piETe78gcAVVrEFi9f4g46uXko",
-          "programdata:solana:BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF",
-          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
-        ],
-        "bypassSurfaces": [
-          "The m_ext upgrade authority can replace the wrapper program and remove or relax the observed M-vault-before-mint invariant without an independent delay."
-        ],
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Solana M Extensions repository",
-            "url": "https://github.com/m0-foundation/solana-m-extensions"
-          },
-          {
-            "label": "Solana mainnet JSON-RPC",
-            "url": "https://api.mainnet-beta.solana.com"
-          }
-        ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 439806760,
-        "evidence": "At finalized Solana slot 439806760, m_ext ProgramData BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. This EOA can replace the local wrapper logic and therefore can change the current deposit-before-mint bound; it is modeled as wrapper-local authority, not as an issuer of native M."
+        "evidence": "At finalized Solana slot 439806760, the Token-2022 mint mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp had mint authority PDA Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv and freeze authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. Official m_ext wrap.rs transfers M into the extension vault before invoking Token-2022 mintTo, so the PDA is currently M-backed and cap-limited; the upgradeable m_ext ProgramData names the same EOA as upgrade authority, with that upgrade surface separately scored under Bridge Risk."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -181,7 +147,7 @@
           "url": "https://docs.m0.org/protocol/minting-burning"
         }
       ],
-      "evidence": "Boundary review at Ethereum block 25773353 and finalized Solana slot 439806760: Ethereum wM remains a 1:1 M-backed wrapper with a current one-of-two migrationAdmin Safe and TTG-registered migrator gate; Solana m_ext likewise transfers canonical M into its extension vault before minting Token-2022 wM, but its ProgramData is upgradeable by 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. The inherited Ethereum MinterGateway is reviewed under m-m0 and is not duplicated as a direct wm-m0 control. Continuous M/wM reconciliation and M0 Validator attestations remain relevant, but wrapper code replacement makes the economic cap unbounded and there is no prudential supervisor.",
+      "evidence": "Boundary review at Ethereum block 25773353 and finalized Solana slot 439806760: Ethereum wM remains a 1:1 M-backed wrapper with a current one-of-two migrationAdmin Safe and TTG-registered migrator gate; Solana m_ext likewise transfers canonical M into its extension vault before minting Token-2022 wM, but its ProgramData is upgradeable by 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW, whose route-scoped upgrade control is retained in Bridge Risk. The inherited Ethereum MinterGateway is reviewed under m-m0 and is not duplicated as a direct wm-m0 control. Continuous M/wM reconciliation and M0 Validator attestations remain relevant, but wrapper code replacement makes the economic cap unbounded and there is no prudential supervisor.",
       "reviewer": "Codex mint-bridge-boundary migration",
       "reviewedAt": "2026-08-16"
     }

@@ -167,14 +167,12 @@
         ],
         "capabilities": [
           "bridge-mint",
-          "bridge-burn",
-          "rate-limit",
-          "peer-config",
-          "admin"
+          "bridge-burn"
         ],
         "controllerChain": "ethereum",
-        "controllerAddress": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
         "failureDomainKeys": [
+          "contract:ethereum:0x500d4882938020e939a5666c1b4200873da7efd3",
           "eoa:ethereum:0x5eaff7af80488033bc845709806d5fae5291eb88"
         ],
         "authorityType": "contract",
@@ -186,7 +184,7 @@
           "onchainAmountBounds": "Chainlink CCT burn/mint semantics validate the cross-chain message and source-pool path, then mint or release the destination amount against source burn/lock accounting; this is bridge machinery rather than independent native issuance."
         },
         "capDescription": "The pool performs CCIP burn/mint and exposes owner-controlled peer and rate-limit configuration; its token MINTER_ROLE is a conserved bridge return path.",
-        "canRaiseCap": true,
+        "canRaiseCap": "unknown",
         "bypassSurfaces": [
           "The shared issuer EOA can administer the CCIP pool and its rate limits; direct native minting is separately scoped to Mint Authority."
         ],
@@ -216,14 +214,12 @@
         ],
         "capabilities": [
           "bridge-mint",
-          "bridge-burn",
-          "rate-limit",
-          "peer-config",
-          "admin"
+          "bridge-burn"
         ],
         "controllerChain": "base",
-        "controllerAddress": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
         "failureDomainKeys": [
+          "contract:base:0x500d4882938020e939a5666c1b4200873da7efd3",
           "eoa:base:0x5eaff7af80488033bc845709806d5fae5291eb88"
         ],
         "authorityType": "contract",
@@ -235,7 +231,7 @@
           "onchainAmountBounds": "Chainlink CCT burn/mint semantics validate the cross-chain message and source-pool path, then mint or release the destination amount against source burn/lock accounting; this is bridge machinery rather than independent native issuance."
         },
         "capDescription": "The pool performs CCIP burn/mint and exposes owner-controlled peer and rate-limit configuration; its token MINTER_ROLE is a conserved bridge return path.",
-        "canRaiseCap": true,
+        "canRaiseCap": "unknown",
         "bypassSurfaces": [
           "The shared issuer EOA can administer the CCIP pool and its rate limits; direct native minting is separately scoped to Mint Authority."
         ],
@@ -265,14 +261,12 @@
         ],
         "capabilities": [
           "bridge-mint",
-          "bridge-burn",
-          "rate-limit",
-          "peer-config",
-          "admin"
+          "bridge-burn"
         ],
         "controllerChain": "bsc",
-        "controllerAddress": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
         "failureDomainKeys": [
+          "contract:bsc:0x500d4882938020e939a5666c1b4200873da7efd3",
           "eoa:bsc:0x5eaff7af80488033bc845709806d5fae5291eb88"
         ],
         "authorityType": "contract",
@@ -284,7 +278,7 @@
           "onchainAmountBounds": "Chainlink CCT burn/mint semantics validate the cross-chain message and source-pool path, then mint or release the destination amount against source burn/lock accounting; this is bridge machinery rather than independent native issuance."
         },
         "capDescription": "The pool performs CCIP burn/mint and exposes owner-controlled peer and rate-limit configuration; its token MINTER_ROLE is a conserved bridge return path.",
-        "canRaiseCap": true,
+        "canRaiseCap": "unknown",
         "bypassSurfaces": [
           "The shared issuer EOA can administer the CCIP pool and its rate limits; direct native minting is separately scoped to Mint Authority."
         ],
@@ -314,16 +308,14 @@
         ],
         "capabilities": [
           "bridge-mint",
-          "bridge-burn",
-          "rate-limit",
-          "peer-config",
-          "admin"
+          "bridge-burn"
         ],
         "controllerChain": "plasma",
-        "controllerAddress": "0x414250b3ac7a46e9baa1ad6dfc41200e5329eece",
+        "controllerAddress": "0x017566aad2c164011b9c6552df3eb7a8c5c11590",
         "failureDomainKeys": [
+          "contract:plasma:0x017566aad2c164011b9c6552df3eb7a8c5c11590",
           "eoa:plasma:0x414250b3ac7a46e9baa1ad6dfc41200e5329eece",
-          "contract:plasma:0x017566aad2c164011b9c6552df3eb7a8c5c11590"
+          "eoa:plasma:0xc4109e427a149239e6c1e35bb2ecd0015b6500b8"
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
@@ -359,6 +351,79 @@
           }
         ],
         "evidence": "At Plasma block 29977797, pool 0x017566aad2c164011b9c6552df3eb7a8c5c11590 reports owner 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece, typeAndVersion USDO BurnMintTokenPool 1.5.1, and local token 0x87e617c7484ade79fcd90db58beb82b057facb48. The current Plasma pool role and token relationship are real, but OpenEden's official registry and Chainlink directory map the authored address to Kaia rather than Plasma; the route remains unchanged and provisional."
+      },
+      {
+        "id": "usdo-plasma-ccip-pool-owner",
+        "label": "USDO provisional Plasma BurnMintTokenPool owner",
+        "routeRefs": [
+          "plasma:0x87e617c7484ade79fcd90db58beb82b057facb48"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0x414250b3ac7a46e9baa1ad6dfc41200e5329eece",
+        "failureDomainKeys": [
+          "eoa:plasma:0x414250b3ac7a46e9baa1ad6dfc41200e5329eece"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The provisional Plasma pool owner can change supported-chain and remote-pool configuration; exact current per-lane mappings were not independently enumerated.",
+          "rateLimits": "The provisional Plasma pool owner can administer inbound and outbound CCIP rate-limit configuration; the chain identity remains unresolved.",
+          "pausersAdminsUpgraders": "At the current pool read, owner() is 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece. This owner control is distinct from the pool contract that holds the token bridge mint/burn roles."
+        },
+        "capDescription": "The provisional Plasma pool owner administers bridge route configuration and rate limits; the authored Plasma/Kaia identity remains unresolved.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "The separate pool owner can change route configuration and rate limits but is not the controller of the pool contract's token MINTER_ROLE."
+        ],
+        "observedAt": "2026-08-17",
+        "observedBlock": 30024152,
+        "sources": [
+          {
+            "label": "Plasma USDO BurnMintTokenPool",
+            "url": "https://plasmascan.to/address/0x017566aad2c164011b9c6552df3eb7a8c5c11590"
+          },
+          {
+            "label": "Plasma RPC",
+            "url": "https://rpc.plasma.to"
+          }
+        ],
+        "evidence": "At Plasma block 30024152 on 2026-08-17 UTC, pool 0x017566aad2c164011b9c6552df3eb7a8c5c11590 owner() returned 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece. The owner is separately authored for bridge administration, peer configuration, and rate-limit powers; the pool contract remains the bridge-mint holder."
+      },
+      {
+        "id": "usdo-plasma-token-role-admin",
+        "label": "USDO provisional Plasma token role administrator",
+        "routeRefs": [
+          "plasma:0x87e617c7484ade79fcd90db58beb82b057facb48"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0xc4109e427a149239e6c1e35bb2ecd0015b6500b8",
+        "failureDomainKeys": [
+          "eoa:plasma:0xc4109e427a149239e6c1e35bb2ecd0015b6500b8"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Plasma role history identifies this EOA as the retained token role administrator after deployer role revocation; it can administer the role set that includes the bridge pool's MINTER_ROLE/BURNER_ROLE."
+        },
+        "capDescription": "The provisional Plasma token role administrator can grant or revoke the bridge pool's token roles; no canonical Plasma issuer claim is made.",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-07-20",
+        "observedBlock": 29978329,
+        "sources": [
+          {
+            "label": "USDO token on Plasma routescan",
+            "url": "https://plasmascan.to/address/0x87e617C7484aDE79FcD90db58BEB82B057facb48"
+          }
+        ],
+        "evidence": "At Plasma block 29978329, role history identified 0xc4109e427a149239e6c1e35bb2ecd0015b6500b8 as the retained administrator after deployer role revocation; the CCIP pool 0x017566aad2c164011b9c6552df3eb7a8c5c11590 remained the current MINTER_ROLE/BURNER_ROLE holder."
       },
       {
         "id": "usdo-ccip-common-pool-owner",

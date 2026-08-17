@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USTB has independent native issuance surfaces on Ethereum, Plume, and Solana. On Ethereum and Plume, the issuer controls each token proxy's direct mint path and its ProxyAdmin through the issuer EOA; Plume additionally exposes owner-only mint and bulkMint with no observed timelock. On Solana, the Token-2022 mint has a live issuer mint authority held by a System Program-owned account. These three native controls remain separate from the documented Plume-to-Ethereum issuer-native burn/mint bridge reviewed under bridgeRouteRisk.",
+    "summary": "USTB has independently evidenced native issuance surfaces on Ethereum and Solana. The Ethereum issuer EOA controls the token proxy's direct mint path and ProxyAdmin, while the Solana Token-2022 mint has a live issuer mint authority held by a System Program-owned account. Plume is conservatively treated as an Ethereum-issued bridge representation: its owner-only mint/bulkMint and upgrade paths are reviewed as bridge-representation controls under bridgeRouteRisk because the evidence does not prove independent local Plume liabilities.",
     "controls": [
       {
         "chain": "ethereum",
@@ -51,64 +51,6 @@
         "evidence": "At Ethereum block 25294990, eth_getCode returned '0x' (no bytecode), confirming an EOA. This issuer-context EOA is consistent with enterprise MPC/HSM custody and owns both the token and ProxyAdmin paths."
       },
       {
-        "chain": "plume",
-        "address": "0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
-        "deploymentRefs": [
-          "plume:0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
-        ],
-        "label": "USTB Plume token proxy",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "capDescription": "The verified Plume implementation exposes owner-only mint and bulkMint with no protocol cap or timelock evidenced in the native issuance path.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Superstate smart-contract documentation",
-            "url": "https://docs.superstate.com/welcome-to-superstate/smart-contracts"
-          },
-          {
-            "label": "Plume USTB verified proxy",
-            "url": "https://explorer.plume.org/address/0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
-          },
-          {
-            "label": "Plume JSON-RPC",
-            "url": "https://rpc.plume.org"
-          }
-        ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 87678057,
-        "evidence": "At Plume block 87678057, USTB proxy 0xe4fa682f94610ccd170680cc3b045d77d9e528a8 returned owner 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, implementation 0x2151706cb4763c20381a8860e25a713f6e1e3b93, and proxy-admin 0xa5df717b304a50838c72cd310c8df636b1aecfa3. The verified ABI exposes owner-only mint and bulkMint, and the transaction history records an owner mint at block 85248240 on 2026-08-04."
-      },
-      {
-        "chain": "plume",
-        "address": "0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83",
-        "deploymentRefs": [
-          "plume:0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
-        ],
-        "label": "USTB Plume token owner / ProxyAdmin owner",
-        "role": "minter-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "capDescription": "The issuer EOA can call the owner-only Plume mint and bulkMint functions; no on-chain cap or delay was evidenced.",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Plume USTB verified proxy",
-            "url": "https://explorer.plume.org/address/0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
-          },
-          {
-            "label": "Plume JSON-RPC",
-            "url": "https://rpc.plume.org"
-          }
-        ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 87678057,
-        "evidence": "At Plume block 87678057, owner() returned issuer EOA 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83 and the verified owner-only mint/bulkMint ABI exposed direct native issuance. No timelock or external validator control was evidenced for this EVM native supply path."
-      },
-      {
         "chain": "solana",
         "address": "EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz",
         "deploymentRefs": [
@@ -128,7 +70,7 @@
         "sources": [
           {
             "label": "Superstate smart-contract documentation",
-            "url": "https://docs.superstate.com/welcome-to-superstate/smart-contracts"
+            "url": "https://docs.superstate.com/investors/smart-contracts"
           },
           {
             "label": "Solana USTB Token-2022 mint",
@@ -156,7 +98,7 @@
         },
         {
           "label": "Superstate smart-contract documentation",
-          "url": "https://docs.superstate.com/welcome-to-superstate/smart-contracts"
+          "url": "https://docs.superstate.com/investors/smart-contracts"
         },
         {
           "label": "Superstate USTB contract repository",
@@ -179,27 +121,23 @@
           "url": "https://explorer.solana.com/address/CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2"
         }
       ],
-      "evidence": "USTB has three independently documented native issuance surfaces. Ethereum is an upgradeable token proxy whose issuer EOA owns both token and ProxyAdmin; Plume is a separately deployed upgradeable token proxy with owner-only mint/bulkMint, ProxyAdmin 0xa5df717b304a50838c72cd310c8df636b1aecfa3, and the same issuer EOA owner at block 87678057; Solana Token-2022 has live mintAuthority EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz in finalized slot 439721950, with the authority account owned by the System Program. The three-ledger native controls support unbounded, periodic, attestation-only issuance posture. The documented Plume-to-Ethereum burn/mint bridge is separately scored under bridgeRouteRisk and does not replace or reduce these native controls. FreezeAuthority, permanent delegate, and default-frozen state remain outside Mint Authority.",
+      "evidence": "USTB has independently evidenced native issuance surfaces on Ethereum and Solana. Ethereum is an upgradeable token proxy whose issuer EOA owns both token and ProxyAdmin; Solana Token-2022 has live mintAuthority EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz in finalized slot 439721950, with the authority account owned by the System Program. The Plume proxy is separately deployed and exposes owner-only mint/bulkMint, ProxyAdmin 0xa5df717b304a50838c72cd310c8df636b1aecfa3, and the same issuer EOA owner at block 87678057, but the evidence does not establish independent local liabilities rather than bridge destination issuance. Its bridge-mint, pause, peer-configuration, admin, and upgrade powers are therefore scored under bridgeRouteRisk. The two native issuance surfaces support the retained unbounded, periodic, attestation-only posture. FreezeAuthority, permanent delegate, and default-frozen state remain outside Mint Authority.",
       "reviewer": "Codex mint/bridge boundary migration; Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16"
+      "reviewedAt": "2026-08-17"
     },
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
-        "ethereum:0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
-        "plume:0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
+        "ethereum:0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
       ],
       "proxyAddresses": [
-        "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
-        "0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
+        "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
       ],
       "implementationAddresses": [
-        "0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4",
-        "0x2151706cb4763c20381a8860e25a713f6e1e3b93"
+        "0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4"
       ],
       "adminAddresses": [
-        "0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146",
-        "0xa5df717b304a50838c72cd310c8df636b1aecfa3"
+        "0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146"
       ],
       "canChangeMintLogic": true,
       "controlRef": "USTB token owner / ProxyAdmin owner",
@@ -212,14 +150,6 @@
         {
           "label": "Ethereum JSON-RPC",
           "url": "https://ethereum-rpc.publicnode.com"
-        },
-        {
-          "label": "Plume USTB verified proxy",
-          "url": "https://explorer.plume.org/address/0xe4fa682f94610ccd170680cc3b045d77d9e528a8"
-        },
-        {
-          "label": "Plume JSON-RPC",
-          "url": "https://rpc.plume.org"
         }
       ]
     }
