@@ -891,7 +891,7 @@ const MintAuthorityNoLocalIssuanceExceptionSchema: z.ZodType<MintAuthorityNoLoca
   })
   .strict();
 
-export const BridgeRouteControlSchema: z.ZodType<BridgeRouteControl> = z
+const BridgeRouteControlSchema: z.ZodType<BridgeRouteControl> = z
   .object({
     // Kebab-case without a nested quantifier: `^[a-z0-9]+(?:-[a-z0-9]+)*$` accepts
     // the same ids but trips security/detect-unsafe-regex. The character-class
