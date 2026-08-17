@@ -8,10 +8,15 @@ import type {
   MintAuthorityProfile,
 } from "@shared/types/core";
 import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
-import { adaptBridgeReview } from "../safety-score-v9-extension-bridge";
+import {
+  adaptBridgeReview,
+  mergedBridgeAuthority,
+  mergedBridgeCapSemantics,
+  type StructuredBridgeOverlayEntry,
+} from "../safety-score-v9-extension-bridge";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import {
   ReviewEvidenceBuilder,
@@ -224,52 +229,19 @@ function adaptBridgeFixture(
   );
 }
 
-type StructuredOverlayEntryForTest = {
-  overlay: {
-    capSemantics: {
-      kind: string;
-      bound: { amount: number; unit: string } | null;
-    };
-    authority: unknown;
+/**
+ * Minimal structured-overlay entry for the merge helpers. Only the fields those
+ * helpers read are populated; everything else stays absent so a future field cannot
+ * be silently satisfied by a fixture default.
+ */
+function overlayEntry(
+  controlId: string,
+  capSemantics: StructuredBridgeOverlayEntry["overlay"]["capSemantics"],
+): StructuredBridgeOverlayEntry {
+  return {
+    sourceControl: bridgeControl({ id: controlId, routeRefs: [BASE_ROUTE] }),
+    overlay: { capSemantics } as StructuredBridgeOverlayEntry["overlay"],
   };
-};
-
-function withStructuredOverlayMutation<T>(
-  mutate: (entries: StructuredOverlayEntryForTest[]) => void,
-  callback: () => T,
-): T {
-  // The public BridgeRouteControl schema currently emits one bounded shape and
-  // always emits an authority. Mutate only the compiler's intermediate join so
-  // these defensive merge invariants are exercised without changing fixtures
-  // or production behavior.
-  const originalFilter = Array.prototype.filter;
-  let mutated = false;
-  const filterSpy = vi.spyOn(Array.prototype, "filter").mockImplementation(function (callbackFn, thisArg) {
-    const result = originalFilter.call(this, callbackFn, thisArg);
-    if (
-      !mutated &&
-      this.length > 0 &&
-      this.every((entry) => {
-        const candidate = entry as Record<string, unknown>;
-        const overlay = candidate.overlay;
-        return (
-          overlay !== null &&
-          typeof overlay === "object" &&
-          "capSemantics" in overlay &&
-          "authority" in overlay
-        );
-      })
-    ) {
-      mutated = true;
-      mutate(this as StructuredOverlayEntryForTest[]);
-    }
-    return result;
-  });
-  try {
-    return callback();
-  } finally {
-    filterSpy.mockRestore();
-  }
 }
 
 describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
@@ -409,22 +381,23 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       capSemantics: { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } },
     });
 
-    const mismatchedBridge = withStructuredOverlayMutation(
-      (entries) => {
-        entries[1]!.overlay.capSemantics = {
-          kind: "bounded",
-          bound: { amount: 2, unit: "supply-fraction" },
-        };
-      },
-      () =>
-        controlsFor(compileFixture(metadata).compiled, metadata.id).find((control) =>
-          control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
-        ),
-    );
+    // Every authored control currently compiles the same bounded shape, so the
+    // disagreement guard is unreachable through fixtures. Drive the merge directly
+    // rather than mutating global state: a route whose covering controls disagree on
+    // the bound must lose the bound entirely instead of adopting either side's.
+    expect(
+      mergedBridgeCapSemantics([
+        overlayEntry("bounded-bridge-cap-a", { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } }),
+        overlayEntry("bounded-bridge-cap-b", { kind: "bounded", bound: { amount: 2, unit: "supply-fraction" } }),
+      ]),
+    ).toEqual({ kind: "unbounded", bound: null });
 
-    expect(mismatchedBridge).toMatchObject({
-      capSemantics: { kind: "unbounded", bound: null },
-    });
+    expect(
+      mergedBridgeCapSemantics([
+        overlayEntry("bounded-bridge-cap-a", { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } }),
+        overlayEntry("bounded-bridge-cap-b", { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } }),
+      ]),
+    ).toEqual({ kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } });
   });
 
   it("retains intrinsic bridge-mint for a reviewed representation route without structured coverage", () => {
@@ -479,33 +452,14 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
   });
 
   it("synthesizes an unknown bridge authority when covering overlays have no authority", () => {
-    const metadata = meta("fixture-unknown-bridge-authority", {
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
-        controls: [
-          bridgeControl({
-            id: "unattributed-bridge-control",
-            routeRefs: [BASE_ROUTE],
-            canRaiseCap: false,
-          }),
-        ],
-      }),
-    });
-    const bridge = withStructuredOverlayMutation(
-      (entries) => {
-        for (const entry of entries) entry.overlay.authority = null;
-      },
-      () =>
-        controlsFor(compileFixture(metadata).compiled, metadata.id).find((control) =>
-          control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
-        ),
-    );
-
-    expect(bridge).toMatchObject({
-      authority: {
-        authorityKey: `bridge-route:${BASE_ROUTE}`,
-        model: "unknown",
-        threshold: null,
-      },
+    // `bridgeAuthority()` always yields an authority for an authored control, so the
+    // unattributed fallback is only reachable by driving the merge directly. It must
+    // synthesize an explicitly unknown authority keyed to the route, so a bridge
+    // control with no attributable controller never reads as a safe one.
+    expect(mergedBridgeAuthority([], BASE_ROUTE)).toEqual({
+      authorityKey: `bridge-route:${BASE_ROUTE}`,
+      model: "unknown",
+      threshold: null,
     });
   });
 
@@ -537,7 +491,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         representationRoute(BASE_ROUTE, {
           representationId,
           issuanceModel: "wrapped-representation",
-          reviewDisposition: "unreviewed",
+          reviewDisposition: "unresolved",
         }),
       ]),
     });

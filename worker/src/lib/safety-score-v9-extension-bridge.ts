@@ -119,12 +119,16 @@ function isBridgeRepresentationRoute(route: BridgeRouteDeployment): boolean {
   return route.routeClass !== "native" && route.issuanceModel !== "native-issuance";
 }
 
-interface StructuredBridgeOverlayEntry {
+export interface StructuredBridgeOverlayEntry {
   sourceControl: BridgeRouteControl;
   overlay: ControlOverlay;
 }
 
-function mergedBridgeCapSemantics(
+/**
+ * Exported for direct unit coverage: the merge fails closed when covering controls
+ * disagree, a state the current public schema cannot yet express through fixtures.
+ */
+export function mergedBridgeCapSemantics(
   entries: readonly StructuredBridgeOverlayEntry[],
 ): ControlOverlay["capSemantics"] {
   const kinds = entries.map((entry) => entry.overlay.capSemantics.kind);
@@ -187,7 +191,11 @@ function compareBridgeAuthorityWeakness(
   return compareText(left.authorityKey, right.authorityKey);
 }
 
-function mergedBridgeAuthority(
+/**
+ * Exported for direct unit coverage: the unattributed-authority fallback cannot be
+ * reached through fixtures while every authored control yields an authority.
+ */
+export function mergedBridgeAuthority(
   entries: readonly StructuredBridgeOverlayEntry[],
   routeId: string,
 ): ControlOverlay["authority"] {
