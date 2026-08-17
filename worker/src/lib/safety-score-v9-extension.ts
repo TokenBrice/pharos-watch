@@ -1,5 +1,6 @@
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
 import { resolveChainId } from "@shared/lib/chains";
+import { normalizeDeploymentId } from "@shared/lib/deployment-id";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
@@ -10,6 +11,7 @@ import { V9_SCORE_BEARING_GATES_POLICY_V922 } from "@shared/lib/safety-score-v9/
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge-ownership";
 import {
   defaultV9DependencyEconomicRole,
   type V9DependencyEconomicRole,
@@ -261,7 +263,6 @@ function canonicalAuthorityType(assetId: string, control: MintAuthorityControl):
 
 function mintControlKind(control: MintAuthorityControl): ControlOverlay["controlKind"] {
   if (control.directMintAbility === "upgrade-only" || control.role === "proxy-admin") return "upgrade";
-  if (control.role === "bridge-admin" || control.authorityType === "bridge") return "bridge";
   if (control.role === "governor" || control.role === "timelock") return "governance";
   if (control.role === "custodian") return "custody";
   return "mint";
@@ -272,7 +273,6 @@ function mintCapabilities(control: MintAuthorityControl, upgradeCapable: boolean
   if (["direct", "cap-limited", "can-authorize"].includes(control.directMintAbility)) capabilities.add("mint");
   if (control.directMintAbility === "upgrade-only" || upgradeCapable) capabilities.add("upgrade");
   if (control.directMintAbility === "parameter-only") capabilities.add("parameter-change");
-  if (control.role === "bridge-admin" || control.authorityType === "bridge") capabilities.add("bridge-mint");
   return [...capabilities].sort(compareText);
 }
 
@@ -281,8 +281,7 @@ function controlFailureDomains(
   control: MintAuthorityControl,
   controlKind: ControlOverlay["controlKind"],
 ): ControlOverlay["failureDomains"] {
-  const kind =
-    controlKind === "upgrade" ? "upgrade-control" : controlKind === "bridge" ? "bridge-route" : "mint-control";
+  const kind = controlKind === "upgrade" ? "upgrade-control" : "mint-control";
   const issuerKey = issuerAuthorityKey(assetId, control);
   const exactKeys = control.failureDomainKeys?.length
     ? control.failureDomainKeys
@@ -297,7 +296,6 @@ function controlFailureDomains(
 function adaptMintControl(
   assetId: string,
   control: MintAuthorityControl,
-  index: number,
   incidents: MintAuthorityProfile["mintIncidents"],
   reviewComplete: boolean,
   upgradeCapable: boolean,
@@ -342,7 +340,7 @@ function adaptMintControl(
       if (reviewedCap === "raiseable" || reviewedCap === "bounded") return "bounded";
       return capped ? "bounded" : "unbounded";
     }
-    if (capabilities.includes("upgrade") || capabilities.includes("bridge-mint")) return "unbounded";
+    if (capabilities.includes("upgrade")) return "unbounded";
     if (capabilities.includes("parameter-change")) return "bounded";
     return "none";
   })();
@@ -355,11 +353,16 @@ function adaptMintControl(
       : reviewComplete
         ? "none"
         : "unknown";
-  const controlKey = `mint-meta:${assetId}:${index}:${domainDigest("safety-score-v9.mint-control-key.v1", {
+  const controlKey = `mint-meta:${assetId}:${domainDigest("safety-score-v9.mint-control-key.v1", {
     chain: control.chain ?? null,
     address: control.address?.toLowerCase() ?? null,
     label: control.label,
     role: control.role,
+    authorityType: control.authorityType,
+    directMintAbility: control.directMintAbility,
+    deploymentRefs: [...(control.deploymentRefs ?? [])]
+      .map(normalizeDeploymentId)
+      .sort(compareText),
   }).slice(0, 20)}`;
   return {
     controlKey,
@@ -379,6 +382,17 @@ function adaptMintControl(
     incidentState,
     failureDomains: controlFailureDomains(assetId, control, controlKind),
   };
+}
+
+function assertMintBridgeOwnership(meta: V9ExtensionRegistryMeta): void {
+  const violations = validateMintBridgeOwnership(meta, { enforce: true });
+  const errors = violations.filter((violation) => violation.severity === "error");
+  if (errors.length === 0) return;
+  throw new Error(
+    `Safety Score v9 mint/bridge ownership validation failed for ${meta.id}: ${errors
+      .map((violation) => `${violation.code} at ${String(violation.path)}: ${violation.message}`)
+      .join("; ")}`,
+  );
 }
 
 
@@ -979,7 +993,6 @@ function adaptMintReview(
     adaptMintControl(
       meta.id,
       control,
-      index,
       profile.mintIncidents,
       reviewComplete,
       upgradeability?.canChangeMintLogic === true && upgradeability.controlRef === control.label,
@@ -992,7 +1005,8 @@ function adaptMintReview(
       profile.economicCapSemantics,
     ),
   );
-  const directMintControl = controls.find((control) => control.capabilities.includes("mint")) ?? null;
+  const directMintControl =
+    controls.find((control) => control.controlKind !== "bridge" && control.capabilities.includes("mint")) ?? null;
   const inheritedFrom = profile.inheritedFrom;
   const hasExactInheritedWrapperDependency =
     profile.mintPath === "wrapped-or-variant-inherited" &&
@@ -1223,6 +1237,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     },
     assets: fixedInput.activeAssetIds.map((assetId) => {
       const meta = metaById.get(assetId)!;
+      assertMintBridgeOwnership(meta);
       const prepared = preparedById.get(assetId)!;
       const cycle = cycleByAsset.get(assetId);
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";

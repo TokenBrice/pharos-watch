@@ -23,7 +23,7 @@ import {
 } from "../safety-score-v9-transfer-materiality";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
-const CLOCK_SEC = Date.parse("2026-08-12T00:00:00Z") / 1_000;
+const CLOCK_SEC = Date.parse("2026-08-17T00:00:00Z") / 1_000;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
 const REGISTRY_FINGERPRINT = "b".repeat(64);
 const AGGREGATE_SUPPLY_USD = 34_668_686.813536435;

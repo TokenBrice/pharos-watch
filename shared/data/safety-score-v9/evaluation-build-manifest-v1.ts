@@ -326,7 +326,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/core.ts",
-      "sha256": "45a3736b7d8bbbe3a8da1eaa61cbeaa02c6a14a9c56f7caa6bea93c7685199df"
+      "sha256": "a73bd925662ed71d17b5369df063edb429a1b9157cc31169dda33038735e3ee6"
     },
     {
       "path": "shared/types/dependency-types.ts",
@@ -430,7 +430,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-bridge.ts",
-      "sha256": "bb4dc370ffc5db2e11c995f7048ce2c72f334f94c8c499b1259f02b1f4cc62e9"
+      "sha256": "e0712bda4edbea6229948a86df033c5dc651bc85ab91ff61d2ab8a33a3293354"
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-mechanism.ts",
@@ -454,7 +454,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-shared.ts",
-      "sha256": "f18ea1075f2248e8f3acd373763b07ca3f7bc235ec6ac6ea67f09856c4d42235"
+      "sha256": "46f807b90b82789a0e66a236e194f8a98dbe84384ab1719c8a22299f7c715afd"
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-shock.ts",
@@ -470,7 +470,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension.ts",
-      "sha256": "d9551de481bf915d76a6940ec026025d9f6511e67833dd73346bd9b94f890f51"
+      "sha256": "582200f62b853d72f2093504942d52c95eac24e80d510e4453aa8176ade8e88f"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-backing.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "8baa6147e47d4c4f08aaf5444c1dad541fcc50946d068bd18f6a4cda0c567aad"
+  "digest": "b13b10151f9c4fec1a75dae2efa11a7de1fc551279e78dcec53d6381527c371a"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

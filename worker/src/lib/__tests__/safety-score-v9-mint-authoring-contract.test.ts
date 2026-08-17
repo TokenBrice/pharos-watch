@@ -10,7 +10,7 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extensio
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 
 const AS_OF_SEC = 1_785_456_000;
-const REGISTRY_FIXTURE_CAPTURED_AT = "2026-08-15T00:00:00.000Z";
+const REGISTRY_FIXTURE_CAPTURED_AT = "2026-08-17T00:00:00.000Z";
 const REGISTRY_FIXTURE_CLOCK_SEC = Date.parse(REGISTRY_FIXTURE_CAPTURED_AT) / 1_000;
 const ASSET_ID = "authoring-example";
 const REVIEWED_INHERITED_WRAPPERS = [
@@ -44,6 +44,8 @@ const UNRESOLVED_INHERITED_WRAPPER = {
  */
 const UNRESOLVED_INHERITED_MINT_CONTROL = {
   label: "Inherited parent permissioned mint authority",
+  // The wrapper's own canonical deployment: inherited parent authority still governs local issuance.
+  deploymentRefs: ["plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"],
   role: "direct-minter",
   authorityType: "issuer-backend",
   directMintAbility: "direct",
@@ -223,7 +225,27 @@ function fixedInput(
 }
 
 function metaWith(profile: MintAuthorityProfile | undefined) {
-  return new Map([[ASSET_ID, { id: ASSET_ID, mechanismArchetype: "fiat-cash" as const, mintAuthority: profile }]]);
+  // Reviewed profiles name the deployments their controls govern; mirror those refs as authored
+  // contracts so the fixture satisfies the mint/bridge ownership contract like a real catalog entry.
+  const refs = new Set<string>([
+    ...(profile?.controls ?? []).flatMap((control) => control.deploymentRefs ?? []),
+    ...(profile?.upgradeability?.deploymentRefs ?? []),
+  ]);
+  const contracts = [...refs].map((ref) => {
+    const separator = ref.indexOf(":");
+    return { chain: ref.slice(0, separator), address: ref.slice(separator + 1), decimals: 18 };
+  });
+  return new Map([
+    [
+      ASSET_ID,
+      {
+        id: ASSET_ID,
+        mechanismArchetype: "fiat-cash" as const,
+        mintAuthority: profile,
+        ...(contracts.length > 0 ? { contracts } : {}),
+      },
+    ],
+  ]);
 }
 
 function mintReviewFor(profile: MintAuthorityProfile | undefined) {
@@ -314,12 +336,14 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     const mintControls = controlReview.controls.filter((control) =>
       control.controlKey.startsWith(`mint-meta:${assetId}:`),
     );
+    // Control keys are derived from stable control identity, not array position, so reordering the
+    // reviewed `controls` array no longer changes compiled identities.
     const expectedControlKeys = [
-      "mint-meta:dusd-dialectic:0:0753a29722c02f5eb3f2",
-      "mint-meta:dusd-dialectic:1:53c5cf56b4e8d9e0facf",
-      "mint-meta:dusd-dialectic:2:8a504a683206276bfc65",
-      "mint-meta:dusd-dialectic:3:1e5d1009d534d5ffa1b9",
-      "mint-meta:dusd-dialectic:4:307f52514a8019019079",
+      "mint-meta:dusd-dialectic:31eba9035ce4e8c7925a",
+      "mint-meta:dusd-dialectic:4f72410f15f4ab33173b",
+      "mint-meta:dusd-dialectic:698be001dc2d297ffcee",
+      "mint-meta:dusd-dialectic:8931251fb8e32aae6dfe",
+      "mint-meta:dusd-dialectic:9178c2c9b995cf1511b7",
     ];
 
     expect(profile).toMatchObject({
@@ -411,6 +435,18 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
               id: ASSET_ID,
               mechanismArchetype: "cdp" as const,
               mintAuthority,
+              // Keep only the deployments the reviewed controls name, so the fixture is a
+              // single-canonical asset rather than an unrouted multi-deployment one.
+              ...(() => {
+                const refs = new Set<string>([
+                  ...(mintAuthority.controls ?? []).flatMap((control) => control.deploymentRefs ?? []),
+                  ...(mintAuthority.upgradeability?.deploymentRefs ?? []),
+                ]);
+                const contracts = (meta.contracts ?? []).filter((contract) =>
+                  refs.has(`${contract.chain}:${contract.address}`.toLowerCase()),
+                );
+                return contracts.length > 0 ? { contracts } : {};
+              })(),
             },
           ],
         ]),
