@@ -1,4 +1,4 @@
-import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "../registry";
 import type {
   BridgeRouteControl,
   BridgeRouteDeployment,
@@ -7,7 +7,7 @@ import type {
   MintAuthorityControl,
   MintAuthorityProfile,
   StablecoinMeta,
-} from "@shared/types/core";
+} from "../../../types/core";
 import { describe, expect, it } from "vitest";
 import { parseStablecoinMetaAssets } from "../schema";
 import {
@@ -19,11 +19,9 @@ const SOURCE = { label: "Fixture review", url: "https://example.com/review" };
 const ETHEREUM_TOKEN = "0x1111111111111111111111111111111111111111";
 const ARBITRUM_TOKEN = "0x2222222222222222222222222222222222222222";
 const BASE_TOKEN = "0x3333333333333333333333333333333333333333";
-const POLYGON_TOKEN = "0x4444444444444444444444444444444444444444";
 const ETHEREUM_ROUTE = `ethereum:${ETHEREUM_TOKEN}`;
 const ARBITRUM_ROUTE = `arbitrum:${ARBITRUM_TOKEN}`;
 const BASE_ROUTE = `base:${BASE_TOKEN}`;
-const POLYGON_ROUTE = `polygon:${POLYGON_TOKEN}`;
 
 const baseFlags = {
   pegCurrency: "USD" as const,

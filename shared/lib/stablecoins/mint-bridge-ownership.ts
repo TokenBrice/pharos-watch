@@ -1,5 +1,4 @@
 import type {
-  BridgeRouteControl,
   BridgeRouteControlCapability,
   BridgeRouteDeployment,
   MintAuthorityControl,

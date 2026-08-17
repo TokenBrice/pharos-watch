@@ -888,7 +888,15 @@ const MintAuthorityNoLocalIssuanceExceptionSchema: z.ZodType<MintAuthorityNoLoca
 
 export const BridgeRouteControlSchema: z.ZodType<BridgeRouteControl> = z
   .object({
-    id: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Expected a kebab-case bridge control id"),
+    // Kebab-case without a nested quantifier: `^[a-z0-9]+(?:-[a-z0-9]+)*$` accepts
+    // the same ids but trips security/detect-unsafe-regex. The character-class
+    // match plus explicit boundary checks are linear in the input length.
+    id: z
+      .string()
+      .regex(/^[a-z0-9-]+$/, "Expected a kebab-case bridge control id")
+      .refine((value) => !value.startsWith("-") && !value.endsWith("-") && !value.includes("--"), {
+        message: "Expected a kebab-case bridge control id",
+      }),
     label: z.string().min(1),
     routeRefs: z.array(DeploymentIdSchema).min(1),
     capabilities: z
