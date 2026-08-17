@@ -28,10 +28,14 @@ regexes = ['''^0x[a-fA-F0-9]{40}[.,;:)\]]?$''']
 # makes it a curated registry reference. A bare base58 allowlist would be far too
 # strong: roughly one generic alphanumeric API key in fourteen happens to contain no
 # 0, O, I or l, and would be exempted along with it.
+#
+# The prefix repeats: failure-domain keys qualify the family further, as in
+# `"solana:system-key:<pubkey>"`, so a single-segment prefix missed them and the
+# finding resurfaced during the mint/bridge boundary migration.
 [[allowlists]]
 description = "Registry-prefixed Solana mint identifiers are public on-chain identifiers, not secrets"
 regexTarget = "line"
-regexes = ['''"[a-z0-9]+(?:-[a-z0-9]+)*:[1-9A-HJ-NP-Za-km-z]{32,44}"''']
+regexes = ['''"(?:[a-z0-9]+(?:-[a-z0-9]+)*:)+[1-9A-HJ-NP-Za-km-z]{32,44}"''']
 
 # Repo-relative source paths are not credentials. CI gates that enumerate route roots
 # (`src/app/api`, `src/app/funding`, ...) otherwise trip the generic-api-key rule on
@@ -76,3 +80,24 @@ condition = "AND"
 regexTarget = "match"
 regexes = ['''^key":"[A-Z][A-Z0-9]{2,10}(?:_[A-Z0-9]{4,8}){1,2}"$''']
 paths = ['''(?:^|/)shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/[^/]+-protocol-api\.json$''']
+
+# Movement xReserve attester keys are 64-byte Ed25519 public keys, so they render as
+# `0x` plus 128 hex characters. The reviewed USDCx bridge control records them as its
+# `controllerAddress` and inside `movement:xreserve-attester:<key>` failure domains,
+# and their entropy trips the generic-api-key rule.
+#
+# Pinned to the two exact published keys rather than to the 128-hex shape. 64 bytes is
+# also the size of an Ed25519 expanded secret key, so a shape-based exemption would
+# blind the scanner to a real key of that form anywhere it applied. These two values
+# are public attester identities read from Movement mainnet; a third attester, or any
+# other high-entropy value in this file, still fails the scan.
+[[allowlists]]
+description = "The two published Movement xReserve attester public keys are not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = [
+  '''0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466''',
+  '''0x6a4854078428eea517e8013827cba9f90583f8a9fdf8610c8791d1b04feb6a3eee428bf506c98ead1e870918f26a1d41f5bfb792b1e4f331679d1ad3e527326f''',
+]
+paths = ['''(?:^|/)shared/data/stablecoins/domains/risk-review/usdcx-movement\.json$''']
