@@ -350,7 +350,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["ftusd-flying-tulip", "Flying Tulip USD", "ftUSD"],
   ["bd-basedollar", "Base Dollar", "BD", "pre-launch"],
   ["brla-brla-digital", "BRLA Digital", "BRLA"],
-  ["silk-shade-protocol", "SILK", "SILK"],
+  ["silk-shade-protocol", "SILK", "SILK", "quarantined"],
   ["idrx-idrx", "IDRX", "IDRX"],
   ["cngn-compliant-naira", "Compliant Naira", "cNGN"],
   ["mxnb-juno", "MXNB", "MXNB"],
