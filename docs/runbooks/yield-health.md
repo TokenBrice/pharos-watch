@@ -34,7 +34,7 @@ Access-gated surfaces:
 
 | Surface | Owner cron/cache | Warn threshold | Stale threshold | Public-critical impact | Admin-watch impact | Related runbook |
 | --- | --- | --- | --- | --- | --- | --- |
-| Rankings freshness | `sync-yield-data` -> `cache['yield-rankings']` | Age above 8 hourly producer intervals | Missing payload or age above 12 hourly producer intervals | Yes, when stale or missing | Degraded-but-not-stale rankings remain watch-only | [stale or missing rankings](./yield-rankings-stale-or-missing.md) |
+| Rankings freshness | `sync-yield-data` -> `cache['yield-rankings']` | Age above 8 post-V9 producer intervals | Missing payload or age above 12 post-V9 producer intervals | Yes, when stale or missing | Degraded-but-not-stale rankings remain watch-only | [stale or missing rankings](./yield-rankings-stale-or-missing.md) |
 | Safety coverage | Read-time report-card hydration in `yield-rankings.provenance.safetySnapshot` | Coverage below 75% | No separate stale tier | No | Sparse safety evidence degrades Yield Health | This runbook |
 | Supplemental source age | `sync-yield-supplemental` -> `yield:supplemental-sources:v1:*` | Any family age above 6h, or missing family cache when family rows exist | Age above 72h | No | Degraded or stale optional families reduce confidence only | [supplemental snapshot](./yield-supplemental-snapshot.md) |
 | Used benchmark registry | `sync-yield-data` ranking + benchmark provenance | Any used fallback/proxy selection | Missing or age above 48h | No | Every used key is reported independently; expired rows remain visible with PYS NR | [benchmark fallback](./yield-benchmark-fallback-stale.md) |
@@ -106,7 +106,7 @@ LIMIT 10;
 
 ## Remediation
 
-- **Missing/stale rankings:** check `sync-yield-data` cron errors first. Clear a stuck `sync-yield-data` lease only when the admin cron card shows repeated `skipped_locked` or stale in-flight progress, then let the next hourly publisher rebuild `yield-rankings`.
+- **Missing/stale rankings:** check `sync-yield-data` cron errors first. Clear a stuck `sync-yield-data` lease only when the admin cron card shows repeated `skipped_locked` or stale in-flight progress, then let the next post-V9 publisher rebuild `yield-rankings`.
 - **Sparse safety coverage:** inspect `safety-score-v9` publication health and `/api/report-cards/v9`; yield rankings can still publish with the explicit unrated safety fallback, but PYS quality is lower.
 - **Stale supplemental cache:** inspect `sync-yield-supplemental`. Because supplemental sources are optional, do not block the public yield page solely on this signal.
 - **Benchmark fallback/staleness:** inspect `yieldHealth.benchmarkRegistry`, then `risk_free_rates` and the latest `sync-yield-data` metadata for the named key. A retained fallback within 48h can remain score-bearing but degraded; after 48h the affected row must be NR. Do not let a healthy USD lane close an incident for a stale non-USD key that still has published rows.
@@ -121,7 +121,7 @@ LIMIT 10;
 - Do not guess or manually backfill source-risk tiers. `venueRiskTier="unknown"` is intentionally treated as missing evidence.
 - Do not clear a `sync-yield-data` or `sync-yield-supplemental` lease while `/api/status` shows a fresh active in-flight progress row.
 - Do not treat supplemental staleness, safety sparsity, source-risk coverage gaps, comparison-anchor freshness, or coverage-audit age as public outages unless a later release explicitly changes the status-impact rule.
-- Stop if `cache['yield-history-cleanup:writer-pause']` is armed; use the writer-pause runbook before expecting hourly yield publication to advance.
+- Stop if `cache['yield-history-cleanup:writer-pause']` is armed; use the writer-pause runbook before expecting post-V9 yield publication to advance.
 
 ## Validation
 
@@ -139,6 +139,6 @@ Rollback of the health card is a Worker/frontend rollback only; it does not alte
 
 ## Prevention
 
-- Keep `yield-rankings` freshness tied to the hourly `sync-yield-data` producer.
+- Keep `yield-rankings` freshness tied to the post-V9 `sync-yield-data` producer.
 - Keep source-family sparsity admin-watch by default; promote only explicitly documented critical families.
 - Do not change yield scoring or source arbitration from the status surface. Status reads existing cache/cron metadata only.

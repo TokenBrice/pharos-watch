@@ -88,8 +88,8 @@ export const CACHE_FRESHNESS_LANES = {
     producerIntervalSec: CRON_INTERVALS["sync-yield-data"],
     endpointMaxAgeSec: CRON_INTERVALS["sync-yield-data"],
     availabilityMaxAgeSec: CRON_INTERVALS["sync-yield-data"],
-    endpointBudgetReason: "Yield publication runs hourly.",
-    availabilityBudgetReason: "Matches the hourly yield publication cadence.",
+    endpointBudgetReason: "Yield publication runs after each V9 publication slot.",
+    availabilityBudgetReason: "Matches the post-V9 yield publication cadence.",
     freshnessSentinelKey: "freshness:yield-data",
   },
   dews: {

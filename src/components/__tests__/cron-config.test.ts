@@ -59,9 +59,9 @@ describe("status cron config", () => {
 
   it("maps core and supplemental yield jobs onto their dedicated post-DEX lanes", () => {
     expect(getStatusCronDisplay("sync-yield-data")).toEqual({
-      group: "hourly",
+      group: "half-hourly",
       label: "Yield sync",
-      schedule: "20 * * * *",
+      schedule: "28,58 * * * *",
       triggerMode: "isolated",
     });
     expect(getStatusCronDisplay("sync-yield-supplemental")).toEqual({
@@ -92,10 +92,10 @@ describe("status cron config", () => {
 
   it("keeps cron group copy aligned with mixed trigger cadences", () => {
     expect(CRON_GROUPS.find((group) => group.key === "half-hourly")?.description).toContain(
-      "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication",
+      "post-V9 yield",
     );
     expect(CRON_GROUPS.find((group) => group.key === "hourly")?.description).toContain(
-      "core yield publication",
+      "source-stage lanes",
     );
     const multiHourly = CRON_GROUPS.find((group) => group.key === "multi-hourly");
     expect(multiHourly?.badge).toBe("2-6h");
@@ -115,7 +115,7 @@ describe("status cron config", () => {
     expect(intervals["sync-live-reserves"]).toBe(4 * 3600);
     expect(intervals["sync-redemption-backstops"]).toBe(4 * 3600);
     expect(intervals["sync-kinesis-supply"]).toBe(4 * 3600);
-    expect(intervals["sync-yield-data"]).toBe(3600);
+    expect(intervals["sync-yield-data"]).toBe(1800);
     expect(intervals["sync-yield-supplemental"]).toBe(4 * 3600);
     expect(intervals["prune-status-probe-runs"]).toBe(86400);
     expect(intervals["prune-cron-history"]).toBe(86400);

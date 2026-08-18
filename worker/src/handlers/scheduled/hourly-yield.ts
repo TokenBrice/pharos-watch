@@ -3,7 +3,7 @@ import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
 export async function runHourlyYieldSlot(runtime: ScheduledRuntimeContext) {
-  return runSingleScheduledJob(runtime, "hourly yield slot", {
+  return runSingleScheduledJob(runtime, "post-V9 yield slot", {
     job: "sync-yield-data",
     run: (signal, reportProgress) =>
       syncYieldData(

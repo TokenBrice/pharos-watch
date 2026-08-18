@@ -105,6 +105,107 @@ describe("syncYieldData", () => {
     expect(safetyCall?.[0]).toBe(db);
   });
 
+  it("blocks yield publication when the safety identity changes before publish", async () => {
+    const db = makePublicationCacheDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const safetySnapshot = vi.mocked(fixtureSafetyScoresModule.computeSafetyScoresSnapshot);
+    safetySnapshot
+      .mockResolvedValueOnce({
+        kind: "ok",
+        mode: "map",
+        coveredCount: 4,
+        trackedCount: 4,
+        coverageRatio: 1,
+        source: "safety-score-v9-publication",
+        safetyScoreIdentity: {
+          model: "v9",
+          schemaVersion: 1,
+          methodologyVersion: "9.0",
+          policyId: "safety-score-v9",
+          policyDigest: "a".repeat(64),
+          evaluationBuildDigest: "b".repeat(64),
+          baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+          publicationGenerationId: "report-cards:v9:test",
+        },
+        publicationGenerationId: "report-cards:v9:test",
+        methodologyVersion: "9.0",
+        publishedAt: nowSec,
+        scores: new Map([
+          ["100", { score: 80, grade: "B+" }],
+          ["usdc-circle", { score: 78, grade: "B+" }],
+          ["u-united-stables", { score: 55, grade: "C" }],
+          ["lusd-liquity", { score: 86, grade: "A-" }],
+        ]),
+      } as never)
+      .mockResolvedValueOnce({
+        kind: "ok",
+        mode: "map",
+        coveredCount: 4,
+        trackedCount: 4,
+        coverageRatio: 1,
+        source: "safety-score-v9-publication",
+        safetyScoreIdentity: {
+          model: "v9",
+          schemaVersion: 1,
+          methodologyVersion: "9.0",
+          policyId: "safety-score-v9",
+          policyDigest: "a".repeat(64),
+          evaluationBuildDigest: "d".repeat(64),
+          baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
+          publicationGenerationId: "report-cards:v9:new-build",
+        },
+        publicationGenerationId: "report-cards:v9:new-build",
+        methodologyVersion: "9.0",
+        publishedAt: nowSec + 60,
+        scores: new Map([
+          ["100", { score: 80, grade: "B+" }],
+          ["usdc-circle", { score: 78, grade: "B+" }],
+          ["u-united-stables", { score: 55, grade: "C" }],
+          ["lusd-liquity", { score: 86, grade: "A-" }],
+        ]),
+      } as never);
+
+    fixtureMockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await fixtureSyncYieldData(db);
+
+    expect(safetySnapshot).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 0,
+      productivity: {
+        productive: false,
+        reason: "yield-safety-identity-changed-before-publish",
+      },
+    });
+    expect(result.metadata).toContain("yield-safety-identity-changed-before-publish");
+    expect(getPublishedYieldRows(db)).toEqual([]);
+    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
+    expect(fixtureWriteFreshnessSentinel).not.toHaveBeenCalled();
+  });
+
   it("reports writer-pause progress metadata before returning", async () => {
     const db = makePublicationCacheDb();
     const progressUpdates: CronProgressUpdate[] = [];

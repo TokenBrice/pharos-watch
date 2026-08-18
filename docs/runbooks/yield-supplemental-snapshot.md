@@ -7,11 +7,11 @@ Triggered by:
 
 ## Symptom
 
-The slower supplemental source snapshot is missing, malformed, empty, or older than its allowed freshness window. The hourly publisher still runs but consumes zero supplemental candidates.
+The slower supplemental source snapshot is missing, malformed, empty, or older than its allowed freshness window. The post-V9 publisher still runs but consumes zero supplemental candidates.
 
 ## Impact
 
-Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes a fresh aggregate snapshot or a fresh per-family snapshot. Stale or missing supplemental cache does not by itself degrade the hourly publisher.
+Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes a fresh aggregate snapshot or a fresh per-family snapshot. Stale or missing supplemental cache does not by itself degrade the post-V9 publisher.
 
 ## First Checks
 
@@ -47,7 +47,7 @@ ORDER BY rows DESC;
 ## Common Causes
 
 - All supplemental families emitted zero candidates, so the cron refused to overwrite the previous aggregate cache.
-- One per-family cache is malformed or stale. The hourly publisher should still load other fresh family caches and report `partial-family-cache` metadata instead of dropping all optional coverage.
+- One per-family cache is malformed or stale. The post-V9 publisher should still load other fresh family caches and report `partial-family-cache` metadata instead of dropping all optional coverage.
 - One successful per-family run emitted zero candidates. That family may intentionally publish an empty per-family cache to clear a previous non-empty family snapshot without overwriting the aggregate cache.
 - Optional protocol APIs timed out inside the family budget.
 - Optional RPC families exhausted their family budget or missed many chain targets.
@@ -57,7 +57,7 @@ ORDER BY rows DESC;
 ## Remediation
 
 - If the latest supplemental run is a single `empty-snapshot`, keep serving the previous snapshot and wait for the next 4-hour run unless optional coverage is business-critical for an incident.
-- If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, audit inventory counts, budget/cap flags, miss reasons, chain breakdowns, and bounded missing-target examples. `sourceCoverage.sourceFamilyCounts` is candidate-oriented; audit-only inventory such as vaults.fyi lives in `sourceCoverage.sourceFamilyInventoryCounts`. Do not move heavy family fetches onto the hourly publisher.
+- If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, audit inventory counts, budget/cap flags, miss reasons, chain breakdowns, and bounded missing-target examples. `sourceCoverage.sourceFamilyCounts` is candidate-oriented; audit-only inventory such as vaults.fyi lives in `sourceCoverage.sourceFamilyInventoryCounts`. Do not move heavy family fetches onto the post-V9 publisher.
 - If the job is stale due to a stuck lease, first confirm `/api/status` has no fresh matching `inFlight` progress. `POST /api/reset-cron-lease` is retired; then delete only `cron_leases.job = 'sync-yield-supplemental'` with scoped remote D1 SQL and verify the next four-hour run.
 - If the cache is malformed, preserve the malformed value for debugging and let a later successful supplemental run replace it.
 
@@ -65,7 +65,7 @@ ORDER BY rows DESC;
 
 - Do not write an empty aggregate supplemental snapshot over the last good aggregate cache.
 - Do not increase Worker connection pressure by moving supplemental readers into `sync-yield-data`.
-- Do not hand-create supplemental candidate rows in `yield_data`; the hourly publisher owns evaluation and arbitration.
+- Do not hand-create supplemental candidate rows in `yield_data`; the post-V9 publisher owns evaluation and arbitration.
 
 ## Validation
 

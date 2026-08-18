@@ -1257,7 +1257,7 @@ describe("handleYieldRankings", () => {
     expect(computeSafetyScoresSnapshotMock).not.toHaveBeenCalled();
   });
 
-  it("keeps hourly rankings fresh for snapshots that are under one hour old", async () => {
+  it("keeps post-V9 rankings fresh for snapshots that are under one hour old", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 3_500;
     const db = makeCacheDb({
       rankings: [],

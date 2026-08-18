@@ -397,8 +397,8 @@ describe("handleYieldHistory", () => {
     }
   });
 
-  it("uses the hourly yield freshness budget for history responses", async () => {
-    const updatedAt = Math.floor(Date.now() / 1000) - 3_500;
+  it("uses the post-V9 yield freshness budget for history responses", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 1_700;
     const historyRow = makeYieldHistoryRow({ recorded_at: updatedAt });
     const db = mockD1([{ match: "yield_history", rows: [historyRow] }]);
 
@@ -406,7 +406,7 @@ describe("handleYieldHistory", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Warning")).toBeNull();
-    expect(res.headers.get("X-Data-Age")).toBe("3500");
+    expect(res.headers.get("X-Data-Age")).toBe("1700");
   });
 
   it("falls back to the latest successful yield cron timestamp when the yield-rankings cache is malformed", async () => {
