@@ -5,6 +5,7 @@ import {
   buildAlertReserveSourceEnvelope,
 } from "../../lib/alert-reserve-source-cache";
 import {
+  assessActiveAlertSafetySource,
   buildActiveAlertSafetyV9SourceEnvelope,
   getAlertSafetyV9SourceGeneration,
 } from "../../lib/alert-safety-source-cache";
@@ -169,12 +170,12 @@ describe("buildDispatchSnapshotState", () => {
   it("fails closed when canonical V9 is unavailable without blocking DEWS", () => {
     const state = buildDispatchSnapshotState(
       sourceData({
-        activeSafetySource: {
+        safetySourceAssessment: assessActiveAlertSafetySource({
           kind: "error",
           reason: "v9-snapshot-unavailable",
           snapshot: null,
           detail: "publication unavailable",
-        },
+        }, { nowSec }),
         dewsRows: [{
           stablecoin_id: "usdc-circle",
           score: 72,
@@ -213,10 +214,10 @@ describe("buildDispatchSnapshotState", () => {
     });
     const state = buildDispatchSnapshotState(
       sourceData({
-        activeSafetySource: {
+        safetySourceAssessment: assessActiveAlertSafetySource({
           kind: "v9",
           snapshot: response,
-        },
+        }, { nowSec }),
         safetyCache: safetyBaseline(response, "D", 44),
       }),
       nowSec,
@@ -244,10 +245,10 @@ describe("buildDispatchSnapshotState", () => {
     });
     const state = buildDispatchSnapshotState(
       sourceData({
-        activeSafetySource: {
+        safetySourceAssessment: assessActiveAlertSafetySource({
           kind: "v9",
           snapshot: response,
-        },
+        }, { nowSec }),
         publicationAttempt: {
           schemaVersion: 1,
           attemptedAtSec: response.updatedAt,

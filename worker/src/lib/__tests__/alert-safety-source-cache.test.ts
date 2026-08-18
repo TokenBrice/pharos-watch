@@ -115,3 +115,43 @@ describe("canonical V9 alert safety source", () => {
     )).toBe(false);
   });
 });
+
+describe("persisted V9 alert source envelope", () => {
+  it("round-trips a persisted source envelope through the strict parser", async () => {
+    const { buildActiveAlertSafetyV9SourceEnvelope, parsePersistedAlertSafetyV9SourceEnvelope } =
+      await import("../alert-safety-source-cache");
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: 1_700_000_000,
+      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A+", score: 91 })],
+    });
+    const envelope = buildActiveAlertSafetyV9SourceEnvelope(response);
+    expect(envelope).not.toBeNull();
+
+    const parsed = parsePersistedAlertSafetyV9SourceEnvelope({
+      value: JSON.stringify(envelope),
+      updatedAt: 1_700_000_100,
+    });
+
+    expect(parsed).toEqual(envelope);
+    expect(parsePersistedAlertSafetyV9SourceEnvelope(null)).toBeNull();
+    expect(
+      parsePersistedAlertSafetyV9SourceEnvelope({ value: "{\"generation\":42}", updatedAt: 0 }),
+    ).toBeNull();
+  });
+
+  it("assesses a persisted envelope with the same staleness rules as the live source", async () => {
+    const { assessAlertSafetyEnvelope, buildActiveAlertSafetyV9SourceEnvelope } =
+      await import("../alert-safety-source-cache");
+    const response = makeWorkerReportCardsV9Response({ updatedAt: 1_700_000_000 });
+    const envelope = buildActiveAlertSafetyV9SourceEnvelope(response)!;
+
+    expect(assessAlertSafetyEnvelope(envelope, 1_700_000_060)).toMatchObject({
+      state: "ok",
+      ageSeconds: 60,
+      envelope,
+    });
+    expect(
+      assessAlertSafetyEnvelope(envelope, 1_700_000_000 + 100_000_000),
+    ).toMatchObject({ state: "stale", failureReason: "v9-snapshot-stale" });
+  });
+});

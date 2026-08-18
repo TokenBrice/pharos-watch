@@ -9,6 +9,12 @@ const mocks = vi.hoisted(() => ({
   loadPublication: vi.fn(),
   persist: vi.fn(),
   persistAttempt: vi.fn(),
+  persistAlertEnvelope: vi.fn(),
+}));
+
+vi.mock("../alert-safety-source-cache", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../alert-safety-source-cache")>(),
+  persistAlertSafetyV9SourceEnvelope: mocks.persistAlertEnvelope,
 }));
 
 vi.mock("../safety-score-v9-candidate", () => ({
@@ -54,6 +60,7 @@ describe("Safety Score V9 publication runner", () => {
     mocks.loadPublication.mockReset().mockResolvedValue(null);
     mocks.persist.mockReset().mockResolvedValue(undefined);
     mocks.persistAttempt.mockReset().mockResolvedValue(undefined);
+    mocks.persistAlertEnvelope.mockReset().mockResolvedValue(undefined);
   });
 
   it("publishes an accepted canonical candidate", async () => {
@@ -78,6 +85,32 @@ describe("Safety Score V9 publication runner", () => {
         }),
       }),
     );
+    expect(mocks.persistAlertEnvelope).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publishedAt: fixedInput.clockSec,
+        safetyScoreIdentity: expect.objectContaining({ model: "v9" }),
+        cards: expect.any(Array),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("does not persist an alert source envelope when the assessment holds", async () => {
+    mocks.assess.mockReturnValue({
+      decision: "hold",
+      reasons: [{ code: "coverage-floor-failed", floorIds: ["minimum-rateable-assets"] }],
+      affectedAssetIds: [],
+    });
+
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+      nowSec: 2_000_000_000,
+    });
+
+    expect(result.status).toBe("held");
+    expect(mocks.persistAlertEnvelope).not.toHaveBeenCalled();
   });
 
   it("updates only publication health when the assessment holds", async () => {

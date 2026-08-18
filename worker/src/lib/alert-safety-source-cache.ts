@@ -7,13 +7,24 @@ import {
   type SafetyScorePublicationIdentity,
   type SafetyScoreV9PublicationIdentity,
 } from "@shared/types/safety-score-publication";
+import { getCache, setCache } from "./db-cache";
 import {
+  loadActiveSafetyScoreIdentity,
   loadActiveSafetyScoreSource,
   type ActiveSafetyScoreSource,
 } from "./safety-score-active-source";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9-consumer-freshness";
 
 const ALERT_SAFETY_V9_SOURCE_GENERATION = "safety-v9-alert-source-v1";
+
+/**
+ * Persisted thin projection of the accepted V9 publication for the alert
+ * lanes. Decoding the full publication costs a large transient heap spike
+ * (gunzip + parse + schema clone of an ~8MB canonical payload), which is far
+ * too heavy for a five-minute cadence on a heap-constrained isolate; the
+ * publication writer persists this envelope once so alert reads stay small.
+ */
+export const ALERT_SAFETY_V9_SOURCE_CACHE_KEY = "alert-safety-v9-source";
 const ALERT_SAFETY_DETAIL_MAX_CHARS = 160;
 
 export interface AlertSafetyV9ExplainSnapshot {
@@ -200,13 +211,25 @@ export function buildActiveAlertSafetyV9SourceEnvelope(
   source: ReportCardsV9CurrentResponse,
 ): AlertSafetySourceEnvelope | null {
   if (source.publicationHealth.status === "held") return null;
+  return buildAlertSafetyV9SourceEnvelopeFromParts({
+    cards: source.cards,
+    safetyScoreIdentity: source.safetyScoreIdentity,
+    publishedAt: source.updatedAt,
+  });
+}
+
+export function buildAlertSafetyV9SourceEnvelopeFromParts(source: {
+  cards: ReportCardsV9CurrentResponse["cards"];
+  safetyScoreIdentity: ReportCardsV9CurrentResponse["safetyScoreIdentity"];
+  publishedAt: number;
+}): AlertSafetySourceEnvelope {
   return {
     generation: ALERT_SAFETY_V9_SOURCE_GENERATION,
     safetyScoreIdentity: source.safetyScoreIdentity,
     publicationGenerationId:
       source.safetyScoreIdentity.publicationGenerationId,
     methodologyVersion: source.safetyScoreIdentity.methodologyVersion,
-    publishedAt: source.updatedAt,
+    publishedAt: source.publishedAt,
     snapshot: Object.fromEntries(
       source.cards.map((card) => [
         card.id,
@@ -278,7 +301,14 @@ export function assessActiveAlertSafetySource(
           : "v9-snapshot-invalid",
     };
   }
-  const ageSeconds = Math.max(0, options.nowSec - envelope.publishedAt);
+  return assessAlertSafetyEnvelope(envelope, options.nowSec);
+}
+
+export function assessAlertSafetyEnvelope(
+  envelope: AlertSafetySourceEnvelope,
+  nowSec: number,
+): AlertSafetySourceAssessment {
+  const ageSeconds = Math.max(0, nowSec - envelope.publishedAt);
   if (ageSeconds > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
     return {
       state: "stale",
@@ -296,11 +326,81 @@ export function assessActiveAlertSafetySource(
   };
 }
 
+export function parsePersistedAlertSafetyV9SourceEnvelope(
+  cached: { value: string; updatedAt: number } | null,
+): AlertSafetySourceEnvelope | null {
+  if (!cached) return null;
+  try {
+    const parsed: unknown = JSON.parse(cached.value);
+    if (
+      !isRecord(parsed) ||
+      typeof parsed.generation !== "string" ||
+      typeof parsed.publicationGenerationId !== "string" ||
+      typeof parsed.methodologyVersion !== "string" ||
+      typeof parsed.publishedAt !== "number" ||
+      !Number.isFinite(parsed.publishedAt)
+    ) {
+      return null;
+    }
+    const identity = SafetyScorePublicationIdentitySchema.safeParse(
+      parsed.safetyScoreIdentity,
+    );
+    const snapshot = parseSnapshot(parsed.snapshot);
+    if (!identity.success || identity.data.model !== "v9" || !snapshot) return null;
+    return {
+      generation: parsed.generation,
+      safetyScoreIdentity: identity.data,
+      publicationGenerationId: parsed.publicationGenerationId,
+      methodologyVersion: parsed.methodologyVersion,
+      publishedAt: parsed.publishedAt,
+      snapshot: snapshot as AlertSafetySourceEnvelope["snapshot"],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Writes the thin alert projection for the accepted publication. Called by
+ * the V9 publication writer, which already holds the response in memory, so
+ * no additional decode happens on this path. A held response persists nothing.
+ */
+export async function persistAlertSafetyV9SourceEnvelope(
+  db: D1Database,
+  source: Parameters<typeof buildAlertSafetyV9SourceEnvelopeFromParts>[0],
+  signal?: AbortSignal,
+): Promise<void> {
+  const envelope = buildAlertSafetyV9SourceEnvelopeFromParts(source);
+  await setCache(db, ALERT_SAFETY_V9_SOURCE_CACHE_KEY, JSON.stringify(envelope), signal);
+}
+
 export async function loadActiveAlertSafetySourceAssessment(
   db: D1Database,
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<AlertSafetySourceAssessment> {
+  // Envelope-first read: when the persisted thin projection matches the
+  // active publication identity, the heavy publication decode is skipped
+  // entirely. Any mismatch, held or error state, or unparseable envelope
+  // falls back to the full decode so behavior stays identical.
+  try {
+    const identity = await loadActiveSafetyScoreIdentity(db, signal);
+    if (identity.kind === "v9" && identity.safetyScoreIdentity) {
+      const cached = parsePersistedAlertSafetyV9SourceEnvelope(
+        await getCache(db, ALERT_SAFETY_V9_SOURCE_CACHE_KEY, signal),
+      );
+      if (
+        cached &&
+        cached.generation === ALERT_SAFETY_V9_SOURCE_GENERATION &&
+        cached.publicationGenerationId ===
+          identity.safetyScoreIdentity.publicationGenerationId
+      ) {
+        return assessAlertSafetyEnvelope(cached, nowSec);
+      }
+    }
+  } catch {
+    // Fall through to the authoritative full decode.
+  }
   return assessActiveAlertSafetySource(
     await loadActiveSafetyScoreSource(db, signal),
     { nowSec },
