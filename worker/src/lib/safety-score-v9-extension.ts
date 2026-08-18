@@ -11,7 +11,10 @@ import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "@shared/lib/safety-score-v9/
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge-ownership";
+import {
+  hasReviewedNoLocalIssuanceException,
+  validateMintBridgeOwnership,
+} from "@shared/lib/stablecoins/mint-bridge-ownership";
 import {
   defaultV9DependencyEconomicRole,
   type V9DependencyEconomicRole,
@@ -88,6 +91,7 @@ import {
   confidenceForResearch,
   conservativeDateEndSec,
   maximumObservedAt,
+  notApplicableStatus,
   requiredStatus,
   researchReviewObservationState,
   reviewedObservationState,
@@ -1071,6 +1075,37 @@ function adaptMintReview(
   const reconciliation =
     profile.reconciliation && profile.reconciliation !== "unknown" ? profile.reconciliation : inferredReconciliation;
   const immutableWithoutMint = mintControl === null && upgrade.state === "immutable";
+  // A reviewed no-local-issuance exception is a measured fact, not missing data: the
+  // product genuinely holds no canonical issuance authority. It is granted only when
+  // the risk it displaces is carried somewhere else — an inherited claim needs the
+  // compiled serial-claim edge to its parent, and an external-only representation
+  // needs the reviewed route inventory that `hasReviewedNoLocalIssuanceException`
+  // already requires to cover every authored deployment. Any authored control keeps
+  // the section required so no reviewed upgrade authority is dropped from the grade.
+  const reviewedNoLocalIssuance =
+    controls.length === 0 &&
+    hasReviewedNoLocalIssuanceException(meta) &&
+    (profile.review.noLocalIssuance?.kind === "external-only-representation" ||
+      hasExactInheritedWrapperDependency);
+  if (reviewedNoLocalIssuance) {
+    return {
+      review: {
+        status: notApplicableStatus(
+          "v9.control.mint-review",
+          profile.review.noLocalIssuance?.kind === "inherited-parent-issuance"
+            ? `Issuance is inherited from ${String(profile.inheritedFrom)}; no local canonical mint authority exists.`
+            : "Every authored deployment is an external representation; no local canonical mint authority exists.",
+          evidenceKeys,
+        ),
+        controlKey: null,
+        reconciliation: "not-applicable",
+        supervision: profile.supervision && profile.supervision !== "unknown" ? profile.supervision : "unknown",
+        latestResolvedIncidentAtSec: latestResolvedMintIncidentAtSec(profile.mintIncidents, clockSec),
+        upgrade: { state: "not-applicable" as const, controlKey: null },
+      },
+      controls,
+    };
+  }
   const state = !reviewComplete
     ? profile.review.disposition === "unresolved" && evidenceKeys.length > 0
       ? "bounded-unknown"

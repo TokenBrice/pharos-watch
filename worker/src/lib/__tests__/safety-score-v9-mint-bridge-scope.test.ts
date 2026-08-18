@@ -761,4 +761,123 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(adapted.review.status.applicability.state).toBe("required");
   });
+
+  it("compiles a reviewed external-only representation as a not-applicable mint section", () => {
+    const representation = representationRoute(BASE_ROUTE);
+    const externalOnly = meta("fixture-external-only-representation", {
+      status: "active",
+      contracts: [
+        {
+          chain: representation.destinationChain,
+          address: representation.contractAddress,
+          decimals: 18,
+        },
+      ],
+      mintAuthority: mintProfile({
+        mintPath: "unknown",
+        controls: [],
+        review: {
+          sources: [SOURCE],
+          evidence: "The fixture has no local canonical issuance.",
+          reviewer: "Fixture reviewer",
+          reviewedAt: "1970-01-01",
+          noLocalIssuance: {
+            kind: "external-only-representation",
+            reviewedAt: "1970-01-01",
+            reviewer: "Fixture reviewer",
+            rationale: "Every authored deployment is an external representation.",
+          },
+        },
+      }),
+      bridgeRouteRisk: bridgeProfile([representation]),
+    });
+
+    const { extension } = compileFixture(externalOnly);
+    const mint = extension.assets[0]!.economicControlReview!.mint;
+
+    expect(mint.status.applicability.state).toBe("not-applicable");
+    expect(mint.controlKey).toBeNull();
+    expect(mint.reconciliation).toBe("not-applicable");
+  });
+
+  it("refuses a not-applicable mint section for an inherited claim with no serial dependency", () => {
+    const nativeRoute = route(ETHEREUM_ROUTE);
+    const inheritedWithoutEdge = meta("fixture-inherited-without-edge", {
+      status: "active",
+      contracts: [
+        {
+          chain: nativeRoute.destinationChain,
+          address: nativeRoute.contractAddress,
+          decimals: 18,
+        },
+      ],
+      mintAuthority: mintProfile({
+        mintPath: "wrapped-or-variant-inherited",
+        inheritedFrom: "usdc-circle",
+        controls: [],
+        review: {
+          sources: [SOURCE],
+          evidence: "The fixture inherits issuance from its parent.",
+          reviewer: "Fixture reviewer",
+          reviewedAt: "1970-01-01",
+          noLocalIssuance: {
+            kind: "inherited-parent-issuance",
+            reviewedAt: "1970-01-01",
+            reviewer: "Fixture reviewer",
+            rationale: "Issuance is the parent's; this deployment holds no local minter.",
+          },
+        },
+      }),
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)]),
+    });
+
+    const { extension } = compileFixture(inheritedWithoutEdge);
+    const mint = extension.assets[0]!.economicControlReview!.mint;
+
+    // No compiled serial-claim edge to the parent means the parent's mint risk
+    // lands nowhere. The section must stay required and fail closed.
+    expect(mint.status.applicability.state).toBe("required");
+  });
+
+  it("refuses a not-applicable mint section when the profile still authors controls", () => {
+    const representation = representationRoute(BASE_ROUTE);
+    const withControls = meta("fixture-external-only-with-controls", {
+      status: "active",
+      contracts: [
+        {
+          chain: representation.destinationChain,
+          address: representation.contractAddress,
+          decimals: 18,
+        },
+      ],
+      mintAuthority: mintProfile({
+        mintPath: "unknown",
+        controls: [
+          mintControl({
+            chain: "base",
+            role: "proxy-admin",
+            directMintAbility: "upgrade-only",
+          }),
+        ],
+        review: {
+          sources: [SOURCE],
+          evidence: "The fixture authors a local upgrade control alongside its exception.",
+          reviewer: "Fixture reviewer",
+          reviewedAt: "1970-01-01",
+          noLocalIssuance: {
+            kind: "external-only-representation",
+            reviewedAt: "1970-01-01",
+            reviewer: "Fixture reviewer",
+            rationale: "Every authored deployment is an external representation.",
+          },
+        },
+      }),
+      bridgeRouteRisk: bridgeProfile([representation]),
+    });
+
+    const { extension } = compileFixture(withControls);
+    const mint = extension.assets[0]!.economicControlReview!.mint;
+
+    expect(mint.status.applicability.state).toBe("required");
+  });
 });
