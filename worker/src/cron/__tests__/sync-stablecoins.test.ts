@@ -1653,7 +1653,10 @@ describe("syncStablecoins", () => {
             ...bound,
             first: async <T>() => {
               stablecoinsCacheReads++;
-              if (stablecoinsCacheReads >= 2) {
+              // The run loads the previous stablecoins cache exactly once (at
+              // intake); the staleness check reuses that load instead of
+              // issuing a second read.
+              if (stablecoinsCacheReads >= 1) {
                 throw new Error("cache read failed");
               }
               return bound.first<T>();

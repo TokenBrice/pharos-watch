@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { hasDepegAuthoritativeSource, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
-import { validateFallbackPriceCandidate, validatePrimaryPriceCandidate } from "../price-publish-policy";
+import {
+  validateFallbackPriceCandidate,
+  validatePrimaryPriceCandidate,
+  validatePublishedAssetPrice,
+} from "../price-publish-policy";
 import type { PriceValidationContext } from "../price-validation";
 
 const USD_CONTEXT: PriceValidationContext = {
@@ -186,6 +190,38 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
     });
     // price 0.85 is NOT severe downside, so the check doesn't trigger at all
     expect(decision.accepted).toBe(true);
+  });
+});
+
+describe("validatePublishedAssetPrice — candidatePrices as a separate argument", () => {
+  it("uses separately passed candidatePrices for severe-downside corroboration", () => {
+    const decision = validatePublishedAssetPrice({
+      asset: {
+        price: 0.38,
+        priceSource: "pyth",
+        priceConfidence: "low",
+        agreeSources: ["pyth"],
+      },
+      candidatePrices: { coingecko: 0.39, pyth: 0.38, "defillama-list": 0.51 },
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(true);
+  });
+
+  it("rejects the same severe downside when no candidatePrices are passed", () => {
+    const decision = validatePublishedAssetPrice({
+      asset: {
+        price: 0.38,
+        priceSource: "pyth",
+        priceConfidence: "low",
+        agreeSources: ["pyth"],
+      },
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(false);
+    expect(decision.reason).toBe("severe_downside_requires_corroboration");
   });
 });
 

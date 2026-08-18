@@ -14,7 +14,7 @@ import type {
 export async function restoreFallbackCacheState(
   input: FallbackCacheRestorationInput,
 ): Promise<FallbackCacheRestorationOutput> {
-  const previousAssetsById = await loadPreviousStablecoinsById(input.db);
+  const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(input.db);
 
   try {
     for (const asset of input.assets) {
@@ -33,7 +33,7 @@ export async function restoreFallbackCacheState(
 
   applyTrackedAssetOverrides(input.assets);
 
-  return { previousAssetsById };
+  return { previousAssetsById, previousCacheState };
 }
 
 export async function fillFallbackSupplyHistoryStage(
@@ -61,7 +61,8 @@ export async function runFallbackStalenessGate(
     stalenessCheckFailureReason,
     blockedResult,
   } = await checkStablecoinsPriceStaleness({
-    db: input.db,
+    previousAssetsById: input.previousAssetsById,
+    previousCacheState: input.previousCacheState,
     assets: input.assets,
     signal: input.signal,
     reportProgress: input.reportProgress,

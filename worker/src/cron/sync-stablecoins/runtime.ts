@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { buildSyncMetadata } from "./shared";
+import { buildSyncMetadata, type PreviousStablecoinsCacheState } from "./shared";
 import { detectPriceStaleness, fillMissingSupplyHistory } from "./phase-helpers";
 import { recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
@@ -130,7 +130,8 @@ function buildStalenessSummaryMetadata(staleness: {
 }
 
 export async function checkStablecoinsPriceStaleness(params: {
-  db: D1Database;
+  previousAssetsById: ReadonlyMap<string, PeggedAsset>;
+  previousCacheState: PreviousStablecoinsCacheState;
   assets: PeggedAsset[];
   signal?: AbortSignal;
   reportProgress?: CronProgressReporter;
@@ -162,7 +163,7 @@ export async function checkStablecoinsPriceStaleness(params: {
         blockedReason: "abort",
       };
     }
-    const staleness = await detectPriceStaleness(params.db, params.assets, params.signal);
+    const staleness = detectPriceStaleness(params.previousCacheState, params.previousAssetsById, params.assets);
     if (staleness.state === "missing-previous-cache") {
       return {
         state: "missing-previous-cache",

@@ -31,6 +31,7 @@ import {
   replaceZeroSupplyPrimaryAssets,
   restoreMissingTrackedAssets,
   type CronResult,
+  type PreviousStablecoinsCacheState,
   type TrackedCoverageRestoreResult,
 } from "./shared";
 
@@ -42,6 +43,7 @@ interface StablecoinsIntakeMainResult {
   canonicalDeduplication: CanonicalDeduplicationResult;
   fxFallbackRates?: Record<string, number>;
   previousAssetsById: Map<string, PeggedAsset>;
+  previousCacheState: PreviousStablecoinsCacheState;
   cgData: CoinGeckoMcapData;
   supplyGapReconciliation: SupplyGapReconciliationResult;
   trackedCoverage: TrackedCoverageRestoreResult;
@@ -179,7 +181,7 @@ export async function loadStablecoinsIntake(
     fallbackToCoingecko: (cgData: CoinGeckoMcapData) => Promise<CronResult>;
   },
 ): Promise<StablecoinsIntakeResult> {
-  const previousAssetsById = await loadPreviousStablecoinsById(input.db);
+  const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(input.db);
   const cgData = await fetchCoinGeckoMarketData(input.db, input.signal, input.coingeckoApiKey);
 
   const dlAllowed = await shouldAttemptFetch(input.db, CIRCUIT_SOURCE.DL_STABLECOINS);
@@ -248,10 +250,13 @@ export async function loadStablecoinsIntake(
     };
   }
 
-  const llamaData = dlFetchResult.payload;
-  const rawAssetCount = llamaData.peggedAssets?.length ?? 0;
+  // Capture only the two consumed payload fields so the parsed payload wrapper
+  // (and its raw unfiltered asset array) can be collected once the intake
+  // pipeline replaces `assets` below, instead of staying pinned until return.
+  const { peggedAssets: rawPeggedAssets, fxFallbackRates: dlFxFallbackRates } = dlFetchResult.payload;
+  const rawAssetCount = rawPeggedAssets?.length ?? 0;
 
-  if (llamaData.peggedAssets === undefined) {
+  if (rawPeggedAssets === undefined) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-stablecoins",
@@ -260,29 +265,29 @@ export async function loadStablecoinsIntake(
       message: "DefiLlama response missing peggedAssets field; possible API contract change",
     });
   }
-  if (!llamaData.peggedAssets || llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
+  if (!rawPeggedAssets || rawPeggedAssets.length < MIN_VALID_ASSET_COUNT) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-stablecoins",
       event: "unexpected-asset-count",
       message: "Unexpected asset count; skipping cache write",
-      metadata: { assetCount: llamaData.peggedAssets?.length, minimumAssetCount: MIN_VALID_ASSET_COUNT },
+      metadata: { assetCount: rawPeggedAssets?.length, minimumAssetCount: MIN_VALID_ASSET_COUNT },
     });
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
       kind: "fallback",
       result: await input.fallbackToCoingecko(cgData),
-      errorMessage: `DefiLlama payload was structurally invalid (asset count=${llamaData.peggedAssets?.length ?? 0}) and fallback failed`,
+      errorMessage: `DefiLlama payload was structurally invalid (asset count=${rawPeggedAssets?.length ?? 0}) and fallback failed`,
     };
   }
 
-  // Run the transformation pipeline on a local variable instead of mutating the
-  // parsed payload struct's array field. `llamaData.peggedAssets` is guaranteed
-  // defined and valid by the guards above; the steps below reassign `assets`
-  // rather than the upstream payload, so the original parsed response is left
-  // intact and the transformation sequence is self-documenting.
-  let assets = mergeFrozenSnapshots(llamaData.peggedAssets, FROZEN_SNAPSHOTS);
-  const injectedFrozenSnapshots = assets.length - llamaData.peggedAssets.length;
+  // Run the transformation pipeline on a local variable. `rawPeggedAssets` is
+  // guaranteed defined and valid by the guards above; the steps below reassign
+  // `assets` rather than mutating the raw array, and nothing references the raw
+  // array (or the payload wrapper) past this point, so both become collectible
+  // as soon as validation/dedupe produce replacement arrays.
+  let assets = mergeFrozenSnapshots(rawPeggedAssets, FROZEN_SNAPSHOTS);
+  const injectedFrozenSnapshots = assets.length - rawAssetCount;
   if (injectedFrozenSnapshots > 0) {
     logWorkerEvent({
       scope: "lib",
@@ -467,8 +472,9 @@ export async function loadStablecoinsIntake(
     rawAssetCount,
     droppedMalformedAssets,
     canonicalDeduplication,
-    fxFallbackRates: llamaData.fxFallbackRates,
+    fxFallbackRates: dlFxFallbackRates,
     previousAssetsById,
+    previousCacheState,
     cgData,
     supplyGapReconciliation,
     trackedCoverage,

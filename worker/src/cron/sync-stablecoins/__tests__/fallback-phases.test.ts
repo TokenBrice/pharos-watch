@@ -7,6 +7,7 @@ import {
 } from "../fallback-intake";
 import { restoreFallbackCacheState, runFallbackStalenessGate } from "../fallback-cache";
 import { runFallbackDepegFollowThrough } from "../fallback-publish";
+import { loadPreviousStablecoinsById } from "../shared";
 import type { PeggedAsset } from "../enrich-prices";
 import { makePeggedAsset } from "./_fixtures";
 
@@ -218,9 +219,12 @@ describe("CoinGecko fallback phases", () => {
       },
     ]);
 
+    const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
     const result = await runFallbackStalenessGate({
       db,
       assets,
+      previousAssetsById,
+      previousCacheState,
       syncStartSec: NOW_SEC,
     });
 
@@ -256,9 +260,12 @@ describe("CoinGecko fallback phases", () => {
       },
     ]);
 
+    const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
     const result = await runFallbackStalenessGate({
       db,
       assets,
+      previousAssetsById,
+      previousCacheState,
       syncStartSec: NOW_SEC,
     });
 
@@ -282,9 +289,12 @@ describe("CoinGecko fallback phases", () => {
       },
     ]);
 
+    const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
     const result = await runFallbackStalenessGate({
       db,
       assets,
+      previousAssetsById,
+      previousCacheState,
       syncStartSec: NOW_SEC,
     });
 
@@ -304,6 +314,8 @@ describe("CoinGecko fallback phases", () => {
     const result = await runFallbackStalenessGate({
       db: mockD1([]),
       assets: [makeAsset()],
+      previousAssetsById: new Map(),
+      previousCacheState: { state: "missing" },
       syncStartSec: NOW_SEC,
       signal: controller.signal,
     });

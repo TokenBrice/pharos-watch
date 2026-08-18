@@ -7,30 +7,21 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-l
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
  */
-import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
+// The five job graphs (alert dispatch, recap planner/store, pulse snapshot,
+// degradation watchdog, disambiguation cleanup) are loaded via dynamic
+// import() at dispatch time — mirroring SLOT_RUNNER_BY_KEY in ../scheduled.ts —
+// so their module graphs never sit on the heap of isolates that only run the
+// heavy data lanes. Only types may be imported statically from them.
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
-import { planTelegramPersonalizedRecaps } from "../../cron/telegram-recap-planner";
-import {
-  cancelQueuedTelegramRecapsForRollout,
-  type TelegramRecapRolloutCleanupResult,
-} from "../../lib/telegram-recap-store";
+import type { TelegramRecapRolloutCleanupResult } from "../../lib/telegram-recap-store";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import {
   TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
   TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS,
   TELEGRAM_RECAP_SLOT_RESERVE_MS,
 } from "@shared/lib/telegram-recap-policy";
-import { publishTelegramPulseSnapshotWithOutcome } from "../../api/telegram-pulse";
-import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
-import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
 import { parseJsonObject } from "../../lib/json-parse";
-import {
-  reconcileTelegramCommandRegistration,
-  reconcileTelegramMenuButton,
-  reconcileTelegramProfileRegistration,
-  reconcileTelegramWebhookRegistration,
-} from "../../lib/telegram-webhook-registration";
 import {
   getRuntimeProducerIdentity,
   runRuntimeBudgetOnlyTask,
@@ -125,6 +116,7 @@ function buildTelegramSlotGroups(
       return { targetRowsCancelled: 0, pendingRowsDeleted: 0 };
     }
     if (recapRolloutCleanup == null) {
+      const { cancelQueuedTelegramRecapsForRollout } = await import("../../lib/telegram-recap-store");
       recapRolloutCleanup = await cancelQueuedTelegramRecapsForRollout(
         runtime.db,
         recapRollout,
@@ -138,6 +130,7 @@ function buildTelegramSlotGroups(
       job: "dispatch-telegram-alerts",
       errorMessage: "[cron] dispatch-telegram-alerts failed:",
       run: async (signal, reportProgress) => {
+        const { dispatchTelegramAlerts } = await import("../../cron/dispatch-telegram-alerts");
         await ensureRecapRolloutCleanup();
         const startedAtMs = Date.now();
         Object.assign(sharedTelegramState, {
@@ -228,6 +221,7 @@ function buildTelegramSlotGroups(
             }),
           };
         }
+        const { planTelegramPersonalizedRecaps } = await import("../../cron/telegram-recap-planner");
         const planned = await planTelegramPersonalizedRecaps(runtime.db, signal, {
           rolloutPolicy: recapRollout,
           softDeadlineMs: recapBudgetMs,
@@ -248,21 +242,27 @@ function buildTelegramSlotGroups(
     {
       job: "telegram-degradation-watchdog",
       errorMessage: "[cron] telegram-degradation-watchdog failed:",
-      run: (signal) =>
-        runTelegramDegradationWatchdog(runtime.db, signal, {
+      run: async (signal) => {
+        const { runTelegramDegradationWatchdog } = await import("../../cron/telegram-degradation-watchdog");
+        return runTelegramDegradationWatchdog(runtime.db, signal, {
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
-        }),
+        });
+      },
     },
     {
       job: "telegram-disambiguation-cleanup",
       errorMessage: "[cron] telegram-disambiguation-cleanup failed:",
-      run: (signal) => cleanExpiredDisambiguations(runtime.db, signal),
+      run: async (signal) => {
+        const { cleanExpiredDisambiguations } = await import("../../api/telegram-store/disambiguation");
+        return cleanExpiredDisambiguations(runtime.db, signal);
+      },
     },
     {
       job: "telegram-pulse-snapshot",
       errorMessage: "[cron] telegram-pulse-snapshot failed:",
       run: async (signal) => {
+        const { publishTelegramPulseSnapshotWithOutcome } = await import("../../api/telegram-pulse");
         const outcome = await publishTelegramPulseSnapshotWithOutcome(runtime.db, undefined, {
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           signal,
@@ -365,34 +365,40 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     buildTelegramSlotGroups(runtime, runtime.env.TELEGRAM_BOT_TOKEN),
   );
 
-  const registrations: Array<{
-    action: string;
-    run: (signal?: AbortSignal) => Promise<{ attempted: boolean; skipped?: boolean; reason?: string }>;
-  }> = [
-    { action: "reconcile-commands", run: (signal) => reconcileTelegramCommandRegistration(runtime.db, {
-      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-      includeRecap: resolveTelegramRecapRolloutPolicy(runtime.env).mode === "public",
-      signal,
-    }) },
-    { action: "reconcile-profile", run: (signal) => reconcileTelegramProfileRegistration(runtime.db, {
-      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-      signal,
-    }) },
-    { action: "reconcile-menu", run: (signal) => reconcileTelegramMenuButton(runtime.db, {
-      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-      signal,
-    }) },
-    { action: "reconcile-webhook", run: (signal) => reconcileTelegramWebhookRegistration(runtime.db, {
-      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-      webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
-      selfUrl: runtime.env.SELF_URL,
-      signal,
-    }) },
-  ];
   const reconciliationResults = await runRuntimeBudgetOnlyTask(
     runtime,
     "telegram-registration-reconciliation",
     async (signal) => {
+      const {
+        reconcileTelegramCommandRegistration,
+        reconcileTelegramMenuButton,
+        reconcileTelegramProfileRegistration,
+        reconcileTelegramWebhookRegistration,
+      } = await import("../../lib/telegram-webhook-registration");
+      const registrations: Array<{
+        action: string;
+        run: (signal?: AbortSignal) => Promise<{ attempted: boolean; skipped?: boolean; reason?: string }>;
+      }> = [
+        { action: "reconcile-commands", run: (signal) => reconcileTelegramCommandRegistration(runtime.db, {
+          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+          includeRecap: resolveTelegramRecapRolloutPolicy(runtime.env).mode === "public",
+          signal,
+        }) },
+        { action: "reconcile-profile", run: (signal) => reconcileTelegramProfileRegistration(runtime.db, {
+          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+          signal,
+        }) },
+        { action: "reconcile-menu", run: (signal) => reconcileTelegramMenuButton(runtime.db, {
+          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+          signal,
+        }) },
+        { action: "reconcile-webhook", run: (signal) => reconcileTelegramWebhookRegistration(runtime.db, {
+          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+          webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
+          selfUrl: runtime.env.SELF_URL,
+          signal,
+        }) },
+      ];
       const results: TelegramReconciliationTelemetry[] = [];
       for (const registration of registrations) {
         results.push(await runTelegramReconciliation(registration.action, () => registration.run(signal)));

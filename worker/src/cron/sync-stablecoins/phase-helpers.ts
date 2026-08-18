@@ -2,11 +2,10 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw, sumPegBuckets } from "@shared/lib/supply";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import type { PeggedAsset } from "./enrich-prices";
-import { parseStablecoinsCachePayload } from "./shared";
+import type { PreviousStablecoinsCacheState } from "./shared";
 import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
 
 const CHAIN_CIRCULATING_KEYS = ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"];
@@ -275,23 +274,28 @@ export function computePriceStalenessSummary(
   };
 }
 
-export async function detectPriceStaleness(
-  db: D1Database,
+/**
+ * Derives the staleness verdict from the previous stablecoins payload the run
+ * already loaded and parsed at intake, instead of re-reading and re-parsing
+ * the whole cache a third time. The load-state discriminator preserves the
+ * missing/malformed/error outcomes the direct read used to produce.
+ */
+export function detectPriceStaleness(
+  previousCacheState: PreviousStablecoinsCacheState,
+  previousAssetsById: ReadonlyMap<string, PeggedAsset>,
   currentAssets: PeggedAsset[],
-  signal?: AbortSignal,
-): Promise<PriceStalenessCheckResult> {
-  throwIfAborted(signal);
-  const previousCache = await getCache(db, "stablecoins");
-  if (!previousCache) return { state: "missing-previous-cache" };
-
-  const previousData = parseStablecoinsCachePayload(previousCache.value);
-  if (!previousData) {
+): PriceStalenessCheckResult {
+  if (previousCacheState.state === "missing") return { state: "missing-previous-cache" };
+  if (previousCacheState.state === "malformed") {
     logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to parse previous stablecoins cache in staleness check");
     return { state: "check-failed", reason: "malformed-previous-cache" };
+  }
+  if (previousCacheState.state === "error") {
+    return { state: "check-failed", reason: previousCacheState.message };
   }
 
   return {
     state: "ok",
-    summary: computePriceStalenessSummary(previousData.peggedAssets, currentAssets),
+    summary: computePriceStalenessSummary([...previousAssetsById.values()], currentAssets),
   };
 }

@@ -218,7 +218,12 @@
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36",
           "starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config"],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
         "controllerChain": "ethereum",
         "controllerAddress": "0x1ea169ecccf7714e7ba04900e1a3357cca77327f",
         "failureDomainKeys": [
@@ -276,7 +281,12 @@
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config"],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
         "controllerChain": "ethereum",
         "controllerAddress": "0x1ea169ecccf7714e7ba04900e1a3357cca77327f",
         "failureDomainKeys": [
@@ -334,7 +344,10 @@
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36",
           "starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
         ],
-        "capabilities": ["admin", "validator"],
+        "capabilities": [
+          "admin",
+          "validator"
+        ],
         "controllerChain": "ethereum",
         "controllerAddress": "0x562dfaac27a84be6c96273f5c9594da1681c0da7",
         "failureDomainKeys": [
@@ -424,7 +437,10 @@
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36",
           "starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
         ],
-        "capabilities": ["upgrade", "admin"],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
         "controllerChain": "ethereum",
         "controllerAddress": "0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f",
         "failureDomainKeys": [
@@ -458,7 +474,12 @@
         "routeRefs": [
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config"],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
         "controllerChain": "zksync",
         "controllerAddress": "0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263",
         "failureDomainKeys": [
@@ -512,7 +533,10 @@
         "routeRefs": [
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
         ],
-        "capabilities": ["upgrade", "admin"],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
         "controllerChain": "zksync",
         "controllerAddress": "0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263",
         "failureDomainKeys": [
@@ -557,7 +581,10 @@
         "routeRefs": [
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
         ],
-        "capabilities": ["upgrade", "admin"],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
         "controllerChain": "zksync",
         "controllerAddress": "0xcd81ccfe7d9306849136fa96397113345a32ecf3",
         "failureDomainKeys": [
@@ -592,7 +619,10 @@
         "routeRefs": [
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
         ],
-        "capabilities": ["admin", "validator"],
+        "capabilities": [
+          "admin",
+          "validator"
+        ],
         "controllerChain": "zksync",
         "controllerAddress": "0xcd81ccfe7d9306849136fa96397113345a32ecf3",
         "failureDomainKeys": [
@@ -665,7 +695,12 @@
         "routeRefs": [
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config"],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
         "controllerChain": "sophon",
         "controllerAddress": "0x553d36879016ce22977a622804eee76dc0dc88e0",
         "failureDomainKeys": [
@@ -719,7 +754,10 @@
         "routeRefs": [
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
-        "capabilities": ["upgrade", "admin"],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
         "controllerChain": "sophon",
         "controllerAddress": "0x553d36879016ce22977a622804eee76dc0dc88e0",
         "failureDomainKeys": [
@@ -764,7 +802,10 @@
         "routeRefs": [
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
-        "capabilities": ["upgrade", "admin"],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
         "controllerChain": "sophon",
         "controllerAddress": "0x113d3a19031fe5db58884d6aa54545dd4de499c0",
         "failureDomainKeys": [
@@ -799,7 +840,10 @@
         "routeRefs": [
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
-        "capabilities": ["admin", "validator"],
+        "capabilities": [
+          "admin",
+          "validator"
+        ],
         "controllerChain": "sophon",
         "controllerAddress": "0x113d3a19031fe5db58884d6aa54545dd4de499c0",
         "failureDomainKeys": [
@@ -875,7 +919,13 @@
         "routeRefs": [
           "starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "upgrade", "admin", "peer-config"],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
         "controllerChain": "starknet",
         "controllerAddress": "0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072",
         "failureDomainKeys": [
@@ -916,7 +966,10 @@
         "routeRefs": [
           "starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
         ],
-        "capabilities": ["admin", "validator"],
+        "capabilities": [
+          "admin",
+          "validator"
+        ],
         "controllerChain": "starknet",
         "controllerAddress": "0x4ddb8856c625235247708e945179085506bff53eae7ff04319cd1cbb5b635e7",
         "failureDomainKeys": [
@@ -952,6 +1005,36 @@
           }
         ],
         "evidence": "starknet_call at blocks 13501913–13502090: Mailbox.owner matches the authored controller. That account returns get_name=ArgentMultisig, threshold 4, seven signer public keys, class 0x6e150953.... Default ISM aggregation children, Pausable unpaused, and Ethereum-origin 6-of-9 validators were read from the live contracts. This is not a Gnosis Safe; signer values are Stark public keys, so no Safe API/threshold object is asserted."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "starknet-usn-owner",
+        "question": "What named Starknet account product (Argent 0.2.x / OpenZeppelin / other) is class 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a? Live calls prove 1-of-1 with no guardian, but the class is not self-named (no get_name) and public class registries were not independently matched on 2026-08-18.",
+        "reviewedAt": "2026-08-18",
+        "reviewer": "aug18-v927-control-wave W01",
+        "sources": [
+          {
+            "label": "Starknet USN owner account class (via token owner)",
+            "url": "https://starkscan.co/contract/0x025beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072"
+          }
+        ]
+      },
+      {
+        "controlRef": "ethereum-usn-hyperlane-mailbox-owner",
+        "question": "Who operates Sophon-origin Hyperlane validator 0xb84c5d02120ed0b39d0f78bbc0e298d89ebcd10b? It is in the live Ethereum default-ISM 2-of-3 set for origin 50104, but Sophon is omitted from the published default-ISM validator table and the Hyperlane registry marks sophon deprecated/disabled.",
+        "reviewedAt": "2026-08-18",
+        "reviewer": "aug18-v927-control-wave W01",
+        "sources": [
+          {
+            "label": "Hyperlane default ISM validator docs (no Sophon section)",
+            "url": "https://docs.hyperlane.xyz/docs/reference/addresses/validators/mainnet-default-ism-validators"
+          },
+          {
+            "label": "Hyperlane Sophon registry metadata (deprecated)",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/sophon/metadata.yaml"
+          }
+        ]
       }
     ]
   }

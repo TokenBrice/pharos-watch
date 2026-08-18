@@ -56,7 +56,7 @@ export async function syncViaCoingeckoFallback(
   if (isFallbackCronResult(intake)) return intake;
   const { assets } = intake;
 
-  const { previousAssetsById } = await restoreFallbackCacheState({ db, assets });
+  const { previousAssetsById, previousCacheState } = await restoreFallbackCacheState({ db, assets });
   // Curated NAV wrappers (llamaId null) get a fresh per-chain on-chain supply
   // overlay here so the fallback lane no longer nulls their V9 chain breakdown;
   // a failed probe leaves the restore's previous-row carry intact.
@@ -66,6 +66,7 @@ export async function syncViaCoingeckoFallback(
     validationReferences,
     validationContexts,
     previousTrustedPrices,
+    replayPriceCache,
   } = await hydrateFallbackFxPhase({
     db,
     syncStartSec,
@@ -92,6 +93,7 @@ export async function syncViaCoingeckoFallback(
     validationReferences,
     validationContexts,
     previousTrustedPrices,
+    priceCache: replayPriceCache,
     returnIfAborted,
     abortResult,
   });
@@ -120,6 +122,8 @@ export async function syncViaCoingeckoFallback(
   const staleness = await runFallbackStalenessGate({
     db,
     assets,
+    previousAssetsById,
+    previousCacheState,
     syncStartSec,
     signal,
     reportProgress,

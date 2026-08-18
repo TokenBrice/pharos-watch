@@ -612,6 +612,32 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   // ceiling instead of its ~78. Per-asset admission already re-derives each
   // stored observation against the live route inventory and identity pins, so
   // a stale global fingerprint is not by itself evidence that a packet is wrong.
+  it("applies the verified subset when the expectation set drifts between capture and consume", () => {
+    const generation = {
+      ...fixtures.acceptedGeneration,
+      // The producer captured under a smaller expectation set (co-tenants had
+      // upstream chain rows then); by consume time they lost them and joined
+      // the expectation. The stored XAUT packet must still apply.
+      expectedAssetIds: ["xaut-tether"],
+      observedAssetIds: ["xaut-tether"],
+    };
+
+    expect(
+      diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
+        fixtures.target,
+        generation,
+      ),
+    ).toBeNull();
+    expect(
+      applySafetyScoreV9SupplyAttributionGeneration(fixtures.target, generation),
+    ).toMatchObject({
+      status: "applied",
+      acceptedAssetIds: ["xaut-tether"],
+      supersededAssetIds: [],
+      invalidAssetIds: [],
+    });
+  });
+
   it("applies a generation captured under an earlier registry fingerprint", () => {
     const generation = fixtures.acceptedGeneration;
     // A release rotates the fingerprint and the base input together, so drop
@@ -645,23 +671,48 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
 
   it("reports exact compatibility reasons before applying a generation", () => {
     const generation = fixtures.acceptedGeneration;
-    const expectedAssetMismatch = {
-      ...fixtures.target,
-      activeAssetIds: fixtures.target.activeAssetIds.filter(
-        (assetId) => assetId !== "xaut-tether",
-      ),
-    };
+    // Retire xaut-tether from every per-asset surface so the drifted input
+    // stays contract-consistent (the old fixture only touched activeAssetIds,
+    // which the input normalizer rejects once it is actually normalized).
+    const expectedAssetMismatch = Object.fromEntries(
+      Object.entries(fixtures.target).map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return [key, value.filter((entry) => entry !== "xaut-tether")];
+        }
+        if (value && typeof value === "object" && "xaut-tether" in value) {
+          const { "xaut-tether": _dropped, ...rest } = value as Record<string, unknown>;
+          return [key, rest];
+        }
+        return [key, value];
+      // The payload changed, so drop the derived identity and let
+      // normalizeFixedInput re-derive it (same pattern as the rotated-registry
+      // case above).
+      }).filter(([key]) => key !== "baseInputGenerationId"),
+    ) as typeof fixtures.target;
     const beforeSourceClock = {
       ...fixtures.target,
       clockSec: generation.sourceClockSec - 1,
     };
 
+    // Expectation drift is handled per asset at apply time, never as a
+    // whole-generation incompatibility: an asset that left the expectation
+    // set is superseded, while the rest of the generation keeps applying.
     expect(
       diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
         expectedAssetMismatch,
         generation,
       ),
-    ).toBe("expected-asset-ids-mismatch");
+    ).toBeNull();
+    expect(
+      applySafetyScoreV9SupplyAttributionGeneration(
+        expectedAssetMismatch,
+        generation,
+      ),
+    ).toMatchObject({
+      status: "applied",
+      acceptedAssetIds: [],
+      supersededAssetIds: ["xaut-tether"],
+    });
     expect(
       diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
         beforeSourceClock,
@@ -680,7 +731,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         expectedAssetMismatch,
         generation,
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("clears attribution when no generation is available", () => {
