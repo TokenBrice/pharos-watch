@@ -26,7 +26,7 @@ Return:
 - failed job and step
 - first actionable error, not just aggregate failure
 - likely local repro command and required Node/environment scope
-- whether this is commit-derived artifact/other generated artifact/docs/test/pages/worker/deploy infra/post-deploy runtime/external transient
+- whether this is generated artifact/docs/test/pages/worker/deploy infra/post-deploy runtime/external transient
 - whether skipped jobs are expected from the outer workflow classifier
 - any files likely involved
 

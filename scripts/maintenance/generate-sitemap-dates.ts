@@ -7,7 +7,6 @@ import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { assertFullGitHistory } from "../lib/git-history.mts";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
-import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");

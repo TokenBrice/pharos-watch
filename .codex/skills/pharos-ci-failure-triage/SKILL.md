@@ -18,7 +18,7 @@ Use this skill from the Pharos repository root for:
 ## Core Rules
 
 - Start from logs and the exact failing command. Do not guess from the workflow name alone.
-- Classify the failing lane before editing: commit-derived artifact, other generated artifact, docs, tests, Pages build/marker, Worker migration/deploy/activation, deploy infra, post-deploy runtime, scheduled automation (bot PRs), or external transient.
+- Classify the failing lane before editing: generated artifact, docs, tests, Pages build/marker, Worker migration/deploy/activation, deploy infra, post-deploy runtime, scheduled automation (bot PRs), or external transient.
 - Read the outer and reusable workflow graph together. A skipped child job can be expected classifier behavior; the aggregate gate, selected surface, head SHA, and exact failed step determine the result.
 - Reproduce locally with the narrowest equivalent command before broad gates when possible.
 - Do not change test timeouts or retry policy merely because a local run was resource-starved. Reproduce the focused lane alone first.
@@ -63,7 +63,6 @@ Common local repro commands:
 
 ```bash
 npm run check:pr -- --base=origin/main
-npm run check:commit-derived-artifacts
 npm run check:generated-artifacts
 npm run check:doc-source-paths
 npm run check:doc-sync
@@ -87,8 +86,8 @@ Use `scripts/ci/classify-deploy-changes.ts` and `scripts/ci/pharos-change-contra
 
 Preferred fixes:
 
-- Commit-derived artifact drift: inspect the `inputState: "committed-history"` entries in `scripts/lib/automation-registry.mjs`. Commit the relevant source first, regenerate `sitemap-dates` or `docs-metadata`, then commit or amend the output. Never regenerate against dirty history inputs and call that final.
-- Other generated artifact drift: run the owning generator/check from `scripts/lib/automation-registry.mjs`, inspect the diff, and commit generated output with the source change. After the final source state, run the full `npm run check:generated-artifacts` so dependent or non-obvious projections converge together.
+- Generated artifact drift: run `npm run check:generated-artifacts` to see every stale entry, then the owning generator/check from `scripts/lib/automation-registry.mjs`, inspect the diff, and commit generated output with the source change. After the final source state, rerun the full check so dependent or non-obvious projections converge together.
+- Shallow-checkout failure in a history-derived generator: `assertFullGitHistory()` in `scripts/lib/git-history.mts` fails `sitemap-dates` and `docs-metadata` fast on a shallow clone rather than publishing wrong dates. Fix the job by setting `fetch-depth: 0` on its `actions/checkout` step, or run `git fetch --unshallow` locally; do not relax the guard.
 - Docs path/version drift: update the verified doc or source reference; do not silence checks.
 - Test expectation drift: verify runtime behavior first, then update tests only when the behavior is intended.
 - Pages smoke/SEO failure: inspect built `out/` and the route source; rebuild before rerunning `seo:check`.
