@@ -86,6 +86,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/run-changed-eslint.ts", "test"),
     exempt("scripts/ci/run-gitleaks.ts", "test"),
     exempt("scripts/ci/select-generated-artifacts.mts", "read-only"),
+    exempt("scripts/ci/sync-staged-generated-artifacts.mts", "build"),
     exempt("scripts/ci/verify-dependency-audit.ts", "read-only"),
     exempt("scripts/lib/coverage-audit-cli.ts", "build"),
     exempt(
