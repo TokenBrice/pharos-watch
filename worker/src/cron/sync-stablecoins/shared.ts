@@ -4,6 +4,7 @@ import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
+import { toErrorMessage } from "../../lib/error-utils";
 import type { CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -264,19 +265,38 @@ function markRestoredSupply(asset: PeggedAsset): PeggedAsset {
   return restored;
 }
 
-export async function loadPreviousStablecoinsById(db: D1Database): Promise<Map<string, PeggedAsset>> {
+/**
+ * Why the previous stablecoins map is (or is not) populated. The price
+ * staleness check derives its missing/malformed/error outcomes from this
+ * instead of re-reading and re-parsing the whole cache a second time per run.
+ */
+export type PreviousStablecoinsCacheState =
+  | { state: "ok" }
+  | { state: "missing" }
+  | { state: "malformed" }
+  | { state: "error"; message: string };
+
+export interface PreviousStablecoinsLoadResult {
+  previousAssetsById: Map<string, PeggedAsset>;
+  cacheState: PreviousStablecoinsCacheState;
+}
+
+export async function loadPreviousStablecoinsById(db: D1Database): Promise<PreviousStablecoinsLoadResult> {
   try {
     const prevCache = await getCache(db, "stablecoins");
-    if (!prevCache) return new Map();
+    if (!prevCache) return { previousAssetsById: new Map(), cacheState: { state: "missing" } };
     const prevData = parseStablecoinsCachePayload(prevCache.value);
-    if (!prevData) return new Map();
+    if (!prevData) return { previousAssetsById: new Map(), cacheState: { state: "malformed" } };
     const cacheUpdatedAt = normalizeOptionalTimestamp(prevCache.updatedAt);
-    return new Map(
-      prevData.peggedAssets.map((asset) => [String(asset.id), stampPreviousSupplyObservedAt(asset, cacheUpdatedAt)]),
-    );
+    return {
+      previousAssetsById: new Map(
+        prevData.peggedAssets.map((asset) => [String(asset.id), stampPreviousSupplyObservedAt(asset, cacheUpdatedAt)]),
+      ),
+      cacheState: { state: "ok" },
+    };
   } catch (err) {
     logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to parse previous stablecoins cache:", err);
-    return new Map();
+    return { previousAssetsById: new Map(), cacheState: { state: "error", message: toErrorMessage(err) } };
   }
 }
 
