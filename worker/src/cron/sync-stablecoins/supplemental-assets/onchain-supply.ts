@@ -131,7 +131,7 @@ function contractDecimals(contract: NonNullable<StablecoinMeta["contracts"]>[num
   return contract.decimals ?? (contract.chain === "solana" ? 6 : 18);
 }
 
-export function contractChainLabel(contract: NonNullable<StablecoinMeta["contracts"]>[number]): string {
+function contractChainLabel(contract: NonNullable<StablecoinMeta["contracts"]>[number]): string {
   return CHAIN_META[contract.chain]?.name ?? contract.chain;
 }
 

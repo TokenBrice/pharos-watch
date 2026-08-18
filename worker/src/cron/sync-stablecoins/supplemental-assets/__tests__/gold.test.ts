@@ -42,28 +42,6 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
         navToken: false,
       },
     },
-    {
-      // Single-deployment commodity token with no protocolSlug and no curated
-      // aggregate config: exercises the CoinGecko-fallback attribution path
-      // (data-pipeline rule 43) independently from pgold's 4-leg aggregate.
-      id: "kausgl-single-chain-test",
-      name: "Kau Single Chain Test Gold",
-      symbol: "kauT",
-      geckoId: "kau-single-chain-test-gold",
-      detailProvider: "commodity",
-      commodityOunces: 1,
-      contracts: [
-        { chain: "ethereum", address: "0x5555555555555555555555555555555555555fee", decimals: 18 },
-      ],
-      flags: {
-        pegCurrency: "GOLD",
-        backing: "rwa-backed",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: true,
-        navToken: false,
-      },
-    },
   ],
 }));
 
@@ -215,35 +193,5 @@ describe("fetchGoldTokens curated aggregate supply", () => {
     });
 
     expect(assets).toEqual([]);
-  });
-});
-
-describe("fetchGoldTokens single-contract attribution", () => {
-  it("attributes the CoinGecko-fallback aggregate to the single probeable deployment", async () => {
-    selectCuratedAggregateContractsMock.mockReset();
-    probeTrackedTokenSupplyMock.mockReset();
-    selectCuratedAggregateContractsMock.mockReturnValue(null);
-    stubGoldUpstreams(78_852_290);
-    const nowSec = Math.floor(Date.now() / 1000);
-
-    const assets = await fetchGoldTokens({
-      "kau-single-chain-test-gold": {
-        usd: 2_600,
-        usd_market_cap: 260_000,
-        last_updated_at: nowSec,
-      },
-    });
-
-    const asset = assets.find((token) => token.id === "kausgl-single-chain-test");
-    expect(asset?.supplySource).toBe("coingecko-fallback");
-    expect(asset?.circulating?.peggedGOLD).toBe(260_000);
-    expect(asset?.chainCirculating).toEqual({
-      Ethereum: {
-        current: 260_000,
-        circulatingPrevDay: 0,
-        circulatingPrevWeek: 0,
-        circulatingPrevMonth: 0,
-      },
-    });
   });
 });

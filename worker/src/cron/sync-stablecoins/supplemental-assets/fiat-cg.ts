@@ -7,7 +7,6 @@ import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap } from "./onchain-supply";
 import {
-  attributeSingleContractSupply,
   fetchSupplementalPriceData,
   getSupplementalChainLabels,
   pegTypeKey,
@@ -107,16 +106,6 @@ export async function fetchFiatCoinGeckoTokens(
           if (onChainMcap) {
             mcap = onChainMcap.mcap;
             supplySource = onChainMcap.supplySource;
-            if (Object.keys(chainCirculating).length === 0) {
-              chainCirculating = {
-                [onChainMcap.chainLabel]: {
-                  current: onChainMcap.mcap,
-                  circulatingPrevDay: 0,
-                  circulatingPrevWeek: 0,
-                  circulatingPrevMonth: 0,
-                },
-              };
-            }
           }
         }
 
@@ -124,13 +113,6 @@ export async function fetchFiatCoinGeckoTokens(
           logWorkerEventArgs("handler", "info", `[fiat-cg] No mcap for ${meta.symbol}, skipping`);
           return null;
         }
-
-        // A single probeable deployment can represent the whole published aggregate
-        // (data-pipeline rule 43): attribute the already-admitted number to its one
-        // chain so V9 gets a real partition instead of failing closed on an empty
-        // per-chain split. Never applies to multi-contract assets, and curated
-        // aggregates (which set chainCirculating themselves) take precedence.
-        chainCirculating = attributeSingleContractSupply(meta, mcap, chainCirculating);
 
         const priceConfidence: PeggedAsset["priceConfidence"] = priceResolution
           ? priceResolution.source === "coingecko-low-volume"
