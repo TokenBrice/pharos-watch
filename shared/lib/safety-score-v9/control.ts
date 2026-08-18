@@ -253,7 +253,12 @@ function isControlEconomicallyRelevant(control: V9DeploymentControlFactV2): bool
   );
 }
 
+function hasFreshScopedQuestion(control: V9DeploymentControlFactV2): boolean {
+  return control.scopedQuestionFresh === true && control.status.observationState !== "missing";
+}
+
 function mappedControlStatusReason(control: V9DeploymentControlFactV2): V9ReasonCode {
+  if (hasFreshScopedQuestion(control)) return "scoped-control-question";
   if (control.controlKind === "mint") {
     return control.status.observationState === "missing" ? "missing-mint-authority" : "unresolved-mint-authority";
   }
@@ -284,12 +289,71 @@ function controlCanRepresent(control: V9DeploymentControlFactV2, kind: "mint" | 
   return control.capabilities.includes(capability[kind]);
 }
 
-function bindingByMateriality(control: V9DeploymentControlFactV2, materialShareThreshold: number): boolean {
+function bindingByMateriality(
+  control: V9DeploymentControlFactV2,
+  materialShareThreshold: number,
+  provenNullShareBound: number | null = null,
+): boolean {
   if (control.economicLossScope === "global-claim" || control.economicLossScope === "reserve-claim") return true;
   if (control.economicLossScope === "access-only") return false;
   // A missing deployment share is not evidence of immateriality. Keep it
-  // fail-closed until the producer supplies an exact below-threshold share.
-  return control.materialSupplyShare === null || control.materialSupplyShare >= materialShareThreshold;
+  // fail-closed unless the producer supplied an exact share or a reconciled
+  // supply partition proves an upper bound for the control's deployment.
+  const share = control.materialSupplyShare ?? provenNullShareBound;
+  return share === null || share >= materialShareThreshold;
+}
+
+// The complete measured split of supply across deployment routes: aggregate
+// shares are produced and the rows sum back to each aggregate and to the
+// whole. Only such a partition can bound the share of a deployment the
+// producer did not join to its control; a partial or absent partition proves
+// nothing about any deployment.
+function reconciledSupplyPartition(
+  facts: V9EconomicControlAssetFacts,
+): V9EconomicControlAssetFacts["supply"]["selectedBridgeRoutes"] | null {
+  if (!isKnownRequired(facts.supply.status)) return null;
+  const { selectedRouteSupplyShare, unreviewedRouteSupplyShare, unknownRouteSupplyShare } = facts.supply;
+  if (selectedRouteSupplyShare === null || unreviewedRouteSupplyShare === null || unknownRouteSupplyShare === null) {
+    return null;
+  }
+  const rows = facts.supply.selectedBridgeRoutes;
+  const reviewedShare = rows.reduce(
+    (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyShare : 0),
+    0,
+  );
+  const unresolvedShare = rows.reduce(
+    (sum, route) => sum + (route.reviewState === "selected-unresolved" ? route.supplyShare : 0),
+    0,
+  );
+  const unmatchedShare = rows.reduce(
+    (sum, route) => sum + (route.reviewState === "unmatched" ? route.supplyShare : 0),
+    0,
+  );
+  if (
+    !bridgeSharesReconcile(reviewedShare, selectedRouteSupplyShare) ||
+    !bridgeSharesReconcile(unresolvedShare, unreviewedRouteSupplyShare) ||
+    !bridgeSharesReconcile(unmatchedShare, unknownRouteSupplyShare) ||
+    !bridgeSharesReconcile(reviewedShare + unresolvedShare + unmatchedShare, 1)
+  ) {
+    return null;
+  }
+  return rows;
+}
+
+// Upper bound for a null-share deployment control's supply share, proven by a
+// reconciled partition: the sum of that deployment's measured rows, or zero
+// when a complete partition holds no row for it.
+function provenNullShareDeploymentBound(
+  facts: V9EconomicControlAssetFacts,
+  control: V9DeploymentControlFactV2,
+): number | null {
+  if (control.economicLossScope !== "deployment" || control.materialSupplyShare !== null) return null;
+  const rows = reconciledSupplyPartition(facts);
+  if (rows === null) return null;
+  return rows.reduce(
+    (sum, route) => sum + (route.deploymentRouteKey === control.deploymentKey ? route.supplyShare : 0),
+    0,
+  );
 }
 
 function bridgeSharesReconcile(left: number, right: number): boolean {
@@ -322,32 +386,8 @@ function hasCompleteSubthresholdUnresolvedBridgeJoins(
   materialShareThreshold: number,
   commonModeShareThreshold: number,
 ): boolean {
-  if (!isKnownRequired(facts.supply.status)) return false;
-  const { selectedRouteSupplyShare, unreviewedRouteSupplyShare, unknownRouteSupplyShare } = facts.supply;
-  if (selectedRouteSupplyShare === null || unreviewedRouteSupplyShare === null || unknownRouteSupplyShare === null) {
-    return false;
-  }
-  const rows = facts.supply.selectedBridgeRoutes;
-  const reviewedShare = rows.reduce(
-    (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyShare : 0),
-    0,
-  );
-  const unresolvedShare = rows.reduce(
-    (sum, route) => sum + (route.reviewState === "selected-unresolved" ? route.supplyShare : 0),
-    0,
-  );
-  const unmatchedShare = rows.reduce(
-    (sum, route) => sum + (route.reviewState === "unmatched" ? route.supplyShare : 0),
-    0,
-  );
-  if (
-    !bridgeSharesReconcile(reviewedShare, selectedRouteSupplyShare) ||
-    !bridgeSharesReconcile(unresolvedShare, unreviewedRouteSupplyShare) ||
-    !bridgeSharesReconcile(unmatchedShare, unknownRouteSupplyShare) ||
-    !bridgeSharesReconcile(reviewedShare + unresolvedShare + unmatchedShare, 1)
-  ) {
-    return false;
-  }
+  const rows = reconciledSupplyPartition(facts);
+  if (rows === null) return false;
 
   const bridgeControlsByDeployment = new Map<string, V9DeploymentControlFactV2[]>();
   for (const control of controls) {
@@ -725,13 +765,24 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     args.facts.controlStatus.applicability.state === "required" &&
     args.facts.controlStatus.observationState !== "known"
   ) {
-    addReason("unresolved-control-identity", "local-component", "controls");
+    // An inventory demoted only by reviewer-scoped open questions inherits the
+    // scoped ceiling; any unresolved control without one keeps the hard reason.
+    const unresolvedControls = controls.filter(
+      (control) =>
+        isControlEconomicallyRelevant(control) &&
+        control.status.applicability.state !== "not-applicable" &&
+        !isKnownRequired(control.status),
+    );
+    const allScoped = unresolvedControls.length > 0 && unresolvedControls.every(hasFreshScopedQuestion);
+    addReason(allScoped ? "scoped-control-question" : "unresolved-control-identity", "local-component", "controls");
   }
 
   for (const control of controls) {
     if (!isControlEconomicallyRelevant(control)) continue;
     if (control.status.applicability.state === "not-applicable") continue;
-    const binding = bindingByMateriality(control, materialShareThreshold);
+    const nullShareBound = provenNullShareDeploymentBound(args.facts, control);
+    const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
+    const binding = bindingByMateriality(control, materialShareThreshold, nullShareBound);
     const pathKind = control.controlKind === "bridge" ? "deployment-control" : "local-component";
     const path = `control:${control.controlKey}`;
     if (control.status.applicability.state === "unresolved" || control.status.observationState !== "known") {
@@ -765,7 +816,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (
       control.economicLossScope === "deployment" &&
       control.materialSupplyShare === null &&
-      control.scope !== "global"
+      control.scope !== "global" &&
+      !provenImmaterial
     ) {
       addReason(
         control.controlKind === "bridge" ? "runtime-bridge-materiality-unavailable" : "unresolved-control-identity",
@@ -1186,14 +1238,16 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         continue;
       }
       if (!isControlEconomicallyRelevant(control)) continue;
-      const binding = bindingByMateriality(control, materialShareThreshold);
+      const nullShareBound = provenNullShareDeploymentBound(args.facts, control);
+      const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
+      const binding = bindingByMateriality(control, materialShareThreshold, nullShareBound);
       if (!isKnownRequired(control.status)) {
         if (binding) {
           addReason("selected-bridge-route-unresolved", "deployment-control", "bridge:route", route.controlKey);
         }
         continue;
       }
-      if (control.economicLossScope === "deployment" && control.materialSupplyShare === null) {
+      if (control.economicLossScope === "deployment" && control.materialSupplyShare === null && !provenImmaterial) {
         addReason(
           "runtime-bridge-materiality-unavailable",
           "deployment-control",

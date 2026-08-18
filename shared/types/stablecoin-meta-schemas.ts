@@ -26,6 +26,7 @@ import type {
   MintAuthorityProfile,
   MintAuthorityReview,
   MintAuthorityRouteChecks,
+  MintAuthorityScopedQuestion,
   OracleRiskProfile,
   MintAuthoritySafeState,
   ReserveReview,
@@ -996,6 +997,16 @@ const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z
     }
   });
 
+const MintAuthorityScopedQuestionSchema: z.ZodType<MintAuthorityScopedQuestion> = z
+  .object({
+    controlRef: z.string().min(1),
+    question: z.string().min(12),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    sources: z.array(StablecoinLinkSchema).min(1).optional(),
+  })
+  .strict();
+
 const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z
   .object({
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
@@ -1005,6 +1016,7 @@ const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z
     reviewedAt: ReviewDateSchema,
     disposition: z.enum(["scoreable", "unresolved"]).optional(),
     unresolvedQuestions: z.array(z.string().min(1)).optional(),
+    scopedQuestions: z.array(MintAuthorityScopedQuestionSchema).min(1).optional(),
     noLocalIssuance: MintAuthorityNoLocalIssuanceExceptionSchema.optional(),
   })
   .strict()
@@ -1088,6 +1100,24 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
     const controls = profile.controls ?? [];
     const profileHasSourceLinks = hasSourceLinks(profile.review.sources);
     const controlsHaveSourceLinks = controls.some((control) => hasSourceLinks(control.sources));
+
+    for (const [index, question] of (profile.review.scopedQuestions ?? []).entries()) {
+      const separator = question.controlRef.indexOf(":");
+      const refChain = separator === -1 ? null : question.controlRef.slice(0, separator);
+      const refAddress = separator === -1 ? null : question.controlRef.slice(separator + 1).toLowerCase();
+      const matched = controls.some(
+        (control) =>
+          (refChain !== null && control.chain === refChain && control.address?.toLowerCase() === refAddress) ||
+          control.label.toLowerCase() === question.controlRef.toLowerCase(),
+      );
+      if (!matched) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "scoped question controlRef must name an authored control's chain:address or label",
+          path: ["review", "scopedQuestions", index, "controlRef"],
+        });
+      }
+    }
 
     if (profile.review.disposition === "unresolved" && profile.confidence !== "unknown") {
       ctx.addIssue({

@@ -67,6 +67,7 @@ export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
   "peg-price-unavailable-adverse-history",
   "peg-supply-floor-withheld",
   "runtime-bridge-materiality-unavailable",
+  "scoped-control-question",
   "selected-bridge-route-missing",
   "selected-bridge-route-unresolved",
   "unknown-control-cap-authority",

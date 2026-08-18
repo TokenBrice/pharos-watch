@@ -468,7 +468,24 @@ export interface MintAuthorityReview {
   reviewedAt: string;
   disposition?: "scoreable" | "unresolved";
   unresolvedQuestions?: string[];
+  /**
+   * Reviewer-authored open questions scoped to one named control each. Unlike
+   * `unresolvedQuestions`, a scoped question does not void the review of the
+   * other controls: only the named control stays unresolved, and while the
+   * question is fresh it takes the bounded scoped-gap ceiling instead of the
+   * control-unverified ceiling.
+   */
+  scopedQuestions?: MintAuthorityScopedQuestion[];
   noLocalIssuance?: MintAuthorityNoLocalIssuanceException;
+}
+
+export interface MintAuthorityScopedQuestion {
+  /** `chain:address` of the authored control this question is scoped to. */
+  controlRef: string;
+  question: string;
+  reviewedAt: string;
+  reviewer: string;
+  sources?: StablecoinLink[];
 }
 
 export interface MintAuthorityNoLocalIssuanceException {

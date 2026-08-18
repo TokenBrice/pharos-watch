@@ -970,6 +970,7 @@
       "commonModeOracleLimit": 49,
       "namedReasonCeilings": {
         "control-unverified": 55,
+        "control-scoped-gap": 69,
         "oracle-unverified": 55,
         "backing-unverified": 60,
         "exit-unverified": 65,
@@ -2062,6 +2063,30 @@
       "ceilingRule": {
         "source": "named-ceiling",
         "key": "control-unverified"
+      }
+    },
+    {
+      "code": "scoped-control-question",
+      "ownerDomain": "control",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "deployment-control",
+        "local-component"
+      ],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": [
+        "ceiling"
+      ],
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
+      "publicLabel": "A reviewer-scoped control question is open",
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-scoped-gap"
       }
     },
     {

@@ -627,6 +627,140 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     }
   });
 
+  it("marks a control named by a fresh scoped question and routes its gaps to scoped-control-question", () => {
+    const scopedAddress = "mintauthority1solana";
+    const metadata = meta("fixture-scoped-question", {
+      mintAuthority: mintProfile({
+        controls: [
+          mintControl(),
+          mintControl({
+            chain: "solana",
+            address: scopedAddress,
+            label: "Fixture Solana token authority",
+            authorityType: "unknown",
+          }),
+        ],
+        review: {
+          sources: [SOURCE],
+          evidence: "The fixture review identifies the native issuance authority on two chains.",
+          reviewer: "Fixture reviewer",
+          reviewedAt: "1970-01-01",
+          scopedQuestions: [
+            {
+              controlRef: `solana:${scopedAddress}`,
+              question: "Which entity controls the Solana token mint authority?",
+              reviewedAt: "1970-01-01",
+              reviewer: "Fixture reviewer",
+              sources: [SOURCE],
+            },
+          ],
+        },
+      }),
+    });
+    const { compiled } = compileFixture(metadata);
+    const asset = compiled.assets[0]!;
+    const unresolved = asset.controls.filter(
+      (control) =>
+        control.controlKey.startsWith("mint-meta:fixture-scoped-question:") &&
+        control.status.observationState !== "known",
+    );
+
+    expect(unresolved).toHaveLength(1);
+    expect(unresolved[0]!.scopedQuestionFresh).toBe(true);
+    const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
+    expect(controlGap?.reasonCode).toBe("scoped-control-question");
+    const inventoryGap = asset.gaps.find((gap) => gap.gapId.endsWith(":gap:deployment-controls"));
+    expect(inventoryGap?.reasonCode).toBe("scoped-control-question");
+  });
+
+  it("matches a scoped question to a non-addressable control by its label", () => {
+    const metadata = meta("fixture-scoped-question-label", {
+      mintAuthority: mintProfile({
+        controls: [
+          mintControl(),
+          mintControl({
+            chain: "hedera",
+            address: undefined,
+            label: "Fixture Hedera supply key",
+            authorityType: "unknown",
+            evidence: "The Hedera supply key is a 2-of-5 multisig whose member attribution is unresolved.",
+          }),
+        ],
+        review: {
+          sources: [SOURCE],
+          evidence: "The fixture review identifies the native issuance authority on two chains.",
+          reviewer: "Fixture reviewer",
+          reviewedAt: "1970-01-01",
+          scopedQuestions: [
+            {
+              controlRef: "Fixture Hedera supply key",
+              question: "Which entities hold the Hedera supply key shares?",
+              reviewedAt: "1970-01-01",
+              reviewer: "Fixture reviewer",
+              sources: [SOURCE],
+            },
+          ],
+        },
+      }),
+    });
+    const { compiled } = compileFixture(metadata);
+    const asset = compiled.assets[0]!;
+    const unresolved = asset.controls.filter(
+      (control) =>
+        control.controlKey.startsWith("mint-meta:fixture-scoped-question-label:") &&
+        control.status.observationState !== "known",
+    );
+
+    expect(unresolved).toHaveLength(1);
+    expect(unresolved[0]!.scopedQuestionFresh).toBe(true);
+  });
+
+  it("drops the scoped-question marker once the question ages past the freshness window", () => {
+    const scopedAddress = "mintauthority1solana";
+    const metadata = meta("fixture-scoped-question-stale", {
+      mintAuthority: mintProfile({
+        controls: [
+          mintControl(),
+          mintControl({
+            chain: "solana",
+            address: scopedAddress,
+            label: "Fixture Solana token authority",
+            authorityType: "unknown",
+          }),
+        ],
+        review: {
+          sources: [SOURCE],
+          evidence: "The fixture review identifies the native issuance authority on two chains.",
+          reviewer: "Fixture reviewer",
+          reviewedAt: "1970-01-01",
+          scopedQuestions: [
+            {
+              controlRef: `solana:${scopedAddress}`,
+              question: "Which entity controls the Solana token mint authority?",
+              reviewedAt: "1970-01-01",
+              reviewer: "Fixture reviewer",
+              sources: [SOURCE],
+            },
+          ],
+        },
+      }),
+    });
+    const { compiled } = compileFixture(metadata, { clockSec: 91 * 86_400 });
+    const asset = compiled.assets[0]!;
+    const unresolved = asset.controls.filter(
+      (control) =>
+        control.controlKey.startsWith("mint-meta:fixture-scoped-question-stale:") &&
+        control.status.observationState !== "known",
+    );
+
+    expect(unresolved).toHaveLength(1);
+    expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
+    const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
+    expect(controlGap?.reasonCode).toBe("unresolved-control-identity");
+    const inventoryGap = asset.gaps.find((gap) => gap.gapId.endsWith(":gap:deployment-controls"));
+    expect(inventoryGap?.reasonCode).toBe("unresolved-control-identity");
+  });
+
   it("keeps compiled control keys stable when Mint Authority and bridge controls are reordered", () => {
     const routes = [route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)];
     const metadata = meta("fixture-control-order", {

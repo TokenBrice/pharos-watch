@@ -6,7 +6,7 @@ import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/d
 import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
-import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "@shared/lib/safety-score-v9/score-bearing-gates-policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -91,6 +91,7 @@ import {
   boundedObservedAt,
   confidenceForResearch,
   conservativeDateEndSec,
+  isoDateStartSec,
   maximumObservedAt,
   notApplicableStatus,
   requiredStatus,
@@ -306,6 +307,7 @@ function adaptMintControl(
   upgradeCapable: boolean,
   hasSeparateCapRaiser: boolean,
   reviewedEconomicCapSemantics: MintAuthorityEconomicCapSemantics | undefined,
+  scopedQuestionFresh: boolean,
 ): ControlOverlay {
   const controlKind = mintControlKind(control);
   const capabilities = mintCapabilities(control, upgradeCapable);
@@ -382,6 +384,7 @@ function adaptMintControl(
     authority: canonicalAuthorityType(assetId, control),
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
+    ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
     keyCustody: control.keyCustodyAttestation?.kind ?? "unknown",
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
     incidentState,
@@ -1017,6 +1020,17 @@ function adaptMintReview(
     (profile.review.unresolvedQuestions?.length ?? 0) === 0 &&
     reviewedObservationState(confidence) === "known";
   const upgradeability = profile.upgradeability;
+  // A scoped question softens only the one control it names, and only while
+  // its review date sits inside the freshness window.
+  const freshScopedQuestionRefs = new Set(
+    (profile.review.scopedQuestions ?? [])
+      .filter(
+        (question) =>
+          clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`) <=
+          V9_SCOPED_QUESTION_MAX_AGE_SEC,
+      )
+      .map((question) => question.controlRef.toLowerCase()),
+  );
   // An unresolved aggregate inventory does not erase controls that were
   // individually identified. Retain those controls in a partial review while
   // the unresolved deployment surfaces remain bounded and fail closed.
@@ -1034,6 +1048,9 @@ function adaptMintReview(
             candidateIndex !== index && candidate.chain === control.chain && candidate.canRaiseCap === true,
         ),
       profile.economicCapSemantics,
+      (control.address != null &&
+        freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
+        freshScopedQuestionRefs.has(control.label.toLowerCase()),
     ),
   );
   const directMintControl =

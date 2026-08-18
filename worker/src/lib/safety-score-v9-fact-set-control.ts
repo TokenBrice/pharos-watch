@@ -56,6 +56,13 @@ export function buildControls(context: AssetBuildContext): {
       controls: [],
     };
   }
+  // An inventory demoted only by reviewer-scoped open questions keeps the
+  // scoped reason so the whole-asset cause matches the per-control gaps; any
+  // unresolved control without one keeps the hard reason.
+  const unresolvedControls = review.controls.filter((control) => !controlCanCarryKnownStatus(control));
+  const allUnresolvedScoped =
+    unresolvedControls.length > 0 &&
+    unresolvedControls.every((control) => control.scopedQuestionFresh === true);
   const status =
     review.state === "reviewed-controls"
       ? createV9FactStatus({
@@ -65,7 +72,7 @@ export function buildControls(context: AssetBuildContext): {
         })
       : missingLocalFact(context, {
           componentKey: "deployment-controls",
-          reasonCode: "unresolved-control-identity",
+          reasonCode: allUnresolvedScoped ? "scoped-control-question" : "unresolved-control-identity",
           ownerDomain: "control",
           responsibility: "issuer-undisclosed",
           policyRuleId: "v9.control.review",
@@ -113,11 +120,12 @@ function boundedControlSemanticsStatus(
   control: ExtensionControlOverlay,
   evidenceRefIds: readonly string[],
 ): V9FactStatusV2 {
+  const scopedQuestion = control.scopedQuestionFresh === true;
   const gapId = addGap(
     context,
     createV9FactGapV3({
       gapId: `${context.asset.assetId}:gap:deployment-control:${control.controlKey}`,
-      reasonCode: "unresolved-control-identity",
+      reasonCode: scopedQuestion ? "scoped-control-question" : "unresolved-control-identity",
       ownerDomain: "control",
       policyRuleId: "v9.control.review",
       observationState: "bounded-unknown",
@@ -126,7 +134,9 @@ function boundedControlSemanticsStatus(
         control.scope === "deployment"
           ? { kind: "deployment-control", deploymentKey: control.deploymentKey, controlKey: control.controlKey }
           : { kind: "local-component", componentKey: `control:${control.controlKey}` },
-      message: "The control inventory is known, but this control's authority or economic semantics remain unresolved.",
+      message: scopedQuestion
+        ? "A reviewer-scoped open question names this control; its semantics stay bounded until it is resolved."
+        : "The control inventory is known, but this control's authority or economic semantics remain unresolved.",
       evidenceRefIds,
     }),
   );
