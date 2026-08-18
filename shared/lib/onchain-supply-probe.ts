@@ -537,6 +537,65 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // Verified 2026-08-18: ETH 222,174,299.983810 + BSC 12,526,473.143741
   // = 234,700,773.127551 (−0.14% vs CoinGecko 235,033,744.23).
   "susdd-tron-dao-reserve": [{ chain: "ethereum" }, { chain: "bsc" }],
+  // ZARP is issuer-native on Ethereum, Base, Polygon and Solana. Verified 2026-08-19:
+  // Ethereum 41,826,590.83270887 + Base 15,729,937.39 + Polygon 10,020,000.00 +
+  // Solana 6,403,393.992399 = 73,979,922.21510787, exactly CoinGecko's circulating.
+  // A same-address Gnosis token exists and reads 0; the issuer contract list omits it.
+  "zarp-zarp": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "polygon" },
+    { chain: "solana" },
+  ],
+  // MXNB is a FiatToken-fork minted natively on five EVMs. Verified 2026-08-19:
+  // Ethereum 1,530,469.139867 + Polygon 95,667.188094 + Arbitrum 25,635,717.221029
+  // + Avalanche 5,002,383.151635 + Base 4,376,239.087585 = 36,640,475.788210,
+  // exactly CoinGecko. No Noble/Solana mint was evidenced.
+  "mxnb-juno": [
+    { chain: "ethereum" },
+    { chain: "polygon" },
+    { chain: "arbitrum" },
+    { chain: "avalanche" },
+    { chain: "base" },
+  ],
+  // GBPe is issuer-native on six EVMs (official Monerium /tokens list). Verified
+  // 2026-08-19: Ethereum 0 + Gnosis 422,355.12 + Linea 22,858.47 + Arbitrum 11.00
+  // + Base 433.95 + Polygon 21.24 = 445,679.78. CoinGecko total 422,355.12 is
+  // the Gnosis leg only. V1 TokenFrontends (Gnosis 0x5cb9…, Polygon 0x7579…)
+  // report the same totalSupply as the v2 proxies — do not add them.
+  "gbpe-monerium": [
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "gnosis" },
+    { chain: "linea", rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
+    { chain: "arbitrum" },
+    { chain: "base" },
+    { chain: "polygon" },
+  ],
+  // AxCNH is issuer-native FiatTokenV2 on Conflux and Ethereum (independent masterMinters).
+  // Verified 2026-08-19: Ethereum 1,000,000.4 + Conflux 38,128,445.4 = 39,128,445.8,
+  // exact CoinGecko circulating. Conflux is absent from buildChainRpcs(); pin the
+  // official eSpace endpoint. Ethereum cannot escrow Conflux (1.00M < 38.13M).
+  "axcnh-anchorx": [
+    { chain: "ethereum" },
+    { chain: "conflux", rpcUrl: "https://evm.confluxrpc.com", fallbackRpcUrl: "https://evm.confluxrpc.org" },
+  ],
+  // MYRC is Blox issuer-native on Ethereum, Arbitrum, Base and Solana.
+  // Verified 2026-08-19: Ethereum 1,054,500 + Arbitrum 4,099,598.66 + Base 500,000
+  // + Solana 711,199.990103 = 6,365,298.650103. CoinGecko 5,310,798.650103 equals
+  // the three platforms it indexes and omits Ethereum (16.57% of the true total).
+  "myrc-blox": [{ chain: "ethereum" }, { chain: "arbitrum" }, { chain: "base" }, { chain: "solana" }],
+  // EUROT is independently mintable on Avalanche, Ethereum and Polygon.
+  // Verified 2026-08-19: Avalanche 160,000 + Ethereum 0 + Polygon 0 = 160,000,
+  // exact CoinGecko circulating. Ethereum/Polygon are reviewed live zeros.
+  "eurot-token-teknoloji": [
+    { chain: "avalanche" },
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true },
+  ],
+  // JPYT is minted natively on each OP-Stack chain by that chain's DepositManager.
+  // Verified 2026-08-19: Optimism 6,641,129.778467 + Base 992,314.925958 =
+  // 7,633,444.704425, exact CoinGecko circulating. Base is 13.00% of the total.
+  "jpyt-dephaser": [{ chain: "optimism" }, { chain: "base" }],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
