@@ -271,7 +271,11 @@ export async function runV9AfterCoreWithinWindow(
           .bind(
             options.currentSlotKey,
             options.slotStartedAt,
-            coreSlotStartedAt - 35 * 60,
+            // Matches the largest slot-fence stale window (6 minutes): a
+            // competing row whose heartbeat is older than that has either been
+            // reconciled already or is about to be, so it must not suppress
+            // this lane for the half hour the old 35-minute bind allowed.
+            coreSlotStartedAt - 6 * 60,
           )
           .first<ActiveV9SlotRow>();
         if (activeV9Slot) {

@@ -88,12 +88,17 @@ describe("reserve recovery mode", () => {
     mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
   });
 
-  it("does not scan, reconcile, or claim when off", async () => {
+  it("runs only the global stale-slot sweep when off", async () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("off"));
 
     expect(result.jobsErrored).toBe(0);
     expect(mocks.inspect).not.toHaveBeenCalled();
-    expect(mocks.sweep).not.toHaveBeenCalled();
+    expect(mocks.sweep).toHaveBeenCalledTimes(1);
+    expect(mocks.sweep).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ staleAfterSec: 300, limit: 10 }),
+    );
+    expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("slotKey");
     expect(mocks.retireIncompatible).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
@@ -110,7 +115,8 @@ describe("reserve recovery mode", () => {
 
     expect(result.jobsErrored).toBe(0);
     expect(mocks.inspect).toHaveBeenCalledTimes(1);
-    expect(mocks.sweep).not.toHaveBeenCalled();
+    expect(mocks.sweep).toHaveBeenCalledTimes(1);
+    expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("slotKey");
     expect(mocks.retireIncompatible).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
@@ -125,7 +131,9 @@ describe("reserve recovery mode", () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("reconcile"));
 
     expect(result.jobsErrored).toBe(0);
-    expect(mocks.sweep).toHaveBeenCalledTimes(1);
+    expect(mocks.sweep).toHaveBeenCalledTimes(2);
+    expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("slotKey");
+    expect(mocks.sweep.mock.calls[1]![1]).toMatchObject({ slotKey: "fourHourlyReserveSync" });
     expect(mocks.retireIncompatible).toHaveBeenCalledTimes(1);
     expect(mocks.prepare).toHaveBeenCalledTimes(1);
     expect(mocks.claim).not.toHaveBeenCalled();

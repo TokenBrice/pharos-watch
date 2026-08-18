@@ -204,7 +204,9 @@ interface RunningCronSlotRow {
   updated_at: number;
 }
 
-const STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC = 35 * 60;
+// Stale windows are 5-6 minutes and the global reconciler runs every five, so
+// a running slot silent for ten minutes should already have been swept.
+const STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC = 10 * 60;
 
 async function fetchCronHistoryRows(
   db: D1Database,
