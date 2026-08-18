@@ -2,10 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import syzusdRiskReview from "@shared/data/stablecoins/domains/risk-review/syzusd-yuzu.json";
 import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
+import xdaiRiskReview from "@shared/data/stablecoins/domains/risk-review/xdai-gnosis.json";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import { adaptBridgeReview } from "../safety-score-v9-extension-bridge";
+import {
+  ReviewEvidenceBuilder,
+  type V9ExtensionRegistryMeta,
+} from "../safety-score-v9-extension-shared";
 import { buildSafetyScoreV9SupplyReview, safetyScoreV9RouteSupplyShare } from "../safety-score-v9-extension-supply";
 import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9-supply-attribution";
+import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
 function fixedInputStub(chainCirculating: Record<string, { current: number }>): ReportCardsFixedInput {
   return { chainCirculatingById: { alpha: chainCirculating } } as unknown as ReportCardsFixedInput;
@@ -473,5 +480,140 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     expect(review!.selectedRouteSupplyShare).toBe(0.88);
     expect(review!.unknownRouteSupplyShare).toBe(0);
     expect(review!.unreviewedRouteSupplyShare).toBe(0.12);
+  });
+});
+
+describe("curated native single-route supply attribution", () => {
+  const XDAI_PROFILE = xdaiRiskReview.bridgeRouteRisk as unknown as BridgeRouteRiskProfile;
+  const XDAI_ROUTE_ID = "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d";
+  const XDAI_AGGREGATE_USD = 56_937_503.6252543;
+
+  function xdaiFixedInput(
+    overrides: {
+      chainRows?: Record<string, { current: number }>;
+      aggregate?: Record<string, unknown> | null;
+    } = {},
+  ): ReportCardsFixedInput {
+    return {
+      chainCirculatingById: { "xdai-gnosis": overrides.chainRows ?? {} },
+      aggregateCirculatingById: {
+        "xdai-gnosis": overrides.aggregate === undefined
+          ? { circulating: { peggedUSD: XDAI_AGGREGATE_USD }, observedAtSec: null }
+          : overrides.aggregate,
+      },
+    } as unknown as ReportCardsFixedInput;
+  }
+
+  it("attributes the published aggregate to the single reviewed xdai-gnosis route", () => {
+    const review = buildSafetyScoreV9SupplyReview(xdaiFixedInput(), "xdai-gnosis", XDAI_PROFILE);
+
+    expect(review).not.toBeNull();
+    expect(review!.selectedBridgeRoutes).toEqual([
+      {
+        deploymentRouteKey: XDAI_ROUTE_ID,
+        supplyUsd: XDAI_AGGREGATE_USD,
+        supplyShare: 1,
+        reviewState: "selected-reviewed",
+        reviewedRouteKind: "controlled",
+      },
+    ]);
+    expect(review!.selectedRouteSupplyShare).toBe(1);
+    expect(review!.unknownRouteSupplyShare).toBe(0);
+    expect(review!.unreviewedRouteSupplyShare).toBe(0);
+    expect(review!.failureDomains).toEqual(
+      [...(XDAI_PROFILE.routes![0]!.failureDomainKeys ?? [])]
+        .sort()
+        .map((key) => ({ kind: "bridge-route", key })),
+    );
+    expect(safetyScoreV9RouteSupplyShare(review, XDAI_ROUTE_ID)).toBe(1);
+  });
+
+  it("feeds materialSupplyShare 1 into every xdai bridge control via the attribution review", () => {
+    const clockSec = v9TestClockSec();
+    const meta = {
+      id: "xdai-gnosis",
+      mechanismArchetype: "crypto-backed",
+      bridgeRouteRisk: XDAI_PROFILE,
+    } as unknown as V9ExtensionRegistryMeta;
+    const review = buildSafetyScoreV9SupplyReview(xdaiFixedInput(), "xdai-gnosis", XDAI_PROFILE);
+
+    const withoutReview = adaptBridgeReview(
+      meta,
+      null,
+      1,
+      new ReviewEvidenceBuilder("xdai-gnosis", clockSec),
+      clockSec,
+    );
+    expect(withoutReview.controls.length).toBeGreaterThan(0);
+    expect(withoutReview.controls.every((control) => control.materialSupplyShare === null)).toBe(true);
+
+    const withReview = adaptBridgeReview(
+      meta,
+      review,
+      1,
+      new ReviewEvidenceBuilder("xdai-gnosis", clockSec),
+      clockSec,
+    );
+    expect(withReview.controls.length).toBeGreaterThan(0);
+    expect(withReview.controls.every((control) => control.materialSupplyShare === 1)).toBe(true);
+  });
+
+  it("lets observed chain rows win over the curated attribution", () => {
+    const review = buildSafetyScoreV9SupplyReview(
+      xdaiFixedInput({ chainRows: { gnosis: { current: 123 } } }),
+      "xdai-gnosis",
+      XDAI_PROFILE,
+    );
+
+    expect(review).not.toBeNull();
+    expect(review!.selectedBridgeRoutes).toHaveLength(1);
+    expect(review!.selectedBridgeRoutes[0]).toMatchObject({
+      deploymentRouteKey: XDAI_ROUTE_ID,
+      supplyUsd: 123,
+    });
+  });
+
+  it("fails closed when the profile route inventory does not match the curated entry", () => {
+    const route = XDAI_PROFILE.routes![0]!;
+    const twoRoutes = {
+      ...XDAI_PROFILE,
+      routes: [route, { ...route, id: "ethereum:0x00000000000000000000000000000000000000aa" }],
+    } as BridgeRouteRiskProfile;
+    expect(buildSafetyScoreV9SupplyReview(xdaiFixedInput(), "xdai-gnosis", twoRoutes)).toBeNull();
+
+    const renamedRoute = {
+      ...XDAI_PROFILE,
+      routes: [{ ...route, id: "gnosis:0x00000000000000000000000000000000000000bb" }],
+    } as BridgeRouteRiskProfile;
+    expect(buildSafetyScoreV9SupplyReview(xdaiFixedInput(), "xdai-gnosis", renamedRoute)).toBeNull();
+
+    const unresolvedRoute = {
+      ...XDAI_PROFILE,
+      routes: [{ ...route, reviewDisposition: "unresolved" as const }],
+    } as BridgeRouteRiskProfile;
+    expect(buildSafetyScoreV9SupplyReview(xdaiFixedInput(), "xdai-gnosis", unresolvedRoute)).toBeNull();
+  });
+
+  it("fails closed without a finite positive published aggregate", () => {
+    expect(
+      buildSafetyScoreV9SupplyReview(xdaiFixedInput({ aggregate: null }), "xdai-gnosis", XDAI_PROFILE),
+    ).toBeNull();
+    expect(
+      buildSafetyScoreV9SupplyReview(
+        xdaiFixedInput({ aggregate: { circulating: { peggedUSD: 0 }, observedAtSec: null } }),
+        "xdai-gnosis",
+        XDAI_PROFILE,
+      ),
+    ).toBeNull();
+  });
+
+  it("does not attribute assets outside the curated table", () => {
+    const fixedInput = {
+      chainCirculatingById: { alpha: {} },
+      aggregateCirculatingById: {
+        alpha: { circulating: { peggedUSD: XDAI_AGGREGATE_USD }, observedAtSec: null },
+      },
+    } as unknown as ReportCardsFixedInput;
+    expect(buildSafetyScoreV9SupplyReview(fixedInput, "alpha", XDAI_PROFILE)).toBeNull();
   });
 });

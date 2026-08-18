@@ -7,6 +7,7 @@ import {
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "./safety-score-v9-curated-single-route-supply";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared";
 import { safetyScoreV9TransferDeploymentKey } from "./safety-score-v9-extension-transfer";
@@ -377,6 +378,57 @@ function buildIndependentLiabilitySupplyReview(
 }
 
 /**
+ * Distributes the already-published aggregate USD onto the one curated
+ * reviewed route of a native-gas asset with no per-chain supply observation.
+ * Asserts no new supply number: the aggregate is admitted upstream and the
+ * single-route reality is asserted by the reviewed bridge profile, so this
+ * partition cannot restate supply or double count. Every gate is fail-closed;
+ * see `CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION` for the entry contract.
+ */
+function buildCuratedNativeSingleRouteSupplyReview(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  profile: BridgeRouteRiskProfile | undefined,
+): SupplyReview | null {
+  const entry = CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION[assetId];
+  if (entry === undefined || entry.assetId !== assetId || !profile) return null;
+
+  const routes = profile.routes ?? [];
+  if (routes.length !== 1) return null;
+  const route = routes[0]!;
+  if (route.id !== entry.routeId || route.reviewDisposition !== "reviewed") return null;
+
+  // A real upstream per-chain partition always wins over this curated
+  // attribution; the lane only fills the aggregate-only gap.
+  if (Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length > 0) return null;
+
+  const aggregateSupplyUsd = getCirculatingRaw(
+    fixedInput.aggregateCirculatingById[assetId] ?? {},
+  );
+  if (!Number.isFinite(aggregateSupplyUsd) || aggregateSupplyUsd <= 0) return null;
+
+  const failureDomains: SupplyReview["failureDomains"] = (
+    route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id]
+  ).map((key) => ({ kind: "bridge-route", key }));
+  return {
+    selectedBridgeRoutes: [{
+      deploymentRouteKey: route.id,
+      supplyUsd: aggregateSupplyUsd,
+      supplyShare: 1,
+      reviewState: "selected-reviewed",
+      reviewedRouteKind:
+        route.routeClass === "native" || route.issuanceModel === "native-issuance" ? "native" : "controlled",
+    }],
+    selectedRouteSupplyShare: 1,
+    unknownRouteSupplyShare: 0,
+    unreviewedRouteSupplyShare: 0,
+    failureDomains: [...new Map(failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
+      (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
+    ),
+  };
+}
+
+/**
  * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. Chains without a unique reviewed route row stay
  * in the unknown share instead of being attributed to any route.
@@ -420,6 +472,13 @@ export function buildSafetyScoreV9SupplyReview(
     options,
   );
   if (independentLiabilityReview) return independentLiabilityReview;
+
+  const curatedSingleRouteReview = buildCuratedNativeSingleRouteSupplyReview(
+    fixedInput,
+    assetId,
+    profile,
+  );
+  if (curatedSingleRouteReview) return curatedSingleRouteReview;
 
   const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);
