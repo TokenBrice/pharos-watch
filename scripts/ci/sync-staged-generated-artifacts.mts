@@ -7,6 +7,14 @@ import { collectStagedFiles, splitNullDelimited } from "../lib/changed-files.mts
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
+// `automation-registry.mjs` is untyped JS; name the shape this module relies on.
+interface RegistryArtifact {
+  id: string;
+  command: string;
+  outputPaths: string[];
+  sourcePaths: string[];
+}
+
 interface SyncOptions {
   cwd?: string;
   execFile?: typeof execFileSync;
@@ -86,19 +94,16 @@ export function syncStagedGeneratedArtifacts({
   );
   if (autoStage.length === 0 && manualCandidates.length === 0) return { blocked: [], manual: [], regenerated: [] };
 
-  const registryById = new Map(GENERATED_ARTIFACT_REGISTRY.map((artifact) => [artifact.id, artifact]));
+  const registryById = new Map(
+    (GENERATED_ARTIFACT_REGISTRY as RegistryArtifact[]).map((artifact) => [artifact.id, artifact]),
+  );
+  const outputPathsFor = (id: string): string[] => registryById.get(id)?.outputPaths ?? [];
 
   // Only warn about artifacts a human could actually commit. A gitignored
   // projection is rebuilt on demand, so naming it here is noise on every
   // coin or docs commit.
-  const ignored = collectIgnoredPaths(
-    manualCandidates.flatMap((id) => registryById.get(id)?.outputPaths ?? []),
-    cwd,
-    execFile,
-  );
-  const manual = manualCandidates.filter((id) =>
-    (registryById.get(id)?.outputPaths ?? []).some((path) => !ignored.has(path)),
-  );
+  const ignored = collectIgnoredPaths(manualCandidates.flatMap(outputPathsFor), cwd, execFile);
+  const manual = manualCandidates.filter((id) => outputPathsFor(id).some((path) => !ignored.has(path)));
   const unstaged = collectUnstagedPaths(cwd, execFile);
 
   // The generators read the working tree, not the index. Staging output derived

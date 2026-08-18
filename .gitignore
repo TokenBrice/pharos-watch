@@ -23,10 +23,8 @@
 
 # generated build artifacts
 /src/generated/*
-!/src/generated/docs-metadata.json.d.ts
 !/src/generated/homepage-bootstrap.json
 !/src/generated/homepage-bootstrap.json.d.ts
-!/src/generated/sitemap-dates.json.d.ts
 
 # deterministic source-tree projections materialized by `npm run bootstrap:generated`
 /public/maps/world-countries.svg
