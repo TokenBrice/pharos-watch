@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildGeneratedArtifactPhases, GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
@@ -19,7 +20,19 @@ interface RegistryArtifact {
   id: string;
   bootstrap?: boolean;
   checkable?: boolean;
+  inputState?: string;
   outputPaths: string[];
+}
+
+/** Ids the `bootstrap:generated:history` npm script passes to `--only`. */
+function historyBootstrapIds(): string[] {
+  const scripts = (
+    JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    }
+  ).scripts;
+  const only = /--only=([^\s"]+)/.exec(scripts["bootstrap:generated:history"] ?? "");
+  return only ? only[1].split(",") : [];
 }
 
 function selectedIds(options: Record<string, unknown>): string[] {
@@ -30,21 +43,48 @@ function selectedIds(options: Record<string, unknown>): string[] {
 
 const registry = GENERATED_ARTIFACT_REGISTRY as RegistryArtifact[];
 
+function isFullyGitIgnored(artifact: RegistryArtifact): boolean {
+  return (
+    artifact.outputPaths.length > 0 &&
+    artifact.outputPaths.every((path) => !path.includes("*") && isGitIgnored(path))
+  );
+}
+
 describe("generated artifact lifecycle", () => {
-  it("keeps every gitignored artifact bootstrap-safe", () => {
-    // A gitignored output only exists because `bootstrap:generated` wrote it.
-    // An artifact that is ignored but not bootstrap-safe is missing from a
-    // fresh clone and from every CI job, which surfaces as an import error.
+  it("materializes every gitignored artifact from one of the two bootstrap paths", () => {
+    // A gitignored output only exists because a bootstrap wrote it. An ignored
+    // artifact reachable from neither path is missing on a fresh clone and in
+    // every CI job, which surfaces as an unresolved import rather than a
+    // useful error. `bootstrap:generated` covers the ordinary projections;
+    // `bootstrap:generated:history` covers the ones needing full git history,
+    // which are deliberately kept out of the ordinary bootstrap because five
+    // workflows run it on a shallow checkout.
+    const historyIds = new Set(historyBootstrapIds());
     const offenders = registry
       .filter(
-        (artifact) =>
-          artifact.bootstrap !== true &&
-          artifact.outputPaths.length > 0 &&
-          artifact.outputPaths.every((path) => !path.includes("*") && isGitIgnored(path)),
+        (artifact) => artifact.bootstrap !== true && !historyIds.has(artifact.id) && isFullyGitIgnored(artifact),
       )
       .map((artifact) => artifact.id);
 
     expect(offenders).toEqual([]);
+  });
+
+  it("keeps the history bootstrap script in step with the build-time artifacts", () => {
+    const buildTimeIds = registry
+      .filter((artifact) => artifact.inputState === "build-time")
+      .map((artifact) => artifact.id);
+
+    expect([...historyBootstrapIds()].sort()).toEqual([...buildTimeIds].sort());
+  });
+
+  it("excludes build-time artifacts from the ordinary bootstrap", () => {
+    // They need full git history; `bootstrap:generated` must stay safe to run
+    // on the shallow checkouts several workflows use.
+    const leaked = registry
+      .filter((artifact) => artifact.inputState === "build-time" && artifact.bootstrap === true)
+      .map((artifact) => artifact.id);
+
+    expect(leaked).toEqual([]);
   });
 
   it("gitignores the report-card registry fingerprint projection", () => {
