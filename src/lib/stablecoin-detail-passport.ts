@@ -107,6 +107,7 @@ const ATTESTOR_PASSPORT_LABELS: Record<keyof typeof POR_TIER_STYLES, string> = {
   niche: "Niche",
   self: "Self-attested",
   none: "None",
+  undisclosed: "Not disclosed",
 };
 
 function buildFreezePassportItem(

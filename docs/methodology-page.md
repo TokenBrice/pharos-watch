@@ -121,13 +121,16 @@ Bluechip has two surfaces: the external Bluechip rating sync documented in [blue
 
 ### Proof of Reserves
 
-`StablecoinMeta.proofOfReserves` (in `shared/types/core.ts`) was extended in May 2026 with an `attestorTier` field — one of `big4` / `regional` / `niche` / `self` / `none` — paired with a `cadence` field of `daily-nav` / `real-time` / `daily` / `weekly` / `monthly` / `semi-monthly` / `quarterly` / `semi-annual` / `annual` / `ad-hoc` / `none`. The combination determines the badge color and label rendered by `POR_TIER_STYLES` in `shared/lib/classification/badges.ts`:
+`StablecoinMeta.proofOfReserves` (in `shared/types/core.ts`) was extended in May 2026 with an `attestorTier` field — one of `big4` / `regional` / `niche` / `self` / `none` / `undisclosed` — paired with a `cadence` field of `daily-nav` / `real-time` / `daily` / `weekly` / `monthly` / `semi-monthly` / `quarterly` / `semi-annual` / `annual` / `ad-hoc` / `none` / `undisclosed`. The combination determines the badge color and label rendered by `POR_TIER_STYLES` in `shared/lib/classification/badges.ts`:
 
 - `big4` — emerald. Independent attestation from a Big-4 firm (Deloitte, EY, KPMG, PwC).
 - `regional` — blue. Licensed regional CPA or auditor with a recognized practice.
 - `niche` — muted/neutral. Small or single-jurisdiction attestor without a wide reputation.
 - `self` — amber. Issuer-published self-attestation, no third-party signoff.
-- `none` — red. No attestation surface published.
+- `none` — red. A reviewer established that no reserve attestation exists: the issuer's materials were enumerated and hold none, or a claimed attestor was checked and refuted.
+- `undisclosed` — muted, dashed border. The issuer names no attestor, or a named artefact could not be retrieved. This is absence of evidence, not evidence of absence, and it never renders as an assertion.
+
+`none` and `undisclosed` are not interchangeable, and the distinction is the reviewer's: refuting an attestor is a finding, failing to reach one is a gap. Where an asset has no attestor concept at all — reserves verifiable directly on-chain through a bridge or factory contract — the field is omitted rather than forced onto either value, and the badge falls back to the `proofOfReserves.type` label.
 
 The cadence field is rendered alongside the tier badge as supporting text (e.g. "Big-4 attestor · monthly").
 

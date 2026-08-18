@@ -101,7 +101,14 @@ export type StablecoinFlags = import("./stablecoin-meta-schemas").StablecoinFlag
 export const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
 export type ProofOfReservesType = (typeof PROOF_OF_RESERVES_TYPE_VALUES)[number];
 
-export const ATTESTOR_TIER_VALUES = ["big4", "regional", "niche", "self", "none"] as const;
+/**
+ * Attestor quality ladder. `none` is a *reviewed* negative — a reviewer
+ * established that no reserve attestation exists. `undisclosed` is the absence
+ * of evidence: the issuer names no attestor, or the claimed artefact is not
+ * retrievable. The two must stay distinct so the UI never renders an
+ * undisclosed attestor as an asserted "No attestation".
+ */
+export const ATTESTOR_TIER_VALUES = ["big4", "regional", "niche", "self", "none", "undisclosed"] as const;
 export type AttestorTier = (typeof ATTESTOR_TIER_VALUES)[number];
 
 export const PROOF_OF_RESERVES_CADENCE_VALUES = [
@@ -115,7 +122,10 @@ export const PROOF_OF_RESERVES_CADENCE_VALUES = [
   "semi-annual",
   "annual",
   "ad-hoc",
+  /** Reviewed negative: the issuer publishes no periodic reserve report. */
   "none",
+  /** Absence of evidence: no cadence is published, or the artefact is unreachable. */
+  "undisclosed",
 ] as const;
 export type ProofOfReservesCadence = (typeof PROOF_OF_RESERVES_CADENCE_VALUES)[number];
 

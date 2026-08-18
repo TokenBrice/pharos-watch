@@ -56,6 +56,9 @@ const PROOF_REPORT_MAX_AGE_DAYS: Readonly<
   annual: 400,
   "ad-hoc": 400,
   none: 400,
+  // Undisclosed cadence carries the same permissive ceiling as `none`/`ad-hoc`:
+  // an unknown publication rhythm cannot imply a tighter staleness budget.
+  undisclosed: 400,
 };
 
 export interface ReserveEvidenceGapRow {
