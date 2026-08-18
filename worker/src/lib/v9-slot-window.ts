@@ -148,15 +148,14 @@ export async function waitForV9MemoryLaneRelease(
 
 /**
  * Admits canonical V9 work only after the matching public quarter-hour slot
- * has completed on the active Worker version and while an absolute pre-quarter
- * execution window remains. A degraded core slot is admitted only when its
- * durable publication ledger proves that the same Worker published the current
- * stablecoins cache during that slot. This keeps an isolated coverage gap from
- * starving V9 without allowing a stale/no-write stablecoin run through. The
- * shared V9 lane lease serializes V9 work and keeps later triggers from loading
- * their job graphs. A prior active invocation of the same V9 schedule lane still
- * fails closed, while unrelated scheduled slots cannot suppress canonical
- * publication.
+ * has completed on the active Worker version, or when the durable publication
+ * ledger proves that the same Worker published the current stablecoins cache
+ * during that slot, and while an absolute pre-quarter execution window remains.
+ * This keeps an isolated parent-slot terminal-row failure from starving V9
+ * without allowing a stale/no-write stablecoin run through. The shared V9 lane
+ * lease serializes V9 work and keeps later triggers from loading their job
+ * graphs. A prior active invocation of the same V9 schedule lane still fails
+ * closed, while unrelated scheduled slots cannot suppress canonical publication.
  */
 export async function runV9AfterCoreWithinWindow(
   options: V9SlotWindowOptions,
@@ -214,38 +213,37 @@ export async function runV9AfterCoreWithinWindow(
           .bind(coreSlotStartedAt)
           .first<CoreSlotRow>();
 
-        let degradedCorePublicationMatched = false;
-        if (
+        let coreStablecoinsPublicationMatched = false;
+        try {
+          coreStablecoinsPublicationMatched =
+            await hasMatchingCoreStablecoinsPublication(
+              options.db,
+              coreSlotStartedAt,
+              workerVersion,
+            );
+        } catch (error) {
+          return degradedAdmission(
+            "v9-core-publication-evidence-unavailable",
+            {
+              lane: options.lane,
+              coreSlotStartedAt,
+              code: error instanceof Error ? error.name : "Error",
+            },
+          );
+        }
+        const degradedCorePublicationMatched =
           coreSlot?.state === "finished" &&
           coreSlot.result_status === "degraded" &&
-          coreSlot.worker_version === workerVersion
-        ) {
-          try {
-            degradedCorePublicationMatched =
-              await hasMatchingCoreStablecoinsPublication(
-                options.db,
-                coreSlotStartedAt,
-                workerVersion,
-              );
-          } catch (error) {
-            return degradedAdmission(
-              "v9-core-publication-evidence-unavailable",
-              {
-                lane: options.lane,
-                coreSlotStartedAt,
-                code: error instanceof Error ? error.name : "Error",
-              },
-            );
-          }
-        }
+          coreSlot.worker_version === workerVersion &&
+          coreStablecoinsPublicationMatched;
+        const coreSlotReady =
+          coreSlot?.state === "finished" &&
+          coreSlot.result_status === "ok" &&
+          coreSlot.worker_version === workerVersion;
 
         if (
-          coreSlot?.state !== "finished" ||
-          (
-            coreSlot.result_status !== "ok" &&
-            !degradedCorePublicationMatched
-          ) ||
-          coreSlot.worker_version !== workerVersion
+          !coreSlotReady &&
+          !coreStablecoinsPublicationMatched
         ) {
           return neutralSkip("v9-core-slot-not-ready", {
             lane: options.lane,
@@ -254,6 +252,7 @@ export async function runV9AfterCoreWithinWindow(
             coreResultStatus: coreSlot?.result_status ?? null,
             coreWorkerVersion: coreSlot?.worker_version ?? null,
             expectedWorkerVersion: workerVersion,
+            coreStablecoinsPublicationMatched,
             degradedCorePublicationMatched,
           });
         }

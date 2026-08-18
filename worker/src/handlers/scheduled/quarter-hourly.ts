@@ -2,22 +2,22 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Quarter-hourly trigger (every 15 min):
  *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots (0)
- *   -> depeg resolver (0)
+ *   -> supply snapshots (0)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier
  * stablecoin pricing pipeline consumes the slot's shared fetch budget.
- * Private V9 attribution and compilation use their own fenced +8 and +22/+52
- * triggers. The V9 fixed input (report-cards snapshot + peg-analytics
- * publish) is prepared on the half-hourly 16,46 chart slot
- * (`prepare-safety-score-v9-input`, after DEX publication), not in this
- * quarter-hourly slot.
+ * Private V9 attribution, DDR, and V9 compilation use fenced follow-up lanes.
+ * DDR intentionally runs after the heavy core slot so the quarter-hour trigger
+ * does not spend its remaining wall-clock budget on D1-only resolver work.
+ * The V9 fixed input (report-cards snapshot + peg-analytics publish) is
+ * prepared on the half-hourly 16,46 chart slot (`prepare-safety-score-v9-input`,
+ * after DEX publication), not in this quarter-hourly slot.
  */
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
-import { computeDepegResolver } from "../../cron/compute-depeg-resolver";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJobWithOutcome } from "./run-best-effort-job";
 import {
@@ -90,16 +90,5 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
 
   await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
-  outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>
-    computeDepegResolver({
-      db: runtime.db,
-      signal,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe,
-      depegPipelineHealthy: stablecoinsCapabilities.depegPipeline,
-      syncCapabilities: stablecoinsCapabilities,
-    }),
-  )).summary);
-
   return buildScheduledSlotSummary(outcomes);
 }

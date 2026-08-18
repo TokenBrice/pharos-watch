@@ -46,6 +46,17 @@ regexTarget = "secret"
 regexes = ['''^(?:src|scripts|shared|worker|functions)/[A-Za-z0-9._/-]+$''']
 
 [[allowlists]]
+description = "Cron scheduleKey enum literals are public scheduler identifiers, not credentials"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = ['''\b(?:\w+\.)?scheduleKey\b\s*(?::|={2,3})\s*["'][A-Za-z][A-Za-z0-9]+["']''']
+paths = [
+  '''(?:^|/)shared/lib/cron-jobs\.ts$''',
+  '''(?:^|/)shared/lib/__tests__/cron-jobs\.test\.ts$''',
+  '''(?:^|/)scripts/ci/check-cron-connection-budget\.test\.ts$''',
+]
+
+[[allowlists]]
 description = "Cosmos IBC denoms (ibc/ + 64 hex) are public on-chain identifiers, not secrets"
 regexTarget = "secret"
 regexes = ['''^ibc/[A-F0-9]{64}$''']
