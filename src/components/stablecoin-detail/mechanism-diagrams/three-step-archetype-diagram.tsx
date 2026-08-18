@@ -24,7 +24,7 @@ type ThreeStepConfig = {
   dashed?: boolean;
 };
 
-export const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> = {
+const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> = {
   "fiat-cash": {
     accentColor: "var(--mechanism-fiat-cash)",
     stressFootnote: "stress: banking-rail freeze (USDC, Mar 2023)",

@@ -303,7 +303,7 @@ function queueServiceCapacityUsd(
  * channels that used to floor to the bounded-unknown score regardless of how
  * redeemable the asset actually is.
  */
-export const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute["routeFamily"][] = [
+const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute["routeFamily"][] = [
   "issuer-redemption",
   "protocol-redemption",
   "eventual-redemption",
