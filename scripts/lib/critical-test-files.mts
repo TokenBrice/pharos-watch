@@ -102,6 +102,7 @@ export const CRITICAL_TEST_FILES: string[] = [
   "shared/lib/__tests__/safety-score-publication.test.ts",
   "shared/lib/__tests__/safety-score-v9-input-identity.test.ts",
   "worker/src/lib/__tests__/safety-score-active-source.test.ts",
+  "worker/src/lib/__tests__/safety-score-active-identity.test.ts",
   "worker/src/api/__tests__/safety-score-history-v2.test.ts",
   "worker/src/lib/__tests__/safety-score-history-v2.test.ts",
   "worker/scripts/lib/__tests__/safety-score-v9-anchor-gate.test.ts",
