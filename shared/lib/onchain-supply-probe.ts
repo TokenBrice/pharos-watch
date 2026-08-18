@@ -399,6 +399,30 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "apechain", rpcUrl: "https://rpc.apechain.com/http", fallbackRpcUrl: "https://apechain.calderachain.xyz/http" },
     { chain: "pharos", rpcUrl: "https://api.zan.top/public/pharos-mainnet", fallbackRpcUrl: "https://pharos.drpc.org" },
   ],
+  // PAXG is issuer-native on Ethereum and Solana. The Ethereum LayerZero OFTWrapper
+  // 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 is a burn/mint SupplyController
+  // (approvalRequired false; balanceOf 0), so Ethereum totalSupply does not escrow
+  // the Solana float and the legs sum. Verified 2026-08-18: Ethereum 434,564.906308
+  // (block 25784877) + Solana 2,382.341744 (slot 440141599) = 436,947.248052,
+  // matching CoinGecko circulating exactly. Do not add CANONICAL_SUPPLY_CHAINS.
+  "paxg-paxos": [{ chain: "ethereum" }, { chain: "solana" }],
+  // DGLD is independently gold-backed on Ethereum and Base after the 2026-06-30
+  // bridge close. Verified 2026-08-18: Ethereum 1,603.687 (block 25784877) + Base
+  // 401.159 (block 50150845) = 2,004.846. Deprecated Base 0xd02f50…d6c9 reads 0.
+  // CoinGecko 2,411.955 is a +20.3% stale overcount (RWA.xyz matches on-chain).
+  "dgld-gold-token-sa": [{ chain: "ethereum" }, { chain: "base" }],
+  // VNXAU is issuer-native on each chain. Verified 2026-08-18: Ethereum 543.10593
+  // (block 25784877) + Polygon 107.73577 (block 92257341) + Base 1,753.41189
+  // (block 50150845) + Etherlink 31,400.97041 (block 51291170) + Solana
+  // 10,279.21837712 (slot 440141599) = 44,084.442377, −0.035% vs CoinGecko 44,100.
+  // Horizon Stellar and TzKT Tezos both read zero, so they stay unconfigured.
+  "vnxau-vnx": [
+    { chain: "ethereum" },
+    { chain: "polygon" },
+    { chain: "base" },
+    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+    { chain: "solana" },
+  ],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
