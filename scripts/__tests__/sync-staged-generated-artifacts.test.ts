@@ -91,6 +91,26 @@ describe("staged artifact sync", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("og-editorial"));
   });
 
+  it("does not warn about gitignored artifacts a human cannot commit", () => {
+    // `git check-ignore --stdin` echoes back only the ignored paths.
+    const execFile = vi.fn((_file: string, args: readonly string[]) =>
+      args[0] === "check-ignore"
+        ? "src/generated/sitemap-dates.json\0src/generated/sitemap-dates.json.d.ts\0"
+        : "",
+    ) as never;
+    const log = vi.fn();
+
+    const result = syncStagedGeneratedArtifacts({
+      stagedFiles: ["src/app/page.tsx"],
+      execFile,
+      runCommand: vi.fn(() => 0),
+      log,
+    });
+
+    expect(result.manual).not.toContain("sitemap-dates");
+    expect(result.manual).toContain("og-editorial");
+  });
+
   it("fails loudly when a generator exits non-zero", () => {
     expect(() =>
       syncStagedGeneratedArtifacts({

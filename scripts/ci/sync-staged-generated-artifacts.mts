@@ -45,6 +45,31 @@ function matchesAny(path: string, patterns: readonly string[]): boolean {
   return patterns.some((pattern) => path === pattern || matchesGlob(path, pattern));
 }
 
+/**
+ * Paths git ignores, resolved in one batch. Glob output paths are reported as
+ * tracked: `git check-ignore` matches literal paths, and a conservative
+ * "tracked" answer only risks an extra warning, never a silent miss.
+ */
+function collectIgnoredPaths(
+  paths: readonly string[],
+  cwd: string,
+  execFile: typeof execFileSync,
+): Set<string> {
+  const literal = paths.filter((path) => !path.includes("*"));
+  if (literal.length === 0) return new Set();
+  try {
+    // Exit code 1 means "nothing ignored" and throws; exit 128 is a real error.
+    const output = execFile("git", ["check-ignore", "--stdin", "-z"], {
+      cwd,
+      encoding: "utf8",
+      input: `${literal.join("\0")}\0`,
+    });
+    return new Set(splitNullDelimited(String(output)).map((path) => path.replaceAll("\\", "/")));
+  } catch {
+    return new Set();
+  }
+}
+
 export function syncStagedGeneratedArtifacts({
   cwd = process.cwd(),
   execFile = execFileSync,
@@ -56,10 +81,24 @@ export function syncStagedGeneratedArtifacts({
   const staged = stagedFiles ?? collectStagedFiles({ cwd });
   if (staged.length === 0) return { blocked: [], manual: [], regenerated: [] };
 
-  const { autoStage, manual } = selectAutoStageArtifactIds(selectChangedGeneratedArtifactIds(staged));
-  if (autoStage.length === 0 && manual.length === 0) return { blocked: [], manual: [], regenerated: [] };
+  const { autoStage, manual: manualCandidates } = selectAutoStageArtifactIds(
+    selectChangedGeneratedArtifactIds(staged),
+  );
+  if (autoStage.length === 0 && manualCandidates.length === 0) return { blocked: [], manual: [], regenerated: [] };
 
   const registryById = new Map(GENERATED_ARTIFACT_REGISTRY.map((artifact) => [artifact.id, artifact]));
+
+  // Only warn about artifacts a human could actually commit. A gitignored
+  // projection is rebuilt on demand, so naming it here is noise on every
+  // coin or docs commit.
+  const ignored = collectIgnoredPaths(
+    manualCandidates.flatMap((id) => registryById.get(id)?.outputPaths ?? []),
+    cwd,
+    execFile,
+  );
+  const manual = manualCandidates.filter((id) =>
+    (registryById.get(id)?.outputPaths ?? []).some((path) => !ignored.has(path)),
+  );
   const unstaged = collectUnstagedPaths(cwd, execFile);
 
   // The generators read the working tree, not the index. Staging output derived
