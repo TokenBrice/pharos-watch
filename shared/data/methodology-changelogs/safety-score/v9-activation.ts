@@ -1,5 +1,22 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_BRIDGE_SCOPED_QUESTIONS: MethodologyChangelogEntry = {
+  version: "9.28",
+  title: "Scoped open questions extend to bridge controls",
+  date: "2026-08-18",
+  effectiveAt: 1787097600,
+  summary:
+    "The 9.27 scoped-question contract now covers structured bridge controls. A curated bridgeRouteRisk review can author scopedQuestions, each naming one structured control by its id, its exact label, or its controllerChain:controllerAddress pair, with its own question text, review date, and sources. While such a question is fresh, an unresolved named control takes the 69 control-scoped-gap ceiling instead of the 55 control-unverified ceiling — the same ninety-day freshness window, the same reversion when it ages out, and the same rule that a question softens only the control it names. The compiled bridge fact is the route-level merge of its structured controls, so the merged overlay inherits the marker only when every unresolved contributor on that route is named; one unnamed unresolved sibling keeps the hard treatment, mirroring the mint-authority whole-inventory rule at route granularity.",
+  impact: [
+    "bridgeRouteRisk gains scopedQuestions[] with the same shape as mintAuthority.review.scopedQuestions. The schema rejects a controlRef that names no authored structured control, and questions attach nothing to conservative route-derived fallback controls, which have no reviewer behind them",
+    "No scoring policy changes: the scoped-control-question reason, its 69 control-scoped-gap ceiling, and its deployment-control path kind all exist since 9.27, so the policy semantic digest does not move. Only the sidecar vocabulary, the bridge compiler, and the version label change",
+    "The three open questions the aug18 control-research wave could not attach in 9.27 are authored in the same release: usn-noon's Starknet owner account-class identity and Sophon-origin Hyperlane validator operator, and usdat-saturn's CCIP RMN blessing-roster membership",
+    "Measured on the 2026-08-18 publication capture: no score, grade, or pillar score moves. The named controls were already resolved by the same wave's research, so the questions document residual soft unknowns today and bound the downgrade to 69 instead of 55 if any of those controls later degrades to unresolved",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_SCOPED_CONTROL_QUESTIONS: MethodologyChangelogEntry = {
   version: "9.27",
   title: "A reviewer-scoped open question is better evidence than silence",

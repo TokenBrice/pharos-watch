@@ -4,7 +4,7 @@
  */
 import { resolveChainId } from "@shared/lib/chains";
 import { normalizeDeploymentId } from "@shared/lib/deployment-id";
-import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import type { V9FailureDomainRef } from "@shared/types/safety-score-v9-facts";
 import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/core";
@@ -12,6 +12,7 @@ import {
   COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
   DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
   confidenceForResearch,
+  isoDateStartSec,
   notApplicableStatus,
   requiredStatus,
   researchReviewObservationState,
@@ -690,6 +691,47 @@ export function adaptBridgeReview(
         safetyScoreV9RouteSupplyShare(supplyReview ?? null, routeId),
       ),
     );
+  }
+  // A fresh reviewer-scoped question softens only the structured control it
+  // names. The compiled fact is the route-level merge, so the merged overlay
+  // inherits the marker only when every unresolved contributor on the route is
+  // named; one unnamed unresolved sibling keeps the hard treatment, mirroring
+  // the mint-authority whole-inventory rule at route granularity.
+  const freshScopedQuestionRefs = new Set(
+    (profile.scopedQuestions ?? [])
+      .filter(
+        (question) =>
+          clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:bridge-scoped-question`) <=
+          V9_SCOPED_QUESTION_MAX_AGE_SEC,
+      )
+      .map((question) => question.controlRef.toLowerCase()),
+  );
+  const controlHasFreshScopedQuestion = (control: BridgeRouteControl): boolean =>
+    freshScopedQuestionRefs.has(control.id.toLowerCase()) ||
+    freshScopedQuestionRefs.has(control.label.toLowerCase()) ||
+    (control.controllerChain != null &&
+      control.controllerAddress != null &&
+      freshScopedQuestionRefs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
+  const overlayFullyResolved = (overlay: ControlOverlay): boolean =>
+    overlay.authority !== null &&
+    overlay.authority.model !== "unknown" &&
+    overlay.failureDomains.length > 0 &&
+    overlay.capSemantics.kind !== "unknown" &&
+    overlay.claimImpairment !== "unknown" &&
+    overlay.economicLossScope !== "unknown" &&
+    overlay.incidentState !== "unknown";
+  if (freshScopedQuestionRefs.size > 0) {
+    for (const [routeId, entries] of structuredOverlaysByDeployment) {
+      const merged = structuredRouteControlsByDeployment.get(routeId);
+      if (!merged || overlayFullyResolved(merged)) continue;
+      const anyNamed = entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl));
+      const allUnresolvedNamed = entries.every(
+        (entry) => controlHasFreshScopedQuestion(entry.sourceControl) || overlayFullyResolved(entry.overlay),
+      );
+      if (anyNamed && allUnresolvedNamed) {
+        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true });
+      }
+    }
   }
   // Every referenced structured fact contributes to exactly one route-level
   // overlay. The source control IDs and all failure domains remain in the

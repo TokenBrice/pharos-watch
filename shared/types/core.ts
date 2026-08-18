@@ -933,6 +933,26 @@ export interface BridgeRouteRiskProfile {
   sources?: StablecoinLink[];
   routes?: BridgeRouteDeployment[];
   controls?: BridgeRouteControl[];
+  /**
+   * Reviewer-authored open questions scoped to one structured bridge control
+   * each, mirroring `mintAuthority.review.scopedQuestions`. A scoped question
+   * does not void the review of the other controls: only the named control
+   * stays unresolved, and while the question is fresh it takes the bounded
+   * scoped-gap ceiling instead of the control-unverified ceiling.
+   */
+  scopedQuestions?: BridgeRouteScopedQuestion[];
+}
+
+export interface BridgeRouteScopedQuestion {
+  /**
+   * The authored structured control this question is scoped to: its `id`,
+   * its exact `label`, or its `controllerChain:controllerAddress` pair.
+   */
+  controlRef: string;
+  question: string;
+  reviewedAt: string;
+  reviewer: string;
+  sources?: StablecoinLink[];
 }
 
 export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;

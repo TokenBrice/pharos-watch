@@ -627,6 +627,113 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     }
   });
 
+  it.each([
+    ["id", "fixture-bridge-control"],
+    ["label", "Fixture structured bridge controller"],
+    ["controllerChain:controllerAddress", "base:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+  ])("marks a bridge control named by a fresh scoped question via its %s", (_kind, controlRef) => {
+    const metadata = meta("fixture-bridge-scoped-question", {
+      bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)], {
+        controls: [
+          bridgeControl({
+            authorityType: "unknown",
+          }),
+        ],
+        scopedQuestions: [
+          {
+            controlRef,
+            question: "Which entity operates the fixture bridge controller?",
+            reviewedAt: "1970-01-01",
+            reviewer: "Fixture reviewer",
+            sources: [SOURCE],
+          },
+        ],
+      }),
+    });
+    const { compiled } = compileFixture(metadata);
+    const asset = compiled.assets[0]!;
+    const unresolved = asset.controls.filter(
+      (control) =>
+        control.controlKey.startsWith("bridge-meta:fixture-bridge-scoped-question:") &&
+        control.status.observationState !== "known",
+    );
+
+    expect(unresolved).toHaveLength(1);
+    expect(unresolved[0]!.scopedQuestionFresh).toBe(true);
+    const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
+    expect(controlGap?.reasonCode).toBe("scoped-control-question");
+  });
+
+  it("drops the bridge scoped-question marker once the question ages past the freshness window", () => {
+    const metadata = meta("fixture-bridge-scoped-question-stale", {
+      bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)], {
+        controls: [
+          bridgeControl({
+            authorityType: "unknown",
+          }),
+        ],
+        scopedQuestions: [
+          {
+            controlRef: "fixture-bridge-control",
+            question: "Which entity operates the fixture bridge controller?",
+            reviewedAt: "1970-01-01",
+            reviewer: "Fixture reviewer",
+            sources: [SOURCE],
+          },
+        ],
+      }),
+    });
+    const { compiled } = compileFixture(metadata, { clockSec: 91 * 86_400 });
+    const asset = compiled.assets[0]!;
+    const unresolved = asset.controls.filter(
+      (control) =>
+        control.controlKey.startsWith("bridge-meta:fixture-bridge-scoped-question-stale:") &&
+        control.status.observationState !== "known",
+    );
+
+    expect(unresolved).toHaveLength(1);
+    expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
+    const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
+    expect(controlGap?.reasonCode).toBe("unresolved-control-identity");
+  });
+
+  it("keeps a route's merged bridge overlay hard when an unresolved sibling control lacks a scoped question", () => {
+    const metadata = meta("fixture-bridge-scoped-question-mixed", {
+      bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)], {
+        controls: [
+          bridgeControl({
+            authorityType: "unknown",
+          }),
+          bridgeControl({
+            id: "fixture-bridge-control-sibling",
+            label: "Fixture sibling bridge controller",
+            authorityType: "unknown",
+            controllerAddress: "0xcccccccccccccccccccccccccccccccccccccccc",
+          }),
+        ],
+        scopedQuestions: [
+          {
+            controlRef: "fixture-bridge-control",
+            question: "Which entity operates the fixture bridge controller?",
+            reviewedAt: "1970-01-01",
+            reviewer: "Fixture reviewer",
+            sources: [SOURCE],
+          },
+        ],
+      }),
+    });
+    const { compiled } = compileFixture(metadata);
+    const asset = compiled.assets[0]!;
+    const unresolved = asset.controls.filter(
+      (control) =>
+        control.controlKey.startsWith("bridge-meta:fixture-bridge-scoped-question-mixed:") &&
+        control.status.observationState !== "known",
+    );
+
+    expect(unresolved).toHaveLength(1);
+    expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
+  });
+
   it("marks a control named by a fresh scoped question and routes its gaps to scoped-control-question", () => {
     const scopedAddress = "mintauthority1solana";
     const metadata = meta("fixture-scoped-question", {

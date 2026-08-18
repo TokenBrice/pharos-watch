@@ -5,6 +5,7 @@ import type {
   BridgeRouteDeployment,
   BridgeRouteProtocolEvidence,
   BridgeRouteRiskProfile,
+  BridgeRouteScopedQuestion,
   CoinNotice,
   ContractDeployment,
   CustodyProfile,
@@ -592,9 +593,29 @@ export const BridgeRouteRiskProfileSchema: z.ZodType<BridgeRouteRiskProfile> = z
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     routes: z.array(BridgeRouteDeploymentSchema).min(1).optional(),
     controls: z.array(z.lazy(() => BridgeRouteControlSchema)).min(1).optional(),
+    scopedQuestions: z.array(z.lazy(() => BridgeRouteScopedQuestionSchema)).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
+    for (const [index, question] of (profile.scopedQuestions ?? []).entries()) {
+      const ref = question.controlRef.toLowerCase();
+      const matched = (profile.controls ?? []).some(
+        (control) =>
+          control.id.toLowerCase() === ref ||
+          control.label.toLowerCase() === ref ||
+          (control.controllerChain != null &&
+            control.controllerAddress != null &&
+            `${control.controllerChain}:${control.controllerAddress.toLowerCase()}` === ref),
+      );
+      if (!matched) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "scoped question controlRef must name a structured bridge control's id, label, or controllerChain:controllerAddress",
+          path: ["scopedQuestions", index, "controlRef"],
+        });
+      }
+    }
     if ((profile.sources?.length ?? 0) > 0 || profile.sourceFreeRationale || (profile.protocols?.length ?? 0) > 0) {
       // Continue validating route identity below.
     } else {
@@ -929,6 +950,16 @@ const BridgeRouteControlSchema: z.ZodType<BridgeRouteControl> = z
     observedBlock: PositiveIntegerSchema.optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     evidence: z.string().min(12).optional(),
+  })
+  .strict();
+
+const BridgeRouteScopedQuestionSchema: z.ZodType<BridgeRouteScopedQuestion> = z
+  .object({
+    controlRef: z.string().min(1),
+    question: z.string().min(12),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    sources: z.array(StablecoinLinkSchema).min(1).optional(),
   })
   .strict();
 
