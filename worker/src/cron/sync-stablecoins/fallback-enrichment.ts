@@ -90,6 +90,7 @@ export async function runFallbackPriceEnrichmentPhase(
     authoritativeOverrides,
     authoritativeOverrideStats,
     previousMissingGenerationsById: input.previousMissingGenerationsById,
+    priceCache: input.priceCache,
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,
   }, "fallback-");

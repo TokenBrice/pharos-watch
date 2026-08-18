@@ -19,7 +19,7 @@ import {
   fetchAuthoritativeLivePriceOverrides,
   type AuthoritativeLivePriceOverrideStats,
 } from "../../lib/authoritative-price-sources";
-import { getPriceCache, type PriceCacheWriteEntry } from "../../lib/db-cache";
+import { getPriceCache, type PriceCacheEntry, type PriceCacheWriteEntry } from "../../lib/db-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import {
@@ -80,6 +80,12 @@ export interface PostEnrichmentInput {
   previousTrustedPrices?: Map<string, TrustedPriceReference>;
   authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
+  /**
+   * The replay price_cache snapshot already loaded for trusted-price
+   * continuity. When provided, the cached-fallback stage reuses it instead of
+   * loading the full price_cache table from D1 a second time in the same run.
+   */
+  priceCache?: ReadonlyMap<string, PriceCacheEntry>;
   nativePegSession?: NativePegQuoteSession;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
@@ -284,10 +290,8 @@ export async function runPostEnrichmentPricePipeline(
     if (asset.price == null || typeof asset.price !== "number") continue;
 
     const decision = validatePublishedAssetPrice({
-      asset: {
-        ...asset,
-        candidatePrices: getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
-      },
+      asset,
+      candidatePrices: getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
@@ -352,7 +356,7 @@ export async function runPostEnrichmentPricePipeline(
   if (stillMissing.length > 0) {
     const priceCacheReadAbort = returnIfAborted(signal, `${abortStagePrefix}read-price-cache`);
     if (priceCacheReadAbort) return priceCacheReadAbort;
-    const priceCache = await getPriceCache(db);
+    const priceCache = input.priceCache ?? await getPriceCache(db);
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
       if (!cached) continue;

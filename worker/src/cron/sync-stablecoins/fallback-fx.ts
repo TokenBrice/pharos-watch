@@ -26,5 +26,8 @@ export async function hydrateFallbackFxPhase(
       input.syncStartSec,
       replayPriceCache,
     ),
+    // Returned so downstream cached-fallback pricing reuses this snapshot
+    // instead of loading the full price_cache table a second time per run.
+    replayPriceCache,
   };
 }

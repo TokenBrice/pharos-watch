@@ -72,7 +72,22 @@ export async function syncStablecoins(
     }
     throw new Error(intake.errorMessage);
   }
-  const { assets, rawAssetCount, droppedMalformedAssets, canonicalDeduplication, supplyGapReconciliation, trackedCoverage } = intake;
+  // Destructure every consumed field so nothing references `intake` past this
+  // point: the stage result also carries cgData, canonicalDeduplication's
+  // deduped rows, and other intake-only payloads that would otherwise stay
+  // pinned on the isolate heap for the rest of the run.
+  const {
+    assets,
+    rawAssetCount,
+    droppedMalformedAssets,
+    canonicalDeduplication,
+    supplyGapReconciliation,
+    trackedCoverage,
+    previousAssetsById,
+    previousCacheState,
+    fxFallbackRates,
+    validationReferences,
+  } = intake;
   const previousActivePriceCoverage = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
   const previousMissingGenerationsById = new Map(
     (previousActivePriceCoverage?.missingActiveAssets ?? []).map(
@@ -82,11 +97,11 @@ export async function syncStablecoins(
   const pricingStage = await runStablecoinsPricingStage({
     db,
     assets,
-    previousAssetsById: intake.previousAssetsById,
+    previousAssetsById,
     previousMissingGenerationsById,
     syncStartSec,
-    fxFallbackRates: intake.fxFallbackRates,
-    validationReferences: intake.validationReferences,
+    fxFallbackRates,
+    validationReferences,
     cmcApiKey,
     jupiterApiKey,
     signal,
@@ -113,7 +128,8 @@ export async function syncStablecoins(
   const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryStage(db, assets, signal);
   if (fillSupplyHistoryResult) return fillSupplyHistoryResult;
   const stalenessCheck = await checkStablecoinsPriceStaleness({
-    db,
+    previousAssetsById,
+    previousCacheState,
     assets,
     signal,
     reportProgress,
@@ -159,7 +175,7 @@ export async function syncStablecoins(
   } = stalenessCheck;
   const publication = await publishMainStablecoinsAndRunFollowThrough({
     assets,
-    fxFallbackRates: intake.fxFallbackRates,
+    fxFallbackRates,
     db,
     syncStartSec,
     signal,
@@ -167,7 +183,7 @@ export async function syncStablecoins(
     rawAssetCount,
     droppedMalformedAssets,
     priceCacheEntries,
-    previousAssetsById: intake.previousAssetsById,
+    previousAssetsById,
     returnIfAborted,
     abortResult,
     reportProgress,
@@ -179,7 +195,7 @@ export async function syncStablecoins(
   const { cacheResult, depegErrorCount, depegErrors, providerDiagnostics: depegProviderDiagnostics = [] } = publication;
   const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, undefined, {
     previousCoverage: previousActivePriceCoverage,
-    previousAcceptedAssetsById: intake.previousAssetsById,
+    previousAcceptedAssetsById: previousAssetsById,
   });
   const result = buildStablecoinsSyncResult({
     assets,
@@ -209,7 +225,7 @@ export async function syncStablecoins(
     responseReadyCacheError: cacheResult.responseReadyCacheError,
     depegPipelineSucceeded: depegErrorCount === 0,
     previousActivePriceCoverage,
-    previousAcceptedAssetsById: intake.previousAssetsById,
+    previousAcceptedAssetsById: previousAssetsById,
     activePriceCoverage,
   });
   await reportStablecoinsStage(reportProgress, "complete", "Completed stablecoins sync", {

@@ -1,9 +1,9 @@
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
-import type { PriceCacheWriteEntry } from "../../lib/db-cache";
+import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import type { CronProgressReporter } from "../../lib/cron-logger";
-import type { CronResult } from "./shared";
+import type { CronResult, PreviousStablecoinsCacheState } from "./shared";
 import type { StablecoinsStalenessSummary } from "./runtime";
 import type { PeggedAsset, EnrichmentStats } from "./enrich-prices";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
@@ -53,6 +53,7 @@ export interface FallbackCacheRestorationInput {
 
 export interface FallbackCacheRestorationOutput {
   previousAssetsById: Map<string, PeggedAsset>;
+  previousCacheState: PreviousStablecoinsCacheState;
 }
 
 export interface FallbackFxInput {
@@ -66,6 +67,7 @@ export interface FallbackFxOutput {
   validationReferences?: PriceValidationReferences;
   validationContexts: ValidationContextResolver;
   previousTrustedPrices: Map<string, PreviousTrustedPrice>;
+  replayPriceCache: Map<string, PriceCacheEntry>;
 }
 
 export interface FallbackPriceEnrichmentInput extends FallbackPhaseContext, FallbackAbortHandlers {
@@ -78,6 +80,7 @@ export interface FallbackPriceEnrichmentInput extends FallbackPhaseContext, Fall
   validationReferences?: PriceValidationReferences;
   validationContexts: ValidationContextResolver;
   previousTrustedPrices: Map<string, PreviousTrustedPrice>;
+  priceCache?: ReadonlyMap<string, PriceCacheEntry>;
 }
 
 export interface FallbackPriceEnrichmentOutput {
@@ -100,6 +103,8 @@ export interface FallbackSupplyHistoryInput extends FallbackAbortHandlers {
 
 export interface FallbackStalenessInput extends FallbackPhaseContext {
   assets: PeggedAsset[];
+  previousAssetsById: ReadonlyMap<string, PeggedAsset>;
+  previousCacheState: PreviousStablecoinsCacheState;
 }
 
 export interface FallbackStalenessOutput {

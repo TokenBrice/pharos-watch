@@ -47,7 +47,6 @@ export interface PublishablePriceInput {
 export interface PriceAssetPublicationLike {
   priceConfidence?: PriceConfidence | null;
   priceSource?: string | null;
-  candidatePrices?: Record<string, number>;
 }
 
 function isFallbackOnlyPublicationSource(source: string | null | undefined): boolean {
@@ -292,14 +291,19 @@ export function validateFallbackPriceCandidate(
   return validatePriceForPublication({ ...input, mode: "fallback_enrichment" });
 }
 
+/**
+ * `candidatePrices` is a separate argument (not a field on `asset`) so callers
+ * validating a full pipeline asset can pass it by reference instead of
+ * shallow-copying every asset just to attach the candidate map.
+ */
 export function validatePublishedAssetPrice(input: {
   asset: {
     price?: number | null | undefined;
     priceSource?: string | null;
     priceConfidence?: PriceConfidence | null;
     agreeSources?: string[];
-    candidatePrices?: Record<string, number>;
   };
+  candidatePrices?: Record<string, number>;
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
   previousTrustedPrice?: TrustedPriceReference | null;
@@ -309,7 +313,7 @@ export function validatePublishedAssetPrice(input: {
     source: input.asset.priceSource,
     confidence: input.asset.priceConfidence ?? null,
     agreeSources: input.asset.agreeSources,
-    candidatePrices: input.asset.candidatePrices,
+    candidatePrices: input.candidatePrices,
     mode: priceValidationModeForAsset(input.asset),
     validationContext: input.validationContext,
     validationReferences: input.validationReferences,

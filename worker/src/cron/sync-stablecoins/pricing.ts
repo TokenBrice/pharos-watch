@@ -347,10 +347,8 @@ export function prevalidatePrices(input: {
   for (const asset of assets) {
     if (asset.price == null || typeof asset.price !== "number" || asset.price === 0) continue;
     const decision = validatePublishedAssetPrice({
-      asset: {
-        ...asset,
-        candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults),
-      },
+      asset,
+      candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults),
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,

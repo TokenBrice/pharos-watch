@@ -38,6 +38,7 @@ import {
   loadFreshFxRates,
   loadReplayPriceCacheForTrustedContinuity,
   type CronResult,
+  type PreviousStablecoinsCacheState,
   type TrackedCoverageRestoreResult,
 } from "./shared";
 import {
@@ -76,6 +77,7 @@ export type StablecoinsIntakeStageResult =
       droppedMalformedAssets: number;
       canonicalDeduplication: CanonicalDeduplicationResult;
       previousAssetsById: Map<string, PeggedAsset>;
+      previousCacheState: PreviousStablecoinsCacheState;
       cgData: CoinGeckoMcapData;
       supplyGapReconciliation: SupplyGapReconciliationResult;
       trackedCoverage: TrackedCoverageRestoreResult;
@@ -137,6 +139,7 @@ export async function runStablecoinsIntakeStage(
     droppedMalformedAssets: intake.droppedMalformedAssets,
     canonicalDeduplication: intake.canonicalDeduplication,
     previousAssetsById: intake.previousAssetsById,
+    previousCacheState: intake.previousCacheState,
     cgData: intake.cgData,
     fxFallbackRates,
     validationReferences,
@@ -374,6 +377,7 @@ export async function runStablecoinsPricingStage(
     authoritativeOverrides,
     authoritativeOverrideStats,
     previousMissingGenerationsById: options.previousMissingGenerationsById,
+    priceCache: replayPriceCache,
     nativePegSession: options.nativePegSession,
     returnIfAborted,
     abortResult,
