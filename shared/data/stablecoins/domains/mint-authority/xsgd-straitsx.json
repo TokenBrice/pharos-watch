@@ -785,54 +785,94 @@
       },
       {
         "chain": "hedera",
+        "address": "0.0.1985919",
         "deploymentRefs": [
           "hedera:0.0.1985922"
         ],
         "label": "StraitsX Hedera XSGD supply key",
         "role": "direct-minter",
-        "authorityType": "multisig",
+        "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "threshold": 2,
         "signerCount": 5,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
+        "failureDomainKeys": [
+          "issuer:straitsx"
+        ],
+        "observedAt": "2026-08-18",
         "sources": [
           {
             "label": "Hedera Mirror Node XSGD token metadata",
-            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
           },
           {
             "label": "Hedera XSGD token",
             "url": "https://hashscan.io/mainnet/token/0.0.1985922"
+          },
+          {
+            "label": "Hedera Mirror Node XSGDSupplyAccount 0.0.1985919",
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/accounts/0.0.1985919"
+          },
+          {
+            "label": "Hedera TOKENCREATION 0.0.1941445-1677141898-168322577",
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/transactions/0.0.1941445-1677141898-168322577"
+          },
+          {
+            "label": "Hedera TOKENMINT 0.0.2048269-1683273600-000000000",
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/transactions?timestamp=1683273631.078705003"
+          },
+          {
+            "label": "StraitsX Mint — Hedera is a native mint network",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365667-what-is-straitsx-mint-"
+          },
+          {
+            "label": "StraitsX Academy — mint XSGD on Hedera via a StraitsX account",
+            "url": "https://www.straitsx.com/blog-post/academy-an-introduction-to-xsgd-on-the-hedera-blockchain"
           }
         ],
-        "evidence": "Hedera Mirror Node metadata for HTS token 0.0.1985922 reports an encoded supply key with a 2-of-5 threshold. That supply key is the direct native issuance authority for Hedera XSGD; the individual key identities were not exposed as a simple address in the reviewed metadata."
+        "evidence": "At consensus time 1677141911.926311219 (2023-02-23 08:45:11 UTC), TOKENCREATION 0.0.1941445-1677141898-168322577 created HTS token 0.0.1985922 with treasury 0.0.1985916. The encoded supply_key is a Hedera ThresholdKey, threshold=2 over five ED25519 keys (not ContractIDs). Those five public keys resolve 1:1 to accounts 0.0.950692, 0.0.950727, 0.0.950696, 0.0.1128284, and 0.0.1259281, all created by operator 0.0.333563 and carrying empty memos. In the same create session the payer also created 0.0.1985919 with memo XSGDSupplyAccount whose account key bytes are identical to the token supply_key; that labeled role account is the issuer handle for this 2-of-5. Observed TOKENMINT/TOKENBURN (including 1683273631.078705003 / 2023-05-05 08:00:31 UTC, valid_start 1683273600) are paid by 0.0.2048269, another 0.0.484746-created StraitsX operator account, not by the share accounts. StraitsX Mint lists Hedera as a native mint network and StraitsX Academy tells users to sign up for a StraitsX account to mint XSGD on Hedera. Individual share-holder names are unpublished; the key set is StraitsX-internal issuer operations, not a named third-party council."
       },
       {
         "chain": "hedera",
+        "address": "0.0.1985917",
         "deploymentRefs": [
           "hedera:0.0.1985922"
         ],
         "label": "StraitsX Hedera XSGD admin key",
         "role": "minter-admin",
-        "authorityType": "multisig",
+        "authorityType": "issuer-backend",
         "directMintAbility": "can-authorize",
         "threshold": 2,
         "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
+        "failureDomainKeys": [
+          "issuer:straitsx"
+        ],
+        "observedAt": "2026-08-18",
         "sources": [
           {
             "label": "Hedera Mirror Node XSGD token metadata",
-            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
           },
           {
             "label": "Hedera XSGD token",
             "url": "https://hashscan.io/mainnet/token/0.0.1985922"
+          },
+          {
+            "label": "Hedera Mirror Node XSGDAdminAccount 0.0.1985917",
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/accounts/0.0.1985917"
+          },
+          {
+            "label": "Hedera TOKENCREATION 0.0.1941445-1677141898-168322577",
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/transactions/0.0.1941445-1677141898-168322577"
+          },
+          {
+            "label": "StraitsX Tokens legal — issuer-deployed token contract / issuance by STX XSGD",
+            "url": "https://www.straitsx.com/legal/token"
           }
         ],
-        "evidence": "Hedera Mirror Node metadata for HTS token 0.0.1985922 reports an encoded 2-of-7 admin key. This issuer-controlled key can replace the supply key and other issuance controls; the individual key identities were not exposed as a simple address in the reviewed metadata."
+        "evidence": "The same TOKENCREATION at 1677141911.926311219 encoded a 2-of-7 admin ThresholdKey (seven ED25519 keys). Those keys resolve to 0.0.1320727, 0.0.1319805, 0.0.1319477, 0.0.1259248, 0.0.1259281 (shared with the supply key), 0.0.1942000, and 0.0.1941965. The first five share accounts were created by operator 0.0.333563; the last two were created by operator 0.0.484746 on 2023-02-17, the same day that operator created token-create payer 0.0.1941445. Concurrent account 0.0.1985917 has memo XSGDAdminAccount and the identical 2-of-7 protobuf as the token admin_key; HTS admin can replace the supply key. Token modified_timestamp 1683273631.078705003 is a TOKENMINT, not a TOKENUPDATE — the admin/supply key sets have been unchanged since create. Share-holder legal names are unpublished; the admin set is the same StraitsX operator lineage as the supply key."
       },
       {
         "chain": "xrpl",
@@ -892,11 +932,35 @@
         {
           "label": "MAS Financial Institutions Directory - StraitsX",
           "url": "https://eservices.mas.gov.sg/fid/institution?term=StraitsX"
+        },
+        {
+          "label": "Hedera Mirror Node token 0.0.1985922",
+          "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
+        },
+        {
+          "label": "Hedera Mirror Node XSGDSupplyAccount",
+          "url": "https://mainnet.mirrornode.hedera.com/api/v1/accounts/0.0.1985919"
+        },
+        {
+          "label": "Hedera Mirror Node XSGDAdminAccount",
+          "url": "https://mainnet.mirrornode.hedera.com/api/v1/accounts/0.0.1985917"
+        },
+        {
+          "label": "StraitsX Mint",
+          "url": "https://support.straitsx.com/support/solutions/articles/157000365667-what-is-straitsx-mint-"
+        },
+        {
+          "label": "StraitsX Academy — XSGD on Hedera",
+          "url": "https://www.straitsx.com/blog-post/academy-an-introduction-to-xsgd-on-the-hedera-blockchain"
+        },
+        {
+          "label": "StraitsX Tokens legal",
+          "url": "https://www.straitsx.com/legal/token"
         }
       ],
-      "evidence": "Fresh fixed-block reads on 2026-08-16 cover all eight authored native deployments. Ethereum block 25770602 retains the legacy Zeppelinos proxy, MasterMinter, owner, and two active minter surfaces; Polygon block 92142756 has one configured 200,000,000 XSGD minter; Arbitrum block 495281539 has one configured 200,000,000 XSGD minter; Avalanche block 92979593 has configured 200,000,000 and 20,000,000 XSGD minters; and Base block 50064941 has one configured 200,000,000 XSGD minter. The four omitted EVM event replays found no MinterRemoved events in the reviewed token logs. The EVM MasterMinter and owner controls can reconfigure native minters, and the five proxy admins can replace mint logic without a recorded delay, so the aggregate economic cap remains unbounded. Finalized Solana slot 439728047 reports a 3-of-10 SPL Token multisig as mint and freeze authority; Hedera Mirror Node metadata reports a 2-of-5 supply key and 2-of-7 admin key; and XRPL validated ledger 106342527 identifies the live XSGD issuing account. The StraitsX archive publishes independent reserve examinations on a semi-monthly cadence, and the MAS directory identifies StraitsX SGD Issuance Pte. Ltd. as a Major Payment Institution. Signer sets for the Arbitrum, Avalanche, and Base proxy-admin contracts and the exact Hedera/XRPL operational key identities remain unresolved; those gaps are recorded on the affected controls and do not change the verified native deployment scope.",
-      "reviewer": "OpenAI Codex C05 control and access review",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Fresh fixed-block reads on 2026-08-16 cover all eight authored native deployments. Ethereum block 25770602 retains the legacy Zeppelinos proxy, MasterMinter, owner, and two active minter surfaces; Polygon block 92142756 has one configured 200,000,000 XSGD minter; Arbitrum block 495281539 has one configured 200,000,000 XSGD minter; Avalanche block 92979593 has configured 200,000,000 and 20,000,000 XSGD minters; and Base block 50064941 has one configured 200,000,000 XSGD minter. The four omitted EVM event replays found no MinterRemoved events in the reviewed token logs. The EVM MasterMinter and owner controls can reconfigure native minters, and the five proxy admins can replace mint logic without a recorded delay, so the aggregate economic cap remains unbounded. Finalized Solana slot 439728047 reports a 3-of-10 SPL Token multisig as mint and freeze authority; Hedera Mirror Node metadata for token 0.0.1985922 still reports a 2-of-5 supply key and 2-of-7 admin key; W08 (2026-08-18) decoded those protobufs to ED25519 shares, matched them to issuer-created accounts, and bound them to memo-labeled StraitsX role accounts XSGDSupplyAccount (0.0.1985919) and XSGDAdminAccount (0.0.1985917) created in the TOKENCREATION session. Hedera mint/burn is submitted by StraitsX operator 0.0.2048269. XRPL validated ledger 106342527 identifies the live XSGD issuing account. The StraitsX archive publishes independent reserve examinations on a semi-monthly cadence, and the MAS directory identifies StraitsX SGD Issuance Pte. Ltd. as a Major Payment Institution. Signer sets for the Arbitrum, Avalanche, and Base proxy-admin contracts remain unresolved in existing control evidence; those contract addresses are already identified and are not scoped questions. Hedera key custody is now attributed to StraitsX issuer operations.",
+      "reviewer": "W08 Hedera key-custody review (on C05 2026-08-16 control inventory)",
+      "reviewedAt": "2026-08-18"
     }
   }
 }

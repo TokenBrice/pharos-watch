@@ -65,21 +65,27 @@ export const SLOT_RUNNER_BY_KEY = Object.fromEntries(
 
 type SlotFencePolicy = Pick<ScheduledSlotExecutionOptions, "heartbeatSec" | "staleAfterSec" | "preSweepLimit">;
 
+// staleAfterSec measures consecutive missed slot heartbeats, not job length:
+// the fence heartbeat timer runs for the whole slot regardless of how long a
+// child job takes, so even the longest lanes tolerate a tight window. Five to
+// six minutes of heartbeat silence means the isolate was killed (OOM kills
+// write no terminal row), and every extra minute here extends the outage of
+// each lane that gates on the dead slot.
 const SHORT_SLOT_FENCE_POLICY = {
   heartbeatSec: 30,
-  staleAfterSec: 10 * 60,
+  staleAfterSec: 5 * 60,
   preSweepLimit: 5,
 } satisfies SlotFencePolicy;
 
 const MEDIUM_SLOT_FENCE_POLICY = {
   heartbeatSec: 45,
-  staleAfterSec: 20 * 60,
+  staleAfterSec: 5 * 60,
   preSweepLimit: 5,
 } satisfies SlotFencePolicy;
 
 const LONG_SLOT_FENCE_POLICY = {
   heartbeatSec: 60,
-  staleAfterSec: 35 * 60,
+  staleAfterSec: 6 * 60,
   preSweepLimit: 5,
 } satisfies SlotFencePolicy;
 

@@ -181,6 +181,7 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "parent-cycle": "method-unsupported",
   "partial-reserve-review": "issuer-undisclosed",
   "runtime-bridge-materiality-unavailable": "integration-missing",
+  "scoped-control-question": "issuer-undisclosed",
   "selected-bridge-route-missing": "producer-failed",
   "selected-bridge-route-unresolved": "integration-missing",
   "unknown-control-cap-authority": "issuer-undisclosed",

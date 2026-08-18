@@ -9,18 +9,19 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "All eight authored EURAU contract rows are reviewed issuer-native issuance lanes, not bridge representations. AllUnity says EURAU integrates Chainlink CCIP/CCT for supply-conserving burn-and-mint transfers across supported chains, so cross-chain machinery remains external-validated-network Bridge Risk rather than Mint Authority. Exact AllUnity CCIP token-pool/adapter, router, peer, rate-limit, pause, upgrade, and Chainlink validator/DON/ARM controller identities remain unresolved; the route control below preserves the evidenced bridge capabilities without inferring issuer-native controllers.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "OpenAI Codex eurau-allunity bridge-boundary migration",
+    "summary": "All eight authored EURAU contract rows remain issuer-native issuance lanes, not bridge representations. The live customer-facing cross-chain path is AllUnity’s documented mapping bridge (issuer burns source EURAU and mints destination EURAU to a registered wallet). The Oct 2025 Chainlink CCIP/CCT partnership is still announced, not registered: TokenAdminRegistry 1.5.0 getPool(EURAU)=0 on Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, and Tempo as of 2026-08-18, and no pool holds MINTER_ROLE/BURNER_ROLE. Do not treat destination supply as a lock/mint representation of a single canonical chain.",
+    "reviewedAt": "2026-08-18",
+    "reviewer": "W03",
     "confidence": "manual-review",
     "protocols": [
       {
         "source": "docs",
-        "name": "Chainlink CCIP",
-        "url": "https://allunity.com/news/allunity-enters-strategic-partnership-with-chainlink-to-power-cross-chain-stablecoin-payments-across-europe",
+        "name": "AllUnity issuer mapping bridge",
+        "url": "https://allunity.com/product-docs/issue-redeem-bridge",
         "bridgeTypes": [
           "burnAndMint"
-        ]
+        ],
+        "note": "Customer-facing same-currency transfers. Chainlink CCIP/CCT remains an announced, unregistered rail (TokenAdminRegistry getPool=0 on every checked chain as of 2026-08-18)."
       }
     ],
     "sources": [
@@ -243,8 +244,8 @@
     ],
     "controls": [
       {
-        "id": "eurau-allunity-ccip-route-machinery-unresolved",
-        "label": "EURAU Chainlink CCIP burn/mint route machinery (controller identities unresolved)",
+        "id": "eurau-allunity-issuer-mapping-bridge",
+        "label": "AllUnity issuer-backend same-currency mapping bridge",
         "routeRefs": [
           "ethereum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
           "arbitrum:0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
@@ -257,40 +258,42 @@
         ],
         "capabilities": [
           "bridge-mint",
-          "bridge-burn",
-          "rate-limit",
-          "validator",
-          "peer-config"
+          "bridge-burn"
         ],
         "failureDomainKeys": [
-          "protocol:chainlink-ccip"
+          "issuer-backend:eurau-allunity:allunity-issuance"
         ],
-        "authorityType": "unknown",
+        "authorityType": "issuer-backend",
         "routeChecks": {
-          "lockboxOrEscrow": "AllUnity's official CCIP/CCT description identifies burn-and-mint transfer semantics; no AllUnity-specific token-pool lockbox or escrow address was identified in the reviewed primary sources.",
-          "trustedPeerOrRemote": "CCIP token-pool, router, remote-pool, and peer or allowlist identities for EURAU were not identified in the reviewed AllUnity materials or verified EURAU token source.",
-          "attestorQuorum": "The route depends on Chainlink CCIP's external validation network, but the EURAU-specific DON, ARM, validator, and quorum configuration was not identified.",
-          "rateLimits": "CCIP token-pool/router rate-limit values and the administrators able to change them were not identified for EURAU.",
-          "onchainAmountBounds": "The documented CCT path burns source EURAU and mints destination EURAU for cross-chain transfer; this supply-conserving route accounting is bridge machinery, not independent native issuer mint authority.",
-          "pausersAdminsUpgraders": "AllUnity-specific CCIP token-pool/adapter/router pause, admin, and upgrade identities were not identified; no issuer token minter or native admin is inferred as a bridge controller."
+          "onchainAmountBounds": "AllUnity’s product docs describe a same-currency cross-chain bridge that burns on the source chain and mints to the holder’s registered wallet on the target chain. Conservation is operational (issuer mapping), not a single canonical lock/escrow. Destination lanes remain native-issuance.",
+          "lockboxOrEscrow": "No lockbox. Official CCIP TokenAdminRegistry 1.5.0 has no EURAU pool on the seven EVM/Tempo registries checked 2026-08-18, so this path is not a registered CCT lock or burn-mint pool.",
+          "trustedPeerOrRemote": "No on-chain peer/allowlist. Transfers require an AllUnity “bridge mapping” to a registered wallet.",
+          "rateLimits": "No public on-chain CCIP or adapter rate-limit admin. Any ceiling is issuer-operational and unpublished.",
+          "pausersAdminsUpgraders": "Execution uses the already-reviewed native issuance surface (EVM MINTER_ROLE / BURNER_ROLE EOAs and the Solana Token-2022 authority). Those identities stay in Mint Authority and are not restated here as bridge controllers."
         },
-        "canRaiseCap": "unknown",
-        "observedAt": "2026-08-16",
+        "capDescription": "The mapping bridge can mint destination EURAU only as the counterpart of a source burn, subject to AllUnity’s backend. It is not independent native issuance and it is not a registered CCIP token pool.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-18",
+        "observedBlock": 25783939,
         "sources": [
           {
-            "label": "AllUnity Chainlink CCIP/CCT announcement",
-            "url": "https://allunity.com/news/allunity-enters-strategic-partnership-with-chainlink-to-power-cross-chain-stablecoin-payments-across-europe"
+            "label": "AllUnity product docs: issuance, redemption, and cross-chain bridging",
+            "url": "https://allunity.com/product-docs/issue-redeem-bridge"
           },
           {
             "label": "AllUnity EURAU supported blockchains",
             "url": "https://allunity.com/eurau"
           },
           {
-            "label": "Chainlink CCIP Router source",
-            "url": "https://github.com/smartcontractkit/chainlink-ccip/blob/main/chains/evm/contracts/Router.sol"
+            "label": "Ethereum TokenAdminRegistry 1.5.0 (no EURAU pool)",
+            "url": "https://etherscan.io/address/0xb22764f98dD05c789929716D677382Df22C05Cb6"
+          },
+          {
+            "label": "Base TokenAdminRegistry 1.5.0 (no EURAU pool)",
+            "url": "https://basescan.org/address/0x6f6C373d09C07425BaAE72317863d7F6bb731e37"
           }
         ],
-        "evidence": "AllUnity's official 2025 Chainlink announcement documents EURAU's CCIP/CCT burn-and-mint path as native, zero-slippage cross-chain transfer with 1:1 value and supply parity. The reviewed issuer materials and verified EURAU token source do not expose the EURAU-specific token-pool/adapter, router/on-ramp/off-ramp, peer, rate-limit, pause, upgrade, or Chainlink validator/DON/ARM controller addresses. This unresolved route control retains the documented bridge-mint, bridge-burn, rate-limit, validator, and peer-configuration surfaces without treating any issuer-native minter or admin as a bridge controller."
+        "evidence": "AllUnity’s current product documentation (fetched 2026-08-18) states: “Transfer tokens from one blockchain to another in the same currency. AllUnity burns on the source chain and mints to your registered wallet on the target chain.” That is issuer-backend burn-and-mint over the existing native lanes. It is a distinct capability from the native mint already recorded under Mint Authority. Official CCIP registries still have no EURAU pool, so this control must not be labelled as Chainlink CCIP and must not reuse the native EOA minter/admin addresses as controllerAddress."
       }
     ]
   }

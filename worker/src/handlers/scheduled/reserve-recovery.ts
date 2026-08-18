@@ -33,6 +33,15 @@ const RECOVERY_STALE_AFTER_SEC = 2 * 60;
 
 async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: AbortSignal) {
   const mode = normalizeReserveRecoveryMode(runtime.env.WORKER_RESERVE_RECOVERY_MODE);
+  // This lane runs every five minutes, so it is the fast global reconciler
+  // for slots whose isolate was killed without a terminal write (OOM leaves
+  // state='running' with a silent heartbeat). Runs in every recovery mode:
+  // sweeping is DB-only and independent of the reserve checkpoint machinery.
+  await sweepStaleScheduledSlotExecutions(runtime.db, {
+    staleAfterSec: 5 * 60,
+    limit: 10,
+    signal,
+  });
   if (mode === "off") {
     return {
       status: "ok" as const,

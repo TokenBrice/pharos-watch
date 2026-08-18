@@ -17,6 +17,13 @@ import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "./score-bearing-gates-policy
 export const V9_REVIEW_EVIDENCE_MAX_AGE_SEC =
   V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedResearchMaxAgeSec;
 
+/**
+ * A reviewer-scoped open control question holds the bounded scoped-gap ceiling
+ * only while its review is fresh; past this window it reverts to the hard
+ * control-unverified treatment so named gaps cannot rot as a permanent softener.
+ */
+export const V9_SCOPED_QUESTION_MAX_AGE_SEC = 90 * 24 * 60 * 60;
+
 export interface CreateV9EvidenceReferenceArgs {
   evidenceId: string;
   sourceId: string;

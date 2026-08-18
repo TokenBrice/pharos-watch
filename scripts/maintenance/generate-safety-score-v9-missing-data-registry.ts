@@ -344,6 +344,7 @@ const WORK_TYPE_BY_REASON: Partial<Record<string, V9MissingDataWorkType>> = {
   "missing-runtime-route-evidence": "EXIT_RUNTIME_ROUTE",
   "missing-upgradeability-review": "DEPLOYMENT_CONTROLS",
   "runtime-bridge-materiality-unavailable": "BRIDGE_MATERIALITY",
+  "scoped-control-question": "DEPLOYMENT_CONTROLS",
   "unresolved-control-identity": "DEPLOYMENT_CONTROLS",
   "unresolved-exit-output": "EXIT_OUTPUT",
   "unreviewed-dependency-relationships": "DEPENDENCY_REVIEW",

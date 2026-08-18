@@ -5,6 +5,49 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "M has one native issuance route: the immutable Ethereum MinterGateway. Approved Minters, Validator attestations, mint-delay review, collateral/debt checks, and TTG-governed issuance parameters constrain native M liabilities; Solana and the other authored deployments are bridge representations assessed under Bridge Risk.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-08-18",
+      "observedBlock": 25783884,
+      "sources": [
+        {
+          "label": "MToken.sol — immutable minterGateway/ttgRegistrar, onlyMinterGateway mint/burn",
+          "url": "https://github.com/m0-foundation/protocol/blob/main/src/MToken.sol"
+        },
+        {
+          "label": "MinterGateway.sol — immutable mToken/ttgRegistrar, no upgrade entrypoint",
+          "url": "https://github.com/m0-foundation/protocol/blob/main/src/MinterGateway.sol"
+        },
+        {
+          "label": "M0 M Token docs — contract designed immutable; TTG changes parameters not bytecode",
+          "url": "https://docs.m0.org/protocol/m-token"
+        },
+        {
+          "label": "M0 TTG research — core protocol completely immutable and non-upgradeable",
+          "url": "https://research.m0.org/research/introducing-the-two-token-governor"
+        },
+        {
+          "label": "M0 platform addresses — Ethereum M, MinterGateway, Registrar, Hub Portal",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
+        },
+        {
+          "label": "Blockscout MToken — verified MToken.sol, proxy_type null, constructor immutables",
+          "url": "https://eth.blockscout.com/address/0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b"
+        },
+        {
+          "label": "Blockscout MinterGateway — verified MinterGateway.sol, proxy_type null",
+          "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+        },
+        {
+          "label": "Ethereum PublicNode RPC — slots and calls at block 25783884",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

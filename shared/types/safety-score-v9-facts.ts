@@ -693,6 +693,10 @@ const V9DeploymentControlFactV2Schema = z
       .nullable(),
     delaySec: z.number().int().nonnegative().nullable(),
     materialSupplyShare: FractionSchema.nullable(),
+    // A reviewer authored a scoped open question naming this control, and that
+    // review is fresh at compile time. Grants the bounded scoped-gap ceiling
+    // instead of the control-unverified ceiling while the question stays open.
+    scopedQuestionFresh: z.boolean().optional(),
     // Reviewed key-custody attestation for the authority holding this control.
     // An attested MPC/HSM key is an operationally different object from a bare
     // externally-owned key even though both present as one address on chain.

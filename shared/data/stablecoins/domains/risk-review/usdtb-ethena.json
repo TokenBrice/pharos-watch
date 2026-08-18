@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDtb has two native issuance routes—Ethereum Anchorage USDtb and the Solana Token-2022 mint—and separate LayerZero bridge representations: an Ethereum OFT adapter, Arbitrum and Base OFTs, and a Solana OFT mint. The EVM bridge owner is a 5-of-10 Safe; EVM lock/mint and burn/mint remain bridge-route risk, while the Solana OFT program and bridge authority remain unresolved and opaque rather than entering Mint Authority.",
+    "summary": "USDtb has two native issuance routes—Ethereum Anchorage USDtb and the Solana Token-2022 mint 8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T (mint/permanent-delegate C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt)—and LayerZero OFT representations on Ethereum (adapter over the native inner token), Arbitrum, and Base. The EVM OFT owner is a 5-of-10 Safe. DefiLlama and official key-addresses treat only the Token-2022 mint as Solana circulating; a separate LayerZero Solana OFT mint 39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy exists with ~3.24 tokens and is omitted from the catalog so the Solana supply row matches exactly one native route.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; mint-bridge-boundary migration",
     "confidence": "manual-review",
@@ -169,9 +169,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "USDtb is native on Solana (Token-2022 mint and permanent-delegate authority resolved in the mint-authority review).",
+        "reviewNote": "USDtb is native on Solana. Official key-addresses and DefiLlama chainConfig.solana.issued list only Token-2022 mint 8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T. At finalized slot 440112810 on 2026-08-18, getTokenSupply was 45,928,759.21 (6 decimals), matching DefiLlama currentChainBalances.Solana. Mint and permanent-delegate authority C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt is a system-owned wallet (Mint Authority sidecar). A separate LayerZero OFT mint 39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy (3.242001 tokens) is not this circulating row.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-18",
+        "observedBlock": 440112810,
         "sources": [
           {
             "label": "USDtb docs",
@@ -181,40 +182,6 @@
             "label": "LayerZero docs",
             "url": "https://docs.layerzero.network/"
           }
-        ]
-      },
-      {
-        "id": "solana:39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy",
-        "destinationChain": "solana",
-        "contractAddress": "39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy",
-        "protocol": "LayerZero Solana OFT mint",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "controllerChain": "solana",
-        "controllerAddress": "kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "LayerZero metadata identifies this as a separate Solana OFT mint, but the program upgrade authority, administrative signer, peer/config state, and DVN/executor configuration remain unresolved. The route stays opaque-or-unknown until those bridge controls are verified from primary sources.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439741723,
-        "sources": [
-          {
-            "label": "LayerZero current OFT metadata",
-            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list"
-          },
-          {
-            "label": "Solana finalized RPC",
-            "url": "https://solana-rpc.publicnode.com"
-          }
-        ],
-        "failureDomainKeys": [
-          "layerzero:oft:usdtb-ethena",
-          "program:solana:BpV7o3yBPYqLnbauX5zdLu8XPhuJ9DESQXgLh8dzqcZ4",
-          "escrow:solana:8rkzuEhp2JiEZFmN7wDZMxzUBGtruKDXWXMxsjEPWEAX",
-          "mint-authority:solana:kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq"
         ]
       }
     ],
@@ -253,7 +220,7 @@
         "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
           "lockboxOrEscrow": "LayerZero metadata identifies this deployment as an OFT_ADAPTER whose innerTokenAddress is native USDtb 0xc139190f447e929f090edeb554d95abb8b18ac1c; the adapter locks the inner token on outbound transfers and releases it on validated inbound messages.",
-          "trustedPeerOrRemote": "At Ethereum block 25771071 on 2026-08-16, isPeer(30110, 0xc708b6887db46005da033501f8aebee72d191a5d) and isPeer(30184, 0xc708b6887db46005da033501f8aebee72d191a5d) returned true on the adapter; the owner Safe can change peer configuration.",
+          "trustedPeerOrRemote": "At Ethereum block 25771071 on 2026-08-16, isPeer(30110, 0xc708b6887db46005da033501f8aebee72d191a5d) and isPeer(30184, 0xc708b6887db46005da033501f8aebee72d191a5d) returned true on the adapter; the owner Safe can change peer configuration. LayerZero Scan (queried 2026-08-18) also shows delivered ETH/Arb/Base ↔ Solana messages whose Solana OApp is OFT Store HFss3BXK8SLaWvskdgA9L2YHKxVH1WKfpxmQFukNypVt (EID 30168), 2-of-2 required DVNs LayerZero Labs + Nethermind, ULN V302. That Solana OFT mint is catalog-omitted because its live supply is 3.242001.",
           "rateLimits": "rateLimiter() = address(0); the verified source exposes owner-controlled rate-limit configuration, so no active aggregate or per-call rate limiter was observed.",
           "caps": "The adapter's bridge accounting is lock/unlock over the native inner token; no independent native-issuance cap is claimed for this route.",
           "pausersAdminsUpgraders": "The owner Safe controls peer, delegate, enforced-options, message-inspector, and rate-limit configuration. Safe guard/fallback reads were unavailable through the tested ABI; enabled-module pagination returned an empty list.",
@@ -388,46 +355,6 @@
           }
         ],
         "evidence": "At Base block 50067660 on 2026-08-16, USDtbOFT owner 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec was a 5-of-10 Safe with an empty enabled-module result; guard/fallback status was not available through the tested ABI. The OFT burns on send and mints on validated receive, while the owner controls peer, delegate, enforced-options, message-inspector, and rate-limit configuration."
-      },
-      {
-        "id": "usdtb-solana-oft-bridge-authority-unresolved",
-        "label": "USDtb Solana LayerZero OFT program and bridge mint authority",
-        "routeRefs": [
-          "solana:39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy"
-        ],
-        "capabilities": [
-          "bridge-mint",
-          "escrow"
-        ],
-        "controllerChain": "solana",
-        "controllerAddress": "kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq",
-        "failureDomainKeys": [
-          "layerzero:oft:usdtb-ethena",
-          "program:solana:BpV7o3yBPYqLnbauX5zdLu8XPhuJ9DESQXgLh8dzqcZ4",
-          "escrow:solana:8rkzuEhp2JiEZFmN7wDZMxzUBGtruKDXWXMxsjEPWEAX",
-          "mint-authority:solana:kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq"
-        ],
-        "authorityType": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "routeChecks": {
-          "lockboxOrEscrow": "LayerZero metadata lists escrow token account 8rkzuEhp2JiEZFmN7wDZMxzUBGtruKDXWXMxsjEPWEAX for the Solana OFT.",
-          "trustedPeerOrRemote": "The Solana OFT peer/config state and exact DVN/executor configuration remain unresolved.",
-          "pausersAdminsUpgraders": "LayerZero metadata lists OFT program BpV7o3yBPYqLnbauX5zdLu8XPhuJ9DESQXgLh8dzqcZ4 and bridge mint authority kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq; the program upgrade authority and administrative signer remain unresolved.",
-          "unsupportedReason": "The route remains unresolved and opaque-or-unknown until the Solana OFT program authority, admin signer, peers, and message validation configuration are verified from primary sources."
-        },
-        "observedAt": "2026-08-16",
-        "observedBlock": 439741723,
-        "sources": [
-          {
-            "label": "LayerZero current OFT metadata",
-            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list"
-          },
-          {
-            "label": "Solana finalized RPC",
-            "url": "https://solana-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At finalized Solana slot 439741723 on 2026-08-16, separate SPL mint 39DrizvVVntnUhKkyy7Nu8v1YDySA1y4R1uBnv4U7zYy had bridge mint authority kRx8UnLZTP7x5we1CWot6wFsTTPx8U7rdw7YhmJSCuq. LayerZero metadata lists its OFT program and escrow account, but the program upgrade authority, administrative signer, peer/config state, and DVN/executor configuration are unresolved; those facts remain opaque Bridge Risk rather than guessed controls or Mint Authority."
       }
     ]
   }

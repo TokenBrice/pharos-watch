@@ -365,7 +365,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       "v9PublicationOffset",
       Math.floor(scheduledTimeMs / 1_000),
       Math.floor(Date.parse("2026-07-26T12:00:00Z") / 1_000) -
-        35 * 60,
+        6 * 60,
     );
     expect(fixture.bind).not.toHaveBeenCalledWith(
       unrelatedSlotKey,
@@ -416,7 +416,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       "v9PublicationOffset",
       Math.floor(scheduledTimeMs / 1_000),
       Math.floor(Date.parse("2026-07-26T12:00:00Z") / 1_000) -
-        35 * 60,
+        6 * 60,
     );
     expect(run).not.toHaveBeenCalled();
   });

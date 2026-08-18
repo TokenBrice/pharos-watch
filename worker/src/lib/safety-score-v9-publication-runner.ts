@@ -22,6 +22,8 @@ import {
   type V9PublicationAttempt,
 } from "./safety-score-v9-publication-store";
 import type { V9AssetQuarantine } from "./safety-score-v9-fact-set";
+import { persistAlertSafetyV9SourceEnvelope } from "./alert-safety-source-cache";
+import { buildSafetyScoreV9PublicationIdentity } from "./report-cards-v9-cache";
 import { logWorkerEvent } from "./structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./safety-score-v9-transfer-materiality";
 
@@ -501,6 +503,31 @@ export async function runSafetyScoreV9Publication(
       publicationClockSec: fixedInput.clockSec,
       signal: publicationSignal,
     });
+    try {
+      // Thin alert-lane projection of the publication just accepted. The
+      // response is already in memory here, so this is the one place the
+      // envelope can be written without a publication decode. Non-fatal:
+      // alert lanes fall back to the full decode when it is absent.
+      await persistAlertSafetyV9SourceEnvelope(
+        input.db,
+        {
+          cards: publication.cards,
+          safetyScoreIdentity:
+            buildSafetyScoreV9PublicationIdentity(publication),
+          publishedAt: fixedInput.clockSec,
+        },
+        publicationSignal,
+      );
+    } catch (error) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "safety_score_v9_alert_source_envelope_persist_failed",
+        job: "compute-safety-score-v9",
+        message: "Safety Score V9 alert source envelope could not be persisted",
+        metadata: { error: String(error).slice(0, 200) },
+      });
+    }
     return {
       status: "published",
       attemptId,

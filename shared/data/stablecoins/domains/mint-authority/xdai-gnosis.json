@@ -1,45 +1,53 @@
 {
   "id": "xdai-gnosis",
   "mintAuthority": {
-    "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "mintPath": "unknown",
+    "authorityPosture": "unknown",
     "confidence": "verified",
-    "summary": "xDAI has no independent local ERC-20 or native issuer: it is a Gnosis-native balance representation of the inherited USDS issuance path. The xDAI bridge's validator quorum, escrow, limits, governance, and upgrades are assessed in Bridge Risk, while USDS parent issuance remains attributable to usds-sky.",
-    "inheritedFrom": "usds-sky",
-    "economicCapSemantics": "raiseable",
-    "reconciliation": "continuous",
+    "summary": "xDAI is the Gnosis-native gas balance, not an ERC-20 liability. There is no addressable native token contract and no local issuer. New xDAI is credited only when the canonical xDAI bridge escrows USDS on Ethereum and a 4-of-7 validator quorum affirms the Home Bridge, which then calls BlockReward.addExtraReceiver; the reverse path burns native xDAI before USDS (or DAI) is released. WXDAI 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is a same-chain WETH9-style wrapper and is not an issuer. Bridge validators, limits, 8-of-15 Safes, and proxy upgrades stay in Bridge Risk. This is an external-only representation, not inherited USDS mint authority.",
+    "economicCapSemantics": "unknown",
+    "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
       "sources": [
         {
-          "label": "Gnosis xDAI bridge docs",
+          "label": "Gnosis xDAI token docs (native gas; WXDAI is the ERC-20 wrap)",
+          "url": "https://docs.gnosischain.com/about/tokens/xdai"
+        },
+        {
+          "label": "Gnosis xDAI bridge docs (USDS lock → BlockReward credit)",
           "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
         },
         {
-          "label": "Gnosis bridge validator docs",
-          "url": "https://docs.gnosischain.com/bridges/management/validators"
+          "label": "HomeBridgeErcToNative onExecuteAffirmation → addExtraReceiver",
+          "url": "https://github.com/gnosischain/tokenbridge-contracts/blob/xdaibridge/contracts/upgradeable_contracts/erc20_to_native/HomeBridgeErcToNative.sol"
         },
         {
-          "label": "Existing USDS mint authority review",
-          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          "label": "WXDAI verified WETH9-style source (Sourcify match)",
+          "url": "https://repo.sourcify.dev/contracts/full_match/100/0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d/"
         }
       ],
-      "evidence": "Reviewed 2026-08-16: xDAI is native to Gnosis Chain and the tracked WXDAI contract is only a WETH-style wrapper, so no independent local xDAI issuer or native token contract is claimed. The reviewed xDAI route is USDS escrow on Ethereum followed by validator-affirmed Home Bridge credit through BlockReward, with xDAI burned before USDS release in the reverse path. Its 4-of-7 validators, bridge limits, 8-of-15 governance Safes, bridge proxy upgrades, and no observed timelock remain fully scoreable under Bridge Risk; they are not native Mint Authority controls. The USDS issuance path remains inherited from usds-sky.",
-      "reviewer": "Codex mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Reviewed 2026-08-18 (W06): official token docs state xDAI is the native gas token and is not ERC-20; WXDAI 0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d is the wrap. Sourcify-verified WXDAI.sol is a WETH9 fork (comment cites mainnet WETH9 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) exposing only deposit/withdraw of msg.value — no mint, no admin, no minter. Bridge docs and HomeBridgeErcToNative.sol credit native xDAI only via blockReward.addExtraReceiver after validator-affirmed executeAffirmation; reverse nativeTransfer burns to address(0) against mintedTotallyByBridge minus totalBurntCoins. USDS minters do not appear on this path. The sole authored contract gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is covered by the single reviewed wrapped-representation route of the same id. 4-of-7 validators, daily/per-tx limits, 8-of-15 Safes, and proxy upgrades remain in bridgeRouteRisk.",
+      "reviewer": "W06",
+      "reviewedAt": "2026-08-18",
+      "disposition": "scoreable",
       "noLocalIssuance": {
-        "kind": "inherited-parent-issuance",
-        "reviewedAt": "2026-08-16",
-        "reviewer": "Codex mint-bridge-boundary migration",
-        "rationale": "xDAI has no independent local native-issuance contract; its Gnosis-native balance is a bridge representation of the inherited USDS parent path, and the tracked WXDAI contract is only a local wrapper.",
+        "kind": "external-only-representation",
+        "reviewedAt": "2026-08-18",
+        "reviewer": "W06",
+        "rationale": "Native xDAI has no token contract and no local issuer. The only authored catalog contract is the same-chain WXDAI wrap, covered by the single reviewed wrapped-representation route gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d. Durable supply is created and destroyed by the already-scored xDAI bridge (Foreign escrow, Home Bridge, BlockReward), not by Sky USDS mint authority.",
         "sources": [
+          {
+            "label": "Gnosis xDAI token docs",
+            "url": "https://docs.gnosischain.com/about/tokens/xdai"
+          },
+          {
+            "label": "WXDAI verified WETH9-style source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/100/0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d/"
+          },
           {
             "label": "Gnosis xDAI bridge docs",
             "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
-          },
-          {
-            "label": "WXDAI verified wrapper",
-            "url": "https://gnosis.blockscout.com/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d?tab=contract"
           }
         ]
       }

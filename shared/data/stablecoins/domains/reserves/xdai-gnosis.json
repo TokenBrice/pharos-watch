@@ -25,8 +25,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "OpenAI Codex Safety Score V9 backing review",
+    "reviewedAt": "2026-08-18",
+    "reviewer": "OpenAI Codex Safety Score V9 backing review; W06 mint-boundary re-home",
     "confidence": "verified",
     "sources": [
       {
@@ -66,7 +66,7 @@
         "url": "https://gnosis.blockscout.com/block/47325357"
       }
     ],
-    "rationale": "Gnosis documents that the completed migration replaced DAI and sDAI with USDS and sUSDS as xDAI bridge collateral. Timestamp-aligned reads at Ethereum block 25584913 (2026-07-22T01:13:47Z) and Gnosis block 47325357 (2026-07-22T01:13:50Z) reconcile the two sides. The Foreign Bridge held 705,559.039085990130672328 liquid USDS and 64,994,123.730852270706889290 sUSDS shares redeemable for 71,738,483.035424911185310499 USDS; only 0.052688189469517749 legacy DAI and zero sDAI remained. On Gnosis, BlockRewardAuRa mintedTotallyByBridge(Home Bridge) was 1,327,754,383.519273030164275956 xDAI and Home Bridge totalBurntCoins was 1,255,997,803.184027289689191742, leaving 71,756,580.335245740475084214 bridge-minted xDAI outstanding. Direct USDS plus the bridge's recorded 71,729,444.626685023633523932 USDS sUSDS principal and DAI dust total 72,435,003.718459203233714009, exceeding that liability by 678,423.383213462758629795 (100.95% principal coverage); max-withdrawable fair value is 72,444,042.127199090785500576. The fair-value composition normalizes to 99.03% sUSDS and 0.97% liquid USDS; legacy DAI is immaterial dust, not a reserve slice.",
+    "rationale": "Gnosis documents that the completed migration replaced DAI and sDAI with USDS and sUSDS as xDAI bridge collateral. Timestamp-aligned reads at Ethereum block 25584913 (2026-07-22T01:13:47Z) and Gnosis block 47325357 (2026-07-22T01:13:50Z) reconcile the two sides. The Foreign Bridge held 705,559.039085990130672328 liquid USDS and 64,994,123.730852270706889290 sUSDS shares redeemable for 71,738,483.035424911185310499 USDS; only 0.052688189469517749 legacy DAI and zero sDAI remained. On Gnosis, BlockRewardAuRa mintedTotallyByBridge(Home Bridge) was 1,327,754,383.519273030164275956 xDAI and Home Bridge totalBurntCoins was 1,255,997,803.184027289689191742, leaving 71,756,580.335245740475084214 bridge-minted xDAI outstanding. Direct USDS plus the bridge's recorded 71,729,444.626685023633523932 USDS sUSDS principal and DAI dust total 72,435,003.718459203233714009, exceeding that liability by 678,423.383213462758629795 (100.95% principal coverage); max-withdrawable fair value is 72,444,042.127199090785500576. The fair-value composition normalizes to 99.03% sUSDS and 0.97% liquid USDS; legacy DAI is immaterial dust, not a reserve slice. W06 mint-boundary re-home (2026-08-18): keep both collateral rows in this sidecar as xDAI's Foreign Bridge backing composition (99.03% sUSDS + 0.97% liquid USDS at Ethereum 0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016). Do not convert them to a 100% usds-sky wrapper slice and do not add a parallel wrapper slice. Redemption pays USDS (or DAI), but the escrow's sUSDS share and minCashThreshold liquidity are real xDAI backing risk and must remain visible here; the live xdai-bridge adapter already emits this collateral mix. USDS/sUSDS mint risk stays on those assets as basket-exposure, not as inherited xDAI mint authority.",
     "compositionBasis": "Timestamp-aligned Ethereum bridge escrow balances and sUSDS max-withdraw/principal reads reconciled to Gnosis bridge mint-minus-burn accounting",
     "compositionAsOf": "2026-07-22",
     "scope": "full-composition",

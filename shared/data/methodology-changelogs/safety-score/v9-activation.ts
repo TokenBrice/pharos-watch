@@ -1,5 +1,26 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_SCOPED_CONTROL_QUESTIONS: MethodologyChangelogEntry = {
+  version: "9.27",
+  title: "A reviewer-scoped open question is better evidence than silence",
+  date: "2026-08-18",
+  effectiveAt: 1787097600,
+  summary:
+    "Economic Control distinguishes a reviewer who investigated a control and recorded exactly what stays unknown from a control nobody has resolved. A curated mint-authority review can now author scoped questions, each naming one control by chain:address or label with its own question text, review date, and sources. While such a question is fresh, the named control's gap takes the new 69 control-scoped-gap ceiling instead of the 55 control-unverified ceiling. The 9.23 boundary migration had recorded several of these as prose — PAXG's Solana Token-2022 authority was reviewed, dated, sourced, and explicitly retained as an unresolved fact — yet the score treated that documented, bounded unknown identically to total ignorance, publishing an 85 A asset at 55 C.",
+  impact: [
+    "The reason registry gains `scoped-control-question` and `namedReasonCeilings` gains `control-scoped-gap` at 69, aligned with the limited-evidence ceiling: a scoped, dated, sourced open question is limited evidence, not absent evidence. All other named ceilings, treatments, weights, and thresholds are unchanged",
+    "A scoped question names exactly one control and softens only that control's gap. The legacy `unresolvedQuestions` list keeps its all-or-nothing semantics unchanged; curators migrate a question to the scoped form only when it genuinely binds one named control",
+    "Freshness is enforced at compile time with a 90-day window: a scoped question whose review date ages past it reverts to the hard 55 ceiling, so a named gap cannot rot as a permanent softener. The gap row stays in the DEPLOYMENT_CONTROLS curation queue throughout",
+    "The whole-asset inventory reason softens only when every unresolved control in the inventory carries a fresh scoped question; one unscoped unresolved control keeps the hard reason for the asset",
+    "Deployment-scoped controls with a null supply share gain a materiality release: when the asset's supply partition is complete and reconciled, the deployment's measured rows (or zero, when a complete partition holds no row for it) bound the share, and a proven sub-threshold bound stops binding the control-unverified ceiling. A missing or unreconciled partition keeps the fail-closed treatment, and global-claim controls are never released by materiality. No currently tracked asset relied on this release at the 2026-08-18 capture; it closes the gap class the 9.26 aggregate-residue fix left open per control",
+    "Reference curation in the same release converts the documented open questions for paxg-paxos (Solana Token-2022 mint authority attribution) and xsgd-straitsx (Hedera supply and admin key attribution) into scoped questions",
+    "Measured on the 2026-08-18 publication capture: exactly two assets move, both upward — paxg-paxos 55 C to 69 B- and xsgd-straitsx 55 C to 69 B-. No other score, grade, or pillar score changes",
+    "Pillar weights, bounded aggregation, grade thresholds, the withhold band, and every score-bearing gate value are unchanged. The policy semantic digest moves because the registry gains the reason and the named-ceiling table gains its entry",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_BRIDGE_RESIDUE_MATERIALITY: MethodologyChangelogEntry = {
   version: "9.26",
   title: "A trace of unmapped bridge supply stops being a material control gap",

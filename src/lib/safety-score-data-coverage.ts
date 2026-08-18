@@ -72,6 +72,7 @@ const REASON_CODE_LABELS = {
   "parent-cycle": "Circular dependency between assets",
   "partial-reserve-review": "Reserve review only partly complete",
   "runtime-bridge-materiality-unavailable": "Live bridge exposure unavailable",
+  "scoped-control-question": "Reviewer-scoped control question open",
   "selected-bridge-route-missing": "Selected bridge route not found",
   "selected-bridge-route-unresolved": "Selected bridge route unresolved",
   "unknown-control-cap-authority": "Supply-cap authority unknown",

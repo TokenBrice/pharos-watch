@@ -308,6 +308,9 @@ const ControlOverlaySchema = z
       .nullable(),
     delaySec: z.number().int().nonnegative().nullable(),
     materialSupplyShare: FractionSchema.nullable(),
+    // A reviewer authored a fresh scoped open question naming this control;
+    // mirrors the compiled control fact (`V9DeploymentControlFactV2`).
+    scopedQuestionFresh: z.boolean().optional(),
     // Reviewed key-custody attestation and Safe module/guard surface. Both
     // mirror the compiled control fact (`V9DeploymentControlFactV2`); see the
     // field comments there.

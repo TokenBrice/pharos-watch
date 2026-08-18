@@ -35,6 +35,10 @@ Mint controls and mutable mint-logic upgrade paths on active multi-deployment as
 
 An inherited claim is curated as a wrapper reserve slice naming the parent, not as a copy of the parent's collateral composition; the copy both double-counts the parent's exposure and leaves no edge for the parent's mint risk to travel along.
 
+### A reviewer-scoped open question is limited evidence (`9.27`)
+
+`mintAuthority.review.scopedQuestions` records an open question a reviewer investigated and could not close, scoped to exactly one control named by `chain:address` or by its label, with the question text, its own `reviewedAt`, `reviewer`, and sources. While that review date sits inside a 90-day freshness window, the named control's gap publishes `scoped-control-question` and takes the 69 `control-scoped-gap` ceiling instead of the 55 `control-unverified` ceiling — an investigated, dated, bounded unknown is limited evidence, not absent evidence. Past the window the gap reverts to the hard ceiling, so a named gap cannot become a permanent softener; the row stays in the `DEPLOYMENT_CONTROLS` curation queue either way. A scoped question softens only the control it names: the whole-asset inventory reason softens only when every unresolved control carries a fresh scoped question, and the legacy all-or-nothing `unresolvedQuestions` list keeps its existing semantics. Deployment-scoped controls with a null supply share also gain a materiality release in `9.27`: when the supply partition is complete and reconciled, the deployment's measured rows bound the share and a proven sub-threshold bound stops binding the ceiling; global-claim controls are never released by materiality.
+
 The historical description follows.
 
 ## Methodology Versioning

@@ -592,20 +592,20 @@ describe("runScheduledSlotWithFence", () => {
     });
   });
 
-  it("uses a 35-minute default scheduled-slot stale window", async () => {
+  it("uses a five-minute default scheduled-slot stale window", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const thirtyMinutesAgo = now - 30 * 60;
+    const sixMinutesAgo = now - 10 * 60;
     const db = makeLeaseDb({
       slots: [
         {
           slot_key: "fourHourlyReserveSync",
-          slot_started_at: thirtyMinutesAgo,
+          slot_started_at: sixMinutesAgo,
           state: "running",
           result_status: null,
           execution_owner: "owner-a",
-          started_at: thirtyMinutesAgo,
+          started_at: sixMinutesAgo,
           finished_at: null,
-          updated_at: thirtyMinutesAgo,
+          updated_at: sixMinutesAgo,
           metadata: null,
         },
       ],
@@ -613,12 +613,69 @@ describe("runScheduledSlotWithFence", () => {
     const fn = vi.fn(async () => undefined);
 
     const result = await runScheduledSlotWithFence(db, "fourHourlyReserveSync", fn, {
-      slotStartedAt: thirtyMinutesAgo,
+      slotStartedAt: sixMinutesAgo,
+      owner: "owner-b",
+    });
+
+    expect(result.status).not.toBe("skipped_running");
+    expect(fn).toHaveBeenCalled();
+  });
+
+  it("keeps a freshly heartbeating slot exclusive under the default stale window", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const slotStartedAt = now - 6 * 60;
+    const db = makeLeaseDb({
+      slots: [
+        {
+          slot_key: "fourHourlyReserveSync",
+          slot_started_at: slotStartedAt,
+          state: "running",
+          result_status: null,
+          execution_owner: "owner-a",
+          started_at: slotStartedAt,
+          finished_at: null,
+          updated_at: now - 60,
+          metadata: null,
+        },
+      ],
+    });
+    const fn = vi.fn(async () => undefined);
+
+    const result = await runScheduledSlotWithFence(db, "fourHourlyReserveSync", fn, {
+      slotStartedAt,
       owner: "owner-b",
     });
 
     expect(result.status).toBe("skipped_running");
     expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("expires a provably dead slot past the invocation wall clock even with a fresh heartbeat row", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleSlotStartedAt = now - 1_000;
+    const db = makeLeaseDb({
+      slots: [
+        {
+          slot_key: "hourlyYieldSync",
+          slot_started_at: staleSlotStartedAt,
+          state: "running",
+          result_status: null,
+          execution_owner: "owner-a",
+          started_at: staleSlotStartedAt,
+          finished_at: null,
+          updated_at: now - 30,
+          metadata: null,
+        },
+      ],
+    });
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 300 });
+
+    expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 1 });
+    expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({
+      state: "finished",
+      result_status: "error",
+    });
   });
 
   it("claims a new slot after sweeping stale previous slots for the same schedule key", async () => {
@@ -1135,6 +1192,53 @@ describe("runScheduledSlotWithFence", () => {
     expect(db.getLease("sync-yield-data")).toBeDefined();
     const staleSlot = db.getSlot("hourlyYieldSync", staleSlotStartedAt);
     expect(staleSlot).toMatchObject({ state: "running", execution_owner: "slot-owner-a" });
+  });
+
+  it("reconciles past a child lease whose heartbeat went silent even while the lease TTL is unexpired", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleSlotStartedAt = now - 3600;
+    const db = makeLeaseDb({
+      slots: [
+        {
+          slot_key: "hourlyYieldSync",
+          slot_started_at: staleSlotStartedAt,
+          state: "running",
+          result_status: null,
+          execution_owner: "slot-owner-a",
+          started_at: staleSlotStartedAt,
+          finished_at: null,
+          updated_at: now - 1800,
+          metadata: null,
+        },
+      ],
+      leases: [
+        {
+          job: "sync-yield-data",
+          lease_owner: "yield-owner-a",
+          lease_until: now + 300,
+          heartbeat_at: now - 400,
+          updated_at: now - 400,
+        },
+      ],
+      progress: [
+        {
+          job: "sync-yield-data",
+          started_at: staleSlotStartedAt + 20,
+          updated_at: now - 400,
+          stage: "evaluation",
+          lease_owner: "yield-owner-a",
+          slot_started_at: staleSlotStartedAt,
+        },
+      ],
+    });
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
+
+    expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 1 });
+    expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({
+      state: "finished",
+      result_status: "error",
+    });
   });
 
   it("stores child job summaries and degraded slot status", async () => {

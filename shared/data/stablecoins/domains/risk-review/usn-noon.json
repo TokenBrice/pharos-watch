@@ -327,7 +327,7 @@
       },
       {
         "id": "ethereum-usn-hyperlane-mailbox-owner",
-        "label": "Ethereum Hyperlane mailbox owner and default ISM administration",
+        "label": "Hyperlane / Abacus Works Ethereum mailbox Safe and default ISM administration",
         "routeRefs": [
           "ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed",
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
@@ -339,26 +339,81 @@
         "controllerAddress": "0x562dfaac27a84be6c96273f5c9594da1681c0da7",
         "failureDomainKeys": [
           "mailbox:ethereum:0xc005dc82818d67af737725bd4bf75435d065d239",
-          "protocol:hyperlane-ism"
+          "proxy-admin:ethereum:0x75ee15ee1b4a75fa3e2fdf5df3253c25599cc659",
+          "safe:ethereum:0x562dfaac27a84be6c96273f5c9594da1681c0da7",
+          "protocol:hyperlane-ism",
+          "eoa:ethereum:0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba"
         ],
-        "authorityType": "unknown",
-        "routeChecks": {
-          "trustedPeerOrRemote": "The Ethereum mailbox defaultIsm() returned 0x10cf42691db303ff44f35c9ced2cd1283a93e046 at block 25771119, and the USN token's zero interchainSecurityModule() makes that default effective.",
-          "attestorQuorum": "The mailbox owner can administer the default ISM, but the current validator/member set and quorum semantics were not independently decoded."
+        "authorityType": "safe",
+        "threshold": 6,
+        "signerCount": 10,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0xD5c0D17cCb9071D27a4F7eD8255F59989b9aee0d",
+            "0x3b548E88BA3259A6f45DEeA91449cdda5cF164b3",
+            "0x861FC61a961F8AFDf115B8DE274101B9ECea2F26",
+            "0x82950a6356316272dF1928C72F5F0A44D9673c88",
+            "0x9F500DF92175b2Ac36F8d443382B219d211D354A",
+            "0x29fF839F1e3322f8408A25Ad29F5092D3A734779",
+            "0x3247FC16763c340EeFc1e60eda172ef9Db7c96B6",
+            "0x2f43Ac3cD6A22E4Ba20d3d18d116b1f9420eD84B",
+            "0xc3E966E79eF1aA4751221F55fB8A36589C24C0cA",
+            "0xa7ECcdb9Be08178f896c26b7BbD8C3D4E844d9Ba"
+          ],
+          "threshold": 6,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedBlock": 25784000,
+          "observedAt": "2026-08-18",
+          "source": "safe-api"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771119,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": false,
+        "capDescription": "This Hyperlane protocol Safe cannot mint USN. It owns Ethereum Mailbox 0xc005dc82818d67af737725bd4bf75435d065d239 and Mailbox ProxyAdmin 0x75ee15ee1b4a75fa3e2fdf5df3253c25599cc659 and can replace defaultIsm() or the mailbox implementation with no timelock. Ethereum USN exposes no maxLimit/limit/rateLimits surface.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 25784000, Mailbox localDomain()=1, owner()=this 6-of-10 Safe, defaultIsm()=0x10cf42691db303ff44f35c9ced2cd1283a93e046. USN.interchainSecurityModule()=0 so the mailbox default is effective. USN.remoteTokens(324) still returns the zkSync representation 0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6.",
+          "attestorQuorum": "Default ISM 0x10cf42691db303ff44f35c9ced2cd1283a93e046 is a StaticAggregationISM clone (moduleType=2, implementation 0xc2ccfc65d2d5719e78a77ea5f6c10aa4cdec6719) requiring both (1) DomainRoutingISM 0x713afc6081d5fafcff806a7ea2ed73c3eb06b060, owned by this Safe, and (2) PausableISM/NULL 0x9c34257b2889099687e58e943873f5c4fbbbb8ee (moduleType=6), unpaused, owned by EOA 0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba (also a Safe signer). Routing module(324/zkSync)=aggregation 1-of-2 of MerkleRootMultisig 0x48f06473d8ff6a2295bbda54174c6c7dad1ee6a2 (type 4) and MessageIdMultisig 0xff868ab2446721b3441679865458244bf9aa1e17 (type 5), each 2-of-3 [Mitosis 0x4f977a59fdc2d9e39f6d780a84d5b4add1495a36, Abacus Works 0xadd1d39ce7a687e32255ac457cf99a6d8c5b5d1a, Merkly 0xcf0211fafbb91fd9d06d7e306b30032dc3a1934f]. module(50104/Sophon)=aggregation 1-of-2 of MerkleRoot 0x359d81c4593a6c834e9ec4c40f59245af6c0ccea and MessageId 0xc1fdb0b4ca37e1b46f0957902afaa0b3a7708008, each 2-of-3 [Mitosis 0x4f977a59..., 0xb84c5d02120ed0b39d0f78bbc0e298d89ebcd10b, Merkly 0xcf0211fa...]; Sophon is marked deprecated/disabled in the Hyperlane registry and is absent from the published default-ISM validator table. module(358974494/Starknet)=aggregation 1-of-2 of MessageId 0x1b0780a059f90f2ad5c41dc1d53adc78e6ce4b1b and MerkleRoot 0x5f2582883c6ae4e788af5b9cddffea4490572060, each 2-of-3 [Zee Prime 0x5450447aee7b544c462c9352bef7cad049b0c2dc, Abacus Works 0x61204c987d1121175a74e04d5045ab708aa1489f, Staked 0xb3ac35d3988bca8c2ffd195b1c6bee18536b317b].",
+          "pausersAdminsUpgraders": "Mailbox EIP-1967 admin is ProxyAdmin 0x75ee15ee1b4a75fa3e2fdf5df3253c25599cc659, whose owner() is this Safe (no timelock; registry timelockController is zero). PausableISM.owner() is EOA 0xa7eccdb9..., which can halt inbound Hyperlane delivery without forging messages. Safe nonce=44, modules=[], guard=0, fallback=0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4.",
+          "rateLimits": "USN.maxLimit(), limit(), and rateLimits(uint32) revert at block 25784095. No token-level Hyperlane rate-limit surface."
+        },
+        "bypassSurfaces": [
+          "PausableISM owner EOA 0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba can pause inbound default-ISM verification (liveness, not unauthorized mint).",
+          "This Safe can replace defaultIsm() or upgrade the Mailbox implementation immediately.",
+          "LayerZero Endpoint V2 remains a separate zkSync/Sophon rail whose DVN set is not decoded here."
+        ],
+        "observedAt": "2026-08-18",
+        "observedBlock": 25784000,
         "sources": [
           {
             "label": "Ethereum Hyperlane mailbox",
             "url": "https://etherscan.io/address/0xc005dc82818d67af737725bd4bf75435d065d239"
           },
           {
-            "label": "Hyperlane docs",
-            "url": "https://docs.hyperlane.xyz/"
+            "label": "Hyperlane mailbox owner Safe",
+            "url": "https://etherscan.io/address/0x562dfaac27a84be6c96273f5c9594da1681c0da7"
+          },
+          {
+            "label": "Hyperlane mailbox owner Safe API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x562Dfaac27A84be6C96273F5c9594DA1681C0DA7/"
+          },
+          {
+            "label": "Hyperlane default ISM validator docs",
+            "url": "https://docs.hyperlane.xyz/docs/reference/addresses/validators/mainnet-default-ism-validators"
+          },
+          {
+            "label": "Hyperlane Multisig ISM docs",
+            "url": "https://docs.hyperlane.xyz/docs/protocol/ISM/standard-ISMs/multisig-ISM"
+          },
+          {
+            "label": "Hyperlane Ethereum registry addresses",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/ethereum/addresses.yaml"
           }
         ],
-        "evidence": "At Ethereum block 25771119, Hyperlane mailbox owner() returned 0x562dfaac27a84be6c96273f5c9594da1681c0da7, localDomain() returned 1, and defaultIsm() returned 0x10cf42691db303ff44f35c9ced2cd1283a93e046."
+        "evidence": "At Ethereum block 25783942–25784000, Mailbox 0xc005dc82818d67af737725bd4bf75435d065d239 owner()=0x562dfaac27a84be6c96273f5c9594da1681c0da7, defaultIsm()=0x10cf42691db303ff44f35c9ced2cd1283a93e046, localDomain()=1, EIP-1967 impl=0x7b4d881c122a5e61adcffb56a2e3ce9927d53455 / admin=0x75ee15ee1b4a75fa3e2fdf5df3253c25599cc659. The owner is a GnosisSafeProxy (VERSION 1.3.0) whose getOwners()+getThreshold() and Safe API return 6-of-10, modules=[], guard=0, fallback=0xf48f2B2d..., nonce=44. ProxyAdmin.owner() is the same Safe. Default ISM bytecode is an EIP-1167 clone of StaticAggregationISM 0xc2ccfc65... with threshold 2 and modules [DomainRoutingISM 0x713afc60... owned by the Safe, PausableISM 0x9c34257b... owned by 0xa7eccdb9..., paused=false]. Per-origin Multisig ISM validator sets were read from clone immutable args / modulesAndThreshold and match the published zkSync and Starknet default-ISM tables; Sophon is live on-chain as 2-of-3 but is registry-deprecated and unpublished. USN token ISM is zero."
       },
       {
         "id": "ethereum-usn-bridge-proxy-upgrade",
@@ -453,64 +508,87 @@
       },
       {
         "id": "zksync-usn-token-proxy-admin",
-        "label": "zkSync USN representation proxy admin",
+        "label": "zkSync USN representation ProxyAdmin owner (Noon 3-of-4 Safe)",
         "routeRefs": [
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
         ],
         "capabilities": ["upgrade", "admin"],
         "controllerChain": "zksync",
-        "controllerAddress": "0x5a82384a042cce41f9ac6f0c110773e5b3266f11",
+        "controllerAddress": "0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263",
         "failureDomainKeys": [
           "proxy-admin:zksync:0x5a82384a042cce41f9ac6f0c110773e5b3266f11",
+          "safe:zksync:0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263",
+          "safe:shared:noon-four-owner-overlap",
           "contract:zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
         ],
-        "authorityType": "contract",
-        "routeChecks": {
-          "pausersAdminsUpgraders": "At zkSync block 71576774, the USN representation implementation slot was 0xa5b228237bef9bc804d8d6e7c76d0853a406bf34 and its proxy admin slot was 0x5a82384a042cce41f9ac6f0c110773e5b3266f11."
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "safe": {
+          "owners": [
+            "0x0649f6fc279b0eb94d5b15de013b87b0e50d2d88",
+            "0xe45bb0d3cc77702e1310bb621c59c778304a42d0",
+            "0x7b1187106a3ac9d2602f41224a06e247fc12be37",
+            "0x09ce2d1c37772f7ff666b6447a66a5ebd2833799"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-18",
+          "source": "onchain"
         },
-        "bypassSurfaces": [
-          "The representation implementation's verified source and exact admin authorization were not fully independently decoded."
-        ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 71576774,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At zkSync block 71595685, USN EIP-1967 admin=ProxyAdmin 0x5a82384a042cce41f9ac6f0c110773e5b3266f11 and implementation=0xa5b228237bef9bc804d8d6e7c76d0853a406bf34. ProxyAdmin.owner()=Noon 3-of-4 Safe 0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263 (same Safe as token.owner())."
+        },
+        "observedAt": "2026-08-18",
+        "observedBlock": 71595685,
         "sources": [
           {
             "label": "zkSync USN representation proxy",
             "url": "https://era.zksync.network/address/0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
           }
         ],
-        "evidence": "The zkSync USN representation's EIP-1967 admin slot returned 0x5a82384a042cce41f9ac6f0c110773e5b3266f11 at block 71576774."
+        "evidence": "ProxyAdmin 0x5a82384a042cce41f9ac6f0c110773e5b3266f11 owner() returned the already-reviewed Noon zkSync 3-of-4 Safe at block 71595685. Upgrade of the representation is therefore Safe-gated, not an unidentified contract admin."
       },
       {
         "id": "zksync-hyperlane-mailbox-proxy-admin",
-        "label": "zkSync Hyperlane mailbox proxy admin",
+        "label": "zkSync Hyperlane mailbox ProxyAdmin owner (Hyperlane 6-of-10 Safe)",
         "routeRefs": [
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
         ],
         "capabilities": ["upgrade", "admin"],
         "controllerChain": "zksync",
-        "controllerAddress": "0xd01274dc164d32f8595be707f221375e68ce300c",
+        "controllerAddress": "0xcd81ccfe7d9306849136fa96397113345a32ecf3",
         "failureDomainKeys": [
           "proxy-admin:zksync:0xd01274dc164d32f8595be707f221375e68ce300c",
-          "mailbox:zksync:0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e"
+          "mailbox:zksync:0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e",
+          "safe:zksync:0xcd81ccfe7d9306849136fa96397113345a32ecf3"
         ],
-        "authorityType": "contract",
+        "authorityType": "safe",
+        "threshold": 6,
+        "signerCount": 10,
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
-          "pausersAdminsUpgraders": "At zkSync block 71576774, the Hyperlane mailbox implementation/admin were 0x1b4e7fd3052fc6d84dab69eef6a156c7d7909a78 / 0xd01274dc164d32f8595be707f221375e68ce300c."
+          "pausersAdminsUpgraders": "At zkSync block 71595685, Mailbox EIP-1967 admin=0xd01274dc164d32f8595be707f221375e68ce300c (matches Hyperlane registry proxyAdmin). ProxyAdmin.owner()=Hyperlane zkSync 6-of-10 Safe 0xcd81ccfe7d9306849136fa96397113345a32ecf3. No mailbox upgrade timelock was observed."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 71576774,
+        "observedAt": "2026-08-18",
+        "observedBlock": 71595685,
         "sources": [
           {
             "label": "zkSync USN Hyperlane mailbox",
             "url": "https://era.zksync.network/address/0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e"
+          },
+          {
+            "label": "Hyperlane zkSync registry addresses",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/zksync/addresses.yaml"
           }
         ],
-        "evidence": "The zkSync Hyperlane mailbox proxy admin returned 0xd01274dc164d32f8595be707f221375e68ce300c at the reviewed block."
+        "evidence": "Mailbox ProxyAdmin 0xd01274dc164d32f8595be707f221375e68ce300c owner() returned the Hyperlane zkSync mailbox-owner Safe at block 71595685."
       },
       {
         "id": "zksync-hyperlane-mailbox-owner",
-        "label": "zkSync Hyperlane mailbox owner and default ISM administration",
+        "label": "Hyperlane zkSync mailbox Safe and default ISM administration",
         "routeRefs": [
           "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
         ],
@@ -519,22 +597,67 @@
         "controllerAddress": "0xcd81ccfe7d9306849136fa96397113345a32ecf3",
         "failureDomainKeys": [
           "mailbox:zksync:0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e",
+          "proxy-admin:zksync:0xd01274dc164d32f8595be707f221375e68ce300c",
+          "safe:zksync:0xcd81ccfe7d9306849136fa96397113345a32ecf3",
           "protocol:hyperlane-ism"
         ],
-        "authorityType": "unknown",
-        "routeChecks": {
-          "trustedPeerOrRemote": "The zkSync mailbox default ISM was 0xf55cb3c8c4b20276af9f979b0d94bd7ae5487fa2 at block 71576774, and the token's LayerZero peer for EID 30101 returned Ethereum USN.",
-          "attestorQuorum": "The mailbox owner can administer the default ISM, but its validator/member set and quorum semantics were not independently decoded."
+        "authorityType": "safe",
+        "threshold": 6,
+        "signerCount": 10,
+        "safe": {
+          "version": "1.3.0+L2",
+          "owners": [
+            "0xD5c0D17cCb9071D27a4F7eD8255F59989b9aee0d",
+            "0x3b548E88BA3259A6f45DEeA91449cdda5cF164b3",
+            "0x861FC61a961F8AFDf115B8DE274101B9ECea2F26",
+            "0x82950a6356316272dF1928C72F5F0A44D9673c88",
+            "0x9F500DF92175b2Ac36F8d443382B219d211D354A",
+            "0x97a1b7D1B6D52CACf4B6754f144fd6E404790346",
+            "0x3247FC16763c340EeFc1e60eda172ef9Db7c96B6",
+            "0x2f43Ac3cD6A22E4Ba20d3d18d116b1f9420eD84B",
+            "0xc3E966E79eF1aA4751221F55fB8A36589C24C0cA",
+            "0xa7ECcdb9Be08178f896c26b7BbD8C3D4E844d9Ba"
+          ],
+          "threshold": 6,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f870a80647BbC554F3a0EBD093f11B4d2a7492A",
+          "masterCopy": "0x1727c2c531cf966f902E5927b98490fDFb3b2b70",
+          "observedBlock": 71595702,
+          "observedAt": "2026-08-18",
+          "source": "safe-api"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 71576774,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": false,
+        "capDescription": "This Hyperlane zkSync Safe cannot mint USN. It owns Mailbox 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e and Mailbox ProxyAdmin 0xd01274dc164d32f8595be707f221375e68ce300c. zkSync USN has no maxLimit/limit/rateLimits surface; destination mint is intended only via authenticated Hyperlane delivery under the mailbox default ISM.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At zkSync block 71595685–71595702, Mailbox owner()=this 6-of-10 Safe, defaultIsm()=0xf55cb3c8c4b20276af9f979b0d94bd7ae5487fa2 (DomainRoutingISM, moduleType=1, owner=this Safe). USN.interchainSecurityModule()=0. Mailbox EIP-1967 admin=0xd01274dc164d32f8595be707f221375e68ce300c.",
+          "attestorQuorum": "Default ISM module(1/Ethereum)=MessageIdMultisig 0x9a97e31b77edf3041c3084de43f8c9561db95f07 (moduleType=5) with validatorsAndThreshold origin=1 = 6-of-9 [Abacus Works 0x03c842db86a6a3e524d4a6615390c1ea8e2b9541, DSRV 0x94438a7de38d4548ae54df5c6010c4ebc5239eae, Zee Prime 0x5450447aee7b544c462c9352bef7cad049b0c2dc, Staked 0xb3ac35d3988bca8c2ffd195b1c6bee18536b317b, AVS Luganodes 0xb683b742b378632a5f73a2a5a45801b3489bba44, Imperator 0x3786083ca59dc806d894104e65a13a70c2b39276, Mitosis 0x4f977a59fdc2d9e39f6d780a84d5b4add1495a36, Substance Labs 0x29d783efb698f9a2d3045ef4314af1f5674f52c5, Enigma 0x36a669703ad0e11a0382b098574903d2084be22c]. Published docs list a 10th Citrea validator 0xef2e5bb2bc45dd092ff7f9d4d4485f022185aeae that is not in this live set. module(50104)=2-of-3 zkSync-origin set; module(358974494)=2-of-3 Starknet-origin set.",
+          "pausersAdminsUpgraders": "Mailbox ProxyAdmin.owner()=this Safe. Safe nonce=4, modules=[], guard=0. Nine of ten signers match the Ethereum Hyperlane Safe; the sixth owner is 0x97a1b7D1B6D52CACf4B6754f144fd6E404790346 instead of Ethereum's 0x29fF839F1e3322f8408A25Ad29F5092D3A734779.",
+          "rateLimits": "zkSync USN 0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6 maxLimit/limit/rateLimits revert."
+        },
+        "observedAt": "2026-08-18",
+        "observedBlock": 71595702,
         "sources": [
           {
             "label": "zkSync USN Hyperlane mailbox",
             "url": "https://era.zksync.network/address/0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e"
+          },
+          {
+            "label": "zkSync Hyperlane mailbox owner Safe API",
+            "url": "https://api.safe.global/tx-service/zksync/api/v1/safes/0xcd81ccFe7D9306849136Fa96397113345a32ECf3/"
+          },
+          {
+            "label": "Hyperlane zkSync registry addresses",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/zksync/addresses.yaml"
+          },
+          {
+            "label": "Hyperlane default ISM validator docs",
+            "url": "https://docs.hyperlane.xyz/docs/reference/addresses/validators/mainnet-default-ism-validators"
           }
         ],
-        "evidence": "At zkSync block 71576774, the mailbox owner was 0xcd81ccfe7d9306849136fa96397113345a32ecf3 and the default ISM was 0xf55cb3c8c4b20276af9f979b0d94bd7ae5487fa2."
+        "evidence": "At zkSync block 71595685 the mailbox owner contract implements getOwners()/getThreshold()/VERSION=1.3.0 as a 6-of-10 Safe. Safe API confirms version 1.3.0+L2, nonce 4, modules=[], guard=0, fallback=0x2f870a80647BbC554F3a0EBD093f11B4d2a7492A. defaultIsm() is a DomainRoutingISM owned by the same Safe; Ethereum-origin MessageIdMultisig threshold/validators were read via validatorsAndThreshold on a constructed Hyperlane v3 message with origin=1."
       },
       {
         "id": "sophon-usn-owner-safe",
@@ -592,64 +715,87 @@
       },
       {
         "id": "sophon-usn-token-proxy-admin",
-        "label": "Sophon USN representation proxy admin",
+        "label": "Sophon USN representation ProxyAdmin owner (Noon 3-of-4 Safe)",
         "routeRefs": [
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
         "capabilities": ["upgrade", "admin"],
         "controllerChain": "sophon",
-        "controllerAddress": "0xad871a241d1fe8dd6293d6746d1898d211cf5890",
+        "controllerAddress": "0x553d36879016ce22977a622804eee76dc0dc88e0",
         "failureDomainKeys": [
           "proxy-admin:sophon:0xad871a241d1fe8dd6293d6746d1898d211cf5890",
+          "safe:sophon:0x553d36879016ce22977a622804eee76dc0dc88e0",
+          "safe:shared:noon-four-owner-overlap",
           "contract:sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
-        "authorityType": "contract",
-        "routeChecks": {
-          "pausersAdminsUpgraders": "At Sophon block 29641979, the USN representation implementation slot was 0xf90d5784e175b6142958ec32b77b7aa63582d957 and its proxy admin slot was 0xad871a241d1fe8dd6293d6746d1898d211cf5890."
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "safe": {
+          "owners": [
+            "0x0649f6fc279b0eb94d5b15de013b87b0e50d2d88",
+            "0xe45bb0d3cc77702e1310bb621c59c778304a42d0",
+            "0x7b1187106a3ac9d2602f41224a06e247fc12be37",
+            "0x09ce2d1c37772f7ff666b6447a66a5ebd2833799"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-18",
+          "source": "onchain"
         },
-        "bypassSurfaces": [
-          "The representation implementation's verified source and exact admin authorization were not fully independently decoded."
-        ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 29641979,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Sophon block 29644095, USN EIP-1967 admin=ProxyAdmin 0xad871a241d1fe8dd6293d6746d1898d211cf5890 and implementation=0xf90d5784e175b6142958ec32b77b7aa63582d957. ProxyAdmin.owner()=Noon 3-of-4 Safe 0x553d36879016ce22977a622804eee76dc0dc88e0 (same Safe as token.owner())."
+        },
+        "observedAt": "2026-08-18",
+        "observedBlock": 29644095,
         "sources": [
           {
             "label": "Sophon USN representation proxy",
             "url": "https://explorer.sophon.xyz/address/0xc1aa99c3881b26901af70738a7c217dc32536d36"
           }
         ],
-        "evidence": "The Sophon USN representation's EIP-1967 admin slot returned 0xad871a241d1fe8dd6293d6746d1898d211cf5890 at block 29641979."
+        "evidence": "ProxyAdmin 0xad871a241d1fe8dd6293d6746d1898d211cf5890 owner() returned the already-reviewed Noon Sophon 3-of-4 Safe at block 29644095."
       },
       {
         "id": "sophon-hyperlane-mailbox-proxy-admin",
-        "label": "Sophon Hyperlane mailbox proxy admin",
+        "label": "Sophon Hyperlane mailbox ProxyAdmin owner (Hyperlane 6-of-10 Safe)",
         "routeRefs": [
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
         "capabilities": ["upgrade", "admin"],
         "controllerChain": "sophon",
-        "controllerAddress": "0x038f9f4e93e88af2c688da265222fde80e455aa4",
+        "controllerAddress": "0x113d3a19031fe5db58884d6aa54545dd4de499c0",
         "failureDomainKeys": [
           "proxy-admin:sophon:0x038f9f4e93e88af2c688da265222fde80e455aa4",
-          "mailbox:sophon:0x9bbdf86b272d224323136e15594fdce487f40ce7"
+          "mailbox:sophon:0x9bbdf86b272d224323136e15594fdce487f40ce7",
+          "safe:sophon:0x113d3a19031fe5db58884d6aa54545dd4de499c0"
         ],
-        "authorityType": "contract",
+        "authorityType": "safe",
+        "threshold": 6,
+        "signerCount": 10,
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
-          "pausersAdminsUpgraders": "At Sophon block 29641979, the Hyperlane mailbox implementation/admin were 0xa3949b37109d64b10de93252eefebbb2e6b8944f / 0x038f9f4e93e88af2c688da265222fde80e455aa4."
+          "pausersAdminsUpgraders": "At Sophon block 29644095, Mailbox EIP-1967 admin=0x038f9f4e93e88af2c688da265222fde80e455aa4 (matches Hyperlane registry proxyAdmin). ProxyAdmin.owner()=Hyperlane Sophon 6-of-10 Safe 0x113d3a19031fe5db58884d6aa54545dd4de499c0. No mailbox upgrade timelock was observed."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 29641979,
+        "observedAt": "2026-08-18",
+        "observedBlock": 29644095,
         "sources": [
           {
             "label": "Sophon USN Hyperlane mailbox",
             "url": "https://explorer.sophon.xyz/address/0x9bbdf86b272d224323136e15594fdce487f40ce7"
+          },
+          {
+            "label": "Hyperlane Sophon registry addresses",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/sophon/addresses.yaml"
           }
         ],
-        "evidence": "The Sophon Hyperlane mailbox proxy admin returned 0x038f9f4e93e88af2c688da265222fde80e455aa4 at the reviewed block."
+        "evidence": "Mailbox ProxyAdmin 0x038f9f4e93e88af2c688da265222fde80e455aa4 owner() returned the Hyperlane Sophon mailbox-owner Safe at block 29644095."
       },
       {
         "id": "sophon-hyperlane-mailbox-owner",
-        "label": "Sophon Hyperlane mailbox owner and default ISM administration",
+        "label": "Hyperlane Sophon mailbox Safe and default ISM administration",
         "routeRefs": [
           "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
         ],
@@ -658,22 +804,70 @@
         "controllerAddress": "0x113d3a19031fe5db58884d6aa54545dd4de499c0",
         "failureDomainKeys": [
           "mailbox:sophon:0x9bbdf86b272d224323136e15594fdce487f40ce7",
+          "proxy-admin:sophon:0x038f9f4e93e88af2c688da265222fde80e455aa4",
+          "safe:sophon:0x113d3a19031fe5db58884d6aa54545dd4de499c0",
           "protocol:hyperlane-ism"
         ],
-        "authorityType": "unknown",
-        "routeChecks": {
-          "trustedPeerOrRemote": "The Sophon mailbox default ISM was 0x309d19dc1adaacd7ff8baae9737e7d2314a4651e at block 29641979, and the token's LayerZero peer for EID 30101 returned Ethereum USN.",
-          "attestorQuorum": "The mailbox owner can administer the default ISM, but its validator/member set and quorum semantics were not independently decoded."
+        "authorityType": "safe",
+        "threshold": 6,
+        "signerCount": 10,
+        "safe": {
+          "version": "1.4.1+L2",
+          "owners": [
+            "0xD5c0D17cCb9071D27a4F7eD8255F59989b9aee0d",
+            "0x3b548E88BA3259A6f45DEeA91449cdda5cF164b3",
+            "0x861FC61a961F8AFDf115B8DE274101B9ECea2F26",
+            "0x82950a6356316272dF1928C72F5F0A44D9673c88",
+            "0x9F500DF92175b2Ac36F8d443382B219d211D354A",
+            "0x97a1b7D1B6D52CACf4B6754f144fd6E404790346",
+            "0x3247FC16763c340EeFc1e60eda172ef9Db7c96B6",
+            "0x2f43Ac3cD6A22E4Ba20d3d18d116b1f9420eD84B",
+            "0xc3E966E79eF1aA4751221F55fB8A36589C24C0cA",
+            "0xa7ECcdb9Be08178f896c26b7BbD8C3D4E844d9Ba"
+          ],
+          "threshold": 6,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x9301E98DD367135f21bdF66f342A249c9D5F9069",
+          "masterCopy": "0x610fcA2e0279Fa1F8C00c8c2F71dF522AD469380",
+          "observedBlock": 29644098,
+          "observedAt": "2026-08-18",
+          "source": "safe-api"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 29641979,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": false,
+        "capDescription": "This Hyperlane Sophon Safe cannot mint USN. It owns Mailbox 0x9bbdf86b272d224323136e15594fdce487f40ce7 and Mailbox ProxyAdmin 0x038f9f4e93e88af2c688da265222fde80e455aa4. Sophon USN has no maxLimit/limit/rateLimits surface. The Hyperlane registry marks chain sophon availability.status=disabled / reasons=[deprecated]; the mailbox and USN representation remain live.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Sophon block 29644095–29644098, Mailbox owner()=this 6-of-10 Safe, defaultIsm()=0x309d19dc1adaacd7ff8baae9737e7d2314a4651e (DomainRoutingISM, moduleType=1, owner=this Safe). USN.interchainSecurityModule()=0.",
+          "attestorQuorum": "Default ISM module(1/Ethereum)=MessageIdMultisig 0x44b55ff09087ab0188d95d9c3f564259a6cea155 (type 5) validatorsAndThreshold origin=1 = the same 6-of-9 Ethereum-origin set read on zkSync. module(324)=2-of-3 [Abacus Works 0xadd1d39c..., Merkly 0xcf0211fa..., Mitosis 0x4f977a59...]. module(358974494)=2-of-3 [Abacus Works 0x61204c98..., Zee Prime 0x5450447a..., Staked 0xb3ac35d3...].",
+          "pausersAdminsUpgraders": "Mailbox ProxyAdmin.owner()=this Safe. Safe nonce=12, modules=[], guard=0. Signer set equals the zkSync Hyperlane Safe (not the Ethereum sixth owner).",
+          "rateLimits": "Sophon USN 0xc1aa99c3881b26901af70738a7c217dc32536d36 maxLimit/limit revert."
+        },
+        "bypassSurfaces": [
+          "Hyperlane registry currently lists Sophon as deprecated/disabled while the mailbox and USN warp remain live."
+        ],
+        "observedAt": "2026-08-18",
+        "observedBlock": 29644098,
         "sources": [
           {
             "label": "Sophon USN Hyperlane mailbox",
             "url": "https://explorer.sophon.xyz/address/0x9bbdf86b272d224323136e15594fdce487f40ce7"
+          },
+          {
+            "label": "Sophon Hyperlane mailbox owner Safe API",
+            "url": "https://transaction.safe.sophon.xyz/api/v1/safes/0x113d3a19031Fe5DB58884D6aa54545dD4De499c0/"
+          },
+          {
+            "label": "Hyperlane Sophon registry addresses",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/sophon/addresses.yaml"
+          },
+          {
+            "label": "Hyperlane Sophon registry metadata (deprecated)",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/sophon/metadata.yaml"
           }
         ],
-        "evidence": "At Sophon block 29641979, the mailbox owner was 0x113d3a19031fe5db58884d6aa54545dd4de499c0 and the default ISM was 0x309d19dc1adaacd7ff8baae9737e7d2314a4651e."
+        "evidence": "At Sophon block 29644095 the mailbox owner implements getOwners()/getThreshold()/VERSION=1.4.1 as a 6-of-10 Safe with the same ten owners as the zkSync Hyperlane Safe. Sophon Safe API confirms 1.4.1+L2, nonce 12, modules=[], guard=0, fallback=0x9301E98DD367135f21bdF66f342A249c9D5F9069. Default ISM routing and Ethereum-origin 6-of-9 validators were read on-chain at block 29644098."
       },
       {
         "id": "starknet-usn-owner",
@@ -689,32 +883,36 @@
           "protocol:hyperlane-warp-route"
         ],
         "authorityType": "contract",
+        "threshold": 1,
+        "signerCount": 1,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
         "routeChecks": {
-          "trustedPeerOrRemote": "At Starknet block 13409507, the token router table included domain 1 to Ethereum USN, 324 to zkSync USN, 50104 to Sophon USN, and 239 to TAC USN. mailbox() returned 0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8 and the token-level ISM returned zero.",
-          "pausersAdminsUpgraders": "The Starknet token class hash was 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d and its ABI includes OpenZeppelin upgrade and Ownable controls. owner() returned the custom account above; its effective signer quorum and upgrade authorization were not established.",
-          "attestorQuorum": "Starknet mailbox get_default_ism() returned 0x6e66fe528f954d3630228d54fb509efe2fd8a646ab0f2265003c20fbf6d5b0a; the current validator/member set and quorum semantics were not independently decoded."
+          "trustedPeerOrRemote": "At Starknet block 13501913, token owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module()=0. Prior 2026-08-16 router-table reads (Ethereum/zkSync/Sophon/TAC) are not re-litigated here.",
+          "pausersAdminsUpgraders": "Owner account class hash 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a. get_public_key()=0x38156224d6c067d825a4f6838e674ee2d2f71127a27c3110af7934bc4125f0b. get_signers()=[count=1, that key, 0, 0] (no guardian / backup). get_threshold() is not implemented. get_version() felt 0x3030312e3030322e303030 decodes to ASCII 001.002.000. This is a single-signer account contract, not a multi-signer quorum.",
+          "attestorQuorum": "Token-level ISM is zero; Hyperlane mailbox default ISM (decoded on starknet-hyperlane-mailbox-owner) is effective."
         },
-        "capDescription": "The Starknet owner account governs the upgradeable Hyperlane representation and its router table; this is bridge representation authority, not an independent native USN issuance route.",
+        "capDescription": "The Starknet owner account governs the upgradeable Hyperlane representation and its router table; this is bridge representation authority, not an independent native USN issuance route. Signer quorum is 1-of-1.",
         "bypassSurfaces": [
-          "The custom Starknet owner account's signer quorum and effective upgrade authorization remain unresolved."
+          "Single-signer account can upgrade/configure the representation immediately; wallet-vendor class name beyond class hash 0x3957f9f5... and version 001.002.000 was not independently labeled."
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 13409507,
+        "observedAt": "2026-08-18",
+        "observedBlock": 13501913,
         "sources": [
           {
             "label": "Starknet USN representation",
             "url": "https://starkscan.co/contract/0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
           },
           {
-            "label": "Starknet fixed-block RPC",
-            "url": "https://rpc.starknet.lava.build"
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
           }
         ],
-        "evidence": "At Starknet block 13409507, owner() returned custom account 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, the class was upgradeable, and its router table covered Ethereum, zkSync, Sophon, and TAC USN."
+        "evidence": "At Starknet block 13501913, token.owner() still returns 0x25beda2.... That account's get_signers/get_public_key establish a single Stark key and zero guardian. Class hash and version string were read via starknet_getClassHashAt / get_version. This closes the prior 'signer quorum unresolved' gap as 1-of-1 without claiming a named wallet product."
       },
       {
         "id": "starknet-hyperlane-mailbox-owner",
-        "label": "Starknet Hyperlane mailbox owner and default ISM administration",
+        "label": "Hyperlane Starknet mailbox ArgentMultisig and default ISM administration",
         "routeRefs": [
           "starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
         ],
@@ -723,22 +921,37 @@
         "controllerAddress": "0x4ddb8856c625235247708e945179085506bff53eae7ff04319cd1cbb5b635e7",
         "failureDomainKeys": [
           "mailbox:starknet:0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8",
-          "protocol:hyperlane-ism"
+          "protocol:hyperlane-ism",
+          "multisig:starknet:0x4ddb8856c625235247708e945179085506bff53eae7ff04319cd1cbb5b635e7"
         ],
-        "authorityType": "unknown",
+        "authorityType": "multisig",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
+        "capDescription": "This ArgentMultisig cannot mint USN. It is Mailbox.owner() and can administer get_default_ism(). Destination mint is intended only via authenticated Hyperlane delivery under that default ISM. No EVM-style token rate-limit ABI exists on the Starknet representation.",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Starknet block 13409507, mailbox get_default_ism() returned 0x6e66fe528f954d3630228d54fb509efe2fd8a646ab0f2265003c20fbf6d5b0a and get_local_domain() returned 0x1565841e.",
-          "attestorQuorum": "The Starknet mailbox owner can administer the default ISM, but its validator/member set and quorum semantics were not independently decoded."
+          "trustedPeerOrRemote": "At Starknet block 13501913–13502090, Mailbox owner()=0x4ddb8856c625235247708e945179085506bff53eae7ff04319cd1cbb5b635e7, get_default_ism()=0x6e66fe528f954d3630228d54fb509efe2fd8a646ab0f2265003c20fbf6d5b0a, get_local_domain()=0x1565841e (358974494). Token interchain_security_module()=0.",
+          "attestorQuorum": "Default ISM is Aggregation module_type=2, get_modules()=[DomainRoutingISM 0x6c343546eb1573cab30a111276c9475a600c38bdb5f7d679de34da007fde4f, Pausable/NULL 0x6832fc0e5527abdd293c9f31ceb283946aee598223e35dabba91da259ee79e9], get_threshold()=2 (both required). Pausable is_paused()=0; its owner is ArgentAccount 0x6ae465e0c05735820a75500c40cb4dabbe46ebf1f1665f9ba3f9a7dcc78a6d1. Routing module(1/Ethereum)=MessageIdMultisig 0x24058f4116f708c56c4fd3e512e83a1f54c9101e28d7d9aaa4a9da03a06e86 with get_threshold()=6 and get_validators()= the same 9 Ethereum-origin keys as zkSync/Sophon. module(0x144/zkSync)=2-of-3 [0xadd1d39c..., 0xcf0211fa..., 0x4f977a59...].",
+          "pausersAdminsUpgraders": "Mailbox owner account get_name()=ArgentMultisig, get_version()=(0,1,1), get_threshold()=4, get_signers() count=7 public keys [0x223389400494bd3c9f6c13e224b4fab92953002b98b5647241a860937e4a051, 0x7f1c510d10c2a299da1eb1675c967d359a9d80463295d5396a166efe8adf190, 0x3fc27ab30ea9aa0e52ab2e606af5676576e936b554a8a4f2354c16d50ab995b, 0x200b7f37fd30d1f2126b8a5985e1745e3e12b04ec19f775bd3ca00f50a0a152, 0x406c38713702a726fea3ade7cc435069d08e51c9a8e41828b396647ea021a7, 0x47b0cfe4d1cb99197a3c8b9c2f906249e8cdc91f223b7c2cb8573c27fe6e2f5, 0x183fe7958154b91c8e1c9fdde5fdfdfb5179ecff56bc8c7ad2d52d2d1dea036]. Class hash 0x6e150953b26271a740bf2b6e9bca17cc52c68d765f761295de51ceb8526ee72."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 13409507,
+        "observedAt": "2026-08-18",
+        "observedBlock": 13502090,
         "sources": [
           {
             "label": "Starknet USN Hyperlane mailbox",
-            "url": "https://starkscan.co/contract/0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8"
+            "url": "https://starkscan.co/contract/0x05520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8"
+          },
+          {
+            "label": "Hyperlane Starknet registry addresses",
+            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/starknet/addresses.yaml"
+          },
+          {
+            "label": "Hyperlane default ISM validator docs (Starknet origin)",
+            "url": "https://docs.hyperlane.xyz/docs/reference/addresses/validators/mainnet-default-ism-validators"
           }
         ],
-        "evidence": "At Starknet block 13409507, the Hyperlane mailbox owner was 0x4ddb8856c625235247708e945179085506bff53eae7ff04319cd1cbb5b635e7 and the default ISM was 0x6e66fe528f954d3630228d54fb509efe2fd8a646ab0f2265003c20fbf6d5b0a."
+        "evidence": "starknet_call at blocks 13501913–13502090: Mailbox.owner matches the authored controller. That account returns get_name=ArgentMultisig, threshold 4, seven signer public keys, class 0x6e150953.... Default ISM aggregation children, Pausable unpaused, and Ethereum-origin 6-of-9 validators were read from the live contracts. This is not a Gnosis Safe; signer values are Stark public keys, so no Safe API/threshold object is asserted."
       }
     ]
   }

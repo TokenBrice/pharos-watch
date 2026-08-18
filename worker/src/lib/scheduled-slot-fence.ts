@@ -46,8 +46,17 @@ interface ScheduledSlotFenceMetadata {
   jobsSkipped: number;
 }
 
-const SLOT_EXECUTION_RUNNING_STALE_SEC = 35 * 60;
+// The slot heartbeat is a fence-owned wall-clock timer, independent of child
+// job duration, so a healthy slot of any length keeps its row fresh. Five
+// minutes of silence therefore means the isolate is gone (OOM/eviction kills
+// write no terminal row), and waiting longer only extends the outage window
+// for every lane that gates on this slot.
+const SLOT_EXECUTION_RUNNING_STALE_SEC = 5 * 60;
 const SLOT_EXECUTION_HEARTBEAT_SEC = 3 * 60;
+// A Cloudflare scheduled invocation cannot outlive the 15-minute event wall
+// clock, so a running row older than that plus a minute of skew is provably
+// dead regardless of what its heartbeat column claims.
+const SLOT_EXECUTION_WALL_CLOCK_DEAD_SEC = 16 * 60;
 
 type SlotExecutionRow = {
   state: string;
@@ -138,6 +147,7 @@ async function listStaleScheduledSlotExecutions(
   db: D1Database,
   slotKey: string | null,
   staleBefore: number,
+  wallDeadBefore: number,
   limit: number,
   excludeSlotStartedAt?: number,
 ): Promise<StaleSlotExecutionRow[]> {
@@ -151,8 +161,14 @@ async function listStaleScheduledSlotExecutions(
     predicates.push("slot_started_at != ?");
     bindArgs.push(excludeSlotStartedAt);
   }
-  predicates.push("state IN ('running', 'reconciling')", "updated_at < ?");
-  bindArgs.push(staleBefore, limit);
+  // The wall-clock backstop applies only to 'running' rows: started_at dates
+  // the original (provably dead) invocation there, while a 'reconciling' row
+  // is owned by a fresh reconciler whose liveness started_at does not measure.
+  predicates.push(
+    "state IN ('running', 'reconciling')",
+    "(updated_at < ? OR (state = 'running' AND started_at < ?))",
+  );
+  bindArgs.push(staleBefore, wallDeadBefore, limit);
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -247,7 +263,7 @@ async function claimStaleScheduledSlotForReconciliation(
             AND execution_owner = ?
             AND execution_generation = ?
             AND updated_at = ?
-            AND updated_at < ?`,
+            AND (updated_at < ? OR (state = 'running' AND started_at < ?))`,
       )
       .bind(
         reconciliationOwner,
@@ -260,6 +276,7 @@ async function claimStaleScheduledSlotForReconciliation(
         slot.execution_generation,
         slot.updated_at,
         staleBefore,
+        nowSec - SLOT_EXECUTION_WALL_CLOCK_DEAD_SEC,
       )
       .run(),
   );
@@ -278,6 +295,7 @@ export async function sweepStaleScheduledSlotExecutions(
     db,
     options.slotKey ?? null,
     staleBefore,
+    nowSec - SLOT_EXECUTION_WALL_CLOCK_DEAD_SEC,
     limit,
     options.excludeSlotStartedAt,
   );

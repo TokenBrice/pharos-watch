@@ -824,11 +824,26 @@ describe("handleStatus", () => {
         { match: "stress_signals", rows: [], first: { age: 300 } },
         ...(params.publicationCoverage
           ? [{
-              match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
+              match: `metadata LIKE '%\"activePublicationCoverage\"%'`,
               rows: [],
               first: {
                 started_at: now - 30,
-                metadata: JSON.stringify({ activePublicationCoverage: params.publicationCoverage }),
+                metadata: JSON.stringify({
+                  activePublicationCoverage: params.publicationCoverage,
+                  activePriceCoverage: {
+                    complete: true,
+                    expectedActiveCount: fixtureACTIVE_STABLECOINS.length,
+                    presentActiveCount: fixtureACTIVE_STABLECOINS.length,
+                    pricedActiveCount: fixtureACTIVE_STABLECOINS.length,
+                    pricedActiveIds: fixtureACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
+                    missingPriceCount: 0,
+                    missingActiveIds: [],
+                    missingActiveAssets: [],
+                    alertEligibleCount: 0,
+                    alertEligibleIds: [],
+                    maxConsecutiveMissingGenerations: 0,
+                  },
+                }),
               },
             }]
           : []),

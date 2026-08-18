@@ -1,19 +1,15 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
-  assessActiveAlertSafetySource,
   alertSafetyIdentitiesAreComparable,
   buildAlertSafetySnapshotEnvelope,
+  loadActiveAlertSafetySourceAssessment,
   parseAlertSafetySnapshotEnvelope,
   type AlertSafetySnapshotEnvelope,
   type AlertSafetySourceAssessment,
   type AlertSafetySourceSnapshot,
 } from "../lib/alert-safety-source-cache";
 import { getCache, setCache } from "../lib/db-cache";
-import {
-  loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
-} from "../lib/safety-score-active-source";
 import {
   loadSafetyScoreV9PublicationAttempt,
   type V9PublicationAttempt,
@@ -117,7 +113,7 @@ export interface DispatchSourceData {
   dewsAlertableCache: CachedValue;
   depegCache: CachedValue;
   safetyCache: CachedValue;
-  activeSafetySource?: ActiveSafetyScoreSource;
+  safetySourceAssessment?: AlertSafetySourceAssessment;
   publicationAttempt?: V9PublicationAttempt | null;
   launchCache: CachedValue;
   /** Producer-written current drift id-set (four-hourly reserve slot). */
@@ -180,7 +176,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     dewsAlertableCache,
     depegCache,
     safetyCache,
-    activeSafetySource,
+    safetySourceAssessment,
     publicationAttempt,
     launchCache,
     reserveCache,
@@ -199,7 +195,10 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     getCache(db, SNAPSHOT_KEYS.dewsAlertable),
     getCache(db, SNAPSHOT_KEYS.depeg),
     getCache(db, SNAPSHOT_KEYS.safety),
-    loadActiveSafetyScoreSource(db),
+    // Envelope-first: the publication writer persists a thin projection, so
+    // the five-minute alert lane never decodes the full V9 publication when
+    // the persisted envelope matches the active identity.
+    loadActiveAlertSafetySourceAssessment(db, snoozeNowSec),
     loadSafetyScoreV9PublicationAttempt(db),
     getCache(db, SNAPSHOT_KEYS.launch),
     getCache(db, SNAPSHOT_KEYS.reserve),
@@ -214,7 +213,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     dewsAlertableCache,
     depegCache,
     safetyCache,
-    activeSafetySource,
+    safetySourceAssessment,
     publicationAttempt,
     launchCache,
     reserveCache,
@@ -227,17 +226,14 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
   const previousDewsAlertableSnapshot =
     parseSnapshotMap<DewsSnapshot>(sourceData.dewsAlertableCache) ?? filterAlertableBands(previousDewsSnapshot);
   const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(sourceData.depegCache);
-  const safetySourceAssessment = assessActiveAlertSafetySource(
-    sourceData.activeSafetySource ?? {
-      kind: "error",
-      reason: "v9-snapshot-unavailable",
-      snapshot: null,
-      detail: "Canonical Safety Score V9 source was not loaded",
-    },
-    {
-      nowSec,
-    },
-  );
+  const safetySourceAssessment: AlertSafetySourceAssessment =
+    sourceData.safetySourceAssessment ?? {
+      state: "missing",
+      ageSeconds: null,
+      generation: null,
+      envelope: null,
+      failureReason: "v9-snapshot-unavailable",
+    };
   const affectedAssetIds = new Set(
     sourceData.publicationAttempt?.outcome ===
         "published-partial" &&

@@ -58,6 +58,7 @@ export const V9_REASON_CODES = [
   "parent-cycle",
   "partial-reserve-review",
   "runtime-bridge-materiality-unavailable",
+  "scoped-control-question",
   "selected-bridge-route-missing",
   "selected-bridge-route-unresolved",
   "unknown-control-cap-authority",
@@ -566,6 +567,7 @@ const V9ReasonPathKindSchema = z.union([z.literal("*"), V9PathKindSchema]);
 
 export const V9NamedReasonCeilingKeySchema = z.enum([
   "control-unverified",
+  "control-scoped-gap",
   "oracle-unverified",
   "backing-unverified",
   "exit-unverified",
@@ -1310,6 +1312,7 @@ const V9StructuralPolicySchema = z
     namedReasonCeilings: z
       .object({
         "control-unverified": ScoreSchema,
+        "control-scoped-gap": ScoreSchema,
         "oracle-unverified": ScoreSchema,
         "backing-unverified": ScoreSchema,
         "exit-unverified": ScoreSchema,

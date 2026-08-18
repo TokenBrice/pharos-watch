@@ -37,8 +37,16 @@ describe("evaluateStablecoinPublicationCoverage", () => {
     });
   });
 
-  it("has no default publication waivers", () => {
-    expect(STABLECOIN_PUBLICATION_WAIVERS).toEqual([]);
+  it("carries only the reviewed silk-shade-protocol incident waiver", () => {
+    expect(STABLECOIN_PUBLICATION_WAIVERS).toEqual([
+      {
+        stablecoinId: "silk-shade-protocol",
+        owner: "pharos-ops",
+        reason:
+          "Upstream CoinGecko/DefiLlama supply for SILK has been invalid since 2026-08-05; a single blocked asset must not blank the whole active supply snapshot during the 2026-08-18 incident.",
+        expiresAt: 1_787_616_000,
+      },
+    ]);
   });
 
   it("accepts only owned, reasoned, unexpired waivers", () => {

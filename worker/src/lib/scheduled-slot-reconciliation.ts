@@ -33,6 +33,7 @@ type StaleSlotProgressRow = {
 type StaleSlotLeaseRow = {
   lease_owner: string;
   lease_until: number;
+  heartbeat_at: number;
 };
 
 export interface StaleSlotReconciliationFence {
@@ -95,6 +96,13 @@ export function getExpectedJobsForScheduledSlot(slotKey: string): readonly strin
   return plan ? flattenScheduledSlotPlanJobs(plan) : [];
 }
 
+// A live child renews its lease heartbeat every 30-120 seconds, so a lease
+// whose heartbeat went silent for five minutes belongs to a dead isolate even
+// while its TTL (up to ~15 minutes for long jobs) has not expired. Without
+// this bound a dead child's lease keeps its slot un-reconcilable for the whole
+// TTL after an OOM kill.
+const CHILD_LEASE_HEARTBEAT_STALE_SEC = 5 * 60;
+
 export async function hasActiveChildLeaseForScheduledSlot(
   db: D1Database,
   slotKey: string,
@@ -114,9 +122,10 @@ export async function hasActiveChildLeaseForScheduledSlot(
           WHERE p.slot_started_at = ?
             AND p.job IN (${jobs.map(() => "?").join(", ")})
             AND l.lease_until >= ?
+            AND l.heartbeat_at >= ?
           LIMIT 1`,
       )
-      .bind(slotStartedAt, ...jobs, nowSec)
+      .bind(slotStartedAt, ...jobs, nowSec, nowSec - CHILD_LEASE_HEARTBEAT_STALE_SEC)
       .first<{ active: number }>(),
   );
   return row?.active === 1;
@@ -148,7 +157,10 @@ async function isSlotFenceCurrent(
 
 async function getCronLeaseForJob(db: D1Database, job: string): Promise<StaleSlotLeaseRow | null> {
   return runWithOverloadRetry(() =>
-    db.prepare("SELECT lease_owner, lease_until FROM cron_leases WHERE job = ?").bind(job).first<StaleSlotLeaseRow>(),
+    db
+      .prepare("SELECT lease_owner, lease_until, heartbeat_at FROM cron_leases WHERE job = ?")
+      .bind(job)
+      .first<StaleSlotLeaseRow>(),
   );
 }
 
@@ -507,7 +519,13 @@ async function reconcileStaleSlotArtifacts(
 
   for (const progress of progressRowsWithOwner) {
     const lease = await getCronLeaseForJob(db, progress.job);
-    if (!lease || lease.lease_owner !== progress.lease_owner || lease.lease_until >= nowSec) continue;
+    if (!lease || lease.lease_owner !== progress.lease_owner) continue;
+    // A lease is dead when its TTL expired OR its heartbeat went silent past
+    // the child heartbeat window: renewals run every 30-120s, so a silent
+    // lease belongs to a killed isolate even while the TTL has not lapsed.
+    const leaseDead =
+      lease.lease_until < nowSec || lease.heartbeat_at < nowSec - CHILD_LEASE_HEARTBEAT_STALE_SEC;
+    if (!leaseDead) continue;
 
     if (!(await isSlotFenceCurrent(db, slot, fence))) continue;
     const progressDelete = await runWithOverloadRetry(() =>
@@ -524,7 +542,7 @@ async function reconcileStaleSlotArtifacts(
                 WHERE job = ?
                   AND lease_owner = ?
                   AND lease_until = ?
-                  AND lease_until < ?
+                  AND (lease_until < ? OR heartbeat_at < ?)
              )`,
         )
         .bind(
@@ -537,6 +555,7 @@ async function reconcileStaleSlotArtifacts(
           progress.lease_owner,
           lease.lease_until,
           nowSec,
+          nowSec - CHILD_LEASE_HEARTBEAT_STALE_SEC,
         )
         .run(),
     );
@@ -556,8 +575,10 @@ async function reconcileStaleSlotArtifacts(
     });
     const leaseDelete = await runWithOverloadRetry(() =>
       db
-        .prepare("DELETE FROM cron_leases WHERE job = ? AND lease_owner = ? AND lease_until = ? AND lease_until < ?")
-        .bind(progress.job, progress.lease_owner, lease.lease_until, nowSec)
+        .prepare(
+          "DELETE FROM cron_leases WHERE job = ? AND lease_owner = ? AND lease_until = ? AND (lease_until < ? OR heartbeat_at < ?)",
+        )
+        .bind(progress.job, progress.lease_owner, lease.lease_until, nowSec, nowSec - CHILD_LEASE_HEARTBEAT_STALE_SEC)
         .run(),
     );
     summary.leasesCleared += leaseDelete.meta.changes ?? 0;

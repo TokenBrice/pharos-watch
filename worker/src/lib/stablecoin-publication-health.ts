@@ -222,11 +222,17 @@ export interface StablecoinCoverageHealthSnapshot {
 export async function loadStablecoinCoverageHealth(
   db: D1Database,
 ): Promise<StablecoinCoverageHealthSnapshot> {
+  // Synthetic abandoned/no-write rows still carry wrapper metadata. Keep them
+  // visible to cron health without letting them erase the last publication's
+  // exact row and price coverage evidence.
   const row = await db
     .prepare(
       `SELECT started_at, metadata
          FROM cron_runs
-        WHERE job = 'sync-stablecoins' AND metadata IS NOT NULL
+        WHERE job = 'sync-stablecoins'
+          AND metadata IS NOT NULL
+          AND metadata LIKE '%"activePublicationCoverage"%'
+          AND metadata LIKE '%"activePriceCoverage"%'
         ORDER BY started_at DESC, id DESC
         LIMIT 1`,
     )

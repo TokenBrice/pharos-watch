@@ -78,8 +78,13 @@ describe("Safety Score v9 methodology policy", () => {
     // the deployment materiality floor is published without a ceiling instead of
     // taking the material reason's 55. Registry addition only — no existing
     // reason, treatment, ceiling, weight, or threshold changes.
+    // 9.27 (2026-08-18): the registry gains "scoped-control-question" and
+    // `namedReasonCeilings` gains "control-scoped-gap" (69): a reviewer-named,
+    // fresh, scoped open control question takes the 69 ceiling instead of the
+    // 55 control-unverified ceiling. Existing reasons, treatments, weights, and
+    // the other named ceilings are unchanged.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "a38ee06f366327966b479d8e4002d8e88b112814824ca963a91a870258872619",
+      "106863d1b26fc03bc3e98912e15b736628a10c38bc72e17576aed438bdf73798",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,
@@ -93,6 +98,15 @@ describe("Safety Score v9 methodology policy", () => {
     });
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
     expect(Object.isFrozen(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1).evidenceExpiry)).toBe(true);
+  });
+
+  it("registers the scoped control question reason with the control-scoped-gap ceiling above control-unverified", () => {
+    const resolved = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "scoped-control-question");
+    expect(resolved.critical).toBe(false);
+    expect(resolved.ceiling).toEqual({ kind: "reason:scoped-control-question", limit: 69 });
+    expect(resolved.ceiling!.limit).toBeGreaterThan(
+      V9_CANDIDATE_POLICY_V1.policy.semantic.structural.namedReasonCeilings["control-unverified"],
+    );
   });
 
   it("changes the semantic digest for every formerly external score-bearing gate family", () => {
