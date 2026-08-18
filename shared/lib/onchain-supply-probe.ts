@@ -46,11 +46,7 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   icp: "icp",
 };
 
-export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, CuratedOnchainSupplyContractConfig> = {
-  // No upstream market row exists for Spark Savings USDC yet, but the Ethereum
-  // vault supply plus the guarded protocol-redeem price keeps the asset visible.
-  "susdc-spark": { chain: "ethereum" },
-};
+export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, CuratedOnchainSupplyContractConfig> = {};
 
 const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
@@ -508,6 +504,39 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org", allowZeroSupply: true },
     { chain: "rootstock", rpcUrl: "https://public-node.rsk.co", allowZeroSupply: true },
   ],
+  // spUSDC is a per-chain Spark ERC-4626 over local USDC. Replaces the former
+  // singular ethereum-only CURATED_ONCHAIN_SUPPLY_CONTRACTS entry, which
+  // published Ethereum-only mcap and no chainCirculating split. Verified
+  // 2026-08-19: Ethereum 262,732,021.385906 (asset=USDC, totalAssets
+  // 271,160,715.325800, convertToAssets(1e6)=1.032081) + Avalanche
+  // 11,720,796.241001 (asset=0xb97e…8a6e, totalAssets 12,024,527.957899)
+  // = 274,452,817.626907. Ethereum balanceOf(self)=0.
+  "susdc-spark": [{ chain: "ethereum" }, { chain: "avalanche" }],
+  // spUSDT is a per-chain Spark ERC-4626 (USDT on Ethereum, USDT0 on Arbitrum).
+  // Verified 2026-08-19: Ethereum 364,164,245.855785 (totalAssets
+  // 374,349,718.457184) + Arbitrum 1,273.135898 (totalAssets 1,276.509506)
+  // = 364,165,518.991683. Ethereum balanceOf(self)=0. Arbitrum is dust; allow
+  // a zero read.
+  "susdt-spark": [{ chain: "ethereum" }, { chain: "arbitrum", allowZeroSupply: true }],
+  // gtUSDCp is a local Gauntlet/Morpho ERC-4626 on each chain. Verified
+  // 2026-08-19: Ethereum 70,509,526.219773 (NAV 1.032007 USDC) + Base
+  // 387,163,856.589938 (NAV 1.107844) + Arbitrum 485,663.027798 (NAV
+  // 1.033408) = 458,159,045.837508 shares. No adapter/lockbox. Probe
+  // multiplies shares by the single CG price; Base NAV is higher, so USD
+  // weights are share-weighted, not NAV-weighted.
+  "gtusdcp-gauntlet": [{ chain: "ethereum" }, { chain: "base" }, { chain: "arbitrum" }],
+  // sdUSD is a chain-isolated ERC-4626 over local dUSD (no shared lockbox).
+  // Verified 2026-08-18: Ethereum 452,761.7318268991 + Fraxtal 63,189.932854
+  // = 515,951.6646808991, exact CoinGecko totalSupply; Fraxtal needs a public RPC.
+  "sdusd-dtrinity": [
+    { chain: "ethereum" },
+    { chain: "fraxtal", rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
+  ],
+  // sUSDD is an independent SavingsUsdd ERC-4626 on Ethereum and BSC over local USDD.
+  // No Tron sUSDD token in issuer deployment/collateral pages or CoinGecko platforms.
+  // Verified 2026-08-18: ETH 222,174,299.983810 + BSC 12,526,473.143741
+  // = 234,700,773.127551 (−0.14% vs CoinGecko 235,033,744.23).
+  "susdd-tron-dao-reserve": [{ chain: "ethereum" }, { chain: "bsc" }],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
