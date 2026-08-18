@@ -2,57 +2,21 @@
   "id": "usdk-kast",
   "reserves": [
     {
-      "name": "Tokenized treasury collateral",
-      "pct": 97.9,
+      "name": "M0 M held in the KAST extension vault",
+      "pct": 100,
       "risk": "low",
-      "coinId": "ustb-superstate",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Invesco Short Duration US Government Securities Fund",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Cash",
-      "pct": 2.099885,
-      "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "M0 permissioned issuers' eligible custody arrangements",
-      "riskFactors": [
-        "custody",
-        "counterparty",
-        "liquidity"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Non-eligible token collateral",
-      "pct": 0.000115,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed non-eligible token collateral obligor",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Foundation permissioned issuers",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "reviewedAt": "2026-08-18",
+    "reviewer": "Inherited-claim re-curation 2026-08-18",
+    "confidence": "probable",
     "sources": [
       {
         "label": "M0 case study on KAST Dollar",
@@ -65,31 +29,14 @@
       {
         "label": "KAST Dollar launch announcement",
         "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins"
-      },
-      {
-        "label": "M0 collateral-composition API recipe",
-        "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
-      },
-      {
-        "label": "M0 Protocol API GraphQL endpoint",
-        "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "KAST identifies USDK as an M0 extension, and the first-party M0 Protocol API reports the inherited collateral mix as 97.9% eligible tokenized Treasury collateral, 2.1% cash, and a 0.000115% non-eligible token residual. The Treasury slice links to the tracked USTB token, and the residual is classified as an 'other' exposure with an explicit undisclosed obligor. The wrapper retains the M0 issuer, custody, and smart-contract context. The API reports the eligible-collateral and cash shares at one-decimal display precision while the non-eligible residual sits below it, so the cash slice carries the exact complement 2.099885% (100 - 97.9 - 0.000115) rather than the displayed 2.1%: this is a full composition, so the three slices must total exactly 100%, and both cash figures round to the API's displayed 2.1%.",
-    "compositionBasis": "Exact live M0 collateral capture for USDK and documented M0-extension relationship",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "USDK is an M0 extension, not an independently issued KAST liability. M0's extension documentation describes each extension as maintaining a vault holding the underlying $M, with unwrap burning the extension token to release $M. A USDK holder's claim therefore runs against M0's M, and M0's own Treasury and cash collateral is M0's reserve view rather than a second, parallel claim held by USDK holders. This entry previously carried M0's collateral composition slice for slice, identical to the tracked m-m0 entry, which double-counted the same Treasury exposure across the dependency graph and left no serial-claim edge to the parent. Confidence is probable rather than verified because KAST publishes no USDK-specific technical documentation, so the extension relationship rests on M0's material and the reviewed on-chain route inventory rather than on an issuer statement.",
+    "compositionBasis": "M0 extension vault model establishing a serial claim on M0's M",
+    "compositionAsOf": "2026-08-18",
     "scope": "full-composition",
-    "knownUnknownExposure": "M0 reports a 0.000115% non-eligible token-collateral residual below the displayed two-slice precision and does not identify its obligor.",
-    "knownUnknownExposurePct": 0.000115,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 2,
-        "reserveName": "Non-eligible token collateral",
-        "pct": 0.000115,
-        "disposition": "insufficient-evidence",
-        "rationale": "The first-party current endpoint reports this residual but does not identify the token or obligor."
-      }
-    ]
+    "knownUnknownExposure": "No direct reserve asset remains unidentified: the whole claim is the tracked m-m0 parent, whose own collateral composition is reviewed on that entry.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

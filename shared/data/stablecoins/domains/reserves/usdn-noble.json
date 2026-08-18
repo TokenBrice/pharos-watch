@@ -2,46 +2,21 @@
   "id": "usdn-noble",
   "reserves": [
     {
-      "name": "Tokenized treasury collateral",
-      "pct": 97.9,
+      "name": "M0 M locked on Ethereum against the Noble representation",
+      "pct": 100,
       "risk": "low",
-      "coinId": "ustb-superstate",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Invesco Short Duration US Government Securities Fund",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Cash",
-      "pct": 2.1,
-      "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "M0 permissioned issuers' eligible custody arrangements",
-      "riskFactors": ["custody", "counterparty", "liquidity"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Non-eligible token collateral",
-      "pct": 0.000115,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed non-eligible token collateral obligor",
-      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Foundation permissioned issuers",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (M0 GraphQL API unreachable this pass; retained prior live capture)",
-    "confidence": "verified",
+    "reviewedAt": "2026-08-18",
+    "reviewer": "Inherited-claim re-curation 2026-08-18",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Noble USDN overview",
@@ -56,29 +31,16 @@
         "url": "https://dollar.noble.xyz/how-noble-dollar-works"
       },
       {
-        "label": "M0 collateral-composition API recipe",
-        "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
-      },
-      {
-        "label": "M0 Protocol API GraphQL endpoint (returned HTTP 500 on 2026-08-08)",
-        "url": "https://protocol-api.m0.org/graphql"
+        "label": "M0 minting and burning",
+        "url": "https://docs.m0.org/protocol/minting-burning"
       }
     ],
-    "rationale": "Re-checked 2026-08-08: the M0 Protocol API GraphQL endpoint returned HTTP 500 for both CollateralCurrent and CollateralTimeSeries, so the previously captured M0 collateral mix is retained. Noble documentation continues to describe USDN as an M0 extension backed by M0's Treasury collateral; the eligible token collateral is linked to USTB via the live adapter.",
-    "compositionBasis": "Prior exact live M0 collateral capture for USDN and Noble's documented M0 Portal architecture",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "USDN is the Noble representation of M0's M, not an independently issued Noble liability. Noble's architecture documentation describes the portal locking the original $M on Ethereum and minting USDN on arrival; the exit is the reverse bridge back into $M. A USDN holder's claim therefore runs against M0's M, and M0's own Treasury and cash collateral is M0's reserve view rather than a second, parallel claim held by USDN holders. This entry previously carried M0's collateral composition slice for slice, identical to the tracked m-m0 entry, which double-counted the same Treasury exposure across the dependency graph and left no serial-claim edge to the parent. Confidence is probable rather than verified because the absence of a direct collateral claim rests on consistent silence across Noble's and M0's published material rather than an explicit disclaimer.",
+    "compositionBasis": "Noble USDN architecture and M0 portal documentation establishing a serial claim on M0's M",
+    "compositionAsOf": "2026-08-18",
     "scope": "full-composition",
-    "knownUnknownExposure": "M0 reports a 0.000115% non-eligible token-collateral residual below the displayed two-slice precision and does not identify its obligor.",
-    "knownUnknownExposurePct": 0.000115,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 2,
-        "reserveName": "Non-eligible token collateral",
-        "pct": 0.000115,
-        "disposition": "insufficient-evidence",
-        "rationale": "The first-party current endpoint reports this residual but does not identify the token or obligor."
-      }
-    ]
+    "knownUnknownExposure": "No direct reserve asset remains unidentified: the whole claim is the tracked m-m0 parent, whose own collateral composition is reviewed on that entry.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
