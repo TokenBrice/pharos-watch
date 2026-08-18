@@ -206,7 +206,25 @@
       ],
       "evidence": "At Ethereum block 25526129, legacy token proxy 0x45804880de22913dafe09f4980848ece6ecbaf78 used implementation 0x7da4c5d9eca180a03765a6d27196f2a0380fa543 and proxy-admin EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c. Its SupplyControl UUPS proxy used exact-source implementation 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3 and two direct Paxos controllers after the LayerZero adapter was removed from native scope. DEFAULT_ADMIN EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b can immediately manage native controllers, redirect SupplyControl, and upgrade SupplyControl; the adapter's implementation, owner, rate limit, and bridge failure domain are assessed separately under Bridge Risk. At finalized Solana slot 439713418, the new Token-2022 PAXG mint reported direct mint authority Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk, but controller attribution and supply-conservation semantics remain unresolved. KPMG's monthly independent PAXG reserve attestations and NYDFS/OCC issuer supervision support periodic reconciliation and prudential supervision. Economic-posture fields reviewed 2026-08-16: the native Ethereum controllers and manager remain unbounded but reconciled, while the Solana authority is retained as an unresolved adverse native-surface fact pending attribution.",
       "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-16"
+      "reviewedAt": "2026-08-16",
+      "scopedQuestions": [
+        {
+          "controlRef": "solana:Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk",
+          "question": "Which entity controls the PAXG Solana Token-2022 mint authority Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk, and is its direct issuance independent issuer issuance or a bridge destination executor whose supply is conserved against Ethereum?",
+          "reviewedAt": "2026-08-16",
+          "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
+          "sources": [
+            {
+              "label": "Paxos PAXG-to-Solana announcement",
+              "url": "https://www.paxos.com/blog/bringing-paxg-to-solana"
+            },
+            {
+              "label": "PAXG Solana mint on Solscan",
+              "url": "https://solscan.io/token/5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
+            }
+          ]
+        }
+      ]
     }
   }
 }

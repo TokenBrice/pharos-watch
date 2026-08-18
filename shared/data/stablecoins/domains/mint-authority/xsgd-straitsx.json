@@ -896,7 +896,33 @@
       ],
       "evidence": "Fresh fixed-block reads on 2026-08-16 cover all eight authored native deployments. Ethereum block 25770602 retains the legacy Zeppelinos proxy, MasterMinter, owner, and two active minter surfaces; Polygon block 92142756 has one configured 200,000,000 XSGD minter; Arbitrum block 495281539 has one configured 200,000,000 XSGD minter; Avalanche block 92979593 has configured 200,000,000 and 20,000,000 XSGD minters; and Base block 50064941 has one configured 200,000,000 XSGD minter. The four omitted EVM event replays found no MinterRemoved events in the reviewed token logs. The EVM MasterMinter and owner controls can reconfigure native minters, and the five proxy admins can replace mint logic without a recorded delay, so the aggregate economic cap remains unbounded. Finalized Solana slot 439728047 reports a 3-of-10 SPL Token multisig as mint and freeze authority; Hedera Mirror Node metadata reports a 2-of-5 supply key and 2-of-7 admin key; and XRPL validated ledger 106342527 identifies the live XSGD issuing account. The StraitsX archive publishes independent reserve examinations on a semi-monthly cadence, and the MAS directory identifies StraitsX SGD Issuance Pte. Ltd. as a Major Payment Institution. Signer sets for the Arbitrum, Avalanche, and Base proxy-admin contracts and the exact Hedera/XRPL operational key identities remain unresolved; those gaps are recorded on the affected controls and do not change the verified native deployment scope.",
       "reviewer": "OpenAI Codex C05 control and access review",
-      "reviewedAt": "2026-08-16"
+      "reviewedAt": "2026-08-16",
+      "scopedQuestions": [
+        {
+          "controlRef": "StraitsX Hedera XSGD supply key",
+          "question": "Which entities hold the five shares of the 2-of-5 Hedera XSGD supply key for HTS token 0.0.1985922, and are they StraitsX-internal or third-party custodied?",
+          "reviewedAt": "2026-08-16",
+          "reviewer": "OpenAI Codex C05 control and access review",
+          "sources": [
+            {
+              "label": "Hedera Mirror Node token 0.0.1985922",
+              "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
+            }
+          ]
+        },
+        {
+          "controlRef": "StraitsX Hedera XSGD admin key",
+          "question": "Which entities hold the seven shares of the 2-of-7 Hedera XSGD admin key that can replace the supply key for HTS token 0.0.1985922?",
+          "reviewedAt": "2026-08-16",
+          "reviewer": "OpenAI Codex C05 control and access review",
+          "sources": [
+            {
+              "label": "Hedera Mirror Node token 0.0.1985922",
+              "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.1985922"
+            }
+          ]
+        }
+      ]
     }
   }
 }
