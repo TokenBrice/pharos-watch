@@ -338,7 +338,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "691282be9de8ae297da863389eee558e3c3ce72100053101edf67e497b743778"
+      "sha256": "06c3068d6c89f20c59b18284e01add63b5a0bbc3875f4764900a7e26353dd78b"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "72d2830d24e9c13a87dde1cc680f7745625dd2228c967a9ebf90978e57cbde6f"
+  "digest": "a4dbcec58a1b4b0fe6834953671e1c21b4e4017693b398175dcc734d0aacd0f3"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
