@@ -1411,8 +1411,10 @@ export const V9MethodologySemanticSchema = z
         transfer: z.array(z.enum(["permissionless", "restrictable", "permissioned", "unknown"])).length(4),
         freezeExposure: z.array(z.enum(["none-known", "upstream", "direct", "possible", "unknown"])).length(5),
         primaryExit: z
-          .array(z.enum(["permissionless", "eligibility-gated", "issuer-discretionary", "none", "unknown"]))
-          .length(5),
+          .array(
+            z.enum(["permissionless", "eligibility-gated", "issuer-discretionary", "none", "undisclosed", "unknown"]),
+          )
+          .length(6),
         governance: z.array(z.enum(["immutable", "distributed", "concentrated", "single-entity", "unknown"])).length(5),
       })
       .strict(),

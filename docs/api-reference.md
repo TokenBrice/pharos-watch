@@ -2356,12 +2356,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.24",
+    "methodologyVersion": "9.25",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.24",
+    "version": "9.25",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2385,6 +2385,8 @@ The endpoint reads only the accepted `report-cards:v9` publication and its `repo
 Rateable cards contain mandatory `backing`, `exit`, and `control` breakdowns. Each card may also carry `backingFromLiveReserves`; current report-v5 publications set it to `true` exactly when the compiled V9 fact set used accepted live reserve exposures for Backing, independently of the reserve detail-page badge. The field is optional only for rollout compatibility with a retained pre-report-v5 publication. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
 
 `breakdowns.exit.primaryRoute.capacity` describes the selected route rather than market-wide liquidity. It exposes `executableUsd`, `requestedNotionalUsd`, `completionRatio`, request and observed cost bounds, settlement delay and scoring horizon, chain, protocol, pool, evidence kind, and evidence timestamp. Exit alternatives expose their own horizon, delay, confidence factor, and compact capacity summary so the evidence-confidence tradeoff against a higher-capacity alternative remains visible. Issuer redemption remains a separate daily, queued, or eventual route; exchange volume, aggregate DEX TVL, and issuer reserves are not interchangeable with executable capacity on one selected route.
+
+`accessPosture` publishes four reviewed posture enums plus `unknownFields` and `signals`. `primaryExit` is one of `permissionless`, `eligibility-gated`, `issuer-discretionary`, `none`, `undisclosed`, or `unknown`, and is derived from every route the Exit pillar credits — score-eligible routes plus reviewed issuer-, protocol-, and eventual-redemption routes — so it cannot contradict a scored `breakdowns.exit.primaryRoute`. The three absences are distinct and consumers should not collapse them: `none` is a reviewed negative (an exit surface observed complete with zero routes); `undisclosed` means no credited route resolved a posture, or the exit surface was never observed; `unknown` means credited routes exist but their access facts are unresolved. Only `unknown` appears in `unknownFields`. The `primaryExit` vocabulary grew from five members to six in methodology `9.25`, which added `undisclosed`; the change is additive, but a consumer that exhaustively switches on the enum needs the new arm. The posture change itself moved no pillar score or grade; a separate Economic Control correction shipped in the same release moved three assets downward, all documented in the `9.25` methodology changelog entry.
 
 `publicationHealth.status` is `current` or `held`. A held response serves the last accepted ratings, uses the accepted timestamp for freshness headers and `updatedAt`, adds `X-Safety-Score-Status: held`, and forces `Cache-Control: no-store`. The latest unsuccessful attempt is exposed separately through `attemptedAtSec` and bounded hold reasons. Isolated producer failures may still publish when at least 90% of active assets are unaffected; broader or identity-level failures hold the prior accepted publication.
 
@@ -2644,7 +2646,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.24",
+      "methodologyVersion": "9.25",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2655,7 +2657,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.24",
+      "methodologyVersion": "9.25",
       "publishedAt": 1772000700
     }
   },

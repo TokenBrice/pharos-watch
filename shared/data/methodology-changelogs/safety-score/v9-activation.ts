@@ -1,5 +1,26 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_UNDISCLOSED_PRIMARY_EXIT: MethodologyChangelogEntry = {
+  version: "9.25",
+  title: "Undisclosed stops being published as a fact, in both directions",
+  date: "2026-08-18",
+  effectiveAt: 1787097600,
+  summary:
+    "The published access posture's primaryExit now reads the same route set the Exit pillar credits, and reserves \"none\" for a reviewed-complete, genuinely empty exit surface. Everything else — routes that exist but earn no credit, and a missing, stale, or unsupported exit surface — publishes the new \"undisclosed\" state. The derivation previously counted only score-eligible routes, so an asset whose Exit pillar was scoring a reviewed issuer, protocol, or eventual redemption simultaneously published \"Primary exit: None\", asserting an absence its own scoring contradicted. The same release fixes the mirror-image defect in Economic Control, where a missing reconciliation cadence was read as evidence of a periodic one.",
+  impact: [
+    "primaryExit is derived from any credited route: score-eligible, or admitted by the creditable-non-atomic-redemption rule that the Exit pillar already applies to the reviewed issuer-redemption, protocol-redemption, and eventual-redemption families. That rule now has a single definition shared by both surfaces, which is what stopped them drifting apart",
+    "\"none\" now requires known negative evidence: a required exit surface observed complete with zero routes. A surface that is missing, stale, or unsupported is an absence of evidence and publishes \"undisclosed\" instead",
+    "accessPostureVocabulary.primaryExit grows from five members to six with the addition of \"undisclosed\". It is not an unknown value, so it does not enter accessPosture.unknownFields and the detail page renders it as an explicit \"Primary exit — Not disclosed\" row rather than dropping the row",
+    "Measured on the 2026-08-18 publication capture: primaryExit moves from none 184 / permissionless 146 / eligibility-gated 7 to a distribution in which every card publishing a scored exit route reports the access posture of that route. BUIDL, USDY, USYC, VBILL, JAAA, USDPT, YLDS, and the Spiko and Midas ranges stop asserting that no exit exists",
+    "primaryExit is a published posture projection and not a scoring input. Measured against the 2026-08-18 capture, the posture change alone leaves every pillar score, cap, and grade byte-identical to 9.24; only the policy semantic digest and the version label move",
+    "Economic Control no longer infers a periodic reserve reconciliation from the absence of one. The inference read proofOfReserves.cadence for truthiness, and the sentinel values \"none\" and \"undisclosed\" are non-empty strings, so an issuer-backend mint whose issuer publishes no reconciliation at all was graded as reconciling periodically. A dated latestReport, or a cadence that names a real rhythm, still establishes \"periodic\"; everything else is now \"unknown\"",
+    "\"unknown\" rather than a known negative is deliberate: an undisclosed cadence establishes only that nothing is published, never that the issuer does not reconcile internally. The mint reconciliation vocabulary has no member for a proven absence, and inventing one would assert more than the evidence carries. A reviewed economicControlReview.mint.reconciliation continues to supersede the inference, so the gap is closable by curation",
+    "That correction moves three assets on the 2026-08-18 capture, and only downward: a7a5-old-vector 23 to 19 (F, unchanged), cngn-compliant-naira 37 F to NR, and euri-banking-circle 52 C- to NR. Both withholds are the insufficient-evidence path — an F requires an attributable measured-adverse fact, and losing an unearned reconciliation credit does not supply one — so the model declines to rate rather than publishing an unjustified F. No asset improves, and no other asset moves",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_CONTROL_SECTION_APPLICABILITY: MethodologyChangelogEntry = {
   version: "9.24",
   title: "A reviewed absence of bridge or local issuance is a fact, not a gap",

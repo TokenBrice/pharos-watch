@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.24`
+- **Current methodology version:** `v9.25`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus the versioned score-bearing gate projection in `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -140,7 +140,7 @@ The writer compares *publication* identities. The capture's `v9-input` identity 
   - `Why not higher` renders the two causal buckets from `scoreTrace`: `adverseAttribution` (measured and adverse) as a flat list, and `boundedUncertaintyAttribution` (unresolved) grouped by `responsibility`. Pharos's own gaps — `producer-failed`, `integration-missing` — are named as ours rather than folded into a neutral "not measured".
   - Attribution `path` values are machine keys and are never rendered; producer messages quoting four or more decimal places round to three for display.
 - The card footer carries neither an Evidence block nor a Dependencies block. Evidence collapsed to a chip beside the score trace, because no card in the corpus publishes evidence reason lines and each pillar row already states its own evidence level. Dependencies was removed outright: `ContagionSnapshot` ("Dependency Context") owns that surface with the full dependency graph, and the card's version rendered an empty-state line on 207 of 336 cards.
-- `AccessPosturePanel` renders the four scored access enums in the summary rail at `xl+` and inside the card below `xl` (`xl:hidden`), the same split `#price` uses. `buildSafetyScoreV9AccessRows` exposes the rows without building the whole card presentation.
+- `AccessPosturePanel` renders the four scored access enums in the summary rail at `xl+` and inside the card below `xl` (`xl:hidden`), the same split `#price` uses. `buildSafetyScoreV9AccessRows` exposes the rows without building the whole card presentation. Since `9.25`, `primaryExit` distinguishes three kinds of absence and the panel treats them differently. `none` is a *reviewed negative* — an exit surface observed complete with zero routes — and renders as "None". `undisclosed` means no credited route resolved a posture, or the exit surface was never observed; it renders as an explicit "Not disclosed" row, because dropping it would let an evidence gap read as a clean bill of health. `unknown` means credited routes exist but their access facts are unresolved; it alone enters `unknownFields` and alone drops out of the panel. The posture is derived from every route the Exit pillar credits — score-eligible routes plus reviewed issuer-, protocol-, and eventual-redemption routes — so the panel can no longer contradict a scored exit route, which it did on 110 cards before `9.25`.
 - `src/lib/safety-score-v9-labels.ts` is the single shared machine-key to display-copy map for public V9 surfaces. Cap kinds, failure domains, and attribution paths draw on overlapping producer keys, so new modules extend this map rather than adding their own.
 - `src/components/radar-chart-v9.tsx` renders Backing, Exit, and Economic Control comparisons.
 - `src/components/safety-score-v9-status-notice.tsx` renders held publication state on every other surface. Reason codes and assessment detail are evaluator identifiers and are never rendered raw; both surfaces route hold reasons through `describeDataCoverageHoldCauses`.

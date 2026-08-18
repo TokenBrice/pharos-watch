@@ -1,5 +1,5 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
-import type { V9AssetFactsBase, V9ExitRouteFactV2 } from "../../types/safety-score-v9-facts";
+import type { V9AssetFactsBase, V9ExitRouteFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import type { ExitRouteObservationHistory } from "../../types/exit-route";
 import {
   blendExitCapacityComponent,
@@ -303,11 +303,32 @@ function queueServiceCapacityUsd(
  * channels that used to floor to the bounded-unknown score regardless of how
  * redeemable the asset actually is.
  */
-const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute["routeFamily"][] = [
+export const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute["routeFamily"][] = [
   "issuer-redemption",
   "protocol-redemption",
   "eventual-redemption",
 ];
+
+/**
+ * The field subset the creditable-non-atomic-redemption rule reads.
+ *
+ * Two surfaces ask "does this route count?": the Exit pillar, over the
+ * projected `V9ExitEvaluationRoute`, and the access-posture `primaryExit`
+ * derivation, over the raw `V9ExitRouteFactV2`. They answered differently —
+ * the posture counted only `scoreEligible` routes — so the same asset
+ * published a scored issuer-redemption route alongside "Primary exit: None".
+ * Both now adapt into this one shape so the families and the eligibility
+ * conditions are named exactly once.
+ */
+export interface V9CreditableNonAtomicRedemptionInput {
+  lane: "dex" | "redemption";
+  routeFamily: V9ExitEvaluationRoute["routeFamily"];
+  observationState: V9ExitEvaluationRoute["observationState"];
+  outputResolved: boolean;
+  coverageClass: V9ExitEvaluationRoute["coverageClass"];
+  evidenceKind: string;
+  failureDomainCount: number;
+}
 
 /**
  * A documented, reliable, non-atomic redemption that earns discounted exit
@@ -332,8 +353,22 @@ const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute[
  * the zero-capacity floor drops it exactly as before this relaxation — the pin
  * safety here is that data invariant, not the family membership.
  */
-function isCreditableNonAtomicRedemption(
-  route: V9ExitEvaluationRoute,
+/**
+ * A route output is resolved when it is both observed and valued. Two surfaces
+ * read this — the exit pillar's route projection and the access-posture
+ * credited-route test — and they must never drift, so it lives here once. A
+ * duplicated eligibility rule is exactly what let the posture publish
+ * "Primary exit: None" against a scored redemption route before 9.25.
+ */
+export function isV9ExitRouteOutputResolved(output: {
+  status: { observationState: V9FactStatusV2["observationState"] };
+  valuation: unknown | null;
+}): boolean {
+  return output.status.observationState === "known" && output.valuation !== null;
+}
+
+export function isV9CreditableNonAtomicRedemption(
+  route: V9CreditableNonAtomicRedemptionInput,
   envelope: V9ValidatedPolicyEnvelope,
 ): boolean {
   if (route.lane !== "redemption") return false;
@@ -341,8 +376,26 @@ function isCreditableNonAtomicRedemption(
   if (route.observationState !== "known") return false;
   if (route.outputResolved !== true) return false;
   if (route.coverageClass === "diagnostic") return false;
-  if (route.failureDomains.length === 0) return false;
+  if (route.failureDomainCount === 0) return false;
   return envelope.policy.semantic.exit.scoreableEvidenceKinds.redemption.includes(route.evidenceKind);
+}
+
+function isCreditableNonAtomicRedemption(
+  route: V9ExitEvaluationRoute,
+  envelope: V9ValidatedPolicyEnvelope,
+): boolean {
+  return isV9CreditableNonAtomicRedemption(
+    {
+      lane: route.lane,
+      routeFamily: route.routeFamily,
+      observationState: route.observationState,
+      outputResolved: route.outputResolved,
+      coverageClass: route.coverageClass,
+      evidenceKind: route.evidenceKind,
+      failureDomainCount: route.failureDomains.length,
+    },
+    envelope,
+  );
 }
 
 function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
@@ -771,7 +824,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     minRedeemUsd: route.minRedeemUsd ?? null,
     execution: mapExecution(route),
     outputQuality: mapOutputQuality(route),
-    outputResolved: route.output.status.observationState === "known" && route.output.valuation !== null,
+    outputResolved: isV9ExitRouteOutputResolved(route.output),
     outputValueRetention: Math.min(1, route.output.valuation?.valueRetentionRatio ?? 0),
     capacityCurve: route.capacityCurve,
     routeScoreCap:

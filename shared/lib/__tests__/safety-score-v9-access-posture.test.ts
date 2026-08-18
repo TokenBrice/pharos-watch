@@ -25,6 +25,15 @@ function stale(rule = "fixture.stale"): V9FactStatusV2 {
   };
 }
 
+function missing(rule = "fixture.missing"): V9FactStatusV2 {
+  return {
+    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
+    observationState: "missing",
+    evidenceRefIds: [],
+    gapIds: [`gap:${rule}`],
+  };
+}
+
 function notApplicable(rule = "fixture.not-applicable"): V9FactStatusV2 {
   return {
     applicability: {
@@ -67,21 +76,61 @@ function control(
   };
 }
 
+type ExitRouteFixture = V9AccessPostureAssetFacts["exitRoutes"][number];
+
+function resolvedOutput(routeKey: string): ExitRouteFixture["output"] {
+  return {
+    status: requiredKnown(`output.${routeKey}`),
+    kind: "tracked-stablecoin",
+    assetKeys: ["asset:usd"],
+    basketWeights: [],
+    valuation: {
+      basis: "reviewed-par",
+      referenceAssetKey: "asset:usd",
+      unitValueUsd: 1,
+      expectedUnitValueUsd: 1,
+      valueRetentionRatio: 1,
+      sourceId: "fixture",
+      sourceGenerationId: "fixture:generation",
+      observedAtSec: 1_780_000_000,
+      asOfSec: 1_780_000_000,
+      confidence: "high",
+      freshness: { state: "current", ageSec: 0, maxAgeSec: 86_400 },
+      evidenceRefIds: [`evidence:output.${routeKey}`],
+    },
+  };
+}
+
 function route(
   routeKey: string,
-  holderAccess: V9AccessPostureAssetFacts["exitRoutes"][number]["holderAccess"] = "permissionless",
+  holderAccess: ExitRouteFixture["holderAccess"] = "permissionless",
   status = requiredKnown(`route.${routeKey}`),
-) {
-  return { routeKey, lane: "redemption" as const, holderAccess, status, scoreEligible: true };
+  overrides: Partial<ExitRouteFixture> = {},
+): ExitRouteFixture {
+  return {
+    routeKey,
+    lane: "redemption" as const,
+    holderAccess,
+    status,
+    scoreEligible: true,
+    routeFamily: "issuer-redemption",
+    coverageClass: "exact-complete",
+    evidenceKind: "documented-terms",
+    failureDomains: [{ kind: "redemption-rail", key: routeKey }],
+    output: resolvedOutput(routeKey),
+    ...overrides,
+  };
 }
 
 function facts(
   controls: readonly V9DeploymentControlFactV2[] = [],
   exitRoutes: V9AccessPostureAssetFacts["exitRoutes"] = [],
+  exitStatus: V9FactStatusV2 = exitRoutes.length > 0 ? requiredKnown("exit") : missing("exit"),
 ): V9AccessPostureAssetFacts {
   return {
     assetId: "fixture-asset",
     controlStatus: controls.length > 0 ? requiredKnown("controls") : notApplicable("controls"),
+    exitStatus,
     controls,
     exitRoutes,
   };
@@ -153,6 +202,45 @@ describe("Safety Score v9 access posture", () => {
     );
 
     expect(result.primaryExit).toBe("permissionless");
+    expect(result.unknownFields).not.toContain("primaryExit");
+  });
+
+  it("credits the non-atomic redemption families the exit pillar scores instead of asserting no exit", () => {
+    const eventual = route("redemption:eventual", "institutional-eligible", requiredKnown("route.eventual"), {
+      scoreEligible: false,
+      routeFamily: "eventual-redemption",
+      coverageClass: "exact-lower-bound",
+    });
+    const result = evaluateV9AccessPosture(args({ facts: facts([], [eventual]) }));
+
+    expect(result.primaryExit).toBe("eligibility-gated");
+    expect(result.unknownFields).not.toContain("primaryExit");
+  });
+
+  it("publishes undisclosed, not none, when routes exist but none is credited", () => {
+    const diagnostic = route("redemption:diagnostic", "issuer-only", requiredKnown("route.diagnostic"), {
+      scoreEligible: false,
+      routeFamily: "eventual-redemption",
+      coverageClass: "diagnostic",
+    });
+    const result = evaluateV9AccessPosture(args({ facts: facts([], [diagnostic]) }));
+
+    expect(result.primaryExit).toBe("undisclosed");
+    expect(result.unknownFields).not.toContain("primaryExit");
+    expect(result.signals).toContain("primary-exit:undisclosed");
+  });
+
+  it("publishes undisclosed when the exit surface itself was never observed", () => {
+    const result = evaluateV9AccessPosture(args({ facts: facts([], [], missing("exit")) }));
+
+    expect(result.primaryExit).toBe("undisclosed");
+    expect(result.unknownFields).not.toContain("primaryExit");
+  });
+
+  it("reserves none for a reviewed-complete exit surface with zero routes", () => {
+    const result = evaluateV9AccessPosture(args({ facts: facts([], [], requiredKnown("exit")) }));
+
+    expect(result.primaryExit).toBe("none");
     expect(result.unknownFields).not.toContain("primaryExit");
   });
 

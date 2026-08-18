@@ -68,8 +68,13 @@ describe("Safety Score v9 methodology policy", () => {
     // 9.17 (2026-08-11): oracle applicability separates genuinely oracleless
     // mechanisms (95) from privileged internal pricing (45); reviewed
     // not-applicable paths emit no scored component.
+    // 9.25 (2026-08-18): `accessPostureVocabulary.primaryExit` gains
+    // "undisclosed" so a missing exit surface stops publishing as the reviewed
+    // negative "none". Published-vocabulary only — primaryExit is a posture
+    // projection, not a scoring input, and the 2026-08-18 capture replays with
+    // every score, grade, and pillar score byte-identical.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "ade82a02e49a24484ecdb4b6f668794420e1c4b25bf0a80ba5f2130a3ebe64cf",
+      "6de4e8d514df4774f81d65feebb84e45361e449fb6bf841b87a848baf12b5d8b",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,

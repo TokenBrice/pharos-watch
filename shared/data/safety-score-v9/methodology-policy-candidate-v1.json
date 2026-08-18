@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.24",
+  "releaseVersion": "9.25",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -1053,6 +1053,7 @@
         "eligibility-gated",
         "issuer-discretionary",
         "none",
+        "undisclosed",
         "unknown"
       ],
       "governance": [
