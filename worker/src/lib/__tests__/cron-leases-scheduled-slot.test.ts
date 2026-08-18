@@ -1227,6 +1227,36 @@ describe("runScheduledSlotWithFence", () => {
     expect(String(abortReason)).toContain("exceeded controlled deadline");
   });
 
+  it("finishes the slot at the controlled deadline when work ignores abort", async () => {
+    const slotStartedAt = Math.floor(Date.now() / 1000);
+    const db = makeLeaseDb();
+    const fn = vi.fn(
+      () =>
+        new Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number }>(() => {}),
+    );
+
+    const runPromise = runScheduledSlotWithFence(db, "daily0800Utc", fn, {
+      slotStartedAt,
+      owner: "owner-deadline-race",
+      deadlineMs: Date.now() + 1_000,
+    });
+
+    await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1));
+    const expectation = expect(runPromise).rejects.toThrow("exceeded controlled deadline");
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expectation;
+
+    const slot = db.getSlot("daily0800Utc", slotStartedAt);
+    expect(slot).toMatchObject({
+      state: "finished",
+      result_status: "error",
+      finished_at: slotStartedAt + 1,
+    });
+    expect(slot?.metadata ? JSON.parse(slot.metadata) : null).toMatchObject({
+      error: `scheduled slot daily0800Utc@${slotStartedAt} exceeded controlled deadline`,
+    });
+  });
+
   it("records slot heartbeat failures in final slot metadata", async () => {
     const slotStartedAt = Math.floor(Date.now() / 1000);
     const db = makeLeaseDb({ failSlotHeartbeatRuns: 1 });

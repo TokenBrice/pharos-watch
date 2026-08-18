@@ -82,6 +82,13 @@ class ScheduledSlotOwnershipLostError extends Error {
   }
 }
 
+class ScheduledSlotDeadlineExceededError extends Error {
+  constructor(slotKey: string, slotStartedAt: number) {
+    super(`scheduled slot ${slotKey}@${slotStartedAt} exceeded controlled deadline`);
+    this.name = "ScheduledSlotDeadlineExceededError";
+  }
+}
+
 export interface ScheduledSlotSweepOptions {
   staleAfterSec?: number;
   limit?: number;
@@ -623,19 +630,9 @@ export async function runScheduledSlotWithFence(
   let heartbeatFailures = 0;
   let heartbeatOwnershipLost = false;
   let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
-  const abortForDeadline = () => {
-    if (slotController.signal.aborted) return;
-    slotController.abort(new Error(`scheduled slot ${slotKey}@${opts.slotStartedAt} exceeded controlled deadline`));
-  };
-  if (opts.deadlineMs != null) {
-    const delayMs = opts.deadlineMs - Date.now();
-    if (delayMs <= 0) {
-      abortForDeadline();
-    } else {
-      deadlineTimer = setTimeout(abortForDeadline, delayMs);
-    }
-  }
   let heartbeatInFlight: Promise<void> | null = null;
+  let deadlineReject: ((error: Error) => void) | null = null;
+  let deadlineSettled = false;
   const timer = setInterval(() => {
     if (heartbeatInFlight) return;
     heartbeatInFlight = touchScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, executionGeneration)
@@ -652,9 +649,44 @@ export async function runScheduledSlotWithFence(
         heartbeatInFlight = null;
       });
   }, heartbeatSec * 1000);
+  const abortForDeadline = () => {
+    if (deadlineSettled) return;
+    deadlineSettled = true;
+    const error =
+      slotController.signal.aborted && slotController.signal.reason instanceof Error
+        ? slotController.signal.reason
+        : new ScheduledSlotDeadlineExceededError(slotKey, opts.slotStartedAt);
+    if (!slotController.signal.aborted) {
+      slotController.abort(error);
+    }
+    deadlineReject?.(error);
+  };
+  const deadlineMs = opts.deadlineMs;
+  const deadlinePromise =
+    deadlineMs == null
+      ? null
+      : new Promise<never>((_, reject) => {
+          deadlineReject = reject;
+          const delayMs = deadlineMs - Date.now();
+          if (delayMs <= 0) {
+            abortForDeadline();
+          } else {
+            deadlineTimer = setTimeout(abortForDeadline, delayMs);
+          }
+        });
 
   try {
-    const metadata = await fn(slotController.signal);
+    const workPromise = fn(slotController.signal);
+    if (deadlinePromise) {
+      void workPromise.catch(() => {});
+    }
+    const metadata = deadlinePromise ? await Promise.race([workPromise, deadlinePromise]) : await workPromise;
+    deadlineSettled = true;
+    deadlineReject = null;
+    if (deadlineTimer) {
+      clearTimeout(deadlineTimer);
+      deadlineTimer = null;
+    }
     const slotMetadata = attachSlotRuntimeMetadata(metadata, heartbeatFailures, staleSlotPreSweep, staleSlotTakeover);
     const resultStatus =
       metadata && metadata.jobsErrored > 0
@@ -720,6 +752,8 @@ export async function runScheduledSlotWithFence(
   } finally {
     slotController.abort(new Error(`scheduled slot ${slotKey}@${opts.slotStartedAt} finished`));
     if (deadlineTimer) clearTimeout(deadlineTimer);
+    deadlineSettled = true;
+    deadlineReject = null;
     clearInterval(timer);
   }
 }
