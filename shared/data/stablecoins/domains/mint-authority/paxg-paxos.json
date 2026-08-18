@@ -45,7 +45,7 @@
         }
       ]
     },
-    "summary": "PAXG's legacy token proxy delegates to PAXG V2, which accepts native mint requests through a UUPS SupplyControl proxy. Two direct Paxos controller EOAs can mint under recorded rate limits, while the immediate Paxos controller-manager EOA can raise limits, add controllers, redirect SupplyControl, and upgrade the native SupplyControl path. A separate immediate EOA can replace the outer token implementation. Solana is now recorded as a second native Token-2022 issuance surface with unresolved controller attribution; the Ethereum LayerZero adapter is assessed separately in Bridge Risk.",
+    "summary": "PAXG's legacy token proxy delegates to PAXG V2, which accepts native mint requests through a UUPS SupplyControl proxy. Two direct Paxos controller EOAs can mint under recorded rate limits, while the immediate Paxos controller-manager EOA can raise limits, add controllers, redirect SupplyControl, and upgrade the native SupplyControl path. A separate immediate EOA can replace the outer token implementation. Solana is a second native Token-2022 issuance surface whose mint authority is a 1-of-4 multisig (Paxos admin EOA, two rate-limited Paxos minter-controller PDAs, and a LayerZero OFT store); the Ethereum LayerZero adapter and the Solana OFT store are assessed separately in Bridge Risk.",
     "controls": [
       {
         "chain": "ethereum",
@@ -149,14 +149,28 @@
         "deploymentRefs": [
           "solana:5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
         ],
-        "label": "PAXG Solana Token-2022 mint authority",
+        "label": "PAXG Solana Token-2022 1-of-4 mint multisig",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 4,
         "canRaiseCap": true,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439713418,
+        "capDescription": "No token-level supply cap. Paxos minter-controller PDA 6NZcfjuC77uQbYBNB2QXPGu4z9s5N89tt1V5p2PXE4hQ authorizes EOA HJDzApv7os9GhYStrgobMjzh7guweq8SMRSip9AU3Jt3 under a 177,000-PAXG capacity and 50-PAXG-per-second refill (remaining 176,999.95 after the 2026-06-08 native mints). PDA 74EHGqcq48SoMbqnTZCjCiCdsH2d8G2KdgBhcCifhngj authorizes EOA 5gUuDFHswKi2QMA1qJHf6FEVhNCrHnyAdfWniMaUUPE4 under the same 177,000 / 50-per-second bounds and has never minted (remaining 0, last_refill_time 0). Threshold one lets Paxos admin 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk or LayerZero OFT store CdxPHbQjNbxyaDBjA92Bbka3YFC9t3JVyQ2cA1mSbNBR mint without either controller.",
+        "observedAt": "2026-08-18",
+        "observedBlock": 440115731,
+        "failureDomainKeys": [
+          "solana:2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk",
+          "solana:6NZcfjuC77uQbYBNB2QXPGu4z9s5N89tt1V5p2PXE4hQ",
+          "solana:74EHGqcq48SoMbqnTZCjCiCdsH2d8G2KdgBhcCifhngj",
+          "solana:CdxPHbQjNbxyaDBjA92Bbka3YFC9t3JVyQ2cA1mSbNBR"
+        ],
+        "bypassSurfaces": [
+          "Signer 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk is an externally signable system account and satisfies the 1-of-4 multisig without either controller PDA or the OFT store.",
+          "Signer CdxPHbQjNbxyaDBjA92Bbka3YFC9t3JVyQ2cA1mSbNBR is the LayerZero OFT store and can mintTo/burn on LzReceive without the Paxos minter-controller PDAs; that path is also authored under Bridge Risk."
+        ],
         "sources": [
           {
             "label": "Paxos PAXG-to-Solana announcement",
@@ -172,10 +186,60 @@
           },
           {
             "label": "Solana RPC",
-            "url": "https://solana-rpc.publicnode.com"
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Paxos Solana minter-controller source",
+            "url": "https://github.com/paxosglobal/solana-programs/blob/master/programs/minter-controller/src/lib.rs"
+          },
+          {
+            "label": "Token-2022 multisig initialize tx",
+            "url": "https://explorer.solana.com/tx/31tyYm5jeBGFsQiUbURVjt8FpM5keD7xmT4uD4aeefTAKKyFXn83yWuH82RX11So2xtUQS4jgipzn4GSQEoXKb5h"
+          },
+          {
+            "label": "Native Paxos MintToken tx (0.05 PAXG)",
+            "url": "https://explorer.solana.com/tx/4BK8HWnLQpowWDPe7zJnZfLvDK5NTt7nCY3ovTgo7oxKw6DErPoQBT5fj8dYDHx2y86j8eAjDjz92FFASC8CRJjQ"
+          },
+          {
+            "label": "LayerZero LzReceive mintTo tx (4.505618 PAXG)",
+            "url": "https://explorer.solana.com/tx/2ZjaHUwcRV7qRAVYqPsKTQEhdDa9yLyktq3pe2nKmXznJnTEH1LPf27iBSNWeUKxJZwJFbMW8MDiJnq3VHzqCWCS"
           }
         ],
-        "evidence": "At finalized Solana slot 439713418 on 2026-08-16, the PAXG Token-2022 mint 5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW reported mintAuthority Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk and permanent delegate/freeze authority 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk. The exact controller entity and whether this direct authority is independent issuer issuance or a bridge destination executor remain unresolved."
+        "evidence": "At finalized Solana slot 440115731 on 2026-08-18, Token-2022 mint 5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW reported decimals 6, supply 382.341744 PAXG, mintAuthority Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk, and freeze/permanent-delegate/close/transfer-fee/confidential-transfer/transfer-hook/metadata authority 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk. getAccountInfo on the mint authority decoded as an initialized Token-2022 multisig with numRequiredSigners 1 and four signers: 2apBGM… (system-owned), 6NZcfju… and 74EHGqc… (Paxos minter_controller PDAs; program G1SRHec1Mig66xKJ169kmmVRy4WX81VLKCUfdExThQdo, whose GitHub declare_id matches and whose programData authority is None), and CdxPHbQ… (OFT store owned by paxosVkYuJBKUQoZGAidRA47Qt4uidqG5fAt5kmr1nR, programData authority None). Both controller PDAs decode to mint 5GgRAE…, admin 2apBGM…, and 177,000 PAXG / 50 PAXG-per-second limits — the same native bounds as the Ethereum PAXG controllers, not the 13,320 / 0.155 LayerZero adapter limit. Slot 424036776 (2026-06-03) initialized this exact 1-of-4. Slot 425176083 and 425176800 show Paxos MintToken via G1SRHec signed by HJDz… using signer 6NZcfju… for 0.001 then 0.05 PAXG with no LayerZero endpoint. Slot 439966894 shows LzReceive on paxosVkYu against endpoint 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6 minting 4.505618 PAXG with only CdxPHbQ as the multisig signer. This is independent native issuance plus a LayerZero OFT transfer rail, not a supply-conserving bridge executor alone."
+      },
+      {
+        "chain": "solana",
+        "address": "2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk",
+        "deploymentRefs": [
+          "solana:5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
+        ],
+        "label": "PAXG Solana Paxos admin and direct mint signer",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-18",
+        "observedBlock": 440115731,
+        "failureDomainKeys": [
+          "solana:2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Paxos Solana controller source",
+            "url": "https://github.com/paxosglobal/solana-programs"
+          },
+          {
+            "label": "USDP Solana review of the same admin signer",
+            "url": "https://solscan.io/account/2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk"
+          }
+        ],
+        "evidence": "At finalized slot 440115731 this on-curve, system-owned account (owner 11111111111111111111111111111111, space 0) was one signer of the threshold-one PAXG mint multisig; admin of both Paxos minter-controller PDAs; and the mint's freeze, mint-close, permanent-delegate, confidential-transfer, transfer-hook, transfer-fee, metadata-pointer, and metadata-update authority. The same address is already reviewed as the Paxos Solana admin on USDP and as a PYUSD mint-multisig signer. It can mint directly, change mint authority, raise controller limits, freeze accounts, or move tokens as permanent delegate with no delay. Named human key-holders are not published; on-chain reuse across Paxos-issued Token-2022 mints attributes it as Paxos-internal, not a third-party custodian."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -204,27 +268,9 @@
           "url": "https://www.occ.treas.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html"
         }
       ],
-      "evidence": "At Ethereum block 25526129, legacy token proxy 0x45804880de22913dafe09f4980848ece6ecbaf78 used implementation 0x7da4c5d9eca180a03765a6d27196f2a0380fa543 and proxy-admin EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c. Its SupplyControl UUPS proxy used exact-source implementation 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3 and two direct Paxos controllers after the LayerZero adapter was removed from native scope. DEFAULT_ADMIN EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b can immediately manage native controllers, redirect SupplyControl, and upgrade SupplyControl; the adapter's implementation, owner, rate limit, and bridge failure domain are assessed separately under Bridge Risk. At finalized Solana slot 439713418, the new Token-2022 PAXG mint reported direct mint authority Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk, but controller attribution and supply-conservation semantics remain unresolved. KPMG's monthly independent PAXG reserve attestations and NYDFS/OCC issuer supervision support periodic reconciliation and prudential supervision. Economic-posture fields reviewed 2026-08-16: the native Ethereum controllers and manager remain unbounded but reconciled, while the Solana authority is retained as an unresolved adverse native-surface fact pending attribution.",
-      "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-16",
-      "scopedQuestions": [
-        {
-          "controlRef": "solana:Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk",
-          "question": "Which entity controls the PAXG Solana Token-2022 mint authority Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk, and is its direct issuance independent issuer issuance or a bridge destination executor whose supply is conserved against Ethereum?",
-          "reviewedAt": "2026-08-16",
-          "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
-          "sources": [
-            {
-              "label": "Paxos PAXG-to-Solana announcement",
-              "url": "https://www.paxos.com/blog/bringing-paxg-to-solana"
-            },
-            {
-              "label": "PAXG Solana mint on Solscan",
-              "url": "https://solscan.io/token/5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
-            }
-          ]
-        }
-      ]
+      "evidence": "At Ethereum block 25526129, legacy token proxy 0x45804880de22913dafe09f4980848ece6ecbaf78 used implementation 0x7da4c5d9eca180a03765a6d27196f2a0380fa543 and proxy-admin EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c. Its SupplyControl UUPS proxy used exact-source implementation 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3 and two direct Paxos controllers after the LayerZero adapter was removed from native scope. DEFAULT_ADMIN EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b can immediately manage native controllers, redirect SupplyControl, and upgrade SupplyControl; the adapter's implementation, owner, rate limit, and bridge failure domain are assessed separately under Bridge Risk. At finalized Solana slot 439713418, the new Token-2022 PAXG mint reported direct mint authority Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk, but controller attribution and supply-conservation semantics remain unresolved. KPMG's monthly independent PAXG reserve attestations and NYDFS/OCC issuer supervision support periodic reconciliation and prudential supervision. Economic-posture fields reviewed 2026-08-16: the native Ethereum controllers and manager remain unbounded but reconciled, while the Solana authority is retained as an unresolved adverse native-surface fact pending attribution. At finalized Solana slot 440115731 on 2026-08-18, mint 5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW still reported mintAuthority Ertp4yV6mJiQP5TyBaEkvza9fhh1pWo4CWtM6CdKmzfk. That account is a Token-2022 1-of-4 multisig (initialized slot 424036776) whose signers are Paxos admin 2apBGM…, minter-controller PDAs 6NZcfju… / 74EHGqc… (program G1SRHec1…, upgrade authority None, 177,000 PAXG / 50-per-second native limits matching the Ethereum controllers), and LayerZero OFT store CdxPHbQ… (program paxosVkYu…, upgrade authority None). Independent Paxos MintToken txs at slots 425176083 and 425176800 minted 0.051 PAXG without LayerZero; recent LzReceive txs mint via the OFT store only. Controller attribution is closed as Paxos-internal hybrid native issuance.",
+      "reviewer": "Codex FIX-09 mint-bridge-boundary migration; W07 Solana mint-authority close",
+      "reviewedAt": "2026-08-18"
     }
   }
 }

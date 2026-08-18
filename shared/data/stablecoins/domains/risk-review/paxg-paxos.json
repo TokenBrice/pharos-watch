@@ -100,7 +100,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Paxos calls this a Solana-native Token-2022 deployment and the official PAXG site links the mint. The route remains opaque-or-unknown for bridge assessment because the relationship between the direct mint authority, LayerZero Stargate messages, and Ethereum gold-backed supply has not been verified.",
+        "reviewNote": "Paxos calls this a Solana-native Token-2022 deployment and the official PAXG site links the mint. W07 (2026-08-18, slot 440115731) confirmed independent native issuance: mint authority is a 1-of-4 Token-2022 multisig with Paxos admin 2apBGM…, two 177k/50s Paxos minter-controller PDAs, and LayerZero OFT store CdxPHbQ…. Native MintToken without LayerZero is observed; OFT LzReceive is an additional burn/mint transfer rail already covered by structured bridge controls. issuanceModel stays native-issuance. Remaining bridge opacity is peer/DVN/current rate-limit state, not mint-authority attribution.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 439713418,
@@ -172,6 +172,59 @@
           }
         ],
         "evidence": "At Ethereum block 25526129, PAXG SupplyControl getAllSupplyControllerAddresses() included adapter proxy 0xd09ede557ef195983c9544a5724046fbd6e8a3c6, whose configuration had 13,320 PAXG capacity and 0.155 PAXG-per-second refill. At block 25770003, the adapter implementation resolved to 0xc54ca36efe594e4c774ba8463adf67ba3de1236f and owner() returned controller-manager EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. This is canonical-side bridge machinery and is not included in the native Mint Authority controls."
+      },
+      {
+        "id": "paxg-solana-layerzero-oft-store",
+        "label": "PAXG Solana LayerZero OFT store",
+        "routeRefs": [
+          "ethereum:0x45804880de22913dafe09f4980848ece6ecbaf78",
+          "solana:5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "CdxPHbQjNbxyaDBjA92Bbka3YFC9t3JVyQ2cA1mSbNBR",
+        "failureDomainKeys": [
+          "contract:solana:CdxPHbQjNbxyaDBjA92Bbka3YFC9t3JVyQ2cA1mSbNBR",
+          "contract:solana:paxosVkYuJBKUQoZGAidRA47Qt4uidqG5fAt5kmr1nR",
+          "contract:solana:76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6",
+          "protocol:layerzero-stargate-paxg"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "InitOft + RegisterOapp at slot 421037033 registered this store as an OApp on LayerZero Solana endpoint 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6. Aave's 2026-07-17 PAXG technical assessment says the Ethereum OFT has a single Solana peer and required DVNs LayerZero Labs, Canary, and Paxos. This review did not re-decode the Solana store's peer bytes or re-read Ethereum peers().",
+          "rateLimits": "The OFT store is a threshold-one mint-authority signer and has no Token-2022 supply cap. Ethereum-side adapter capacity 13,320 PAXG / 0.155-per-second remains on paxg-ethereum-layerzero-adapter. Aave reported an inbound bound of about 4,440 PAXG per 24 hours as of 2026-07-17; that bound was not re-read on 2026-08-18.",
+          "pausersAdminsUpgraders": "OFT program paxosVkYuJBKUQoZGAidRA47Qt4uidqG5fAt5kmr1nR programData Gvgyba4eLM2hqC8GUZoMsfWRSpe3SzNbXwHDmLERLj1p reports upgrade authority None (immutable) at slot 440115731. Store account data contains mint 5GgRAE… and Paxos admin 2apBGM…. No on-chain OFT pause was enumerated."
+        },
+        "capDescription": "OFT mint/burn is ungated at the Token-2022 mint (1-of-4). Ethereum adapter capacity and refill stay on the existing adapter control.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-18",
+        "observedBlock": 440115731,
+        "sources": [
+          {
+            "label": "OFT InitOft / RegisterOapp tx",
+            "url": "https://explorer.solana.com/tx/dL2UEkzUxemZVATaYSj86Sr8L2SjWndKvgCBH4VdUX3qELE2N2MyNGwxT7XMsWbXPZEzZsw7V1TsgkzQ8McsJ4q"
+          },
+          {
+            "label": "Recent LzReceive mintTo",
+            "url": "https://explorer.solana.com/tx/2ZjaHUwcRV7qRAVYqPsKTQEhdDa9yLyktq3pe2nKmXznJnTEH1LPf27iBSNWeUKxJZwJFbMW8MDiJnq3VHzqCWCS"
+          },
+          {
+            "label": "PayPal/Paxos LayerZero OFT program-id (same paxosVkYu program)",
+            "url": "https://developer.paypal.com/community/blog/pyusd-layerzero/"
+          },
+          {
+            "label": "Aave PAXG technical assessment (ETH OFT / Solana peer)",
+            "url": "https://governance.aave.com/t/paxos-gold-paxg-on-aave-ethereum-assessments/25359"
+          },
+          {
+            "label": "Paxos PAXG-to-Solana announcement",
+            "url": "https://www.paxos.com/blog/bringing-paxg-to-solana"
+          }
+        ],
+        "evidence": "At slot 421037033 the paxosVkYu program executed InitOft and RegisterOapp, creating store CdxPHbQ… and an escrow token account for mint 5GgRAE… on LayerZero endpoint 76y77prsi…. At slot 439966894 an LzReceive on paxosVkYu cleared a message via that endpoint and mintTo'd 4.505618 PAXG with only CdxPHbQ as the Token-2022 multisig signer. PayPal's PYUSD LayerZero guide uses the same program-id paxosVkYu… for lz:oft:solana:send. This is destination-side OFT machinery on a native Token-2022 mint, not the only Solana issuance path."
       }
     ]
   }
