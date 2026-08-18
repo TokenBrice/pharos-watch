@@ -12,6 +12,7 @@ describe("adaptive PR checks", () => {
       base: "abc",
       head: "def",
       rest: ["--shard=1/2"],
+      staged: false,
     });
   });
 
