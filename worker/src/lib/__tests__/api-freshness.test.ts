@@ -334,7 +334,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     expect(statusFloor).toBe("healthy");
   });
 
-  it("degrades yield-data past 2x its half-hourly budget while other caches stay fresh", async () => {
+  it("degrades yield-data past 2x its hourly budget while other caches stay fresh", async () => {
     const now = 1_800_000_000;
     const db = mockD1([
       {
@@ -346,8 +346,8 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
-          // ~2.06x the half-hourly budget: two missed publishes -> public-unhealthy.
-          sentinelRow("yield-data", now - 3_700),
+          // ~2.06x the hourly budget: two missed publishes -> public-unhealthy.
+          sentinelRow("yield-data", now - 7_400),
           sentinelRow("dews", now - 240),
         ],
       },
@@ -356,7 +356,7 @@ describe("buildCacheStatuses sentinel validation", () => {
 
     const { caches, statusFloor } = await buildCacheStatuses(db, now);
 
-    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 3_700, healthy: false });
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 7_400, healthy: false });
     expect(statusFloor).toBe("degraded");
   });
 

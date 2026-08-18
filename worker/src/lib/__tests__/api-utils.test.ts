@@ -1082,9 +1082,9 @@ describe("buildCacheStatuses", () => {
     expect(caches["yield-data"]).toMatchObject({
       freshnessSource: "freshness-sentinel",
       producerJob: "sync-yield-data",
-      producerIntervalSec: 1800,
-      endpointMaxAge: 1800,
-      availabilityMaxAge: 1800,
+      producerIntervalSec: 3600,
+      endpointMaxAge: 3600,
+      availabilityMaxAge: 3600,
     });
     expect(caches.dews?.ageSeconds).toBe(240);
     expect(caches.dews).toMatchObject({

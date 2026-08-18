@@ -1,6 +1,6 @@
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import type { CronResult } from "../../lib/cron-logger";
-import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
+import { loadActiveSafetyScoreIdentity } from "../../lib/safety-score-active-source";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import {
@@ -26,10 +26,10 @@ export async function runYieldCoordinatorPersistStage(
   const { fetched, normalized, health } = params;
   const loadedSafetyIdentity = health.safetySnapshotMeta.safetyScoreIdentity ?? null;
   if (loadedSafetyIdentity) {
-    const currentSafetySnapshot = await computeSafetyScoresSnapshot(params.db);
-    const currentSafetyIdentity = currentSafetySnapshot.safetyScoreIdentity;
+    const currentSafetySource = await loadActiveSafetyScoreIdentity(params.db);
+    const currentSafetyIdentity = currentSafetySource.safetyScoreIdentity;
     if (
-      currentSafetySnapshot.kind === "ok" &&
+      currentSafetySource.kind === "v9" &&
       currentSafetyIdentity &&
       !safetyScorePublicationIdentitiesAreComparable(loadedSafetyIdentity, currentSafetyIdentity)
     ) {

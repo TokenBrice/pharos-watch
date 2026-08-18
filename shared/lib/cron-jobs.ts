@@ -65,10 +65,14 @@ const CRON_SCHEDULE_DEFINITIONS = {
   },
   dewsPsiOffset: { schedule: "26,56 * * * *", ...CRON_SCHEDULE_CADENCES.dewsPsiOffset },
   fourHourlyReserveSync: { schedule: "11 */4 * * *", ...CRON_SCHEDULE_CADENCES.fourHourlyReserveSync },
-  // Runs after both Safety Score V9 publication slots (:22/:52) so Yield
-  // snapshots start from the newest complete report-card identity while still
-  // leaving a buffer before the heavy :00/:30 lanes.
-  hourlyYieldSync: { schedule: "24,54 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
+  // Single hourly expression on purpose. Cloudflare caps Cron expressions with
+  // intervals below one hour at 30 seconds of CPU time, and the yield source and
+  // publication graph needs ~150-175s of runtime, so a twice-hourly expression
+  // (":28,:58" or ":24,:54") gets the invocation killed mid `source-resolution`.
+  // Recombining this into a sub-hourly expression requires the paired-trigger
+  // form used by halfHourlyOffset/halfHourlyChartsOffset, which needs a physical
+  // trigger beyond the reviewed budget. See docs/dex-liquidity.md.
+  hourlyYieldSync: { schedule: "20 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
   fourHourlyYieldSupplemental: {
     schedule: "25 */4 * * *",
     ...CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental,
@@ -202,13 +206,13 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     title: "30-minute slot",
     badge: "~30 min",
     description:
-      "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication, post-V9 yield, plus isolated mint/burn critical and extended triggers.",
+      "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication, plus isolated mint/burn critical and extended triggers.",
   },
   {
     key: "hourly",
     title: "Hourly slot",
     badge: "~1h",
-    description: "Hourly source-stage lanes that feed slower scoring and publication consumers.",
+    description: "Dedicated core yield publication lane after DEX scoring has refreshed its inputs.",
   },
   {
     key: "multi-hourly",
@@ -446,7 +450,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "sync-yield-data",
     label: "Yield sync",
-    group: "half-hourly",
+    group: "hourly",
     scheduleKey: "hourlyYieldSync",
     triggerMode: "isolated",
     maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity-stage (sequential)
