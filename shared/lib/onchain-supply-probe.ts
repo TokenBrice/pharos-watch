@@ -46,11 +46,7 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   icp: "icp",
 };
 
-export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, CuratedOnchainSupplyContractConfig> = {
-  // No upstream market row exists for Spark Savings USDC yet, but the Ethereum
-  // vault supply plus the guarded protocol-redeem price keeps the asset visible.
-  "susdc-spark": { chain: "ethereum" },
-};
+export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, CuratedOnchainSupplyContractConfig> = {};
 
 const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
@@ -399,6 +395,207 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "apechain", rpcUrl: "https://rpc.apechain.com/http", fallbackRpcUrl: "https://apechain.calderachain.xyz/http" },
     { chain: "pharos", rpcUrl: "https://api.zan.top/public/pharos-mainnet", fallbackRpcUrl: "https://pharos.drpc.org" },
   ],
+  // PAXG is issuer-native on Ethereum and Solana. The Ethereum LayerZero OFTWrapper
+  // 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 is a burn/mint SupplyController
+  // (approvalRequired false; balanceOf 0), so Ethereum totalSupply does not escrow
+  // the Solana float and the legs sum. Verified 2026-08-18: Ethereum 434,564.906308
+  // (block 25784877) + Solana 2,382.341744 (slot 440141599) = 436,947.248052,
+  // matching CoinGecko circulating exactly. Do not add CANONICAL_SUPPLY_CHAINS.
+  "paxg-paxos": [{ chain: "ethereum" }, { chain: "solana" }],
+  // DGLD is independently gold-backed on Ethereum and Base after the 2026-06-30
+  // bridge close. Verified 2026-08-18: Ethereum 1,603.687 (block 25784877) + Base
+  // 401.159 (block 50150845) = 2,004.846. Deprecated Base 0xd02f50…d6c9 reads 0.
+  // CoinGecko 2,411.955 is a +20.3% stale overcount (RWA.xyz matches on-chain).
+  "dgld-gold-token-sa": [{ chain: "ethereum" }, { chain: "base" }],
+  // VNXAU is issuer-native on each chain. Verified 2026-08-18: Ethereum 543.10593
+  // (block 25784877) + Polygon 107.73577 (block 92257341) + Base 1,753.41189
+  // (block 50150845) + Etherlink 31,400.97041 (block 51291170) + Solana
+  // 10,279.21837712 (slot 440141599) = 44,084.442377, −0.035% vs CoinGecko 44,100.
+  // Horizon Stellar and TzKT Tezos both read zero, so they stay unconfigured.
+  "vnxau-vnx": [
+    { chain: "ethereum" },
+    { chain: "polygon" },
+    { chain: "base" },
+    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+    { chain: "solana" },
+  ],
+  // USTB is native on Ethereum and Solana; Plume is Superstate issuer-native
+  // burn/mint (bridge() burns source, no lockbox). Verified 2026-08-19:
+  // Ethereum 67,696,661.464479 + Plume 169,698.550490 + Solana 224,120.571877
+  // = 68,090,480.586846, matching Superstate's token rows exactly. Superstate
+  // book-entry 16,278,150.21 (19.29% of AUM) is not a token and stays outside
+  // this aggregate (CG circulating 84,341,804.96 includes it). Plume is absent
+  // from buildChainRpcs(), so pin the reviewed public endpoint.
+  "ustb-superstate": [
+    { chain: "ethereum" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+    { chain: "solana" },
+  ],
+  // VBILL is Securitize-native on Avalanche, Ethereum, BSC and Solana (no
+  // Wormhole lockbox). Verified 2026-08-19: Avalanche 136,217,752.38 +
+  // Ethereum 21,684,333.099655 + BSC 21,501,301.39 + Solana 13,926,019.96
+  // = 193,329,406.829655, equal to CoinGecko market cap at $1 NAV.
+  "vbill-vaneck": [
+    { chain: "avalanche" },
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    { chain: "solana" },
+  ],
+  // bC3M is independently mintable on seven EVM chains (no lockbox). Verified
+  // 2026-08-19: Ethereum 68,426.302701 + Gnosis/Base/Polygon/BSC/Arbitrum/
+  // Avalanche 0 = 68,426.302701, matching the published share count. Zero legs
+  // are reviewed live deployments.
+  "bc3m-backed": [
+    { chain: "ethereum" },
+    { chain: "gnosis", allowZeroSupply: true },
+    { chain: "base", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true },
+    { chain: "arbitrum", allowZeroSupply: true },
+    { chain: "avalanche", allowZeroSupply: true },
+  ],
+  // bIB01 is independently mintable on seven EVM chains; CCIP is a transfer
+  // rail, not a lockbox. Verified 2026-08-19: Ethereum 45,326.8030000012 +
+  // Base 10,000 + Polygon 4,442.0000000002 + Arbitrum 60,000 + Gnosis
+  // 14,896.7260716317 + Avalanche 21,000.295821 + BSC 0 = 155,665.824892633
+  // (−0.0001% vs published 155,665.99 shares). BSC is a reviewed live
+  // deployment at zero.
+  "bib01-backed": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "bsc", allowZeroSupply: true },
+    { chain: "polygon" },
+    { chain: "arbitrum" },
+    { chain: "gnosis" },
+    { chain: "avalanche" },
+  ],
+  // HLSCOPE is Securitize-native on Ethereum, Polygon, Optimism, Plume and
+  // Tron. Verified 2026-08-19: Polygon 3,237.185242 + Ethereum 159.936826 +
+  // Optimism 0 + Plume 16.267368 = 3,413.389436. Tron 20.012264 (TronGrid
+  // block 85473285) is a tracked native issuance with no probe family
+  // (0.58% of 3,433.401700); it stays outside this aggregate rather than
+  // failing the row closed. Plume is absent from buildChainRpcs().
+  "hlscope-hamilton-lane": [
+    { chain: "polygon" },
+    { chain: "ethereum" },
+    { chain: "optimism", allowZeroSupply: true },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+  ],
+  // mMEV is Ethereum-native with independent Midas burn/mint deployments on
+  // Plume and Etherlink. Verified 2026-08-18: Ethereum 2,195,114.48626855
+  // + Plume 3,349.01453156 + Etherlink 756,113.92423621 = 2,954,577.42503632,
+  // matching CoinGecko circulating 2,954,577.425036322. Etherlink is 25.59%.
+  "mmev-midas": [
+    { chain: "ethereum" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+  ],
+  // mTBILL's five Pharos deployments are independent Midas EIP-1967 proxies.
+  // Verified 2026-08-18: Ethereum 60,728,248.53125032 + Base 342,458.83707271
+  // + Etherlink 1,138,694.88287399 + Plume 958.90953026 + Rootstock 0.86487596
+  // = 62,210,362.02560327. CoinGecko 62,210,622.94890065 also indexes Oasis
+  // Sapphire 260.92329742 (0.00042%); Sapphire has no chain registry entry, so
+  // that leg stays outside (mRe7YIELD TAC gap). Rootstock is seed dust; Plume
+  // is 0.0015%.
+  "mtbill-midas": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org", allowZeroSupply: true },
+    { chain: "rootstock", rpcUrl: "https://public-node.rsk.co", allowZeroSupply: true },
+  ],
+  // spUSDC is a per-chain Spark ERC-4626 over local USDC. Replaces the former
+  // singular ethereum-only CURATED_ONCHAIN_SUPPLY_CONTRACTS entry, which
+  // published Ethereum-only mcap and no chainCirculating split. Verified
+  // 2026-08-19: Ethereum 262,732,021.385906 (asset=USDC, totalAssets
+  // 271,160,715.325800, convertToAssets(1e6)=1.032081) + Avalanche
+  // 11,720,796.241001 (asset=0xb97e…8a6e, totalAssets 12,024,527.957899)
+  // = 274,452,817.626907. Ethereum balanceOf(self)=0.
+  "susdc-spark": [{ chain: "ethereum" }, { chain: "avalanche" }],
+  // spUSDT is a per-chain Spark ERC-4626 (USDT on Ethereum, USDT0 on Arbitrum).
+  // Verified 2026-08-19: Ethereum 364,164,245.855785 (totalAssets
+  // 374,349,718.457184) + Arbitrum 1,273.135898 (totalAssets 1,276.509506)
+  // = 364,165,518.991683. Ethereum balanceOf(self)=0. Arbitrum is dust; allow
+  // a zero read.
+  "susdt-spark": [{ chain: "ethereum" }, { chain: "arbitrum", allowZeroSupply: true }],
+  // gtUSDCp is a local Gauntlet/Morpho ERC-4626 on each chain. Verified
+  // 2026-08-19: Ethereum 70,509,526.219773 (NAV 1.032007 USDC) + Base
+  // 387,163,856.589938 (NAV 1.107844) + Arbitrum 485,663.027798 (NAV
+  // 1.033408) = 458,159,045.837508 shares. No adapter/lockbox. Probe
+  // multiplies shares by the single CG price; Base NAV is higher, so USD
+  // weights are share-weighted, not NAV-weighted.
+  "gtusdcp-gauntlet": [{ chain: "ethereum" }, { chain: "base" }, { chain: "arbitrum" }],
+  // sdUSD is a chain-isolated ERC-4626 over local dUSD (no shared lockbox).
+  // Verified 2026-08-18: Ethereum 452,761.7318268991 + Fraxtal 63,189.932854
+  // = 515,951.6646808991, exact CoinGecko totalSupply; Fraxtal needs a public RPC.
+  "sdusd-dtrinity": [
+    { chain: "ethereum" },
+    { chain: "fraxtal", rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
+  ],
+  // sUSDD is an independent SavingsUsdd ERC-4626 on Ethereum and BSC over local USDD.
+  // No Tron sUSDD token in issuer deployment/collateral pages or CoinGecko platforms.
+  // Verified 2026-08-18: ETH 222,174,299.983810 + BSC 12,526,473.143741
+  // = 234,700,773.127551 (−0.14% vs CoinGecko 235,033,744.23).
+  "susdd-tron-dao-reserve": [{ chain: "ethereum" }, { chain: "bsc" }],
+  // ZARP is issuer-native on Ethereum, Base, Polygon and Solana. Verified 2026-08-19:
+  // Ethereum 41,826,590.83270887 + Base 15,729,937.39 + Polygon 10,020,000.00 +
+  // Solana 6,403,393.992399 = 73,979,922.21510787, exactly CoinGecko's circulating.
+  // A same-address Gnosis token exists and reads 0; the issuer contract list omits it.
+  "zarp-zarp": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "polygon" },
+    { chain: "solana" },
+  ],
+  // MXNB is a FiatToken-fork minted natively on five EVMs. Verified 2026-08-19:
+  // Ethereum 1,530,469.139867 + Polygon 95,667.188094 + Arbitrum 25,635,717.221029
+  // + Avalanche 5,002,383.151635 + Base 4,376,239.087585 = 36,640,475.788210,
+  // exactly CoinGecko. No Noble/Solana mint was evidenced.
+  "mxnb-juno": [
+    { chain: "ethereum" },
+    { chain: "polygon" },
+    { chain: "arbitrum" },
+    { chain: "avalanche" },
+    { chain: "base" },
+  ],
+  // GBPe is issuer-native on six EVMs (official Monerium /tokens list). Verified
+  // 2026-08-19: Ethereum 0 + Gnosis 422,355.12 + Linea 22,858.47 + Arbitrum 11.00
+  // + Base 433.95 + Polygon 21.24 = 445,679.78. CoinGecko total 422,355.12 is
+  // the Gnosis leg only. V1 TokenFrontends (Gnosis 0x5cb9…, Polygon 0x7579…)
+  // report the same totalSupply as the v2 proxies — do not add them.
+  "gbpe-monerium": [
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "gnosis" },
+    { chain: "linea", rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
+    { chain: "arbitrum" },
+    { chain: "base" },
+    { chain: "polygon" },
+  ],
+  // AxCNH is issuer-native FiatTokenV2 on Conflux and Ethereum (independent masterMinters).
+  // Verified 2026-08-19: Ethereum 1,000,000.4 + Conflux 38,128,445.4 = 39,128,445.8,
+  // exact CoinGecko circulating. Conflux is absent from buildChainRpcs(); pin the
+  // official eSpace endpoint. Ethereum cannot escrow Conflux (1.00M < 38.13M).
+  "axcnh-anchorx": [
+    { chain: "ethereum" },
+    { chain: "conflux", rpcUrl: "https://evm.confluxrpc.com", fallbackRpcUrl: "https://evm.confluxrpc.org" },
+  ],
+  // MYRC is Blox issuer-native on Ethereum, Arbitrum, Base and Solana.
+  // Verified 2026-08-19: Ethereum 1,054,500 + Arbitrum 4,099,598.66 + Base 500,000
+  // + Solana 711,199.990103 = 6,365,298.650103. CoinGecko 5,310,798.650103 equals
+  // the three platforms it indexes and omits Ethereum (16.57% of the true total).
+  "myrc-blox": [{ chain: "ethereum" }, { chain: "arbitrum" }, { chain: "base" }, { chain: "solana" }],
+  // EUROT is independently mintable on Avalanche, Ethereum and Polygon.
+  // Verified 2026-08-19: Avalanche 160,000 + Ethereum 0 + Polygon 0 = 160,000,
+  // exact CoinGecko circulating. Ethereum/Polygon are reviewed live zeros.
+  "eurot-token-teknoloji": [
+    { chain: "avalanche" },
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true },
+  ],
+  // JPYT is minted natively on each OP-Stack chain by that chain's DepositManager.
+  // Verified 2026-08-19: Optimism 6,641,129.778467 + Base 992,314.925958 =
+  // 7,633,444.704425, exact CoinGecko circulating. Base is 13.00% of the total.
+  "jpyt-dephaser": [{ chain: "optimism" }, { chain: "base" }],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for

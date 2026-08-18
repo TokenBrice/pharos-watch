@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { CURATED_ONCHAIN_SUPPLY_CONTRACTS } from "@shared/lib/onchain-supply-probe";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
   getSupplementalDefiLlamaContractPriceKey,
@@ -94,17 +95,26 @@ describe("selectSingleOnChainSupplyContract", () => {
   });
 
   it("allows curated multi-chain supplemental assets to use a configured supply chain", () => {
-    const ethereumContract = { chain: "ethereum", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
-    const avalancheContract = { chain: "avalanche", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
+    // susdc-spark previously held this map's only entry; it moved to the
+    // aggregate map once the Avalanche vault leg was verified, so exercise
+    // the still-supported single-chain override mechanism with a synthetic id.
+    const testId = "test-curated-single-chain-coin";
+    CURATED_ONCHAIN_SUPPLY_CONTRACTS[testId] = { chain: "ethereum" };
+    try {
+      const ethereumContract = { chain: "ethereum", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
+      const avalancheContract = { chain: "avalanche", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
 
-    expect(selectSingleOnChainSupplyContract(makeMeta([
-      ethereumContract,
-      avalancheContract,
-    ], "susdc-spark"))).toBeNull();
-    expect(selectSupplementalOnChainSupplyContract(makeMeta([
-      ethereumContract,
-      avalancheContract,
-    ], "susdc-spark"))).toBe(ethereumContract);
+      expect(selectSingleOnChainSupplyContract(makeMeta([
+        ethereumContract,
+        avalancheContract,
+      ], testId))).toBeNull();
+      expect(selectSupplementalOnChainSupplyContract(makeMeta([
+        ethereumContract,
+        avalancheContract,
+      ], testId))).toBe(ethereumContract);
+    } finally {
+      delete CURATED_ONCHAIN_SUPPLY_CONTRACTS[testId];
+    }
   });
 });
 

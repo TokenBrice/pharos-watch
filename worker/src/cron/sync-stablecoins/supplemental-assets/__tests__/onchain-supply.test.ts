@@ -17,7 +17,7 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
-import { fetchCuratedAggregateOnChainMcap } from "../onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
 
 function makeSkyMeta(): StablecoinMeta {
   return {
@@ -163,6 +163,42 @@ function makeMre7yieldMeta(): StablecoinMeta {
     },
   } as StablecoinMeta;
 }
+
+function makeSingleContractMeta(): StablecoinMeta {
+  return {
+    id: "susdc-spark",
+    name: "Spark Savings USDC",
+    symbol: "sUSDC",
+    detailProvider: "coingecko",
+    contracts: [
+      { chain: "ethereum", address: "0x0000000000000000000000000000000000000009", decimals: 18 },
+    ],
+    flags: {
+      pegCurrency: "USD",
+      backing: "crypto-backed",
+      governance: "centralized-dependent",
+      yieldBearing: true,
+      navToken: true,
+    },
+  } as StablecoinMeta;
+}
+
+describe("fetchOnChainMcap", () => {
+  beforeEach(() => {
+    fetchErc20TotalSupplyMock.mockReset();
+    probeTrackedTokenSupplyMock.mockReset();
+  });
+
+  it("passes through the resolved chain and chain label for the single-contract fallback", async () => {
+    probeTrackedTokenSupplyMock.mockResolvedValue(1_000n * 10n ** 18n);
+
+    await expect(fetchOnChainMcap(makeSingleContractMeta(), 1)).resolves.toMatchObject({
+      mcap: 1_000,
+      chain: "ethereum",
+      chainLabel: expect.any(String),
+    });
+  });
+});
 
 describe("fetchCuratedAggregateOnChainMcap", () => {
   beforeEach(() => {
