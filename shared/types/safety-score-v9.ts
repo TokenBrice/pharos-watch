@@ -52,6 +52,7 @@ export const V9_REASON_CODES = [
   "missing-same-notional-route",
   "missing-upgrade-control",
   "missing-upgradeability-review",
+  "nonmaterial-bridge-supply-unmatched",
   "nonmaterial-dependency-unavailable",
   "no-viable-exit-path",
   "parent-cycle",

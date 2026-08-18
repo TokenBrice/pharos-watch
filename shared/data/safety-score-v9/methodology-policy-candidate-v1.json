@@ -1940,6 +1940,25 @@
       }
     },
     {
+      "code": "nonmaterial-bridge-supply-unmatched",
+      "ownerDomain": "control",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "deployment-control"
+      ],
+      "defaultFactClass": "missing-bounded-exposure",
+      "boundedness": "exposure-bounded",
+      "permittedTreatments": [
+        "diagnostic"
+      ],
+      "defaultTreatment": "diagnostic",
+      "releaseSeverity": "diagnostic",
+      "publicLabel": "Non-material deployment supply is not mapped to a bridge route",
+      "auditClassification": "missing-data"
+    },
+    {
       "code": "nonmaterial-dependency-unavailable",
       "ownerDomain": "dependency",
       "archetypes": [

@@ -1150,13 +1150,17 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
       return { fixed, extension, asset: extension.assets[0]! };
     };
 
+    // Rows individually under the deployment-materiality floor, summing to
+    // 4.95% — under the floor as an aggregate too. 9.26 grades the sum as well
+    // as each row, so demonstrating the per-row exemption requires a fixture
+    // whose total residue is itself immaterial; the aggregate case follows.
     const independent = baselineFor({
-      ethereum: 0.5005,
-      base: 0.0999,
-      polygon: 0.0999,
-      arbitrum: 0.0999,
-      optimism: 0.0999,
-      avalanche: 0.0999,
+      ethereum: 0.9505,
+      base: 0.0099,
+      polygon: 0.0099,
+      arbitrum: 0.0099,
+      optimism: 0.0099,
+      avalanche: 0.0099,
     });
     expect(independent.asset.economicControlReview?.bridge.status.observationState).toBe("known");
     const independentBridgeControls =
@@ -1180,6 +1184,27 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
           gap.path.kind === "deployment-control",
       ),
     ).toBe(false);
+
+    // 9.26: a per-row exemption is not an aggregate exemption. The same shape
+    // with every row just under the floor leaves 49.95% of supply mapped to no
+    // reviewed route while each row still proves "independently subthreshold".
+    // The completeness proof clears rows one at a time and cannot see that sum,
+    // so the aggregate is graded directly against the same materiality floor.
+    const aggregateAtFloor = baselineFor({
+      ethereum: 0.5005,
+      base: 0.0999,
+      polygon: 0.0999,
+      arbitrum: 0.0999,
+      optimism: 0.0999,
+      avalanche: 0.0999,
+    });
+    const aggregateEvaluation = evaluateV9FactSet(
+      compileSafetyScoreV9FactSetFromFixedInput(aggregateAtFloor.fixed, aggregateAtFloor.extension),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    expect(
+      aggregateEvaluation.control.reasons.some((reason) => reason.code === "material-bridge-supply-unmatched"),
+    ).toBe(true);
 
     const reviewedLockMint = (id: string) => ({
       ...route(id, "reviewed"),

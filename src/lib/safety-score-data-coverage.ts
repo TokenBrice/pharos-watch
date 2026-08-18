@@ -66,6 +66,7 @@ const REASON_CODE_LABELS = {
   "missing-same-notional-route": "No exit route at the tested size",
   "missing-upgrade-control": "Upgrade controls not identified",
   "missing-upgradeability-review": "Contract upgradeability not reviewed",
+  "nonmaterial-bridge-supply-unmatched": "A trace of supply is not mapped to a bridge route",
   "nonmaterial-dependency-unavailable": "A minor dependency could not be scored",
   "no-viable-exit-path": "No viable exit path found",
   "parent-cycle": "Circular dependency between assets",

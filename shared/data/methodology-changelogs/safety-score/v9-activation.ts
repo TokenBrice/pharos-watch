@@ -1,5 +1,25 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_BRIDGE_RESIDUE_MATERIALITY: MethodologyChangelogEntry = {
+  version: "9.26",
+  title: "A trace of unmapped bridge supply stops being a material control gap",
+  date: "2026-08-18",
+  effectiveAt: 1787097600,
+  summary:
+    "Economic Control grades unattributed bridge supply against the same 10% deployment-materiality floor its per-row check already used. The aggregate check fired on any residue at all, so a rounding tail — $257 of EURC's $470M inventory, $40 of frxUSD's — was published as a material control gap and took the 55 control-unverified ceiling. Because a ceiling-treatment reason also classifies its pillar as limited evidence, the same trace applied the 69 evidence ceiling underneath it, and EURC published C/55 against an 82 it had otherwise earned. Sub-material residue is still published, now as a diagnostic that scores nothing.",
+  impact: [
+    "The aggregate unattributed-supply check moves from \"any residue\" to the deployment materiality floor already applied per row, which is what the reason's own name asserted. Residue at or above 10% keeps the material reason and its 55 control-unverified ceiling unchanged",
+    "Residue below the floor publishes the new diagnostic reason `nonmaterial-bridge-supply-unmatched`, the twin of the existing non-material dependency reason. It carries no ceiling and does not classify its pillar as limited evidence, so the gap stays visible on the card and in the BRIDGE_MATERIALITY curation queue without bounding a score",
+    "The material check no longer consults the subthreshold completeness proof. That proof clears each unmatched row against the floor individually, so rows that are each immaterial could sum past it and still prove complete — harmless while the trigger was any residue, an escape once the trigger is the floor itself. A material aggregate now fails closed on its own terms, and no tracked asset relied on the exemption",
+    "Measured on the 2026-08-18 publication capture: 5 assets change score, all upward, and none worsens or becomes unrated. eurc-circle 55 C to 82 A-, frxusd-frax 55 C to 70 B, pyusd-paypal 55 C to 70 B, ausd-agora 55 C to 63 C+, and ussd-sonic-labs 45 D to 59 C as a strategy-vault wrapper whose frxUSD parent limit rises with it",
+    "Five further assets exchange the material reason for the diagnostic without moving: cusd-celo, eurs-stasis, fusd-finchain, usbd-bima, and usdy-ondo-finance were each bounded by something other than this gap",
+    "usdtb-ethena keeps its 55. Its 11.37% ($45.9M) Solana row matches two curated routes rather than one, which is a genuinely material attribution gap and not a rounding tail",
+    "Pillar weights, bounded aggregation, grade thresholds, the withhold band, and every score-bearing gate value are unchanged. The policy semantic digest moves only because the reason registry gains the diagnostic entry",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_UNDISCLOSED_PRIMARY_EXIT: MethodologyChangelogEntry = {
   version: "9.25",
   title: "Undisclosed stops being published as a fact, in both directions",

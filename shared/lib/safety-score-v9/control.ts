@@ -1245,8 +1245,26 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       1,
       (args.facts.supply.unknownRouteSupplyShare ?? 0) + (args.facts.supply.unreviewedRouteSupplyShare ?? 0),
     );
-    if (unknownBridgeShare > 0 && !completeSubthresholdUnresolvedJoins) {
+    // The aggregate residue is graded on the same deployment-materiality floor the
+    // per-row branch above already applies, which is what the reason's own name
+    // asserts. Firing the material reason on any residue at all read a rounding
+    // tail as a material control gap: on the 2026-08-18 capture EURC ($257 of
+    // $470M), PYUSD ($201), frxUSD ($40), and AUSD ($874) each took the 55
+    // control-unverified ceiling for a residue under a thousandth of a percent,
+    // and because a ceiling-treatment reason also classifies its pillar as
+    // limited evidence, the same gap applied the 69 evidence ceiling underneath.
+    // A sub-material residue is still published, as the diagnostic twin that
+    // scores nothing and keeps the row in the BRIDGE_MATERIALITY curation queue.
+    //
+    // The material branch does not consult the completeness proof. That proof
+    // clears each unmatched row against the materiality floor individually, so a
+    // long tail of sub-material rows could sum past the floor and still prove
+    // complete — harmless while the trigger was `> 0`, an escape once it is the
+    // floor itself. A material aggregate now fails closed on its own terms.
+    if (unknownBridgeShare >= materialShareThreshold) {
       addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply");
+    } else if (unknownBridgeShare > 0 && !completeSubthresholdUnresolvedJoins) {
+      addReason("nonmaterial-bridge-supply-unmatched", "deployment-control", "bridge:supply");
     }
   }
 

@@ -73,8 +73,13 @@ describe("Safety Score v9 methodology policy", () => {
     // negative "none". Published-vocabulary only — primaryExit is a posture
     // projection, not a scoring input, and the 2026-08-18 capture replays with
     // every score, grade, and pillar score byte-identical.
+    // 9.26 (2026-08-18): the reason registry gains the diagnostic twin
+    // "nonmaterial-bridge-supply-unmatched", so unattributed bridge supply below
+    // the deployment materiality floor is published without a ceiling instead of
+    // taking the material reason's 55. Registry addition only — no existing
+    // reason, treatment, ceiling, weight, or threshold changes.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "6de4e8d514df4774f81d65feebb84e45361e449fb6bf841b87a848baf12b5d8b",
+      "a38ee06f366327966b479d8e4002d8e88b112814824ca963a91a870258872619",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,
