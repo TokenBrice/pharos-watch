@@ -20,7 +20,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
+    "reviewedAt": "2026-08-18",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -31,13 +31,29 @@
       {
         "label": "Ethereum eEARN contract",
         "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract"
+      },
+      {
+        "label": "Current verified EmberVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
+      },
+      {
+        "label": "Current verified EmberVaultValidator implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bebb55c0ca126b0d883fb94843c0a2c13102522"
+      },
+      {
+        "label": "Current verified EmberProtocolConfig implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x540db273e41587a748365f01f35adb095b58bfeb"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The existing eEARN profile and live ERC-4626-style adapter identify a single 100% USDC reserve relationship through the Ember Earn Ethereum vault. The reviewed product and contract sources support the wrapper dependency, but do not publish a current independent assurance report, strategy allocation, or fixed redemption window.",
-    "compositionBasis": "Ember Earn product disclosure and the exact live ERC-4626 single-asset row",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The eEARN proxy still resolves to a single USDC-denominated Ember Earn vault after the 2026-08-18 implementation-pin review. Same-run on-chain reads confirmed asset() returns USDC, the vaultValidator and protocolConfig dependencies remain the configured proxy addresses, operations and protocol pause flags are unpaused, and the withdrawal-fee components are zero. The reviewed sources support retaining the 100% USDC wrapper dependency while pinning the upgraded vault, validator, and protocol-config implementations; they still do not publish a current independent assurance report, strategy allocation, or fixed redemption window.",
+    "compositionBasis": "Ember Earn product disclosure, verified current proxy implementations, and live ERC-4626 single-asset observer reads",
+    "compositionAsOf": "2026-08-18",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve dependency is identified as USDC. The vault's current strategy holdings, utilization, and legal custody terms are not separately disclosed in the reviewed sources.",
+    "knownUnknownExposure": "The direct reserve dependency is identified as USDC. The vault's current strategy holdings, utilization, legal custody terms, and independent reserve reconciliation are not separately disclosed in the reviewed sources.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -56,7 +72,7 @@
     "segregation": "mixed",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-08-18",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -67,8 +83,16 @@
       {
         "label": "Ethereum eEARN contract",
         "url": "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract"
+      },
+      {
+        "label": "Current verified EmberVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "uncertainty": "The reviewed sources identify an onchain Ember vault wrapper over USDC but do not establish a legal custody wrapper, bankruptcy remoteness, provider allocation, or a separate assurance report. Liquidity is therefore left unknown rather than inferred from secondary-market trading."
+    "uncertainty": "The reviewed sources identify the current onchain Ember vault wrapper over USDC but do not establish a legal custody wrapper, bankruptcy remoteness, provider allocation, or a separate assurance report. Liquidity is therefore left unknown rather than inferred from secondary-market trading."
   }
 }

@@ -97,27 +97,29 @@ const EARN = {
   vault: {
     address: "0x9be9294722f8aad37b11a9792be2c782182cafa2",
     codeHash: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-    implementationAddress: "0xab222201c5bd8a18dc6b340ba78a709589e01781",
-    implementationCodeHash: "0xebac90c2e11a034e309d631405c1ca28595c324af368ef5c2135e1f944415ce2",
+    implementationAddress: "0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+    implementationCodeHash: "0x4448a74aff5a6b95fe30cebf1187f9dc647d81413ae7e06410e7772b4b64efc4",
   } satisfies ProxyIdentity,
   validator: {
     address: "0x4c735b0989f1a7464991bcca9f0e8c661ba54465",
     codeHash: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-    implementationAddress: "0xe2089585c12ca4638ef072236fff877e961b8f13",
-    implementationCodeHash: "0x674d3f0b56cb829758f2450d2c38fa4c64eef02d7a1574119dc7b0ec2df557f7",
+    implementationAddress: "0x2bebb55c0ca126b0d883fb94843c0a2c13102522",
+    implementationCodeHash: "0x537bb88a640ed963c5848c27bdb3ac3b7da135642908db377b4c9a362cdd61f9",
   } satisfies ProxyIdentity,
   protocolConfig: {
     address: "0x1dc4836e5a0a95105bee1899e3b6bbb1714480fb",
     codeHash: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-    implementationAddress: "0x1ff9fe88c530b5320bb70e4b9593b33c0ae7289f",
-    implementationCodeHash: "0xc26e573ca2939ea56ae79dfaa5e2aa6287075978f222166b98e10c62ea6cef02",
+    implementationAddress: "0x540db273e41587a748365f01f35adb095b58bfeb",
+    implementationCodeHash: "0x2c629d0cdee4894f27ca680a5d168a46ae8ed829e6d5e0c424f5d3e12dc866c7",
   } satisfies ProxyIdentity,
   assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   assetDecimals: 6,
   sourceUrls: [
     "https://ember.so/earn/eEARN",
     "https://etherscan.io/address/0x9be9294722f8aad37b11a9792be2c782182cafa2#readContract",
-    "https://eth.blockscout.com/address/0xab222201c5bd8a18dc6b340ba78a709589e01781?tab=contract",
+    "https://eth.blockscout.com/address/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e?tab=contract",
+    "https://eth.blockscout.com/address/0x2bebb55c0ca126b0d883fb94843c0a2c13102522?tab=contract",
+    "https://eth.blockscout.com/address/0x540db273e41587a748365f01f35adb095b58bfeb?tab=contract",
   ],
 } as const;
 
