@@ -15,6 +15,7 @@ import {
   fixtureShouldAttemptFetch,
   fixtureMockFetch,
   fixtureACTIVE_STABLECOINS,
+  fixtureSafetyScoreActiveSourceModule,
   fixtureSafetyScoresModule,
   fixtureYieldHelpersModule,
   fixturePublicationModule,
@@ -109,6 +110,9 @@ describe("syncYieldData", () => {
     const db = makePublicationCacheDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const safetySnapshot = vi.mocked(fixtureSafetyScoresModule.computeSafetyScoresSnapshot);
+    const currentSafetyIdentity = vi.mocked(
+      fixtureSafetyScoreActiveSourceModule.loadActiveSafetyScoreIdentity,
+    );
     safetySnapshot
       .mockResolvedValueOnce({
         kind: "ok",
@@ -136,34 +140,20 @@ describe("syncYieldData", () => {
           ["u-united-stables", { score: 55, grade: "C" }],
           ["lusd-liquity", { score: 86, grade: "A-" }],
         ]),
-      } as never)
-      .mockResolvedValueOnce({
-        kind: "ok",
-        mode: "map",
-        coveredCount: 4,
-        trackedCount: 4,
-        coverageRatio: 1,
-        source: "safety-score-v9-publication",
-        safetyScoreIdentity: {
-          model: "v9",
-          schemaVersion: 1,
-          methodologyVersion: "9.0",
-          policyId: "safety-score-v9",
-          policyDigest: "a".repeat(64),
-          evaluationBuildDigest: "d".repeat(64),
-          baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
-          publicationGenerationId: "report-cards:v9:new-build",
-        },
-        publicationGenerationId: "report-cards:v9:new-build",
-        methodologyVersion: "9.0",
-        publishedAt: nowSec + 60,
-        scores: new Map([
-          ["100", { score: 80, grade: "B+" }],
-          ["usdc-circle", { score: 78, grade: "B+" }],
-          ["u-united-stables", { score: 55, grade: "C" }],
-          ["lusd-liquity", { score: 86, grade: "A-" }],
-        ]),
       } as never);
+    currentSafetyIdentity.mockResolvedValue({
+      kind: "v9",
+      safetyScoreIdentity: {
+        model: "v9",
+        schemaVersion: 1,
+        methodologyVersion: "9.0",
+        policyId: "safety-score-v9",
+        policyDigest: "a".repeat(64),
+        evaluationBuildDigest: "d".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
+        publicationGenerationId: "report-cards:v9:new-build",
+      },
+    });
 
     fixtureMockFetch([
       {
@@ -191,7 +181,8 @@ describe("syncYieldData", () => {
 
     const result = await fixtureSyncYieldData(db);
 
-    expect(safetySnapshot).toHaveBeenCalledTimes(2);
+    expect(safetySnapshot).toHaveBeenCalledTimes(1);
+    expect(currentSafetyIdentity).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({
       status: "degraded",
       itemCount: 0,

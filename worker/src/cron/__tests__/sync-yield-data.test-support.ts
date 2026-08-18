@@ -193,6 +193,7 @@ import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
+import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldHelpersModule from "../yield-helpers";
@@ -428,6 +429,16 @@ function resetSyncYieldDataTest() {
       ["lusd-liquity", { score: 86, grade: "A-" }],
     ]),
   } as never);
+  // Identity-only publish-time guard: mirror whatever published snapshot the
+  // test has staged so per-test safety identities keep driving the guard.
+  vi.spyOn(safetyScoreActiveSourceModule, "loadActiveSafetyScoreIdentity").mockImplementation(
+    async (db) => {
+      const snapshot = await safetyScoresModule.computeSafetyScoresSnapshot(db);
+      return snapshot.kind === "ok" && snapshot.safetyScoreIdentity !== null
+        ? { kind: "v9", safetyScoreIdentity: snapshot.safetyScoreIdentity }
+        : { kind: "error", safetyScoreIdentity: null };
+    },
+  );
 }
 
 function cleanupSyncYieldDataTest() {
@@ -449,6 +460,7 @@ const fixtureGetChainRpc = getChainRpc;
 const fixtureMockFetch = mockFetch;
 const fixtureACTIVE_STABLECOINS = ACTIVE_STABLECOINS;
 const fixtureACTIVE_YIELD_BEARING_STABLECOINS = ACTIVE_YIELD_BEARING_STABLECOINS;
+const fixtureSafetyScoreActiveSourceModule = safetyScoreActiveSourceModule;
 const fixtureSafetyScoresModule = safetyScoresModule;
 const fixtureYieldConfigModule = yieldConfigModule;
 const fixtureYieldHelpersModule = yieldHelpersModule;
@@ -489,6 +501,7 @@ export {
   fixtureMockFetch,
   fixtureACTIVE_STABLECOINS,
   fixtureACTIVE_YIELD_BEARING_STABLECOINS,
+  fixtureSafetyScoreActiveSourceModule,
   fixtureSafetyScoresModule,
   fixtureYieldConfigModule,
   fixtureYieldHelpersModule,

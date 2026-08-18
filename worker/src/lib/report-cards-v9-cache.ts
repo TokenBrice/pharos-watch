@@ -5,6 +5,7 @@ import {
   type ReportCardsV9CurrentResponse,
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import {
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9CurrentResponse,
@@ -21,16 +22,38 @@ export class ReportCardsV9SnapshotUnavailableError extends Error {
   }
 }
 
-export function projectSafetyScoreV9PublicationToPublicSnapshot(
-  input: SafetyScoreV9CurrentResponse,
+/**
+ * The published V9 identity carried by a parsed publication. Kept separate from
+ * the full projection so identity-only consumers never materialize the cards.
+ */
+export function buildSafetyScoreV9PublicationIdentity(
+  publication: SafetyScoreV9CurrentResponse,
+): SafetyScoreV9PublicationIdentity {
+  return {
+    model: "v9",
+    schemaVersion: 1,
+    methodologyVersion: publication.policyVersion,
+    policyId: publication.policy.id,
+    policyDigest: publication.policy.semanticDigest,
+    evaluationBuildDigest: publication.evaluationBuildDigest,
+    baseInputGenerationId: publication.baseInputGenerationId,
+    publicationGenerationId: publication.publicationGenerationId,
+  };
+}
+
+/**
+ * Publication health as the public snapshot serves it: health that does not
+ * match the stored publication is downgraded to `held` rather than trusted.
+ */
+export function resolveSafetyScoreV9EffectivePublicationHealth(
+  publication: SafetyScoreV9CurrentResponse,
   publicationHealth: V9PublicationHealth,
-): ReportCardsV9CurrentResponse {
-  const publication = SafetyScoreV9CurrentResponseSchema.parse(input);
+): V9PublicationHealth {
   const healthMatchesPublication =
     publicationHealth.acceptedPublicationGenerationId ===
       publication.publicationGenerationId &&
     publicationHealth.acceptedAtSec === publication.publishedAtSec;
-  const effectiveHealth = healthMatchesPublication
+  return healthMatchesPublication
     ? publicationHealth
     : {
         ...publicationHealth,
@@ -56,20 +79,22 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
           detail: "Publication health did not match the stored snapshot; serving the last-known-good snapshot as held.",
         }],
       };
+}
+
+export function projectSafetyScoreV9PublicationToPublicSnapshot(
+  input: SafetyScoreV9CurrentResponse,
+  publicationHealth: V9PublicationHealth,
+): ReportCardsV9CurrentResponse {
+  const publication = SafetyScoreV9CurrentResponseSchema.parse(input);
+  const effectiveHealth = resolveSafetyScoreV9EffectivePublicationHealth(
+    publication,
+    publicationHealth,
+  );
   return ReportCardsV9CurrentResponseSchema.parse({
     model: "v9",
     schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
     lifecycle: "active",
-    safetyScoreIdentity: {
-      model: "v9",
-      schemaVersion: 1,
-      methodologyVersion: publication.policyVersion,
-      policyId: publication.policy.id,
-      policyDigest: publication.policy.semanticDigest,
-      evaluationBuildDigest: publication.evaluationBuildDigest,
-      baseInputGenerationId: publication.baseInputGenerationId,
-      publicationGenerationId: publication.publicationGenerationId,
-    },
+    safetyScoreIdentity: buildSafetyScoreV9PublicationIdentity(publication),
     methodology: {
       version: publication.policyVersion,
       policy: publication.policy,
