@@ -1,11 +1,12 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import { CAUSE_META } from "@shared/lib/dead-stablecoins";
-import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { DeadStablecoin } from "@shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
@@ -14,16 +15,16 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SOURCE_REPO_PATH = "shared/lib/cemetery-merged.ts";
 const SOURCE_FILE_PATH = join(__dirname, "../../shared/lib/cemetery-merged.ts");
-const SOURCE_DATA_FILES = [
+const SOURCE_DATA = [
   {
     repoPath: "shared/data/dead-stablecoins.json",
-    filePath: join(__dirname, "../../shared/data/dead-stablecoins.json"),
     role: "Curated dead-stablecoin metadata.",
+    readContent: () => readFileSync(join(__dirname, "../../shared/data/dead-stablecoins.json"), "utf8"),
   },
   {
-    repoPath: "shared/data/stablecoins/coins.generated.json",
-    filePath: join(__dirname, "../../shared/data/stablecoins/coins.generated.json"),
-    role: "Generated tracked-stablecoin aggregate used for frozen cemetery rows.",
+    repoPath: "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
+    role: "Canonical frozen tracked-stablecoin projection merged into cemetery rows.",
+    readContent: () => stableJsonStringifyV1(buildFrozenCemeteryProjection()),
   },
 ] as const;
 const OUTPUT_DIR = join(__dirname, "../../public/datasets");
@@ -159,14 +160,10 @@ function renderCsv(rows: CemeteryDatasetRow[]): string {
   return `${lines.join("\n")}\n`;
 }
 
-function sha256Text(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
-}
-
 function getSourceDataProvenance(): CemeteryDatasetSource[] {
-  return SOURCE_DATA_FILES.map(({ repoPath, filePath, role }) => ({
+  return SOURCE_DATA.map(({ repoPath, readContent, role }) => ({
     path: repoPath,
-    checksum: `sha256:${sha256Text(readFileSync(filePath, "utf8"))}`,
+    checksum: `sha256:${sha256Hex(readContent())}`,
     role,
   }));
 }
@@ -175,11 +172,11 @@ function getCombinedSourceChecksum(sources: CemeteryDatasetSource[]): string {
   const checksumInput = [
     {
       path: SOURCE_REPO_PATH,
-      checksum: `sha256:${sha256Text(readFileSync(SOURCE_FILE_PATH, "utf8"))}`,
+      checksum: `sha256:${sha256Hex(readFileSync(SOURCE_FILE_PATH, "utf8"))}`,
     },
     ...sources.map(({ path, checksum }) => ({ path, checksum })),
   ];
-  return `sha256:${sha256Text(JSON.stringify(checksumInput))}`;
+  return `sha256:${sha256Hex(JSON.stringify(checksumInput))}`;
 }
 
 function renderJson(rows: CemeteryDatasetRow[]): string {

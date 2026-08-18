@@ -43,6 +43,16 @@ export function frozenToDeadShape(coin: FrozenStablecoin): CemeteryEntry {
   };
 }
 
+/**
+ * The frozen-coin slice the cemetery export actually consumes, in a stable
+ * order. Dataset provenance hashes this projection rather than the whole
+ * generated catalog: an active-coin edit must not rotate a published cemetery
+ * checksum when no cemetery row moves.
+ */
+export function buildFrozenCemeteryProjection(): CemeteryEntry[] {
+  return FROZEN_STABLECOINS.map(frozenToDeadShape).sort((left, right) => left.id.localeCompare(right.id));
+}
+
 export function buildMergedCemetery(): CemeteryEntry[] {
   const seenIds = new Set<string>();
   const merged: CemeteryEntry[] = [];
