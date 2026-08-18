@@ -143,7 +143,11 @@ export async function gunzipBytesBounded(
   }
 
   const allocationLimit = Math.min(maximumUncompressedBytes, expectedUncompressedBytes ?? Infinity);
-  const stream = new Response(Uint8Array.from(compressed)).body!.pipeThrough(new DecompressionStream("gzip"));
+  // With a declared length the output buffer is preallocated and filled in
+  // place; chunk accumulation plus a final concat would hold ~2x the
+  // uncompressed payload at peak, which matters at the Worker memory boundary.
+  const preallocated = expectedUncompressedBytes != null ? new Uint8Array(expectedUncompressedBytes) : null;
+  const stream = new Response(compressed).body!.pipeThrough(new DecompressionStream("gzip"));
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
   let uncompressedBytes = 0;
@@ -160,7 +164,11 @@ export async function gunzipBytesBounded(
             : `${label} exceeds the uncompressed byte limit; maximum is ${maximumUncompressedBytes}`,
         );
       }
-      chunks.push(value);
+      if (preallocated) {
+        preallocated.set(value, uncompressedBytes - value.byteLength);
+      } else {
+        chunks.push(value);
+      }
     }
   } catch (error) {
     await reader.cancel(error).catch(() => undefined);
@@ -171,13 +179,14 @@ export async function gunzipBytesBounded(
   if (expectedUncompressedBytes != null && uncompressedBytes !== expectedUncompressedBytes) {
     throw new Error(`${label} payload length mismatch`);
   }
+  throwIfAborted(signal);
+  if (preallocated) return preallocated;
   const output = new Uint8Array(uncompressedBytes);
   let offset = 0;
   for (const chunk of chunks) {
     output.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  throwIfAborted(signal);
   return output;
 }
 
