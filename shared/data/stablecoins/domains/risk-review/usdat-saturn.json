@@ -397,7 +397,10 @@
           "monad:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
           "bsc:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef"
         ],
-        "capabilities": ["validator", "pause"],
+        "capabilities": [
+          "validator",
+          "pause"
+        ],
         "controllerChain": "ethereum",
         "controllerAddress": "0x411de17f12d1a34ecc7f45f49844626267c75e81",
         "failureDomainKeys": [
@@ -444,6 +447,24 @@
           }
         ],
         "evidence": "At Ethereum block 25783924 the LockRelease pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86 returned getRmnProxy() = 0x411de17f12d1a34ecc7f45f49844626267c75e81 (ARMProxy 1.0.0, owner 0x44835bbba9d40deda9b64858095ecfb2693c9449, getARM() = 0x0b047953451a207743fb62541b21199b95190602). That ARM is verified RMN 2.1.0; owner() = 0x6608920e3f6b591ec3cf15ca1ddf66fbe117f56a; getAllAuthorizedCallers() = [0xd9ab1714df2b5d0011b22f6d94812e7813fa5795]; getVersionedConfig() = (0, empty Config). isCursed() = false; isCursed(eth/bnb/monad/global) = false; getCursedSubjects() returned five other bytes16 chain selectors. BNB pool getRmnProxy() = directory 0x9e09…8f84 → ARM 0xca659c9e6e2f54ee9d9e1e7032805e8a8f361e7c (RMN 2.1.0, owner 0xa390731d4758c6944a3c2322479685dcc6d51714). Monad pool getRmnProxy() = directory 0x99df…2AcD → ARM 0x45272144fa079bb81c8004f208ab2176e6fe5bed (RMN 2.1.0, owner 0x48bc5ab224b818300041956f0da2e675bf676d27)."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "usdat-ccip-rmn-validation",
+        "question": "What is the current RMN node roster and f-threshold (2f+1) that must bless CCIP commits for the Ethereum-Monad and Ethereum-BNB USDat lanes? Per-chain RMN 2.1.0 getVersionedConfig() returns empty signers and fSign=0 by design; getAllAuthorizedCallers() only lists curse admins, not the blessing committee. The live membership is not published on the curse contract or in the CCIP directory pages reviewed.",
+        "reviewedAt": "2026-08-18",
+        "reviewer": "aug18-v927-control-wave W02",
+        "sources": [
+          {
+            "label": "RMN 2.1.0 getVersionedConfig is empty by design",
+            "url": "https://eth.blockscout.com/address/0x0b047953451a207743fb62541b21199b95190602?tab=contract_source_code"
+          },
+          {
+            "label": "Ethereum CCIP directory (RMN proxy only; no node list)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/mainnet"
+          }
+        ]
       }
     ]
   }
