@@ -10,6 +10,7 @@ import { type ListingDecisionRegistry } from "@shared/lib/stablecoins/listing-go
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge-ownership";
 import { validateVariantRelationships } from "@shared/lib/stablecoins/validate-variants";
+import { findCollateralProseReserveDriftFindings } from "@shared/lib/stablecoins/collateral-prose-reserve-drift";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
@@ -61,10 +62,21 @@ const ListingDecisionRegistrySchema: z.ZodType<ListingDecisionRegistry> = z
 const LOGOS_FILE = "data/logos.json";
 
 let errorCount = 0;
+let warningCount = 0;
 
 function reportError(message: string): void {
   process.stderr.write(`${message}\n`);
   errorCount++;
+}
+
+/**
+ * Advisory lane. Curation-quality findings that a human should read but that
+ * must never block a release — the prose surfaces they cover carry legitimate
+ * exceptions the detector cannot distinguish from defects.
+ */
+function reportWarning(message: string): void {
+  process.stdout.write(`warning: ${message}\n`);
+  warningCount++;
 }
 
 function readCanonicalOrder(): string[] {
@@ -607,6 +619,23 @@ function runStablecoinDataCheck(): void {
     for (const issue of findBlacklistabilityReviewIssues(allEntries.map((entry) => entry.coin))) {
       reportError(`${STABLECOIN_DATA_DIR}: ${issue.id}: ${issue.message}`);
     }
+
+    // Advisory only: catches `collateral` prose written from a
+    // governance-approved/eligible asset list instead of the observed balances
+    // the reviewed slices record (the frxUSD USCC/JTRSY/AUSD defect). Tier 2 is
+    // the tolerated noise floor (look-through and taxonomy naming), so only its
+    // count is printed.
+    const collateralDrift = findCollateralProseReserveDriftFindings(allEntries.map((entry) => entry.coin));
+    for (const finding of collateralDrift.filter((candidate) => candidate.tier === 1)) {
+      reportWarning(`${STABLECOIN_DATA_DIR}: ${finding.coinId}: ${finding.message}`);
+    }
+    const collateralDriftTier2 = collateralDrift.filter((candidate) => candidate.tier === 2).length;
+    if (collateralDriftTier2 > 0) {
+      process.stdout.write(
+        `note: ${collateralDriftTier2} further coin(s) name a tracked symbol absent from their reviewed reserve ` +
+          `slices without eligibility modality (look-through / taxonomy naming; not reviewed as drift).\n`,
+      );
+    }
   }
 
   if (errorCount > 0) {
@@ -614,7 +643,9 @@ function runStablecoinDataCheck(): void {
     process.exitCode = 1;
     return;
   }
-  process.stdout.write("Stablecoin data validation: OK\n");
+  process.stdout.write(
+    warningCount > 0 ? `Stablecoin data validation: OK (${warningCount} warning(s))\n` : "Stablecoin data validation: OK\n",
+  );
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

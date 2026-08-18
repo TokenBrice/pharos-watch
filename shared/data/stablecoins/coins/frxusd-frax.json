@@ -8,7 +8,7 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
+  "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians, each of which mints and redeems frxUSD 1:1 against reserves it holds on-chain. The observed balance sheet is WisdomTree WTGXX (U.S. government money market), Superstate USTB (T-bills), BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Bridge USDB, and a segregated Erebor Bank reserve account. Governance has additionally approved Superstate USCC (FIP-420), Agora AUSD (FIP-425), Centrifuge JTRSY (FIP-426), and Circle USDC as custodian assets, but no balances have been observed for them beyond dust USDC in the redemption contract.",
   "pegMechanism": "1:1 mint and redemption through governance-approved enshrined custodians; each custodian holds provable on-chain reserves and can mint or burn frxUSD 1:1; redeemable from any custodian with available collateral",
   "mechanismArchetype": "tbill",
   "llamaId": "235",

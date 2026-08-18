@@ -41,8 +41,8 @@
     "type": "self-reported",
     "url": "https://accountable.hyperbeat.org/",
     "provider": "Accountable instance (dashboard backend returned persistent HTTP 503 across two consecutive days of checks 2026-08-07/08, port and sibling API paths unreachable, and archive.org has never captured rendered content - the claimed live proof-of-solvency feed is not retrievable, unlike every other verified Accountable deployment)",
-    "attestorTier": "none",
-    "cadence": "none"
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed"
   },
   "links": [
     {

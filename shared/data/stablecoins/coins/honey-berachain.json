@@ -44,7 +44,6 @@
     "type": "real-time",
     "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401#readProxyContract",
     "provider": "Berachain HoneyFactory",
-    "attestorTier": "none",
     "cadence": "real-time",
     "latestReport": {
       "periodEnd": "2026-07-15",
