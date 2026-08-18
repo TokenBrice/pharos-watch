@@ -8,6 +8,9 @@ const ARCHETYPE_TONE: Record<StablecoinVerdictArchetype, SeverityTone | null> = 
   "delisted-record": "neutral",
   "frozen-archive": "neutral",
   distressed: "alert",
+  // `watch`, not `alert`: a low grade measures our evidence and scoring, not a
+  // failing asset. `alert` stays with the measured-distress archetype.
+  "low-safety-score": "watch",
   "yield-bearing-hybrid": "ok",
   "decentralized-benchmark": "ok",
   "institutional-default": "ok",

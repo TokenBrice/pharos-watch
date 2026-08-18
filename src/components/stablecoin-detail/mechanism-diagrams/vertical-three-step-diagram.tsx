@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import {
-  THREE_STEP_ARCHETYPE_CONFIG,
+  resolveThreeStepConfig,
   type ThreeStepArchetypeDiagramProps,
 } from "./three-step-archetype-diagram";
 
@@ -17,8 +17,9 @@ export function VerticalThreeStepDiagram({
   symbol,
   steps: overrideSteps,
   stressFootnote,
+  navToken,
 }: ThreeStepArchetypeDiagramProps) {
-  const config = THREE_STEP_ARCHETYPE_CONFIG[archetype];
+  const config = resolveThreeStepConfig(archetype, navToken);
   const steps = config.defaultSteps(symbol).map((step, index) => ({
     label: overrideSteps?.[index]?.label ?? step.label,
     subtitle: overrideSteps?.[index]?.subtitle ?? step.subtitle,

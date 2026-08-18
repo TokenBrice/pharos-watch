@@ -81,6 +81,7 @@ export function DetailRiskContextSections({
               isWrapper={isWrapperVariant}
               parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
               parentArchetype={parentArchetype}
+              parentNavToken={isWrapperVariant ? (viewModel.variantParent?.flags?.navToken ?? null) : null}
               variantKind={viewModel.coin.variantKind ?? null}
             />
           ) : null}

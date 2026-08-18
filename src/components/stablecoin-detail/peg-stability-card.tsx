@@ -24,6 +24,11 @@ export interface PegStabilityCardProps {
   isWrapper: boolean;
   parentSymbol?: string | null;
   parentArchetype?: MechanismArchetype | null;
+  /**
+   * Parent coin's `flags.navToken`, for the wrapper diagram's parent panel.
+   * The wrapper's own flag cannot stand in for it (see `MechanismDiagramOptions`).
+   */
+  parentNavToken?: boolean | null;
   variantKind?: StablecoinMeta["variantKind"] | null;
 }
 
@@ -65,6 +70,7 @@ function MechanismDiagramColumn({
           archetype={effectiveArchetype}
           symbol={meta.symbol}
           steps={override?.steps}
+          navToken={diagramOptions.navToken}
           {...(override?.stressFootnote !== undefined ? { stressFootnote: override.stressFootnote } : {})}
         />
       ) : (
@@ -94,6 +100,7 @@ export function PegStabilityCard({
   isWrapper,
   parentSymbol,
   parentArchetype,
+  parentNavToken,
   variantKind,
 }: PegStabilityCardProps) {
   if (!meta.pegMechanism) return null;
@@ -101,13 +108,18 @@ export function PegStabilityCard({
   const effectiveArchetype =
     resolvedMechanismArchetype !== undefined ? resolvedMechanismArchetype : (meta.mechanismArchetype ?? null);
   const useVerticalFlow = effectiveArchetype != null && !isWrapper && isThreeStepArchetype(effectiveArchetype);
+  // `flags.navToken` splits the tbill archetype's diagram between NAV-accreting
+  // fund shares and $1-pegged reserve-backed tokens; the schema defaults the
+  // flag, so an absent one is a curated `false` rather than an unknown.
   const diagramOptions: MechanismDiagramOptions = {
     override: getCoinOverride(meta.id),
+    navToken: meta.flags?.navToken === true,
     ...(isWrapper && parentArchetype
       ? {
           isWrapper: true,
           parentSymbol: parentSymbol ?? undefined,
           parentArchetype,
+          parentNavToken,
           variantKind: variantKind ?? undefined,
         }
       : {}),

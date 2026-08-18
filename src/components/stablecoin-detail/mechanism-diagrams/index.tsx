@@ -22,8 +22,9 @@ export function mechanismDiagramFor(
         parentSymbol={options.parentSymbol}
         parentArchetype={options.parentArchetype}
         variantKind={options.variantKind}
+        parentNavToken={options.parentNavToken}
       />
     );
   }
-  return renderArchetype(archetype, symbol, options?.override);
+  return renderArchetype(archetype, symbol, options?.override, options?.navToken);
 }

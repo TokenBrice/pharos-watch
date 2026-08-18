@@ -9,6 +9,8 @@ interface WrapperDiagramProps {
   parentSymbol: string;
   /** Parent's mechanism archetype, used to choose the inner diagram. */
   parentArchetype: MechanismArchetype;
+  /** Parent coin's `flags.navToken`, which selects the parent panel's copy. */
+  parentNavToken?: boolean | null;
   /** Optional wrapper kind controls the right-hand description. */
   variantKind?: VariantKind;
 }
@@ -41,6 +43,7 @@ export function WrapperDiagram({
   symbol,
   parentSymbol,
   parentArchetype,
+  parentNavToken,
   variantKind,
 }: WrapperDiagramProps) {
   const kicker = variantKind ? VARIANT_KICKER[variantKind] : "wrapper vault";
@@ -72,7 +75,7 @@ export function WrapperDiagram({
           >
             {parentSymbol} mechanism
           </p>
-          {renderArchetype(parentArchetype, parentSymbol, { stressFootnote: "" })}
+          {renderArchetype(parentArchetype, parentSymbol, { stressFootnote: "" }, parentNavToken)}
         </div>
 
         <svg

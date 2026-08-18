@@ -19,8 +19,8 @@ export const content: ArchetypeContent = {
       body: "The fund deploys cash into short-duration U.S. T-Bills, overnight reverse-repos, and a small cash buffer. The administrator publishes a daily NAV; the on-chain token records the holder list and accretes yield.",
     },
     {
-      title: "NAV-accruing token units",
-      body: "The token is minted or rebased pro-rata. BENJI rebases share count daily so per-token value stays near $1.00; BUIDL accrues by minting new units; USDY and OUSG appreciate by per-token price. Redemption is bank-wire or stablecoin-out, settled at NAV.",
+      title: "Token units",
+      body: "How the yield reaches the holder depends on the wrapper, and this archetype carries two families. NAV-accreting share classes let per-unit price drift up: USDY and OUSG appreciate at the published NAV. Par-stable tokens hold the unit at $1 and move the yield elsewhere — BENJI rebases share count daily, BUIDL mints new units, and the reserve-backed $1 tokens built on the same T-Bill collateral (USDtb, USD0, frxUSD) pass yield through a separate staked wrapper or retain it at the issuer. Roughly half the coins Pharos tracks under this archetype are par-stable rather than NAV-accreting; the detail page reads the coin’s NAV flag. Redemption is bank-wire or stablecoin-out, settled at NAV for fund shares and at par for the rest.",
     },
   ],
   riskProfile: [
@@ -30,7 +30,7 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Redemption gating and transfer restrictions",
-      body: "These are securities, not cash. Transfers are restricted to whitelisted addresses; primary-market redemption can be paused, queued, rate-limited, or settled T+N. In a stressed crypto market this matters more than the underlying asset risk: OUSG advertises instant redemptions, but its own docs set 24-hour global and per-investor caps, say instant redemptions can be limited by available USDC liquidity, and expose paused-redemption states for integrators. A daily-NAV ticker does not turn a permissioned fund share into cash.",
+      body: "Fund shares are securities, not cash: transfers are restricted to whitelisted addresses, and primary-market redemption can be paused, queued, rate-limited, or settled T+N. The par-stable tokens built on the same reserve usually transfer freely, but their mint and redeem rails stay permissioned, so the same gating applies at the exit. Terms are per-issuer and have to be read per-issuer — OUSG, for one, advertises instant redemption while its own docs set 24-hour global and per-investor caps, allow instant redemption to be limited by available USDC liquidity, and expose paused-redemption states for integrators. A daily-NAV ticker does not turn a permissioned claim into cash.",
     },
     {
       headline: "Custodian and fund-administrator failure",
@@ -70,7 +70,7 @@ export const content: ArchetypeContent = {
     },
     {
       title: "NAV-accreting fund shares",
-      body: "BUIDL, USDY, OUSG, and USYC let per-unit price drift up over time. Pharos flags these as NAV tokens and shows \"NAV\" instead of bps on peg-deviation tables — price drift is signal, not depeg.",
+      body: "USDY, OUSG, and USYC let per-unit price drift up over time. Pharos flags these as NAV tokens and shows \"NAV\" instead of bps on peg-deviation tables — price drift is signal, not depeg.",
     },
     {
       title: "Hybrid yield-bearing stablecoins",

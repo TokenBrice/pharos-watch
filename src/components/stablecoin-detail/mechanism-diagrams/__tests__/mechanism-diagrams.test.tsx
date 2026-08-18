@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { MechanismArchetype } from "@shared/types";
 import { mechanismDiagramFor, type MechanismDiagramOptions } from "@/components/stablecoin-detail/mechanism-diagrams";
+import { VerticalThreeStepDiagram } from "@/components/stablecoin-detail/mechanism-diagrams/vertical-three-step-diagram";
 
 afterEach(() => cleanup());
 
@@ -72,7 +73,7 @@ const ARCHETYPE_CASES = [
     desktopPathCount: 0,
     labels: ["Investor cash", "T-Bills + Repos", "USDC units"],
     subtitles: ["subscribed via fund", "short-duration RWA", "NAV accrues daily"],
-    stress: "stress: instant-redemption cap / USDC rail constraint (OUSG)",
+    stress: "stress: instant-redemption cap / stablecoin-rail constraint",
   },
   {
     archetype: "cdp",
@@ -265,6 +266,75 @@ describe("mechanismDiagramFor", () => {
         },
       });
       expectText(container, ["perp short on Binance/Bybit/OKX", "Long spot + short perp"]);
+    });
+  });
+
+  /**
+   * `tbill` covers both NAV-accreting fund shares and $1-pegged tokens that
+   * merely hold a T-Bill reserve (25 of 47 tracked coins). Asserting daily NAV
+   * accrual for the second family, and drawing them with no redeem loop, is the
+   * template-binding defect fixed 2026-08-18.
+   */
+  describe("tbill NAV split", () => {
+    it("keeps the NAV-accreting copy for a NAV token", () => {
+      const { container, desktopSvg } = renderDiagram("tbill", "OUSG", { navToken: true });
+      expectText(container, ["OUSG units", "NAV accrues daily", "stress: instant-redemption cap / stablecoin-rail constraint"]);
+      expect(container.textContent).not.toContain("redeem 1:1");
+      expect(desktopSvg.querySelectorAll("path")).toHaveLength(0);
+    });
+
+    it("renders par redemption, not NAV accrual, for a non-NAV coin", () => {
+      const { container, desktopSvg } = renderDiagram("tbill", "GUSD", { navToken: false });
+      expectText(container, [
+        "Subscriber cash",
+        "T-Bills + Repos",
+        "GUSD minted",
+        "redeem 1:1",
+        "stress: redemption gate / reserve-rail constraint",
+      ]);
+      expect(container.textContent).not.toContain("NAV accrues daily");
+      expect(container.textContent).not.toContain("GUSD units");
+      // The redeem loop the NAV template omits entirely.
+      expect(desktopSvg.querySelectorAll("path")).toHaveLength(1);
+      expect(desktopSvg.getAttribute("aria-label")).toContain("redeemed 1:1");
+    });
+
+    it("keeps the NAV-accreting default when no coin is in hand (/learn)", () => {
+      const { container } = renderDiagram("tbill", "STBL");
+      expectText(container, ["STBL units", "NAV accrues daily"]);
+    });
+
+    it("reads the parent's NAV flag, not the wrapper's, in the wrapper parent panel", () => {
+      const node = mechanismDiagramFor("tbill", "sfrxUSD", {
+        navToken: true,
+        isWrapper: true,
+        parentSymbol: "frxUSD",
+        parentArchetype: "tbill",
+        parentNavToken: false,
+        variantKind: "savings-passthrough",
+      });
+      const { container } = render(<>{node}</>);
+      const parent = container.querySelector('[data-testid="wrapper-parent-diagram"]');
+      expect(parent?.textContent).toContain("frxUSD minted");
+      expect(parent?.textContent).toContain("redeem 1:1");
+      expect(parent?.textContent).not.toContain("NAV accrues daily");
+    });
+  });
+
+  describe("VerticalThreeStepDiagram", () => {
+    it("takes the same NAV branch as the horizontal renderer", () => {
+      const nav = render(<VerticalThreeStepDiagram archetype="tbill" symbol="OUSG" navToken={true} />);
+      expect(nav.container.textContent).toContain("NAV accrues daily");
+      expect(nav.container.textContent).not.toContain("↺ redeem");
+      cleanup();
+
+      const par = render(<VerticalThreeStepDiagram archetype="tbill" symbol="GUSD" navToken={false} />);
+      expect(par.container.textContent).toContain("GUSD minted");
+      expect(par.container.textContent).toContain("redeem 1:1");
+      expect(par.container.textContent).not.toContain("NAV accrues daily");
+      // The redeem loop renders as the DOM return bracket + its caption.
+      expect(par.container.textContent).toContain("↺ redeem");
+      expect(par.container.textContent).toContain("stress: redemption gate / reserve-rail constraint");
     });
   });
 });

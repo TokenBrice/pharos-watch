@@ -127,7 +127,34 @@ describe("projectReserveQualityClientSummary", () => {
     ]);
     expect(summary!.unknownHorizonPct).toBe(45);
     expect(summary!.liquidWithinOneDayPct).toBe(25);
-    expect(summary!.lede).toContain("25% convertible within one day, 45% with no established exit timeline.");
+    expect(summary!.lede).toContain("at least 25% convertible within one day; 45% has no published exit timeline.");
+  });
+
+  it("leads with the disclosure gap, not a 0% figure, when no horizon is published at all", () => {
+    const summary = projectReserveQualityClientSummary(
+      coinWith(
+        [{ name: "Undisclosed reserve basket", pct: 100, risk: "high", assetClass: "other", liquidityHorizon: "unknown" }],
+        { knownUnknownExposurePct: 100 },
+      ),
+    );
+    expect(summary!.unknownHorizonPct).toBe(100);
+    expect(summary!.liquidWithinOneDayPct).toBe(0);
+    expect(summary!.lede).toBe(
+      "1 reviewed reserve slice — no published exit timeline for any of the basket. 100% of the basket has no identified obligor.",
+    );
+    expect(summary!.lede).not.toContain("0% convertible");
+  });
+
+  it("states a known-negative convertibility only for the disclosed part of a partly opaque basket", () => {
+    const summary = projectReserveQualityClientSummary(
+      coinWith([
+        { name: "Private credit fund", pct: 40, risk: "high", assetClass: "private-credit" },
+        { name: "Tokenized notes", pct: 60, risk: "medium", assetClass: "tokenized-security", liquidityHorizon: "over-seven-days" },
+      ]),
+    );
+    expect(summary!.lede).toBe(
+      "2 reviewed reserve slices — none of the disclosed basket converts within one day; 40% has no published exit timeline.",
+    );
   });
 
   it("aggregates repeated asset classes and rounds shares", () => {
