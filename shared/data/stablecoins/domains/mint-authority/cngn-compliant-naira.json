@@ -42,7 +42,7 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "The cNGN FAQ and Bantu Foundation case study identify Bantu as the native issuance ledger and state that Bantu remains the source of truth for total supply while bridge contracts lock Bantu cNGN and mint equivalent destination representations. The Bantu issuer account and CNGN asset were re-read at ledger 34,127,652 on 2026-08-16. No dated whole-supply attestation reconciling Bantu issuance to all destination representations was accessible, so the native posture remains unbounded-or-compromised with reconciliation unknown. The Solana Token-2022 program can mint its deployment, but the reviewed primary sources do not prove whether that deployment is an AMTP representation or an independently reconciled native liability chain; it is therefore not used to support native issuance.",
+      "evidence": "The cNGN FAQ and Bantu Foundation case study identify Bantu as the native issuance ledger and state that Bantu remains the source of truth for total supply while bridge contracts lock Bantu cNGN and mint equivalent destination representations. The Bantu issuer account and CNGN asset were re-read at ledger 34,127,652 on 2026-08-16. No dated whole-supply attestation reconciling Bantu issuance to all destination representations was accessible, so the native posture remains unbounded-or-compromised with reconciliation unknown. The Solana Token-2022 program can mint its deployment, but the reviewed primary sources do not prove whether that deployment is an AMTP representation or an independently reconciled native liability chain; it is therefore not used to support native issuance. Both questions the boundary migration raised are decided here rather than left open: the Solana deployment is conservatively classified as a representation because independent native issuance is unproven, and Bantu's absence from the route inventory is a catalog chain-registry gap rather than an unreviewed issuer fact. Neither is an open question about this issuer's mint authority.",
       "reviewer": "Codex mint-bridge-boundary canonicality verification",
       "reviewedAt": "2026-08-17",
       "sources": [
@@ -64,10 +64,6 @@
         }
       ],
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "Does the Solana Token-2022 mint belong to the Bantu AMTP representation route or to an independently reconciled native issuance ledger?",
-        "When will the verified Bantu native asset be represented by a registered chain identifier in the catalog?"
-      ],
       "noLocalIssuance": {
         "kind": "external-only-representation",
         "reviewedAt": "2026-08-17",

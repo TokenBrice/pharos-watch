@@ -77,14 +77,14 @@ const STATIC_ATOKEN_ABI = parseAbi([
 
 const CODE_HASH_BY_ADDRESS: Record<string, string> = {
   [EARN_VAULT]: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-  "0xab222201c5bd8a18dc6b340ba78a709589e01781":
-    "0xebac90c2e11a034e309d631405c1ca28595c324af368ef5c2135e1f944415ce2",
+  "0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e":
+    "0x4448a74aff5a6b95fe30cebf1187f9dc647d81413ae7e06410e7772b4b64efc4",
   [EARN_VALIDATOR]: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-  "0xe2089585c12ca4638ef072236fff877e961b8f13":
-    "0x674d3f0b56cb829758f2450d2c38fa4c64eef02d7a1574119dc7b0ec2df557f7",
+  "0x2bebb55c0ca126b0d883fb94843c0a2c13102522":
+    "0x537bb88a640ed963c5848c27bdb3ac3b7da135642908db377b4c9a362cdd61f9",
   [EARN_PROTOCOL_CONFIG]: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
-  "0x1ff9fe88c530b5320bb70e4b9593b33c0ae7289f":
-    "0xc26e573ca2939ea56ae79dfaa5e2aa6287075978f222166b98e10c62ea6cef02",
+  "0x540db273e41587a748365f01f35adb095b58bfeb":
+    "0x2c629d0cdee4894f27ca680a5d168a46ae8ed829e6d5e0c424f5d3e12dc866c7",
   [DSTAKE_TOKEN]: "0xe5e3693157141608a301682c8c228c0277eac7efc0b98b57f874ca49752b5fd8",
   "0x9c278036c3c4529472751502dfc71bb1f0a3bfd4":
     "0xf3d6aec9f278be5b2140dcca59bfd109bd57bdf4d928e11d2a7b3863bb1b796d",
@@ -97,9 +97,9 @@ const CODE_HASH_BY_ADDRESS: Record<string, string> = {
 };
 
 const IMPLEMENTATION_BY_PROXY: Record<string, string> = {
-  [EARN_VAULT]: "0xab222201c5bd8a18dc6b340ba78a709589e01781",
-  [EARN_VALIDATOR]: "0xe2089585c12ca4638ef072236fff877e961b8f13",
-  [EARN_PROTOCOL_CONFIG]: "0x1ff9fe88c530b5320bb70e4b9593b33c0ae7289f",
+  [EARN_VAULT]: "0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
+  [EARN_VALIDATOR]: "0x2bebb55c0ca126b0d883fb94843c0a2c13102522",
+  [EARN_PROTOCOL_CONFIG]: "0x540db273e41587a748365f01f35adb095b58bfeb",
   [DSTAKE_TOKEN]: "0x9c278036c3c4529472751502dfc71bb1f0a3bfd4",
 };
 
@@ -392,7 +392,7 @@ describe("specialized executable redemption observers", () => {
         undefined,
         {
           client: client("earn", {
-            driftAddress: "0xab222201c5bd8a18dc6b340ba78a709589e01781",
+            driftAddress: "0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e",
           }),
           nowSec: NOW,
         },

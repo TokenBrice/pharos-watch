@@ -61,7 +61,7 @@ function controllerIdentity(chain: string | undefined, address: string | undefin
   return criticalControllerKey(chain, address);
 }
 
-function hasReviewedNoLocalIssuanceException(meta: MintBridgeOwnershipMeta): boolean {
+export function hasReviewedNoLocalIssuanceException(meta: MintBridgeOwnershipMeta): boolean {
   const mintAuthority = meta.mintAuthority;
   if (!mintAuthority) return false;
 

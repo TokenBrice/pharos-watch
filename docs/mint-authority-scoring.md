@@ -25,6 +25,16 @@ Since Safety methodology `9.23`, the live V9 mint component assesses native issu
 
 Mint controls and mutable mint-logic upgrade paths on active multi-deployment assets are bound to reviewed native deployments. Structured bridge controls compile once per referenced route; when structured evidence is absent, conservative route-derived controls remain. This corrects the USDai scope bug in which satellite OToken administration had classified canonical Arbitrum issuance as `unbounded-or-compromised`; separating the evidence moved USDai from D to B. [Classification](./classification.md#mint-authority-taxonomy) owns the taxonomy boundary, and [Stablecoin Data Registry](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns the exact authoring and enforcement contract.
 
+### Reviewed absence is a fact, not a gap (`9.24`)
+
+`9.23` bound the two domains but compiled three reviewed answers as missing evidence, collapsing the Economic Control pillar to its neutral default and withholding otherwise rateable assets. `9.24` reads each as the measured fact it is:
+
+- **No bridge.** An inventory whose every reviewed route is native issuance is not bridge-exposed, even where structured controls govern those canonical deployments — such a control administers the canonical liability, not a representation. It scores `single-chain-or-native` rather than the `opaque-or-unknown` fallback. A reviewed representation route keeps Bridge Risk applicable even when no control compiled for it, and an unresolved zero-share deployment stays an audit fact rather than proof of no bridge.
+- **Incomplete bridge materiality.** A bridge review that could not attribute all supply keeps the routes it did review when the unattributed share sits below the deployment materiality threshold, or when a known supply review selected no bridge route at all. A material residual, an unmeasured share, and a supply review that is not itself a known fact all keep the previous discard. Each route still fails closed individually, so an inventory whose rows are all unresolved reaches the unverified fallback regardless.
+- **No local issuance.** A reviewed `mintAuthority.review.noLocalIssuance` exception scores the mint component `none-resolved` only when the displaced risk is carried elsewhere: an `inherited-parent-issuance` claim must compile a serial-claim dependency edge to its named parent, and an `external-only-representation` must carry the reviewed route inventory that already has to cover every authored deployment. Any authored control keeps the mint review in force so no reviewed upgrade authority is dropped from the grade. Absence is never inferred.
+
+An inherited claim is curated as a wrapper reserve slice naming the parent, not as a copy of the parent's collateral composition; the copy both double-counts the parent's exposure and leaves no edge for the parent's mint risk to travel along.
+
 The historical description follows.
 
 ## Methodology Versioning

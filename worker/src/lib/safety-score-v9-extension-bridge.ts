@@ -799,6 +799,22 @@ export function adaptBridgeReview(
       tier: group.tier,
     })),
   ].sort((left, right) => compareText(left.controlKey, right.controlKey));
+  // A structured control whose only reviewed routes are native issuance governs the
+  // canonical liability (adapters, lockboxes, portal administration on the canonical
+  // chain). It is a real control fact and stays in the umbrella inventory, but it does
+  // not make the asset bridge-exposed — the reviewed answer is still "no bridge".
+  const nativeRouteIds = new Set(
+    profileRoutes
+      .filter((route) => !isBridgeRepresentationRoute(route))
+      .map((route) => normalizedBridgeDeploymentId(route.id)),
+  );
+  const bridgeClaimControls = controls.filter(
+    (control) => !nativeRouteIds.has(control.deploymentKey),
+  );
+  // A reviewed representation route is bridge exposure whether or not a control
+  // compiled for it. `routes` drops a representation route whose control did not
+  // resolve, so control emptiness alone cannot prove the absence of a bridge.
+  const hasReviewedRepresentationRoute = reviewedRoutes.some(isBridgeRepresentationRoute);
   const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(profileRoutes, controls, supplyReview);
   const hasToleratedUncanonicalizedPool = (supplyReview?.selectedBridgeRoutes ?? []).some(
     (route) =>
@@ -812,6 +828,9 @@ export function adaptBridgeReview(
       !route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
       route.supplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
   );
+  // Deliberately over the whole inventory, not `bridgeClaimControls`: a canonical
+  // control carrying real supply must keep blocking this branch, so an unresolved
+  // zero-share deployment stays an audit fact rather than proof of no bridge.
   const onlyZeroShareUnroutedControls =
     routes.length === 0 &&
     controls.length > 0 &&
@@ -821,7 +840,10 @@ export function adaptBridgeReview(
   // make the asset bridge-exposed or require a synthetic bridge route row.
   if (
     !reviewStale &&
-    ((controls.length === 0 && !hasToleratedUncanonicalizedPool && !hasToleratedUnmatchedDust) ||
+    ((bridgeClaimControls.length === 0 &&
+      !hasReviewedRepresentationRoute &&
+      !hasToleratedUncanonicalizedPool &&
+      !hasToleratedUnmatchedDust) ||
       (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls))
   ) {
     return {

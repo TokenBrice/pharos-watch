@@ -1,5 +1,25 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_CONTROL_SECTION_APPLICABILITY: MethodologyChangelogEntry = {
+  version: "9.24",
+  title: "A reviewed absence of bridge or local issuance is a fact, not a gap",
+  date: "2026-08-18",
+  effectiveAt: 1787011200,
+  summary:
+    "Economic Control now reads three reviewed answers as the measured facts they are. An inventory whose every reviewed route is native issuance is not bridge-exposed even when structured controls govern those canonical deployments; a bridge review whose unattributed supply is immaterial keeps the rows it did review; and a reviewed no-local-issuance exception compiles as a not-applicable mint section when the risk it displaces is carried by a serial-claim parent or by Bridge Risk. The 9.23 boundary release had made each of these compile as missing evidence, collapsing the control pillar to its neutral default and withholding otherwise rateable assets.",
+  impact: [
+    "A structured bridge control whose only reviewed routes are native issuance no longer keeps the bridge section applicable, so an asset whose reviewed answer is \"no bridge\" scores single-chain-or-native instead of the opaque-or-unknown fallback. A reviewed representation route keeps the section applicable even when no control compiled for it, and an unresolved zero-share deployment remains an audit fact rather than proof of no bridge",
+    "A bounded bridge review keeps its reviewed rows when the supply the compiler could not attribute is below the deployment materiality threshold, or when a known supply review selected no bridge route at all. A material residual, an unknown share, and a supply review that is not itself a known fact all keep the previous discard, and every row still fails closed on its own",
+    "mintAuthority.review.noLocalIssuance compiles as the mint review's existing not-applicable state. It is granted only when an inherited claim carries a compiled serial-claim edge to its parent, or an external-only representation carries the reviewed route inventory covering every authored deployment; any authored control keeps the section required",
+    "USDN and USDK are re-curated to hold a serial claim on M0 rather than a copy of M0's collateral composition, ending a threefold count of the same Treasury exposure and scoring the inherited mint risk on the dependency edge. Both are rated D/45, below the C/55 their parent scores, which is the intended result of binding an inherited claim to its parent",
+    "cngn's boundary-migration review questions are recorded as the decided dispositions they were. As open questions they made the mint review incomplete, which zeroed the control's incident state and suppressed the centralized-mint signal carrying the asset's only measured-adverse attribution, so the F-floor withheld a grade the evidence still supports",
+    "Measured on the 2026-08-18 publication capture: 17 assets changed on score-material terms, 9 of them rated again and 8 improving. No asset worsened, none became newly unrated, and no rated asset moved by 10 points or more. Not Rated falls from 25 to 16",
+    "Pillar weights, bounded aggregation, caps, grade thresholds, the withhold band, and every score-bearing gate value are unchanged; only the methodology version label moves",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_MINT_BRIDGE_SCOPE_BOUNDARY: MethodologyChangelogEntry = {
   version: "9.23",
   title: "Mint authority follows native issuance; bridge controls stay route-scoped",

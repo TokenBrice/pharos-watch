@@ -8,10 +8,14 @@ import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
+import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
 const AS_OF_SEC = 1_785_456_000;
-const REGISTRY_FIXTURE_CAPTURED_AT = "2026-08-17T00:00:00.000Z";
-const REGISTRY_FIXTURE_CLOCK_SEC = Date.parse(REGISTRY_FIXTURE_CAPTURED_AT) / 1_000;
+// Derived, never hardcoded: the extension rejects a reviewedAt later than the
+// scoring clock, so a literal goes stale the moment any authoring pass lands a
+// newer review date. `v9TestClockSec()` tracks the registry's own latest review.
+const REGISTRY_FIXTURE_CLOCK_SEC = v9TestClockSec();
+const REGISTRY_FIXTURE_CAPTURED_AT = new Date(REGISTRY_FIXTURE_CLOCK_SEC * 1_000).toISOString();
 const ASSET_ID = "authoring-example";
 const REVIEWED_INHERITED_WRAPPERS = [
   { assetId: "stusds-sky", parentId: "usds-sky" },
