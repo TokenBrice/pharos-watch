@@ -1,4 +1,4 @@
-import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./commit-derived-artifacts.mts";
+import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./sitemap-source-paths.mts";
 
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
@@ -99,6 +99,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
 function generatedArtifact(definition) {
   return {
     ...definition,
+    checkable: definition.checkable ?? true,
     inputState: definition.inputState ?? "working-tree",
     sourcePaths: uniqueSorted([definition.script, ...(definition.sourcePaths ?? [])]),
     outputPaths: uniqueSorted(definition.outputPaths ?? []),
@@ -132,7 +133,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "sitemap-dates",
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
-    inputState: "committed-history",
+    checkable: false,
+    inputState: "build-time",
     outputPaths: ["src/generated/sitemap-dates.json", "src/generated/sitemap-dates.json.d.ts"],
     phase: 0,
     reproducibility: "git-history-derived",
@@ -154,7 +156,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "docs-metadata",
     checkCommand: "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     command: "tsx scripts/maintenance/generate-docs-metadata.ts",
-    inputState: "committed-history",
+    checkable: false,
+    inputState: "build-time",
     outputPaths: ["src/generated/docs-metadata.json", "src/generated/docs-metadata.json.d.ts"],
     phase: 0,
     reproducibility: "git-history-derived",
@@ -416,7 +419,7 @@ function assertKnownGeneratedArtifactPhases(phases, registry = GENERATED_ARTIFAC
  *   skip?: string[],
  * }} [options]
  */
-export function selectGeneratedArtifacts({ bootstrap = false, only = [], phases = [], skip = [] } = {}) {
+export function selectGeneratedArtifacts({ bootstrap = false, check = false, only = [], phases = [], skip = [] } = {}) {
   assertKnownGeneratedArtifactIds([...only, ...skip]);
   assertKnownGeneratedArtifactPhases(phases);
 
@@ -427,9 +430,18 @@ export function selectGeneratedArtifacts({ bootstrap = false, only = [], phases 
   const selectedIds = new Set();
   const usesExplicitIdSelection = onlyIds.size > 0;
 
+  // `checkable: false` artifacts are gitignored build-time projections. They
+  // are regenerated moments before any check would run, so verifying them
+  // compares a file against itself; exclude them from check selection outright,
+  // including when another artifact reaches them through dependsOn.
+  function isCheckEligible(artifact) {
+    return !check || artifact.checkable !== false;
+  }
+
   function isEligibleBaseArtifact(artifact) {
     return (
       !skipIds.has(artifact.id) &&
+      isCheckEligible(artifact) &&
       (!bootstrap || artifact.bootstrap === true) &&
       (!usesExplicitIdSelection || onlyIds.has(artifact.id)) &&
       (phaseSet.size === 0 || phaseSet.has(artifact.phase))
@@ -439,7 +451,7 @@ export function selectGeneratedArtifacts({ bootstrap = false, only = [], phases 
   function includeWithDependencies(id) {
     if (skipIds.has(id) || selectedIds.has(id)) return;
     const artifact = artifactById.get(id);
-    if (!artifact || (bootstrap && artifact.bootstrap !== true)) return;
+    if (!artifact || (bootstrap && artifact.bootstrap !== true) || !isCheckEligible(artifact)) return;
 
     for (const dependency of artifact.dependsOn ?? []) {
       includeWithDependencies(dependency);
@@ -471,7 +483,7 @@ export function buildGeneratedArtifactPhases({
 } = {}) {
   const phaseGroups = new Map();
 
-  for (const artifact of selectGeneratedArtifacts({ bootstrap, only, phases: phaseFilters, skip })) {
+  for (const artifact of selectGeneratedArtifacts({ bootstrap, check, only, phases: phaseFilters, skip })) {
     const command = check && artifact.checkCommand ? artifact.checkCommand : artifact.command;
     const phaseArtifacts = phaseGroups.get(artifact.phase) ?? [];
     phaseArtifacts.push({ ...artifact, command });
