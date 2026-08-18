@@ -35,11 +35,11 @@ describe("normalizeTopPools", () => {
     expect(pool.project).toBe("uniswap-v3");
     expect(pool.tvlUsd).toBe(100_000);
     expect(pool.volumeUsd1d).toBe(50_000);
+    expect(pool.volumeUsd7d).toBe(300_000);
     expect(pool.price).toBe(1.0001);
     expect(pool.source).toBe("dl");
     // Dead top-level keys stripped
     expect(pool).not.toHaveProperty("poolId");
-    expect(pool).not.toHaveProperty("volumeUsd7d");
     // Allowed extra keys present
     const extra = pool.extra as Record<string, unknown>;
     expect(extra.balanceRatio).toBe(0.5);

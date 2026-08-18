@@ -303,6 +303,7 @@ const DexLiquidityPoolSchema = z.object({
   tvlUsd: z.number(),
   symbol: z.string(),
   volumeUsd1d: z.number(),
+  volumeUsd7d: z.number().nullable().optional(),
   poolType: z.string(),
   source: LiquidityPoolSourceFamilySchema.optional(),
   price: z.number().optional(),
@@ -413,7 +414,7 @@ const DexLiquidityDataSchema = z
   .object({
     totalTvlUsd: z.number(),
     totalVolume24hUsd: z.number(),
-    totalVolume7dUsd: z.number(),
+    totalVolume7dUsd: z.number().nullable(),
     poolCount: z.number(),
     pairCount: z.number(),
     chainCount: z.number(),

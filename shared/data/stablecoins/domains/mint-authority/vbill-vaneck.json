@@ -2,9 +2,9 @@
   "id": "vbill-vaneck",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "VBILL is a Securitize-administered fund token with issuer-native issuance surfaces on Ethereum, Avalanche, BNB Chain, and Solana. The three EVM DSToken proxies expose owner-gated issueTokens and UUPS upgrade paths controlled by the same EOA 0x59c1eA...76Ee; the Solana Token-2022 mint and freeze authorities are issuer-controlled by BJXUcHs7...cgiK. These are native issuance controls, not Wormhole Guardian or transfer-admin controls. The Solana mint-program upgrade path remains unresolved.",
+    "summary": "VBILL is a Securitize-administered fund token with issuer-native issuance surfaces on Ethereum, Avalanche, BNB Chain, and Solana. The three EVM DSToken proxies expose owner-gated issueTokens and UUPS upgrade paths controlled by the same EOA 0x59c1eA...76Ee with no delay. On Solana the Token-2022 mint and freeze authority BJXUcHs7...cgiK is a program-derived address of the Securitize DS controller 7tXjm...9tvP, driven by a single issuer signature, and that controller's program upgrade authority is the single plain key 8d36iv2Y...zbB6 shared with the controller that mints STAC. These are native issuance controls, not Wormhole Guardian or transfer-admin controls. Every issuance surface is uncapped and single-key governed, with no on-chain threshold or delay anywhere in the stack.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -152,12 +152,12 @@
         ],
         "label": "VBILL Solana Token-2022 mint authority",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 439710513,
+        "observedAt": "2026-08-18",
+        "observedBlock": 440030249,
         "sources": [
           {
             "label": "Solana VBILL Token-2022 mint",
@@ -170,9 +170,22 @@
           {
             "label": "Securitize VanEck Treasury Fund",
             "url": "https://securitize.io/primary-market/vaneck-vbill"
+          },
+          {
+            "label": "Solana JSON-RPC (publicnode)",
+            "url": "https://solana-rpc.publicnode.com"
+          },
+          {
+            "label": "Securitize DS token controller program",
+            "url": "https://solscan.io/account/7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
           }
         ],
-        "evidence": "At Solana slot 439710513, the VBILL Token-2022 mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1 had mintAuthority and freezeAuthority set to BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK. The authority is issuer-controlled in the reviewed route, but its key-versus-program governance and any upgrade authority remain unresolved."
+        "evidence": "At Solana slot 440030249 (2026-08-18) getAccountInfo reports BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK as non-executable, program-owned by the Securitize DS token controller 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP, holding a 73-byte record binding it to the VBILL mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1. It is therefore a program-derived address rather than an unresolved key, and it holds mint, freeze, permanent-delegate and mint-close authority simultaneously. Issuance runs through the DS entrypoint IssueTokens instruction, which requires a single issuer signature; no on-chain multisig, threshold, or timelock governs it.",
+        "failureDomainKeys": [
+          "authority:solana:bjxuchs7r8m9oxzqkfxphzuxmy8spsk8upi5sx7ycgik",
+          "program:solana:7txjmbkzvy3gmg9kdbebcnxt1yc5pyoxxxvlwdbv9tvp",
+          "program-upgrade-authority:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6"
+        ]
       },
       {
         "chain": "ethereum",
@@ -205,6 +218,40 @@
           }
         ],
         "evidence": "At Ethereum block 25770003, Avalanche block 92972905, and BNB Chain block 116336111, owner() returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. The verified Securitize DSToken model gates issueTokens and UUPS authorization through the owner; off-chain MPC/HSM custody is indistinguishable from the EOA read."
+      },
+      {
+        "chain": "solana",
+        "address": "8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
+        "label": "VBILL Solana controller program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-08-18",
+        "observedBlock": 440030249,
+        "sources": [
+          {
+            "label": "Solana JSON-RPC (publicnode)",
+            "url": "https://solana-rpc.publicnode.com"
+          },
+          {
+            "label": "Securitize DS token controller program",
+            "url": "https://solscan.io/account/7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
+          },
+          {
+            "label": "Securitize DS controller upgrade authority",
+            "url": "https://solscan.io/account/8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
+          }
+        ],
+        "evidence": "At Solana slot 440030249 the token controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP resolves to programData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1 whose upgrade authority is 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. That account is system-program owned, non-executable and zero-data, i.e. a plain keypair address rather than a multisig or PDA, with no timelock and no on-chain threshold. A single signature can therefore replace the program that mints VBILL. The same key holds upgrade authority over the DS entrypoint, transfer-hook, registry and compliance programs, and over the controller that mints STAC (stac-securitize), so this is a shared failure domain across Securitize's Solana tokens rather than a VBILL-local control.",
+        "deploymentRefs": [
+          "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
+        ],
+        "failureDomainKeys": [
+          "eoa:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6",
+          "program:solana:7txjmbkzvy3gmg9kdbebcnxt1yc5pyoxxxvlwdbv9tvp"
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -236,15 +283,19 @@
         {
           "label": "BVI FSC professional-fund registry page containing VanEck Treasury Fund",
           "url": "https://www.bvifsc.vg/regulated-entities/hatstone-fund-services-limited?page=741"
+        },
+        {
+          "label": "Securitize DS token controller program",
+          "url": "https://solscan.io/account/7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP"
+        },
+        {
+          "label": "Securitize DS controller upgrade authority",
+          "url": "https://solscan.io/account/8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
         }
       ],
-      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. Re-verified 2026-08-16 at Ethereum block 25770003 (implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156), Avalanche block 92972905 (implementation 0xc7579a9a4801a805b66742e5bd56a1581705fe0d), and BNB Chain block 116336111 (implementation 0xcd01d1c5c78ad428cd01913d4664c20ed1e61923): all three owner() reads returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. At Solana slot 439710513, the Token-2022 mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1 had mintAuthority and freezeAuthority BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK. The Solana mint authority is recorded, but its controlling program or governance and any mint-program upgrade authority remain unresolved. Evidence challenge completed 2026-07-15: VBILL publishes Securitize-administered daily NAV through RedStone and identifies State Street as custodian, but no dated independent fund supply-to-assets attestation was found. The BVI FSC registry matches VanEck Treasury Fund, Ltd. as a professional fund, so supervision is established while reconciliation remains unknown. Economic-posture fields reviewed 2026-08-16: the issuer owner can mint and upgrade without a delay or firm cap across the three EVM deployments, the Solana mint has no reviewed supply cap, daily NAV does not reconcile whole multi-chain token supply to fund assets, and the BVI FSC registry names the supervised professional fund product.",
+      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. Re-verified 2026-08-16 at Ethereum block 25770003 (implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156), Avalanche block 92972905 (implementation 0xc7579a9a4801a805b66742e5bd56a1581705fe0d), and BNB Chain block 116336111 (implementation 0xcd01d1c5c78ad428cd01913d4664c20ed1e61923): all three owner() reads returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. At Solana slot 439710513, the Token-2022 mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1 had mintAuthority and freezeAuthority BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK. The Solana mint authority is recorded, but its controlling program or governance and any mint-program upgrade authority remain unresolved. Evidence challenge completed 2026-07-15: VBILL publishes Securitize-administered daily NAV through RedStone and identifies State Street as custodian, but no dated independent fund supply-to-assets attestation was found. The BVI FSC registry matches VanEck Treasury Fund, Ltd. as a professional fund, so supervision is established while reconciliation remains unknown. Economic-posture fields reviewed 2026-08-16: the issuer owner can mint and upgrade without a delay or firm cap across the three EVM deployments, the Solana mint has no reviewed supply cap, daily NAV does not reconcile whole multi-chain token supply to fund assets, and the BVI FSC registry names the supervised professional fund product. Resolved 2026-08-18 at Solana slot 440030249: the Solana mint authority is a program-derived address of the Securitize DS controller, and that controller's program upgrade authority is a single system-owned plain key that also governs the STAC controller. Both questions this review had left open are answered on-chain; the remaining residual is whether the issuer's signing keys are MPC- or HSM-backed off-chain, which no on-chain read can settle and which does not bound the posture.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
-      "unresolvedQuestions": [
-        "What program or governance controls the Solana VBILL mint authority and any mint-program upgrade path?",
-        "Which VBILL-specific Securitize Wormhole transfer contracts, peers, rate limits, and administrators enforce cross-chain accounting?"
-      ]
+      "reviewedAt": "2026-08-18"
     }
   }
 }

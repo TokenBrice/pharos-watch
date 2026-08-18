@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "STAC uses issuer-administered native token issuance on Ethereum and Solana. On Ethereum, the token is a UUPS proxy whose DSToken implementation permits ISSUER-or-above accounts to mint; the current token-owner EOA is the trust service's unique MASTER and can both mint and authorize upgrades. On Solana, Token-2022 minting and freezing are controlled by the program-owned GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M account through controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP; its program upgrade authority is 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. The Solana signer/governance identity and off-chain issuance limits are not publicly resolved.",
+    "summary": "STAC uses issuer-administered native token issuance on Ethereum and Solana. On Ethereum, the token is a UUPS proxy whose DSToken implementation permits ISSUER-or-above accounts to mint; the current token-owner EOA is the trust service's unique MASTER and can both mint and authorize upgrades. On Solana, Token-2022 minting and freezing are controlled by the program-owned GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M account through controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP, whose program upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6 is a single system-owned keypair address with no timelock or on-chain threshold, shared with the controller that mints vbill-vaneck. No liability-side reconciliation is published for either chain: the Chronicle feed carries a net-asset value per token and nothing else, and the Solana leg, which holds the majority of STAC liabilities, is not separately attested.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -191,7 +191,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
       "disposition": "scoreable",
@@ -223,15 +223,15 @@
         {
           "label": "Securitize STAC launch",
           "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
+        },
+        {
+          "label": "Chronicle STAC proof-of-asset feed (readWithAge)",
+          "url": "https://etherscan.io/address/0x9D77E4cA90E25114AFb24dF908f5918f572D958B"
         }
       ],
-      "evidence": "Ethereum and Solana are both authored as issuer-native STAC deployments, with no third-party bridge machinery in the reviewed route inventory. At Ethereum block 25770050, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation slot resolved to 0x77684815f44b28726bc3efa4471b88ef3b93feb0. At finalized Solana slot 439718934, the Token-2022 mint reported supply 244961279015, mintAuthority and freezeAuthority GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M, and controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP; its ProgramData reported upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, a system-owned zero-data account with no resolved timelock or multisig threshold. The Solana authority is therefore a live native mint/freeze path and its controller program is immediately replaceable, but the controller state's signer/governance semantics and off-chain issuance limits remain unresolved. Ethereum DSToken minting is onlyIssuerOrAbove, so the MASTER owner can mint, but the evidence does not establish that no other issuer-level accounts exist. Chronicle continuously and independently verifies STAC holdings and NAV inputs from BNY custody and publishes the results through its public Proof of Asset dashboard; chain-specific Solana liability coverage is not separately exposed. The BVI company and U.S. private-placement exemptions are not product-level prudential supervision. Economic-posture fields remain unbounded issuer-or-above mint and immediate upgrade authority across the native routes, with continuous Chronicle reconciliation and attestation-only supervision.",
+      "evidence": "Ethereum and Solana are both authored as issuer-native STAC deployments, with no third-party bridge machinery in the reviewed route inventory. At Ethereum block 25770050, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation slot resolved to 0x77684815f44b28726bc3efa4471b88ef3b93feb0. At finalized Solana slot 439718934, the Token-2022 mint reported supply 244961279015, mintAuthority and freezeAuthority GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M, and controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP; its ProgramData reported upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, a system-owned zero-data account with no resolved timelock or multisig threshold. The Solana authority is therefore a live native mint/freeze path and its controller program is immediately replaceable, but the controller state's signer/governance semantics and off-chain issuance limits remain unresolved. Ethereum DSToken minting is onlyIssuerOrAbove, so the MASTER owner can mint, but the evidence does not establish that no other issuer-level accounts exist. Chronicle continuously and independently verifies STAC holdings and NAV inputs from BNY custody and publishes the results through its public Proof of Asset dashboard; chain-specific Solana liability coverage is not separately exposed. The BVI company and U.S. private-placement exemptions are not product-level prudential supervision. Economic-posture fields remain unbounded issuer-or-above mint and immediate upgrade authority across the native routes, with continuous Chronicle reconciliation and attestation-only supervision. Re-reviewed 2026-08-18. The Chronicle feed 0x9D77E4cA90E25114AFb24dF908f5918f572D958B was read directly: readWithAge() returns exactly two words, a net-asset value per token of 1028.734848 and an age of 2026-08-18T07:44:35Z. It carries no supply term, no liability term and no chain dimension, so it cannot reconcile per-chain token liabilities by construction; Pharos supplies the liability side itself by multiplying that value by Ethereum totalSupply(). At the same time the Solana Token-2022 mint reports 244961.279015 STAC, the larger share of total liabilities, on the chain no published proof covers. The reviewed evidence therefore establishes continuous asset-side and NAV verification but no reconciliation of issuance against reserves, so reconciliation moves from \"continuous\" to \"unknown\" rather than crediting an asset-side proof for a liability-side control. Off-chain issuance limits and whether the issuer signing keys are MPC- or HSM-backed remain undisclosed; both are issuer-questionnaire matters and neither can bound an otherwise unbounded mint, so they are recorded here as stated limitations rather than as posture-bearing open questions.",
       "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
-      "unresolvedQuestions": [
-        "Which signer or governance account controls the Solana GSM authority state and what off-chain issuance limits apply?",
-        "Does Chronicle's continuous STAC proof explicitly reconcile Solana token liabilities separately from the fund-level holdings and NAV inputs?"
-      ]
+      "reviewedAt": "2026-08-18"
     }
   }
 }

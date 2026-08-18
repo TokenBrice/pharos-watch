@@ -25,7 +25,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const [result, histResult, priceResult, deploymentResult, latestCron] = await Promise.all([
     db
       .prepare(
-        `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version
+        `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, total_volume_7d_measured, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version
          FROM dex_liquidity
          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          ORDER BY liquidity_score DESC`,
@@ -126,10 +126,18 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       `dex-liquidity:${id}:score_components_json`,
     );
 
+    const topPools = normalizeTopPools(row.top_pools_json, `dex-liquidity:${id}:top_pools_json`);
+    const inferred7dMeasured =
+      topPools.length === 0 ||
+      topPools.every((pool) => typeof pool.volumeUsd7d === "number" && Number.isFinite(pool.volumeUsd7d));
+    const totalVolume7dMeasured = row.total_volume_7d_measured != null
+      ? row.total_volume_7d_measured === 1
+      : inferred7dMeasured;
+
     map[id] = {
       totalTvlUsd: currentTvl,
       totalVolume24hUsd: row.total_volume_24h_usd,
-      totalVolume7dUsd: row.total_volume_7d_usd,
+      totalVolume7dUsd: totalVolume7dMeasured ? row.total_volume_7d_usd : null,
       poolCount: row.pool_count,
       pairCount: row.pair_count,
       chainCount: row.chain_count,
@@ -139,7 +147,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
         `dex-liquidity:${id}:protocol_tvl_json`,
       ),
       chainTvl: safeJsonParse<Record<string, number>>(row.chain_tvl_json, {}, `dex-liquidity:${id}:chain_tvl_json`),
-      topPools: normalizeTopPools(row.top_pools_json, `dex-liquidity:${id}:top_pools_json`),
+      topPools,
       liquidityScore: row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
       depthStability: row.depth_stability,

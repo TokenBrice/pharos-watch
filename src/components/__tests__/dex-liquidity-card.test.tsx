@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { buildLiquidityVerdictLine } from "@/components/dex-liquidity-card-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
@@ -67,6 +67,10 @@ describe("DexLiquidityCard", () => {
     useDexLiquidityHistoryMock.mockReset();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders unavailable instead of hiding the module when the query fails", () => {
     useDexLiquidityMock.mockReturnValue({
       data: undefined,
@@ -121,6 +125,30 @@ describe("DexLiquidityCard", () => {
 
     expect(effectiveLabel.compareDocumentPosition(totalAmmLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(effectiveValue.compareDocumentPosition(totalAmmValue) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("renders unavailable 7d volume as an em dash", () => {
+    useDexLiquidityMock.mockReturnValue({
+      data: {
+        "gusd-gate": makeDexLiquidityData({
+          totalVolume24hUsd: 2_890_000,
+          totalVolume7dUsd: null,
+          poolCount: 1,
+          chainCount: 1,
+        }),
+      },
+      isLoading: false,
+    });
+    useDexLiquidityHistoryMock.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+
+    const { container } = render(<DexLiquidityCard stablecoinId="gusd-gate" />);
+    const sevenDayLabel = screen.getAllByText("7d Volume")[0];
+
+    expect(sevenDayLabel.nextElementSibling?.textContent).toBe("—");
+    expect(container.textContent).toContain("$2.89M");
   });
 
   it("renders an explicit unobserved-history state instead of a zero-value chart for unrated assets", () => {

@@ -57,6 +57,8 @@ export interface LiquidityMetrics {
   totalTvlUsd: number;
   totalVolume24hUsd: number;
   totalVolume7dUsd: number;
+  /** True only when every retained contributing pool supplied measured 7d volume. */
+  totalVolume7dMeasured: boolean;
   poolCount: number;
   chains: Set<string>;
   pairs: Set<string>;
@@ -491,6 +493,7 @@ export interface GlobalAgg {
   totalTvl: number;
   totalVol24h: number;
   totalVol7d: number;
+  totalVol7dMeasured: boolean;
   poolCount: number;
   chainCount: number;
   protocolTvl: Record<string, number>;

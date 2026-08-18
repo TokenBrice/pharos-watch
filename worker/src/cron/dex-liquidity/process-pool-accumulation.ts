@@ -64,7 +64,10 @@ export function accumulatePoolMetrics(
 
   metric.totalTvlUsd += rawContribTvl;
   metric.totalVolume24hUsd += volumeUsd1d;
-  metric.totalVolume7dUsd += volumeUsd7d;
+  metric.totalVolume7dUsd += volumeUsd7d ?? 0;
+  if (volumeUsd7d == null) {
+    metric.totalVolume7dMeasured = false;
+  }
   metric.poolCount++;
   metric.chains.add(pool.chain);
   metric.pairs.add(pool.symbol);
@@ -125,7 +128,7 @@ export function accumulatePoolMetrics(
       maturityDays: poolMaturityDays,
       measurement: {
         tvlMeasured: true,
-        volumeMeasured: volumeUsd1d > 0 || volumeUsd7d > 0,
+        volumeMeasured: volumeUsd1d > 0 || (volumeUsd7d ?? 0) > 0,
         balanceMeasured: curveData != null,
         maturityMeasured: poolMaturityDays > 0,
         priceMeasured: poolPrice != null && poolPrice > 0,
