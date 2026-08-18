@@ -28,7 +28,7 @@ export const CRON_SCHEDULE_CADENCES = {
   halfHourlyChartsOffset: { intervalSec: 1800, offsetSec: 16 * 60 },
   dewsPsiOffset: { intervalSec: 1800, offsetSec: 26 * 60 },
   fourHourlyReserveSync: { intervalSec: 4 * 3600, offsetSec: 11 * 60 },
-  hourlyYieldSync: { intervalSec: 1800, offsetSec: 24 * 60 },
+  hourlyYieldSync: { intervalSec: 3600, offsetSec: 20 * 60 },
   fourHourlyYieldSupplemental: { intervalSec: 4 * 3600, offsetSec: 25 * 60 },
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
   fiveMinuteReserveRecovery: { intervalSec: 300, offsetSec: 60 },

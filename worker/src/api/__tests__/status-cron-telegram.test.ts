@@ -96,7 +96,7 @@ describe("handleStatus", () => {
     expect(body.crons["sync-blacklist"]?.expectedIntervalSec).toBe(6 * 3600);
     expect(body.crons["sync-dex-discovery"]?.expectedIntervalSec).toBe(2 * 3600);
     expect(body.crons["sync-live-reserves"]?.expectedIntervalSec).toBe(4 * 3600);
-    expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(1800);
+    expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(3600);
     expect(body.crons["sync-yield-supplemental"]?.expectedIntervalSec).toBe(4 * 3600);
     expect(body.crons["prune-status-probe-runs"]?.expectedIntervalSec).toBe(86400);
   });

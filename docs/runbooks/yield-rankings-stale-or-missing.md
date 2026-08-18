@@ -102,7 +102,7 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 
 ## Remediation
 
-- If `sync-yield-data` is stale but not leased, wait for the next `24,54 * * * *` run if the last failure was transient.
+- If `sync-yield-data` is stale but not leased, wait for the next `20 * * * *` run if the last failure was transient.
 - If the cron is repeatedly `skipped_locked`, confirm the lease is stale, then delete it directly. `POST /api/reset-cron-lease` was retired on 2026-08-09; the delete below is exactly what it ran.
 
   ```bash
