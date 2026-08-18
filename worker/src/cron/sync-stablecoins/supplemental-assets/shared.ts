@@ -1,6 +1,9 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { CHAIN_META } from "@shared/lib/chains";
-import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
+import {
+  selectSingleOnchainSupplyProbeContract,
+  selectSupplementalOnchainSupplyProbeContract,
+} from "@shared/lib/onchain-supply-probe";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
@@ -14,7 +17,7 @@ import {
 import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
 import type { PeggedAsset } from "../enrich-prices";
-import { fetchCuratedAggregateOnChainMcap } from "./onchain-supply";
+import { contractChainLabel, fetchCuratedAggregateOnChainMcap } from "./onchain-supply";
 
 export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number; last_updated_at?: number }>;
 type SupplementalDefiLlamaPriceData = { coins: NonNullable<DefiLlamaCoinsPriceResponse["coins"]> };
@@ -185,6 +188,32 @@ export function getSupplementalChainLabels(meta: StablecoinMeta): string[] {
   return Array.from(new Set(labels));
 }
 
+/**
+ * A single probeable deployment can represent the whole published aggregate
+ * (data-pipeline rule 43): attribute the already-admitted number to its one
+ * chain so V9 gets a real partition instead of failing closed on an empty
+ * per-chain split. Never applies to multi-contract assets, and curated
+ * aggregates (which already populate `chainCirculating`) take precedence, so
+ * this only fires when the caller's split is still empty.
+ */
+export function attributeSingleContractSupply(
+  meta: StablecoinMeta,
+  mcap: number,
+  chainCirculating: NonNullable<PeggedAsset["chainCirculating"]>,
+): NonNullable<PeggedAsset["chainCirculating"]> {
+  if (Object.keys(chainCirculating).length > 0 || !(mcap > 0)) return chainCirculating;
+  const singleContract = selectSingleOnchainSupplyProbeContract(meta);
+  if (!singleContract) return chainCirculating;
+  return {
+    [contractChainLabel(singleContract)]: {
+      current: mcap,
+      circulatingPrevDay: 0,
+      circulatingPrevWeek: 0,
+      circulatingPrevMonth: 0,
+    },
+  };
+}
+
 export function buildSupplementalAsset(input: {
   meta: StablecoinMeta;
   priceResolution: SupplementalPriceResolution | null;
@@ -198,6 +227,7 @@ export function buildSupplementalAsset(input: {
   const nowSec = Math.floor(Date.now() / 1000);
   const pKey = pegTypeKey(input.meta);
   const priceResolution = input.priceResolution;
+  const chainCirculating = attributeSingleContractSupply(input.meta, input.mcap, input.chainCirculating ?? {});
   return {
     id: input.meta.id,
     name: input.meta.name,
@@ -217,7 +247,7 @@ export function buildSupplementalAsset(input: {
     circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
     circulatingPrevWeek: input.circulatingPrevWeek != null ? { [pKey]: input.circulatingPrevWeek } : null,
     circulatingPrevMonth: input.circulatingPrevMonth != null ? { [pKey]: input.circulatingPrevMonth } : null,
-    chainCirculating: input.chainCirculating ?? {},
+    chainCirculating,
     chains: getSupplementalChainLabels(input.meta),
     commodityOunces: input.meta.commodityOunces,
   } as PeggedAsset;
