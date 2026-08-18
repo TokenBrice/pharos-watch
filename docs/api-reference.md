@@ -2097,6 +2097,8 @@ Blacklist amount-gap severity is intentionally tolerant of isolated parser/provi
 
 `dex-liquidity`, `yield-data`, and `dews` compute freshness from producer-owned cache sentinels first (`freshness:dex-liquidity`, `freshness:yield-data`, `freshness:dews`). A sentinel is trusted only when its JSON payload has `updatedAt`, the expected producer `source`, and `publishStatus: "ok"`; optional `rowsWritten` and `coverageRatio` fields may also be present. If the sentinel is missing or fails validation, the worker falls back to the legacy table query. If that freshness diagnostic also fails, it can fall back again to the latest successful producer cron timestamp. Invalid sentinels surface `freshnessSource`, `sentinelValidationReason`, and a cache `warning` instead of making the sentinel row authoritative.
 
+Stablecoin publication and active-price coverage use the newest `sync-stablecoins` run that persisted both exact coverage reports. Synthetic abandoned or no-write attempts remain visible in cron health, but they do not replace the last publication evidence with `unknown`.
+
 **Overall status logic:**
 
 - `healthy` — every cache impact is healthy, the public mint/burn lane is healthy, fewer than 3 public-impact circuit groups are open, and the health subqueries all resolved cleanly
