@@ -52,6 +52,7 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
       "route",
       "fees",
       "access",
+      "settlement",
     ]),
     sourceRef("Gate GUSD minting and redemption guide", "https://www.gate.com/help/lend/staking/46831", [
       "route",
@@ -60,6 +61,12 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
       "access",
       "settlement",
     ]),
+    sourceRef(
+      "Gate GUSD Flexible US Treasury upgrade announcement (2026-07-27)",
+      "https://www.gate.com/announcements/article/100840",
+      ["route", "fees", "access", "settlement"],
+    ),
+    sourceRef("Gate GUSD overview", "https://www.gate.com/gusd", ["route", "capacity", "fees"]),
   ],
   "reur-royal-euro": [sourceRef("REUR", "https://www.rcoins.digital/REUR.html", ["route", "capacity", "access"])],
   "rusd-royal-dollar": [sourceRef("RUSD", "https://www.rcoins.digital/RUSD.html", ["route", "capacity", "access"])],
@@ -279,10 +286,19 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
         : entry.id === "gusd-gate"
           ? {
               ...entry.config,
-              ...documentedBoundSupplyFull("2026-08-17"),
+              ...documentedBoundSupplyFull("2026-08-18"),
+              // Keep this wording clear of the `feeDescriptionLooksUndisclosed`
+              // trigger list in ../shared.ts: Gate does document the fee
+              // *structure*, it just never quantifies the quota or the schedule,
+              // so the model stays `documented-variable`.
               costModel: documentedVariableFee(
-                "Gate currently advertises fee-free redemption into the original subscription asset; an older help article says fees may vary by redemption mode and market conditions",
+                "Gate documents a 1:1 fee-free exit when redeeming in the original subscription asset (USDT, USDC, or USD1) within a per-currency fee-free exit quota that applies to both fast and standard redemption; redeeming in a non-original asset or above that quota is charged a fee shown only on the authenticated redemption page, and the quota size and fee schedule remain undisclosed",
               ),
+              notes: [
+                "Gate's 2026-07-27 GUSD upgrade announcement advertises instant credit, and the help centre states fast redemption is typically credited within 5 minutes. Settlement is nonetheless retained at same-day because the current product-page FAQ defers the actual arrival time to the authenticated redemption page and documents a standard redemption path credited on D+3, so no public SLA bounds the full-supply capacity this route models.",
+                "The 1:1 fee-free exit is conditional: it applies only in the original subscription asset and only within a per-currency fee-free exit quota whose size Gate has not published. The quota applies to both fast and standard redemption, so it bounds cost rather than speed.",
+                "Access is Gate-account-internal and jurisdiction-gated: the announcement states that users in the UK and other restricted regions cannot access the service.",
+              ],
             }
         : entry.config,
     overrideReason: "Direct-redemption review cohort upgrades issuer defaults to documented-bound capacity.",
