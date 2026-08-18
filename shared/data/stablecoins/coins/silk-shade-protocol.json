@@ -2,6 +2,16 @@
   "id": "silk-shade-protocol",
   "name": "SILK",
   "symbol": "SILK",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-08-18",
+    "reason": "Upstream CoinGecko/DefiLlama circulating supply for SILK has been invalid (roughly 12x understated) since 2026-08-05, blocking the exact active supply-publication contract; owner decision of 2026-08-18 withholds SILK from the active set until the upstream source recovers.",
+    "reviewBy": "2026-09-18",
+    "source": {
+      "label": "DefiLlama stablecoin detail for SILK",
+      "url": "https://stablecoins.llama.fi/stablecoin/113"
+    }
+  },
   "oneLiner": "SILK is Shade Protocol's basket-pegged stable on Secret Network, tracking a GDP-weighted currency basket and overcollateralized through ShadeLend CDP vaults.",
   "flags": {
     "backing": "crypto-backed",

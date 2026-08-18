@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 337 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 336 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -456,7 +456,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Tangent USD (USG)](https://pharos.watch/stablecoin/usg-tangent/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Flying Tulip USD (ftUSD)](https://pharos.watch/stablecoin/ftusd-flying-tulip/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [BRLA Digital (BRLA)](https://pharos.watch/stablecoin/brla-brla-digital/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
-- [SILK (SILK)](https://pharos.watch/stablecoin/silk-shade-protocol/): decentralized stablecoin collateralized by crypto assets pegged to CPI.
 - [IDRX (IDRX)](https://pharos.watch/stablecoin/idrx-idrx/): centralized stablecoin backed by real-world assets pegged to Indonesian Rupiah.
 - [Compliant Naira (cNGN)](https://pharos.watch/stablecoin/cngn-compliant-naira/): centralized stablecoin backed by real-world assets pegged to Nigerian Naira.
 - [MXNB (MXNB)](https://pharos.watch/stablecoin/mxnb-juno/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.

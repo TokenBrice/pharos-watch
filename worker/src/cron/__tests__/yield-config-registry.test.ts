@@ -568,9 +568,10 @@ describe("yield config registry", () => {
   });
 
   it("wires v8.16 coverage additions to runtime source keys", () => {
+    // silk-shade-protocol left this pin list when it was quarantined on
+    // 2026-08-18 (invalid upstream supply); the manifest only covers active coins.
     for (const stablecoinId of [
       "fpi-frax",
-      "silk-shade-protocol",
       "isc-international-stable-currency",
     ]) {
       const coin = TRACKED_STABLECOINS.find((entry) => entry.id === stablecoinId);

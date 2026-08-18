@@ -91,17 +91,7 @@ export interface ResolvedStablecoinPublicationWaivers {
 /** Active publication omissions are not silently waived. Price gaps and depegs
  * remain active monitoring failures. Only a persistent inability to establish
  * positive supply may move a row to quarantine after an explicit review. */
-export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [
-  {
-    stablecoinId: "silk-shade-protocol",
-    owner: "pharos-ops",
-    reason:
-      "Upstream CoinGecko/DefiLlama supply for SILK has been invalid since 2026-08-05; a single blocked asset must not blank the whole active supply snapshot during the 2026-08-18 incident.",
-    // 2026-08-25T00:00:00Z — one week; resolve SILK's supply source or its
-    // listing status before this expires.
-    expiresAt: 1_787_616_000,
-  },
-];
+export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [];
 
 function isNonEmpty(value: string): boolean {
   return value.trim().length > 0;
