@@ -6,6 +6,7 @@ import {
   collapseDuplicateObservations,
   buildDexPriceObservationsFromRetainedPools,
   filterRetainedPools,
+  rebuildMetricsFromPools,
 } from "../scoring-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { DexPriceObs, LiquiditySourceMixByFamily, PoolEntry } from "../types";
@@ -394,9 +395,21 @@ describe("filterRetainedPools", () => {
   });
 });
 
+describe("rebuildMetricsFromPools", () => {
+  it("marks 7d volume as unmeasured when any retained pool lacks 7d volume", () => {
+    const rebuilt = rebuildMetricsFromPools([
+      makePool({ poolId: "ethereum:0xmeasured", volumeUsd7d: 700_000 }),
+      makePool({ poolId: "ethereum:0xfallback", tvlUsd: 50_000, volumeUsd1d: 25_000, volumeUsd7d: null }),
+    ]);
+
+    expect(rebuilt.totalVolume7dUsd).toBe(700_000);
+    expect(rebuilt.totalVolume7dMeasured).toBe(false);
+  });
+});
+
 describe("accumulateGlobalAggregate", () => {
   it("dedupes the same poolId across stablecoins", () => {
-    const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>();
+    const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>();
     const protoTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
     const protoChainTvl: Record<string, number> = {};
@@ -412,7 +425,7 @@ describe("accumulateGlobalAggregate", () => {
   });
 
   it("prefers the higher-TVL row on poolId collision", () => {
-    const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>();
+    const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>();
     const protoTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
     const protoChainTvl: Record<string, number> = {};
@@ -430,5 +443,27 @@ describe("accumulateGlobalAggregate", () => {
     expect(a.totalTvl + b.totalTvl).toBe(5_000_000);
     expect(protoTvl["balancer"]).toBe(5_000_000);
     expect(chainTvl["ethereum"]).toBe(5_000_000);
+  });
+
+  it("tracks whether the selected deduped pool supplied measured 7d volume", () => {
+    const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>();
+    const protoTvl: Record<string, number> = {};
+    const chainTvl: Record<string, number> = {};
+    const protoChainTvl: Record<string, number> = {};
+    const chains = new Set<string>();
+
+    accumulateGlobalAggregate(
+      [makePool({ tvlUsd: 4_500_000, volumeUsd7d: null })],
+      protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
+    );
+    expect(seenTvl.get("ethereum:0xabc")?.vol7d).toBe(0);
+    expect(seenTvl.get("ethereum:0xabc")?.vol7dMeasured).toBe(false);
+
+    accumulateGlobalAggregate(
+      [makePool({ tvlUsd: 5_000_000, volumeUsd7d: 7_000_000 })],
+      protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
+    );
+    expect(seenTvl.get("ethereum:0xabc")?.vol7d).toBe(7_000_000);
+    expect(seenTvl.get("ethereum:0xabc")?.vol7dMeasured).toBe(true);
   });
 });

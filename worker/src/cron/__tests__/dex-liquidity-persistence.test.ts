@@ -141,7 +141,7 @@ function extractHistoryInsertRows(statements: readonly PreparedStatementWithMeta
   return rows;
 }
 
-const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 28;
+const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 29;
 
 function extractDexLiquidityRunRows(statements: readonly PreparedStatementWithMeta[]): unknown[][] {
   const rows: unknown[][] = [];
@@ -265,6 +265,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 456_789,
         totalVol24h: 99_999,
         totalVol7d: 700_000,
+        totalVol7dMeasured: true,
         poolCount: 12,
         chainCount: 4,
         protocolTvl: { curve: 200_000 },
@@ -320,7 +321,7 @@ describe("dex-liquidity persistence", () => {
       ),
     );
     expect(prepared.length).toBeLessThan(preparedRows.length);
-    expect(prepared.every((statement) => statement.boundValues.length <= 84)).toBe(true);
+    expect(prepared.every((statement) => statement.boundValues.length <= 87)).toBe(true);
 
     const usdtRow = preparedRows.find((row) => row[1] === "usdt-tether");
     const usdcPlaceholder = preparedRows.find((row) => row[1] === "usdc-circle");
@@ -333,6 +334,7 @@ describe("dex-liquidity persistence", () => {
       123_456,
       22_222,
       155_555,
+      1,
       2,
       2,
       2,
@@ -372,6 +374,7 @@ describe("dex-liquidity persistence", () => {
       0,
       0,
       0,
+      1,
       0,
       0,
       0,
@@ -395,7 +398,7 @@ describe("dex-liquidity persistence", () => {
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
-    expect(JSON.parse(String(usdcPlaceholder?.[19]))).toMatchObject({
+    expect(JSON.parse(String(usdcPlaceholder?.[20]))).toMatchObject({
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "unknown",
@@ -415,6 +418,7 @@ describe("dex-liquidity persistence", () => {
       456_789,
       99_999,
       700_000,
+      1,
       12,
       0,
       4,
@@ -469,6 +473,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 0,
         totalVol24h: 0,
         totalVol7d: 0,
+        totalVol7dMeasured: true,
         poolCount: 0,
         chainCount: 0,
         protocolTvl: {},
@@ -480,7 +485,7 @@ describe("dex-liquidity persistence", () => {
     const row = extractDexLiquidityRunRows(
       getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
     ).find((candidate) => candidate[1] === meta.id);
-    expect(JSON.parse(String(row?.[19]))).toMatchObject({
+    expect(JSON.parse(String(row?.[20]))).toMatchObject({
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "populated",
@@ -537,6 +542,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 0,
         totalVol24h: 0,
         totalVol7d: 0,
+        totalVol7dMeasured: true,
         poolCount: 0,
         chainCount: 0,
         protocolTvl: {},
@@ -548,7 +554,7 @@ describe("dex-liquidity persistence", () => {
     const row = extractDexLiquidityRunRows(
       getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
     ).find((candidate) => candidate[1] === meta.id);
-    expect(JSON.parse(String(row?.[19]))).toMatchObject({
+    expect(JSON.parse(String(row?.[20]))).toMatchObject({
       exitRouteObservationCoverage: {
         status: "unknown",
         retainedPoolCount: 0,
@@ -590,6 +596,7 @@ describe("dex-liquidity persistence", () => {
         totalTvl: 579,
         totalVol24h: 0,
         totalVol7d: 0,
+        totalVol7dMeasured: true,
         poolCount: 2,
         chainCount: 1,
         protocolTvl: {},
@@ -649,6 +656,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
+          totalVol7dMeasured: true,
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -681,6 +689,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
+          totalVol7dMeasured: true,
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -713,6 +722,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
+          totalVol7dMeasured: true,
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -744,6 +754,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
+          totalVol7dMeasured: true,
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -783,6 +794,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
+          totalVol7dMeasured: true,
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},
@@ -816,6 +828,7 @@ describe("dex-liquidity persistence", () => {
           totalTvl: 1,
           totalVol24h: 1,
           totalVol7d: 1,
+          totalVol7dMeasured: true,
           poolCount: 1,
           chainCount: 1,
           protocolTvl: {},

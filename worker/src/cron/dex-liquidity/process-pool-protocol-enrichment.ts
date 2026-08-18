@@ -136,6 +136,6 @@ export function enrichPoolProtocol(
       : pool.tvlUsd,
     balanceDetails,
     volumeUsd1d: pool.volumeUsd1d ?? 0,
-    volumeUsd7d: pool.volumeUsd7d ?? 0,
+    volumeUsd7d: pool.volumeUsd7d,
   };
 }

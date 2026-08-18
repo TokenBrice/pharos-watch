@@ -212,6 +212,7 @@ export function initMetrics(id: string, symbol: string): LiquidityMetrics {
     totalTvlUsd: 0,
     totalVolume24hUsd: 0,
     totalVolume7dUsd: 0,
+    totalVolume7dMeasured: true,
     poolCount: 0,
     chains: new Set(),
     pairs: new Set(),

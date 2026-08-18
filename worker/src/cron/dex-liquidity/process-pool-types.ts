@@ -103,7 +103,7 @@ export interface PoolProtocolEnrichment {
     | { symbol: string; balancePct: number; isTracked: boolean }[]
     | undefined;
   volumeUsd1d: number;
-  volumeUsd7d: number;
+  volumeUsd7d: number | null;
 }
 
 export interface PoolExecutionCapability {

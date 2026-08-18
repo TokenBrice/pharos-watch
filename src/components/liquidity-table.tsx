@@ -171,7 +171,9 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                 {formatCurrency(liq.totalVolume24hUsd)}
               </TableCell>
               <TableCell className="hidden lg:table-cell text-right pharos-numeric">
-                {formatCurrency(liq.totalVolume7dUsd)}
+                {liq.totalVolume7dUsd != null ? formatCurrency(liq.totalVolume7dUsd) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
               </TableCell>
               <TableCell className="hidden sm:table-cell text-right pharos-numeric text-sm">
                 {formatPercent(vtRatio * 100, 1)}

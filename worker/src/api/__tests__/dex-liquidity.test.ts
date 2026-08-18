@@ -42,6 +42,108 @@ describe("handleDexLiquidity", () => {
     expect(coin).toHaveProperty("deploymentCoverage");
   });
 
+  it("returns null 7d volume when the producer marked 7d volume as unmeasured", async () => {
+    const db = mockDexD1([
+      {
+        match: "dex_liquidity",
+        rows: [
+          makeDexLiquidityRow({
+            total_volume_24h_usd: 2_890_000,
+            total_volume_7d_usd: 0,
+            total_volume_7d_measured: 0,
+            top_pools_json: JSON.stringify([
+              {
+                project: "gate",
+                chain: "orderbook",
+                tvlUsd: 517_330,
+                symbol: "GUSD/USDT",
+                volumeUsd1d: 2_890_000,
+                poolType: "cex-orderbook",
+                source: "cg_tickers",
+              },
+            ]),
+          }),
+        ],
+      },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+
+    expect(body["usdt-tether"]?.totalVolume24hUsd).toBe(2_890_000);
+    expect(body["usdt-tether"]?.totalVolume7dUsd).toBeNull();
+    expect((body["usdt-tether"]?.topPools as Array<Record<string, unknown>>)[0]?.volumeUsd7d).toBeUndefined();
+  });
+
+  it("infers null 7d volume for pre-migration fallback rows whose top pools lack 7d volume", async () => {
+    const db = mockDexD1([
+      {
+        match: "dex_liquidity",
+        rows: [
+          makeDexLiquidityRow({
+            total_volume_24h_usd: 100_000,
+            total_volume_7d_usd: 0,
+            total_volume_7d_measured: undefined,
+            top_pools_json: JSON.stringify([
+              {
+                project: "gate",
+                chain: "orderbook",
+                tvlUsd: 50_000,
+                symbol: "GUSD/USDT",
+                volumeUsd1d: 100_000,
+                poolType: "cex-orderbook",
+                source: "cg_tickers",
+              },
+            ]),
+          }),
+        ],
+      },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+
+    expect(body["usdt-tether"]?.totalVolume7dUsd).toBeNull();
+  });
+
+  it("keeps measured pre-migration 7d volume when top pools include finite 7d volume", async () => {
+    const db = mockDexD1([
+      {
+        match: "dex_liquidity",
+        rows: [
+          makeDexLiquidityRow({
+            total_volume_7d_usd: 700_000,
+            total_volume_7d_measured: undefined,
+            top_pools_json: JSON.stringify([
+              {
+                project: "curve",
+                chain: "Ethereum",
+                tvlUsd: 500_000,
+                symbol: "USDT/USDC",
+                volumeUsd1d: 100_000,
+                volumeUsd7d: 700_000,
+                poolType: "curve-stableswap",
+                source: "dl",
+              },
+            ]),
+          }),
+        ],
+      },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+
+    expect(body["usdt-tether"]?.totalVolume7dUsd).toBe(700_000);
+    expect((body["usdt-tether"]?.topPools as Array<Record<string, unknown>>)[0]?.volumeUsd7d).toBe(700_000);
+  });
+
   it("exposes exact deployment outcome truth", async () => {
     const db = mockDexD1([
       { match: "FROM dex_liquidity\n", rows: [row] },

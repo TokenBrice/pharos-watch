@@ -83,6 +83,10 @@ export function addSecondaryPoolContribution(
 
   m.totalTvlUsd += pool.tvlUsd;
   m.totalVolume24hUsd += pool.volume24hUsd;
+  m.totalVolume7dUsd += pool.volume7dUsd ?? 0;
+  if (pool.volume7dUsd == null) {
+    m.totalVolume7dMeasured = false;
+  }
   m.poolCount++;
   m.chains.add(chainDisplay);
   m.pairs.add(pool.symbol);

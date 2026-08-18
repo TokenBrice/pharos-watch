@@ -229,7 +229,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">7d Volume</p>
-              <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalVolume7dUsd)}</p>
+              <p className="text-lg font-extrabold font-mono tabular-nums">
+                {liq.totalVolume7dUsd != null ? formatCurrency(liq.totalVolume7dUsd) : "—"}
+              </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Pools</p>

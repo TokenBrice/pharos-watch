@@ -30,7 +30,7 @@ export const compareLiquidityRows: (
   tvl: (r) => r.liq.totalTvlUsd,
   tvlTrend: (r) => r.liq.tvlChange7d ?? 0,
   volume: (r) => r.liq.totalVolume24hUsd,
-  volume7d: (r) => r.liq.totalVolume7dUsd,
+  volume7d: (r) => r.liq.totalVolume7dUsd ?? 0,
   vtRatio: (r) => r.liq.totalTvlUsd > 0 ? r.liq.totalVolume24hUsd / r.liq.totalTvlUsd : 0,
   pools: (r) => r.liq.poolCount,
   chains: (r) => r.liq.chainCount,

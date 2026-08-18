@@ -38,6 +38,7 @@ const BASE_GLOBAL_AGG: GlobalAgg = {
   totalTvl: 100,
   totalVol24h: 10,
   totalVol7d: 70,
+  totalVol7dMeasured: true,
   poolCount: 1,
   chainCount: 1,
   protocolTvl: { curve: 100 },

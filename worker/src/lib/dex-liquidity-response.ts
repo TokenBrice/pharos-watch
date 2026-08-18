@@ -21,6 +21,7 @@ export interface DexLiquidityRow {
   total_tvl_usd: number;
   total_volume_24h_usd: number;
   total_volume_7d_usd: number;
+  total_volume_7d_measured?: number | null;
   pool_count: number;
   pair_count: number;
   chain_count: number;
@@ -223,6 +224,7 @@ const ALLOWED_POOL_KEYS = new Set<string>([
   "poolType",
   "tvlUsd",
   "volumeUsd1d",
+  "volumeUsd7d",
   "price",
   "source",
 ]);

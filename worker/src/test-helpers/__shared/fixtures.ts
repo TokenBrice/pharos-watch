@@ -280,6 +280,7 @@ export function makeDexLiquidityRow(overrides: Partial<DexLiquidityRow> = {}): D
     total_tvl_usd: 500_000_000,
     total_volume_24h_usd: 10_000_000,
     total_volume_7d_usd: 70_000_000,
+    total_volume_7d_measured: 1,
     pool_count: 10,
     pair_count: 15,
     chain_count: 3,

@@ -130,6 +130,13 @@ describe("compareLiquidityRows — volume7d", () => {
     const result = compareLiquidityRows(high, low, sort("volume7d", "desc"));
     expect(result).toBeLessThan(0);
   });
+
+  it("treats null 7d volume as 0 for sorting", () => {
+    const measured = makeRow({ totalVolume7dUsd: 1 });
+    const unmeasured = makeRow({ totalVolume7dUsd: null });
+    const result = compareLiquidityRows(measured, unmeasured, sort("volume7d", "desc"));
+    expect(result).toBeLessThan(0);
+  });
 });
 
 describe("compareLiquidityRows — vtRatio (volume/TVL)", () => {

@@ -48,6 +48,7 @@ export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   let totalTvlUsd = 0;
   let totalVolume24hUsd = 0;
   let totalVolume7dUsd = 0;
+  let totalVolume7dMeasured = true;
   let qualityAdjustedTvl = 0;
   let effectiveTvl = 0;
   let balanceRatioWeightedSum = 0;
@@ -76,6 +77,9 @@ export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
     totalTvlUsd += pool.tvlUsd;
     totalVolume24hUsd += pool.volumeUsd1d || 0;
     totalVolume7dUsd += pool.volumeUsd7d ?? 0;
+    if (pool.volumeUsd7d == null) {
+      totalVolume7dMeasured = false;
+    }
     qualityAdjustedTvl += getPoolExtraNumber(pool.extra, "qualityAdjustedTvl") ?? pool.tvlUsd;
     effectiveTvl += getPoolExtraNumber(pool.extra, "effectiveTvl") ?? pool.tvlUsd;
 
@@ -130,6 +134,7 @@ export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
     totalTvlUsd,
     totalVolume24hUsd,
     totalVolume7dUsd,
+    totalVolume7dMeasured,
     poolCount: pools.length,
     chains,
     pairs,
@@ -239,6 +244,7 @@ export function applyRebuiltMetrics(
   metric.totalTvlUsd = rebuilt.totalTvlUsd;
   metric.totalVolume24hUsd = rebuilt.totalVolume24hUsd;
   metric.totalVolume7dUsd = rebuilt.totalVolume7dUsd;
+  metric.totalVolume7dMeasured = rebuilt.totalVolume7dMeasured;
   metric.poolCount = rebuilt.poolCount;
   metric.chains = rebuilt.chains;
   metric.pairs = rebuilt.pairs;
@@ -261,7 +267,7 @@ export function accumulateGlobalAggregate(
   globalChainTvl: Record<string, number>,
   globalProtoChainTvl: Record<string, number>,
   globalChains: Set<string>,
-  seenPoolTvl: Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>,
+  seenPoolTvl: Map<string, { tvl: number; vol24h: number; vol7d: number; vol7dMeasured: boolean; proto: string; chain: string }>,
 ): { totalTvl: number; totalVol24h: number; totalVol7d: number; poolCount: number } {
   let totalTvl = 0;
   let totalVol24h = 0;
@@ -272,6 +278,7 @@ export function accumulateGlobalAggregate(
     const proto = normalizeProtocol(pool.project);
     const chainKey = pool.chain.toLowerCase();
     const incomingVol7d = pool.volumeUsd7d ?? 0;
+    const incomingVol7dMeasured = pool.volumeUsd7d != null;
     const prev = seenPoolTvl.get(pool.poolId);
 
     if (prev) {
@@ -291,12 +298,12 @@ export function accumulateGlobalAggregate(
         globalProtoChainTvl[`${proto}:${chainKey}`] =
           (globalProtoChainTvl[`${proto}:${chainKey}`] ?? 0) + pool.tvlUsd;
         globalChains.add(chainKey);
-        seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, proto, chain: chainKey });
+        seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, vol7dMeasured: incomingVol7dMeasured, proto, chain: chainKey });
       }
       continue;
     }
 
-    seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, proto, chain: chainKey });
+    seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, vol7dMeasured: incomingVol7dMeasured, proto, chain: chainKey });
     totalTvl += pool.tvlUsd;
     totalVol24h += pool.volumeUsd1d;
     totalVol7d += incomingVol7d;
