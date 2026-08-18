@@ -35,7 +35,7 @@ interface SyncCapabilities {
   depegPipeline: boolean;
 }
 
-export function parseStablecoinsCachePayload(value: string): StablecoinsPayload | null {
+function parseStablecoinsCachePayload(value: string): StablecoinsPayload | null {
   try {
     const parsed = JSON.parse(value) as { peggedAssets?: PeggedAsset[]; fxFallbackRates?: Record<string, number> };
     if (!Array.isArray(parsed.peggedAssets)) return null;
