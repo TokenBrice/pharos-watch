@@ -8,10 +8,10 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
+    "tier": "issuer-native-burn-mint",
     "summary": "All eight authored EURAU contract rows remain issuer-native issuance lanes, not bridge representations. The live customer-facing cross-chain path is AllUnity’s documented mapping bridge (issuer burns source EURAU and mints destination EURAU to a registered wallet). The Oct 2025 Chainlink CCIP/CCT partnership is still announced, not registered: TokenAdminRegistry 1.5.0 getPool(EURAU)=0 on Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, and Tempo as of 2026-08-18, and no pool holds MINTER_ROLE/BURNER_ROLE. Do not treat destination supply as a lock/mint representation of a single canonical chain.",
     "reviewedAt": "2026-08-18",
-    "reviewer": "W03",
+    "reviewer": "orchestrator follow-up 2026-08-18 (W03 tier decision)",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -32,6 +32,18 @@
       {
         "label": "AllUnity EURAU",
         "url": "https://allunity.com/eurau"
+      },
+      {
+        "label": "AllUnity product docs: issuance, redemption, and cross-chain bridging",
+        "url": "https://allunity.com/product-docs/issue-redeem-bridge"
+      },
+      {
+        "label": "Ethereum CCIP TokenAdminRegistry 1.5.0 (getPool(EURAU)=0, re-verified 2026-08-18)",
+        "url": "https://etherscan.io/address/0xb22764f98dD05c789929716D677382Df22C05Cb6"
+      },
+      {
+        "label": "Base CCIP TokenAdminRegistry 1.5.0 (getPool(EURAU)=0, re-verified 2026-08-18)",
+        "url": "https://basescan.org/address/0x6f6C373d09C07425BaAE72317863d7F6bb731e37"
       }
     ],
     "routes": [
