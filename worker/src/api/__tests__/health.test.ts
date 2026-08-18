@@ -14,10 +14,13 @@ type HealthDbOptions = {
   extras?: MockTableConfig[];
 };
 
+const STABLECOIN_COVERAGE_QUERY_MATCH =
+  "metadata LIKE '%\"activePublicationCoverage\"%'";
+
 function healthD1(tables: MockTableConfig[]) {
   return mockD1([
     ...tables,
-    { match: "job = 'sync-stablecoins' AND metadata IS NOT NULL", rows: [], first: null },
+    { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null },
     { match: "FROM dex_liquidity", rows: [], first: { age: 60 } },
     { match: "FROM yield_data", rows: [], first: { age: 60 } },
     { match: "key LIKE 'circuit:%'", rows: [] },
@@ -54,7 +57,7 @@ function completePublicationEntry(
   },
 ): MockTableConfig {
   return {
-    match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
+    match: STABLECOIN_COVERAGE_QUERY_MATCH,
     rows: [],
     first: {
       started_at: now - 30,
