@@ -423,6 +423,91 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
     { chain: "solana" },
   ],
+  // USTB is native on Ethereum and Solana; Plume is Superstate issuer-native
+  // burn/mint (bridge() burns source, no lockbox). Verified 2026-08-19:
+  // Ethereum 67,696,661.464479 + Plume 169,698.550490 + Solana 224,120.571877
+  // = 68,090,480.586846, matching Superstate's token rows exactly. Superstate
+  // book-entry 16,278,150.21 (19.29% of AUM) is not a token and stays outside
+  // this aggregate (CG circulating 84,341,804.96 includes it). Plume is absent
+  // from buildChainRpcs(), so pin the reviewed public endpoint.
+  "ustb-superstate": [
+    { chain: "ethereum" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+    { chain: "solana" },
+  ],
+  // VBILL is Securitize-native on Avalanche, Ethereum, BSC and Solana (no
+  // Wormhole lockbox). Verified 2026-08-19: Avalanche 136,217,752.38 +
+  // Ethereum 21,684,333.099655 + BSC 21,501,301.39 + Solana 13,926,019.96
+  // = 193,329,406.829655, equal to CoinGecko market cap at $1 NAV.
+  "vbill-vaneck": [
+    { chain: "avalanche" },
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    { chain: "solana" },
+  ],
+  // bC3M is independently mintable on seven EVM chains (no lockbox). Verified
+  // 2026-08-19: Ethereum 68,426.302701 + Gnosis/Base/Polygon/BSC/Arbitrum/
+  // Avalanche 0 = 68,426.302701, matching the published share count. Zero legs
+  // are reviewed live deployments.
+  "bc3m-backed": [
+    { chain: "ethereum" },
+    { chain: "gnosis", allowZeroSupply: true },
+    { chain: "base", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true },
+    { chain: "arbitrum", allowZeroSupply: true },
+    { chain: "avalanche", allowZeroSupply: true },
+  ],
+  // bIB01 is independently mintable on seven EVM chains; CCIP is a transfer
+  // rail, not a lockbox. Verified 2026-08-19: Ethereum 45,326.8030000012 +
+  // Base 10,000 + Polygon 4,442.0000000002 + Arbitrum 60,000 + Gnosis
+  // 14,896.7260716317 + Avalanche 21,000.295821 + BSC 0 = 155,665.824892633
+  // (−0.0001% vs published 155,665.99 shares). BSC is a reviewed live
+  // deployment at zero.
+  "bib01-backed": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "bsc", allowZeroSupply: true },
+    { chain: "polygon" },
+    { chain: "arbitrum" },
+    { chain: "gnosis" },
+    { chain: "avalanche" },
+  ],
+  // HLSCOPE is Securitize-native on Ethereum, Polygon, Optimism, Plume and
+  // Tron. Verified 2026-08-19: Polygon 3,237.185242 + Ethereum 159.936826 +
+  // Optimism 0 + Plume 16.267368 = 3,413.389436. Tron 20.012264 (TronGrid
+  // block 85473285) is a tracked native issuance with no probe family
+  // (0.58% of 3,433.401700); it stays outside this aggregate rather than
+  // failing the row closed. Plume is absent from buildChainRpcs().
+  "hlscope-hamilton-lane": [
+    { chain: "polygon" },
+    { chain: "ethereum" },
+    { chain: "optimism", allowZeroSupply: true },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+  ],
+  // mMEV is Ethereum-native with independent Midas burn/mint deployments on
+  // Plume and Etherlink. Verified 2026-08-18: Ethereum 2,195,114.48626855
+  // + Plume 3,349.01453156 + Etherlink 756,113.92423621 = 2,954,577.42503632,
+  // matching CoinGecko circulating 2,954,577.425036322. Etherlink is 25.59%.
+  "mmev-midas": [
+    { chain: "ethereum" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+  ],
+  // mTBILL's five Pharos deployments are independent Midas EIP-1967 proxies.
+  // Verified 2026-08-18: Ethereum 60,728,248.53125032 + Base 342,458.83707271
+  // + Etherlink 1,138,694.88287399 + Plume 958.90953026 + Rootstock 0.86487596
+  // = 62,210,362.02560327. CoinGecko 62,210,622.94890065 also indexes Oasis
+  // Sapphire 260.92329742 (0.00042%); Sapphire has no chain registry entry, so
+  // that leg stays outside (mRe7YIELD TAC gap). Rootstock is seed dust; Plume
+  // is 0.0015%.
+  "mtbill-midas": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org", allowZeroSupply: true },
+    { chain: "rootstock", rpcUrl: "https://public-node.rsk.co", allowZeroSupply: true },
+  ],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
