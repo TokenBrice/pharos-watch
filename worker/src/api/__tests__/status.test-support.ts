@@ -199,11 +199,12 @@ function fixtureMockD1(
   options: Parameters<typeof mockD1>[1] = {},
 ): ReturnType<typeof mockD1> {
   const activeIds = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id);
+  const stablecoinCoverageQueryMatch = `metadata LIKE '%\"activePublicationCoverage\"%'`;
   const hasPublicationFixture = tables.some((table) =>
-    table.match.includes("job = 'sync-stablecoins' AND metadata IS NOT NULL"),
+    table.match.includes(stablecoinCoverageQueryMatch),
   );
   const publicationFixture = {
-    match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
+    match: stablecoinCoverageQueryMatch,
     rows: [],
     first: {
       started_at: Math.floor(Date.now() / 1000) - 30,
