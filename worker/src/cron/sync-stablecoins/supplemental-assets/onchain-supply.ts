@@ -46,6 +46,11 @@ export interface OnChainMcapResult {
   chainCirculating?: Record<string, number>;
 }
 
+export interface SingleContractOnChainMcapResult extends OnChainMcapResult {
+  chain: string;
+  chainLabel: string;
+}
+
 export const selectSingleOnChainSupplyContract = selectSingleOnchainSupplyProbeContract;
 export const selectSupplementalOnChainSupplyContract = selectSupplementalOnchainSupplyProbeContract;
 
@@ -297,7 +302,7 @@ export async function fetchOnChainMcap(
   priceUsd: number,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
-): Promise<OnChainMcapResult | null> {
+): Promise<SingleContractOnChainMcapResult | null> {
   const curated = CURATED_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
   const supplyContract = selectSupplementalOnChainSupplyContract(meta);
   if (!supplyContract) {
@@ -317,7 +322,9 @@ export async function fetchOnChainMcap(
     signal,
     curated,
   });
-  return result ? { mcap: result.mcap, supplySource: result.supplySource } : null;
+  return result
+    ? { mcap: result.mcap, supplySource: result.supplySource, chain: result.chain, chainLabel: result.chainLabel }
+    : null;
 }
 
 export async function fetchCuratedAggregateOnChainMcap(
