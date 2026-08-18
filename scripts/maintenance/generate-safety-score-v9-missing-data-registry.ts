@@ -363,6 +363,7 @@ const SCORE_PROJECTION_WORK_TYPE_BY_REASON: Partial<Record<string, V9MissingData
   "missing-same-notional-route": "EXIT_RUNTIME_ROUTE",
   "missing-upgrade-control": "DEPLOYMENT_CONTROLS",
   "mint-control-question": "MINT_AUTHORITY",
+  "nonmaterial-bridge-supply-unmatched": "BRIDGE_MATERIALITY",
   "nonmaterial-dependency-unavailable": "DEPENDENCY_REVIEW",
   "partial-reserve-review": "RESERVE_COMPOSITION",
   "selected-bridge-route-missing": "BRIDGE_ROUTE_REVIEW",

@@ -9,8 +9,8 @@
     "yieldBearing": true,
     "rwa": true
   },
-  "collateral": "Gate states that GUSD is backed by tokenized Treasury bills and stablecoins, but publishes no current instrument-level allocation or product-specific reserve reconciliation",
-  "pegMechanism": "Users subscribe 1:1 with USDT, USDC, or USD1 on Gate. Returns accrue from subscription and are distributed daily in GUSD. Gate currently advertises 1:1 redemption into the original subscription asset with no redemption fee; older help materials say fees may vary by redemption mode and market conditions",
+  "collateral": "Gate attributes GUSD returns to its own ecosystem revenue alongside tokenized Treasury RWAs and yield-bearing stablecoin assets, but publishes no instrument-level allocation, named reserve vehicle, custodian, or product-specific reserve reconciliation",
+  "pegMechanism": "Users subscribe 1:1 with USDT, USDC, or USD1 on Gate. Returns accrue from subscription and are distributed daily in GUSD. Gate quotes a fixed 1 GUSD = 1 USDT/USDC/USD1 conversion rate rather than an accruing NAV. Redemption offers a fast path Gate describes as typically credited within five minutes and a standard path credited on D+3, with the 1:1 fee-free exit limited to the original subscription asset and to a per-currency fee-free quota Gate has not sized; redemptions beyond that quota or into a different asset carry a fee shown only at redemption time",
   "mechanismArchetype": "tbill",
   "llamaId": "306",
   "detailProvider": "defillama",
@@ -20,8 +20,8 @@
     "type": "self-reported",
     "url": "https://www.gate.com/proof-of-reserves",
     "provider": "Gate exchange-wide zk-Merkle proof-of-reserves publishes customer and platform balances for GUSD, but this demonstrates Gate's custody of customer GUSD tokens rather than identifying or reconciling the assets backing all issued GUSD; no token-backing attestor is named",
-    "attestorTier": "none",
-    "cadence": "none"
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed"
   },
   "links": [
     {
@@ -59,6 +59,11 @@
       "type": "warning",
       "title": "Circulating-supply caveat",
       "message": "Pharos inherits GUSD supply from DefiLlama, whose current series tracks the full Ethereum token supply. Gate subscription figures and CoinGecko circulating supply are lower, so the displayed market cap should not be read as independently reconciled circulating supply."
+    },
+    {
+      "type": "info",
+      "title": "Jurisdictional access restriction",
+      "message": "Gate states that users in the UK and other restricted regions cannot access the GUSD Flexible US Treasury product. GUSD redemption is available only to Gate account holders in permitted jurisdictions."
     },
     {
       "type": "info",

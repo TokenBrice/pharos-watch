@@ -29,12 +29,24 @@ export interface CoinOverride {
 export interface MechanismDiagramOptions {
   /** Coin-specific node hydration (label/subtitle overrides). */
   override?: CoinOverride;
+  /**
+   * Coin's `flags.navToken`. Splits the `tbill` archetype between NAV-accreting
+   * fund shares and $1-pegged reserve-backed tokens; omit where no coin is in
+   * hand (generic `/learn` rendering) to keep the archetype default.
+   */
+  navToken?: boolean | null;
   /** When true and {@link parentArchetype} is set, render the wrapper diagram. */
   isWrapper?: boolean;
   /** Parent stablecoin symbol (only meaningful when `isWrapper`). */
   parentSymbol?: string;
   /** Parent archetype, used to pick the inner diagram (only meaningful when `isWrapper`). */
   parentArchetype?: MechanismArchetype;
+  /**
+   * Parent coin's `flags.navToken`, for the wrapper diagram's parent panel. The
+   * wrapper's own flag is not a substitute — three of the four tracked wrappers
+   * over a `tbill` parent are NAV tokens whose parent is not.
+   */
+  parentNavToken?: boolean | null;
   /** Wrapper variant kind, controls the right-hand box copy. */
   variantKind?: VariantKind;
 }

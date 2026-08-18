@@ -108,7 +108,7 @@
     "url": "https://www.sofi.com/crypto/sofiusd/",
     "provider": "SoFi product disclosures (press reports monthly Deloitte verification, but no public attestation report or transparency page exists; the previously recorded SEC URL resolved to an unrelated ABS-15G filing under a different CIK)",
     "attestorTier": "self",
-    "cadence": "none",
+    "cadence": "undisclosed",
     "attestorJurisdiction": "United States"
   },
   "listingStatusReview": {

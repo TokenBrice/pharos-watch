@@ -30,7 +30,6 @@
     "type": "real-time",
     "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract",
     "provider": "Gnosis xDAI TokenBridge contracts",
-    "attestorTier": "none",
     "cadence": "real-time",
     "latestReport": {
       "periodEnd": "2026-07-22",

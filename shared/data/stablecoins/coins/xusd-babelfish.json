@@ -11,7 +11,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Rootstock basket of accepted stablecoins, dominated by DLLR with bridged USDT, USDC, DAI variants, and small DOC exposure",
+  "collateral": "Rootstock basket of accepted stablecoins: the reviewed composition is 89.4% Sovryn DLLR, 9.7% bridged USDT, and 0.9% Money on Chain DOC. Bridged USDC and DAI variants are admissible in the basket, but no balance is present in the reviewed composition.",
   "pegMechanism": "BabelFish mints XUSD 1:1 from accepted stablecoins and allows redemption into accepted bAssets, subject to basket-balance constraints and balancing fees",
   "links": [
     {

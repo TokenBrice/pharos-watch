@@ -14,6 +14,7 @@ import {
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9-extension";
 import { deriveSafetyScoreV9PegScore } from "../safety-score-v9-fact-set";
+import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9-extension";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
@@ -279,6 +280,11 @@ describe("Phase 1 R5 V9-only peg adapter", () => {
   });
 });
 
+const POR_BASE = {
+  type: "self-reported",
+  url: "https://example.invalid/por",
+} as const;
+
 describe("Phase 1 D6 issuer-attested reserve admission", () => {
   it("admits a signed independent report for a prudential issuer at the owner-ratify 0.8 confidence", () => {
     const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(eligibleReserveMeta(), CLOCK_SEC);
@@ -396,6 +402,56 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(selfAttested, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(onchainOnly, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(unsourced, CLOCK_SEC)).toBeNull();
+  });
+
+  it("scores `undisclosed` exactly like `none`, so reclassifying a curated tier cannot move a grade", () => {
+    // The independence gate is a whitelist (big4/regional/niche), so the
+    // display-only split of "no attestor" into `none` (reviewed negative) and
+    // `undisclosed` (absence of evidence) is score-neutral by construction.
+    const base = eligibleReserveMeta();
+    const noneTier = eligibleReserveMeta({
+      proofOfReserves: { ...base.proofOfReserves!, attestorTier: "none" },
+    });
+    const undisclosedTier = eligibleReserveMeta({
+      proofOfReserves: { ...base.proofOfReserves!, attestorTier: "undisclosed" },
+    });
+
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(noneTier, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(undisclosedTier, CLOCK_SEC)).toEqual(
+      buildSafetyScoreV9ReviewedStaticReserveRows(noneTier, CLOCK_SEC),
+    );
+  });
+
+  it("does not infer a periodic reconciliation from a `none` or `undisclosed` cadence", () => {
+    // Regression: `cadence` was read for truthiness, and both sentinels are
+    // non-empty strings, so an issuer publishing no reconciliation at all was
+    // inferred to reconcile `periodic`ally. Absence must not flatter.
+    expect(hasPublishedReserveReconciliationEvidence({ ...POR_BASE, cadence: "none" })).toBe(false);
+    expect(hasPublishedReserveReconciliationEvidence({ ...POR_BASE, cadence: "undisclosed" })).toBe(false);
+    expect(hasPublishedReserveReconciliationEvidence({ ...POR_BASE, cadence: undefined })).toBe(false);
+    expect(hasPublishedReserveReconciliationEvidence(undefined)).toBe(false);
+  });
+
+  it("still infers a periodic reconciliation from a real cadence or a dated report", () => {
+    expect(hasPublishedReserveReconciliationEvidence({ ...POR_BASE, cadence: "monthly" })).toBe(true);
+    expect(hasPublishedReserveReconciliationEvidence({ ...POR_BASE, cadence: "real-time" })).toBe(true);
+    // A dated report stands on its own even when the rhythm is undisclosed.
+    expect(
+      hasPublishedReserveReconciliationEvidence({
+        ...POR_BASE,
+        cadence: "none",
+        latestReport: {
+          periodEnd: "2026-07-31",
+          publishedAt: "2026-08-05",
+          assuranceMethod: "attestation",
+          scope: "assets-and-liabilities",
+          liabilityReconciliation: "full",
+          reviewer: "fixture",
+          confidence: "verified",
+          sources: [{ label: "Fixture report", url: "https://example.invalid/report" }],
+        },
+      }),
+    ).toBe(true);
   });
 
   it("keeps a USDai-shaped issuer excluded even if curated rows later appear", () => {

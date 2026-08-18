@@ -117,6 +117,28 @@ describe("stablecoin V9 safety presentation", () => {
     expect(humanizeSafetyScoreV9Value("issuer-discretionary")).toBe("Issuer discretionary");
   });
 
+  it("renders an undisclosed primary exit as an explicit row rather than dropping it", () => {
+    const card = makeV9Card({
+      accessPosture: {
+        transfer: "permissionless",
+        freezeExposure: "none-known",
+        primaryExit: "undisclosed",
+        governance: "single-entity",
+        unknownFields: [],
+        signals: [],
+        reasons: [],
+      },
+    });
+
+    const presentation = buildStablecoinSafetyScoreV9Presentation(card);
+
+    expect(presentation.accessRows).toContainEqual({
+      key: "primaryExit",
+      label: "Primary exit",
+      value: "Not disclosed",
+    });
+  });
+
   it("turns opaque public component keys into categorized input details", () => {
     expect(describeSafetyScoreV9Components([
       "mechanism:liquidation-mechanics",

@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Crypto assets backing USDf and the USDf Earn strategy, including BTC and stablecoins, with delta-neutral hedging on centralized exchanges; tokenized real-world assets (USTB, JAAA, JTRSY, plus tokenized gold/equities/CETES) accepted with dynamic overcollateralization ratios",
+  "collateral": "Crypto assets backing USDf and the USDf Earn strategy, with delta-neutral hedging on centralized exchanges; the reviewed composition is ~94% BTC alongside USDC and USDT cash-equivalents, an insurance fund, and a ~2% long-tail of other crypto and tokenized assets. Falcon additionally accepts tokenized real-world assets (USTB, JAAA, JTRSY, tokenized gold and equities, and Etherfuse CETES) as mintable collateral, though no individual tokenized-RWA balance is present in the reviewed reserve composition.",
   "pegMechanism": "Overcollateralized synthetic dollar; liquidation mechanisms and arbitrage maintain the $1 peg; delta-neutral strategies power sUSDf yield",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "246",

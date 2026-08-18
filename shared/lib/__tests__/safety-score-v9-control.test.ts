@@ -1246,8 +1246,11 @@ describe("Safety Score v9 economic control", () => {
     expect(floorWithControl.score).toBe(90);
 
     // Named unmatched rows are unaffected by the pool tolerance: with their
-    // own joined subthreshold controls they pass.
-    const named = resultFor(0.0999, {
+    // own joined subthreshold controls they pass. Shares are chosen so the
+    // AGGREGATE residue also stays under the floor — 9.26 grades the sum as
+    // well as each row, so a per-row assertion has to hold the sum sub-material
+    // to be measuring per-row tolerance at all.
+    const named = resultFor(0.07, {
       withPoolControl: false,
       namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.02 }],
     });
@@ -1256,16 +1259,27 @@ describe("Safety Score v9 economic control", () => {
     // 9.192: a named unmatched row independently below the 10% deployment
     // floor is accepted without a joined identity control, same as the
     // unrecognized-label pool. At or above the floor it still fails closed.
-    const namedOpen = resultFor(0.0999, {
+    const namedOpen = resultFor(0.07, {
       withPoolControl: false,
       namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.02, withControl: false }],
     });
     expect(namedOpen.reasons).toEqual([]);
-    const namedOpenAtFloor = resultFor(0.0999, {
+    const namedOpenAtFloor = resultFor(null, {
       withPoolControl: false,
       namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.1, withControl: false }],
     });
     expect(namedOpenAtFloor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
+
+    // 9.26: rows that each clear the per-row tolerance still fail closed once
+    // their SUM reaches the floor. The completeness proof grades every row
+    // individually, so before 9.26 read the aggregate this shape proved
+    // "complete" while 11.99% of supply was mapped to no reviewed route — an
+    // escape that only stayed shut because the trigger was any residue at all.
+    const aggregateAtFloor = resultFor(0.0999, {
+      withPoolControl: false,
+      namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.02 }],
+    });
+    expect(aggregateAtFloor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
   });
 
   it.each(MEASURED_CHAIN_LABEL_POOLS)(
@@ -1343,6 +1357,66 @@ describe("Safety Score v9 economic control", () => {
 
     expect(result.reasons).toEqual([]);
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
+  });
+
+  it("publishes a trace bridge residue as a diagnostic rather than the material ceiling", () => {
+    // EURC's 2026-08-18 shape. Every material deployment is reviewed and the
+    // only unattributed supply is $257 of a $470M inventory. The completeness
+    // proof cannot clear it — the reviewed Tempo route's control is
+    // bounded-unknown rather than known, which fails the per-row join — so
+    // before 9.26 that trace took the material reason's 55 control-unverified
+    // ceiling, and, because a ceiling-treatment reason also classifies its
+    // pillar as limited evidence, the 69 evidence ceiling underneath it. The
+    // residue is still published; it just scores nothing.
+    const tempoControl = control("bridge:tempo", "bridge", {
+      deploymentKey: "tempo:0xtempo",
+      scope: "deployment",
+      economicLossScope: "deployment",
+      materialSupplyShare: 0.00002,
+      status: boundedUnknown("control.tempo"),
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([tempoControl]),
+          supply: {
+            status: requiredKnown("supply"),
+            selectedBridgeRoutes: [
+              {
+                deploymentRouteKey: "ethereum:native",
+                supplyUsd: 99_997,
+                supplyShare: 0.99997,
+                reviewState: "selected-reviewed",
+                reviewedRouteKind: "native",
+              },
+              {
+                deploymentRouteKey: tempoControl.deploymentKey,
+                supplyUsd: 2,
+                supplyShare: 0.00002,
+                reviewState: "selected-reviewed",
+                reviewedRouteKind: "controlled",
+              },
+              {
+                deploymentRouteKey: "unmatched-chain:fixture-asset:icp",
+                supplyUsd: 1,
+                supplyShare: 0.00001,
+                reviewState: "unmatched",
+              },
+            ],
+            selectedRouteSupplyShare: 0.99999,
+            unknownRouteSupplyShare: 0.00001,
+            unreviewedRouteSupplyShare: 0,
+          },
+        },
+        bridge: {
+          status: requiredKnown("bridge"),
+          routes: [{ controlKey: tempoControl.controlKey, tier: "external-validated-network" as const }],
+        },
+      }),
+    );
+
+    expect(result.reasons.map((reason) => reason.code)).toContain("nonmaterial-bridge-supply-unmatched");
+    expect(result.reasons.map((reason) => reason.code)).not.toContain("material-bridge-supply-unmatched");
   });
 
   it("rejects a required-known reviewed bridge inventory with no route joins", () => {

@@ -18,14 +18,14 @@ Each configured `mechanismArchetype` gets a dedicated educational page covering 
 - **Page-level shell (editorial display + breadcrumb):** `src/app/learn/_shared/learn-page-shell.tsx` (`LearnPageShell`)
 - **Body section renderer:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
 - **Content registry:** `src/lib/mechanism-explainers/index.ts` (`ARCHETYPE_CONTENT`)
-- **Per-archetype content modules:** `src/app/learn/mechanisms/content/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund,commodity-claim}.ts`
+- **Per-archetype content modules:** `src/lib/mechanism-explainers/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund,commodity-claim}.ts`
 - **Content schema:** `src/lib/mechanism-explainers/types.ts` (`ArchetypeContent` interface, `ARCHETYPE_VISUALS` map)
 - **Slug helpers (single source of truth):** `shared/lib/classification/mechanism-archetypes.ts`
   - `MECHANISM_ARCHETYPE_LABELS`, `MECHANISM_ARCHETYPE_ONE_LINERS`
   - `getMechanismArchetypeLabel(archetype)`
   - `getMechanismExplainerPath(archetype)` returns `/learn/mechanisms/<slug>/`
 - **Slug source:** `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts`
-- **Diagram reuse:** `mechanismDiagramFor(archetype, "STBL")` from `src/components/stablecoin-detail/mechanism-diagrams/index.tsx`
+- **Diagram reuse:** `mechanismDiagramFor(archetype, "STBL")` from `src/components/stablecoin-detail/mechanism-diagrams/index.tsx`. Three-step configs are read through `resolveThreeStepConfig(archetype, navToken)`, not directly off `THREE_STEP_ARCHETYPE_CONFIG`: the `tbill` archetype carries two variants and the coin's `flags.navToken` selects between them. The `/learn` call passes no `navToken`, so the explainer keeps the archetype default (NAV-accreting for `tbill`); only an explicit `false` switches to the par-redemption variant.
 
 The hub is a static route with no client-only state. The archetype route is static-exported via `generateStaticParams()` driven by `MECHANISM_ARCHETYPE_VALUES`.
 
@@ -104,9 +104,9 @@ No footer entry. The hub is the only deep-link from `Mechanisms`-related surface
 1. Add the slug to `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts`.
 2. Add the label + one-liner entries to `MECHANISM_ARCHETYPE_LABELS` and `MECHANISM_ARCHETYPE_ONE_LINERS` in `shared/lib/classification/mechanism-archetypes.ts`. The typechecker enforces exhaustiveness.
 3. Add the corresponding `ARCHETYPE_VISUALS` entry in `src/lib/mechanism-explainers/types.ts`, preserving the route's neutral shared chrome unless the design contract changes.
-4. Author a new content module under `src/app/learn/mechanisms/content/<slug>.ts` and register it in `src/lib/mechanism-explainers/index.ts`.
+4. Author a new content module under `src/lib/mechanism-explainers/<slug>.ts` and register it in `src/lib/mechanism-explainers/index.ts`.
 5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
-6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does).
+6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does). A variant that differs by a coin-level flag rather than by archetype adds a second config beside the first and a case in `resolveThreeStepConfig` — never a per-coin entry in `coin-overrides.ts`, which is sized for a handful of flagship coins.
 7. Run `tsx scripts/maintenance/build-og-learn-images.ts`, then follow the manual rasterize-and-review workflow in [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png).
 8. Run the mechanism content, exact static-param, and sitemap suites listed in Coverage Invariant; regenerate the OG asset before running `npm run check:generated-artifacts`.
 

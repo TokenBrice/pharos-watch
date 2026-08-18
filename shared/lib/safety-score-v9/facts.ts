@@ -173,6 +173,7 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "missing-same-notional-route": "producer-failed",
   "missing-upgrade-control": "issuer-undisclosed",
   "missing-upgradeability-review": "integration-missing",
+  "nonmaterial-bridge-supply-unmatched": "producer-failed",
   "nonmaterial-dependency-unavailable": "integration-missing",
   // Retained V2 cannot distinguish a measured zero-exit outcome from producer
   // or integration absence. Only native V3 facts may author measured-adverse.

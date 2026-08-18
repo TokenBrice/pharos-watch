@@ -24,6 +24,7 @@ export type StablecoinVerdictArchetype =
   | "delisted-record"
   | "frozen-archive"
   | "distressed"
+  | "low-safety-score"
   | "yield-bearing-hybrid"
   | "decentralized-benchmark"
   | "institutional-default"
@@ -52,6 +53,7 @@ const VERDICT_LABELS: Record<StablecoinVerdictArchetype, string> = {
   "delisted-record": "Delisted Record",
   "frozen-archive": "Frozen Archive",
   distressed: "Distressed",
+  "low-safety-score": "Low Safety Score",
   "yield-bearing-hybrid": "Yield-Bearing Hybrid",
   "decentralized-benchmark": "Decentralized Benchmark",
   "institutional-default": "Institutional Default",
@@ -87,6 +89,8 @@ export function deriveStablecoinVerdict(inputs: VerdictInputs): StablecoinVerdic
   }
 
   const grade = inputs.reportCardGrade;
+  // "Distressed" is reserved for *measured* distress: an active depeg or a
+  // WARNING/DANGER DEWS band. Nothing else may claim it.
   if (
     inputs.activeDepeg
     || (inputs.dewsBand !== null && DISTRESSED_BANDS.has(inputs.dewsBand))
@@ -99,8 +103,14 @@ export function deriveStablecoinVerdict(inputs: VerdictInputs): StablecoinVerdic
     return buildVerdict("yield-bearing-hybrid");
   }
 
+  // A D/F grade is a statement about our evidence and our scoring, not a claim
+  // that the asset is failing. It keeps its place in the precedence ladder — a
+  // badly rated coin must still be flagged ahead of the yield/benchmark labels
+  // — but it names the measurement instead of asserting a condition, and it
+  // carries the `watch` tone. Red stays reserved for the measured-distress
+  // branch above, consistent with the standing "red = active only" module rule.
   if (grade !== null && RISKY_GRADES.has(grade)) {
-    return buildVerdict("distressed");
+    return buildVerdict("low-safety-score");
   }
 
   if (inputs.yieldBearing && archetype !== undefined && YIELD_HYBRID_ARCHETYPES.has(archetype)) {

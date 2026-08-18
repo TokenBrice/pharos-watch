@@ -8,11 +8,15 @@ import type { CoinOverride } from "./types";
  * Dispatch a {@link MechanismArchetype} to its concrete diagram component.
  * Shared by the top-level dispatcher and the wrapper diagram's parent panel so
  * a newly added archetype only needs wiring in one place.
+ *
+ * `navToken` is the rendered coin's `flags.navToken`; leave it undefined when
+ * no coin is in hand so the archetype keeps its default copy.
  */
 export function renderArchetype(
   archetype: MechanismArchetype,
   symbol: string,
   override?: CoinOverride,
+  navToken?: boolean | null,
 ): React.ReactNode {
   const steps = override?.steps;
   const stressFootnote = override?.stressFootnote;
@@ -39,6 +43,7 @@ export function renderArchetype(
         archetype={archetype}
         symbol={symbol}
         steps={steps}
+        navToken={navToken}
         {...(stressFootnote !== undefined ? { stressFootnote } : {})}
       />
     );

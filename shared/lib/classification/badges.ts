@@ -95,6 +95,16 @@ export const POR_TIER_STYLES: Record<AttestorTier, { cls: string; label: string;
     label: "No attestation",
     textCls: "text-red-700 dark:text-red-400",
   },
+  // Absence of evidence, not evidence of absence: the issuer names no attestor
+  // or the claimed artefact is unreachable. It takes the dashed-muted "nothing
+  // here yet" idiom rather than an alarm tone, because an undisclosed attestor
+  // is an unanswered question and only a reviewed negative (`none`) may assert
+  // that no attestation exists.
+  undisclosed: {
+    cls: "bg-muted/20 text-muted-foreground border-dashed border-border/60",
+    label: "Not disclosed",
+    textCls: "text-muted-foreground",
+  },
 };
 
 // ---------------------------------------------------------------------------

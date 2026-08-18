@@ -169,7 +169,14 @@ export const SafetyScoreV9AccessPostureSchema = z
   .object({
     transfer: z.enum(["permissionless", "restrictable", "permissioned", "unknown"]),
     freezeExposure: z.enum(["none-known", "upstream", "direct", "possible", "unknown"]),
-    primaryExit: z.enum(["permissionless", "eligibility-gated", "issuer-discretionary", "none", "unknown"]),
+    primaryExit: z.enum([
+      "permissionless",
+      "eligibility-gated",
+      "issuer-discretionary",
+      "none",
+      "undisclosed",
+      "unknown",
+    ]),
     governance: z.enum(["immutable", "distributed", "concentrated", "single-entity", "unknown"]),
     unknownFields: z.array(AccessPostureFieldSchema),
     signals: z.array(z.string().min(1)),

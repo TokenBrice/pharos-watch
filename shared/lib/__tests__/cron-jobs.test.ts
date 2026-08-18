@@ -131,11 +131,11 @@ describe("cron job schedule metadata", () => {
       schedule.split(" ")[0]!.split(",").map(Number);
 
     expect(CRON_SCHEDULES.v9PublicationOffset).toBe("22,52 * * * *");
-    expect(CRON_SCHEDULES.hourlyYieldSync).toBe("28,58 * * * *");
+    expect(CRON_SCHEDULES.hourlyYieldSync).toBe("24,54 * * * *");
 
     const yieldMinutes = minutesOf(CRON_SCHEDULES.hourlyYieldSync);
     const v9Minutes = minutesOf(CRON_SCHEDULES.v9PublicationOffset);
 
-    expect(yieldMinutes).toEqual(v9Minutes.map((minute) => minute + 6));
+    expect(yieldMinutes).toEqual(v9Minutes.map((minute) => minute + 2));
   });
 });

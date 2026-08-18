@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized"
   },
-  "collateral": "Bitcoin liquid staking/restaking derivatives and other approved BTC wrappers deposited into BIMA vaults; the Peg Stability Module can also hold approved stablecoins such as USDC, USDP, and GUSD for peg operations",
+  "collateral": "Bitcoin liquid staking/restaking derivatives and other approved BTC wrappers deposited into BIMA vaults; the Peg Stability Module can also hold approved stablecoins such as USDC, USDP, and GUSD for peg operations, though no PSM stablecoin balance is present in the reviewed composition (100% WBTC collateral wrapper).",
   "pegMechanism": "Liquity-style overcollateralized vaults with a 150% minimum collateral ratio; USBD can be redeemed permissionlessly for $1 of BTC-denominated collateral from the lowest-ratio vaults with a fee of coreRate + 75 bps; a Peg Stability Module adds near-1:1 USDC/USDP/GUSD swaps",
   "mechanismArchetype": "cdp",
   "llamaId": "253",

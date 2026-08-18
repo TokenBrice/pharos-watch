@@ -11,6 +11,7 @@ const LABELED_ARCHETYPES: { archetype: StablecoinVerdictArchetype; label: string
   { archetype: "pre-launch", label: "Pre-Launch" },
   { archetype: "frozen-archive", label: "Frozen Archive" },
   { archetype: "distressed", label: "Distressed" },
+  { archetype: "low-safety-score", label: "Low Safety Score" },
   { archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" },
   { archetype: "decentralized-benchmark", label: "Decentralized Benchmark" },
   { archetype: "institutional-default", label: "Institutional Default" },
@@ -25,6 +26,18 @@ describe("VerdictPill", () => {
       expect(pill?.textContent).toBe(label);
     });
   }
+
+  it.each([
+    ["distressed", "alert", "text-red"] as const,
+    ["low-safety-score", "watch", "text-amber"] as const,
+  ])("tones %s as %s", (archetype, _tone, expectedClassFragment) => {
+    // Red is reserved for measured distress; a low grade renders amber.
+    const { container } = render(
+      <VerdictPill verdict={{ archetype, label: archetype }} />,
+    );
+    const pill = container.querySelector(`[data-archetype="${archetype}"]`);
+    expect(pill?.getAttribute("class")).toContain(expectedClassFragment);
+  });
 
   it("renders nothing for the uncategorized archetype", () => {
     const { container } = render(

@@ -28,6 +28,7 @@ import type {
   MintAuthorityProfile,
 } from "@shared/types/core";
 import type { V9FailureDomainRef } from "@shared/types/safety-score-v9-facts";
+import type { StablecoinMeta } from "@shared/types";
 import {
   type ReserveSlice,
 } from "@shared/types/reserves";
@@ -936,6 +937,32 @@ function latestResolvedMintIncidentAtSec(
   return latest;
 }
 
+/**
+ * Whether the curated proof-of-reserves block evidences a *published* periodic
+ * reconciliation of issued supply to reserves.
+ *
+ * This used to be a truthiness read of `cadence`, which made the sentinel
+ * values self-defeating: `"none"` and `"undisclosed"` are non-empty strings, so
+ * an issuer that publishes no reconciliation at all was inferred to have a
+ * `"periodic"` one. That is the same absence-as-fact defect the 9.25 access
+ * posture work fixed, inverted — here the missing evidence flattered the issuer
+ * instead of accusing it.
+ *
+ * `"unknown"` is the correct fallback rather than a known negative: an
+ * undisclosed cadence tells us nothing about whether the issuer reconciles
+ * internally, only that it publishes nothing we can check. The mint
+ * reconciliation vocabulary (`continuous | periodic | not-applicable |
+ * unknown`) has no member for "established that none occurs", and inventing
+ * one would assert more than the evidence carries.
+ */
+export function hasPublishedReserveReconciliationEvidence(
+  proof: StablecoinMeta["proofOfReserves"] | undefined,
+): boolean {
+  if (proof?.latestReport) return true;
+  const cadence = proof?.cadence;
+  return cadence != null && cadence !== "none" && cadence !== "undisclosed";
+}
+
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
   dependencies: PreparedDependency["dependency"],
@@ -1066,7 +1093,7 @@ function adaptMintReview(
         ? "not-applicable"
         : "unknown"
       : issuerBackendMint
-        ? meta.proofOfReserves?.latestReport || meta.proofOfReserves?.cadence
+        ? hasPublishedReserveReconciliationEvidence(meta.proofOfReserves)
           ? "periodic"
           : "unknown"
         : "not-applicable";

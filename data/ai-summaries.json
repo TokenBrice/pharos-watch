@@ -693,13 +693,21 @@
   },
   "frxusd-frax": {
     "title": "Frax's Clean Slate",
-    "text": "frxUSD is Frax's tokenized-{{term:treasury}}T-bill{{/term}}-backed dollar minted and redeemed 1:1 through governance-approved custodians, a {{term:rwa}}RWA{{/term}} do-over without legacy FRAX's algorithmic baggage. Its reserves span tokenized government-money products and fiat-backed dollars including BUIDL, USTB, USCC, JTRSY, WTGXX, AUSD, and USDC, while the enshrined-custodian design gives users a direct exit whenever the relevant collateral is available. The sfrxUSD wrapper passes through reserve yield, which is modestly useful and mercifully not the whole pitch. The trade-off is concentration in a small club of tokenized-money issuers, plus Frax DAO's power to approve the custodians. It is institutional plumbing arranged by a crypto protocol: much tidier than old FRAX, but not magically free of gatekeepers.",
-    "updatedAt": "2026-07-15",
+    "text": "frxUSD is Frax's tokenized-{{term:treasury}}T-bill{{/term}}-backed dollar minted and redeemed 1:1 through governance-approved custodians, a {{term:rwa}}RWA{{/term}} do-over without legacy FRAX's algorithmic baggage. The balance sheet is narrower than the custodian roster suggests: WisdomTree's WTGXX government money-market fund is the largest holding, Superstate USTB and BlackRock BUIDL sit behind it, and a small Bridge USDB position plus a segregated bank account round it out — while the enshrined-custodian design gives users a direct exit whenever the relevant collateral is available. Governance has approved more custodians than the reserve actually uses: Superstate USCC, Agora AUSD, and Centrifuge JTRSY each cleared a FIP without ever carrying a balance, a useful reminder that an approval is a permission, not a position. The sfrxUSD wrapper passes through reserve yield, which is modestly useful and mercifully not the whole pitch. The real trade-off is concentration in a small club of tokenized-money issuers, plus Frax DAO's power to approve — and unapprove — who holds the money. It is institutional plumbing arranged by a crypto protocol: much tidier than old FRAX, but not magically free of gatekeepers.",
+    "updatedAt": "2026-08-18",
     "authoredBy": "ai",
-    "model": "gpt-5.6-sol",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-15",
-    "factsAsOf": "2026-07-15"
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-08-18",
+    "sources": [
+      {
+        "label": "Frax frxUSD balance sheet (live)",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Frax transparency",
+        "url": "https://frax.com/transparency"
+      }
+    ]
   },
   "usyc-hashnote": {
     "title": "Circle USYC Goes Multichain",

@@ -215,6 +215,33 @@ function resolveChip(liquidWithinOneDayPct: number, unknownHorizonPct: number): 
   return { label: "Mixed liquidity", toneClass: CHIP_TONES.amber };
 }
 
+/**
+ * The convertibility figure is only a measurement of the part of the basket
+ * whose liquidation timeline the issuer actually published. Leading with it
+ * unqualified turns a disclosure gap into an illiquidity claim — a fully
+ * undisclosed ladder reported "0% convertible within one day" (owner feedback
+ * 2026-08-18). So the sentence branches on the unknown share *before* any
+ * percentage is emitted:
+ *
+ * - fully undisclosed → no convertibility figure at all, only the gap;
+ * - partly undisclosed → "at least X%", which is the honest floor, since the
+ *   undisclosed remainder may convert just as fast;
+ * - fully disclosed → the plain measurement, unchanged.
+ */
+function buildConvertibilityClause(liquidWithinOneDayPct: number, unknownHorizonPct: number): string {
+  if (unknownHorizonPct >= 100) {
+    return "no published exit timeline for any of the basket.";
+  }
+  if (unknownHorizonPct > 0) {
+    const disclosed =
+      liquidWithinOneDayPct > 0
+        ? `at least ${formatReserveQualityPct(liquidWithinOneDayPct)} convertible within one day`
+        : "none of the disclosed basket converts within one day";
+    return `${disclosed}; ${formatReserveQualityPct(unknownHorizonPct)} has no published exit timeline.`;
+  }
+  return `${formatReserveQualityPct(liquidWithinOneDayPct)} convertible within one day.`;
+}
+
 function buildLede(
   sliceCount: number,
   liquidWithinOneDayPct: number,
@@ -223,11 +250,7 @@ function buildLede(
   selfExposurePct: number | null,
 ): string {
   const sliceNoun = sliceCount === 1 ? "reviewed reserve slice" : "reviewed reserve slices";
-  let lede = `${sliceCount} ${sliceNoun} — ${formatReserveQualityPct(liquidWithinOneDayPct)} convertible within one day`;
-  if (unknownHorizonPct > 0) {
-    lede += `, ${formatReserveQualityPct(unknownHorizonPct)} with no established exit timeline`;
-  }
-  lede += ".";
+  let lede = `${sliceCount} ${sliceNoun} — ${buildConvertibilityClause(liquidWithinOneDayPct, unknownHorizonPct)}`;
   if (unidentifiedObligorsPct != null && unidentifiedObligorsPct > 0) {
     lede += ` ${formatReserveQualityPct(unidentifiedObligorsPct)} of the basket has no identified obligor.`;
   }

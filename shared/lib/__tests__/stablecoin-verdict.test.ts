@@ -81,15 +81,56 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
     },
   );
 
+  // `RISKY_GRADES` is every grade below C-; the ladder in `report-card-core.ts`
+  // has no D+/D- members, so D and F are the whole risky bucket.
   it.each([["D"] as const, ["F"] as const])(
-    "returns distressed when overall grade is %s",
+    "returns low-safety-score (not distressed) when overall grade is %s",
     (grade) => {
-      const archetype = archetypeOf({ reportCardGrade: grade });
+      const verdict = deriveStablecoinVerdict(inputs({ reportCardGrade: grade }));
+      expect(verdict.archetype).toBe("low-safety-score");
+      expect(verdict.label).toBe("Low Safety Score");
+    },
+  );
+
+  it("does not return distressed for a low grade with no measured distress signal", () => {
+    // Regression: a D/F grade alone used to render the red "Distressed" pill on
+    // 147 of 337 rated coins with a healthy peg and a CALM DEWS band.
+    const archetype = archetypeOf({
+      reportCardGrade: "F",
+      dewsBand: "CALM",
+      activeDepeg: false,
+      yieldBearing: true,
+      navToken: false,
+      mechanismArchetype: "tbill",
+    });
+    expect(archetype).toBe("low-safety-score");
+  });
+
+  it("prefers distressed over low-safety-score when a low grade coincides with an active depeg", () => {
+    const archetype = archetypeOf({ reportCardGrade: "F", activeDepeg: true });
+    expect(archetype).toBe("distressed");
+  });
+
+  it.each([["WARNING"] as const, ["DANGER"] as const])(
+    "prefers distressed over low-safety-score when a low grade coincides with DEWS %s",
+    (band) => {
+      const archetype = archetypeOf({ reportCardGrade: "F", dewsBand: band });
       expect(archetype).toBe("distressed");
     },
   );
 
-  it("returns yield-bearing-hybrid for NAV tokens before grade-only distress", () => {
+  it("keeps the low-grade rule ahead of the yield-hybrid and benchmark rules", () => {
+    // The branch was re-labelled, not reordered: a badly rated yield-bearing
+    // tbill must still surface the grade rather than fall through to "ok".
+    expect(
+      archetypeOf({ reportCardGrade: "D", yieldBearing: true, mechanismArchetype: "tbill" }),
+    ).toBe("low-safety-score");
+    expect(
+      archetypeOf({ reportCardGrade: "F", mechanismArchetype: "cdp", governance: "decentralized" }),
+    ).toBe("low-safety-score");
+  });
+
+  it("returns yield-bearing-hybrid for NAV tokens before the low-grade rule", () => {
     const archetype = archetypeOf({
       navToken: true,
       yieldBearing: true,

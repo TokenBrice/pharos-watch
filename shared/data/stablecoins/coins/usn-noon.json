@@ -8,7 +8,7 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "USN is backed 1:1 by USDT, USDC, or short-term U.S. Treasury bills, with reserve assets deployable into approved yield strategies including CLOs, private credit, DeFi lending, Pendle PTs, and tokenized T-bills.",
+  "collateral": "USN is minted 1:1 against USDT, USDC, or short-term U.S. Treasury bills, but the deposited assets are redeployed: the reviewed reserve composition is ~71% Fasanara FTAC private credit, ~10% DeFi lending, ~8% U.S. Treasury bills, and ~5% Janus Henderson JAAA CLOs, with the remainder unmapped. No USDT or USDC cash balance is present in the reviewed composition.",
   "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
   "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "230",

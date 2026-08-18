@@ -24,7 +24,7 @@ type ThreeStepConfig = {
   dashed?: boolean;
 };
 
-export const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> = {
+const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> = {
   "fiat-cash": {
     accentColor: "var(--mechanism-fiat-cash)",
     stressFootnote: "stress: banking-rail freeze (USDC, Mar 2023)",
@@ -47,7 +47,7 @@ export const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepCo
   },
   tbill: {
     accentColor: "var(--mechanism-tbill)",
-    stressFootnote: "stress: instant-redemption cap / USDC rail constraint (OUSG)",
+    stressFootnote: "stress: instant-redemption cap / stablecoin-rail constraint",
     ariaLabel: (symbol) =>
       `Investor cash funds a short-duration Treasury portfolio; ${symbol} units accrue NAV daily.`,
     description: (symbol) =>
@@ -151,11 +151,62 @@ export const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepCo
   },
 };
 
+/**
+ * The `tbill` archetype covers two structurally different instruments:
+ * NAV-accreting fund shares (OUSG, USDY, USYC — 22 tracked coins) and
+ * $1-pegged tokens that merely hold a T-Bill reserve and redeem at par
+ * (BUIDL, USDtb, USD0, Gate USD — 25 tracked coins, `flags.navToken: false`).
+ * Applying "NAV accrues daily" to the second family asserts a yield mechanic
+ * they do not have, and the missing redeem loop compounds it by drawing them
+ * as one-way instruments (owner feedback 2026-08-18).
+ *
+ * So the archetype carries a second config and callers that hold a coin pass
+ * its `flags.navToken`. Callers without a coin — the `/learn` explainer and the
+ * comparison matrix, which describe the fund-share family — pass nothing and
+ * keep the NAV-accreting default.
+ */
+const TBILL_PAR_REDEMPTION_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-tbill)",
+  stressFootnote: "stress: redemption gate / reserve-rail constraint",
+  ariaLabel: (symbol) =>
+    `Subscriber cash funds a short-duration Treasury reserve; ${symbol} is minted at par and redeemed 1:1.`,
+  description: (symbol) =>
+    `Subscribers send cash or an accepted stablecoin to the issuer; the reserve is held in short-duration T-Bills, repos, and cash; ${symbol} is minted 1:1 against that reserve and redeems at par — the yield reaches holders through unit accrual or a separate staked wrapper, not through the token's unit price.`,
+  defaultSteps: (symbol) => [
+    { label: "Subscriber cash", subtitle: "cash / accepted stablecoin" },
+    { label: "T-Bills + Repos", subtitle: "short-duration RWA" },
+    { label: `${symbol} minted`, subtitle: "redeem 1:1" },
+  ],
+  returnArrow: {
+    fromX: 500,
+    toX: 275,
+    topY: 90,
+    peakY: 140,
+    label: "redeem",
+    strokeWidth: 1.2,
+  },
+};
+
+/**
+ * Resolves the archetype's diagram copy for one coin. `navToken` is the coin's
+ * `flags.navToken`; `undefined`/`null` means "no coin in hand" and keeps the
+ * archetype default.
+ */
+export function resolveThreeStepConfig(
+  archetype: ThreeStepArchetype,
+  navToken?: boolean | null,
+): ThreeStepConfig {
+  if (archetype === "tbill" && navToken === false) return TBILL_PAR_REDEMPTION_CONFIG;
+  return THREE_STEP_ARCHETYPE_CONFIG[archetype];
+}
+
 export interface ThreeStepArchetypeDiagramProps {
   archetype: ThreeStepArchetype;
   symbol: string;
   steps?: ReadonlyArray<MechanismStepOverride>;
   stressFootnote?: string;
+  /** Coin's `flags.navToken`; omit where no coin is in hand (see {@link resolveThreeStepConfig}). */
+  navToken?: boolean | null;
 }
 
 export function ThreeStepArchetypeDiagram({
@@ -163,8 +214,9 @@ export function ThreeStepArchetypeDiagram({
   symbol,
   steps: overrideSteps,
   stressFootnote,
+  navToken,
 }: ThreeStepArchetypeDiagramProps) {
-  const config = THREE_STEP_ARCHETYPE_CONFIG[archetype];
+  const config = resolveThreeStepConfig(archetype, navToken);
   return (
     <ThreeStepMechanismDiagram
       ariaLabel={config.ariaLabel(symbol)}

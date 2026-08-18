@@ -5,13 +5,20 @@ import type {
   V9ExitRouteFactV2,
 } from "../../types/safety-score-v9-facts";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
+import { isV9CreditableNonAtomicRedemption, isV9ExitRouteOutputResolved } from "./exit";
 import { assertV9ValidatedPolicyEnvelope } from "./policy";
 import { compareText, uniqueSorted } from "./primitives";
 import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "./score-bearing-gates-policy";
 
 export type V9TransferPosture = "permissionless" | "restrictable" | "permissioned" | "unknown";
 export type V9FreezeExposure = "none-known" | "upstream" | "direct" | "possible" | "unknown";
-export type V9PrimaryExitPosture = "permissionless" | "eligibility-gated" | "issuer-discretionary" | "none" | "unknown";
+export type V9PrimaryExitPosture =
+  | "permissionless"
+  | "eligibility-gated"
+  | "issuer-discretionary"
+  | "none"
+  | "undisclosed"
+  | "unknown";
 export type V9GovernancePosture = "immutable" | "distributed" | "concentrated" | "single-entity" | "unknown";
 
 /** D11: reviewed access evidence remains current for 365 days. */
@@ -32,8 +39,22 @@ export interface V9FreezeAccessReview {
 export interface V9AccessPostureAssetFacts {
   assetId: V9AssetFactsBase["assetId"];
   controlStatus: V9AssetFactsBase["controlStatus"];
+  /** Reviewed state of the whole exit surface; the only source of known-negative "no exit" evidence. */
+  exitStatus: V9AssetFactsBase["exitStatus"];
   controls: readonly V9DeploymentControlFactV2[];
-  exitRoutes: readonly Pick<V9ExitRouteFactV2, "routeKey" | "lane" | "status" | "scoreEligible" | "holderAccess">[];
+  exitRoutes: readonly Pick<
+    V9ExitRouteFactV2,
+    | "routeKey"
+    | "lane"
+    | "status"
+    | "scoreEligible"
+    | "holderAccess"
+    | "routeFamily"
+    | "coverageClass"
+    | "evidenceKind"
+    | "failureDomains"
+    | "output"
+  >[];
 }
 
 export interface EvaluateV9AccessPostureArgs {
@@ -95,12 +116,60 @@ function deriveFreezeExposure(
   return reviewedNone ? "none-known" : "unknown";
 }
 
-function derivePrimaryExit(routes: V9AccessPostureAssetFacts["exitRoutes"]): V9PrimaryExitPosture {
+/**
+ * A route the Exit pillar credits: score-eligible, or admitted through the
+ * shared creditable-non-atomic-redemption rule. Reading only `scoreEligible`
+ * here is what published "Primary exit: None" on assets whose Exit pillar was
+ * scoring a reviewed issuer, protocol, or eventual redemption.
+ */
+function isCreditedRoute(
+  route: V9AccessPostureAssetFacts["exitRoutes"][number],
+  policy: V9ValidatedPolicyEnvelope,
+): boolean {
+  if (route.scoreEligible) return true;
+  return isV9CreditableNonAtomicRedemption(
+    {
+      lane: route.lane,
+      routeFamily: route.routeFamily,
+      observationState: route.status.observationState,
+      outputResolved: isV9ExitRouteOutputResolved(route.output),
+      coverageClass: route.coverageClass,
+      evidenceKind: route.evidenceKind,
+      failureDomainCount: route.failureDomains.length,
+    },
+    policy,
+  );
+}
+
+/**
+ * `"none"` is a positive assertion that no exit exists, so it is reserved for
+ * the one fact shape that carries that evidence: a reviewed-complete exit
+ * surface with zero routes (the fact compiler's `emptySurfaceComplete` branch).
+ * A missing, stale, or unsupported surface is an absence of evidence and
+ * publishes `"undisclosed"` instead.
+ */
+function isReviewedEmptyExitSurface(
+  routes: V9AccessPostureAssetFacts["exitRoutes"],
+  exitStatus: V9FactStatusV2,
+): boolean {
+  return (
+    routes.length === 0 &&
+    exitStatus.applicability.state === "required" &&
+    exitStatus.observationState === "known"
+  );
+}
+
+function derivePrimaryExit(
+  routes: V9AccessPostureAssetFacts["exitRoutes"],
+  exitStatus: V9FactStatusV2,
+  policy: V9ValidatedPolicyEnvelope,
+): V9PrimaryExitPosture {
   const known: V9PrimaryExitPosture[] = [];
   let unresolved = false;
 
   for (const route of routes) {
-    if (!route.scoreEligible || route.status.applicability.state === "not-applicable") continue;
+    if (route.status.applicability.state === "not-applicable") continue;
+    if (!isCreditedRoute(route, policy)) continue;
     if (!isKnown(route.status) || route.holderAccess === "unknown") {
       unresolved = true;
       continue;
@@ -117,8 +186,14 @@ function derivePrimaryExit(routes: V9AccessPostureAssetFacts["exitRoutes"]): V9P
   if (known.includes("permissionless")) return "permissionless";
   if (known.includes("eligibility-gated")) return "eligibility-gated";
   if (known.includes("issuer-discretionary")) return "issuer-discretionary";
+  // Credited routes exist but their access facts are unresolved: "unknown"
+  // enters unknownFields and the row drops out of the UI entirely.
   if (unresolved) return "unknown";
-  return routes.some((route) => route.scoreEligible) ? "unknown" : "none";
+  // No credited route resolved a posture. That is a known negative only when
+  // the exit surface itself was reviewed complete and empty; otherwise the
+  // exit is undisclosed, which renders as an explicit gap rather than dropping
+  // out of the row set the way "unknown" does.
+  return isReviewedEmptyExitSurface(routes, exitStatus) ? "none" : "undisclosed";
 }
 
 type V9AuthorityRole = "issuance" | "governance" | "pause" | "upgrade";
@@ -215,7 +290,7 @@ export function evaluateV9AccessPosture(args: EvaluateV9AccessPostureArgs): V9Ac
   const transfer: V9TransferPosture =
     isKnown(args.transfer.status) && args.transfer.posture !== null ? args.transfer.posture : "unknown";
   const freezeExposure = deriveFreezeExposure(controls, args.freezeReviews);
-  const primaryExit = derivePrimaryExit(routes);
+  const primaryExit = derivePrimaryExit(routes, args.facts.exitStatus, args.policy);
   const governanceResult = deriveGovernance(args.facts.controlStatus, controls);
   const posture = {
     transfer,

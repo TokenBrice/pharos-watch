@@ -883,7 +883,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "28,58 * * * *" } as ScheduledEvent,
+      { cron: "24,54 * * * *" } as ScheduledEvent,
       env,
       ctx,
     );

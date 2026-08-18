@@ -567,6 +567,28 @@ describe("stablecoin detail hero view-model builder", () => {
     }
   });
 
+  it("separates an undisclosed attestor from a reviewed absence of one", () => {
+    const attestor = (attestorTier: string) =>
+      buildPassportHero({
+        coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier } },
+      }).passportItems.find((item) => item.key === "attestor");
+
+    // A reviewed negative keeps the alarm tone; it asserts a fact a curator established.
+    expect(attestor("none")).toMatchObject({
+      value: "None",
+      valueClass: "text-red-700 dark:text-red-400",
+      ariaLabel: "Reserve attestation: No attestation — jump to Proof of Reserves",
+    });
+
+    // An issuer that names no attestor, or an artefact we cannot retrieve, is
+    // an unanswered question — muted, and never rendered as "None".
+    expect(attestor("undisclosed")).toMatchObject({
+      value: "Not disclosed",
+      valueClass: "text-muted-foreground",
+      ariaLabel: "Reserve attestation: Not disclosed — jump to Proof of Reserves",
+    });
+  });
+
   it("points the Jurisdiction field at the Regulatory standing module once a regime is reviewed", () => {
     // `#jurisdiction` is owned by that module's below-xl fold (rail twin at
     // xl+), so the link only renders a target when a regime profile exists.

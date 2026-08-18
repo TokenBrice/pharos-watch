@@ -37,6 +37,10 @@ export function humanizeSafetyScoreV9Value(value: string): string {
     "eligibility-gated": "Eligibility gated",
     "issuer-discretionary": "Issuer discretionary",
     "single-entity": "Single entity",
+    // An undisclosed primary exit is an absence of evidence, not a reviewed
+    // absence of an exit. It keeps its row (only "unknown" drops out) and reads
+    // as a gap rather than as the "None" assertion it used to publish.
+    undisclosed: "Not disclosed",
   };
   const explicit = explicitLabels[value];
   if (explicit) return explicit;
