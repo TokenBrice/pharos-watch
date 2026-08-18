@@ -1109,6 +1109,28 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     }
   }
 
+  // A bounded bridge review keeps the rows it did review only when the supply it
+  // could not attribute is itself immaterial. An unavailable share fails closed:
+  // an unknown residual cannot license scoring the known part.
+  // A supply review that is itself a known fact and selected no bridge route at all
+  // has nothing unattributed to a bridge: that silence is a measured zero, not an
+  // unknown. Any other absent share stays unknown and keeps the discard.
+  const supplySelectedNoBridgeRoute =
+    args.facts.supply.status.observationState === "known" &&
+    args.facts.supply.selectedBridgeRoutes.length === 0;
+  const unattributedBridgeShare =
+    args.facts.supply.unknownRouteSupplyShare === null ||
+    args.facts.supply.unreviewedRouteSupplyShare === null
+      ? supplySelectedNoBridgeRoute
+        ? 0
+        : null
+      : Math.min(
+          1,
+          args.facts.supply.unknownRouteSupplyShare + args.facts.supply.unreviewedRouteSupplyShare,
+        );
+  const boundedBridgeGapIsImmaterial =
+    unattributedBridgeShare !== null && unattributedBridgeShare < materialShareThreshold;
+
   const bridge = args.bridge;
   if (bridge.status.applicability.state === "not-applicable") {
     components.push({
@@ -1122,13 +1144,20 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     });
   } else if (bridge.status.applicability.state === "unresolved") {
     addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
-  } else if (bridge.status.observationState !== "known") {
-    addReason(
-      bridge.status.observationState === "missing" ? "missing-bridge-routes" : "runtime-bridge-materiality-unavailable",
-      "deployment-control",
-      "bridge",
-    );
+  } else if (bridge.status.observationState === "missing") {
+    addReason("missing-bridge-routes", "deployment-control", "bridge");
+  } else if (bridge.status.observationState !== "known" && !boundedBridgeGapIsImmaterial) {
+    addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
   } else {
+    // A bounded section whose unattributed supply is immaterial keeps its reason
+    // (and its reason-coded ceiling) but does not discard the rows it did review.
+    // Each row below still fails closed on its own: a row that is not
+    // known-required leaves `selected-bridge-route-unresolved` and contributes no
+    // component, so an inventory whose rows are all unresolved still reaches the
+    // `bridge:unverified` fallback.
+    if (bridge.status.observationState !== "known") {
+      addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
+    }
     const completeSubthresholdUnresolvedJoins = hasCompleteSubthresholdUnresolvedBridgeJoins(
       args.facts,
       controls,
