@@ -207,18 +207,10 @@ describe("Safety Score v9 control bridge sections", () => {
     expect(result.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
   });
 
-  it("reads a known supply review that selected no bridge route as a measured zero", () => {
-    // The supply review is a known fact and found no bridge route to attribute
-    // supply to. That silence is a measured zero, so the reviewed rows still score.
+  it("fails closed when no supply partition produced bridge shares at all", () => {
+    // A null share means no supply partition exists for the asset, never that the
+    // partition ran and found no bridge route. It must not be read as a zero.
     const result = boundedReviewResult(null, { selectSupplyRow: false });
-
-    expect(result.components.map((component) => component.componentKey)).toContain(REVIEWED_COMPONENT_KEY);
-    expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
-    expect(result.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
-  });
-
-  it("fails closed when the supply review itself is not a known fact", () => {
-    const result = boundedReviewResult(null, { selectSupplyRow: false, supplyKnown: false });
 
     expect(result.components).toContainEqual(expect.objectContaining({ componentKey: "bridge:unverified" }));
     expect(result.components.map((component) => component.componentKey)).not.toContain(REVIEWED_COMPONENT_KEY);

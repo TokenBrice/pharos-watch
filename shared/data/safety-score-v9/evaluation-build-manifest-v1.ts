@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "5c208c66ea96b009751c4d563d5e6f904c1953a01fcef0dbac182d969c92d928"
+      "sha256": "23cb679c74b98b7e208c0606cebc1ce0541a22b507b52183415f2a46227ae7f7"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -66,7 +66,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "939f5bb3aa52f0c2baccd636cdab33efe27a6356aa72fbdbe363cd181772b125"
+      "sha256": "9f19afc0fb9ae183de5b92a020a80472f6bdd3c11a67f834d9678461fef69aa8"
     },
     {
       "path": "shared/lib/methodology-versions/liquidity-score.ts",
@@ -238,7 +238,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/control.ts",
-      "sha256": "f58351f272b21e2cbb1b8bd268ac8a730a1ffee32398fa4d7b78b8d61987912a"
+      "sha256": "eb821d389d70506191c64ee8f3a1f5d61a8359c46f0032718efbfd7c5f28ae51"
     },
     {
       "path": "shared/lib/safety-score-v9/dependencies.ts",
@@ -430,7 +430,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-bridge.ts",
-      "sha256": "b10e18599fa069ef01d429d59e85cddb443d7dc524797b6757b061b1834609ed"
+      "sha256": "f9a990e8b1bd269e00d0a8dba60d6b8c5d8c8cb039136cc61ce8b8ffbe0a3481"
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-mechanism.ts",
@@ -470,7 +470,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension.ts",
-      "sha256": "24e5489010a3437e445f64349334cf15eceb4257c09cf4a0eeaf0b5defacbde3"
+      "sha256": "d959f49c971a37581595a4a5d491236701277150b0feaa2800d32a4d29de6625"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-backing.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "c055d53637d1f3e5b204465289a305c7c31bc9e7f18f620acb301ae2c82419ea"
+  "digest": "72d2830d24e9c13a87dde1cc680f7745625dd2228c967a9ebf90978e57cbde6f"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

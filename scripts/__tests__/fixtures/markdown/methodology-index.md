@@ -55,6 +55,8 @@ Since methodology v9.1 it is graded once, by the Safety Score V9 Economic Contro
 
 Representations and cross-chain machinery are assessed separately by Bridge Risk at deployment scope. A shared controller may appear in both domains for distinct powers, but a bridge capability never becomes global Mint Authority risk. Missing or unresolved review data returns NR and never implies safety.
 
+Since methodology 9.24 a reviewed absence is scored as the fact it is rather than as missing evidence. An inventory whose every reviewed route is native issuance is not bridge-exposed, even where structured controls govern those canonical deployments; a reviewed representation route keeps Bridge Risk applicable regardless. A bridge review with an incomplete materiality picture keeps the routes it did review when the supply it could not attribute is immaterial, and still fails closed when that residual is material or unmeasured. A reviewed no-local-issuance exception scores the mint component as none-resolved only when the displaced risk is carried elsewhere: an inherited claim must compile a serial-claim edge to its parent, and an external-only representation must carry a reviewed route inventory covering every authored deployment. Absence is never inferred, and any authored control keeps the mint review in force.
+
 
 ## Infrastructure Tagging
 

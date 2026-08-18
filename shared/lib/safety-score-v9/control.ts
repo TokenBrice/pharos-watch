@@ -1112,18 +1112,17 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   // A bounded bridge review keeps the rows it did review only when the supply it
   // could not attribute is itself immaterial. An unavailable share fails closed:
   // an unknown residual cannot license scoring the known part.
-  // A supply review that is itself a known fact and selected no bridge route at all
-  // has nothing unattributed to a bridge: that silence is a measured zero, not an
-  // unknown. Any other absent share stays unknown and keeps the discard.
-  const supplySelectedNoBridgeRoute =
-    args.facts.supply.status.observationState === "known" &&
-    args.facts.supply.selectedBridgeRoutes.length === 0;
+  // An absent share is never read as a measured zero. A null share means no supply
+  // partition was produced for this asset at all, not that the partition ran and
+  // found no bridge route: on the 2026-08-18 catalogue every one of the 225
+  // partitioned assets returned at least one bridge route row, and all 112 assets
+  // with an empty partition had null shares. "Partitioned but empty" is not a
+  // reachable state, so treating null as zero would only ever license scoring an
+  // inventory whose residual was never measured.
   const unattributedBridgeShare =
     args.facts.supply.unknownRouteSupplyShare === null ||
     args.facts.supply.unreviewedRouteSupplyShare === null
-      ? supplySelectedNoBridgeRoute
-        ? 0
-        : null
+      ? null
       : Math.min(
           1,
           args.facts.supply.unknownRouteSupplyShare + args.facts.supply.unreviewedRouteSupplyShare,
