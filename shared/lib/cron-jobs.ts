@@ -66,8 +66,9 @@ const CRON_SCHEDULE_DEFINITIONS = {
   dewsPsiOffset: { schedule: "26,56 * * * *", ...CRON_SCHEDULE_CADENCES.dewsPsiOffset },
   fourHourlyReserveSync: { schedule: "11 */4 * * *", ...CRON_SCHEDULE_CADENCES.fourHourlyReserveSync },
   // Runs after both Safety Score V9 publication slots (:22/:52) so Yield
-  // snapshots start from the newest complete report-card identity.
-  hourlyYieldSync: { schedule: "28,58 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
+  // snapshots start from the newest complete report-card identity while still
+  // leaving a buffer before the heavy :00/:30 lanes.
+  hourlyYieldSync: { schedule: "24,54 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
   fourHourlyYieldSupplemental: {
     schedule: "25 */4 * * *",
     ...CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental,

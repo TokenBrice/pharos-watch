@@ -61,7 +61,7 @@ describe("status cron config", () => {
     expect(getStatusCronDisplay("sync-yield-data")).toEqual({
       group: "half-hourly",
       label: "Yield sync",
-      schedule: "28,58 * * * *",
+      schedule: "24,54 * * * *",
       triggerMode: "isolated",
     });
     expect(getStatusCronDisplay("sync-yield-supplemental")).toEqual({
