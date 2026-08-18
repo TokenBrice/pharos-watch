@@ -48,7 +48,7 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   depegEvents: 900,
   stressSignals: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
   reportCards: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
-  // `compute-depeg-resolver` interval (quarter-hourly lane).
+  // `compute-depeg-resolver` interval (fenced +8 D1-only follow-up lane).
   depegResolver: 900,
   depegResolverReview: 900,
   redemptionBackstops: CRON_INTERVALS["sync-redemption-backstops"] * 2,

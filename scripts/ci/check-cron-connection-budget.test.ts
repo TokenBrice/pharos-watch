@@ -18,12 +18,28 @@ describe("check-cron-connection-budget", () => {
           "sync-stablecoins",
           "snapshot-supply",
           "snapshot-chain-supply",
-          "compute-depeg-resolver",
         ],
         peak: 4,
       },
     ]);
     expect(quarterHourly?.totalConnections).toBe(4);
+    expect(report.failed).toBe(false);
+  });
+
+  it("models DDR as a serial D1-only follow-up in the V9 supply lane", () => {
+    const report = evaluateCronConnectionBudget();
+    const v9Supply = report.triggerReports.find((trigger) => trigger.scheduleKey === "v9SupplyAttributionOffset");
+    const ddr = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "compute-depeg-resolver");
+
+    expect(ddr?.maxConnections).toBe(0);
+    expect(v9Supply?.chains).toEqual([
+      {
+        chainKey: "chain-1",
+        jobs: ["sync-v9-supply-attribution", "compute-depeg-resolver"],
+        peak: 3,
+      },
+    ]);
+    expect(v9Supply?.totalConnections).toBe(3);
     expect(report.failed).toBe(false);
   });
 

@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.22`
+- **Current methodology version:** `v9.23`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus the versioned score-bearing gate projection in `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -66,7 +66,7 @@ The prepare cron owns:
 - `report-cards:v9-peg-provenance-seed:exact`
 - publishing the peg-analytics aggregate cache, now an explicit producer step rather than a side effect of building V8 cards. Content and cadence are unchanged: one publish per capture, at the half-hourly chart slot.
 
-V9-only enrichment is loaded directly by the canonical compiler. Supply attribution runs on its dedicated fenced schedule and is admitted only when its identity matches the fixed scoring generation. The producer due interval is shorter than the compiler's freshness window so the existing 15-minute trigger grid lands healthy captures roughly every 30 minutes. Compilation normally follows an `ok` same-version core slot. A degraded core slot can proceed only when the durable publication ledger proves a same-slot, same-Worker `stablecoins` cache generation, and the compiler rejects a fixed input whose stablecoin timestamp no longer matches the live cache. Stale, future, registry, and inventory mismatches are reported with clause-specific reason codes.
+V9-only enrichment is loaded directly by the canonical compiler. Supply attribution runs on its dedicated fenced schedule and is admitted only when its identity matches the fixed scoring generation. The producer due interval is shorter than the compiler's freshness window so the existing 15-minute trigger grid lands healthy captures roughly every 30 minutes. Compilation normally follows an `ok` same-version core slot, but durable same-slot, same-Worker `stablecoins` publication evidence is sufficient when the parent slot row is degraded or otherwise not terminal. The compiler still rejects a fixed input whose stablecoin timestamp no longer matches the live cache. Stale, future, registry, and inventory mismatches are reported with clause-specific reason codes.
 
 Canonical accepted state is stored in:
 

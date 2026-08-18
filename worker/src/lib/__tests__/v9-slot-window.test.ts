@@ -31,9 +31,7 @@ function dbWithCoreSlot(
   stablecoinsPublication: { published_at: number } | null = null,
 ) {
   const first = vi.fn().mockResolvedValueOnce(row);
-  if (row?.result_status === "degraded") {
-    first.mockResolvedValueOnce(stablecoinsPublication);
-  }
+  first.mockResolvedValueOnce(stablecoinsPublication);
   first.mockResolvedValue(null);
   const bind = vi.fn(() => ({ first }));
   const prepare = vi.fn((_sql?: string) => ({ bind }));
@@ -254,6 +252,37 @@ describe("runV9AfterCoreWithinWindow", () => {
     );
   });
 
+  it("admits V9 from publication evidence when the parent core slot is not terminal", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot(
+      {
+        state: "running",
+        result_status: null,
+        worker_version: "worker-v2",
+      },
+      {
+        published_at: Math.floor(
+          Date.parse("2026-07-26T12:15:30Z") / 1_000,
+        ),
+      },
+    );
+    const run = vi.fn(async () => ({
+      status: "ok" as const,
+      itemCount: 337,
+    }));
+
+    const result = await runV9AfterCoreWithinWindow(
+      options(fixture.db, scheduledTimeMs),
+      run,
+    );
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(337);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
   it("skips V9 after a degraded core slot without a matching stablecoin publication", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
     vi.useFakeTimers();
@@ -328,8 +357,8 @@ describe("runV9AfterCoreWithinWindow", () => {
 
     expect(result.status).toBe("ok");
     expect(run).toHaveBeenCalledTimes(1);
-    expect(fixture.prepare).toHaveBeenCalledTimes(2);
-    expect(fixture.prepare.mock.calls[1]?.[0]).toContain(
+    expect(fixture.prepare).toHaveBeenCalledTimes(3);
+    expect(fixture.prepare.mock.calls[2]?.[0]).toContain(
       "WHERE slot_key = ?",
     );
     expect(fixture.bind).toHaveBeenLastCalledWith(
@@ -361,6 +390,7 @@ describe("runV9AfterCoreWithinWindow", () => {
         result_status: "ok",
         worker_version: "worker-v2",
       })
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({
         slot_key: "v9PublicationOffset",
         slot_started_at: Math.floor(
