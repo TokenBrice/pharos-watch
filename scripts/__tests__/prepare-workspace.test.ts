@@ -15,6 +15,7 @@ describe("prepare-workspace", () => {
   it("runs bootstrap and hook setup for local installs", () => {
     expect(commandTexts(buildPrepareWorkspaceCommands(testEnv()))).toEqual([
       "npm run bootstrap:generated",
+      "npm run bootstrap:generated:history",
       "git config core.hooksPath .githooks",
     ]);
   });
@@ -33,6 +34,7 @@ describe("prepare-workspace", () => {
   it("allows local callers to skip git hook setup", () => {
     expect(commandTexts(buildPrepareWorkspaceCommands(testEnv({ PHAROS_PREPARE_SKIP_GIT_HOOKS: "1" })))).toEqual([
       "npm run bootstrap:generated",
+      "npm run bootstrap:generated:history",
     ]);
   });
 

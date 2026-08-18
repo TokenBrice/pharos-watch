@@ -1,4 +1,4 @@
-import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./commit-derived-artifacts.mts";
+import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./sitemap-source-paths.mts";
 
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
@@ -99,6 +99,8 @@ export const DEPLOY_IMPACT_REGISTRY = {
 function generatedArtifact(definition) {
   return {
     ...definition,
+    autoStage: definition.autoStage ?? false,
+    checkable: definition.checkable ?? true,
     inputState: definition.inputState ?? "working-tree",
     sourcePaths: uniqueSorted([definition.script, ...(definition.sourcePaths ?? [])]),
     outputPaths: uniqueSorted(definition.outputPaths ?? []),
@@ -119,6 +121,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "agents-doc",
+    autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/generate-agents-doc.ts --check",
     command: "node --import tsx scripts/maintenance/generate-agents-doc.ts",
     bootstrap: true,
@@ -132,7 +135,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "sitemap-dates",
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
-    inputState: "committed-history",
+    checkable: false,
+    inputState: "build-time",
     outputPaths: ["src/generated/sitemap-dates.json", "src/generated/sitemap-dates.json.d.ts"],
     phase: 0,
     reproducibility: "git-history-derived",
@@ -154,7 +158,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "docs-metadata",
     checkCommand: "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     command: "tsx scripts/maintenance/generate-docs-metadata.ts",
-    inputState: "committed-history",
+    checkable: false,
+    inputState: "build-time",
     outputPaths: ["src/generated/docs-metadata.json", "src/generated/docs-metadata.json.d.ts"],
     phase: 0,
     reproducibility: "git-history-derived",
@@ -163,6 +168,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "depeg-event-search-data",
+    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
     command: "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
     bootstrap: true,
@@ -225,6 +231,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "safety-score-v9-shock-coverage-registry",
+    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",
     bootstrap: true,
@@ -239,6 +246,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "safety-score-v9-evaluation-build",
+    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
     bootstrap: true,
@@ -303,6 +311,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "cemetery-dataset",
+    autoStage: true,
     checkCommand: "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
     command: "tsx scripts/maintenance/generate-cemetery-dataset.ts",
     dependsOn: ["report-card-registry-fingerprint"],
@@ -416,7 +425,30 @@ function assertKnownGeneratedArtifactPhases(phases, registry = GENERATED_ARTIFAC
  *   skip?: string[],
  * }} [options]
  */
-export function selectGeneratedArtifacts({ bootstrap = false, only = [], phases = [], skip = [] } = {}) {
+/**
+ * Split selected artifact ids into those the pre-commit hook may regenerate and
+ * stage on its own, and those a human must handle. Network-derived artifacts,
+ * browser-rendered OG images, and gitignored outputs are never auto-staged: a
+ * commit hook must not make network calls, take minutes, or stage nothing.
+ *
+ * @param {readonly string[]} ids
+ * @returns {{ autoStage: string[], manual: string[] }}
+ */
+export function selectAutoStageArtifactIds(ids) {
+  assertKnownGeneratedArtifactIds([...ids]);
+  const selected = new Set(ids);
+  const autoStage = [];
+  const manual = [];
+
+  for (const artifact of GENERATED_ARTIFACT_REGISTRY) {
+    if (!selected.has(artifact.id)) continue;
+    (artifact.autoStage === true ? autoStage : manual).push(artifact.id);
+  }
+
+  return { autoStage, manual };
+}
+
+export function selectGeneratedArtifacts({ bootstrap = false, check = false, only = [], phases = [], skip = [] } = {}) {
   assertKnownGeneratedArtifactIds([...only, ...skip]);
   assertKnownGeneratedArtifactPhases(phases);
 
@@ -427,9 +459,18 @@ export function selectGeneratedArtifacts({ bootstrap = false, only = [], phases 
   const selectedIds = new Set();
   const usesExplicitIdSelection = onlyIds.size > 0;
 
+  // `checkable: false` artifacts are gitignored build-time projections. They
+  // are regenerated moments before any check would run, so verifying them
+  // compares a file against itself; exclude them from check selection outright,
+  // including when another artifact reaches them through dependsOn.
+  function isCheckEligible(artifact) {
+    return !check || artifact.checkable !== false;
+  }
+
   function isEligibleBaseArtifact(artifact) {
     return (
       !skipIds.has(artifact.id) &&
+      isCheckEligible(artifact) &&
       (!bootstrap || artifact.bootstrap === true) &&
       (!usesExplicitIdSelection || onlyIds.has(artifact.id)) &&
       (phaseSet.size === 0 || phaseSet.has(artifact.phase))
@@ -439,7 +480,7 @@ export function selectGeneratedArtifacts({ bootstrap = false, only = [], phases 
   function includeWithDependencies(id) {
     if (skipIds.has(id) || selectedIds.has(id)) return;
     const artifact = artifactById.get(id);
-    if (!artifact || (bootstrap && artifact.bootstrap !== true)) return;
+    if (!artifact || (bootstrap && artifact.bootstrap !== true) || !isCheckEligible(artifact)) return;
 
     for (const dependency of artifact.dependsOn ?? []) {
       includeWithDependencies(dependency);
@@ -471,7 +512,7 @@ export function buildGeneratedArtifactPhases({
 } = {}) {
   const phaseGroups = new Map();
 
-  for (const artifact of selectGeneratedArtifacts({ bootstrap, only, phases: phaseFilters, skip })) {
+  for (const artifact of selectGeneratedArtifacts({ bootstrap, check, only, phases: phaseFilters, skip })) {
     const command = check && artifact.checkCommand ? artifact.checkCommand : artifact.command;
     const phaseArtifacts = phaseGroups.get(artifact.phase) ?? [];
     phaseArtifacts.push({ ...artifact, command });

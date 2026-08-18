@@ -44,6 +44,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
         with:
+          bootstrap-history: "true"
           tooling-cache: "true"
           tooling-cache-save: "true"
           install-playwright-firefox: "true"
@@ -69,6 +70,8 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
+        with:
+          bootstrap-history: "true"
       - name: Run critical contracts and tests affected by the PR
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -87,6 +90,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
         with:
+          bootstrap-history: "true"
           tooling-cache: "true"
       - name: Enforce touched critical-file coverage ratchet
         env:

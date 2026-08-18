@@ -3,15 +3,15 @@
 Triggered by:
 - Planned use of `worker/scripts/yield-history-cleanup.ts`
 - `sync-yield-data` returning a degraded no-op while `cache['yield-history-cleanup:writer-pause']` is armed
-- `/admin/` showing repeated degraded hourly yield runs during a cleanup window
+- `/admin/` showing repeated degraded post-V9 yield runs during a cleanup window
 
 ## Symptom
 
-The hourly yield publisher sees the writer pause guard and exits without purging or rewriting yield history. This is expected during a bounded yield-history cleanup window and unexpected if the key remains after the cleanup is complete.
+The post-V9 yield publisher sees the writer pause guard and exits without purging or rewriting yield history. This is expected during a bounded yield-history cleanup window and unexpected if the key remains after the cleanup is complete.
 
 ## Impact
 
-While the pause is armed, `yield_data`, `yield_history`, and the `yield-rankings` cache do not advance through the hourly writer. Public rankings continue from the last published cache, but freshness degrades if the pause spans multiple hourly cycles.
+While the pause is armed, `yield_data`, `yield_history`, and the `yield-rankings` cache do not advance through the post-V9 writer. Public rankings continue from the last published cache, but freshness degrades if the pause spans multiple post-V9 cycles.
 
 ## First Checks
 
@@ -51,9 +51,9 @@ LIMIT 20;
 
 ## Remediation
 
-- For a planned cleanup, follow the deployment-process sequence: deploy protections, arm writer pause, verify no active `sync-yield-data` lease, export targeted rows, rehearse delete and restore locally, run bounded production cleanup, then validate after the next hourly writer cycle.
+- For a planned cleanup, follow the deployment-process sequence: deploy protections, arm writer pause, verify no active `sync-yield-data` lease, export targeted rows, rehearse delete and restore locally, run bounded production cleanup, then validate after the next post-V9 writer cycle.
 - Use `worker/scripts/yield-history-cleanup.ts` controls rather than ad hoc SQL. The script owns the `--arm-writer-pause`, `--clear-writer-pause`, `--execute`, `--confirm yield-history-cleanup`, and guarded restore paths.
-- If the pause key is stale and no cleanup operator owns it, clear it with the script's `--clear-writer-pause` path, then let the next hourly `sync-yield-data` cycle publish.
+- If the pause key is stale and no cleanup operator owns it, clear it with the script's `--clear-writer-pause` path, then let the next post-V9 `sync-yield-data` cycle publish.
 - If cleanup failed after deleting rows, use the exported artifact and the script's guarded restore path. Remote restore requires `--execute --confirm yield-history-cleanup` and an armed writer pause.
 
 ## Abort Conditions
@@ -67,7 +67,7 @@ LIMIT 20;
 
 - `cache['yield-history-cleanup:writer-pause']` is absent after cleanup.
 - `sync-yield-data` has a fresh post-cleanup run and is no longer returning writer-pause no-ops.
-- Targeted parent/source rows remain absent after the next hourly writer cycle.
+- Targeted parent/source rows remain absent after the next post-V9 writer cycle.
 - `GET /api/yield-rankings` returns a fresh non-empty payload.
 - `GET /api/yield-history?stablecoin=<wrapper-id>&days=365` returns expected wrapper-owned history without resurrecting parent-owned rows.
 

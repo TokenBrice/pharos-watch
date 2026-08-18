@@ -71,7 +71,7 @@ describe("cron staleness watchdog", () => {
 
   it("flags watched freshness lanes beyond twice their producer interval", () => {
     expect(evaluateCronStaleness({
-      stablecoins: { ageSeconds: 1_801 }, "fx-rates": { ageSeconds: 1_799 }, "dex-liquidity": { ageSeconds: 14_401 }, "yield-data": { ageSeconds: 7_200 }, dews: { ageSeconds: 1_000 },
+      stablecoins: { ageSeconds: 1_801 }, "fx-rates": { ageSeconds: 1_799 }, "dex-liquidity": { ageSeconds: 14_401 }, "yield-data": { ageSeconds: 3_600 }, dews: { ageSeconds: 1_000 },
     }).map((entry) => entry.cacheKey)).toEqual(["stablecoins", "dex-liquidity"]);
   });
 

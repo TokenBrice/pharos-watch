@@ -320,8 +320,8 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
-          // 3600s = 1x the hourly budget: one missed publish stays healthy.
-          sentinelRow("yield-data", now - 3_600),
+          // 1800s = 1x the half-hourly budget: one missed publish stays healthy.
+          sentinelRow("yield-data", now - 1_800),
           sentinelRow("dews", now - 240),
         ],
       },
@@ -330,11 +330,11 @@ describe("buildCacheStatuses sentinel validation", () => {
 
     const { caches, statusFloor } = await buildCacheStatuses(db, now);
 
-    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 3_600, healthy: true });
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 1_800, healthy: true });
     expect(statusFloor).toBe("healthy");
   });
 
-  it("degrades yield-data past 2x its hourly budget while other caches stay fresh", async () => {
+  it("degrades yield-data past 2x its half-hourly budget while other caches stay fresh", async () => {
     const now = 1_800_000_000;
     const db = mockD1([
       {
@@ -346,8 +346,8 @@ describe("buildCacheStatuses sentinel validation", () => {
           cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
-          // ~2.06x the hourly budget: two missed publishes -> public-unhealthy.
-          sentinelRow("yield-data", now - 7_400),
+          // ~2.06x the half-hourly budget: two missed publishes -> public-unhealthy.
+          sentinelRow("yield-data", now - 3_700),
           sentinelRow("dews", now - 240),
         ],
       },
@@ -356,7 +356,7 @@ describe("buildCacheStatuses sentinel validation", () => {
 
     const { caches, statusFloor } = await buildCacheStatuses(db, now);
 
-    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 7_400, healthy: false });
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 3_700, healthy: false });
     expect(statusFloor).toBe("degraded");
   });
 

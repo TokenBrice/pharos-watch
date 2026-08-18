@@ -111,10 +111,10 @@ export const STATUS_CACHE_RATIO_THRESHOLDS = {
  * Tightens the default 8×/12× tolerance for caches whose slow stale window would
  * otherwise under-report real user impact on the public status surface.
  *
- * `yield-data`: hourly producer (`sync-yield-data`, 3600s availability budget).
- * Under the global bands a lane can serve ~8h-stale rankings while public health
+ * `yield-data`: post-V9 producer (`sync-yield-data`, 1800s availability budget).
+ * Under the global bands a lane can serve multi-hour-stale rankings while public health
  * still reads "healthy", even though the admin endpoint-budget lane already flags
- * it at 1×. Ruling R3 (2026-07-19) tightens it to degrade after two missed hourly
+ * it at 1×. Ruling R3 (2026-07-19) tightens it to degrade after two missed post-V9
  * publishes (2×) and go stale after four (4×); one missed publish stays healthy.
  * See docs/architecture.md ADR-9 and docs/status-dashboard.md.
  */

@@ -4,12 +4,9 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
+import { assertFullGitHistory } from "../lib/git-history.mts";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
-import {
-  enforceCommittedArtifactSources,
-  SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
-} from "../lib/commit-derived-artifacts.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
@@ -21,14 +18,7 @@ const OUTPUT = join(__dirname, "../../src/generated/sitemap-dates.json");
 const OUTPUT_TYPES = join(__dirname, "../../src/generated/sitemap-dates.json.d.ts");
 const CHECK_MODE = process.argv.includes("--check");
 
-enforceCommittedArtifactSources({
-  artifactId: "sitemap-dates",
-  check: CHECK_MODE,
-  command: "npx tsx scripts/maintenance/generate-sitemap-dates.ts",
-  cwd: REPO_ROOT,
-  outputPaths: ["src/generated/sitemap-dates.json", "src/generated/sitemap-dates.json.d.ts"],
-  sourcePaths: SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
-});
+assertFullGitHistory("sitemap-dates");
 const STABLECOIN_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/stablecoin/[id]/page.tsx"),
   join(__dirname, "../../src/components/stablecoin-detail/static-seo-content.tsx"),
@@ -66,41 +56,44 @@ interface GitDateIndex {
   changedPaths: { path: string; date: string }[];
 }
 
-let gitDateIndex: GitDateIndex | null | undefined;
+let gitDateIndex: GitDateIndex | undefined;
 
 function toGitPath(path: string): string {
   return relative(REPO_ROOT, path).replaceAll("\\", "/");
 }
 
-function loadGitDateIndex(): GitDateIndex | null {
-  try {
-    const output = execFileSync(
-      "git",
-      ["log", `--format=${GIT_LOG_MARKER}%aI`, "--name-only", "--", ...GIT_DATE_SCAN_PATHS],
-      { cwd: REPO_ROOT, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
-    );
-    const fileDates = new Map<string, string>();
-    const changedPaths: GitDateIndex["changedPaths"] = [];
-    let currentDate: string | null = null;
+function loadGitDateIndex(): GitDateIndex {
+  const output = execFileSync(
+    "git",
+    ["log", `--format=${GIT_LOG_MARKER}%aI`, "--name-only", "--", ...GIT_DATE_SCAN_PATHS],
+    { cwd: REPO_ROOT, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
+  );
+  const fileDates = new Map<string, string>();
+  const changedPaths: GitDateIndex["changedPaths"] = [];
+  let currentDate: string | null = null;
 
-    for (const line of output.split(/\r?\n/)) {
-      if (line.startsWith(GIT_LOG_MARKER)) {
-        currentDate = line.slice(GIT_LOG_MARKER.length);
-        continue;
-      }
-      if (!line || currentDate == null) continue;
-      const changedPath = line.replaceAll("\\", "/");
-      if (!fileDates.has(changedPath)) fileDates.set(changedPath, currentDate);
-      changedPaths.push({ path: changedPath, date: currentDate });
+  for (const line of output.split(/\r?\n/)) {
+    if (line.startsWith(GIT_LOG_MARKER)) {
+      currentDate = line.slice(GIT_LOG_MARKER.length);
+      continue;
     }
-
-    return { fileDates, changedPaths };
-  } catch {
-    return null;
+    if (!line || currentDate == null) continue;
+    const changedPath = line.replaceAll("\\", "/");
+    if (!fileDates.has(changedPath)) fileDates.set(changedPath, currentDate);
+    changedPaths.push({ path: changedPath, date: currentDate });
   }
+
+  if (fileDates.size === 0) {
+    throw new Error(
+      "[sitemap-dates] git log returned no history for the sitemap scan paths. " +
+        "Refusing to fall back to filesystem timestamps, which would stamp every route as modified today.",
+    );
+  }
+
+  return { fileDates, changedPaths };
 }
 
-function getGitDateIndex(): GitDateIndex | null {
+function getGitDateIndex(): GitDateIndex {
   if (gitDateIndex === undefined) {
     gitDateIndex = loadGitDateIndex();
   }
@@ -115,11 +108,11 @@ function findDirectoryLastModified(index: GitDateIndex, gitPath: string): string
 function getLastModified(pagePath: string): string {
   const index = getGitDateIndex();
   const gitPath = toGitPath(pagePath);
-  const fileDate = index?.fileDates.get(gitPath);
+  const fileDate = index.fileDates.get(gitPath);
   if (fileDate) return fileDate;
 
   const pageStat = statSync(pagePath);
-  if (index && pageStat.isDirectory()) {
+  if (pageStat.isDirectory()) {
     const directoryDate = findDirectoryLastModified(index, gitPath);
     if (directoryDate) return directoryDate;
   }

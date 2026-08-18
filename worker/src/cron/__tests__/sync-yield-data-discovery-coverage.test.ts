@@ -30,7 +30,7 @@ import {
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
   afterEach(cleanupSyncYieldDataTest);
-  it("uses cached supplemental sources on the hourly publication path", async () => {
+  it("uses cached supplemental sources on the post-V9 publication path", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -794,7 +794,7 @@ describe("syncYieldData", () => {
       },
     ];
 
-    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
       kind: "ok",
       mode: "map",
       coveredCount: 5,
@@ -913,7 +913,7 @@ describe("syncYieldData", () => {
       explorerUrl: "https://etherscan.io",
     });
 
-    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
       kind: "ok",
       mode: "map",
       coveredCount: 4,

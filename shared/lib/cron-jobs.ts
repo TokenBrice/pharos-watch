@@ -65,7 +65,9 @@ const CRON_SCHEDULE_DEFINITIONS = {
   },
   dewsPsiOffset: { schedule: "26,56 * * * *", ...CRON_SCHEDULE_CADENCES.dewsPsiOffset },
   fourHourlyReserveSync: { schedule: "11 */4 * * *", ...CRON_SCHEDULE_CADENCES.fourHourlyReserveSync },
-  hourlyYieldSync: { schedule: "20 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
+  // Runs after both Safety Score V9 publication slots (:22/:52) so Yield
+  // snapshots start from the newest complete report-card identity.
+  hourlyYieldSync: { schedule: "28,58 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
   fourHourlyYieldSupplemental: {
     schedule: "25 */4 * * *",
     ...CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental,
@@ -199,13 +201,13 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     title: "30-minute slot",
     badge: "~30 min",
     description:
-      "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication, plus isolated mint/burn critical and extended triggers.",
+      "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication, post-V9 yield, plus isolated mint/burn critical and extended triggers.",
   },
   {
     key: "hourly",
     title: "Hourly slot",
     badge: "~1h",
-    description: "Dedicated core yield publication lane after DEX scoring has refreshed its inputs.",
+    description: "Hourly source-stage lanes that feed slower scoring and publication consumers.",
   },
   {
     key: "multi-hourly",
@@ -443,7 +445,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "sync-yield-data",
     label: "Yield sync",
-    group: "hourly",
+    group: "half-hourly",
     scheduleKey: "hourlyYieldSync",
     triggerMode: "isolated",
     maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity-stage (sequential)

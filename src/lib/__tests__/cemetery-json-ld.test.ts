@@ -46,7 +46,7 @@ describe("buildCemeteryDatasetJsonLd", () => {
         expect.objectContaining({ name: "sourceDataFile", value: "shared/data/dead-stablecoins.json" }),
         expect.objectContaining({
           name: "sourceDataFile",
-          value: "shared/data/stablecoins/coins.generated.json",
+          value: "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
         }),
       ]),
     );
@@ -56,7 +56,7 @@ describe("buildCemeteryDatasetJsonLd", () => {
         expect.objectContaining({ propertyID: "sourceChecksum" }),
         expect.objectContaining({ propertyID: "sourceChecksum:shared/data/dead-stablecoins.json" }),
         expect.objectContaining({
-          propertyID: "sourceChecksum:shared/data/stablecoins/coins.generated.json",
+          propertyID: "sourceChecksum:shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
         }),
       ]),
     );

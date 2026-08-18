@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Regenerate and stage the committed generated artifacts this commit's staged
+# sources affect, so derived output lands in the source commit instead of a
+# trailing chore commit. See docs/testing.md and scripts/lib/automation-registry.mjs.
+
+if [[ "${PHAROS_SKIP_ARTIFACT_HOOK:-}" == "1" ]]; then
+  echo "[pre-commit] PHAROS_SKIP_ARTIFACT_HOOK=1; skipping generated-artifact sync." >&2
+  exit 0
+fi
+
+git_dir="$(git rev-parse --git-dir)"
+for state in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD rebase-merge rebase-apply; do
+  if [[ -e "${git_dir}/${state}" ]]; then
+    echo "[pre-commit] in-progress ${state}; skipping generated-artifact sync." >&2
+    exit 0
+  fi
+done
+
+if git diff --cached --quiet; then
+  exit 0
+fi
+
+npm run --silent sync:staged-artifacts

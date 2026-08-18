@@ -42,6 +42,14 @@ export function buildPrepareWorkspaceCommands(env: PrepareWorkspaceEnv = process
     commands.push(["npm", ["run", "bootstrap:generated"]]);
   }
 
+  if (!ci) {
+    // Local clones always carry full history. CI opts in per job through the
+    // setup-workspace `bootstrap-history` input so deliberately shallow jobs
+    // stay shallow rather than tripping the generators' full-history guard --
+    // including a CI caller that forces the ordinary bootstrap.
+    commands.push(["npm", ["run", "bootstrap:generated:history"]]);
+  }
+
   if (!ci && !skipHooks) {
     commands.push(["git", ["config", "core.hooksPath", ".githooks"]]);
   }

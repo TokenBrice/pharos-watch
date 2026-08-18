@@ -39,6 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          # sitemap-dates and docs-metadata derive per-route and per-doc
+          # timestamps from commit history during prebuild. A shallow checkout
+          # makes their guard fail rather than publish wrong lastmod values.
+          fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
@@ -91,7 +95,7 @@ jobs:
           echo "- Public-dataset refresh: ${public_datasets_refresh_ok}" >> "$GITHUB_STEP_SUMMARY"
       - name: Build clean production export
         env:
-          GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,report-card-registry-fingerprint,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
+          GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,case-study-client-index,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,report-card-registry-fingerprint,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
           PUBLIC_DATASETS_REQUIRE_API: ""

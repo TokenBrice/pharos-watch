@@ -125,4 +125,17 @@ describe("cron job schedule metadata", () => {
       ).map((definition) => definition.job),
     ).not.toContain("sync-v9-supply-attribution");
   });
+
+  it("runs yield after each dedicated V9 publication slot", () => {
+    const minutesOf = (schedule: string): number[] =>
+      schedule.split(" ")[0]!.split(",").map(Number);
+
+    expect(CRON_SCHEDULES.v9PublicationOffset).toBe("22,52 * * * *");
+    expect(CRON_SCHEDULES.hourlyYieldSync).toBe("28,58 * * * *");
+
+    const yieldMinutes = minutesOf(CRON_SCHEDULES.hourlyYieldSync);
+    const v9Minutes = minutesOf(CRON_SCHEDULES.v9PublicationOffset);
+
+    expect(yieldMinutes).toEqual(v9Minutes.map((minute) => minute + 6));
+  });
 });

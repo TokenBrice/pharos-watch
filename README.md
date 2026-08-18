@@ -91,7 +91,6 @@ Useful checks:
 npm run lint
 npm run typecheck
 npm run test
-npm run check:commit-derived-artifacts
 npm run check:pr -- --base=origin/main
 ```
 

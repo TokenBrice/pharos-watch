@@ -147,8 +147,8 @@ describe("data surface descriptors", () => {
       queryKey: ["yield-rankings"],
       summaryPath: "/api/yield-rankings?projection=summary",
       summaryQueryKey: ["yield-rankings", "summary"],
-      producerIntervalSec: 3600,
-      endpointMaxAgeSec: 3600,
+      producerIntervalSec: 1800,
+      endpointMaxAgeSec: 1800,
       producerJob: "sync-yield-data",
       cacheKey: "yield-data",
       criticality: "critical",
@@ -223,8 +223,8 @@ describe("data surface descriptors", () => {
       cacheKey: surface.cacheKey,
       criticality: surface.dependencyCriticality,
     }).toEqual({
-      producerIntervalSec: 3600,
-      endpointMaxAgeSec: 3600,
+      producerIntervalSec: 1800,
+      endpointMaxAgeSec: 1800,
       producerJob: "sync-yield-data",
       cacheKey: "yield-data",
       criticality: "critical",
@@ -297,9 +297,9 @@ describe("data surface descriptors", () => {
     expect(CACHE_FRESHNESS_LANES_BY_KEY.yieldData).toMatchObject({
       cacheKey: "yield-data",
       producerJob: "sync-yield-data",
-      producerIntervalSec: 3600,
-      endpointMaxAgeSec: 3600,
-      availabilityMaxAgeSec: 3600,
+      producerIntervalSec: 1800,
+      endpointMaxAgeSec: 1800,
+      availabilityMaxAgeSec: 1800,
       freshnessSentinelKey: "freshness:yield-data",
     });
     expect(CACHE_FRESHNESS_LANES_BY_KEY.dews).toMatchObject({
@@ -436,7 +436,7 @@ describe("data surface descriptors", () => {
     }).toEqual({
       stablecoins: { label: "Prices", staleTime: 600_000 },
       dexLiquidity: { label: "Liquidity", staleTime: 14_400_000 },
-      yieldRankings: { label: "Yield Rankings", staleTime: 3_600_000 },
+      yieldRankings: { label: "Yield Rankings", staleTime: 1_800_000 },
       stressSignals: { label: "DEWS", staleTime: 1_800_000 },
       reportCards: { label: "Report Cards", staleTime: 900_000 },
     });

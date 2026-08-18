@@ -1,4 +1,6 @@
+import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import type { CronResult } from "../../lib/cron-logger";
+import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import {
@@ -22,6 +24,65 @@ export async function runYieldCoordinatorPersistStage(
   params: YieldCoordinatorPersistStageParams,
 ): Promise<CronResult> {
   const { fetched, normalized, health } = params;
+  const loadedSafetyIdentity = health.safetySnapshotMeta.safetyScoreIdentity ?? null;
+  if (loadedSafetyIdentity) {
+    const currentSafetySnapshot = await computeSafetyScoresSnapshot(params.db);
+    const currentSafetyIdentity = currentSafetySnapshot.safetyScoreIdentity;
+    if (
+      currentSafetySnapshot.kind === "ok" &&
+      currentSafetyIdentity &&
+      !safetyScorePublicationIdentitiesAreComparable(loadedSafetyIdentity, currentSafetyIdentity)
+    ) {
+      const reason = "yield-safety-identity-changed-before-publish";
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: reason,
+        job: "sync-yield-data",
+        message: "Yield publication blocked because the Safety Score V9 identity changed after yield inputs were loaded",
+        metadata: {
+          loadedPublicationGenerationId: loadedSafetyIdentity.publicationGenerationId,
+          currentPublicationGenerationId: currentSafetyIdentity.publicationGenerationId,
+          loadedEvaluationBuildDigest: loadedSafetyIdentity.evaluationBuildDigest,
+          currentEvaluationBuildDigest: currentSafetyIdentity.evaluationBuildDigest,
+        },
+      });
+      await fetched.reportYieldProgress(
+        "publication-blocked",
+        "Yield publication was blocked because the Safety Score V9 identity changed before publish",
+        "yield-publication",
+        {
+          itemsDone: 0,
+          itemsTotal: health.previewRankingsPayload.rankings.length,
+          metadata: {
+            reason,
+            countTotals: { previewRankings: health.previewRankingsPayload.rankings.length },
+            safetySnapshot: {
+              loadedPublicationGenerationId: loadedSafetyIdentity.publicationGenerationId,
+              currentPublicationGenerationId: currentSafetyIdentity.publicationGenerationId,
+              loadedEvaluationBuildDigest: loadedSafetyIdentity.evaluationBuildDigest,
+              currentEvaluationBuildDigest: currentSafetyIdentity.evaluationBuildDigest,
+            },
+          },
+        },
+      );
+      return {
+        status: "degraded",
+        itemCount: 0,
+        metadata: JSON.stringify({
+          reason,
+          loadedPublicationGenerationId: loadedSafetyIdentity.publicationGenerationId,
+          currentPublicationGenerationId: currentSafetyIdentity.publicationGenerationId,
+          loadedEvaluationBuildDigest: loadedSafetyIdentity.evaluationBuildDigest,
+          currentEvaluationBuildDigest: currentSafetyIdentity.evaluationBuildDigest,
+          rowsRejected: normalized.rowsRejected,
+          divergenceFlags: normalized.divergenceFlags,
+          sourceSwitches: normalized.sourceSwitches,
+        }),
+        productivity: { productive: false, reason },
+      };
+    }
+  }
   const publicationResult = await publishYieldCoordinatorResults({
     db: params.db,
     signal: params.signal,

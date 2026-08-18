@@ -40,16 +40,13 @@ notes). Keep posts editorial: what shipped, what's next, and why.
    ```bash
    npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts
    ```
-4. **Commit** the post + registry (source first — the next step is git-derived).
-5. **Regenerate** the git-derived last-modified dates, then commit the artifact:
-   ```bash
-   npx tsx scripts/maintenance/generate-sitemap-dates.ts
-   npm run check:commit-derived-artifacts
-   ```
-   `src/data/blog/**` is wired into both `GIT_DATE_SCAN_PATHS`
-   (`generate-sitemap-dates.ts`) and `SITEMAP_COMMIT_DERIVED_SOURCE_PATHS`
-   (`scripts/lib/commit-derived-artifacts.mts`), so this step is mandatory.
-6. **Push** via the normal protected-main PR path. The homepage banner arms
+4. **Commit** the post + registry.
+   `src/data/blog/**` is wired into `GIT_DATE_SCAN_PATHS`
+   (`generate-sitemap-dates.ts`), so the gitignored `sitemap-dates` projection
+   picks the new post up automatically — locally on the next
+   `npm run bootstrap:generated:history`, and in production during the release
+   build. There is no separate settle step.
+5. **Push** via the normal protected-main PR path. The homepage banner arms
    itself from `datePublished` on the next build — nothing else to touch.
 
 ## Notes

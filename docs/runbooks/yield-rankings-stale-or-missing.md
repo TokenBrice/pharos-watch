@@ -102,7 +102,7 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 
 ## Remediation
 
-- If `sync-yield-data` is stale but not leased, wait for the next hourly `20 * * * *` run if the last failure was transient.
+- If `sync-yield-data` is stale but not leased, wait for the next `28,58 * * * *` run if the last failure was transient.
 - If the cron is repeatedly `skipped_locked`, confirm the lease is stale, then delete it directly. `POST /api/reset-cron-lease` was retired on 2026-08-09; the delete below is exactly what it ran.
 
   ```bash
@@ -131,4 +131,4 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 
 ## Rollback Notes
 
-The normal rollback is to keep serving the previous `yield-rankings` cache while the hourly publisher recovers. Failed or CAS-skipped generations are intentionally left in D1 as audit evidence and should not be promoted manually. If a deploy caused repeated publication failures, roll back the Worker version through the standard deployment process; do not manually rewrite rankings cache contents unless a maintainer explicitly approves a targeted restore.
+The normal rollback is to keep serving the previous `yield-rankings` cache while the post-V9 publisher recovers. Failed or CAS-skipped generations are intentionally left in D1 as audit evidence and should not be promoted manually. If a deploy caused repeated publication failures, roll back the Worker version through the standard deployment process; do not manually rewrite rankings cache contents unless a maintainer explicitly approves a targeted restore.

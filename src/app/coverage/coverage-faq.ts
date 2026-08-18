@@ -14,6 +14,6 @@ export const COVERAGE_FAQ_ITEMS = [
   {
     question: "How often is coverage data updated?",
     answer:
-      "Prices and peg scores refresh every 15 minutes. Safety score caches publish every 15 minutes, while daily safety-grade history powers historical snapshots and safety-change alerts. DEX liquidity, DEWS stress signals, PSI, and mint/burn flows refresh every 30 minutes. Yield rankings refresh hourly, with slower supplemental source families updated every four hours. Blacklist events refresh every six hours, and live reserve plus redemption backstop snapshots refresh every four hours. The coverage matrix reflects the current availability state and updates as new data sources come online or existing ones expand.",
+      "Prices and peg scores refresh every 15 minutes. Safety score caches publish every 15 minutes, while daily safety-grade history powers historical snapshots and safety-change alerts. DEX liquidity, DEWS stress signals, PSI, and mint/burn flows refresh every 30 minutes. Yield rankings refresh after each Safety Score V9 publication window, with slower supplemental source families updated every four hours. Blacklist events refresh every six hours, and live reserve plus redemption backstop snapshots refresh every four hours. The coverage matrix reflects the current availability state and updates as new data sources come online or existing ones expand.",
   },
 ] as const satisfies readonly FaqItem[];

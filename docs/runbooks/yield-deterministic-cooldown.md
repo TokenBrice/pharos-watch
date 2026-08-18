@@ -7,11 +7,11 @@ Triggered by:
 
 ## Symptom
 
-Deterministic on-chain yield reads fail in a run. If all configured deterministic sources have non-onchain alternative coverage, the failure is masked and a 6-hour cooldown can arm after repeated masked all-fail runs. During cooldown, the hourly publisher skips deterministic on-chain reads.
+Deterministic on-chain yield reads fail in a run. If all configured deterministic sources have non-onchain alternative coverage, the failure is masked and a 6-hour cooldown can arm after repeated masked all-fail runs. During cooldown, the post-V9 publisher skips deterministic on-chain reads.
 
 ## Impact
 
-Rows backed by non-onchain sources continue to publish. Native deterministic rows may be absent or replaced by lower-confidence alternatives until the cooldown expires. If a coverage gap appears while cooldown is active, `sync-yield-data` degrades and retries deterministic reads on the next hourly cycle.
+Rows backed by non-onchain sources continue to publish. Native deterministic rows may be absent or replaced by lower-confidence alternatives until the cooldown expires. If a coverage gap appears while cooldown is active, `sync-yield-data` degrades and retries deterministic reads on the next post-V9 cycle.
 
 ## First Checks
 
@@ -52,10 +52,10 @@ LIMIT 30;
 
 ## Remediation
 
-- If cooldown is active and no coverage gap is reported, leave it in place. It exists to protect the hourly publisher from repeatedly burning time on a fully masked outage.
-- If metadata reports `onchain-rates:cooldown-coverage-gap`, wait for the next hourly run after the cooldown state is reset by the publisher, then confirm deterministic reads are attempted again.
+- If cooldown is active and no coverage gap is reported, leave it in place. It exists to protect the post-V9 publisher from repeatedly burning time on a fully masked outage.
+- If metadata reports `onchain-rates:cooldown-coverage-gap`, wait for the next post-V9 run after the cooldown state is reset by the publisher, then confirm deterministic reads are attempted again.
 - If failures persist across providers, check Cloudflare/RPC/explorer provider status and `ETHERSCAN_API_KEY` availability through the normal secret/config process.
-- If a stale cron lease is preventing retries, first confirm `/api/status` has no fresh matching `inFlight` progress. `POST /api/reset-cron-lease` is retired; then delete only `cron_leases.job = 'sync-yield-data'` with scoped remote D1 SQL and verify the next hourly run.
+- If a stale cron lease is preventing retries, first confirm `/api/status` has no fresh matching `inFlight` progress. `POST /api/reset-cron-lease` is retired; then delete only `cron_leases.job = 'sync-yield-data'` with scoped remote D1 SQL and verify the next post-V9 run.
 
 ## Abort Conditions
 

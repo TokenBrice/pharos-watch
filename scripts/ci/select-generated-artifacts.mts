@@ -2,7 +2,7 @@
 
 import { matchesGlob } from "node:path";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
-import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
+import { collectChangedFiles, collectStagedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 
 interface GeneratedArtifactDefinition {
   id: string;
@@ -40,9 +40,9 @@ export function selectChangedGeneratedArtifactIds(
 }
 
 export function runSelector(argv: readonly string[] = process.argv.slice(2), env: NodeJS.ProcessEnv = process.env) {
-  const { base, head, rest } = parseChangedFileArgs(argv, env);
+  const { base, head, rest, staged } = parseChangedFileArgs(argv, env);
   if (rest.length > 0) throw new Error(`Unknown option(s): ${rest.join(", ")}`);
-  return selectChangedGeneratedArtifactIds(collectChangedFiles({ base, head }));
+  return selectChangedGeneratedArtifactIds(staged ? collectStagedFiles() : collectChangedFiles({ base, head }));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

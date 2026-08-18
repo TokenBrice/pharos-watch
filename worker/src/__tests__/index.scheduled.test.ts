@@ -874,7 +874,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);
   });
 
-  it("runs yield publication on the dedicated hourly :20 trigger", async () => {
+  it("runs yield publication on the dedicated post-V9 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = createWorkerEnv({
       DB: {} as D1Database,
@@ -883,7 +883,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "20 * * * *" } as ScheduledEvent,
+      { cron: "28,58 * * * *" } as ScheduledEvent,
       env,
       ctx,
     );

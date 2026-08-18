@@ -20,7 +20,7 @@ Do not use this for a pure review with no requested commit/push, or while anothe
 
 - Default to `main` for inspection. Direct pushes are protected. A request to push, publish, release, or take work to production authorizes the necessary release branch and protected-main PR; do not attempt a direct `main` push or ask again solely because branch protection requires a PR.
 - Preserve unrelated dirty files. Never stash, reset, checkout, or delete work you did not create unless instructed.
-- Commit before publishing. The required `PR gate` check owns the authoritative release gate; the pre-push hook verifies only commit-derived artifacts when the pushed commit is checked out, allowing unrelated dirty work but rejecting dirty relevant inputs/outputs.
+- Commit before publishing. The required `PR gate` check owns the authoritative release gate; the repo pre-commit hook only regenerates and stages the committed generated artifacts affected by the staged files, and aborts rather than staging an artifact whose sources still have unstaged working-tree edits.
 - The pushed state must match the validated state. Re-run `git status --short --branch` after long builds or generators.
 - Use the exact `.nvmrc` runtime directly in the shell. Do not use a temporary `npx node@...` wrapper: nested `npx --no-install` and workspace commands must inherit the same runtime.
 - Distinguish deployment proof from operational acceptance. Worker activation and a Pages release marker prove that the intended artifact is live; cron, memory, scheduler, migration, and ingestion changes require the first relevant production execution before an operational-success claim.
@@ -80,17 +80,15 @@ After each commit, verify the tree state:
 git status --short --branch
 ```
 
-#### Settle Commit-Derived Artifacts
+#### Keep Generated Artifacts With Their Source Commit
 
-`sitemap-dates` and `docs-metadata` calculate timestamps from committed source history. Never treat output generated while a relevant source is staged, modified, deleted, or untracked as final.
+The pre-commit hook runs `npm run sync:staged-artifacts`, which regenerates and stages the committed generated artifacts affected by the staged files, so a source commit and its derived output land together. Bypass it only with `PHAROS_SKIP_ARTIFACT_HOOK=1`.
 
-1. Commit the relevant page, stablecoin, public-doc, or public-doc registry source changes without relying on provisional timestamp output.
-2. Run `npm run check:commit-derived-artifacts`. If stale, run the owning generators only after the source commit exists.
-3. Inspect the generated diff, then commit it separately or amend it into the source commit without changing the source author date.
-4. When the final source commit stack is stable, run `npm run check:generated-artifacts` to converge the entire registry rather than fixing artifacts one failure at a time.
-5. If any later remediation changes a commit-derived source, repeat this sequence before validation or push.
+1. Stage the source change with a clean working tree for the affected inputs; the hook aborts instead of staging an artifact whose sources still have unstaged edits.
+2. Regenerate the deliberately excluded artifacts yourself: the network-derived `llms-txt`, `public-datasets`, and `homepage-bootstrap` outputs plus the OG builders.
+3. When the final source commit stack is stable, run `npm run check:generated-artifacts` to converge the entire registry rather than fixing artifacts one failure at a time.
 
-The generators warn when write mode sees uncommitted history inputs and check mode fails. The default pre-push guard catches stale committed output from a clean checked-out commit, but it is not a substitute for the final full registry check.
+`sitemap-dates` and `docs-metadata` are gitignored build-time artifacts materialized by `npm run bootstrap:generated:history` and by `prebuild` in the release. They need no commit and are skipped by `--check` runs.
 
 ### 3. Validate
 
@@ -100,7 +98,7 @@ Useful controls:
 
 - `npm run check:pr -- --base=<ref>` runs the adaptive committed-diff PR contract.
 - `npm run check:release` runs the optional Pages build/static checks and credential-free Worker bundle proof.
-- Normal pushes run only the lightweight commit-derived artifact guard when the pushed commit is checked-out `HEAD`.
+- No local hook gates the push. The pre-commit hook only keeps staged generated artifacts in sync, so run `npm run check:generated-artifacts` yourself before pushing.
 
 Fix failures locally and rerun the failing focused command. Use the full nightly commands directly only when the changed surface warrants them.
 
@@ -150,7 +148,7 @@ The parent agent owns staging, committing, pushing, and final judgment.
 End with:
 
 - commits created or pushed
-- focused validation commands, discovery target/report status (including incomplete or provisional evidence), and pre-push gate outcome if opted in
+- focused validation commands, discovery target/report status (including incomplete or provisional evidence), and generated-artifact check outcome
 - GitHub Actions run watched and final status, if pushed
 - deployment proof separately from operational-acceptance evidence or pending observation window
 - any dirty files intentionally left out
