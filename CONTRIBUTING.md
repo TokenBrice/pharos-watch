@@ -57,7 +57,7 @@ npm run check:pr -- --base=origin/main
 
 Use `npm run check:release` only when a local Pages build and Worker bundle rehearsal is useful. Neither command replaces the protected PR gate.
 
-`docs-metadata` and `sitemap-dates` calculate timestamps from committed source history. Commit relevant source changes first, regenerate those artifacts, then commit or amend their output. `npm run check:commit-derived-artifacts` verifies that settled state before the full generated-artifact check.
+`docs-metadata` and `sitemap-dates` are gitignored build-time artifacts derived from commit history. `npm install` materializes them locally; CI jobs that need them opt in through the `bootstrap-history` input on `setup-workspace`.
 
 ## Pull Requests
 

@@ -490,21 +490,22 @@ value; do not weaken the assertion.
 
 ### 4c. Registry-derived artifacts that are checked in
 
-Every one of these hashes or enumerates the tracked catalog, so a coin addition moves them and
+These hash or enumerate the tracked catalog, so a coin addition moves them and
 `npm run check:generated-artifacts` fails until they are regenerated and committed.
 
 | Artifact | Regenerate with | Notes |
 | --- | --- | --- |
-| `shared/data/stablecoins/report-card-registry-fingerprint.generated.ts` | `npx tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts` | Report cards read this precomputed fingerprint instead of hashing the catalog at runtime |
-| `public/datasets/stablecoin-cemetery.json` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Only the `coins.generated.json` source checksum moves for a live addition; the paired `.csv` moves only when a frozen or dead row changes |
 | `public/llms.txt` | `npx tsx scripts/maintenance/generate-llms-txt.ts` | Active-stablecoin count in the summary line plus one per-coin entry |
-| `src/generated/sitemap-dates.json` | `npx tsx scripts/maintenance/generate-sitemap-dates.ts` | Commit-derived: the coin source must be committed first. See Phase 7. |
+| `public/datasets/stablecoin-cemetery.json` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Provenance pins the curated dead-stablecoin file and the frozen-row projection, so a live addition leaves it byte-identical; it moves only when a frozen or dead row changes |
 
 Also regenerate the gitignored projections, which are not committed but which the build, the
 tests, and `check:stablecoin-data` all read:
 `coins.generated.json`, `coins.client.generated.json`, `coins.compliance.generated.json`,
-`coins.telegram-mini-app.generated.json` and
+`coins.telegram-mini-app.generated.json`,
+`report-card-registry-fingerprint.generated.ts` and
 `legacy-llama-redirects.generated.json` (only moves when the coin has a `llamaId`).
+The gitignored `sitemap-dates` projection also picks the coin up automatically; it needs no
+settle step.
 
 Gotcha worth recognising: if the client projection is stale, a large number of unrelated test
 files fail at import with `[client-registry] canonical-order.json references unknown stablecoin
@@ -788,11 +789,9 @@ npm test
 cd worker && npx tsc --noEmit
 ```
 
-Base coin files also feed commit-derived sitemap timestamps. Commit the coin source and ordinary generated registry projections before producing the final sitemap output, then settle and validate the committed snapshot:
+Base coin files feed the gitignored `sitemap-dates` projection, which is regenerated automatically — no separate settle step is required. Validate the committed snapshot:
 
 ```bash
-npx tsx scripts/maintenance/generate-sitemap-dates.ts
-npm run check:commit-derived-artifacts
 npm run check:generated-artifacts
 npm run check:pr -- --base=origin/main
 npm run build

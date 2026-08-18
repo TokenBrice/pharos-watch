@@ -54,12 +54,14 @@ describe("classifyChangedFiles", () => {
     expect(contract.hardRules).toContain("Cron jobs share Cloudflare's per-trigger 6-connection pool.");
   });
 
-  it("routes blog publishing changes to the editorial process and history-derived checks", () => {
+  it("routes blog publishing changes to the editorial process and its focused suites", () => {
     const contract = classifyChangedFiles(["src/data/blog/posts/example.md"]);
 
     expect(contract.families.map((family: { id: string }) => family.id)).toContain("editorial-publishing");
     expect(contract.docsToRead).toContain("docs/process/blog-publishing.md");
-    expect(contract.checks).toContain("npm run check:commit-derived-artifacts after blog source commits");
+    expect(contract.checks).toContain(
+      "npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts",
+    );
   });
 
   it("routes Telegram auth and delivery changes to Telegram contracts and runbooks", () => {

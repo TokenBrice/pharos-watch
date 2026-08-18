@@ -29,7 +29,7 @@ npm run bootstrap:generated
 
 The legacy category shards (`usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json`) were emptied and then deleted. `npm run check:stablecoin-data` fails if any of those filenames reappears under `shared/data/stablecoins/`.
 
-The client, compliance, Telegram Mini App, and legacy redirect projections are gitignored local/build artifacts generated from the merged catalog. `coins.client.generated.json` powers lightweight browser-facing metadata; `coins.compliance.generated.json` keeps GENIUS long-form evidence scoped to `/compliance/`; `coins.telegram-mini-app.generated.json` powers the Mini App registry; `legacy-llama-redirects.generated.json` maps old numeric DefiLlama stablecoin URLs. Base coin files also feed the tracked, commit-derived `sitemap-dates` projection used by stablecoin detail pages. Commit tracked catalog source and ordinary tracked generated artifacts first, regenerate sitemap dates from that committed history, then run `npm run check:generated-artifacts` after the final generated commit.
+The client, compliance, Telegram Mini App, legacy redirect, and report-card registry fingerprint projections are gitignored local/build artifacts generated from the merged catalog. `coins.client.generated.json` powers lightweight browser-facing metadata; `coins.compliance.generated.json` keeps GENIUS long-form evidence scoped to `/compliance/`; `coins.telegram-mini-app.generated.json` powers the Mini App registry; `legacy-llama-redirects.generated.json` maps old numeric DefiLlama stablecoin URLs. `report-card-registry-fingerprint.generated.ts` pins the canonical registry identity hash so Worker report-card requests never serialize and hash the full catalog at runtime.
 
 ## Editing Rules
 
@@ -95,15 +95,11 @@ npm run audit:coverage -- --domain=mechanism-archetype
 npm test -- shared/lib/__tests__/stablecoin-id-registry.test.ts
 ```
 
-After base coin source/projection commits exist, settle and validate the commit-derived sitemap plus the complete artifact graph:
+Then validate the complete artifact graph:
 
 ```bash
-npx tsx scripts/maintenance/generate-sitemap-dates.ts
-npm run check:commit-derived-artifacts
 npm run check:generated-artifacts
 ```
-
-Commit the sitemap output separately or amend it into the source commit without changing the source author date. A check against dirty base coin history intentionally fails rather than certifying provisional timestamps.
 
 If the change affects page counts, feature coverage, reserve coverage, source families, or public methodology behavior, also update the matching route/feature docs from `docs/README.md`.
 

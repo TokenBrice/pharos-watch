@@ -19,8 +19,7 @@ See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file onl
 - Sidecar files must not live under `shared/data/stablecoins/coins/`. Sidecar `id` values must match the base coin ID, and duplicate fields across a base coin and sidecar are invalid.
 - Use `npx tsx scripts/maintenance/migrate-stablecoin-sidecar.ts --domain <domain> --id <id> --dry-run` before layout migrations. The tool moves existing values only and proves the merged projection is unchanged.
 - Run `npm run bootstrap:generated` after per-coin or sidecar edits. It refreshes the gitignored full, client, compliance, Telegram Mini App, and legacy redirect projections plus tracked dependent artifacts; do not edit generator outputs by hand.
-- Keep `shared/data/stablecoins/report-card-registry-fingerprint.generated.ts` fresh too; it is a tracked projection guarded with the rest of the graph by `npm run check:generated-artifacts`.
-- Base coin files also feed commit-derived stablecoin detail dates in `sitemap-dates`. Generate working-tree artifacts locally, commit the tracked catalog source and ordinary tracked generated artifacts, then regenerate sitemap dates from that committed history and commit or amend the result before the final full artifact check.
+- Keep `shared/data/stablecoins/report-card-registry-fingerprint.generated.ts` fresh too; it is a gitignored bootstrap projection refreshed by `npm run bootstrap:generated` and guarded with the rest of the graph by `npm run check:generated-artifacts`.
 - In coordinated multi-agent batches, regenerate shared projections only after all source moves are complete; layout-only migrations must leave those projections byte-identical.
 - The retired legacy category shards (`usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json`) are deleted. `npm run check:stablecoin-data` fails if any of those filenames reappears here.
 - Author only non-default `flags`. The schema supplies `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false` when absent; `backing` and `governance` are always required. Do not re-add a default value to a base coin file.
@@ -36,6 +35,5 @@ See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file onl
 ## Common Checks
 
 - `npm run check:stablecoin-data`
-- `npm run check:commit-derived-artifacts` after the base coin source commit
 - `npm run check:generated-artifacts`
 - Focused stablecoin registry tests under `shared/lib/__tests__`

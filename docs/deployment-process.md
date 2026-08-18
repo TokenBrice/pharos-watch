@@ -1,6 +1,6 @@
 # Deployment Process
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Repo Pre-Push Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Repo Pre-Commit Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
 
 ## Purpose
 
@@ -18,11 +18,10 @@ Treat release preparation as ordered state transitions. Passing a check against 
 
 1. **Classify** — fetch `origin/main`, inspect committed/staged/worktree/untracked state, identify Pages and Worker impact, and preserve unrelated work.
 2. **Commit source** — create logical source commits first. Use the exact `.nvmrc` Node runtime directly in the shell so nested workspace and `npx --no-install` commands inherit it.
-3. **Settle commit-derived artifacts** — `docs-metadata` and `sitemap-dates` use source Git history. If their relevant sources changed, commit those sources before generation, run the owning generators, inspect the output, then commit the generated files separately or amend them into the source commit. Output generated while those source paths are uncommitted is provisional.
-4. **Converge the artifact graph** — after the final source history is stable, run `npm run check:generated-artifacts`. Fixing only the first stale projection is not convergence; rerun the full check after focused fixes. If a later remediation changes a commit-derived source, return to step 3.
-5. **Validate the intended contract** — use focused checks for small changes, `npm run check:pr -- --base=<ref>` for the adaptive PR contract, and `npm run check:release` only when a local production-build rehearsal is useful.
-6. **Publish** — push a release branch, wait for the authoritative protected `PR gate`, merge through GitHub, and map the PR head SHA to the resulting `main` SHA and deployment run. Do not attempt direct `main` first.
-7. **Prove deployment and operation separately** — verify Worker activation and/or the immutable Pages marker. Then complete any risk-based runtime observation required by [Operational Acceptance](#operational-acceptance).
+3. **Converge the artifact graph** — after the final source history is stable, run `npm run check:generated-artifacts`. Fixing only the first stale projection is not convergence; rerun the full check after focused fixes.
+4. **Validate the intended contract** — use focused checks for small changes, `npm run check:pr -- --base=<ref>` for the adaptive PR contract, and `npm run check:release` only when a local production-build rehearsal is useful.
+5. **Publish** — push a release branch, wait for the authoritative protected `PR gate`, merge through GitHub, and map the PR head SHA to the resulting `main` SHA and deployment run. Do not attempt direct `main` first.
+6. **Prove deployment and operation separately** — verify Worker activation and/or the immutable Pages marker. Then complete any risk-based runtime observation required by [Operational Acceptance](#operational-acceptance).
 
 ## Optional Worktree Flow
 
@@ -45,9 +44,9 @@ gh pr create --base main --head "$BRANCH_NAME"
 
 4. Merge only after the required `PR gate` status succeeds. The merge push triggers deployment.
 
-## Repo Pre-Push Hook
+## Repo Pre-Commit Hook
 
-In the standard local npm setup, `package.json` runs `scripts/maintenance/prepare-workspace.ts` via the `prepare` script. Local installs materialize bootstrap-safe generated projections and run `git config core.hooksPath .githooks`, so the repo pre-push hook is configured automatically after install. GitHub Actions skips that implicit prepare work and runs `npm run bootstrap:generated` explicitly through `.github/actions/setup-workspace/action.yml`. If hooks were disabled or overridden locally, re-enable them with:
+In the standard local npm setup, `package.json` runs `scripts/maintenance/prepare-workspace.ts` via the `prepare` script. Local installs materialize bootstrap-safe generated projections, materialize the history-derived projections with `npm run bootstrap:generated:history`, and run `git config core.hooksPath .githooks`, so the repo pre-commit hook is configured automatically after install. GitHub Actions skips that implicit prepare work and runs `npm run bootstrap:generated` explicitly through `.github/actions/setup-workspace/action.yml`, opting into the history-derived projections per job with its `bootstrap-history` input. If hooks were disabled or overridden locally, re-enable them with:
 
 ```bash
 git config core.hooksPath .githooks
@@ -55,8 +54,8 @@ git config core.hooksPath .githooks
 
 Hook behavior:
 
-1. The hook runs `npm run check:commit-derived-artifacts` by default when the pushed commit is the checked-out `HEAD`. Unrelated dirty work is allowed, while dirty relevant sources or generated outputs fail the artifact check. It blocks stale committed sitemap/docs timestamps before CI has to discover the lifecycle error.
-2. When a pushed ref is not the checked-out `HEAD`, the lightweight proof is skipped with an explicit unverified warning. GitHub Actions remains authoritative.
+1. The pre-commit hook regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. It aborts rather than staging a mismatched artifact when a selected artifact's sources have unstaged working-tree changes. Set `PHAROS_SKIP_ARTIFACT_HOOK=1` to bypass it.
+2. It is a no-op when the index is empty and during an in-progress merge, rebase, cherry-pick, or revert.
 3. The hook does not run a local test/build gate. GitHub branch protection and the aggregate PR gate are authoritative.
 
 ## Local Validation Commands
@@ -348,7 +347,7 @@ If an explicit local `check:release` rehearsal fails:
 3. For a small change, fix the failing command directly. For a large batch, run one full discovery for the intended target and read the final structured summary.
 4. Fix all blocking root failures and rerun their focused commands while editing. If local parallel load is suspect, run the focused shard alone or set `MERGE_GATE_DISCOVERY_MAX_PARALLEL=1`; do not loosen timeouts solely from a contended run.
 5. If producers left blocked or tainted nodes, use discovery `--resume` with the same target. Run another full discovery only when the changed snapshot broadly invalidates the original plan.
-6. After the final source state, run the full generated-artifact freshness check. Commit-derived failures follow the post-commit generation sequence, not an immediate dirty-worktree rewrite.
+6. After the final source state, run the full generated-artifact freshness check. Regenerate stale artifacts with their owning generator and fold the output into the commit that moved their sources.
 7. Run `npm run check:release` only when an explicit local rehearsal is desired, then push to the protected PR gate. GitHub Actions remains authoritative.
 
 If a production deployment fails after mutation:
