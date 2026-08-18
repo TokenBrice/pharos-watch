@@ -49,7 +49,7 @@ describe("DatasetFreshnessTable", () => {
 
     const yieldRow = getDomainRow("Yield data");
     expect(yieldRow).not.toBeNull();
+    expect(within(yieldRow as HTMLTableRowElement).getByText("30m")).toBeTruthy();
     expect(within(yieldRow as HTMLTableRowElement).getByText("1h")).toBeTruthy();
-    expect(within(yieldRow as HTMLTableRowElement).getByText("2h")).toBeTruthy();
   });
 });
