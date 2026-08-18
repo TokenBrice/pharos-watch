@@ -282,7 +282,7 @@ export async function fetchSafetyScoreV9SolanaRpc<T>(
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
         signal,
       },
-      0,
+      1,
       { timeoutMs: 10_000, maxResponseBytes: 128_000 },
     );
     if (

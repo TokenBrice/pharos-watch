@@ -133,4 +133,26 @@ describe("Safety Score V9 supply observation primitives", () => {
       params: [{ commitment: "finalized" }],
     });
   });
+
+  it("retries a single Solana endpoint once before rotating to the next endpoint", async () => {
+    const fetchMock = mockFetch([{
+      match: "api.mainnet-beta.solana.com",
+      outcomes: [
+        new Error("network flake"),
+        { body: { result: { slot: 42 } } },
+      ],
+    }]);
+
+    await expect(
+      fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
+        "getSlot",
+        [{ commitment: "finalized" }],
+      ),
+    ).resolves.toEqual({ slot: 42 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://api.mainnet-beta.solana.com",
+      "https://api.mainnet-beta.solana.com",
+    ]);
+  });
 });
