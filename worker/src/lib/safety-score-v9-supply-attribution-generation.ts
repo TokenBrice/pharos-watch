@@ -495,6 +495,12 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
       acceptedAssetIds: string[];
       rejectedAssetIds: string[];
       invalidAssetIds: string[];
+      /**
+       * Accepted packets skipped because the consumer no longer expects the
+       * asset (its upstream chain rows returned, or it left the active set);
+       * applying them would shadow observed data.
+       */
+      supersededAssetIds: string[];
     }
   | {
       status: "unavailable" | "incompatible";
@@ -504,7 +510,6 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
     };
 
 type SupplyAttributionGenerationCompatibilityReason =
-  | "expected-asset-ids-mismatch"
   | "source-clock-after-fixed-input"
   | "capture-clock-after-consumer"
   | "captured-after-consumer"
@@ -524,20 +529,19 @@ export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
   generation: SafetyScoreV9SupplyAttributionGeneration,
   consumerClockSec = fixedInput.clockSec,
 ): SupplyAttributionGenerationCompatibilityReason | null {
-  const expectedAssetIds = uniqueSorted(
-    safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
-  );
   // The generation's own registryFingerprint stays on the record as capture
   // provenance, but it is deliberately not an admission gate. It is global, so
   // any registry edit rotates it for every asset, including the ones the edit
   // never touched; gating here discarded the whole generation for one
-  // publication cycle after each release. Admission is per asset instead:
-  // `applySafetyScoreV9SupplyAttributionGeneration` re-derives every stored
-  // observation against the live route inventory, identity pins, observation
-  // window, and aggregate supply, and drops only the assets that fail.
-  if (!exactStrings(generation.expectedAssetIds, expectedAssetIds)) {
-    return "expected-asset-ids-mismatch";
-  }
+  // publication cycle after each release. The expected-asset-id set is not a
+  // gate for the same reason: it is derived from live upstream chain rows, so
+  // one co-tenant gaining or losing DefiLlama coverage (or failing its own
+  // capture) flipped the set and discarded every verified packet with it — on
+  // 2026-08-18 two Solana RPC rejections cost XAUT its accepted attribution.
+  // Admission is per asset instead: `applySafetyScoreV9SupplyAttributionGeneration`
+  // re-derives every stored observation against the live route inventory,
+  // identity pins, observation window, and aggregate supply, applies only the
+  // assets the consumer still expects, and drops only the assets that fail.
   if (generation.sourceClockSec > fixedInput.clockSec) {
     return "source-clock-after-fixed-input";
   }
@@ -627,7 +631,15 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"] = {};
   const appliedAssetIds: string[] = [];
   const invalidAssetIds: string[] = [];
+  const supersededAssetIds: string[] = [];
+  const consumerExpectedAssetIds = new Set(
+    safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
+  );
   for (const assetId of generation.acceptedAssetIds) {
+    if (!consumerExpectedAssetIds.has(assetId)) {
+      supersededAssetIds.push(assetId);
+      continue;
+    }
     const stored = generation.attributionById[assetId]!;
     const aggregate = aggregateSupplyUsd(fixedInput, assetId);
     const attribution =
@@ -669,5 +681,6 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     acceptedAssetIds: appliedAssetIds,
     rejectedAssetIds: [...generation.rejectedAssetIds],
     invalidAssetIds,
+    supersededAssetIds,
   };
 }
