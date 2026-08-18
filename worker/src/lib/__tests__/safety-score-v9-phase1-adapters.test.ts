@@ -444,8 +444,11 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
           periodEnd: "2026-07-31",
           publishedAt: "2026-08-05",
           assuranceMethod: "attestation",
-          scope: "reserves-only",
-          liabilityReconciliation: "reconciled",
+          scope: "assets-and-liabilities",
+          liabilityReconciliation: "full",
+          reviewer: "fixture",
+          confidence: "verified",
+          sources: [{ label: "Fixture report", url: "https://example.invalid/report" }],
         },
       }),
     ).toBe(true);
