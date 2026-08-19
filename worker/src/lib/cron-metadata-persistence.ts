@@ -67,6 +67,16 @@ export function compactCronMetadataForPersistence(
   const parsed = safeParseMetadata(metadata);
   const diagnostics: Record<string, unknown> = {};
   const entries = parsed ? Object.entries(parsed) : [];
+  // Measured-execution ledger chunks must survive compaction as TOP-LEVEL scalars:
+  // producer history keeps only top-level scalars (normalizeHistoryMetadata), and the
+  // durable activation-gate ledger reads them from there. Each is bounded to <=240 chars
+  // and at most a handful of parts, so preserving them cannot re-breach the byte cap.
+  const preservedLedgerScalars: Record<string, string | number | boolean | null> = {};
+  for (const [key, value] of entries) {
+    if (!key.startsWith("mxLedger")) continue;
+    const scalar = boundedScalar(value);
+    if (scalar !== undefined) preservedLedgerScalars[key] = scalar;
+  }
   for (const [key, value] of entries.slice(0, MAX_TOP_LEVEL_DIAGNOSTICS)) {
     const summary = summarizeDiagnostic(value);
     if (summary !== undefined) diagnostics[key] = summary;
@@ -76,6 +86,7 @@ export function compactCronMetadataForPersistence(
     : "cron-metadata-over-64-kib";
   const envelope: Record<string, unknown> = {
     reason,
+    ...preservedLedgerScalars,
     persistenceCompaction: {
       schemaVersion: 1,
       originalBytes,
@@ -101,6 +112,7 @@ export function compactCronMetadataForPersistence(
   if (utf8Bytes(compacted) > MAX_PERSISTED_CRON_METADATA_BYTES) {
     compacted = JSON.stringify({
       reason: "cron-metadata-over-64-kib",
+      ...preservedLedgerScalars,
       persistenceCompaction: { schemaVersion: 1, originalBytes, diagnosticsDropped: true },
     });
   }

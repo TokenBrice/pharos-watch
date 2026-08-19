@@ -59,4 +59,34 @@ describe("compactCronMetadataForPersistence", () => {
       },
     });
   });
+
+  it("preserves mxLedger scalars as top-level keys through oversized compaction", () => {
+    const chunk = "A".repeat(240);
+    const metadata = JSON.stringify({
+      reason: "dex-liquidity-publication",
+      mxLedgerV: 1,
+      mxLedgerKind: "A",
+      mxLedgerCycle: 1_787_120_160,
+      mxLedgerParts: 2,
+      mxLedger0: chunk,
+      mxLedger1: chunk,
+      bulk: Array.from({ length: 5_000 }, (_, index) => ({
+        pool: `pool-${index}`,
+        body: "x".repeat(120),
+      })),
+    });
+
+    const result = compactCronMetadataForPersistence(metadata);
+    expect(result.compacted).toBe(true);
+    const parsed = JSON.parse(result.metadata!) as Record<string, unknown>;
+    // Top-level scalars, not nested under diagnostics: producer history's
+    // normalizeHistoryMetadata drops nested objects, and the durable
+    // activation-gate ledger reads these keys from worker_producer_history.
+    expect(parsed.mxLedgerV).toBe(1);
+    expect(parsed.mxLedgerKind).toBe("A");
+    expect(parsed.mxLedgerCycle).toBe(1_787_120_160);
+    expect(parsed.mxLedgerParts).toBe(2);
+    expect(parsed.mxLedger0).toBe(chunk);
+    expect(parsed.mxLedger1).toBe(chunk);
+  });
 });

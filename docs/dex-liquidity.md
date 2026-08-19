@@ -176,6 +176,14 @@ For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydiu
 - CryptoSwap pools: correctly classified via `registryId`
 - DL Raydium pools: classified from `poolMeta` (Concentrated -> `raydium-clmm`) since v6.0, because DeFiLlama ships every Raydium pool under the `raydium-amm` project slug; this lets the DL row and its direct-API CLMM twin share one pool-shape family and deduplicate instead of double-counting
 
+### Known Uncovered Venues
+
+Venues that qualify for the score on the criteria above but that no configured provider indexes. Listed so a coverage gap is a recorded decision rather than a silent omission.
+
+| Venue | Chain | Why uncovered | Revisit trigger |
+| --- | --- | --- | --- |
+| Jupiter Lend DEX (`jupiter-lend-dex`) | Solana | A concentrated-liquidity AMM on Jupiter's shared liquidity layer, distinct from the `jupiter-lend` lending protocol and classed `Dexs` by DefiLlama. DefiLlama Yields ships no rows for it, and GeckoTerminal and DexScreener do not list it, so neither the `dl` lane nor discovery can see it. Jupiter publishes no REST endpoint — `developers.jup.ag/docs/lend/dex/api.md` is an explicit placeholder — so ingesting it means `getProgramAccounts` plus borsh decoding at IDL-derived offsets inside the source-stage cron, reopening the Solana on-chain lane that v6.0 retired and adding an RPC dependency inside the 6-connection budget. Protocol-wide TVL is ~$7.0M, so present score impact is small. | DefiLlama Yields adding `jupiter-lend-dex` pools, or Jupiter shipping the promised REST endpoints. Either collapses this to a cheap change. Raised as #880. |
+
 ### CoinGecko Onchain Integration
 
 CoinGecko Onchain is a discovery-stage source rather than a direct source-stage fetch. Its outputs are written into `dex_pool_staging` and later merged by `sync-dex-liquidity-stage` if the rows are fresh. Pool parsing, fee-tier classification, balance-ratio inference, and locked-liquidity parsing are shared between discovery and liquidity through `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`. CoinGecko Onchain and GeckoTerminal token crawls now read multiple bounded pages (`3 x 20` rows max) before declaring discovery exhausted, which reduces false partial-coverage outcomes on fragmented assets.

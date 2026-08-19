@@ -684,12 +684,30 @@
     "factsAsOf": "2026-08-05"
   },
   "wusd-worldwide": {
-    "title": "Enterprise Rails, Empty Station",
-    "text": "WSPN's white-label dollar pairs conservative T-bill claims with a failing grade and thin DEX liquidity that betrays missing on-chain demand.\n\nWSPN's Worldwide USD pitches a conservative reserve — {{term:treasury}}T-bills{{/term}} and cash with a Basel III-inspired 6% liquidity buffer — yet carries an F safety grade, because v9 scores evidence and market structure rather than brochures: no current reserve composition is on file for the backing pillar, and economic control fails on effectively unbounded mint authority. The peg itself holds clean and rarely strays from the calm end of the stress scale, but liquidity is the soft spot: the DEX float across Ethereum, Polygon, and Viction is too thin to absorb size, and a couple of shallow sub-200-bps wobbles suggest the peg holds because almost nothing tests it. The BVI domicile with FinCEN MSB registration is regulatory limbo: enough paperwork to look legitimate, not enough to satisfy institutional compliance departments shopping for USDC alternatives. WUSD's white-label infrastructure for enterprise stablecoin issuance is the real product pitch, but a payments network needs volume, and volume needs liquidity that isn't here yet — and the {{term:custody}}custody{{/term}} story alone won't fix that.",
-    "updatedAt": "2026-08-05",
+    "title": "The Exit Toll",
+    "text": "A dollar token that lost every venue it traded on, then charged a hundred of itself to leave the one still standing.\n\nWSPN's Worldwide USD shed roughly 94% of its circulating supply between 2026-07-21 and mid-August — 9.99M down to 0.61M, with two burns on 07-29 and 08-01 doing most of the work — and no issuer statement has accompanied the contraction. The centralized exits closed in the same window: MEXC delisted on 07-25, Bitget dropped WUSD/USDT on 07-31, and Coins.ph, the flagship retail pair, left on 08-04 with the tidy explanation that WUSD was \"no longer able to adhere to our listing standards.\" What remains is a single Viction pool quoting around $0.95 whose ~$96k headline reserve absorbs roughly $490 before it moves 2%, which is why Pharos now publishes no price at all rather than a number nothing trades at. Direct {{term:redemption}}redemption{{/term}} still functions, but only through corporate accounts that qualified businesses must apply and be verified for — so a holder without a WSPN relationship is routed to a secondary market that no longer exists. The detail worth pausing on sits on Viction, where the VRC25 deployment levies a flat 100 WUSD on token calls: amount-independent, verified on-chain, and charged on approve() as well as transfer(), meaning a wallet must hold $100 of a dollar token before it can authorise a swap of any size. The F grade was already on file before any of this happened; the reserve brochure was never the binding constraint.",
+    "updatedAt": "2026-08-19",
     "authoredBy": "ai",
-    "model": "claude-fable-5",
-    "factsAsOf": "2026-08-05"
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-08-19",
+    "sources": [
+      {
+        "label": "DefiLlama: WUSD circulating supply history (stablecoin 234)",
+        "url": "https://defillama.com/stablecoin/worldwide-usd"
+      },
+      {
+        "label": "Coins.ph: WUSD delisting notice, 2026-08-04",
+        "url": "https://support.coins.ph/hc/en-us/articles/60655699647641"
+      },
+      {
+        "label": "Bitget: notice of delisting 6 spot trading pairs, 2026-07-31",
+        "url": "https://www.bitget.com/support/articles/12560603890084"
+      },
+      {
+        "label": "Viction VRC25 issuer registry entry for WUSD (100 WUSD fee)",
+        "url": "https://issuer.viction.xyz/token/0xBA73E59F11597c1c13B0D9114688Efb6A6D430F6"
+      }
+    ]
   },
   "frxusd-frax": {
     "title": "Frax's Clean Slate",

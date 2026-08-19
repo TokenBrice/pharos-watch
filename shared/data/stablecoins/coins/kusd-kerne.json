@@ -45,9 +45,6 @@
       "url": "https://basescan.org/token/0x5c2efdf0d8d286959b42308966bc2b97f5680aa3"
     }
   ],
-  "jurisdiction": {
-    "country": "British Virgin Islands"
-  },
   "contracts": [
     {
       "chain": "base",

@@ -103,6 +103,11 @@
       "chain": "tempo",
       "address": "0x20c000000000000000000000e09a4cfec804f102",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "2uxaYT1fVrp6Fg2BrxQcyKSW91hefM6dG9krpbeDiirT",
+      "decimals": 9
     }
   ],
   "collateralQuality": "exotic",

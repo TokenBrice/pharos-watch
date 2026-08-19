@@ -53,6 +53,13 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "No market exit; 100 WUSD fee per Viction transfer",
+      "message": "WUSD lost every centralized venue between 2026-07-25 and 2026-08-04 — MEXC, Bitget, and Coins.ph, which stated WUSD is no longer able to adhere to its listing standards — and circulating supply fell about 94%, from 9,986,097 on 2026-07-21 to 610,332. Pharos publishes no price because no venue quotes one continuously: the only pool with live trading holds roughly $96k on Viction and absorbs about $490 before moving 2%. Direct redemption remains open but only through WSPN corporate accounts, which qualified businesses must apply and be verified for, so there is no retail exit at par. On Viction the token also charges a flat 100 WUSD fee on token calls, verified on-chain at block 112793798 and independent of the amount sent: a transfer requires the amount plus 100 WUSD, and approve() carries the same fee, so a wallet cannot authorise a swap of any size without holding 100 WUSD. https://issuer.viction.xyz/token/0xBA73E59F11597c1c13B0D9114688Efb6A6D430F6"
+    }
+  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
