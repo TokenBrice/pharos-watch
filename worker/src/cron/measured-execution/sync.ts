@@ -1,4 +1,5 @@
 import {
+  DEX_MEASURED_MAX_COST_BPS,
   getDexMeasuredExecutionProbeNotionals,
   getDexMeasuredExecutionFreshnessMaxSec,
   validateDexMeasuredExecutionProfile,
@@ -19,6 +20,13 @@ import {
   canonicalExitRouteChain,
   canonicalExitRouteScopedKey,
 } from "@shared/lib/exit-route-identity";
+import {
+  buildMeasuredLedgerCohortKey,
+  countMeasuredLadderCostBoundViolations,
+  countMeasuredLadderMonotonicityViolations,
+  encodeMeasuredLedgerRecord,
+  type MeasuredLedgerRecordB,
+} from "@shared/lib/measured-execution-ledger";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
@@ -272,6 +280,69 @@ export function summarizeMeasuredExecutionQuoteFailures(
       0,
       attemptedFailures.length - scoreEligibleFailures.length - oversizedTargetIds.size,
     ) + scoreEligibleDiagnosticFailureCount,
+  };
+}
+
+/**
+ * Failure reasons that mean a target was never attempted this run: the
+ * rotating admission budget deferred it up front, or the in-run RPC budget
+ * stopped before its ladder (both `evm-quote-plan.ts` stop paths surface as
+ * the two budget stop reasons on the quote state).
+ */
+const MEASURED_LEDGER_BUDGET_DEFERRED_REASONS: ReadonlySet<string> = new Set([
+  "budget-deferred",
+  "request-budget-exhausted",
+  "runtime-deadline-exceeded",
+]);
+
+/**
+ * Builds the durable Record B evidence ledger for one shadow quote run
+ * (Liquidity Score v6 Phase 0.4). Monotonicity and cost-bound consistency are
+ * computed here, at emission time, from the raw quote ladders — the staged
+ * quote generations prune at three hours, so this is the only durable place
+ * the ladder health of a daily shadow cycle can be recorded.
+ */
+export function buildMeasuredShadowQuoteLedgerRecord(input: {
+  cycle: number;
+  targetGenerationId: string | null;
+  quoteGenerationId: string | null;
+  outcomes: readonly {
+    target: DexMeasuredExecutionTarget;
+    status: "measured" | "failed";
+    failureReason?: string;
+    points?: readonly DexMeasuredRawQuotePoint[];
+  }[];
+}): MeasuredLedgerRecordB {
+  const cohorts: MeasuredLedgerRecordB["cohorts"] = {};
+  for (const outcome of input.outcomes) {
+    const key = buildMeasuredLedgerCohortKey(outcome.target);
+    const cohort = (cohorts[key] ??= {
+      measured: 0,
+      failed: 0,
+      budgetDeferred: 0,
+      monotonicityViolations: 0,
+      costBoundViolations: 0,
+    });
+    if (outcome.status === "measured") {
+      cohort.measured += 1;
+    } else if (MEASURED_LEDGER_BUDGET_DEFERRED_REASONS.has(outcome.failureReason ?? "")) {
+      cohort.budgetDeferred += 1;
+    } else {
+      cohort.failed += 1;
+    }
+    const points = outcome.points ?? [];
+    if (points.length > 0) {
+      cohort.monotonicityViolations += countMeasuredLadderMonotonicityViolations(points);
+      cohort.costBoundViolations += countMeasuredLadderCostBoundViolations(points, DEX_MEASURED_MAX_COST_BPS);
+    }
+  }
+  return {
+    kind: "B",
+    cycle: input.cycle,
+    targetGenerationId: input.targetGenerationId,
+    quoteGenerationId: input.quoteGenerationId,
+    cohorts,
+    truncatedCohorts: 0,
   };
 }
 
@@ -858,7 +929,21 @@ async function syncDexMeasuredExecutionLane(
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "target-generation-missing" }),
+      metadata: JSON.stringify({
+        reason: "target-generation-missing",
+        // A shadow run with no generation still writes an empty durable
+        // Record B so the ledger distinguishes "no generation" from "no row".
+        ...(lane === "shadow"
+          ? encodeMeasuredLedgerRecord(
+              buildMeasuredShadowQuoteLedgerRecord({
+                cycle: startedAt,
+                targetGenerationId: targetGeneration?.generationId ?? null,
+                quoteGenerationId: null,
+                outcomes: [],
+              }),
+            )
+          : {}),
+      }),
       productivity: { productive: false, reason: "target-generation-missing" },
     };
   }
@@ -1597,6 +1682,24 @@ async function syncDexMeasuredExecutionLane(
       }
       return counts;
     }, {}),
+    // Durable Record B (Phase 0.4): flat scalar chunks that survive the merged
+    // handler metadata and the producer-history scalar filter even when the
+    // run is nonproductive.
+    ...(lane === "shadow"
+      ? encodeMeasuredLedgerRecord(
+          buildMeasuredShadowQuoteLedgerRecord({
+            cycle: startedAt,
+            targetGenerationId: targetGeneration.generationId,
+            quoteGenerationId: publication.generationId,
+            outcomes: outcomes.map((outcome, index) => ({
+              target: outcome.target,
+              status: outcome.status,
+              ...(outcome.failureReason != null ? { failureReason: outcome.failureReason } : {}),
+              points: states[index]!.points,
+            })),
+          }),
+        )
+      : {}),
   };
   return {
     status: retention.error

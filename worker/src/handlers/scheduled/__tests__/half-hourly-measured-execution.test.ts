@@ -109,4 +109,56 @@ describe("half-hourly measured execution result aggregation", () => {
 
     expect(merged.status).toBe("error");
   });
+
+  it("hoists evidence-ledger scalars from the daily-0810 shadow lane to the merged top level", () => {
+    // Producer history keeps only top-level scalar metadata; nested lane
+    // objects are dropped, so mxLedger* chunks must survive at the top level.
+    const merged = mergeMeasuredExecutionResults(
+      result("ok", "evm-shadow", 0, {
+        mxLedgerV: 1,
+        mxLedgerKind: "B",
+        mxLedgerCycle: 1_755_590_200,
+        mxLedgerParts: 2,
+        mxLedger0: '{"cy":1755590200,"tg":"gen","qg":"quotes","tr":0,"c":{"uniswap-v3-quo',
+        mxLedger1: 'ter-v2@bsc":[1,0,0,0,0]}}',
+      }),
+      result("skipped_neutral", "solana"),
+      result("ok", "tron", 0, { activation: "shadow" }),
+    );
+    const metadata = JSON.parse(merged.metadata!);
+
+    expect(metadata).toMatchObject({
+      mxLedgerV: 1,
+      mxLedgerKind: "B",
+      mxLedgerCycle: 1_755_590_200,
+      mxLedgerParts: 2,
+    });
+    expect(metadata.mxLedger0).toBe('{"cy":1755590200,"tg":"gen","qg":"quotes","tr":0,"c":{"uniswap-v3-quo');
+    expect(metadata.mxLedger1).toBe('ter-v2@bsc":[1,0,0,0,0]}}');
+    // The nested lane copies remain untouched.
+    expect(metadata.evm.mxLedgerKind).toBe("B");
+  });
+
+  it("hoists ledger scalars from the half-hourly shape and keeps the first lane on collision", () => {
+    const merged = mergeMeasuredExecutionResults(
+      result("ok", "evm", 0, { mxLedgerV: 1, mxLedgerKind: "B", mxLedgerCycle: 10, mxLedgerParts: 1, mxLedger0: "{}" }),
+      result("ok", "solana-shadow", 0, { mxLedgerCycle: 99 }),
+      result("skipped_neutral", "tron"),
+    );
+    const metadata = JSON.parse(merged.metadata!);
+
+    expect(metadata.mxLedgerCycle).toBe(10);
+    expect(metadata.mxLedgerParts).toBe(1);
+  });
+
+  it("emits no ledger scalars when no lane carries them", () => {
+    const merged = mergeMeasuredExecutionResults(
+      result("ok", "evm"),
+      result("ok", "solana"),
+      result("ok", "tron"),
+    );
+    const metadata = JSON.parse(merged.metadata!);
+
+    expect(Object.keys(metadata).some((key) => key.startsWith("mxLedger"))).toBe(false);
+  });
 });

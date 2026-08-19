@@ -8,7 +8,7 @@ import {
   initMetrics,
 } from "./pool-helpers";
 import { isTrustworthyExactPoolId } from "./pool-identity";
-import type { LiquidityMetrics } from "./types";
+import type { LiquidityFallbackCounters, LiquidityMetrics } from "./types";
 import type {
   PoolExecutionCapability,
   PoolProtocolEnrichment,
@@ -21,6 +21,7 @@ export function accumulatePoolMetrics(
   enrichment: PoolProtocolEnrichment,
   capability: PoolExecutionCapability,
   stablecoinId: string,
+  fallbackCounters?: LiquidityFallbackCounters,
 ): void {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   if (!meta) return;
@@ -44,6 +45,9 @@ export function accumulatePoolMetrics(
   }
 
   const pairQuality = computePoolPairQuality(poolSymbols, meta.symbol);
+  // computePoolQualityContribution runs its optimistic balanceHealth=1 path when
+  // no measured Curve balance data exists for this pool.
+  if (fallbackCounters && curveData == null) fallbackCounters.unmeasuredBalanceOptimistic++;
   const {
     qualityAdjustedTvl: poolQualityAdjustedTvl,
     effectiveTvl: poolEffectiveTvl,

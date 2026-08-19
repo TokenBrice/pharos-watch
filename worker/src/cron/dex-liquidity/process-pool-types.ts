@@ -6,6 +6,7 @@ import type {
   CurveStableswapRateInputExecutionCandidate,
   EvmV2ExecutionCandidate,
   LlamaPool,
+  LiquidityFallbackCounters,
   LiquidityMetrics,
 } from "./types";
 import type { UniqueEvmV2ExecutionCandidateFingerprintIndex } from "./constant-product-v2";
@@ -47,6 +48,8 @@ export interface ProcessPoolMetricsInput {
     string,
     readonly UniswapV4ExecutionCandidate[]
   >;
+  /** Report-only fallback/default counters accumulated during processing. */
+  fallbackCounters?: LiquidityFallbackCounters;
 }
 
 export interface ProcessPoolMetricsResult {
@@ -62,6 +65,7 @@ export interface PoolProcessingContext
     | "aerodromeV2ExecutionCandidates"
     | "curvePoolCandidatesByFingerprint"
     | "uniswapV4ExecutionCandidates"
+    | "fallbackCounters"
   > {
   uniV3ExecutionCandidates: Map<string, UniV3ExecutionCandidate[]>;
   measuredTargetCapturedAt: number;

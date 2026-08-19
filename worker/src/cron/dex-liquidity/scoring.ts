@@ -10,6 +10,10 @@ import {
   type P4DexRouteObservationResult,
 } from "@shared/lib/p4-exit-route-capacity";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
+import {
+  buildMeasuredLedgerCohortKey,
+  type MeasuredLedgerAdmissionCohort,
+} from "@shared/lib/measured-execution-ledger";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -18,7 +22,7 @@ import { toErrorMessage } from "../../lib/error-utils";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { DexPriceObs, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
+import type { DexPriceObs, LiquidityFallbackCounters, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { SolanaMeasuredExecutionTarget } from "@shared/types/solana-measured-execution";
 import type { TronMeasuredExecutionTarget } from "@shared/types/tron-measured-execution";
@@ -61,7 +65,7 @@ import {
   type TronMeasuredExecutionJoinDiagnostics,
 } from "../measured-execution/tron-join";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
-import { computeDurabilityScore, computeLiquidityScore } from "./pool-helpers";
+import { computeDurabilityScore, computeLiquidityScore, initLiquidityFallbackCounters } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
@@ -152,6 +156,7 @@ function selectDexRouteObservationPoolSet(
   };
 }
 
+/** @internal Exported for focused route-observation selection tests. */
 export function selectDexRouteObservationPools(
   currentPools: readonly LiquidityMetrics["topPools"][number][],
   retainedMeasuredPools: readonly LiquidityMetrics["topPools"][number][],
@@ -651,8 +656,26 @@ interface ProtocolCapDiagnostics {
   reducedTvlUsd: number;
 }
 
+/**
+ * Report-only shadow admission-opportunity capture from the daily 06:16
+ * scoring run (Liquidity Score v6 Phases 0.1/0.4). Cohorts key on a stable
+ * per-policy identity via `buildMeasuredLedgerCohortKey`; this run records
+ * what it can decide (eligible/rejected/published) and the retrieval-time
+ * join with the 08:10 quote record derives the full tri-state.
+ */
+export interface DexShadowAdmissionDiagnostics {
+  /** Route-observation epoch of the emitting run (seconds). */
+  cycle: number;
+  targetGenerationId: string | null;
+  solanaTargetGenerationId: string | null;
+  tronTargetGenerationId: string | null;
+  cohorts: Record<string, MeasuredLedgerAdmissionCohort>;
+}
+
 interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
+  /** Report-only optimistic-default/silent-exclusion counters from the scoring pass. */
+  fallbackCounters: LiquidityFallbackCounters;
   routeSelection: DexRouteSelectionDiagnostic[];
   measuredExecution: {
     join: DexMeasuredExecutionJoinDiagnostics;
@@ -674,6 +697,8 @@ interface ScoreDiagnostics {
     tronTargetPublication:
       | { status: "published"; generationId: string; rowCount: number }
       | { status: "skipped" | "failed"; reason: string };
+    /** Populated only on the daily shadow-publication run; null otherwise. */
+    shadowAdmission: DexShadowAdmissionDiagnostics | null;
   };
 }
 
@@ -836,13 +861,14 @@ export async function computeStablecoinScores(
   let globalPoolCount = 0;
   const globalChains = new Set<string>();
   const protocolCapDiagnostics: ProtocolCapDiagnostics = { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 };
+  const fallbackCounters = initLiquidityFallbackCounters();
   const preparedRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
   const p4OnlyRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
 
   for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
     throwIfAborted(signal);
     p4OnlyRetainedPools.set(id, m.topPools.filter(isP4OnlyPausedBalancerPool));
-    m.topPools = filterRetainedPools(m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)));
+    m.topPools = filterRetainedPools(m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)), fallbackCounters);
     const capResult = applyProtocolCaps(m.topPools, protocolTvlCaps);
     protocolCapDiagnostics.cappedPoolCount += capResult.cappedPoolCount;
     protocolCapDiagnostics.cappedProtocols += capResult.cappedProtocols;
@@ -1132,6 +1158,54 @@ export async function computeStablecoinScores(
     }
   }
 
+  // Shadow admission-opportunity capture (Phases 0.1/0.4). This is the only
+  // place pre-target rejections are visible: a retained pool that failed target
+  // admission carries its `executionCapabilityGate`, while every produced
+  // shadow target sits in `shadowTargetInventory`. Emitted per policy cohort —
+  // never aggregated by adapter+chain — so a healthy policy cannot mask a
+  // broken sibling sharing the same adapter profile.
+  let shadowAdmission: DexShadowAdmissionDiagnostics | null = null;
+  if (measuredTargetPublicationMode === "active-and-shadow") {
+    const cohorts: Record<string, MeasuredLedgerAdmissionCohort> = {};
+    const cohortFor = (key: string) =>
+      (cohorts[key] ??= { eligible: 0, rejected: 0, published: 0, gateReason: null });
+    const shadowPublished = shadowTargetPublication.status === "published";
+    const shadowPublicationFailed = shadowTargetPublication.status === "failed";
+    for (const target of shadowTargetInventory) {
+      const cohort = cohortFor(buildMeasuredLedgerCohortKey(target));
+      cohort.eligible += 1;
+      if (shadowPublished) cohort.published += 1;
+      else if (shadowPublicationFailed && cohort.gateReason == null) {
+        cohort.gateReason = "shadow-target-publication-failed";
+      }
+    }
+    for (const [id, pools] of preparedRetainedPools) {
+      for (const pool of pools) {
+        const gate = pool.extra?.executionCapabilityGate;
+        if (!gate) continue;
+        const cohort = cohortFor(
+          buildMeasuredLedgerCohortKey({ chain: pool.chain, poolId: pool.poolId, stablecoinId: id }),
+        );
+        cohort.eligible += 1;
+        cohort.rejected += 1;
+        if (cohort.gateReason == null) cohort.gateReason = `${gate.family}:${gate.reason}`;
+      }
+    }
+    shadowAdmission = {
+      cycle: routeObservedAt,
+      targetGenerationId: shadowTargetPublication.status === "published"
+        ? shadowTargetPublication.generationId
+        : null,
+      solanaTargetGenerationId: solanaTargetPublication.status === "published"
+        ? solanaTargetPublication.generationId
+        : null,
+      tronTargetGenerationId: tronTargetPublication.status === "published"
+        ? tronTargetPublication.generationId
+        : null,
+      cohorts,
+    };
+  }
+
   const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal);
   const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
     poolsByStablecoin: preparedRetainedPools,
@@ -1176,7 +1250,7 @@ export async function computeStablecoinScores(
   for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
     throwIfAborted(signal);
     const retainedPools = preparedRetainedPools.get(id) ?? [];
-    const rebuilt = rebuildMetricsFromPools(retainedPools);
+    const rebuilt = rebuildMetricsFromPools(retainedPools, fallbackCounters);
     const routeObservationPoolSelection = selectDexRouteObservationPoolSet(
       [...retainedPools, ...(p4OnlyRetainedPools.get(id) ?? [])],
       retainedMeasuredRoutePools.get(id) ?? [],
@@ -1217,11 +1291,11 @@ export async function computeStablecoinScores(
     // v2: Compute durability score
     const tvlStab = tvlStabilityMap.get(id) ?? null;
     const volStab = volumeStabilityMap.get(id) ?? null;
-    const durability = computeDurabilityScore(m, tvlStab, volStab);
+    const durability = computeDurabilityScore(m, tvlStab, volStab, fallbackCounters);
 
     // v2: Compute 6-component score
     const circulatingUsd = mcapById?.get(id);
-    const { score, components } = computeLiquidityScore(m, durability, circulatingUsd);
+    const { score, components } = computeLiquidityScore(m, durability, circulatingUsd, fallbackCounters);
 
     // v2: Compute aggregate metrics
     const weightedBalanceRatio = weightedRatio(m.balanceRatioWeightedSum, m.totalTvlForBalance);
@@ -1315,6 +1389,7 @@ export async function computeStablecoinScores(
         cappedProtocols: protocolCapDiagnostics.cappedProtocols,
         reducedTvlUsd: protocolCapDiagnostics.reducedTvlUsd + Math.round(globalCapReduction),
       },
+      fallbackCounters,
       routeSelection: routeSelectionDiagnostics,
       measuredExecution: {
         join: measuredExecutionJoin,
@@ -1328,6 +1403,7 @@ export async function computeStablecoinScores(
         shadowTargetPublication,
         solanaTargetPublication,
         tronTargetPublication,
+        shadowAdmission,
       },
     },
   };

@@ -133,6 +133,7 @@ export function processPoolMetrics(
         enrichment,
         capability,
         stablecoinId,
+        input.fallbackCounters,
       );
     }
   }

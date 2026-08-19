@@ -14,7 +14,7 @@ import {
   COMPOSITE_POOL_NAMES,
   normalizeDexSymbol,
 } from "../../lib/dex-cron-constants";
-import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
+import type { LiquidityFallbackCounters, LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
 import { LIQUIDITY_COMPONENT_WEIGHTS } from "./score-weights";
 import { buildChainAddressKey } from "./token-resolution";
@@ -32,6 +32,31 @@ const TVL_DEPTH_FALLBACK_MCAP_USD = 1_000_000_000;
 
 function computeTvlDepthScore(depthRatio: number): number {
   return clampScore(TVL_DEPTH_SLOPE * Math.log10(depthRatio / TVL_DEPTH_ANCHOR_RATIO));
+}
+
+/** Zero-initialized report-only fallback/default counters (Liquidity v6 Phase 0.2). */
+export function initLiquidityFallbackCounters(): LiquidityFallbackCounters {
+  return {
+    unmeasuredBalanceOptimistic: 0,
+    stagedOrganicFractionDefault: 0,
+    stagedBalanceRatioFallback: 0,
+    fluidVolumeCoercedToZero: 0,
+    fluidFeeRateUnmeasured: 0,
+    fluidBalancesUnmeasured: 0,
+    directApiMaturityDefaulted: 0,
+    directApiBalanceUnmeasured: 0,
+    directApiPriceUnmeasured: 0,
+    durabilityOrganicFractionDefault: 0,
+    durabilityTvlStabilityDefault: 0,
+    durabilityVolumeConsistencyDefault: 0,
+    tvlDepthMcapFallback: 0,
+    tvlDepthRelative: 0,
+    rebuildQualityAdjustedTvlFallback: 0,
+    rebuildEffectiveTvlFallback: 0,
+    retainedExclusionBlockedDex: 0,
+    retainedExclusionVolTvlRatio: 0,
+    retainedExclusionLargePoolLowVolume: 0,
+  };
 }
 
 /** Parse pool symbol string into constituent token symbols */
@@ -126,15 +151,19 @@ export function computeDurabilityScore(
   m: LiquidityMetrics,
   tvlStability: number | null,
   volumeStability: number | null,
+  counters?: LiquidityFallbackCounters,
 ): number {
   // Organic fraction sub-score (sqrt curve — less punishing at low end)
+  if (counters && !(m.totalTvlForOrganic > 0)) counters.durabilityOrganicFractionDefault++;
   const organicFraction = m.totalTvlForOrganic > 0 ? m.organicTvlWeightedSum / m.totalTvlForOrganic : 0.5;
   const organicScore = Math.min(100, Math.sqrt(organicFraction) * 100);
 
   // TVL stability sub-score (from depth_stability, 0-1)
+  if (counters && tvlStability == null) counters.durabilityTvlStabilityDefault++;
   const tvlStabilityScore = tvlStability != null ? tvlStability * 100 : 50;
 
   // Volume consistency sub-score
+  if (counters && volumeStability == null) counters.durabilityVolumeConsistencyDefault++;
   const volumeConsistencyScore = volumeStability != null ? volumeStability * 100 : 50;
 
   // Maturity sub-score
@@ -154,15 +183,18 @@ export function computeLiquidityScore(
   m: LiquidityMetrics,
   durabilityScore: number,
   circulatingUsd?: number,
+  counters?: LiquidityFallbackCounters,
 ): { score: number; components: ScoreComponents } {
   // Component 1: TVL depth (30%) — uses effectiveTvl
   const tvlInput = m.effectiveTvl > 0 ? m.effectiveTvl : m.totalTvlUsd;
   let tvlDepth: number;
   if (circulatingUsd != null && circulatingUsd > 0) {
+    if (counters) counters.tvlDepthRelative++;
     // Size-aware relative formula: depth ratio vs circulating supply
     const depthRatio = tvlInput / circulatingUsd;
     tvlDepth = computeTvlDepthScore(depthRatio);
   } else {
+    if (counters) counters.tvlDepthMcapFallback++;
     // v5.5 absolute fallback: uses a $1B implied reference mcap to reuse the
     // ratio formula's anchor (0.07% depth = score 0). Equivalent to running
     // the ratio branch with depthRatio = tvl / 1_000_000_000.

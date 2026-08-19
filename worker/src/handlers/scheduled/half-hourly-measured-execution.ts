@@ -56,6 +56,27 @@ export async function settleMeasuredExecutionLane(name: string, run: Promise<Cro
   }
 }
 
+/**
+ * Producer history persists only top-level scalar metadata values, so the
+ * durable measured-execution evidence-ledger chunks emitted by a lane
+ * (`mxLedger*`, Liquidity Score v6 Phase 0.4) must be hoisted out of the
+ * nested per-lane objects. First lane wins on collision; only the EVM shadow
+ * lane emits these today.
+ */
+function collectMeasuredLedgerScalars(lanes: readonly unknown[]): Record<string, string | number | boolean | null> {
+  const scalars: Record<string, string | number | boolean | null> = {};
+  for (const lane of lanes) {
+    if (!lane || typeof lane !== "object" || Array.isArray(lane)) continue;
+    for (const [key, value] of Object.entries(lane as Record<string, unknown>)) {
+      if (!key.startsWith("mxLedger") || key in scalars) continue;
+      if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        scalars[key] = value;
+      }
+    }
+  }
+  return scalars;
+}
+
 export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResult, tron: CronResult): CronResult {
   const evmStatus = evm.status ?? "ok";
   const solanaStatus = solana.status ?? "ok";
@@ -91,6 +112,7 @@ export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResul
       evm: evmMetadata,
       solana: solanaMetadata,
       tron: tronMetadata,
+      ...collectMeasuredLedgerScalars([evmMetadata, solanaMetadata, tronMetadata]),
     }),
     productivity: {
       productive,

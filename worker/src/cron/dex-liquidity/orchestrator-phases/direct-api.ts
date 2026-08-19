@@ -42,7 +42,7 @@ import {
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
 } from "../pool-identity";
-import type { DexPriceObs, GtNewPool, LiquidityMetrics, PoolEntry, SymbolLookups } from "../types";
+import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, SymbolLookups } from "../types";
 import { mergeDexPriceObservationMap } from "./price-obs";
 import { DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
 import { toErrorMessage } from "../../../lib/error-utils";
@@ -284,6 +284,7 @@ export function buildDexDirectApiFetchers(params: {
   symbolToChainScopedIds: SymbolLookups["symbolToChainScopedIds"];
   stablecoinPriceById: Map<string, number>;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  fallbackCounters?: LiquidityFallbackCounters;
 }): DirectApiFetcher[] {
   return [
     {
@@ -291,7 +292,7 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API,
       normalizedProtocol: "fluid",
       supportedChains: ["ethereum", "arbitrum", "base", "polygon", "bsc", "plasma"],
-      fn: (signal) => fetchFluidPools(signal, params.chainRpcs),
+      fn: (signal) => fetchFluidPools(signal, params.chainRpcs, params.fallbackCounters),
     },
     {
       name: "Balancer",
@@ -535,6 +536,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
   validationReferences: PriceValidationReferences;
   stablecoinPriceById: Map<string, number>;
   preprocessedPoolCounts?: DirectApiPoolCompactionCounts;
+  fallbackCounters?: LiquidityFallbackCounters;
 }): Promise<DirectApiIntegrationResult> {
   if (
     params.preprocessedPoolCounts &&
@@ -716,9 +718,10 @@ export async function integrateDirectApiLiquidityPhase(params: {
       params.symbolToChainScopedIds,
       params.validationReferences,
       params.stablecoinPriceById,
+      params.fallbackCounters,
     );
     if (directApiGtPools.size > 0) {
-      await mergeGtPools(params.metrics, directApiGtPools, params.db);
+      await mergeGtPools(params.metrics, directApiGtPools, params.db, params.fallbackCounters);
     }
   }
 

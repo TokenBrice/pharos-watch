@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { logCronEvent, type CronEventInput } from "../../lib/cron-logger";
-import type { LiquidityMetrics, PoolEntry, GtNewPool, CgNewPool } from "./types";
+import type { LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, GtNewPool, CgNewPool } from "./types";
 import { addSecondaryPoolContribution } from "./pool-contribution";
 
 type DexCrawlerEvent = Omit<CronEventInput, "job">;
@@ -15,6 +15,7 @@ function mergeSecondaryPools<TPool extends GtNewPool | CgNewPool>(
   discoveredPools: Map<string, TPool[]>,
   options?: {
     onPoolMerged?: (pool: TPool) => void;
+    fallbackCounters?: LiquidityFallbackCounters;
   },
 ): number {
   let merged = 0;
@@ -29,7 +30,7 @@ function mergeSecondaryPools<TPool extends GtNewPool | CgNewPool>(
     }
 
     for (const pool of pools) {
-      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool, poolIndex);
+      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool, poolIndex, options?.fallbackCounters);
       options?.onPoolMerged?.(pool);
       merged++;
     }
@@ -44,12 +45,14 @@ export async function mergeCgPools(
   metrics: Map<string, LiquidityMetrics>,
   cgNewPools: Map<string, CgNewPool[]>,
   db?: D1Database,
+  fallbackCounters?: LiquidityFallbackCounters,
 ): Promise<void> {
   let withBalance = 0;
   const merged = mergeSecondaryPools(metrics, cgNewPools, {
     onPoolMerged: (pool) => {
       if (pool.balanceRatio != null) withBalance++;
     },
+    fallbackCounters,
   });
 
   if (merged > 0) {
@@ -67,8 +70,9 @@ export async function mergeGtPools(
   metrics: Map<string, LiquidityMetrics>,
   gtNewPools: Map<string, GtNewPool[]>,
   db?: D1Database,
+  fallbackCounters?: LiquidityFallbackCounters,
 ): Promise<void> {
-  const merged = mergeSecondaryPools(metrics, gtNewPools);
+  const merged = mergeSecondaryPools(metrics, gtNewPools, { fallbackCounters });
 
   if (merged > 0) {
     await logDexCrawlerEvent(db, {

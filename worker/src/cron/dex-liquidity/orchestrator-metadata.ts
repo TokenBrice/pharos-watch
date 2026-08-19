@@ -1,12 +1,14 @@
+import { encodeMeasuredLedgerRecord } from "@shared/lib/measured-execution-ledger";
 import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persistence";
 import type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 import type { DexPaginationPersistenceSummary } from "../../lib/dex-api-common";
-import type { DexPricePersistenceDiagnostics } from "./scoring";
+import type { DexPricePersistenceDiagnostics, DexShadowAdmissionDiagnostics } from "./scoring";
 import {
   POOL_REJECTION_MATERIAL_TVL_USD,
   hasMaterialPoolRejections,
 } from "./process-pools";
 import type { PoolProcessingRejection } from "./process-pool-types";
+import type { LiquidityFallbackCounters } from "./types";
 
 export type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 export { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
@@ -76,6 +78,9 @@ export function buildDexLiquidityCronMetadata(params: {
   dexPriceDiagnostics: DexPricePersistenceDiagnostics;
   failedSources: string[];
   fallbackSignals: string[];
+  fallbackCounters: LiquidityFallbackCounters;
+  /** Daily shadow admission capture; null on non-shadow-publication runs. */
+  shadowAdmission: DexShadowAdmissionDiagnostics | null;
   persistence: PersistScoresResult;
   historicalSnapshot: HistoricalSnapshotWriteResult;
 }): Record<string, unknown> {
@@ -115,6 +120,49 @@ export function buildDexLiquidityCronMetadata(params: {
     failedSources: [...new Set(params.failedSources)],
     dexPriceDiagnostics: params.dexPriceDiagnostics,
     fallbackMode: [...new Set(params.fallbackSignals)],
+    fallbackCounters: params.fallbackCounters,
+    // Phase 0.1 report-only admission-opportunity states per policy cohort,
+    // plus the durable Record A ledger chunks (Phase 0.4) as flat scalars so
+    // they survive the producer-history scalar filter. The remaining
+    // tri-states (`no-eligible-source-row`, `target-produced-no-quote`) are
+    // only decidable by joining Record A with the 08:10 Record B at retrieval.
+    ...(params.shadowAdmission
+      ? {
+          shadowAdmissionReport: {
+            cycle: params.shadowAdmission.cycle,
+            targetGenerationId: params.shadowAdmission.targetGenerationId,
+            solanaTargetGenerationId: params.shadowAdmission.solanaTargetGenerationId,
+            tronTargetGenerationId: params.shadowAdmission.tronTargetGenerationId,
+            cohorts: Object.fromEntries(
+              Object.entries(params.shadowAdmission.cohorts).map(([key, cohort]) => [
+                key,
+                {
+                  ...cohort,
+                  state: cohort.rejected > 0
+                    ? "eligible-source-rejected"
+                    : cohort.published > 0
+                      ? "target-published"
+                      : "target-publication-failed",
+                },
+              ]),
+            ),
+          },
+          ...encodeMeasuredLedgerRecord(
+            {
+              kind: "A",
+              cycle: params.shadowAdmission.cycle,
+              targetGenerationId: params.shadowAdmission.targetGenerationId,
+              solanaTargetGenerationId: params.shadowAdmission.solanaTargetGenerationId,
+              tronTargetGenerationId: params.shadowAdmission.tronTargetGenerationId,
+              cohorts: params.shadowAdmission.cohorts,
+              truncatedCohorts: 0,
+            },
+            // Five chunks keep the persisted scalar object under the 2,000-char
+            // producer-history bound beside this job's numeric scalars.
+            { maxParts: 5 },
+          ),
+        }
+      : {}),
     persistence: {
       generationId: params.persistence.generationId ?? null,
       expectedRowCount: params.persistence.expectedRowCount ?? null,

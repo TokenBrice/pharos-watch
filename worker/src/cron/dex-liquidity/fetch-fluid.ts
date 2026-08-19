@@ -13,6 +13,7 @@ import { encodeAddress } from "../../lib/evm-selectors";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { rethrowIfAborted } from "../../lib/abort";
+import type { LiquidityFallbackCounters } from "./types";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
 const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
@@ -162,6 +163,7 @@ async function enrichFluidPool(
 export async function fetchFluidPools(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  fallbackCounters?: LiquidityFallbackCounters,
 ): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
@@ -204,6 +206,10 @@ export async function fetchFluidPools(
           return null;
         }
 
+        if (fallbackCounters && (!Number.isFinite(baseVol) || !Number.isFinite(targetVol))) {
+          fallbackCounters.fluidVolumeCoercedToZero++;
+        }
+
         return {
           source: "fluid",
           chain,
@@ -234,6 +240,11 @@ export async function fetchFluidPools(
           const reason = toErrorMessage(error);
           warnings.push(`${chain} pool ${pool.poolAddress} enrichment failed: ${reason}`);
           logWorkerEventArgs("handler", "warn", "[fetch-fluid] Pool enrichment failed:", reason);
+        }
+        if (fallbackCounters) {
+          // Neutral defaults that survive enrichment stay in the scored pool graph.
+          if (pool.feeRate == null) fallbackCounters.fluidFeeRateUnmeasured++;
+          if (pool.balances == null) fallbackCounters.fluidBalancesUnmeasured++;
         }
       }
       results.push(...pools);
