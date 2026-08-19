@@ -4871,6 +4871,68 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "wusd-worldwide",
+      "reviewedAt": "2026-08-19",
+      "reviewer": "Claude transfer-fact review (issue #865)",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At Ethereum block 25787562 the WSPN ERC1967 proxy resolved to a verified ERC20F AccessControl token: paused() returned false, totalSupply() was 552,285.91 WUSD, and PAUSER_ROLE, BURNER_ROLE, MINTER_ROLE, CONTRACT_ADMIN_ROLE and UPGRADER_ROLE are declared role constants. Probes for isBlacklisted(address), blacklisted(address), frozen(address) and isFrozen(address) all reverted, so no holder-selective denylist was found in those four common forms; a PAUSER_ROLE holder can still halt all transfers, so secondary transfers remain restrictable rather than permissionless.",
+          "sources": [
+            {
+              "label": "WUSD on Ethereum (Etherscan)",
+              "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+            },
+            {
+              "label": "Ethereum PublicNode RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "polygon",
+          "contractOrTokenId": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+          "scope": "additional",
+          "posture": "restrictable",
+          "evidence": "At Polygon block 92278868 the same-address WSPN deployment exposed the identical ERC20F role set, with paused() false and totalSupply() 58,045.44 WUSD; the same four denylist probes reverted. This is native WSPN issuance rather than a bridged copy, per the reviewed bridge-route facts, and carries no transfer fee.",
+          "sources": [
+            {
+              "label": "WUSD on Polygon (Polygonscan)",
+              "url": "https://polygonscan.com/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+            },
+            {
+              "label": "Polygon PublicNode RPC",
+              "url": "https://polygon-bor-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "viction",
+          "contractOrTokenId": "0xba73e59f11597c1c13b0d9114688efb6a6d430f6",
+          "scope": "additional",
+          "posture": "restrictable",
+          "evidence": "The Viction deployment charges a flat 100 WUSD protocol fee on token calls, verified at Viction block 112793798. minFee() and estimateFee(uint256) both return 100000000000000000000 against decimals() 18, and estimateFee is amount-independent, returning the same 100 WUSD for 0, 1 wei, 1 WUSD and 10,000 WUSD. eth_call transfer probes from the WUSD/C98 pool pin the boundary exactly: an amount of balance minus 100 WUSD succeeds, while balance minus 100 WUSD plus 1 wei reverts InsufficientBalance() (0xf4d678b8), so a holder must retain a full 100 WUSD on top of whatever is sent. approve(spender, 1) reverts the same way from a zero-balance address and succeeds from the funded pool, so authorising a DEX also costs 100 WUSD. paused() was false and issuer() equals owner() 0x42cc0bacf8286da37196e4391727d4f3ad478319. Viction totalSupply() was 48,461.45 WUSD, of which the WUSD/C98 pool held 48,122.94 (99.3%), so the fee applies to roughly 338 WUSD held elsewhere on this chain while making the only venue with live trading unreachable for any holder with less than 100 WUSD.",
+          "sources": [
+            {
+              "label": "WUSD on Viction (Vicscan)",
+              "url": "https://vicscan.xyz/address/0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+            },
+            {
+              "label": "Viction VRC25 issuer registry entry for WUSD",
+              "url": "https://issuer.viction.xyz/token/0xBA73E59F11597c1c13B0D9114688Efb6A6D430F6"
+            },
+            {
+              "label": "Viction public RPC",
+              "url": "https://rpc.viction.xyz"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -512,7 +512,6 @@ describe("getRedemptionBackstopConfig", () => {
       "sbc-brale",
       "eurr-stablr",
       "usdr-stablr",
-      "wusd-worldwide",
       "audd-novatti",
     ] as const;
 
@@ -525,6 +524,17 @@ describe("getRedemptionBackstopConfig", () => {
       });
       expect(config?.docs?.length).toBeGreaterThan(0);
     }
+
+    // WUSD belongs to the same tranche but carries its own re-review stamp:
+    // the first-wave date predated the CEX delisting cascade that left the
+    // gated issuer route as the only exit (issue #865).
+    const wusd = getRedemptionBackstopConfig("wusd-worldwide");
+    expect(wusd).toMatchObject({
+      routeFamily: "offchain-issuer",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      reviewedAt: "2026-08-19",
+    });
+    expect(wusd?.docs?.length).toBeGreaterThan(0);
 
     expect(getRedemptionBackstopConfig("usdh-native-markets")).toMatchObject({
       costModel: { kind: "fee-bps", feeBps: 0 },

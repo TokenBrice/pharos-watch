@@ -1713,6 +1713,28 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       label: "WUSD depeg low ~$0.97 — liquidity stress",
       severity: "med",
     },
+    {
+      // 2026-07-25 — MEXC ST-tagged WUSD on 07-22 and delisted it 07-25;
+      // Bitget removed WUSD/USDT on 07-31; Coins.ph, the flagship WUSD/PHP
+      // retail venue, delisted 08-04 citing WUSD no longer meeting its
+      // listing standards. Pinned at the first delisting; the Coins.ph
+      // notice is the only one of the three that states a reason.
+      ts: Date.UTC(2026, 6, 25),
+      kind: "regulatory",
+      label: "CEX delisting cascade — MEXC, Bitget and Coins.ph exit WUSD",
+      severity: "high",
+      href: "https://support.coins.ph/hc/en-us/articles/60655699647641",
+    },
+    {
+      // 2026-07-29 — largest single-day burn of the contraction: 8.39M to
+      // 2.21M, followed by 2.21M to 0.61M on 08-01. Circulating fell 9.99M
+      // (07-21) to 0.61M, ~94%, with primary redemption KYB-gated to
+      // qualified businesses. No issuer statement accompanied it.
+      ts: Date.UTC(2026, 6, 29),
+      kind: "mint-burn-spike",
+      label: "94% of supply redeemed — WUSD circulating falls 9.99M to 0.61M",
+      severity: "high",
+    },
   ],
   "xdai-gnosis": [
     {

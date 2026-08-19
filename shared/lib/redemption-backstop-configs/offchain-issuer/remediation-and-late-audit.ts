@@ -56,11 +56,17 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       ]),
     ],
   },
+  // Re-reviewed 2026-08-19 (issue #865). The issuer route itself is unchanged
+  // and still documented, but the prior 2026-03-23 stamp predated the events
+  // that made it the *only* route: WUSD lost every CEX venue between 07-25 and
+  // 08-04 and circulating fell ~94% (9.99M to 0.61M). A holder who cannot open
+  // a WSPN corporate account now has no exit at par, so the eligibility gate is
+  // named explicitly rather than left to the access model alone.
   "wusd-worldwide": {
     ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
+    ...documentedBoundSupplyFull("2026-08-19"),
     costModel: documentedVariableFee(
-      "Corporate-account redemptions convert WUSD to USD at a 1:1 rate; WSPN docs say the platform conversion has no handling fee, while bank or network fees may still apply",
+      "Redemption is limited to WSPN corporate accounts, which qualified businesses must apply and be verified for; there is no retail redemption path. Approved accounts convert WUSD to USD at a 1:1 rate and WSPN docs say the platform conversion has no handling fee, while bank or network fees may still apply",
     ),
     docs: [
       sourceRef("About WUSD", "https://developer.wspn.io/5768563m0", ["route", "capacity"]),
