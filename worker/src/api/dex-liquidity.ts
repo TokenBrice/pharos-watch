@@ -4,7 +4,6 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { isMissingTableError } from "../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { getLiquidityMethodologyVersionAt } from "@shared/lib/methodology-versions/liquidity-score";
 import {
   buildDexLiquidityWarning,
   getDexLiquidityTrendTolerances,
@@ -183,7 +182,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
       scoreComponents: scoreDetails.scoreComponents,
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
-      methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.updated_at),
+      methodologyVersion: row.methodology_version,
       deploymentCoverage: deploymentCoverageById.get(id) ?? null,
       exitRouteObservations: scoreDetails.exitRouteObservations,
       exitRouteObservationCoverage: scoreDetails.exitRouteObservationCoverage,

@@ -106,20 +106,16 @@ describe("handleDexLiquidityHistory", () => {
     expect(body[0]).not.toHaveProperty("snapshot_date");
   });
 
-  it("reconstructs methodologyVersion from snapshot date when DB version is null", async () => {
-    const legacyRow = {
-      ...makeDexLiquidityHistoryRow({
-        snapshot_date: 1772250000, // v2.2 window
-      }),
-      methodology_version: null,
-    };
-    const db = mockD1([{ match: "dex_liquidity_history", rows: [legacyRow] }]);
+  it("passes the stored methodology_version through unchanged", async () => {
+    const db = mockD1([
+      { match: "dex_liquidity_history", rows: [makeDexLiquidityHistoryRow({ methodology_version: "5.91" })] },
+    ]);
     const res = await handleDexLiquidityHistory(
       db,
       new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
     );
     const body = (await res.json()) as Array<{ methodologyVersion: string }>;
-    expect(body[0]?.methodologyVersion).toBe("2.2");
+    expect(body[0]?.methodologyVersion).toBe("5.91");
   });
 
   it("marks low-confidence snapshots as informational rather than trendworthy", async () => {

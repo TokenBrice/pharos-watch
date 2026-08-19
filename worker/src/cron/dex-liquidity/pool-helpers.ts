@@ -75,7 +75,7 @@ export function parsePoolSymbols(symbol: string): string[] {
 }
 
 /** Classify a DeFiLlama pool into a pool type for quality weighting */
-export function classifyPoolType(project: string): string {
+export function classifyPoolType(project: string, poolMeta?: string | null): string {
   const proj = project.toLowerCase();
   if (proj.includes("aerodrome-slipstream")) return "aerodrome-slipstream-5bp";
   if (proj.includes("velodrome-slipstream")) return "velodrome-slipstream-5bp";
@@ -85,7 +85,15 @@ export function classifyPoolType(project: string): string {
   if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined to aerodrome-stable via subgraph isStable flag
   if (proj.includes("balancer") && proj.includes("stable")) return "balancer-stable";
   if (proj.includes("balancer")) return "balancer-weighted";
-  if (proj.includes("raydium")) return "raydium-amm";
+  // DL lists every Raydium pool under the raydium-amm slug; the CLMM signal
+  // lives in poolMeta ("Concentrated - 0.01%" vs "Standard - 0.25%").
+  // Collapsing CLMM rows to raydium-amm diverges the pool-shape identity from
+  // the direct fetcher's raydium-clmm classification, so the cross-source
+  // dedupe never fires and the same physical pool is admitted twice.
+  if (proj.includes("raydium")) {
+    const meta = (poolMeta ?? "").toLowerCase();
+    return proj.includes("clmm") || meta.includes("concentrated") ? "raydium-clmm" : "raydium-amm";
+  }
   if (proj.includes("orca")) return "orca-whirlpool";
   if (proj.includes("pancakeswap")) return "pancakeswap-v3-5bp";
   if (proj.includes("uniswap-v3") || proj === "uniswap-v3") return "uniswap-v3-5bp";

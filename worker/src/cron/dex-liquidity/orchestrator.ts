@@ -110,7 +110,7 @@ export function filterPrimaryPoolsPreferDirectApi(
       protocol: pool.project,
       poolAddressOrId: pool.pool,
       tokenAddresses: tokenAddrs,
-      poolType: classifyPoolType(pool.project),
+      poolType: classifyPoolType(pool.project, pool.poolMeta),
       isStable: pool.stablecoin,
       isStableHint,
     });

@@ -38,7 +38,10 @@ describe("dex-liquidity pool helpers", () => {
     expect(classifyPoolType("balancer-v2")).toBe("balancer-weighted");
     expect(classifyPoolType("uniswap-v3")).toBe("uniswap-v3-5bp");
     expect(classifyPoolType("raydium")).toBe("raydium-amm");
-    expect(classifyPoolType("Raydium CLMM")).toBe("raydium-amm");
+    expect(classifyPoolType("raydium-amm")).toBe("raydium-amm");
+    expect(classifyPoolType("raydium-amm", "Standard - 0.25%")).toBe("raydium-amm");
+    expect(classifyPoolType("raydium-amm", "Concentrated - 0.01%")).toBe("raydium-clmm");
+    expect(classifyPoolType("Raydium CLMM")).toBe("raydium-clmm");
     expect(classifyPoolType("orca-whirlpool")).toBe("orca-whirlpool");
     expect(classifyPoolType("mystery-dex")).toBe("generic");
 

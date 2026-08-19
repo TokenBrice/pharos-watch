@@ -436,21 +436,15 @@ describe("handleDexLiquidity", () => {
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
 
-  it("reconstructs methodologyVersion from updatedAt when DB version is null", async () => {
-    const legacyRow = {
-      ...makeDexLiquidityRow({
-        updated_at: 1772280000, // v3.0 window
-      }),
-      methodology_version: null,
-    };
+  it("passes the stored methodology_version through unchanged", async () => {
     const db = mockDexD1([
-      { match: "dex_liquidity", rows: [legacyRow] },
+      { match: "dex_liquidity", rows: [makeDexLiquidityRow({ methodology_version: "5.91" })] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
     ]);
     const res = await handleDexLiquidity(db);
     const body = (await res.json()) as Record<string, { methodologyVersion: string }>;
-    expect(body["usdt-tether"]?.methodologyVersion).toBe("3.0");
+    expect(body["usdt-tether"]?.methodologyVersion).toBe("5.91");
   });
 
   it("adds a Warning header when the latest liquidity cron run was degraded", async () => {

@@ -669,7 +669,7 @@ export function buildKnownPoolAddresses(
       protocol: pool.project,
       poolAddressOrId: pool.pool,
       tokenAddresses: pool.underlyingTokens ?? [],
-      poolType: classifyPoolType(pool.project),
+      poolType: classifyPoolType(pool.project, pool.poolMeta),
       isStable: pool.stablecoin,
     });
     if (identity.derivedMatchKey) derivedCount++;

@@ -10,7 +10,11 @@
 
 export const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
 
-/** Pool-type-adjusted TVL multipliers for liquidity score quality weighting */
+/**
+ * Pool-type-adjusted TVL multipliers for liquidity score quality weighting.
+ * Values are expert-judgment calibration, not measured slippage; last table
+ * change 2026-04-23, last reviewed 2026-08-19 (Liquidity v6 Phase 2).
+ */
 export const QUALITY_MULTIPLIERS: Record<string, number> = {
   "curve-stableswap-high-a": 1.0,
   "curve-stableswap": 0.85,

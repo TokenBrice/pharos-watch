@@ -75,7 +75,7 @@ export function admitAndResolvePoolIdentity(
   });
   if (matchedIds.size === 0) return null;
 
-  const poolType = classifyPoolType(pool.project);
+  const poolType = classifyPoolType(pool.project, pool.poolMeta);
   const protocol = normalizeProtocol(pool.project);
   const chainNorm = canonicalExitRouteChain(pool.chain);
   const addrCurveKey = canonicalExitRouteAssetKey(chainNorm, pool.pool);

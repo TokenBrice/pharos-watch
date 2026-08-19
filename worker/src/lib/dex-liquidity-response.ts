@@ -44,7 +44,8 @@ export interface DexLiquidityRow {
   source_mix_json: string | null;
   balance_measured_tvl_usd: number | null;
   organic_measured_tvl_usd: number | null;
-  methodology_version: string | null;
+  // Column is NOT NULL DEFAULT in D1; no NULL rows remain (verified 2026-08-19).
+  methodology_version: string;
 }
 
 export interface DexHistoryRow {
