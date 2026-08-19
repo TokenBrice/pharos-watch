@@ -1185,3 +1185,38 @@ describe("tracked stablecoin metadata", () => {
     expect(mismatches).toEqual([]);
   });
 });
+
+describe("suspended live reserve feeds", () => {
+  it("strips a suspended liveReservesConfig at registry load and keeps others intact", async () => {
+    const { withoutSuspendedLiveReserves } = await import("@shared/lib/stablecoins/registry");
+    const base = {
+      id: "test-coin",
+      liveReservesConfig: {
+        adapter: "m0",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/graphql" } },
+      },
+    } as unknown as Parameters<typeof withoutSuspendedLiveReserves>[0];
+
+    expect(withoutSuspendedLiveReserves(base)).toBe(base);
+
+    const suspended = {
+      ...base,
+      liveReservesConfig: {
+        ...base.liveReservesConfig,
+        suspended: { reason: "upstream keyed access", since: "2026-08-19" },
+      },
+    } as unknown as Parameters<typeof withoutSuspendedLiveReserves>[0];
+    const stripped = withoutSuspendedLiveReserves(suspended);
+    expect(stripped.liveReservesConfig).toBeUndefined();
+    expect(stripped.id).toBe("test-coin");
+  });
+
+  it("exposes no suspended config through the tracked registry", async () => {
+    const { TRACKED_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
+    for (const coin of TRACKED_STABLECOINS) {
+      expect(coin.liveReservesConfig?.suspended, coin.id).toBeUndefined();
+    }
+  });
+});

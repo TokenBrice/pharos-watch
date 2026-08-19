@@ -147,6 +147,19 @@ export interface LiveReserveDisplay {
   label?: string;
 }
 
+/**
+ * Explicit operator suspension of a live reserve feed. A suspended config is
+ * stripped from runtime metadata at registry load, so every consumer (sync
+ * queue, scoring, presentation) behaves as if the coin has no live feed and
+ * falls back to curated reserve evidence. The source file keeps the full
+ * adapter config so re-enabling is a one-line revert.
+ */
+export interface LiveReserveSuspension {
+  reason: string;
+  since: string;
+  reviewBy?: string;
+}
+
 export interface LiveReservesConfig {
   adapter: LiveReserveAdapterKey;
   version: number;
@@ -154,6 +167,7 @@ export interface LiveReservesConfig {
   breakerScope?: string;
   display?: LiveReserveDisplay;
   scoring?: LiveReserveScoringPolicy;
+  suspended?: LiveReserveSuspension;
   inputs: {
     primary: LiveReserveInput;
     fallbacks?: LiveReserveInput[];

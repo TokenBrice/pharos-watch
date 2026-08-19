@@ -41,6 +41,9 @@ Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig`
 | `inputs.primary`   | Primary source input                                                                  |
 | `inputs.fallbacks` | Optional fallback inputs                                                              |
 | `params`           | Adapter-specific validated settings enforced by the shared live-reserve config schema |
+| `suspended`        | Optional operator kill switch (`reason`, `since`, optional `reviewBy`, ISO dates)     |
+
+A `suspended` marker is for dead upstream feeds (for example a provider moving to keyed API access with no key issued). The registry strips a suspended `liveReservesConfig` at load (`shared/lib/stablecoins/registry.ts`), so every consumer — the sync queue, V9 backing evidence, presentation, and circuit breakers — treats the coin as having no live feed and falls back to curated reserve evidence. The source file keeps the full adapter config, so re-enabling is a one-line revert. First use: the seven `m0`-adapter coins on 2026-08-19, after M0's Protocol API moved to keyed access.
 
 All configured source URLs must be absolute URLs. The schema enforces this for HTTP/indexer inputs, `display.url`, and adapter-specific URL params such as RPC endpoints, dashboard APIs, and liquidity endpoints. Adapter definitions also declare their supported `semantics` values and config `version` set, so metadata changes cannot silently pair an adapter with unsupported reserve semantics.
 

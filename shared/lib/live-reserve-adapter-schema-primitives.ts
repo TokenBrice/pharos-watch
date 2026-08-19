@@ -73,4 +73,12 @@ export const baseLiveReserveConfigSchema = z.object({
   breakerScope: z.string().min(1).optional(),
   display: LiveReserveDisplaySchema.optional(),
   scoring: liveReserveScoringPolicySchema.optional(),
+  suspended: z
+    .object({
+      reason: z.string().min(1),
+      since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "since must be an ISO date (YYYY-MM-DD)"),
+      reviewBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "reviewBy must be an ISO date (YYYY-MM-DD)").optional(),
+    })
+    .strict()
+    .optional(),
 });

@@ -111,6 +111,28 @@ describe("baseLiveReserveConfigSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts an operator suspension with ISO dates and rejects malformed ones", () => {
+    const base = { version: 1, semantics: "collateral-mix" };
+    expect(
+      baseLiveReserveConfigSchema.safeParse({
+        ...base,
+        suspended: { reason: "upstream moved to keyed access", since: "2026-08-19", reviewBy: "2026-09-19" },
+      }).success,
+    ).toBe(true);
+    expect(
+      baseLiveReserveConfigSchema.safeParse({
+        ...base,
+        suspended: { reason: "", since: "2026-08-19" },
+      }).success,
+    ).toBe(false);
+    expect(
+      baseLiveReserveConfigSchema.safeParse({
+        ...base,
+        suspended: { reason: "x", since: "next week" },
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts the late-monthly disclosure source-age policy", () => {
     const result = baseLiveReserveConfigSchema.safeParse({
       version: 1,
