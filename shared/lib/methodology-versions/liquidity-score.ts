@@ -3,6 +3,7 @@ import { LIQUIDITY_SCORE_V2 } from "../../data/methodology-changelogs/liquidity-
 import { LIQUIDITY_SCORE_V3 } from "../../data/methodology-changelogs/liquidity-score/v3";
 import { LIQUIDITY_SCORE_V4 } from "../../data/methodology-changelogs/liquidity-score/v4";
 import { LIQUIDITY_SCORE_V5 } from "../../data/methodology-changelogs/liquidity-score/v5";
+import { LIQUIDITY_SCORE_V6 } from "../../data/methodology-changelogs/liquidity-score/v6";
 import { createMethodologyVersion } from "./base";
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
@@ -13,6 +14,7 @@ const liquidity = createMethodologyVersion({
   currentVersion: LIQUIDITY_METHODOLOGY_VERSION,
   changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
+    ...LIQUIDITY_SCORE_V6,
     ...LIQUIDITY_SCORE_V5,
     ...LIQUIDITY_SCORE_V4,
     ...LIQUIDITY_SCORE_V3,

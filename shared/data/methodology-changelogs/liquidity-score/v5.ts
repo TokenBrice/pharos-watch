@@ -4,11 +4,8 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // @shared/lib/methodology-versions/base): each dotted segment is compared as an
 // INTEGER, not a decimal fraction — so the minor segment is an open-ended integer
 // counter within the v5 bucket, e.g. `5.0` ([5, 0]) < `5.8` ([5, 8]) < `5.81`
-// ([5, 81]). Routine liquidity-score changes bump the minor counter (and may
-// extend to `5.811`, `5.812`, … without ever needing v6) and stay in this file.
-// Create a new `v6.ts` (and a sibling vN file array) only for a genuine
-// major/breaking change to the liquidity-score methodology, not merely to roll the
-// counter over. Entries below are newest-first by version.
+// ([5, 81]). This file is the closed v5 history: since the v6.0 release, new
+// entries land in `v6.ts`. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
     version: "5.993",

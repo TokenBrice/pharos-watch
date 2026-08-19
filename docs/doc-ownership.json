@@ -124,7 +124,7 @@
       "checks": ["focused scoring tests", "npm run check:doc-sync"],
       "hardRules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
       "prefixes": ["src/app/methodology/", "src/components/methodology/"],
-      "regexes": ["^docs/.*methodology", "^shared/data/methodology-changelogs/", "^shared/lib/.*(score|scoring|dews|report-card|stability-index|liquidity|resilience|peg)", "^worker/src/.*(dews|report-card|stability-index|liquidity|mint-burn|yield|blacklist|reserve)"]
+      "regexes": ["^docs/.*methodology", "^shared/data/methodology-changelogs/", "^shared/lib/.*(score|scoring|dews|report-card|stability-index|liquidity|resilience|peg)", "^shared/lib/(p4-exit-route-capacity|exit-route-capacity-point|exit-route-identity|exit-route-output|dex-deployment-coverage)\\.ts$", "^worker/src/.*(dews|report-card|stability-index|liquidity|mint-burn|yield|blacklist|reserve)"]
     },
     {
       "id": "pages-functions-host",

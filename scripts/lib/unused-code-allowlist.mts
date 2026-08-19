@@ -37,6 +37,8 @@ export const DEBT_MODULES: Record<string, string> = {
 
 /** Unreferenced exports kept on purpose; deletion is a separate pass. */
 export const DEBT_EXPORTS: Record<string, string> = {
+  "shared/lib/methodology-versions/liquidity-score.ts::getLiquidityMethodologyVersionAt":
+    "Runtime consumers (the pre-5.9 API reconstruction fallback) were removed in the v6.0 cutover; retained as the mixed-version boundary helper for history analysis. Deletion decision belongs to the v6 Phase 6 cleanup.",
   "shared/data/coverage-dispositions/oracle-risk-branch-dispositions.ts::ORACLE_RISK_BRANCH_DISPOSITION_FIELDS":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/data/coverage-dispositions/oracle-risk-branch-dispositions.ts::ORACLE_RISK_BRANCH_DISPOSITIONS":
