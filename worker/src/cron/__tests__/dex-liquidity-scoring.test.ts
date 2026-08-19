@@ -58,6 +58,7 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { getCache } from "../../lib/db-cache";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { buildMeasuredLedgerCohortKey } from "@shared/lib/measured-execution-ledger";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { ExitRouteObservation } from "@shared/types/market";
 import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
@@ -2284,5 +2285,167 @@ describe("dex-liquidity scoring", () => {
       1_700_000_006,
       "dex-liquidity-1700000006",
     ]);
+  });
+});
+
+describe("shadow admission ledger capture", () => {
+  function shadowBscTarget(): DexMeasuredExecutionTarget {
+    return {
+      schemaVersion: "dex-measured-target-v1",
+      targetId: "bsc-uniswap-v3-shadow-target",
+      stablecoinId: "usdt-tether",
+      adapterProfileId: "uniswap-v3-quoter-v2",
+      protocol: "uniswap-v3",
+      chain: "bsc",
+      poolId: "bsc:0xf150d29d92e7460a1531cbc9d1abeab33d6998e4",
+      poolTokenAddresses: [
+        "0x55d398326f99059ff775485246999027b3197955",
+        "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+      ],
+      tokenIn: {
+        address: "0x55d398326f99059ff775485246999027b3197955",
+        symbol: "USDT",
+        decimals: 18,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdt-tether",
+      },
+      tokenOut: {
+        address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        symbol: "USD1",
+        decimals: 18,
+        referencePriceUsd: 1,
+        trackedAssetId: "usd1-world-liberty-financial",
+      },
+      feePips: 100,
+      retainedTvlUsd: 2_000_000,
+      retainedPoolPriceUsd: 1,
+      capturedAt: 1_700_000_000,
+    };
+  }
+
+  it("captures per-cohort eligibility, rejection gates, and publication on the daily shadow run", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const target = shadowBscTarget();
+    const shadowTargets = new Map([[`usdt-tether|${target.poolId}`, target]]);
+    const gatedPoolId = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const metrics = initMetrics("usdc-circle", "USDC");
+    metrics.topPools = [
+      makeDexPricePool({
+        poolId: gatedPoolId,
+        project: "curve",
+        chain: "Ethereum",
+        tvlUsd: 250_000,
+        volumeUsd1d: 25_000,
+        source: "direct_api",
+        extra: {
+          executionCapabilityGate: { family: "curve-stableswap", reason: "exact-pool-join-unresolved" },
+        },
+      }),
+    ];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map(),
+      undefined,
+      1_700_000_100,
+      new Map(),
+      new Map(),
+      undefined,
+      new Map(),
+      shadowTargets,
+    );
+
+    const shadowAdmission = result.diagnostics.measuredExecution.shadowAdmission;
+    expect(shadowAdmission).not.toBeNull();
+    expect(shadowAdmission!.cycle).toBe(1_700_000_100);
+    expect(shadowAdmission!.targetGenerationId).toMatch(/^dex-shadow-measured-targets-/);
+    expect(shadowAdmission!.cohorts["uniswap-v3-quoter-v2@bsc"]).toEqual({
+      eligible: 1,
+      rejected: 0,
+      published: 1,
+      gateReason: null,
+    });
+    const gatedKey = buildMeasuredLedgerCohortKey({
+      chain: "Ethereum",
+      poolId: gatedPoolId,
+      stablecoinId: "usdc-circle",
+    });
+    expect(shadowAdmission!.cohorts[gatedKey]).toEqual({
+      eligible: 1,
+      rejected: 1,
+      published: 0,
+      gateReason: "curve-stableswap:exact-pool-join-unresolved",
+    });
+  });
+
+  it("emits a valid empty admission record when the run has no shadow cohorts", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const result = await computeStablecoinScores(db, new Map(), new Map(), undefined, 1_700_000_100);
+
+    expect(result.diagnostics.measuredExecution.shadowTargetPublication).toEqual({
+      status: "skipped",
+      reason: "no-shadow-targets",
+    });
+    expect(result.diagnostics.measuredExecution.shadowAdmission).toEqual({
+      cycle: 1_700_000_100,
+      targetGenerationId: null,
+      solanaTargetGenerationId: null,
+      tronTargetGenerationId: null,
+      cohorts: {},
+    });
+  });
+
+  it("still captures Record A inputs when the shadow target publication fails", async () => {
+    const db = makeQueryDb([
+      { match: "FROM dex_liquidity_history", all: [] },
+      { match: "INSERT INTO surface_publication_generations", throwError: "d1 write refused" },
+    ]);
+    const target = shadowBscTarget();
+    const shadowTargets = new Map([[`usdt-tether|${target.poolId}`, target]]);
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map(),
+      new Map(),
+      undefined,
+      1_700_000_100,
+      new Map(),
+      new Map(),
+      undefined,
+      new Map(),
+      shadowTargets,
+    );
+
+    expect(result.diagnostics.measuredExecution.shadowTargetPublication.status).toBe("failed");
+    const shadowAdmission = result.diagnostics.measuredExecution.shadowAdmission;
+    expect(shadowAdmission).not.toBeNull();
+    expect(shadowAdmission!.targetGenerationId).toBeNull();
+    expect(shadowAdmission!.cohorts["uniswap-v3-quoter-v2@bsc"]).toEqual({
+      eligible: 1,
+      rejected: 0,
+      published: 0,
+      gateReason: "shadow-target-publication-failed",
+    });
+  });
+
+  it("leaves the admission capture null outside the daily shadow-publication mode", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const result = await computeStablecoinScores(
+      db,
+      new Map(),
+      new Map(),
+      undefined,
+      1_700_000_100,
+      new Map(),
+      new Map(),
+      undefined,
+      new Map(),
+      new Map(),
+      new Map(),
+      "active",
+    );
+
+    expect(result.diagnostics.measuredExecution.shadowAdmission).toBeNull();
   });
 });

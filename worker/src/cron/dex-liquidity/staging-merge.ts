@@ -13,7 +13,7 @@ import type { CgTickerOrderbookMetadata } from "./coingecko-tickers-shared";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases";
 import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import type { CgNewPool, GtNewPool, LiquidityMetrics, DexPriceObs } from "./types";
+import type { CgNewPool, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, DexPriceObs } from "./types";
 import {
   buildPoolIdentity,
   createKnownPoolIdentityIndex,
@@ -383,6 +383,7 @@ export async function mergeStagedPools(
   nowSec: number,
   references?: PriceValidationReferences,
   authoritativeConfirmation?: AuthoritativeStagedPoolConfirmationIndex,
+  fallbackCounters?: LiquidityFallbackCounters,
 ): Promise<{
   mergedCount: number;
   skippedCount: number;
@@ -735,11 +736,11 @@ export async function mergeStagedPools(
   stagedIdentityCountsByStablecoin.clear();
 
   if (cgPoolMap.size > 0) {
-    await mergeCgPools(metrics, cgPoolMap, db);
+    await mergeCgPools(metrics, cgPoolMap, db, fallbackCounters);
     cgPoolMap.clear();
   }
   if (gtPoolMap.size > 0) {
-    await mergeGtPools(metrics, gtPoolMap, db);
+    await mergeGtPools(metrics, gtPoolMap, db, fallbackCounters);
     gtPoolMap.clear();
   }
 

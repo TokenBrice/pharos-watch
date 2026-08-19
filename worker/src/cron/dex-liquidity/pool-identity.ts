@@ -5,7 +5,6 @@ import {
 } from "@shared/lib/exit-route-identity";
 import { normalizeProtocol } from "./pool-helpers";
 
-export type PoolIdentityConfidence = "exact" | "derived_unique" | "derived_ambiguous" | "none";
 export type PoolIdentitySource = "address" | "native-id" | "token-shape-heuristic" | "none";
 export type PoolDedupReason = "exact" | "derived_unique" | "derived_optional_wildcard";
 
@@ -190,16 +189,6 @@ export function buildPoolIdentity(input: {
         ? "token-shape-heuristic"
         : "none",
   };
-}
-
-export function buildKnownPoolIdentityIndex(identities: PoolIdentity[]): KnownPoolIdentityIndex {
-  const known = createKnownPoolIdentityIndex();
-
-  for (const identity of identities) {
-    registerKnownPoolIdentity(known, identity);
-  }
-
-  return known;
 }
 
 export function registerKnownPoolIdentity(known: KnownPoolIdentityIndex, identity: PoolIdentity): void {

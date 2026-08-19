@@ -1,6 +1,7 @@
 import type {
   DexPriceObs,
   LiquidityCoverageClass,
+  LiquidityFallbackCounters,
   LiquidityMetrics,
   LiquiditySourceMixByFamily,
 } from "./types";
@@ -38,7 +39,10 @@ function normalizeSourceFamily(value: string | null | undefined): string | undef
   return normalized.length > 0 ? normalized : undefined;
 }
 
-export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
+export function rebuildMetricsFromPools(
+  pools: LiquidityMetrics["topPools"],
+  fallbackCounters?: LiquidityFallbackCounters,
+) {
   const protocolTvl: Record<string, number> = {};
   const chainTvl: Record<string, number> = {};
   const sourceMix: LiquiditySourceMixByFamily = {};
@@ -80,8 +84,12 @@ export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
     if (pool.volumeUsd7d == null) {
       totalVolume7dMeasured = false;
     }
-    qualityAdjustedTvl += getPoolExtraNumber(pool.extra, "qualityAdjustedTvl") ?? pool.tvlUsd;
-    effectiveTvl += getPoolExtraNumber(pool.extra, "effectiveTvl") ?? pool.tvlUsd;
+    const poolQualityAdjustedTvl = getPoolExtraNumber(pool.extra, "qualityAdjustedTvl");
+    const poolEffectiveTvl = getPoolExtraNumber(pool.extra, "effectiveTvl");
+    if (fallbackCounters && poolQualityAdjustedTvl == null) fallbackCounters.rebuildQualityAdjustedTvlFallback++;
+    if (fallbackCounters && poolEffectiveTvl == null) fallbackCounters.rebuildEffectiveTvlFallback++;
+    qualityAdjustedTvl += poolQualityAdjustedTvl ?? pool.tvlUsd;
+    effectiveTvl += poolEffectiveTvl ?? pool.tvlUsd;
 
     const balanceRatio = getPoolExtraNumber(pool.extra, "balanceRatio");
     if (balanceRatio != null) {
@@ -161,12 +169,24 @@ export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   };
 }
 
-export function filterRetainedPools(pools: LiquidityMetrics["topPools"]): LiquidityMetrics["topPools"] {
+export function filterRetainedPools(
+  pools: LiquidityMetrics["topPools"],
+  fallbackCounters?: LiquidityFallbackCounters,
+): LiquidityMetrics["topPools"] {
   return pools.filter((pool) => {
-    if (isBlockedDexId(pool.project)) return false;
+    if (isBlockedDexId(pool.project)) {
+      if (fallbackCounters) fallbackCounters.retainedExclusionBlockedDex++;
+      return false;
+    }
     const vol = pool.volumeUsd1d || 0;
-    if (pool.tvlUsd > 0 && vol / pool.tvlUsd > POOL_VOL_TO_TVL_RATIO_MAX) return false;
-    if (pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && vol < LARGE_POOL_MIN_VOLUME_USD) return false;
+    if (pool.tvlUsd > 0 && vol / pool.tvlUsd > POOL_VOL_TO_TVL_RATIO_MAX) {
+      if (fallbackCounters) fallbackCounters.retainedExclusionVolTvlRatio++;
+      return false;
+    }
+    if (pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && vol < LARGE_POOL_MIN_VOLUME_USD) {
+      if (fallbackCounters) fallbackCounters.retainedExclusionLargePoolLowVolume++;
+      return false;
+    }
     return true;
   });
 }

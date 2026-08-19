@@ -1,12 +1,12 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { LiquidityMetrics, LlamaPool } from "./types";
+import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
-import { buildSymbolLookups, classifyPoolType } from "./pool-helpers";
+import { buildSymbolLookups, classifyPoolType, initLiquidityFallbackCounters } from "./pool-helpers";
 import { buildChainAddressKey } from "./token-resolution";
 import {
   fetchDataSources,
@@ -190,6 +190,7 @@ export async function stageDexLiquidityScoring(
   sourceSlotStartedAt?: number,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
+  const fallbackCounters = initLiquidityFallbackCounters();
   const ctx: DexLiquidityRunContext = {
     db,
     graphApiKey,
@@ -198,6 +199,7 @@ export async function stageDexLiquidityScoring(
     chainRpcs,
     reportProgress,
     syncStartSec,
+    fallbackCounters,
   };
   const { scoringSourceState, poolState } = await buildDexLiquidityScoringStageState(ctx);
   const itemCount = poolState.metrics.size;
@@ -263,6 +265,7 @@ export async function stageDexLiquidityScoring(
         rejectedPoolTvlUsd,
         material: materialPoolRejections,
       },
+      fallbackCounters,
     }),
   };
 }
@@ -364,6 +367,8 @@ export interface DexLiquidityRunContext {
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
   reportProgress?: CronProgressReporter;
+  /** Report-only fallback/default counters shared across the run's pool-intake phases. */
+  fallbackCounters?: LiquidityFallbackCounters;
 }
 
 type DexLiquidityDataSources = NonNullable<Awaited<ReturnType<typeof fetchDataSources>>>;
@@ -511,6 +516,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     symbolToChainScopedIds: lookups.symbolToChainScopedIds,
     stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
+    fallbackCounters: ctx.fallbackCounters,
   });
   await reportCronProgress(ctx.reportProgress, {
     stage: "direct-api-fetch",
@@ -811,6 +817,7 @@ async function buildDexLiquidityPoolState(
       sourceState.curvePoolCandidatesByFingerprint,
     uniswapV4ExecutionCandidates:
       sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
+    fallbackCounters: ctx.fallbackCounters,
   });
 
   // Primary pools and enrichment maps have been projected into metrics and the
@@ -844,6 +851,7 @@ async function buildDexLiquidityPoolState(
     validationReferences: sourceState.validationReferences,
     stablecoinPriceById: sourceState.stablecoinPriceById,
     preprocessedPoolCounts: sourceState.directApiPoolCounts,
+    fallbackCounters: ctx.fallbackCounters,
   });
   logDirectApiSourceSummary(directApiIntegration, sourceState.directApiPhase.circuitEvents);
 
@@ -877,6 +885,7 @@ async function buildDexLiquidityPoolState(
     ctx.syncStartSec,
     sourceState.validationReferences,
     sourceState.authoritativeConfirmation,
+    ctx.fallbackCounters,
   );
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
   staged.priceObservations.clear();
@@ -1359,6 +1368,8 @@ function buildDexLiquidityCronResult(
         dexPriceDiagnostics: persistenceState.dexPriceDiagnostics,
         failedSources: sourceState.failedSources,
         fallbackSignals: sourceState.fallbackSignals,
+        fallbackCounters: scoreState.diagnostics.fallbackCounters,
+        shadowAdmission: scoreState.diagnostics.measuredExecution?.shadowAdmission ?? null,
         persistence: persistenceState.persistence,
         historicalSnapshot: persistenceState.historicalSnapshot,
       }),

@@ -278,22 +278,6 @@ export interface GtPool {
   };
 }
 
-export interface GtTokenAttributes {
-  address: string;
-  name: string;
-  symbol: string;
-  coingecko_coin_id: string | null;
-  price_usd: string | null;
-  total_reserve_in_usd: string | null;
-  volume_usd: { h24: string | null } | null;
-}
-
-export interface GtToken {
-  id: string;
-  type: string;
-  attributes: GtTokenAttributes;
-}
-
 export interface ScoreComponents {
   tvlDepth: number;
   volumeActivity: number;
@@ -498,6 +482,55 @@ export interface GlobalAgg {
   chainCount: number;
   protocolTvl: Record<string, number>;
   chainTvl: Record<string, number>;
+}
+
+/**
+ * Report-only counters for optimistic defaults and silent exclusions in the
+ * DEX liquidity pipeline (Liquidity Score v6 Phase 0.2 observability).
+ * Fixed key set, scalar counts only. Surfaced in cron run metadata as
+ * `fallbackCounters`; never persisted per-pool and never read by any scoring
+ * formula. Pool-intake keys populate during the scoring-stage run; scoring
+ * keys populate during the consume/scoring run.
+ */
+export interface LiquidityFallbackCounters {
+  /** computePoolQualityContribution callers passing hasMeasuredBalance=false (balanceHealth forced to 1). */
+  unmeasuredBalanceOptimistic: number;
+  /** STAGED_POOL_DEFAULTS.organicFraction applied to a newly merged secondary pool. */
+  stagedOrganicFractionDefault: number;
+  /** STAGED_POOL_DEFAULTS.balanceRatioFallback applied to a newly merged secondary pool. */
+  stagedBalanceRatioFallback: number;
+  /** Fluid tickers with a non-finite base/target volume coerced to 0. */
+  fluidVolumeCoercedToZero: number;
+  /** Fluid pools whose feeRate stayed null after RPC enrichment. */
+  fluidFeeRateUnmeasured: number;
+  /** Fluid pools whose balances stayed null after RPC enrichment. */
+  fluidBalancesUnmeasured: number;
+  /** Direct-API pools shaped with the hardcoded 30d maturity (maturityMeasured=false). */
+  directApiMaturityDefaulted: number;
+  /** Direct-API pools shaped without measured balance metrics (balanceMeasured=false). */
+  directApiBalanceUnmeasured: number;
+  /** Direct-API pools shaped without a derivable token USD price (priceMeasured=false). */
+  directApiPriceUnmeasured: number;
+  /** Durability organic-fraction neutral 0.5 default (no organic-measured TVL). */
+  durabilityOrganicFractionDefault: number;
+  /** Durability TVL-stability neutral 50 default (no history stability row). */
+  durabilityTvlStabilityDefault: number;
+  /** Durability volume-consistency neutral 50 default (no history stability row). */
+  durabilityVolumeConsistencyDefault: number;
+  /** TVL-depth scored via the $1B implied-mcap absolute fallback (no circulating supply). */
+  tvlDepthMcapFallback: number;
+  /** TVL-depth scored via the size-aware relative formula (circulating supply measured). */
+  tvlDepthRelative: number;
+  /** Rebuild pools falling back to raw tvlUsd for qualityAdjustedTvl. */
+  rebuildQualityAdjustedTvlFallback: number;
+  /** Rebuild pools falling back to raw tvlUsd for effectiveTvl. */
+  rebuildEffectiveTvlFallback: number;
+  /** Pools silently excluded by filterRetainedPools: blocked DEX id. */
+  retainedExclusionBlockedDex: number;
+  /** Pools silently excluded by filterRetainedPools: volume/TVL ratio above 50. */
+  retainedExclusionVolTvlRatio: number;
+  /** Pools silently excluded by filterRetainedPools: >$100M TVL with <$50K volume. */
+  retainedExclusionLargePoolLowVolume: number;
 }
 
 export type FullScoreResult = ScoreResult & {

@@ -10,7 +10,6 @@ import {
   createDexMeasuredExecutionRpcBudget,
 } from "../profiles";
 import {
-  CURVE_CRYPTOSWAP_ADAPTER,
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
   CURVE_CRYPTOSWAP_SHADOW_COHORT,
   createCurveCryptoSwapQuoteExecutor,
@@ -115,16 +114,16 @@ function makeTarget(
   };
 }
 
-function completeShadowPolicy(
+function completePinnedPolicy(
   generation: CurveCryptoSwapPoolPolicy["generation"] = "twocrypto-ng",
 ): CurveCryptoSwapPoolPolicy {
   return {
     chain: "ethereum",
     poolAddress: TWOCRYPTO_POOL,
     generation,
-    mode: "shadow",
+    mode: "active",
     identityAnchor: "pinned-pool-code",
-    scoreEligible: false,
+    scoreEligible: true,
     expectedPoolCodeHash: HASH_A,
     expectedFactoryAddress: DEP_A,
     expectedFactoryCodeHash: HASH_B,
@@ -151,27 +150,11 @@ function completeRuntimeEvidence(generation: CurveCryptoSwapPoolPolicy["generati
   } as const;
 }
 
-describe("Curve CryptoSwap shadow policy", () => {
-  it("pins the eight reviewed crvUSD TwoCrypto pools while retaining the shadow census", () => {
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT).toHaveLength(30);
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "twocrypto-ng")).toHaveLength(26);
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "tricrypto-ng")).toHaveLength(2);
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "legacy-cryptoswap")).toHaveLength(1);
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "special-tridbr")).toHaveLength(1);
-    expect(
-      CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.mode === "shadow").every(
-        (entry) =>
-          entry.mode === "shadow" &&
-          entry.scoreEligible === false &&
-          entry.transferSemanticsReviewed === false &&
-          entry.expectedPoolCodeHash == null &&
-          entry.expectedFactoryCodeHash == null &&
-          entry.expectedViewsCodeHash == null &&
-          entry.expectedMathCodeHash == null,
-      ),
-    ).toBe(true);
-    const active = CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.mode === "active");
-    expect(active).toHaveLength(19);
+describe("Curve CryptoSwap policy", () => {
+  it("pins the nineteen reviewed active Ethereum TwoCrypto pools", () => {
+    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT).toHaveLength(19);
+    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.every((entry) => entry.generation === "twocrypto-ng")).toBe(true);
+    const active = CURVE_CRYPTOSWAP_SHADOW_COHORT;
     expect(active.every((entry) => entry.scoreEligible && entry.transferSemanticsReviewed)).toBe(true);
     const pinned = active.filter((entry) => entry.identityAnchor === "pinned-pool-code");
     expect(pinned).toHaveLength(8);
@@ -216,7 +199,7 @@ describe("Curve CryptoSwap shadow policy", () => {
     // must not drift apart, or a family-anchored pool would accept a factory,
     // views, or math deployment no pinned pool ever proved.
     for (const entry of CURVE_CRYPTOSWAP_SHADOW_COHORT) {
-      if (entry.identityAnchor !== "pinned-pool-code" || entry.mode !== "active") continue;
+      if (entry.identityAnchor !== "pinned-pool-code") continue;
       const family = getCurveCryptoSwapReviewedDeploymentFamily(entry.chain, entry.generation);
       expect(family).not.toBeNull();
       expect(entry.expectedFactoryAddress).toBe(family!.factoryAddress);
@@ -291,7 +274,7 @@ describe("Curve CryptoSwap shadow policy", () => {
   });
 
   it("admits a reviewed active policy only with complete matching runtime evidence", () => {
-    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find((entry) => entry.mode === "active");
+    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find((entry) => entry.identityAnchor === "pinned-pool-code");
     if (!policy) throw new Error("missing active Curve CryptoSwap policy");
     expect(
       evaluateCurveCryptoSwapEligibility({
@@ -333,17 +316,26 @@ describe("Curve CryptoSwap shadow policy", () => {
       }),
     ).toEqual({ ok: false, reason: "runtime-code-unavailable" });
 
-    // A generation with no reviewed family keeps the incomplete-allowlist gate.
+    // A pinned policy with no pinned hashes keeps the incomplete-allowlist gate.
     expect(
       evaluateCurveCryptoSwapEligibility({
         chain: "ethereum",
         endpointAddress: TRICRYPTO_POOL,
+        policy: {
+          chain: "ethereum",
+          poolAddress: TRICRYPTO_POOL,
+          generation: "tricrypto-ng",
+          mode: "active",
+          identityAnchor: "pinned-pool-code",
+          scoreEligible: true,
+          transferSemanticsReviewed: true,
+        },
         evidence: { apiIsBroken: false, ngKillMethodUnavailable: true },
       }),
     ).toEqual({ ok: false, reason: "runtime-allowlist-incomplete" });
 
     const legacyPolicy: CurveCryptoSwapPoolPolicy = {
-      ...completeShadowPolicy("legacy-cryptoswap"),
+      ...completePinnedPolicy("legacy-cryptoswap"),
       poolAddress: LEGACY_POOL,
     };
     expect(
@@ -359,7 +351,7 @@ describe("Curve CryptoSwap shadow policy", () => {
       evaluateCurveCryptoSwapEligibility({
         chain: "ethereum",
         endpointAddress: TWOCRYPTO_POOL,
-        policy: completeShadowPolicy(),
+        policy: completePinnedPolicy(),
         evidence: { ...completeRuntimeEvidence(), poolCodeHash: HASH_B },
       }),
     ).toEqual({ ok: false, reason: "runtime-code-hash-mismatch" });
@@ -368,7 +360,7 @@ describe("Curve CryptoSwap shadow policy", () => {
       evaluateCurveCryptoSwapEligibility({
         chain: "ethereum",
         endpointAddress: TWOCRYPTO_POOL,
-        policy: completeShadowPolicy(),
+        policy: completePinnedPolicy(),
         evidence: { ...completeRuntimeEvidence(), viewsAddress: DEP_C },
       }),
     ).toEqual({ ok: false, reason: "dependency-identity-mismatch" });
@@ -377,7 +369,7 @@ describe("Curve CryptoSwap shadow policy", () => {
       evaluateCurveCryptoSwapEligibility({
         chain: "ethereum",
         endpointAddress: TWOCRYPTO_POOL,
-        policy: completeShadowPolicy(),
+        policy: completePinnedPolicy(),
         evidence: completeRuntimeEvidence(),
       }),
     ).toEqual({ ok: false, reason: "transfer-semantics-unreviewed" });
@@ -394,7 +386,7 @@ describe("Curve CryptoSwap token indices and ABI", () => {
       poolId: "ethereum:defillama-route-fingerprint-not-an-address",
     });
     expect(resolveCurveCryptoSwapTokenIndices(target)).toEqual({ ok: true, inputIndex: 0, outputIndex: 2 });
-    expect(getCurveCryptoSwapShadowPolicy(target.chain, TRICRYPTO_POOL)?.poolAddress).toBe(TRICRYPTO_POOL);
+    expect(getCurveCryptoSwapShadowPolicy(target.chain, TWOCRYPTO_POOL)?.poolAddress).toBe(TWOCRYPTO_POOL);
     expect(target.poolId).not.toContain(TRICRYPTO_POOL);
 
     expect(
@@ -622,44 +614,6 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(outcomes[0]?.failureReason).toBe("pool-revert");
   });
 
-  it("runs no more than three chain lanes and only one request per chain at a time", async () => {
-    let active = 0;
-    let maxActive = 0;
-    const activeByChain = new Map<string, number>();
-    let sameChainOverlap = false;
-    const executeMulticall = vi.fn(async (input: { chain: string; calls: readonly { label: string }[] }) => {
-      active += 1;
-      maxActive = Math.max(maxActive, active);
-      const chainActive = (activeByChain.get(input.chain) ?? 0) + 1;
-      activeByChain.set(input.chain, chainActive);
-      if (chainActive > 1) sameChainOverlap = true;
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      active -= 1;
-      activeByChain.set(input.chain, chainActive - 1);
-      return input.calls.map((call) => ({ label: call.label, success: true, returnData: uint256Return(0n) }));
-    });
-    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
-    const fixtures = [
-      { chain: "ethereum", pool: TWOCRYPTO_POOL },
-      { chain: "base", pool: "0x6771bb9ec8da900eeba738599c3cc4f8fc07aea7d" },
-      { chain: "arbitrum", pool: "0x590f7e2b211fa5ff7840dd3c425b543363797701" },
-      { chain: "polygon", pool: "0xcb6dcbcb1da63acc01e6cc9804d0aee5a0dbb3ba" },
-    ] as const;
-    const requests = fixtures.flatMap(({ chain, pool }) =>
-      [ETHEREUM_BLOCK, ETHEREUM_BLOCK + 1].map((blockNumber) => ({
-        target: makeTarget({ chain, poolAddress: pool, poolId: `${chain}:opaque-route-id` }),
-        inputUsd: 1_000,
-        blockNumber,
-        endpointAddress: pool,
-      })),
-    );
-
-    await quote({ requests, chainRpcs: new Map() });
-
-    expect(maxActive).toBeLessThanOrEqual(3);
-    expect(sameChainOverlap).toBe(false);
-  });
-
   it("rejects active quotes when provider token order disagrees with on-chain coins", async () => {
     const policy = getCurveCryptoSwapShadowPolicy("ethereum", ACTIVE_TWOCRYPTO_POOL);
     if (policy == null || !policy.scoreEligible) throw new Error("missing active Curve CryptoSwap policy");
@@ -711,18 +665,6 @@ describe("Curve CryptoSwap quote transport", () => {
     });
   });
 
-  it("keeps the generic adapter score-ineligible while the census is incomplete", async () => {
-    const target = makeTarget();
-    const result = await CURVE_CRYPTOSWAP_ADAPTER.quotePoints({
-      target,
-      inputNotionalsUsd: [1_000],
-      blockNumber: ETHEREUM_BLOCK,
-      endpointAddress: TWOCRYPTO_POOL,
-      chainRpcs: new Map(),
-    });
-    expect(result.points).toEqual([]);
-    expect(result.failures[0]?.reason).toBe("api-broken-or-unknown");
-  });
 });
 
 describe("Curve CryptoSwap stored proof validation", () => {

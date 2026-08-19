@@ -1,4 +1,4 @@
-import type { DexPriceObs, GtNewPool } from "../cron/dex-liquidity/types";
+import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters } from "../cron/dex-liquidity/types";
 import type { SymbolLookups } from "../cron/dex-liquidity/types";
 import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-cron-constants";
 import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
@@ -592,6 +592,7 @@ export function convertToGtNewPools(
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
   trackedStablecoinPrices?: Map<string, number>,
+  fallbackCounters?: LiquidityFallbackCounters,
 ): Map<string, GtNewPool[]> {
   const result = new Map<string, GtNewPool[]>();
 
@@ -679,6 +680,13 @@ export function convertToGtNewPools(
           synthetic: false,
         },
       };
+
+      if (fallbackCounters) {
+        // Every shaped direct-API pool carries the hardcoded 30d maturity default.
+        fallbackCounters.directApiMaturityDefaulted++;
+        if (balanceMetrics == null) fallbackCounters.directApiBalanceUnmeasured++;
+        if (!(tokenPrice != null && tokenPrice > 0)) fallbackCounters.directApiPriceUnmeasured++;
+      }
 
       const existing = result.get(stablecoinId) ?? [];
       existing.push(gtPool);

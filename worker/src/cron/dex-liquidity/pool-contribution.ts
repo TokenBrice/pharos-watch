@@ -1,6 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
-import type { LiquidityMetrics, PoolEntry, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
+import type { LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
 import {
   computePoolPairQuality,
   computePoolQualityContribution,
@@ -22,6 +22,7 @@ export function addSecondaryPoolContribution(
   stablecoinSymbol: string,
   pool: SecondaryPool,
   existingPoolsById?: Map<string, PoolEntry>,
+  fallbackCounters?: LiquidityFallbackCounters,
 ): void {
   let m = metrics.get(stablecoinId);
   if (!m) {
@@ -54,6 +55,14 @@ export function addSecondaryPoolContribution(
   const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
   const hasMeasuredBalance = pool.balanceRatio != null && Number.isFinite(pool.balanceRatio);
   const balanceRatio = hasMeasuredBalance ? pool.balanceRatio! : STAGED_POOL_DEFAULTS.balanceRatioFallback;
+  if (fallbackCounters) {
+    fallbackCounters.stagedOrganicFractionDefault++;
+    if (!hasMeasuredBalance) {
+      fallbackCounters.stagedBalanceRatioFallback++;
+      // computePoolQualityContribution below runs its optimistic balanceHealth=1 path.
+      fallbackCounters.unmeasuredBalanceOptimistic++;
+    }
+  }
   const pairQuality =
     pool.pairQualityOverride != null && Number.isFinite(pool.pairQualityOverride)
       ? pool.pairQualityOverride

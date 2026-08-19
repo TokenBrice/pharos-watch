@@ -75,6 +75,7 @@ vi.mock("../dex-liquidity/scoring", () => ({
     tvlStabilityMap: new Map(),
     diagnostics: {
       protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+      fallbackCounters: { tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 },
     },
   })),
   computeDepthStability: vi.fn(async () => {}),
@@ -498,6 +499,26 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
+  });
+
+  it("surfaces scoring fallback counters in the consume-run metadata", async () => {
+    const result = await runDexLiquidityScoringCycle(db, "graph-key");
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackCounters?: Record<string, number>;
+    };
+    expect(metadata.fallbackCounters).toEqual({ tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 });
+  });
+
+  it("surfaces pool-intake fallback counters in the scoring-stage run metadata", async () => {
+    const stageResult = await stageDexLiquidityScoring(db, "graph-key");
+
+    const metadata = JSON.parse(stageResult.metadata ?? "{}") as {
+      fallbackCounters?: Record<string, number>;
+    };
+    expect(metadata.fallbackCounters).toBeDefined();
+    expect(metadata.fallbackCounters?.unmeasuredBalanceOptimistic).toBeTypeOf("number");
+    expect(metadata.fallbackCounters?.stagedOrganicFractionDefault).toBeTypeOf("number");
   });
 
   it("reuses the current generation for hourly prices without liquidity writes", async () => {
@@ -1052,7 +1073,7 @@ describe("dex liquidity scoring stage cycle", () => {
 
     await runDexLiquidityScoringCycle(db, "graph-key", undefined, undefined, chainRpcs);
 
-    expect(fetchFluidPools).toHaveBeenCalledWith(expect.any(AbortSignal), chainRpcs);
+    expect(fetchFluidPools).toHaveBeenCalledWith(expect.any(AbortSignal), chainRpcs, expect.any(Object));
   });
 
   it("threads tracked stablecoin cache prices into direct API conversion and observations", async () => {
