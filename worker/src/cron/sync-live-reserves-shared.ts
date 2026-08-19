@@ -112,7 +112,7 @@ function canonicalStringify(value: unknown): string {
 
 export function buildSharedSourceCacheKey(
   config: LiveReserveConfig,
-  adapter: ReserveAdapterDefinition,
+  adapter: Pick<ReserveAdapterDefinition, "sharedSourceMode">,
 ): string | null {
   if (adapter.sharedSourceMode !== "source-invariant") {
     return null;

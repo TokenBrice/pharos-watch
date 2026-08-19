@@ -4,7 +4,7 @@ import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
-import { LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { buildSharedSourceCacheKey, LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 
 
 const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
@@ -1185,23 +1185,31 @@ describe("syncLiveReserves", () => {
   });
 
   it("retains shared source-cache failures for the run so a single fetch satisfies every sharing coin", async () => {
-    // m0 has >=2 coins sharing the same source-invariant primary URL.
-    const m0Coins = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig?.adapter === "m0");
-    expect(m0Coins.length).toBeGreaterThanOrEqual(2);
-    const sharedM0Primary = m0Coins[0]!.liveReservesConfig!.inputs.primary;
-    expect(sharedM0Primary.kind).toMatch(/^http-json|http-html$/);
+    // Derive a fixture from any active source-invariant adapter with >=2 coins
+    // sharing the same primary URL, so the test survives individual adapter
+    // suspensions (m0, the original fixture, was suspended 2026-08-19).
+    const sharedGroups = new Map<string, { cacheKey: string; coinIds: string[] }>();
+    for (const coin of ACTIVE_STABLECOINS) {
+      const config = coin.liveReservesConfig;
+      if (!config) continue;
+      const cacheKey = buildSharedSourceCacheKey(config, LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter]);
+      if (!cacheKey) continue;
+      const group = sharedGroups.get(cacheKey) ?? { cacheKey, coinIds: [] };
+      group.coinIds.push(coin.id);
+      sharedGroups.set(cacheKey, group);
+    }
+    const shared = [...sharedGroups.values()].find((group) => group.coinIds.length >= 2);
+    expect(shared, "an active source-invariant adapter with a shared source cache key").toBeDefined();
+
+    const matchesSharedSource = (
+      config: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> | undefined,
+    ): boolean =>
+      config != null
+      && buildSharedSourceCacheKey(config, LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter]) === shared!.cacheKey;
 
     const adapterFetch = mockAdapterRegistry(async (_coin, config) => {
-      const primary = config?.inputs.primary;
-      if (
-        config?.adapter === "m0"
-        && primary
-        && (primary.kind === "http-json" || primary.kind === "http-html")
-        && "url" in primary
-        && "url" in sharedM0Primary
-        && primary.url === sharedM0Primary.url
-      ) {
-        throw new Error("m0 upstream boom");
+      if (matchesSharedSource(config ?? undefined)) {
+        throw new Error("shared upstream boom");
       }
       return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
     });
@@ -1210,19 +1218,12 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     await syncLiveReserves(db, new AbortController().signal, {});
 
-    const m0FetchCalls = adapterFetch.mock.calls.filter((call) => {
-      const config = call[1] as NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> | undefined;
-      const primary = config?.inputs.primary;
-      return (
-        config?.adapter === "m0"
-        && primary
-        && (primary.kind === "http-json" || primary.kind === "http-html")
-        && "url" in primary
-        && "url" in sharedM0Primary
-        && primary.url === sharedM0Primary.url
-      );
-    });
-    expect(m0FetchCalls.length).toBe(1);
+    const sharedFetchCalls = adapterFetch.mock.calls.filter((call) =>
+      matchesSharedSource(
+        call[1] as NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> | undefined,
+      ),
+    );
+    expect(sharedFetchCalls.length).toBe(1);
   });
 
   it("emits a primary-fallback-used info warning when the fallback succeeds", async () => {
