@@ -105,6 +105,13 @@ export interface ScheduledSlotSweepOptions {
   slotKey?: string;
   excludeSlotStartedAt?: number;
   signal?: AbortSignal;
+  /**
+   * Worker version of the process performing the sweep. Persisted into each
+   * synthetic abandonment row's metadata next to the dead slot's version, so
+   * "killed by deploy" (versions differ) vs "killed in place, e.g. OOM"
+   * (versions match) is decidable from D1 alone.
+   */
+  reconcilerWorkerVersion?: string | null;
 }
 
 export interface ScheduledSlotSweepSummary {
@@ -329,11 +336,17 @@ export async function sweepStaleScheduledSlotExecutions(
     if (reconciliationGeneration == null) {
       continue;
     }
-    const reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(db, staleSlot, nowSec, {
-      owner: reconciliationOwner,
-      generation: reconciliationGeneration,
-      state: "reconciling",
-    });
+    const reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(
+      db,
+      staleSlot,
+      nowSec,
+      {
+        owner: reconciliationOwner,
+        generation: reconciliationGeneration,
+        state: "reconciling",
+      },
+      options.reconcilerWorkerVersion ?? null,
+    );
     const finished = await finishStaleScheduledSlotExecution(
       db,
       staleSlot,
@@ -605,6 +618,7 @@ export async function runScheduledSlotWithFence(
         excludeSlotStartedAt: opts.slotStartedAt,
         staleAfterSec,
         limit: opts.preSweepLimit ?? 5,
+        reconcilerWorkerVersion: opts.workerVersion ?? null,
       });
       if (summary.candidateSlots > 0 || summary.slotsReconciled > 0) {
         staleSlotPreSweep = summary;

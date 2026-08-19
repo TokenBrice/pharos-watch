@@ -41,6 +41,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     staleAfterSec: 5 * 60,
     limit: 10,
     signal,
+    reconcilerWorkerVersion: runtime.workerVersion ?? null,
   });
   if (mode === "off") {
     return {
@@ -74,6 +75,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     staleAfterSec: RECOVERY_STALE_AFTER_SEC,
     limit: 1,
     signal,
+    reconcilerWorkerVersion: runtime.workerVersion ?? null,
   });
   const incompatibleRetirement = await retireIncompatibleScheduledCheckpointRecoveries(runtime.db, {
     scheduleKey: "fourHourlyReserveSync",

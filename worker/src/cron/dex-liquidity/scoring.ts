@@ -414,20 +414,28 @@ function applyDexRouteObservationBounds(
   };
 }
 
+// The completeness fence compares the generation's row counts against the
+// generation's own recorded expectation, not the running bundle's active
+// roster. A published generation stays internally complete after a roster
+// change deploys (coin added/quarantined); the next publication slot mints a
+// generation under the new roster. Comparing against the build-time constant
+// here made every odd-hour reuse slot inside a roster-change window fail
+// with "not the complete current publication" while all counts were equal
+// (observed 2026-08-18 23:16Z after the SILK quarantine shipped).
 const DEX_PRICE_EXACT_CURRENT_GENERATION_SQL = `
   SELECT generation.generation_id
   FROM dex_liquidity_publication_generations generation
   WHERE generation.generation_id = ?
     AND generation.state = 'published'
-    AND generation.expected_row_count = ?
-    AND generation.current_row_count = ?
+    AND generation.expected_row_count > 0
+    AND generation.current_row_count = generation.expected_row_count
     AND (SELECT COUNT(*)
          FROM dex_liquidity_run_rows staged
-         WHERE staged.generation_id = generation.generation_id) = ?
+         WHERE staged.generation_id = generation.generation_id) = generation.expected_row_count
     AND (SELECT COUNT(*)
          FROM dex_liquidity current
          WHERE current.publication_generation_id = generation.generation_id
-           AND current.publication_state = 'published') = ?
+           AND current.publication_state = 'published') = generation.expected_row_count
     AND EXISTS (
       SELECT 1
       FROM dex_liquidity current_global
@@ -440,14 +448,7 @@ const DEX_PRICE_EXACT_CURRENT_GENERATION_SQL = `
          WHERE price_stage.generation_id = generation.generation_id) = ?`;
 
 function dexPriceExactCurrentGenerationBinds(generationId: string, priceRowCount: number): unknown[] {
-  return [
-    generationId,
-    DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS,
-    DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS,
-    DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS,
-    DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS,
-    priceRowCount,
-  ];
+  return [generationId, priceRowCount];
 }
 
 interface DexScoringGenerationCoverage {
@@ -480,6 +481,16 @@ async function assertCurrentDexScoringGeneration(
   db: D1Database,
   generationId: string,
   signal?: AbortSignal,
+  options?: {
+    /**
+     * Publish-path callers authored the generation's rows under the running
+     * bundle's roster in this same run, so they additionally pin the
+     * generation's expectation to the build-time roster count. Reuse-path
+     * callers omit this: a published generation from a pre-roster-change
+     * deploy stays valid until the next publication slot replaces it.
+     */
+    requireRosterExpectation?: boolean;
+  },
 ): Promise<void> {
   throwIfAborted(signal);
   const coverage = await db
@@ -504,16 +515,19 @@ async function assertCurrentDexScoringGeneration(
 
   if (
     coverage?.state !== "published" ||
-    coverage.expected_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS ||
-    coverage.current_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS ||
-    coverage.staged_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS ||
-    coverage.public_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS
+    coverage.expected_row_count <= 0 ||
+    coverage.current_row_count !== coverage.expected_row_count ||
+    coverage.staged_row_count !== coverage.expected_row_count ||
+    coverage.public_row_count !== coverage.expected_row_count ||
+    (options?.requireRosterExpectation === true &&
+      coverage.expected_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS)
   ) {
     throw new Error(
       `DEX scoring generation ${generationId} is not the complete current publication` +
         ` (state=${coverage?.state ?? "missing"}, expected=${coverage?.expected_row_count ?? 0},` +
         ` current=${coverage?.current_row_count ?? 0}, staged=${coverage?.staged_row_count ?? 0},` +
-        ` public=${coverage?.public_row_count ?? 0})`,
+        ` public=${coverage?.public_row_count ?? 0},` +
+        ` rosterExpected=${DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS})`,
     );
   }
 }
@@ -1222,7 +1236,7 @@ export async function computeDepthStability(
   if (!generationId.trim()) throw new Error("DEX depth stability requires a publication generation id");
   throwIfAborted(signal);
   const tvlStabilityMap = preloadedTvlStabilityMap ?? (await loadConfidentHistoryStability(db)).tvlStabilityMap;
-  await assertCurrentDexScoringGeneration(db, generationId, signal);
+  await assertCurrentDexScoringGeneration(db, generationId, signal, { requireRosterExpectation: true });
 
   const stabilityStmts: D1PreparedStatement[] = [];
   const queueStabilityStatement = async (statement: D1PreparedStatement): Promise<void> => {
@@ -1275,7 +1289,7 @@ export async function computeDepthStability(
     );
   }
 
-  await assertCurrentDexScoringGeneration(db, generationId, signal);
+  await assertCurrentDexScoringGeneration(db, generationId, signal, { requireRosterExpectation: true });
   const publishedChanges = await executeAtomicBatch(
     db,
     [

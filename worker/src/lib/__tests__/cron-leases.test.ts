@@ -355,6 +355,7 @@ describe("D1 overload retry classification", () => {
       ),
     ).toBe(true);
     expect(isRetriableD1OverloadError(new Error("D1_ERROR: internal error; reference = abc123"))).toBe(true);
+    expect(isRetriableD1OverloadError(new Error("D1_ERROR: Network connection lost."))).toBe(true);
     expect(isRetriableD1OverloadError(new Error("D1_ERROR: no such table: cache"))).toBe(false);
   });
 

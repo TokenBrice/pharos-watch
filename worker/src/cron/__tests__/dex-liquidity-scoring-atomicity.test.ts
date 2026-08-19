@@ -239,6 +239,56 @@ describe("DEX scoring publication atomicity", () => {
     ).toEqual({ count: 30 });
   });
 
+  it("republishes prices against a complete generation from a pre-roster-change deploy", async () => {
+    // Regression: 2026-08-18 23:16Z — a coin quarantine deployed between the
+    // even-hour publication and the odd-hour reuse slot shrank the active
+    // roster by one, and the completeness guard compared the (internally
+    // consistent) published generation against the new bundle's roster count
+    // and threw "is not the complete current publication". The guard must
+    // compare the generation against its own recorded expectation instead.
+    const { sqlite, db } = seedPublishedDexGeneration();
+    const retiredCoinId = "roster-drift-retired-coin";
+    sqlite.exec("BEGIN IMMEDIATE");
+    try {
+      sqlite
+        .prepare(
+          `INSERT INTO dex_liquidity_run_rows
+            (generation_id, stablecoin_id, symbol, depth_stability, updated_at)
+           VALUES (?, ?, 'RETD', 0.25, ?)`,
+        )
+        .run(GENERATION_ID, retiredCoinId, NOW_SEC);
+      sqlite
+        .prepare(
+          `INSERT INTO dex_liquidity
+            (stablecoin_id, symbol, depth_stability, updated_at, publication_generation_id, publication_state)
+           VALUES (?, 'RETD', 0.25, ?, ?, 'published')`,
+        )
+        .run(retiredCoinId, NOW_SEC, GENERATION_ID);
+      sqlite
+        .prepare(
+          `UPDATE dex_liquidity_publication_generations
+           SET expected_row_count = ?, written_row_count = ?, current_row_count = ?
+           WHERE generation_id = ?`,
+        )
+        .run(
+          EXPECTED_GENERATION_ROWS + 1,
+          EXPECTED_GENERATION_ROWS + 1,
+          EXPECTED_GENERATION_ROWS + 1,
+          GENERATION_ID,
+        );
+      sqlite.exec("COMMIT");
+    } catch (error) {
+      sqlite.exec("ROLLBACK");
+      throw error;
+    }
+
+    await computeDexPrices(db, makePricePools(30), NOW_SEC);
+
+    expect(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM dex_prices WHERE updated_at = ?").get(NOW_SEC),
+    ).toEqual({ count: 30 });
+  });
+
   it("prunes only a bounded set of expired failed stages and protects live generations", async () => {
     const { sqlite, db } = seedPublishedDexGeneration();
     const explicitlyProtected = `${GENERATION_ID}-in-flight`;

@@ -15,7 +15,7 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
         {
           job: "cron-slot-sweeper",
           errorMessage: "[cron] cron-slot-sweeper failed in isolated slot:",
-          run: (signal) => runCronSlotSweeper(runtime.db, signal),
+          run: (signal) => runCronSlotSweeper(runtime.db, signal, runtime.workerVersion ?? null),
         },
         {
           job: "status-self-check",

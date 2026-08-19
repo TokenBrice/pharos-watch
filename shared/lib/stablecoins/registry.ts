@@ -17,7 +17,22 @@ const CANONICAL_ORDER = canonicalOrderAsset as readonly string[];
 // authoritative validation of the artifact.
 const PER_COIN_SOURCE_COINS = coinsGeneratedAsset as unknown as readonly StablecoinMeta[];
 
-const byId = new Map(PER_COIN_SOURCE_COINS.map((stablecoin) => [stablecoin.id, stablecoin]));
+// A `liveReservesConfig.suspended` marker is an operator kill switch for a dead
+// upstream feed (e.g. the provider moved to keyed access). Stripping the config
+// here — the single ingestion point — makes every consumer (sync queue, V9
+// backing evidence, presentation, breakers) treat the coin as having no live
+// feed, which is the supported curated-fallback state. The source file keeps
+// the adapter config so re-enabling is a one-line revert.
+/** @internal Exported for the registry suspension test. */
+export function withoutSuspendedLiveReserves(stablecoin: StablecoinMeta): StablecoinMeta {
+  if (!stablecoin.liveReservesConfig?.suspended) return stablecoin;
+  const { liveReservesConfig: _suspendedConfig, ...rest } = stablecoin;
+  return rest;
+}
+
+const byId = new Map(
+  PER_COIN_SOURCE_COINS.map((stablecoin) => [stablecoin.id, withoutSuspendedLiveReserves(stablecoin)]),
+);
 
 /** Tracked stablecoins in canonical market-cap order. */
 export const TRACKED_STABLECOINS: readonly StablecoinMeta[] = CANONICAL_ORDER.map((id) => {

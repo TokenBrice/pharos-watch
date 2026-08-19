@@ -5,10 +5,11 @@ import type { CronResult } from "../lib/cron-logger";
 export async function runCronSlotSweeper(
   db: D1Database,
   signal?: AbortSignal,
+  reconcilerWorkerVersion?: string | null,
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
-  const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec, signal });
+  const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec, signal, reconcilerWorkerVersion });
   throwIfAborted(signal);
 
   return {

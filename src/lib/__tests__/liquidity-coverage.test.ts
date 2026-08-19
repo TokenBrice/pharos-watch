@@ -17,7 +17,9 @@ describe("liquidity coverage", () => {
         );
       }
     }
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(51);
+    // 51 -> 50 when the SILK quarantine (#892) removed silk-shade-protocol
+    // from the active registry.
+    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(50);
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {
