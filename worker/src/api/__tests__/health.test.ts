@@ -32,6 +32,8 @@ function healthD1(tables: MockTableConfig[]) {
       first: { item_count: 0, metadata: null },
     },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "stamped_identity", rows: [], first: null },
+    { match: "publication_identity", rows: [], first: null },
     { match: "telegram_subscribers", rows: [], first: { n: 0 } },
     { match: "telegram_pending_alerts", rows: [], first: null },
     { match: "dispatch-telegram-alerts", rows: [], first: null },
@@ -446,6 +448,100 @@ describe("handleHealth", () => {
     expect(body.mintBurn.sync.freshnessStatus).toBe("fresh");
     expect(body.mintBurn.sync.warning).toBeNull();
     expect(body.mintBurn.sync.criticalLaneHealthy).toBe(true);
+  });
+
+  function stampedYieldIdentityJson(evaluationBuildDigest: string): string {
+    return JSON.stringify({
+      model: "v9",
+      schemaVersion: 1,
+      methodologyVersion: "9.28",
+      policyId: "safety-score-v9",
+      policyDigest: "c".repeat(64),
+      evaluationBuildDigest,
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId: `report-cards:v9:v1:${"a".repeat(64)}`,
+    });
+  }
+
+  function publicationEnvelopeIdentityJson(evaluationBuildDigest: string): string {
+    return JSON.stringify({
+      candidateId: `safety-score-v9:v1:${"e".repeat(64)}`,
+      policyVersion: "9.28",
+      publicationGenerationId: `report-cards:v9:v1:${"f".repeat(64)}`,
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      factSetDigest: "1".repeat(64),
+      policyId: "safety-score-v9",
+      policyDigest: "c".repeat(64),
+      evaluationBuildDigest,
+      resultDigest: "2".repeat(64),
+    });
+  }
+
+  it("keeps health green with a fallback warning while yield serves its publish-time safety snapshot", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeHealthyHealthDb(now, {
+      extras: [
+        {
+          match: "stamped_identity",
+          rows: [],
+          first: { updated_at: now - 1800, stamped_identity: stampedYieldIdentityJson("a".repeat(64)) },
+        },
+        {
+          match: "publication_identity",
+          rows: [],
+          first: { publication_identity: publicationEnvelopeIdentityJson("d".repeat(64)) },
+        },
+      ],
+    });
+
+    const res = await handleHealth(db);
+    const body = (await res.json()) as { status: string; warnings: string[] };
+
+    expect(body.status).toBe("healthy");
+    expect(body.warnings).toContain("yield-safety-publish-time-fallback:safety-identity-mismatch");
+  });
+
+  it("degrades health when yield rankings are serving unrated safety for lack of a stamped identity", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeHealthyHealthDb(now, {
+      extras: [
+        {
+          match: "stamped_identity",
+          rows: [],
+          first: { updated_at: now - 1800, stamped_identity: null },
+        },
+      ],
+    });
+
+    const res = await handleHealth(db);
+    const body = (await res.json()) as { status: string; warnings: string[] };
+
+    expect(body.status).toBe("degraded");
+    expect(body.warnings).toContain("yield-safety-unrated-serving:safety-identity-missing");
+  });
+
+  it("degrades health when a mismatched yield cache has aged past the stale-coherent window", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeHealthyHealthDb(now, {
+      extras: [
+        {
+          match: "stamped_identity",
+          rows: [],
+          first: { updated_at: now - (24 * 3600 + 120), stamped_identity: stampedYieldIdentityJson("a".repeat(64)) },
+        },
+        {
+          match: "publication_identity",
+          rows: [],
+          first: { publication_identity: publicationEnvelopeIdentityJson("d".repeat(64)) },
+        },
+      ],
+    });
+
+    const res = await handleHealth(db);
+    const body = (await res.json()) as { status: string; warnings: string[] };
+
+    expect(body.status).toBe("degraded");
+    expect(body.warnings).toContain("yield-safety-unrated-serving:safety-identity-mismatch");
   });
 
   it("surfaces sentinel fallback metadata when a freshness sentinel is invalid", async () => {

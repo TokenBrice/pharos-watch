@@ -5,6 +5,7 @@ Triggered by:
 - `/status/` impacted surfaces naming yield data
 - `/admin/` -> Crons showing stale or unhealthy `sync-yield-data`
 - `/admin/` -> Endpoint probes showing unhealthy `/api/yield-rankings`
+- `/api/health` degraded with a `yield-safety-unrated-serving:*` warning, or `/yield/` showing all rows as Safety NR (see [Safety Identity Mismatch](#safety-identity-mismatch-blank-scatter--all-nr-safety))
 
 ## Symptom
 
@@ -92,6 +93,31 @@ WHERE generation_id = '<generation_id>' AND stablecoin_id = '<stablecoin_id>';
 ```
 
 The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per selected row. It keeps at most four alternate sources with short rejected/retained reasons and anomaly samples, so it is debug evidence rather than a full replay log.
+
+## Safety Identity Mismatch (blank scatter / all-NR safety)
+
+`/yield/` showing every row as Safety NR — blank scatter chart, `—` hero PYS, zeroed risk-tolerance bands — while APYs still populate is the *safety hydration* failure mode, not a rankings-cache failure. The read path hydrates safety from the live V9 publication only when the identity stamped into the `yield-rankings` cache is evaluator-compatible with it (`safetyScorePublicationIdentitiesAreComparable`). Every scoring deploy rotates the evaluation-build digest, so a mismatch window is expected after each rollout until the next hourly `sync-yield-data` publish.
+
+Since 2026-08-19 the API bridges that window itself: an incompatible or unavailable live publication makes `/api/yield-rankings` serve the cached payload's own publish-time safety values (warning `yield-safety-hydration-stale`, `provenance.liveSafetyHydration.fallback: "publish-time-snapshot"`), and `/api/health` carries the informational warning `yield-safety-publish-time-fallback:<reason>` while staying healthy. The page stays fully populated; no action is needed.
+
+Investigate only when `/api/health` is `degraded` with a `yield-safety-unrated-serving:<reason>` warning — that means the public surface is actually serving NR safety:
+
+- `yield-safety-unrated-serving:safety-identity-missing`: the cached payload has no stamped safety identity. The last `sync-yield-data` publish predates identity stamping or published without a usable safety snapshot; check its `cron_runs` metadata `sourceCoverage.safetySnapshot`.
+- `yield-safety-unrated-serving:safety-identity-mismatch` / `:safety-snapshot-unavailable`: the publish-time fallback aged past the 24-hour stale-coherent window, meaning `sync-yield-data` has not published a compatible snapshot for over a day. Diagnose the cron (below), not the identity coupling.
+
+Compare the two identities directly:
+
+```sql
+SELECT json_extract(value, '$.provenance.safetySnapshot.safetyScoreIdentity') AS stamped
+FROM cache WHERE key = 'yield-rankings';
+```
+
+```sql
+SELECT json_extract(value, '$.identity') AS live
+FROM cache WHERE key = 'report-cards:v9';
+```
+
+Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`, and methodology/policy version; generation IDs may differ. A run whose metadata contains `safetyIdentityChangedBeforePublish` saw a mid-run rollout, published anyway (by design), and the next run re-aligns.
 
 ## Common Causes
 

@@ -571,7 +571,7 @@ Schedules are owned by `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `s
 - A circuit-broken provider removes only that source family. Independent tiers may still publish.
 - Trailing windows are timestamp-based, so cron gaps do not shift their boundaries.
 - Live safety hydration accepts ordinary newer report-card input/publication generations only when the V9 publication model, schema, methodology/policy identity, and evaluation-build digest still match, then recomputes safety-derived row fields and ordering against that live snapshot.
-- Missing, incomplete, or evaluation-incompatible live safety hydration clears safety-derived public fields and emits explicit degradation metadata while preserving the immutable hourly snapshot provenance.
+- Missing, incomplete, or evaluation-incompatible live safety hydration falls back to the cached payload's own publish-time safety values — coherent by construction, published unchanged with `yield-safety-hydration-stale` and `liveSafetyHydration.fallback: "publish-time-snapshot"` — for up to the 24-hour stale-coherent window (`shared/lib/yield-safety-fallback.ts`). Safety-derived public fields are cleared to explicit NR only when the payload carries no stamped safety identity or the fallback ages past that window; both variants preserve the immutable hourly snapshot provenance.
 - Malformed persisted warning payloads decode to an empty warning list so one row cannot fail an endpoint.
 
 ### Presentation Boundaries

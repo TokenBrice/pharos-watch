@@ -6,6 +6,7 @@ import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import {
   buildComparisonAnchorFreshnessMeta,
   buildYieldSyncMetadata,
+  type YieldSafetyIdentityChangeMeta,
 } from "./coordinator-metadata";
 import { publishYieldCoordinatorResults } from "./coordinator-persist";
 import type { YieldCoordinatorFetchContext } from "./coordinator-fetch-stage";
@@ -25,6 +26,7 @@ export async function runYieldCoordinatorPersistStage(
 ): Promise<CronResult> {
   const { fetched, normalized, health } = params;
   const loadedSafetyIdentity = health.safetySnapshotMeta.safetyScoreIdentity ?? null;
+  let safetyIdentityChangedBeforePublish: YieldSafetyIdentityChangeMeta | null = null;
   if (loadedSafetyIdentity) {
     const currentSafetySource = await loadActiveSafetyScoreIdentity(params.db);
     const currentSafetyIdentity = currentSafetySource.safetyScoreIdentity;
@@ -33,13 +35,24 @@ export async function runYieldCoordinatorPersistStage(
       currentSafetyIdentity &&
       !safetyScorePublicationIdentitiesAreComparable(loadedSafetyIdentity, currentSafetyIdentity)
     ) {
-      const reason = "yield-safety-identity-changed-before-publish";
+      // The run still publishes: its results are coherent under the identity it
+      // loaded, and the read path serves them as a publish-time snapshot until
+      // the next run re-aligns. Withholding the publish would only pin an
+      // older, equally mismatched cache (2026-08-19 incident).
+      safetyIdentityChangedBeforePublish = {
+        reason: "yield-safety-identity-changed-before-publish",
+        loadedPublicationGenerationId: loadedSafetyIdentity.publicationGenerationId,
+        currentPublicationGenerationId: currentSafetyIdentity.publicationGenerationId,
+        loadedEvaluationBuildDigest: loadedSafetyIdentity.evaluationBuildDigest,
+        currentEvaluationBuildDigest: currentSafetyIdentity.evaluationBuildDigest,
+      };
       logWorkerEvent({
         scope: "lib",
         level: "warn",
-        event: reason,
+        event: safetyIdentityChangedBeforePublish.reason,
         job: "sync-yield-data",
-        message: "Yield publication blocked because the Safety Score V9 identity changed after yield inputs were loaded",
+        message:
+          "Safety Score V9 identity changed after yield inputs were loaded; publishing the coherent loaded-identity results",
         metadata: {
           loadedPublicationGenerationId: loadedSafetyIdentity.publicationGenerationId,
           currentPublicationGenerationId: currentSafetyIdentity.publicationGenerationId,
@@ -47,40 +60,6 @@ export async function runYieldCoordinatorPersistStage(
           currentEvaluationBuildDigest: currentSafetyIdentity.evaluationBuildDigest,
         },
       });
-      await fetched.reportYieldProgress(
-        "publication-blocked",
-        "Yield publication was blocked because the Safety Score V9 identity changed before publish",
-        "yield-publication",
-        {
-          itemsDone: 0,
-          itemsTotal: health.previewRankingsPayload.rankings.length,
-          metadata: {
-            reason,
-            countTotals: { previewRankings: health.previewRankingsPayload.rankings.length },
-            safetySnapshot: {
-              loadedPublicationGenerationId: loadedSafetyIdentity.publicationGenerationId,
-              currentPublicationGenerationId: currentSafetyIdentity.publicationGenerationId,
-              loadedEvaluationBuildDigest: loadedSafetyIdentity.evaluationBuildDigest,
-              currentEvaluationBuildDigest: currentSafetyIdentity.evaluationBuildDigest,
-            },
-          },
-        },
-      );
-      return {
-        status: "degraded",
-        itemCount: 0,
-        metadata: JSON.stringify({
-          reason,
-          loadedPublicationGenerationId: loadedSafetyIdentity.publicationGenerationId,
-          currentPublicationGenerationId: currentSafetyIdentity.publicationGenerationId,
-          loadedEvaluationBuildDigest: loadedSafetyIdentity.evaluationBuildDigest,
-          currentEvaluationBuildDigest: currentSafetyIdentity.evaluationBuildDigest,
-          rowsRejected: normalized.rowsRejected,
-          divergenceFlags: normalized.divergenceFlags,
-          sourceSwitches: normalized.sourceSwitches,
-        }),
-        productivity: { productive: false, reason },
-      };
     }
   }
   const publicationResult = await publishYieldCoordinatorResults({
@@ -194,6 +173,7 @@ export async function runYieldCoordinatorPersistStage(
         startSec: fetched.startSec,
       }),
       previousTvlRowsTruncated: normalized.historySnapshots.previousTvlRowsTruncated,
+      safetyIdentityChangedBeforePublish,
     }),
   };
 }

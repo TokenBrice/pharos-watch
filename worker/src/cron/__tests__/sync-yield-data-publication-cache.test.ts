@@ -106,7 +106,7 @@ describe("syncYieldData", () => {
     expect(safetyCall?.[0]).toBe(db);
   });
 
-  it("blocks yield publication when the safety identity changes before publish", async () => {
+  it("publishes coherent results when the safety identity changes before publish", async () => {
     const db = makePublicationCacheDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const safetySnapshot = vi.mocked(fixtureSafetyScoresModule.computeSafetyScoresSnapshot);
@@ -183,18 +183,19 @@ describe("syncYieldData", () => {
 
     expect(safetySnapshot).toHaveBeenCalledTimes(1);
     expect(currentSafetyIdentity).toHaveBeenCalledTimes(1);
-    expect(result).toMatchObject({
-      status: "degraded",
-      itemCount: 0,
-      productivity: {
-        productive: false,
-        reason: "yield-safety-identity-changed-before-publish",
-      },
-    });
+    // The run publishes its coherent results stamped with the identity it
+    // loaded; the read path serves them as a publish-time snapshot until the
+    // next run re-aligns. Withholding the publish would only pin an older,
+    // equally mismatched cache.
+    expect(result.itemCount).toBeGreaterThan(0);
+    expect(result.productivity).toBeUndefined();
     expect(result.metadata).toContain("yield-safety-identity-changed-before-publish");
-    expect(getPublishedYieldRows(db)).toEqual([]);
-    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
-    expect(fixtureWriteFreshnessSentinel).not.toHaveBeenCalled();
+    expect(getPublishedYieldRows(db).length).toBeGreaterThan(0);
+    const cachePayload = getYieldRankingsCachePayload(db) as {
+      provenance?: { safetySnapshot?: { safetyScoreIdentity?: { evaluationBuildDigest?: string } } };
+    } | undefined;
+    expect(cachePayload?.provenance?.safetySnapshot?.safetyScoreIdentity?.evaluationBuildDigest).toBe("b".repeat(64));
+    expect(fixtureWriteFreshnessSentinel).toHaveBeenCalled();
   });
 
   it("reports writer-pause progress metadata before returning", async () => {
