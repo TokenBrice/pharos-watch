@@ -185,10 +185,14 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
           )}
         </DetailSectionTitle>
       </div>
-      <div
-        className="mt-3 min-h-[200px] w-full min-w-0 shrink-0 overflow-hidden lg:max-h-[520px]"
-        style={{ aspectRatio: "6 / 5" }}
-      >
+      {/* Below lg the panel stacks in auto-height flow, so the stage keeps its
+          6/5 ratio (flex-1 would collapse to zero with no definite parent
+          height). At lg the report-card grid gives the right column a definite
+          height driven by the score column, so the stage flexes into whatever
+          that is instead of overflowing a width-derived ratio and clipping the
+          bottom row of tiles. The ratio lives in a class, not an inline style,
+          so the lg override can win. */}
+      <div className="mt-3 aspect-[6/5] min-h-[200px] w-full min-w-0 shrink-0 overflow-hidden lg:aspect-auto lg:min-h-[240px] lg:max-h-[520px] lg:flex-1 lg:shrink">
         <div
           ref={chartContainerRef}
           className="h-full min-w-0 overflow-hidden"

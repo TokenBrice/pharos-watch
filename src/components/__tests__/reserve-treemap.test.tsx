@@ -12,7 +12,7 @@ describe("ReserveTreemap", () => {
       <ReserveTreemap reserves={[SLICE("USD deposits & T-bills", 100, "very-low")]} />,
     );
     expect(html).toContain("Reserve composition treemap: USD deposits &amp; T-bills 100%");
-    expect(html).toContain("aspect-ratio:6 / 5");
+    expect(html).toContain("aspect-[6/5]");
     expect(html).toContain("pharos-chart-stage");
   });
 
