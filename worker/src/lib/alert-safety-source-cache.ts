@@ -9,10 +9,10 @@ import {
 } from "@shared/types/safety-score-publication";
 import { getCache, setCache } from "./db-cache";
 import {
-  loadActiveSafetyScoreIdentity,
   loadActiveSafetyScoreSource,
   type ActiveSafetyScoreSource,
 } from "./safety-score-active-source";
+import { loadSafetyScoreV9PublicationHealth } from "./safety-score-v9-publication-store";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9-consumer-freshness";
 
 const ALERT_SAFETY_V9_SOURCE_GENERATION = "safety-v9-alert-source-v1";
@@ -379,22 +379,41 @@ export async function loadActiveAlertSafetySourceAssessment(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<AlertSafetySourceAssessment> {
-  // Envelope-first read: when the persisted thin projection matches the
-  // active publication identity, the heavy publication decode is skipped
-  // entirely. Any mismatch, held or error state, or unparseable envelope
-  // falls back to the full decode so behavior stays identical.
+  // Envelope-first read: the small publication-health record names the
+  // accepted publication generation, so when the persisted thin projection
+  // matches it the ~8MB publication decode is skipped entirely — including in
+  // the held state, which previously forced the heavy fallback on every
+  // five-minute alert slot for as long as a hold lasted (observed OOM-killing
+  // the telegram lane on 2026-08-19). A held publication still assesses as
+  // unusable; only the decode is skipped. Any mismatch or unparseable state
+  // falls back to the authoritative full decode.
+  //
+  // The one state this trades away: a crash between the publication write and
+  // the health write leaves health (and the matching envelope) one accepted
+  // publication behind, and this path serves that last-verified envelope
+  // where the full decode would have served the newer row downgraded to held.
+  // The window closes at the next publication attempt.
   try {
-    const identity = await loadActiveSafetyScoreIdentity(db, signal);
-    if (identity.kind === "v9" && identity.safetyScoreIdentity) {
-      const cached = parsePersistedAlertSafetyV9SourceEnvelope(
-        await getCache(db, ALERT_SAFETY_V9_SOURCE_CACHE_KEY, signal),
-      );
+    const [health, cachedRaw] = await Promise.all([
+      loadSafetyScoreV9PublicationHealth(db, signal),
+      getCache(db, ALERT_SAFETY_V9_SOURCE_CACHE_KEY, signal),
+    ]);
+    if (health !== null) {
+      const cached = parsePersistedAlertSafetyV9SourceEnvelope(cachedRaw);
       if (
         cached &&
         cached.generation === ALERT_SAFETY_V9_SOURCE_GENERATION &&
-        cached.publicationGenerationId ===
-          identity.safetyScoreIdentity.publicationGenerationId
+        cached.publicationGenerationId === health.acceptedPublicationGenerationId
       ) {
+        if (health.status === "held") {
+          return {
+            state: "corrupt",
+            ageSeconds: null,
+            generation: null,
+            envelope: null,
+            failureReason: "v9-publication-held",
+          };
+        }
         return assessAlertSafetyEnvelope(cached, nowSec);
       }
     }

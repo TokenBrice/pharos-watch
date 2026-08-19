@@ -66,6 +66,12 @@ export type SafetyScoreV9PublicationRunResult =
       attemptId: string;
       attemptedPublicationGenerationId: string;
       reasons: V9PublicationHoldReason[];
+      /**
+       * Observed-vs-required values for every coverage floor, so a
+       * `coverage-floor-failed` hold in cron metadata shows how far below the
+       * floor the attempt landed without replaying the compile.
+       */
+      coverageFloors: readonly V9PublicationCoverageFloor[];
       quarantines: readonly V9AssetQuarantine[];
       affectedAssetIds: readonly string[];
     }
@@ -463,6 +469,7 @@ export async function runSafetyScoreV9Publication(
         attemptedPublicationGenerationId:
           publication.publicationGenerationId,
         reasons: assessment.reasons,
+        coverageFloors,
         quarantines: pipeline.quarantines,
         affectedAssetIds: assessment.affectedAssetIds,
       };

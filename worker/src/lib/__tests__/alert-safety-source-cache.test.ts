@@ -139,6 +139,64 @@ describe("persisted V9 alert source envelope", () => {
     ).toBeNull();
   });
 
+  it("resolves envelope-first assessments from health alone, without the publication decode", async () => {
+    const { buildActiveAlertSafetyV9SourceEnvelope, loadActiveAlertSafetySourceAssessment } =
+      await import("../alert-safety-source-cache");
+    const { stableJsonStringifyV1 } = await import("@shared/lib/stable-json");
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: 1_700_000_000,
+      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A+", score: 91 })],
+    });
+    const envelope = buildActiveAlertSafetyV9SourceEnvelope(response)!;
+
+    const makeDb = (healthStatus: "current" | "held"): D1Database => {
+      const health = {
+        schemaVersion: 1 as const,
+        status: healthStatus,
+        acceptedPublicationGenerationId: envelope.publicationGenerationId,
+        acceptedAtSec: response.updatedAt,
+        attemptedAtSec: response.updatedAt,
+        heldSinceSec: healthStatus === "held" ? response.updatedAt : null,
+        reasons:
+          healthStatus === "held"
+            ? [{ code: "coverage-floor-failed" as const, floorIds: ["minimum-rateable-assets"] }]
+            : [],
+      };
+      const rows = new Map<string, { value: string; updated_at: number }>([
+        [
+          "report-cards:v9:publication-health",
+          { value: stableJsonStringifyV1(health), updated_at: health.attemptedAtSec },
+        ],
+        ["alert-safety-v9-source", { value: JSON.stringify(envelope), updated_at: response.updatedAt }],
+      ]);
+      return {
+        prepare: (sql: string) => ({
+          bind: (key: string) => ({
+            first: async () => {
+              if (key === "report-cards:v9") {
+                throw new Error("publication decode must not run on the envelope-first path");
+              }
+              if (!sql.includes("FROM cache")) throw new Error(`unexpected sql: ${sql}`);
+              return rows.get(key) ?? null;
+            },
+          }),
+        }),
+      } as unknown as D1Database;
+    };
+
+    await expect(
+      loadActiveAlertSafetySourceAssessment(makeDb("current"), response.updatedAt + 60),
+    ).resolves.toMatchObject({ state: "ok", ageSeconds: 60 });
+
+    await expect(
+      loadActiveAlertSafetySourceAssessment(makeDb("held"), response.updatedAt + 60),
+    ).resolves.toMatchObject({
+      state: "corrupt",
+      envelope: null,
+      failureReason: "v9-publication-held",
+    });
+  });
+
   it("assesses a persisted envelope with the same staleness rules as the live source", async () => {
     const { assessAlertSafetyEnvelope, buildActiveAlertSafetyV9SourceEnvelope } =
       await import("../alert-safety-source-cache");

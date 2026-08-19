@@ -89,10 +89,14 @@ function base64ToBytes(value: string, label: string): Uint8Array {
 function parsePublicationPayload(
   raw: string,
   label: string,
+  options?: { skipCanonicalityCheck?: boolean },
 ): SafetyScoreV9CurrentResponse {
   const parsed = parseJson(raw);
   if (!parsed.ok) throw new Error(`Malformed ${label} JSON: ${parsed.message}`);
-  if (stableJsonStringifyV1(parsed.value) !== raw) {
+  // Re-stringifying the full payload doubles peak string heap on a ~8MB
+  // publication; callers that have already authenticated the exact stored
+  // bytes (payloadSha256 on the compressed path) skip it.
+  if (!options?.skipCanonicalityCheck && stableJsonStringifyV1(parsed.value) !== raw) {
     throw new Error(`${label} JSON is not canonical`);
   }
   return SafetyScoreV9CurrentResponseSchema.parse(
@@ -282,6 +286,9 @@ export async function parseSafetyScoreV9Publication(
   const publication = parsePublicationPayload(
     canonical,
     "Safety Score v9 publication",
+    // payloadSha256 above already pinned the exact producer-written canonical
+    // bytes, so the canonicality re-stringify adds no integrity here.
+    { skipCanonicalityCheck: true },
   );
   if (
     stableJsonStringifyV1(publicationIdentity(publication)) !==
