@@ -84,21 +84,14 @@ export function LiquidityPoolMatchingDetails() {
           ceiling before scoring. Mature fresh profiles remain route-only if a pool temporarily rotates out of the display
           shortlist; they never re-enter aggregate liquidity, price consensus, or public target inventory. Any V9 Exit
           use is limited to the current score-eligible exact-route contract. Optimism
-          Uniswap V3 has been retired from the maintained source and measured-execution lanes. The reviewed wM/USDC
-          Raydium direction still captures its pool state and exactly replays the direct quote, but its score eligibility is
-          paused after the first post-activation scoring consumers exceeded the Worker memory limit. Generic Raydium, Orca
-          Whirlpool, Meteora, and unlisted native routes also remain shadow-only.
+          Uniswap V3 has been retired from the maintained source and measured-execution lanes.
         </p>
         <p>
-          SunSwap V2 routes on Tron remain shadow-only and score-ineligible while target and quote collection continue for
-          revalidation. The producer proves the canonical factory and pair runtimes, exact pair binding and reserves, the
-          reviewed 0.3% constant-product output, and a bounded latest-state block bracket. It prefers a direct SUN Smart
-          Router path. When that service&apos;s three returned candidates are all clean V2 multi-hop paths, it may use the
-          pinned on-chain V2 Router only after proving its runtime, factory binding, exact two-token path, and identical raw
-          output. An invalid direct Smart Router candidate still fails closed. Missing, stale, failed, or identity-mismatched
-          evidence remains capability-gated per target. The SunSwap census still does not enter aggregate liquidity, price
-          consensus, direct-source precedence, visible pool selection, P4 capacity or completeness, or aggregate liquidity
-          inputs.
+          As of v6.0, the never-score-eligible Solana and Tron native measured-execution lanes (Raydium CLMM, Orca
+          Whirlpool, SunSwap V2) and the Fluid measured overlay have been retired. Retained Raydium, Orca, and Fluid
+          pools continue to contribute aggregate liquidity, price observations, and shaped exit-route evidence, but no
+          native measured-execution profiles are collected or published for them, and the target-only SunSwap census is
+          no longer fetched.
         </p>
         <p>
           Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed before

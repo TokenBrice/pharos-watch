@@ -29,7 +29,6 @@ export interface DexApiPool {
     | "orca"
     | "meteora"
     | "pancakeswap"
-    | "sunswap"
     | "aerodrome-slipstream"
     | "velodrome-slipstream"
     | "uniswap-v3-shadow";

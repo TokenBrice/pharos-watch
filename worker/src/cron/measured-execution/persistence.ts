@@ -1,6 +1,5 @@
 import {
   DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
-  DEX_MEASURED_FRESHNESS_MAX_SEC,
   getDexMeasuredExecutionFreshnessMaxSec,
   DexMeasuredExecutionProfileSchema,
   DexMeasuredExecutionTargetSchema,
@@ -8,18 +7,6 @@ import {
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import {
-  SolanaMeasuredExecutionProfileSchema,
-  SolanaMeasuredExecutionTargetSchema,
-  type SolanaMeasuredExecutionProfile,
-  type SolanaMeasuredExecutionTarget,
-} from "@shared/types/solana-measured-execution";
-import {
-  TronMeasuredExecutionProfileSchema,
-  TronMeasuredExecutionTargetSchema,
-  type TronMeasuredExecutionProfile,
-  type TronMeasuredExecutionTarget,
-} from "@shared/types/tron-measured-execution";
 import { rethrowIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -29,7 +16,6 @@ import {
   summarizeDexMeasuredExecutionHistory,
   type DexMeasuredExecutionHistoryCycle,
 } from "./history";
-import { isOperationalSolanaMeasuredFailure } from "./solana-quotes";
 
 const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
 const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
@@ -981,82 +967,6 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   };
 }
 
-const SOLANA_MEASURED_TARGET_SURFACE = "dex-solana-measured-execution-targets";
-const SOLANA_MEASURED_QUOTE_SURFACE = "dex-solana-measured-execution-quotes";
-
-export interface PublishedSolanaMeasuredTargets {
-  generationId: string;
-  targets: SolanaMeasuredExecutionTarget[];
-  publishedAt: number;
-}
-
-export interface SolanaMeasuredQuoteOutcome {
-  target: SolanaMeasuredExecutionTarget;
-  status: "measured" | "failed";
-  failureReason?: string;
-  profile?: SolanaMeasuredExecutionProfile;
-  rawPayload?: unknown;
-}
-
-export interface LoadedSolanaMeasuredQuoteEvidence {
-  quoteGenerationId: string;
-  targetGenerationId: string;
-  publishedAt: number;
-  byTargetId: Map<
-    string,
-    {
-      quotedTarget: SolanaMeasuredExecutionTarget;
-      status: "measured" | "failed";
-      failureReason: string | null;
-      profile: SolanaMeasuredExecutionProfile | null;
-      quoteGenerationId: string;
-      targetGenerationId: string;
-      resolution: "latest" | "last-known-good";
-      latestFailureReason: string | null;
-    }
-  >;
-}
-
-export function buildSolanaMeasuredQuoteGenerationId(nowSec: number): string {
-  return generationId("dex-solana-measured-quotes", nowSec);
-}
-
-const TRON_MEASURED_TARGET_SURFACE = "dex-tron-measured-execution-targets";
-const TRON_MEASURED_QUOTE_SURFACE = "dex-tron-measured-execution-quotes";
-
-export interface PublishedTronMeasuredTargets {
-  generationId: string;
-  targets: TronMeasuredExecutionTarget[];
-  publishedAt: number;
-}
-
-export interface TronMeasuredQuoteOutcome {
-  target: TronMeasuredExecutionTarget;
-  status: "measured" | "failed";
-  failureReason?: string;
-  profile?: TronMeasuredExecutionProfile;
-  rawPayload?: unknown;
-}
-
-export interface LoadedTronMeasuredQuoteEvidence {
-  quoteGenerationId: string;
-  targetGenerationId: string;
-  publishedAt: number;
-  byTargetId: Map<
-    string,
-    {
-      quotedTarget: TronMeasuredExecutionTarget;
-      status: "measured" | "failed";
-      failureReason: string | null;
-      profile: TronMeasuredExecutionProfile | null;
-    }
-  >;
-}
-
-export function buildTronMeasuredQuoteGenerationId(nowSec: number): string {
-  return generationId("dex-tron-measured-quotes", nowSec);
-}
-
 interface NativeMeasuredTarget {
   targetId: string;
   stablecoinId: string;
@@ -1102,21 +1012,6 @@ interface NativeQuoteOutcome<TTarget, TProfile> {
   rawPayload?: unknown;
 }
 
-interface NativeLoadedQuoteEvidence<TTarget, TProfile> {
-  quoteGenerationId: string;
-  targetGenerationId: string;
-  publishedAt: number;
-  byTargetId: Map<
-    string,
-    {
-      quotedTarget: TTarget;
-      status: "measured" | "failed";
-      failureReason: string | null;
-      profile: TProfile | null;
-    }
-  >;
-}
-
 const DEX_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMeasuredExecutionProfile> = {
   label: "DEX",
   activation: "active",
@@ -1141,38 +1036,6 @@ const DEX_SHADOW_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget
   targetSchema: DexMeasuredExecutionTargetSchema,
   profileSchema: DexMeasuredExecutionProfileSchema,
   profileBlockNumber: (profile) => profile.blockNumber,
-  targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
-  quoteProducer: { scheduleKey: "daily0810Utc", job: "sync-cl-exit-depth", path: "daily0810Utc" },
-};
-
-const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget, SolanaMeasuredExecutionProfile> = {
-  label: "Solana",
-  activation: "shadow",
-  targetSurface: SOLANA_MEASURED_TARGET_SURFACE,
-  quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
-  targetGenerationPrefix: "dex-solana-measured-targets",
-  quoteGenerationPrefix: "dex-solana-measured-quotes",
-  targetSchema: SolanaMeasuredExecutionTargetSchema,
-  profileSchema: SolanaMeasuredExecutionProfileSchema,
-  profileBlockNumber: (profile) => profile.slotWindow.after,
-  targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
-  quoteProducer: {
-    scheduleKey: "halfHourlyMeasuredExecution",
-    job: "sync-cl-exit-depth",
-    path: "halfHourlyMeasuredExecution",
-  },
-};
-
-const TRON_PERSISTENCE: NativePersistenceConfig<TronMeasuredExecutionTarget, TronMeasuredExecutionProfile> = {
-  label: "Tron",
-  activation: "shadow",
-  targetSurface: TRON_MEASURED_TARGET_SURFACE,
-  quoteSurface: TRON_MEASURED_QUOTE_SURFACE,
-  targetGenerationPrefix: "dex-tron-measured-targets",
-  quoteGenerationPrefix: "dex-tron-measured-quotes",
-  targetSchema: TronMeasuredExecutionTargetSchema,
-  profileSchema: TronMeasuredExecutionProfileSchema,
-  profileBlockNumber: (profile) => Math.max(...profile.quoteProof.map((point) => point.route.blockAfter)),
   targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
   quoteProducer: { scheduleKey: "daily0810Utc", job: "sync-cl-exit-depth", path: "daily0810Utc" },
 };
@@ -1468,223 +1331,6 @@ async function publishNativeMeasuredQuoteGeneration<
   }
 }
 
-async function loadLatestPublishedNativeMeasuredQuoteEvidence<
-  TTarget extends NativeMeasuredTarget,
-  TProfile extends NativeMeasuredProfile,
->(
-  config: NativePersistenceConfig<TTarget, TProfile>,
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<NativeLoadedQuoteEvidence<TTarget, TProfile> | null> {
-  return loadCurrentMeasuredQuoteEvidence({
-    db,
-    quoteSurface: config.quoteSurface,
-    targetSurface: config.targetSurface,
-    label: config.label,
-    targetSchema: config.targetSchema,
-    profileSchema: config.profileSchema,
-    signal,
-  });
-}
-
-/**
- * Solana rotates most targets through a bounded serialized quote budget. A
- * current `budget-deferred` row is therefore an operational collection result,
- * not fresh evidence that the last exact route stopped working. Reuse only a
- * fresh, fully valid prior measurement for that same target; semantic or
- * malformed history is an integrity barrier and remains fail-closed.
- */
-async function loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(
-  db: D1Database,
-  signal?: AbortSignal,
-  targetIds?: readonly string[],
-): Promise<LoadedSolanaMeasuredQuoteEvidence | null> {
-  const currentEvidence = await loadCurrentMeasuredQuoteEvidence({
-    db,
-    quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
-    targetSurface: SOLANA_MEASURED_TARGET_SURFACE,
-    label: "Solana",
-    targetSchema: SolanaMeasuredExecutionTargetSchema,
-    profileSchema: SolanaMeasuredExecutionProfileSchema,
-    targetIds,
-    signal,
-  });
-  if (!currentEvidence) return null;
-
-  const byTargetId = new Map<
-    string,
-    LoadedSolanaMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never
-  >();
-  const eligibleLkgTargetIds: string[] = [];
-  for (const [targetId, entry] of currentEvidence.byTargetId) {
-    byTargetId.set(targetId, {
-      ...entry,
-      quoteGenerationId: currentEvidence.quoteGenerationId,
-      targetGenerationId: currentEvidence.targetGenerationId,
-      resolution: "latest",
-      latestFailureReason: entry.failureReason,
-    });
-    if (entry.status === "failed" && isOperationalSolanaMeasuredFailure(entry.failureReason)) {
-      eligibleLkgTargetIds.push(targetId);
-    }
-  }
-  currentEvidence.byTargetId.clear();
-  if (eligibleLkgTargetIds.length === 0) {
-    return { ...currentEvidence, byTargetId };
-  }
-
-  try {
-    const historyGenerationIds = await loadSupersededQuoteGenerationIds({
-      db,
-      quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
-      publishedAtFloor: currentEvidence.publishedAt - DEX_MEASURED_FRESHNESS_MAX_SEC,
-      signal,
-    });
-    if (historyGenerationIds.length === 0) return { ...currentEvidence, byTargetId };
-
-    const historyGenerationIdsJson = JSON.stringify(historyGenerationIds);
-    for (let offset = 0; offset < eligibleLkgTargetIds.length; offset += DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE) {
-      const targetIdBatch = eligibleLkgTargetIds.slice(offset, offset + DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE);
-      const rowsResult = await runWithOverloadRetry(
-        () =>
-          db
-            .prepare(
-              `SELECT q.generation_id, q.target_generation_id, q.target_id, q.status, q.failure_reason,
-                q.quote_profile_json, g.published_at AS quote_published_at, t.target_json
-         FROM dex_measured_execution_quotes q
-         JOIN surface_publication_generations g ON g.surface = ? AND g.generation_id = q.generation_id
-         JOIN dex_measured_execution_targets t
-           ON t.generation_id = q.target_generation_id AND t.target_id = q.target_id
-         WHERE q.generation_id IN (SELECT value FROM json_each(?))
-           AND q.target_id IN (SELECT value FROM json_each(?))
-         ORDER BY q.target_id, g.published_at DESC, q.generation_id DESC`,
-            )
-            .bind(SOLANA_MEASURED_QUOTE_SURFACE, historyGenerationIdsJson, JSON.stringify(targetIdBatch))
-            .all<HistoricalQuoteRow>(),
-        3,
-        signal,
-      );
-      const blockedTargetIds = new Set<string>();
-      const resolvedTargetIds = new Set<string>();
-      const rows: Array<HistoricalQuoteRow | undefined> = rowsResult.results ?? [];
-      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-        const row = rows[rowIndex];
-        rows[rowIndex] = undefined;
-        if (!row || blockedTargetIds.has(row.target_id) || resolvedTargetIds.has(row.target_id)) continue;
-
-        const targetJson = parseJson(row.target_json, { onFailure: () => undefined });
-        const profileJson = row.quote_profile_json
-          ? parseJson(row.quote_profile_json, { onFailure: () => undefined })
-          : null;
-        const targetResult = targetJson.ok ? SolanaMeasuredExecutionTargetSchema.safeParse(targetJson.value) : null;
-        const profileResult = profileJson?.ok
-          ? SolanaMeasuredExecutionProfileSchema.safeParse(profileJson.value)
-          : null;
-        const profile = profileResult?.success ? profileResult.data : null;
-        const quotedTarget = targetResult?.success ? targetResult.data : null;
-        if (quotedTarget === null || !isCoherentHistoricalQuoteRow(row, quotedTarget, profile)) {
-          blockedTargetIds.add(row.target_id);
-          continue;
-        }
-        if (row.status === "failed") {
-          if (!isOperationalSolanaMeasuredFailure(row.failure_reason)) blockedTargetIds.add(row.target_id);
-          continue;
-        }
-        const latest = byTargetId.get(row.target_id);
-        if (!latest || latest.status !== "failed" || !isOperationalSolanaMeasuredFailure(latest.failureReason)) {
-          blockedTargetIds.add(row.target_id);
-          continue;
-        }
-        byTargetId.set(row.target_id, {
-          quotedTarget,
-          status: "measured",
-          failureReason: null,
-          profile,
-          quoteGenerationId: row.generation_id,
-          targetGenerationId: row.target_generation_id,
-          resolution: "last-known-good",
-          latestFailureReason: latest.failureReason,
-        });
-        resolvedTargetIds.add(row.target_id);
-      }
-      rows.length = 0;
-    }
-  } catch {
-    // A transient optional-history read must not discard the valid latest generation.
-  }
-
-  return { ...currentEvidence, byTargetId };
-}
-
-export async function publishSolanaMeasuredTargetInventory(input: {
-  db: D1Database;
-  targets: readonly SolanaMeasuredExecutionTarget[];
-  capturedAt: number;
-  signal?: AbortSignal;
-}): Promise<{ generationId: string; rowCount: number }> {
-  return publishNativeMeasuredTargetInventory(SOLANA_PERSISTENCE, input);
-}
-
-export async function loadLatestPublishedSolanaMeasuredTargets(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<PublishedSolanaMeasuredTargets | null> {
-  return loadLatestPublishedNativeMeasuredTargets(SOLANA_PERSISTENCE, db, signal);
-}
-
-export async function publishSolanaMeasuredQuoteGeneration(input: {
-  db: D1Database;
-  targetGeneration: PublishedSolanaMeasuredTargets;
-  outcomes: readonly SolanaMeasuredQuoteOutcome[];
-  quotedAt: number;
-  generationId?: string;
-  signal?: AbortSignal;
-}): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
-  return publishNativeMeasuredQuoteGeneration(SOLANA_PERSISTENCE, input);
-}
-
-export async function loadLatestPublishedSolanaMeasuredQuoteEvidence(
-  db: D1Database,
-  signal?: AbortSignal,
-  targetIds?: readonly string[],
-): Promise<LoadedSolanaMeasuredQuoteEvidence | null> {
-  return loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(db, signal, targetIds);
-}
-
-export async function publishTronMeasuredTargetInventory(input: {
-  db: D1Database;
-  targets: readonly TronMeasuredExecutionTarget[];
-  capturedAt: number;
-  signal?: AbortSignal;
-}): Promise<{ generationId: string; rowCount: number }> {
-  return publishNativeMeasuredTargetInventory(TRON_PERSISTENCE, input);
-}
-
-export async function loadLatestPublishedTronMeasuredTargets(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<PublishedTronMeasuredTargets | null> {
-  return loadLatestPublishedNativeMeasuredTargets(TRON_PERSISTENCE, db, signal);
-}
-
-export async function publishTronMeasuredQuoteGeneration(input: {
-  db: D1Database;
-  targetGeneration: PublishedTronMeasuredTargets;
-  outcomes: readonly TronMeasuredQuoteOutcome[];
-  quotedAt: number;
-  generationId?: string;
-  signal?: AbortSignal;
-}): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
-  return publishNativeMeasuredQuoteGeneration(TRON_PERSISTENCE, input);
-}
-
-export async function loadLatestPublishedTronMeasuredQuoteEvidence(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<LoadedTronMeasuredQuoteEvidence | null> {
-  return loadLatestPublishedNativeMeasuredQuoteEvidence(TRON_PERSISTENCE, db, signal);
-}
-
 export interface DexMeasuredExecutionRetentionResult {
   cutoff: number;
   deletedRows: number;
@@ -1720,15 +1366,13 @@ export async function pruneDexMeasuredExecutionGenerations(
           `DELETE FROM dex_measured_execution_quotes
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
-         WHERE surface IN (?, ?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         WHERE surface IN (?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
          ORDER BY started_at ASC LIMIT ?
        )`,
         )
         .bind(
           DEX_MEASURED_QUOTE_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
-          SOLANA_MEASURED_QUOTE_SURFACE,
-          TRON_MEASURED_QUOTE_SURFACE,
           cutoff,
           GENERATION_PRUNE_MAX_PER_RUN,
         )
@@ -1744,7 +1388,7 @@ export async function pruneDexMeasuredExecutionGenerations(
           `DELETE FROM dex_measured_execution_targets
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
-         WHERE surface IN (?, ?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         WHERE surface IN (?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
          ORDER BY started_at ASC LIMIT ?
        )
        AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
@@ -1752,8 +1396,6 @@ export async function pruneDexMeasuredExecutionGenerations(
         .bind(
           DEX_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
-          SOLANA_MEASURED_TARGET_SURFACE,
-          TRON_MEASURED_TARGET_SURFACE,
           cutoff,
           GENERATION_PRUNE_MAX_PER_RUN,
         )
@@ -1770,7 +1412,7 @@ export async function pruneDexMeasuredExecutionGenerations(
        WHERE rowid IN (
          SELECT candidate.rowid
            FROM surface_publication_generations candidate
-          WHERE candidate.surface IN (?, ?, ?, ?, ?, ?, ?, ?)
+          WHERE candidate.surface IN (?, ?, ?, ?)
             AND candidate.state IN ('failed', 'rejected', 'superseded')
             AND candidate.started_at < ?
             AND NOT EXISTS (
@@ -1791,10 +1433,6 @@ export async function pruneDexMeasuredExecutionGenerations(
           DEX_MEASURED_QUOTE_SURFACE,
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
-          SOLANA_MEASURED_TARGET_SURFACE,
-          SOLANA_MEASURED_QUOTE_SURFACE,
-          TRON_MEASURED_TARGET_SURFACE,
-          TRON_MEASURED_QUOTE_SURFACE,
           cutoff,
           GENERATION_PRUNE_MAX_PER_RUN,
         )
@@ -1809,7 +1447,7 @@ export async function pruneDexMeasuredExecutionGenerations(
         .prepare(
           `SELECT MIN(candidate.started_at) AS oldest_remaining_at
              FROM surface_publication_generations candidate
-            WHERE candidate.surface IN (?, ?, ?, ?, ?, ?, ?, ?)
+            WHERE candidate.surface IN (?, ?, ?, ?)
               AND (
                 EXISTS (
                   SELECT 1 FROM dex_measured_execution_quotes q
@@ -1827,10 +1465,6 @@ export async function pruneDexMeasuredExecutionGenerations(
           DEX_MEASURED_QUOTE_SURFACE,
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
-          SOLANA_MEASURED_TARGET_SURFACE,
-          SOLANA_MEASURED_QUOTE_SURFACE,
-          TRON_MEASURED_TARGET_SURFACE,
-          TRON_MEASURED_QUOTE_SURFACE,
         )
         .first<{ oldest_remaining_at: number | null }>(),
       3,

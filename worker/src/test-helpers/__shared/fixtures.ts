@@ -116,7 +116,7 @@ type DexLiquidityHistoryRow = {
   snapshot_date: number;
   coverage_class: string | null;
   coverage_confidence: number | null;
-  methodology_version: string | null;
+  methodology_version: string;
   exit_route_summary_json?: string | null;
 };
 

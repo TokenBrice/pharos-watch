@@ -90,16 +90,6 @@ import type {
   DexMeasuredExecutionPublicProfile,
   DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import type {
-  SolanaMeasuredExecutionProfile,
-  SolanaMeasuredExecutionPublicProfile,
-  SolanaMeasuredExecutionTarget,
-} from "@shared/types/solana-measured-execution";
-import type {
-  TronMeasuredExecutionProfile,
-  TronMeasuredExecutionPublicProfile,
-  TronMeasuredExecutionTarget,
-} from "@shared/types/tron-measured-execution";
 
 export type { LiquidityPoolSourceFamily, LiquiditySourceMixEntry, LiquidityCoverageClass };
 
@@ -199,38 +189,6 @@ export interface PoolEntry {
       targetId?: string;
       detail?: string;
     }[];
-    /** Internal native Solana target; never published. */
-    solanaMeasuredExecutionTarget?: SolanaMeasuredExecutionTarget;
-    /** Proof-free shadow profile retained for operator/API diagnostics. */
-    solanaMeasuredExecution?: SolanaMeasuredExecutionPublicProfile;
-    /** Internal native Solana proof profile; never published. */
-    solanaMeasuredExecutionProfile?: SolanaMeasuredExecutionProfile;
-    /** Internal native physical pool id consumed before publication. */
-    solanaMeasuredExecutionPhysicalPoolId?: string;
-    /** Internal native adapter diagnostics; never published. */
-    solanaMeasuredExecutionDiagnostic?: {
-      adapterProfileId: string;
-      targetId?: string;
-      detail?: string;
-    };
-    /** Internal native Tron target; never published. */
-    tronMeasuredExecutionTarget?: TronMeasuredExecutionTarget;
-    /** Proof-free shadow profile retained for operator/API diagnostics. */
-    tronMeasuredExecution?: TronMeasuredExecutionPublicProfile;
-    /** Internal native Tron proof profile; never published. */
-    tronMeasuredExecutionProfile?: TronMeasuredExecutionProfile;
-    /** Internal native physical pool id consumed before publication. */
-    tronMeasuredExecutionPhysicalPoolId?: string;
-    /** Internal native adapter diagnostics; never published. */
-    tronMeasuredExecutionDiagnostic?: {
-      adapterProfileId: string;
-      targetId?: string;
-      detail?: string;
-    };
-    /** Validated active native profile promoted into P4, then stripped before publication. */
-    nativeMeasuredExecution?: SolanaMeasuredExecutionPublicProfile | TronMeasuredExecutionPublicProfile;
-    /** Case-sensitive physical pool id paired with the active native P4 profile. */
-    nativeMeasuredExecutionPhysicalPoolId?: string;
   };
 }
 

@@ -8,7 +8,6 @@ vi.mock("../../../lib/structured-log", () => ({
 
 import type { DexApiPool } from "../../../lib/dex-api-types";
 import {
-  buildFluidMeasuredExecutionTargets,
   buildMeasuredPoolDirectionKey,
   buildPancakeMeasuredExecutionTargets,
   buildSlipstreamMeasuredExecutionTarget,
@@ -30,7 +29,7 @@ function addressMap(entries: Array<[string, string]>, chain = "ethereum") {
 }
 
 function directPool(
-  source: "pancakeswap" | "fluid" | "aerodrome-slipstream",
+  source: "pancakeswap" | "aerodrome-slipstream",
   tokens: DexApiPool["tokens"] = [
     { address: USDC, symbol: "USDC", decimals: 6 },
     { address: USDT, symbol: "USDT", decimals: 6 },
@@ -41,11 +40,9 @@ function directPool(
     chain: "ethereum",
     poolAddress: POOL,
     poolType:
-      source === "fluid"
-        ? "fluid-dex"
-        : source === "aerodrome-slipstream"
-          ? "aerodrome-slipstream-1bp"
-          : "pancakeswap-v3",
+      source === "aerodrome-slipstream"
+        ? "aerodrome-slipstream-1bp"
+        : "pancakeswap-v3",
     tokens,
     price: 0.98,
     tvlUsd: 4_000_000,
@@ -359,7 +356,7 @@ describe("measured execution target inventory", () => {
     ).toBeNull();
   });
 
-  it("builds exact two-token Pancake and Fluid targets but rejects self-output and multi-token pools", () => {
+  it("builds exact two-token Pancake targets but rejects self-output pools", () => {
     const chainAddressToId = addressMap([
       [USDC, "usdc-circle"],
       [USDT, "usdt-tether"],
@@ -374,7 +371,6 @@ describe("measured execution target inventory", () => {
       capturedAt: 1_752_560_000,
     };
     const pancake = buildPancakeMeasuredExecutionTargets({ pools: [directPool("pancakeswap")], ...common });
-    const fluid = buildFluidMeasuredExecutionTargets({ pools: [directPool("fluid")], ...common });
     const poolId = `ethereum:${POOL}`;
 
     expect(pancake.get(buildMeasuredPoolDirectionKey("usdc-circle", poolId))).toMatchObject({
@@ -383,12 +379,6 @@ describe("measured execution target inventory", () => {
       tokenIn: { referencePriceUsd: 0.99 },
       tokenOut: { referencePriceUsd: 1.01 },
     });
-    expect(fluid.get(buildMeasuredPoolDirectionKey("usdc-circle", poolId))).toMatchObject({
-      adapterProfileId: "fluid-resolver-measured",
-      tokenIn: { referencePriceUsd: 0.99 },
-      tokenOut: { referencePriceUsd: 1.01 },
-    });
-
     const selfMap = addressMap([
       [USDC, "usdc-circle"],
       [USDT, "usdc-circle"],
@@ -398,25 +388,6 @@ describe("measured execution target inventory", () => {
         pools: [directPool("pancakeswap")],
         ...common,
         chainAddressToId: selfMap,
-      }).size,
-    ).toBe(0);
-    const thirdToken = { address: "0x5555555555555555555555555555555555555555", symbol: "DAI", decimals: 18 };
-    expect(
-      buildFluidMeasuredExecutionTargets({
-        pools: [directPool("fluid", [...directPool("fluid").tokens, thirdToken])],
-        ...common,
-      }).size,
-    ).toBe(0);
-    const unsupportedFluidPool = directPool("fluid");
-    unsupportedFluidPool.chain = "bsc";
-    expect(
-      buildFluidMeasuredExecutionTargets({
-        pools: [unsupportedFluidPool],
-        ...common,
-        chainAddressToId: addressMap([
-          [USDC, "usdc-circle"],
-          [USDT, "usdt-tether"],
-        ], "bsc"),
       }).size,
     ).toBe(0);
   });

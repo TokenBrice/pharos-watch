@@ -1,6 +1,5 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { getLiquidityMethodologyVersionAt } from "@shared/lib/methodology-versions/liquidity-score";
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { safeJsonParse } from "../lib/api-utils";
 import {
@@ -16,7 +15,8 @@ interface LiquidityHistoryRow {
   snapshot_date: number;
   coverage_class: string | null;
   coverage_confidence: number | null;
-  methodology_version: string | null;
+  // Column is NOT NULL DEFAULT in D1; no NULL rows remain (verified 2026-08-19).
+  methodology_version: string;
   exit_route_summary_json: string | null;
 }
 
@@ -75,7 +75,7 @@ export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promi
           liquidityEvidenceClass,
           hasMeasuredLiquidityEvidence,
           trendworthy,
-          methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.snapshot_date),
+          methodologyVersion: row.methodology_version,
           ...parseRouteSummary(row.exit_route_summary_json ?? null),
         };
       },

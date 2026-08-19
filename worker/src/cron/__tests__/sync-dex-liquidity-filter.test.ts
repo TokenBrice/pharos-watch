@@ -204,6 +204,63 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
     expect(ambiguous.filteredPools).toHaveLength(1);
   });
 
+  it("deduplicates a DL Concentrated raydium-amm pool against the identical direct Raydium CLMM pool", () => {
+    // Live duplicate observed in production (USDS-USDC, 2026-08-19): DL lists
+    // every Raydium pool under the raydium-amm slug with the CLMM signal only
+    // in poolMeta, so classifyPoolType resolved the DL row to the "generic"
+    // pool-shape family while the direct CLMM row resolved to "concentrated" —
+    // the derived identities never matched and the same physical pool was
+    // admitted twice into total_tvl_usd.
+    const USDS_MINT = "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA";
+    const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    const pools: LlamaPool[] = [
+      {
+        pool: "5b6c56a9-3b81-48ee-bee7-3f0dcd862e4d",
+        chain: "Solana",
+        project: "raydium-amm",
+        symbol: "USDS-USDC",
+        poolMeta: "Concentrated - 0.01%",
+        tvlUsd: 3_234_788,
+        volumeUsd1d: 1_034_471,
+        volumeUsd7d: null,
+        stablecoin: true,
+        underlyingTokens: [USDS_MINT, USDC_MINT],
+        apyBase: null,
+        apyReward: null,
+        apy: 0,
+        sigma: 0,
+        exposure: "multi",
+        count: 20,
+      },
+    ];
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "raydium",
+        chain: "solana",
+        poolAddress: "AS5MV3ib4bfudpsb65yfmyQwrB9nRbY4rEqMSpjwbAcT",
+        poolType: "raydium-clmm",
+        tokens: [
+          { address: USDS_MINT, symbol: "USDS", decimals: 6 },
+          { address: USDC_MINT, symbol: "USDC", decimals: 6 },
+        ],
+        price: 1,
+        tvlUsd: 3_234_790,
+        volume24hUsd: 1_034_500,
+        feeRate: 0.0001,
+        balances: [1_617_000, 1_617_500],
+      },
+    ];
+    const chainAddressToId = new Map([
+      [`solana:${USDS_MINT}`, "usds-sky"],
+      [`solana:${USDC_MINT}`, "usdc-circle"],
+    ]);
+
+    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools, chainAddressToId);
+
+    expect(result.filteredPools).toHaveLength(0);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(1);
+  });
+
   it("does not use optional wildcard dedup when multiple direct API Orca pools share the same pair", () => {
     const pools: LlamaPool[] = [
       {

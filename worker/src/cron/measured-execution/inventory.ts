@@ -9,7 +9,6 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
 import { getTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { getFluidResolverDeployment } from "./fluid-resolver";
 // Alias the canonical key builder locally instead of importing token-resolution's
 // wrapper: that import closed a module cycle (dex-liquidity/types -> inventory ->
 // token-resolution -> types) flagged by check:shared-cycles.
@@ -255,28 +254,6 @@ export function buildPancakeMeasuredExecutionTargets(input: {
     },
     hasCoherentSpot: ({ pool, inputIndex, inputReferencePriceUsd, outputReferencePriceUsd }) =>
       hasCoherentPancakeSpotPrice(pool, inputIndex, inputReferencePriceUsd, outputReferencePriceUsd),
-  });
-}
-
-export function buildFluidMeasuredExecutionTargets(input: {
-  pools: readonly DexApiPool[];
-  chainAddressToId: Map<string, string>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
-  capturedAt: number;
-}): Map<string, DexMeasuredExecutionTarget> {
-  return buildTwoTokenMeasuredExecutionTargets(input, {
-    source: "fluid",
-    materializePool: ({ chain }) => getFluidResolverDeployment(chain) == null
-      ? null
-      : { adapterProfileId: "fluid-resolver-measured", protocol: "fluid" },
-    validateTokens: (tokens) => tokens.every((token) =>
-      token.symbol.trim().length > 0 &&
-      Number.isInteger(token.decimals) &&
-      token.decimals >= 0 &&
-      token.decimals <= 255
-    ),
   });
 }
 

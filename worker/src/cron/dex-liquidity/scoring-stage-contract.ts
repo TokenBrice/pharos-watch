@@ -1,7 +1,5 @@
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import type { SolanaMeasuredExecutionTarget } from "@shared/types/solana-measured-execution";
-import type { TronMeasuredExecutionTarget } from "@shared/types/tron-measured-execution";
 import type {
   DirectApiFetchPhaseResult,
   DirectApiIntegrationResult,
@@ -41,10 +39,7 @@ export interface DexLiquidityPoolState {
   metrics: Map<string, LiquidityMetrics>;
   poolRejections: PoolProcessingRejection[];
   pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
-  fluidMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
-  solanaMeasuredExecutionTargets: Map<string, SolanaMeasuredExecutionTarget>;
-  tronMeasuredExecutionTargets: Map<string, TronMeasuredExecutionTarget>;
   stagedMergedCount: number;
   stagedSkippedCount: number;
   stagedSkippedByExactIdentityCount: number;

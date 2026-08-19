@@ -743,12 +743,12 @@ describe("dex-liquidity scoring", () => {
     });
     const observations = [
       ...Array.from({ length: 10 }, (_, index) => route({
-        id: `sunswap-${index}`,
-        protocol: "sunswap",
-        chain: "Tron",
+        id: `thinswap-${index}`,
+        protocol: "thinswap",
+        chain: "Polygon",
         capacity: 1_000,
         evidenceKind: "measured-executable-depth",
-        adapterProfileId: "sunswap-v2-router-v1",
+        adapterProfileId: "thinswap-v2-router-v1",
       })),
       route({
         id: "curve-deep",
@@ -775,7 +775,7 @@ describe("dex-liquidity scoring", () => {
     expect(selected.bestIncludedCapacityUsd).toBe(24_600_000);
     expect(selected.bestOmittedCapacityUsd).toBe(1_000);
     expect(selected.observations.filter(
-      (observation) => observation.adapterProfileId === "sunswap-v2-router-v1",
+      (observation) => observation.adapterProfileId === "thinswap-v2-router-v1",
     )).toHaveLength(3);
   });
 
@@ -933,20 +933,33 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
-  it("fails a retained SunSwap pool closed when its exact native target is missing", async () => {
+  it("leaves retained Solana and Tron pools ungated as shaped evidence after the native-lane removal", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const metrics = initMetrics("usdt-tether", "USDT");
-    metrics.topPools = [{
-      poolId: "TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ",
-      project: "sunswap-v2",
-      chain: "Tron",
-      tvlUsd: 92_000_000,
-      symbol: "USDT-WTRX",
-      volumeUsd1d: 700_000,
-      volumeUsd7d: 4_900_000,
-      poolType: "sunswap-v2",
-      source: "dl",
-    }];
+    metrics.topPools = [
+      {
+        poolId: "TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ",
+        project: "sunswap-v2",
+        chain: "Tron",
+        tvlUsd: 92_000_000,
+        symbol: "USDT-WTRX",
+        volumeUsd1d: 700_000,
+        volumeUsd7d: 4_900_000,
+        poolType: "sunswap-v2",
+        source: "dl",
+      },
+      {
+        poolId: "solana:Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+        project: "orca",
+        chain: "Solana",
+        tvlUsd: 5_000_000,
+        symbol: "USDT-USDC",
+        volumeUsd1d: 400_000,
+        volumeUsd7d: 2_800_000,
+        poolType: "orca-whirlpool",
+        source: "direct_api",
+      },
+    ];
 
     const result = await computeStablecoinScores(
       db,
@@ -954,24 +967,19 @@ describe("dex-liquidity scoring", () => {
       new Map(),
       undefined,
       1_752_560_000,
-      new Map(),
-      new Map(),
-      undefined,
-      new Map(),
-      new Map(),
-      new Map(),
     );
-    const retainedPool = result.retainedPoolsByStablecoin.get("usdt-tether")?.[0];
+    const retainedPools = result.retainedPoolsByStablecoin.get("usdt-tether") ?? [];
     const routeResult = result.scores.get("usdt-tether") as {
       exitRouteObservationCoverage?: { unsupportedReasons: Record<string, number> };
     } | undefined;
 
-    expect(retainedPool?.extra?.executionCapabilityGate).toEqual({
-      family: "measured-execution",
-      reason: "target-unresolved",
-    });
+    expect(retainedPools).toHaveLength(2);
+    for (const pool of retainedPools) {
+      expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    }
     expect(routeResult?.exitRouteObservationCoverage?.unsupportedReasons).toMatchObject({
-      "executionCapabilityGate:measured-execution:target-unresolved": 1,
+      "nonExecutableEvidence:defillama-pool-shaped": 1,
+      "nonExecutableEvidence:direct-api-amm-shaped": 1,
     });
   });
 
@@ -1378,9 +1386,7 @@ describe("dex-liquidity scoring", () => {
       undefined,
       1_700_000_100,
       new Map(),
-      new Map(),
       undefined,
-      new Map(),
       slipstreamTargets,
     );
 
@@ -1430,9 +1436,7 @@ describe("dex-liquidity scoring", () => {
       undefined,
       1_700_000_100,
       new Map(),
-      new Map(),
       undefined,
-      new Map(),
       shadowTargets,
     );
 
@@ -1517,9 +1521,7 @@ describe("dex-liquidity scoring", () => {
       undefined,
       1_785_084_100,
       new Map(),
-      new Map(),
       undefined,
-      new Map(),
       slipstreamTargets,
     );
 
@@ -2350,9 +2352,7 @@ describe("shadow admission ledger capture", () => {
       undefined,
       1_700_000_100,
       new Map(),
-      new Map(),
       undefined,
-      new Map(),
       shadowTargets,
     );
 
@@ -2390,8 +2390,6 @@ describe("shadow admission ledger capture", () => {
     expect(result.diagnostics.measuredExecution.shadowAdmission).toEqual({
       cycle: 1_700_000_100,
       targetGenerationId: null,
-      solanaTargetGenerationId: null,
-      tronTargetGenerationId: null,
       cohorts: {},
     });
   });
@@ -2411,9 +2409,7 @@ describe("shadow admission ledger capture", () => {
       undefined,
       1_700_000_100,
       new Map(),
-      new Map(),
       undefined,
-      new Map(),
       shadowTargets,
     );
 
@@ -2438,10 +2434,7 @@ describe("shadow admission ledger capture", () => {
       undefined,
       1_700_000_100,
       new Map(),
-      new Map(),
       undefined,
-      new Map(),
-      new Map(),
       new Map(),
       "active",
     );

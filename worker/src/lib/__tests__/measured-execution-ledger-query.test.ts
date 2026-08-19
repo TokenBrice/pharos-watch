@@ -5,7 +5,6 @@ import {
   type MeasuredLedgerRecordA,
   type MeasuredLedgerRecordB,
 } from "@shared/lib/measured-execution-ledger";
-import { mergeMeasuredExecutionResults } from "../../handlers/scheduled/half-hourly-measured-execution";
 import { recordProducerOutcome } from "../producer-history";
 import {
   loadMeasuredExecutionLedgerRecords,
@@ -110,8 +109,10 @@ describe("measured execution ledger retrieval", () => {
         productivity: { productive: true },
       });
 
-      // Record B flows through the daily-0810 merged handler shape and is
-      // written as a zero-output, nonproductive run: metadata must survive.
+      // Record B flows through the daily-0810 handler's settled EVM shadow
+      // lane (the native lanes were removed in Liquidity Score v6 Phase 3)
+      // and is written as a zero-output, nonproductive run: metadata must
+      // survive at the top level.
       const evmShadowLane: CronResult = {
         status: "ok",
         itemCount: 0,
@@ -124,21 +125,7 @@ describe("measured execution ledger retrieval", () => {
         }),
         productivity: { productive: false, reason: "no-measured-execution" },
       };
-      const merged = mergeMeasuredExecutionResults(
-        evmShadowLane,
-        {
-          status: "skipped_neutral",
-          itemCount: 0,
-          metadata: JSON.stringify({ reason: "half-hour-native-lane" }),
-          productivity: { productive: false, reason: "half-hour-native-lane" },
-        },
-        {
-          status: "ok",
-          itemCount: 0,
-          metadata: JSON.stringify({ activation: "shadow" }),
-          productivity: { productive: false, reason: "no-measured-execution" },
-        },
-      );
+      const merged = evmShadowLane;
       expect(merged.productivity?.productive).toBe(false);
       await recordProducerOutcome(db, {
         scheduleKey: "daily0810Utc",
