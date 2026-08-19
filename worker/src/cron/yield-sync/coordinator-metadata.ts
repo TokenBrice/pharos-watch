@@ -175,6 +175,14 @@ export interface YieldOnChainSyncMeta {
   consecutiveMaskedAllFailRuns: number;
 }
 
+export interface YieldSafetyIdentityChangeMeta {
+  reason: "yield-safety-identity-changed-before-publish";
+  loadedPublicationGenerationId: string;
+  currentPublicationGenerationId: string;
+  loadedEvaluationBuildDigest: string;
+  currentEvaluationBuildDigest: string;
+}
+
 export function buildYieldSyncMetadata(input: {
   rowsRead: number;
   rowsWritten: number;
@@ -200,6 +208,7 @@ export function buildYieldSyncMetadata(input: {
   cacheWriteSkipped: boolean;
   comparisonAnchorFreshness: YieldComparisonAnchorFreshnessMeta;
   previousTvlRowsTruncated: boolean;
+  safetyIdentityChangedBeforePublish?: YieldSafetyIdentityChangeMeta | null;
 }): string {
   const onChain = input.onChain;
   const onChainEnvelopeRejections = onChain.envelopeRejections.slice(0, YIELD_METADATA_EXAMPLE_LIMIT);
@@ -257,5 +266,8 @@ export function buildYieldSyncMetadata(input: {
     validationFailures: input.validationFailures,
     riskFreeRate: input.riskFreeRate,
     cacheWriteSkipped: input.cacheWriteSkipped,
+    ...(input.safetyIdentityChangedBeforePublish
+      ? { safetyIdentityChangedBeforePublish: input.safetyIdentityChangedBeforePublish }
+      : {}),
   });
 }
