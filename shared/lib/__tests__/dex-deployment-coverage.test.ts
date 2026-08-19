@@ -31,9 +31,9 @@ describe("DEX deployment coverage ownership", () => {
       }
     }
 
-    expect(unsupported).toHaveLength(51);
-    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(31);
-    expect(exclusivelyUnsupported).toHaveLength(5);
+    expect(unsupported).toHaveLength(50);
+    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(30);
+    expect(exclusivelyUnsupported).toHaveLength(4);
     expect(getDexDiscoveryProviders("stellar")).toEqual(["horizon"]);
   });
 

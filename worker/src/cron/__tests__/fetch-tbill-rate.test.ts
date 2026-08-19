@@ -164,6 +164,22 @@ function okExtendedBenchmarkMocks(): Record<string, MockUrlResponse> {
 const BANXICO_TEST_ENV = { BANXICO_TOKEN: "test-token" } as const;
 const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 
+// The St. Louis Fed SONIA mirrors gate their latest observation against the
+// real clock (140-day staleness / 1-day future-skew window in
+// tbill-sources/fred.ts). Freeze Date so the static 2026 fixtures stay inside
+// that window instead of silently rerouting GBP to the BoE fallback once the
+// wall clock drifts past the fixtures.
+const FROZEN_NOW = new Date("2026-06-25T12:00:00Z");
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(FROZEN_NOW);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("fetchTbillRate", () => {
   const db = {} as D1Database;
 
