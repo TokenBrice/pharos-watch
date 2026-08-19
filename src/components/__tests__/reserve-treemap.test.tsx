@@ -16,15 +16,15 @@ describe("ReserveTreemap", () => {
     expect(html).toContain("pharos-chart-stage");
   });
 
-  it("suppresses the risk legend when the basket carries a single tier", () => {
+  it("keys the risk legend even when the basket carries a single tier", () => {
     const single = renderToStaticMarkup(
       <ReserveTreemap reserves={[SLICE("Cash", 60, "very-low"), SLICE("T-bills", 40, "very-low")]} />,
     );
-    expect(single).not.toContain("VERY LOW RISK");
-    expect(single).not.toContain("Very Low Risk");
+    expect(single).toContain("Very Low Risk");
+    expect(single.match(/rounded-\[2px\]/g)).toHaveLength(1);
   });
 
-  it("keys only the tiers present in the basket, left-aligned", () => {
+  it("keys only the tiers present in the basket, right-aligned on the title row", () => {
     const html = renderToStaticMarkup(
       <ReserveTreemap
         reserves={[
@@ -41,7 +41,7 @@ describe("ReserveTreemap", () => {
     // Delimited: a naive "Low Risk" substring also matches "Very Low Risk".
     expect(html).not.toContain(">Low Risk<");
     expect(html.match(/rounded-\[2px\]/g)).toHaveLength(3);
-    expect(html).toContain("justify-start");
+    expect(html).toContain("justify-end");
   });
 
   it("reads compact and standalone reserve-risk labels from the shared classification owner", () => {

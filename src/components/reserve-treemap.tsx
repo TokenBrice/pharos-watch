@@ -160,9 +160,8 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
     () => reserves.filter((r) => Number.isFinite(r.pct) && r.pct > 0).map((r) => ({ ...r, size: r.pct })),
     [reserves],
   );
-  // Only the tiers actually in the basket are keyed; a single-tier basket needs
-  // no key at all, and a fixed five-tier row would describe colors that appear
-  // nowhere on the chart.
+  // Only the tiers actually in the basket are keyed; a fixed five-tier row
+  // would describe colors that appear nowhere on the chart.
   const presentRisks = useMemo(
     () => (Object.keys(RESERVE_RISK_PRESENTATION) as ReserveRisk[]).filter((risk) => data.some((r) => r.risk === risk)),
     [data],
@@ -173,7 +172,7 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   // panel's right column, and a nested card would violate Flat-By-Default.
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <DetailSectionTitle className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold tracking-normal text-muted-foreground">
           Reserve Composition
           {badge && (
@@ -184,6 +183,21 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
             </span>
           )}
         </DetailSectionTitle>
+        {/* Risk-tier legend on the title row (right-aligned to save vertical
+            space): square swatches + mono uppercase labels. Shown even for a
+            single-tier basket so the color always has a key. */}
+        {presentRisks.length > 0 && (
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+            {presentRisks.map((risk) => (
+              <div key={risk} className="flex min-w-0 items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
+                <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  {RESERVE_RISK_PRESENTATION[risk].longLabel}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {/* Below lg the panel stacks in auto-height flow, so the stage keeps its
           6/5 ratio (flex-1 would collapse to zero with no definite parent
@@ -218,21 +232,6 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
           )}
         </div>
       </div>
-      {/* Risk-tier legend beneath the map (Figma coin template): square
-          swatches + mono uppercase labels, left-aligned so it holds the same
-          position from coin to coin. */}
-      {presentRisks.length > 1 && (
-        <div className="mt-2.5 flex min-w-0 flex-wrap items-center justify-start gap-x-3 gap-y-1">
-          {presentRisks.map((risk) => (
-            <div key={risk} className="flex min-w-0 items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
-              <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                {RESERVE_RISK_PRESENTATION[risk].longLabel}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
