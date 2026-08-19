@@ -179,9 +179,6 @@ vi.mock("../dex-liquidity/fetch-meteora", () => ({ fetchMeteoraPools: vi.fn(asyn
 vi.mock("../dex-liquidity/fetch-pancakeswap", () => ({
   fetchPancakeSwapPools: vi.fn(async () => makeDirectApiResult()),
 }));
-vi.mock("../dex-liquidity/fetch-sunswap", () => ({
-  fetchSunSwapPools: vi.fn(async () => makeDirectApiResult()),
-}));
 vi.mock("../dex-liquidity/fetch-slipstream", () => ({
   fetchSlipstreamPools: vi.fn(async () => makeDirectApiResult()),
 }));
@@ -545,7 +542,7 @@ describe("dex liquidity scoring stage cycle", () => {
       skippedReason: "liquidity-cadence-reuse",
     });
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    expect(scoreCalls[scoreCalls.length - 1]?.[11]).toBe("none");
+    expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("none");
     expect(persistScores).not.toHaveBeenCalled();
     expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
     expect(computeDepthStability).not.toHaveBeenCalled();
@@ -565,7 +562,7 @@ describe("dex liquidity scoring stage cycle", () => {
 
     expect(result.status).toBe("ok");
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    expect(scoreCalls[scoreCalls.length - 1]?.[11]).toBe("active");
+    expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("active");
     expect(persistScores).toHaveBeenCalledOnce();
     expect(writeHistoricalSnapshots).toHaveBeenCalledOnce();
     expect(computeDepthStability).toHaveBeenCalledOnce();
@@ -583,7 +580,7 @@ describe("dex liquidity scoring stage cycle", () => {
     );
 
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    expect(scoreCalls[scoreCalls.length - 1]?.[11]).toBe("active-and-shadow");
+    expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("active-and-shadow");
   });
 
   it("returns explicit neutral and degraded results when reusing a scoring generation", async () => {
@@ -920,7 +917,6 @@ describe("dex liquidity scoring stage cycle", () => {
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
     const scoreCall = scoreCalls[scoreCalls.length - 1];
     const pancakeTargets = scoreCall?.[5];
-    const fluidTargets = scoreCall?.[6];
     expect([...pancakeTargets!.values()]).toContainEqual(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
@@ -934,19 +930,7 @@ describe("dex liquidity scoring stage cycle", () => {
         capturedAt: expect.any(Number),
       }),
     );
-    expect([...fluidTargets!.values()]).toContainEqual(
-      expect.objectContaining({
-        stablecoinId: "usdt-tether",
-        adapterProfileId: "fluid-resolver-measured",
-        poolId: "ethereum:0x1111111111111111111111111111111111111111",
-        poolTokenAddresses: [address, quoteAddress],
-        tokenIn: expect.objectContaining({ address, trackedAssetId: "usdt-tether" }),
-        tokenOut: expect.objectContaining({ address: quoteAddress, trackedAssetId: "usdc-circle" }),
-        retainedTvlUsd: 1_000_000,
-        capturedAt: expect.any(Number),
-      }),
-    );
-    expect([...fluidTargets!.values()].every((target) => target.capturedAt >= startedAt)).toBe(true);
+    expect([...pancakeTargets!.values()].every((target) => target.capturedAt >= startedAt)).toBe(true);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       directApiSourceSummary?: {
         sourceWarnings?: string[];
@@ -1015,7 +999,7 @@ describe("dex liquidity scoring stage cycle", () => {
 
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
     const scoreCall = scoreCalls[scoreCalls.length - 1];
-    const shadowTargets = scoreCall?.[9];
+    const shadowTargets = scoreCall?.[7];
     expect([...shadowTargets!.values()]).toContainEqual(
       expect.objectContaining({
         stablecoinId: "usdt-tether",

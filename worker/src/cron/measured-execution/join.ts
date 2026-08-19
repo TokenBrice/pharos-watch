@@ -8,11 +8,6 @@ import {
 import type { DexExecutionCapabilityGate } from "@shared/types/market";
 import type { PoolEntry } from "../dex-liquidity/types";
 import {
-  getFluidResolverDeployment,
-  validateFluidResolverProfileProof,
-  FLUID_RESOLVER_ADAPTER_PROFILE_ID,
-} from "./fluid-resolver";
-import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
   getCurveCryptoSwapShadowPolicy,
   validateCurveCryptoSwapProfileProof,
@@ -119,15 +114,6 @@ function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
     if (profile.executionEndpoint.address !== deployment.endpointAddress) issues.push("endpoint-address-mismatch");
     if (profile.executionEndpoint.codeHash !== deployment.expectedCodeHash) issues.push("endpoint-code-hash-mismatch");
     issues.push(...validateQuoterV2ProfileProof(profile));
-    return issues;
-  }
-  if (profile.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID) {
-    const deployment = getFluidResolverDeployment(profile.chain);
-    if (!deployment) return ["deployment-missing"];
-    const issues: string[] = [];
-    if (profile.executionEndpoint.address !== deployment.endpointAddress) issues.push("endpoint-address-mismatch");
-    if (profile.executionEndpoint.codeHash !== deployment.expectedCodeHash) issues.push("endpoint-code-hash-mismatch");
-    issues.push(...validateFluidResolverProfileProof(profile));
     return issues;
   }
   if (profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID) {
@@ -664,9 +650,7 @@ export function joinDexMeasuredExecutionEvidence(input: {
         ? getCurveCompositePolicy(profile.chain, profile.executionEndpoint.address)
         : null;
       const activationPending =
-        profile.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID
-          ? true
-          : profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID
+        profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID
           ? false
           : profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
             ? !curvePolicy?.scoreEligible

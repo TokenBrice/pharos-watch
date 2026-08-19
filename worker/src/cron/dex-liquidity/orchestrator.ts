@@ -60,13 +60,10 @@ import {
   isDexLiquidityDegraded,
 } from "./orchestrator-metadata";
 import {
-  buildFluidMeasuredExecutionTargets,
   buildPancakeMeasuredExecutionTargets,
   buildSlipstreamMeasuredExecutionTargets,
   buildUniV3DirectMeasuredExecutionTargets,
 } from "../measured-execution/inventory";
-import { buildSolanaMeasuredExecutionTargets } from "../measured-execution/solana-inventory";
-import { buildTronMeasuredExecutionTargets } from "../measured-execution/tron-inventory";
 import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
 import {
@@ -395,10 +392,7 @@ interface DexLiquiditySourceState {
   directApiPhase: DexLiquidityDirectApiPhase;
   directApiPools: DexApiPool[];
   pancakeMeasuredExecutionTargets: ReturnType<typeof buildPancakeMeasuredExecutionTargets>;
-  fluidMeasuredExecutionTargets: ReturnType<typeof buildFluidMeasuredExecutionTargets>;
   slipstreamMeasuredExecutionTargets: ReturnType<typeof buildSlipstreamMeasuredExecutionTargets>;
-  solanaMeasuredExecutionTargets: ReturnType<typeof buildSolanaMeasuredExecutionTargets>;
-  tronMeasuredExecutionTargets: ReturnType<typeof buildTronMeasuredExecutionTargets>;
   primaryPoolCounts: PrimaryPoolCompactionResult;
   directApiPoolCounts: DirectApiPoolCompactionCounts;
   authoritativeConfirmation: ReturnType<typeof buildAuthoritativeStagedPoolConfirmationIndex>;
@@ -565,14 +559,6 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     stablecoinPriceById,
     capturedAt: ctx.syncStartSec,
   });
-  const fluidMeasuredExecutionTargets = buildFluidMeasuredExecutionTargets({
-    pools: compactedDirectApi.measuredExecutionPools,
-    chainAddressToId: lookups.chainAddressToId,
-    symbolToChainScopedIds: lookups.symbolToChainScopedIds,
-    validationReferences,
-    stablecoinPriceById,
-    capturedAt: ctx.syncStartSec,
-  });
   const slipstreamMeasuredExecutionTargets = buildSlipstreamMeasuredExecutionTargets({
     pools: compactedDirectApi.measuredExecutionPools,
     chainAddressToId: lookups.chainAddressToId,
@@ -597,22 +583,6 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     slipstreamMeasuredExecutionTargets.set(key, target);
   }
   uniswapV3BscShadowTargets.clear();
-  const solanaMeasuredExecutionTargets = buildSolanaMeasuredExecutionTargets({
-    pools: compactedDirectApi.measuredExecutionPools,
-    chainAddressToId: lookups.chainAddressToId,
-    symbolToChainScopedIds: lookups.symbolToChainScopedIds,
-    validationReferences,
-    stablecoinPriceById,
-    capturedAt: ctx.syncStartSec,
-  });
-  const tronMeasuredExecutionTargets = buildTronMeasuredExecutionTargets({
-    pools: compactedDirectApi.measuredExecutionPools,
-    chainAddressToId: lookups.chainAddressToId,
-    symbolToChainScopedIds: lookups.symbolToChainScopedIds,
-    validationReferences,
-    stablecoinPriceById,
-    capturedAt: ctx.syncStartSec,
-  });
 
   // Keep the compact direct pool list needed for preference and integration,
   // but release provider-owned graphs before loading the larger primary sources.
@@ -734,10 +704,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     directApiPhase,
     directApiPools: compactedDirectApi.pools,
     pancakeMeasuredExecutionTargets,
-    fluidMeasuredExecutionTargets,
     slipstreamMeasuredExecutionTargets,
-    solanaMeasuredExecutionTargets,
-    tronMeasuredExecutionTargets,
     primaryPoolCounts,
     directApiPoolCounts: compactedDirectApi.counts,
     authoritativeConfirmation,
@@ -961,10 +928,7 @@ async function buildDexLiquidityPoolState(
     metrics,
     poolRejections,
     pancakeMeasuredExecutionTargets: sourceState.pancakeMeasuredExecutionTargets,
-    fluidMeasuredExecutionTargets: sourceState.fluidMeasuredExecutionTargets,
     slipstreamMeasuredExecutionTargets: sourceState.slipstreamMeasuredExecutionTargets,
-    solanaMeasuredExecutionTargets: sourceState.solanaMeasuredExecutionTargets,
-    tronMeasuredExecutionTargets: sourceState.tronMeasuredExecutionTargets,
     stagedMergedCount: staged.mergedCount,
     stagedSkippedCount: staged.skippedCount,
     stagedSkippedByExactIdentityCount: staged.skippedByExactIdentityCount,
@@ -1008,11 +972,8 @@ async function scoreDexLiquidityPoolState(
     sourceState.stablecoinMcapById,
     ctx.syncStartSec,
     poolState.pancakeMeasuredExecutionTargets,
-    poolState.fluidMeasuredExecutionTargets,
     ctx.signal,
-    poolState.solanaMeasuredExecutionTargets,
     poolState.slipstreamMeasuredExecutionTargets,
-    poolState.tronMeasuredExecutionTargets,
     measuredTargetPublicationMode,
   );
   const analysis = await analyzeDexLiquidityPostScoring({

@@ -28,14 +28,6 @@ import {
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
-import {
-  SolanaMeasuredExecutionPublicProfileSchema,
-  type SolanaMeasuredExecutionPublicProfile,
-} from "../types/solana-measured-execution";
-import {
-  TronMeasuredExecutionPublicProfileSchema,
-  type TronMeasuredExecutionPublicProfile,
-} from "../types/tron-measured-execution";
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
 
@@ -144,12 +136,7 @@ function reviewedCurveStableSwapNgPolicyForProfile(
 }
 
 type CapabilityLevel = "exact" | "partial" | "symbol-only" | "aggregate-only" | "absent";
-type NativeMeasuredExecutionPublicProfile =
-  | SolanaMeasuredExecutionPublicProfile
-  | TronMeasuredExecutionPublicProfile;
-type P4MeasuredExecutionPublicProfile =
-  | DexMeasuredExecutionPublicProfile
-  | NativeMeasuredExecutionPublicProfile;
+type P4MeasuredExecutionPublicProfile = DexMeasuredExecutionPublicProfile;
 type DexRouteEvidenceKind = Extract<
   ExitRouteEvidenceKind,
   | "measured-executable-depth"
@@ -304,25 +291,6 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: false,
     limitations: ["Shadow-only measured adapters require an activation-pending gate and cannot satisfy completeness."],
-  },
-  {
-    id: "native-measured-exact",
-    sourceFamilies: ["direct_api", "dl"],
-    model: "measured-quote",
-    tokenIdentity: "exact",
-    exactBalancesOrReserves: "absent",
-    poolInvariantParameters: "exact",
-    outputIdentity: "exact",
-    fees: "exact",
-    observationTime: "source-observed",
-    outputEvidenceKind: "measured-executable-depth",
-    confidence: "high",
-    outputKinds: ["tracked-stablecoin", "collateral"],
-    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
-    scoreEligible: true,
-    limitations: [
-      "Consumed only after the native registry marks the adapter active and the proof-bearing join validates the current target.",
-    ],
   },
   {
     id: "raydium-constant-product-exact",
@@ -559,8 +527,6 @@ export interface P4DexRoutePoolInput {
     measuredExecution?: DexMeasuredExecutionPublicProfile;
     measuredExecutions?: DexMeasuredExecutionPublicProfile[];
     measuredExecutionPhysicalPoolId?: string;
-    nativeMeasuredExecution?: NativeMeasuredExecutionPublicProfile;
-    nativeMeasuredExecutionPhysicalPoolId?: string;
   };
 }
 
@@ -692,7 +658,6 @@ function measuredExecutionProfilesForPool(
     ...(pool.extra?.measuredExecutions ?? []),
     ...(pool.extra?.measuredExecution ? [pool.extra.measuredExecution] : []),
   ];
-  if (pool.extra?.nativeMeasuredExecution) profiles.push(pool.extra.nativeMeasuredExecution);
   return profiles;
 }
 
@@ -700,14 +665,6 @@ function observationHistoryForProfile(
   profile: P4MeasuredExecutionPublicProfile,
 ): DexMeasuredExecutionObservationHistory | undefined {
   return "observationHistory" in profile ? profile.observationHistory : undefined;
-}
-
-function isNativeMeasuredExecutionAdapter(adapterProfileId: string): boolean {
-  return (
-    adapterProfileId === "raydium-clmm-trade-api-v1" ||
-    adapterProfileId === "orca-whirlpool-jupiter-v1" ||
-    adapterProfileId === "sunswap-v2-router-v1"
-  );
 }
 
 function isQuoterV2MeasuredExecutionAdapter(adapterProfileId: string): boolean {
@@ -731,9 +688,7 @@ function capabilityForPool(
     : measuredExecutionProfilesForPool(pool)[0];
   if (measuredProfile) {
     return capabilityById(
-      isNativeMeasuredExecutionAdapter(measuredProfile.adapterProfileId)
-        ? "native-measured-exact"
-        : isQuoterV2MeasuredExecutionAdapter(measuredProfile.adapterProfileId)
+      isQuoterV2MeasuredExecutionAdapter(measuredProfile.adapterProfileId)
         ? "quoter-v2-measured-exact"
         : isUniswapV4MeasuredExecutionAdapter(measuredProfile.adapterProfileId)
           ? "uniswap-v4-hook-free-measured-exact"
@@ -822,55 +777,29 @@ function validateMeasuredExecutionProfile(
   context: { pool: P4DexRoutePoolInput; stablecoinId: string; observedAt: number },
 ): string[] {
   const issues: string[] = [];
-  const isNative = isNativeMeasuredExecutionAdapter(profile.adapterProfileId);
-  const schemaValid =
-    profile.adapterProfileId === "raydium-clmm-trade-api-v1" ||
-    profile.adapterProfileId === "orca-whirlpool-jupiter-v1"
-      ? SolanaMeasuredExecutionPublicProfileSchema.safeParse(profile).success
-      : profile.adapterProfileId === "sunswap-v2-router-v1"
-        ? TronMeasuredExecutionPublicProfileSchema.safeParse(profile).success
-        : DexMeasuredExecutionPublicProfileSchema.safeParse(profile).success;
+  const schemaValid = DexMeasuredExecutionPublicProfileSchema.safeParse(profile).success;
   if (!schemaValid) issues.push("invalid-profile-schema");
-  if (!isNative) {
-    if (
-      !isQuoterV2MeasuredExecutionAdapter(profile.adapterProfileId) &&
-      !isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId) &&
-      profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1" &&
-      profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID &&
-      profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
-    ) {
-      issues.push("adapter-not-score-eligible");
-    }
+  if (
+    !isQuoterV2MeasuredExecutionAdapter(profile.adapterProfileId) &&
+    !isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId) &&
+    profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1" &&
+    profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID &&
+    profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+  ) {
+    issues.push("adapter-not-score-eligible");
   }
   const projectKey = normalizedKey(context.pool.project);
   const profileProtocolKey = normalizedKey(profile.protocol);
   const protocolMatches =
-    profile.adapterProfileId === "sunswap-v2-router-v1"
-      ? projectKey === "sunswap" || projectKey === "sunswap-v2"
-      : profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
-        ? profileProtocolKey === "aerodrome-slipstream" &&
-          (projectKey === "aerodrome" || projectKey === "aerodrome-slipstream")
-        : profileProtocolKey === projectKey;
+    profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
+      ? profileProtocolKey === "aerodrome-slipstream" &&
+        (projectKey === "aerodrome" || projectKey === "aerodrome-slipstream")
+      : profileProtocolKey === projectKey;
   if (
     canonicalExitRouteChain(profile.chain) !== canonicalExitRouteChain(context.pool.chain) ||
     !protocolMatches
   ) issues.push("pool-identity-mismatch");
-  if (
-    (
-      profile.adapterProfileId === "raydium-clmm-trade-api-v1" ||
-      profile.adapterProfileId === "orca-whirlpool-jupiter-v1"
-    ) &&
-    (
-      !("poolType" in profile) ||
-      (profile.adapterProfileId === "raydium-clmm-trade-api-v1" &&
-        (profile.protocol !== "raydium" || profile.poolType !== "raydium-clmm")) ||
-      (profile.adapterProfileId === "orca-whirlpool-jupiter-v1" &&
-        (profile.protocol !== "orca" || profile.poolType !== "orca-whirlpool"))
-    )
-  ) issues.push("adapter-identity-mismatch");
-  const measuredPhysicalPoolId = isNative
-    ? context.pool.extra?.nativeMeasuredExecutionPhysicalPoolId
-    : context.pool.extra?.measuredExecutionPhysicalPoolId;
+  const measuredPhysicalPoolId = context.pool.extra?.measuredExecutionPhysicalPoolId;
   if (
     !measuredPhysicalPoolId ||
     canonicalExitRouteScopedKey(profile.chain, profile.poolId) !==
@@ -879,7 +808,7 @@ function validateMeasuredExecutionProfile(
     issues.push("retained-physical-pool-mismatch");
   if (profile.tokenIn.trackedAssetId !== context.stablecoinId) issues.push("tracked-input-mismatch");
   if (profile.tokenOut.trackedAssetId === context.stablecoinId) issues.push("self-output-asset");
-  if (!isNative && isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId)) {
+  if (isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId)) {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
     const provenance = evmProfile.uniswapV4PoolProvenance;
     if (
@@ -902,7 +831,7 @@ function validateMeasuredExecutionProfile(
       evmProfile.executionEndpoint.address !== UNISWAP_V4_QUOTER_ADDRESS ||
       evmProfile.executionEndpoint.codeHash !== UNISWAP_V4_QUOTER_CODE_HASH
     ) issues.push("invalid-uniswap-v4-identity");
-  } else if (!isNative && profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
+  } else if (profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
     if (
       evmProfile.chain !== "ethereum" ||
@@ -920,7 +849,7 @@ function validateMeasuredExecutionProfile(
       provenance.poolTokenAddresses.length !== CURVE_3POOL_TOKEN_ADDRESSES.length ||
       provenance.poolTokenAddresses.some((address, index) => address !== CURVE_3POOL_TOKEN_ADDRESSES[index])
     ) issues.push("physical-pool-provenance-mismatch");
-  } else if (!isNative && profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
+  } else if (profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
     const policy = reviewedCurveStableSwapNgPolicyForProfile(evmProfile);
     if (
@@ -951,7 +880,7 @@ function validateMeasuredExecutionProfile(
         (address, index) => address !== policy.poolTokenAddresses[index],
       )
     ) issues.push("physical-pool-provenance-mismatch");
-  } else if (!isNative) {
+  } else {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
     if (evmProfile.poolTokenAddresses?.length !== 2) issues.push("invalid-cl-token-count");
     if (

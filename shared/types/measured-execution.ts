@@ -6,7 +6,7 @@ export const DEX_MEASURED_EXECUTION_SCHEMA_VERSION = "dex-measured-execution-v1"
 export const DEX_MEASURED_TARGET_SCHEMA_VERSION = "dex-measured-target-v1" as const;
 export const DEX_MEASURED_MAX_COST_BPS = 200;
 export const DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO = 1.02;
-export const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
+const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
 export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 // Both bounds must cover the two-hour score-bearing Liquidity Score publication
 // cadence (even-hour :16): the half-hourly V9 input preparation sees the current
@@ -554,7 +554,7 @@ export function buildDexMeasuredCapacityCurve(
  * New profiles attest realized capacity-point cost. Legacy profiles remain
  * valid when that additive field is absent; V9 then uses the request bound.
  */
-export function dexMeasuredCapacityPointMatchesProof(
+function dexMeasuredCapacityPointMatchesProof(
   claimed: z.infer<typeof ExitRouteCapacityPointSchema> | undefined,
   rebuilt: z.infer<typeof ExitRouteCapacityPointSchema>,
 ): boolean {

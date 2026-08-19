@@ -85,10 +85,6 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/tracked-stablecoin-utils.ts::findTrackedContract":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/types/native-measured-execution.ts::nativeMeasuredExecutionRelativeDifference":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/types/native-measured-execution.ts::nativeMeasuredExecutionRawAmountToUsd":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/types/safety-score-v9-facts.ts::V9FactSourceFingerprintsV2Schema":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/types/safety-score-v9-public-facts.ts::compareText":
@@ -234,16 +230,6 @@ export const DEBT_EXPORTS: Record<string, string> = {
   "worker/src/cron/measured-execution/curve-composite.ts::CURVE_TUSD_AM3CRV_METAPOOL_POLICY":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/measured-execution/curve-cryptoswap.ts::CURVE_CRYPTOSWAP_REVIEWED_FAMILIES":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/measured-execution/native-inventory.ts::buildNativeMeasuredExecutionToken":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/measured-execution/native-join.ts::mapNativeMeasuredExecutionValidationGate":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/measured-execution/native-join.ts::resetNativeMeasuredExecutionJoinFields":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/measured-execution/native-join.ts::recordNativeMeasuredExecutionFailure":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/measured-execution/native-join.ts::promoteNativeMeasuredExecutionProfile":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/reserve-adapters/slice-math.ts::RATIO_SCALE":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",

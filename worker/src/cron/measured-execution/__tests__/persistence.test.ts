@@ -2,30 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import {
-  SOLANA_MEASURED_TARGET_SCHEMA_VERSION,
-  buildSolanaMeasuredExecutionTargetId,
-  type SolanaMeasuredExecutionTarget,
-} from "@shared/types/solana-measured-execution";
-import {
-  buildSolanaMeasuredQuoteGenerationId,
-  buildTronMeasuredQuoteGenerationId,
   DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE,
   getDexMeasuredHistoryFreshnessSec,
   isOperationalDexMeasuredFailure,
   loadLatestPublishedDexMeasuredQuoteEvidence,
-  loadLatestPublishedSolanaMeasuredQuoteEvidence,
   materializeDexMeasuredQuoteProfile,
   publishDexMeasuredQuoteGeneration,
   publishDexMeasuredTargetInventory,
-  publishSolanaMeasuredQuoteGeneration,
-  publishSolanaMeasuredTargetInventory,
-  publishTronMeasuredQuoteGeneration,
-  publishTronMeasuredTargetInventory,
   pruneDexMeasuredExecutionGenerations,
 } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
-import { buildSolanaMeasuredExecutionProfile } from "../solana-profiles";
-import { buildSolanaMeasuredQuotePoint } from "../solana-quotes";
 
 function fixtureTarget(chain: string): DexMeasuredExecutionTarget {
   const input = {
@@ -101,171 +87,6 @@ function fixtureProfile(
   });
 }
 
-function solanaFixtureTarget(): SolanaMeasuredExecutionTarget {
-  const input = {
-    schemaVersion: SOLANA_MEASURED_TARGET_SCHEMA_VERSION,
-    stablecoinId: "usdc-circle",
-    adapterProfileId: "orca-whirlpool-jupiter-v1" as const,
-    protocol: "orca" as const,
-    chain: "solana" as const,
-    poolId: "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
-    poolType: "orca-whirlpool" as const,
-    tokenIn: {
-      address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      symbol: "USDC",
-      decimals: 6,
-      referencePriceUsd: 1,
-      referencePriceSource: "tracked" as const,
-      trackedAssetId: "usdc-circle",
-    },
-    tokenOut: {
-      address: "Es9vMFrzaCERmJfrF4H2FYDgK5KJY8PYdG7yM7pTz1C",
-      symbol: "USDT",
-      decimals: 6,
-      referencePriceUsd: 1,
-      referencePriceSource: "tracked" as const,
-      trackedAssetId: "usdt-tether",
-    },
-    retainedTvlUsd: 100_000,
-    retainedPoolPriceUsd: 1,
-    capturedAt: 1_000,
-  };
-  return {
-    ...input,
-    targetId: buildSolanaMeasuredExecutionTargetId({
-      stablecoinId: input.stablecoinId,
-      adapterProfileId: input.adapterProfileId,
-      protocol: input.protocol,
-      poolId: input.poolId,
-      tokenInAddress: input.tokenIn.address,
-      tokenOutAddress: input.tokenOut.address,
-    }),
-  };
-}
-
-function solanaFixtureProfile(
-  target: SolanaMeasuredExecutionTarget,
-  identity: { targetGenerationId: string; quoteGenerationId: string; quotedAt?: number },
-) {
-  const route = {
-    provider: "jupiter-swap-api" as const,
-    label: "Whirlpool" as const,
-    poolId: target.poolId,
-    inputMint: target.tokenIn.address,
-    outputMint: target.tokenOut.address,
-    inputAmount: "1000000000",
-    outputAmount: "995000000",
-    contextSlot: 1_005,
-  };
-  return buildSolanaMeasuredExecutionProfile({
-    target,
-    targetGenerationId: identity.targetGenerationId,
-    quoteGenerationId: identity.quoteGenerationId,
-    quotedAt: identity.quotedAt ?? 1_900,
-    slotBefore: 1_000,
-    slotAfter: 1_010,
-    points: [
-      buildSolanaMeasuredQuotePoint(target, route)!,
-      buildSolanaMeasuredQuotePoint(target, {
-        ...route,
-        inputAmount: "100000000000",
-        outputAmount: "98000000000",
-        contextSlot: 1_006,
-      })!,
-    ],
-  });
-}
-
-function solanaEvidenceDb(input: {
-  target: SolanaMeasuredExecutionTarget;
-  latestFailureReason: string;
-  historical?: { profile?: ReturnType<typeof solanaFixtureProfile>; failureReason?: string };
-}) {
-  const preparedSql: string[] = [];
-  const makeStmt = (sql: string, _binds: unknown[] = []): Record<string, unknown> => ({
-    bind: (...nextBinds: unknown[]) => makeStmt(sql, nextBinds),
-    first: async () => {
-      if (sql.includes("COUNT(*) AS row_count")) {
-        return {
-          row_count: 1,
-          min_target_generation_id: "solana-targets-latest",
-          max_target_generation_id: "solana-targets-latest",
-        };
-      }
-      if (sql.includes("state IN ('published', 'superseded')")) {
-        return {
-          generation_id: "solana-targets-latest",
-          state: "superseded",
-          started_at: 1_000,
-          published_at: 1_010,
-          expected_rows: 1,
-          published_rows: 1,
-          dependency_snapshot_json: null,
-        };
-      }
-      if (sql.includes("WHERE surface = ? AND state = 'published'")) {
-        return {
-          generation_id: "solana-quotes-latest",
-          state: "published",
-          started_at: 2_000,
-          published_at: 2_010,
-          expected_rows: 1,
-          published_rows: 1,
-          dependency_snapshot_json: JSON.stringify({ targetGenerationId: "solana-targets-latest" }),
-        };
-      }
-      return null;
-    },
-    all: async () => {
-      if (sql.includes("SELECT target_id") && sql.includes("FROM dex_measured_execution_targets")) {
-        return { results: [{ target_id: input.target.targetId }] };
-      }
-      if (sql.includes("SELECT history_generation.generation_id")) {
-        return { results: input.historical ? [{ generation_id: "solana-quotes-lkg" }] : [] };
-      }
-      if (sql.includes("q.generation_id IN")) {
-        const profile = input.historical?.profile ?? null;
-        return {
-          results: input.historical
-            ? [{
-                generation_id: profile?.quoteGenerationId ?? "solana-quotes-semantic",
-                target_generation_id: profile?.targetGenerationId ?? "solana-targets-semantic",
-                target_id: input.target.targetId,
-                status: profile ? "measured" : "failed",
-                failure_reason: profile ? null : input.historical.failureReason ?? "exact-route-mismatch",
-                quote_profile_json: profile ? JSON.stringify(profile) : null,
-                quote_published_at: 1_900,
-                target_json: JSON.stringify(input.target),
-              }]
-            : [],
-        };
-      }
-      if (sql.includes("JOIN dex_measured_execution_targets")) {
-        return {
-          results: [{
-            generation_id: "solana-quotes-latest",
-            target_generation_id: "solana-targets-latest",
-            target_id: input.target.targetId,
-            status: "failed",
-            failure_reason: input.latestFailureReason,
-            quote_profile_json: null,
-            target_json: JSON.stringify(input.target),
-          }],
-        };
-      }
-      return { results: [] };
-    },
-  });
-  return {
-    preparedSql,
-    db: {
-      prepare: (sql: string) => {
-        preparedSql.push(sql);
-        return makeStmt(sql);
-      },
-    } as unknown as D1Database,
-  };
-}
 
 function evidenceDb(input: {
   target: DexMeasuredExecutionTarget;
@@ -462,43 +283,6 @@ describe("measured execution publication", () => {
     expect(prepare).not.toHaveBeenCalled();
   });
 
-  it("rejects empty native measured generations before touching shared storage", async () => {
-    const prepare = vi.fn();
-    const db = { prepare } as Pick<D1Database, "prepare"> as D1Database;
-
-    await expect(publishSolanaMeasuredTargetInventory({ db, targets: [], capturedAt: 1_700_000_000 })).rejects.toThrow(
-      "empty Solana measured target generation",
-    );
-    await expect(
-      publishSolanaMeasuredQuoteGeneration({
-        db,
-        targetGeneration: { generationId: "solana-targets", targets: [], publishedAt: 1_700_000_000 },
-        outcomes: [],
-        quotedAt: 1_700_000_100,
-      }),
-    ).rejects.toThrow("empty Solana measured quote generation");
-    await expect(publishTronMeasuredTargetInventory({ db, targets: [], capturedAt: 1_700_000_000 })).rejects.toThrow(
-      "empty Tron measured target generation",
-    );
-    await expect(
-      publishTronMeasuredQuoteGeneration({
-        db,
-        targetGeneration: { generationId: "tron-targets", targets: [], publishedAt: 1_700_000_000 },
-        outcomes: [],
-        quotedAt: 1_700_000_100,
-      }),
-    ).rejects.toThrow("empty Tron measured quote generation");
-    expect(prepare).not.toHaveBeenCalled();
-  });
-
-  it("uses chain-specific native quote generation prefixes", () => {
-    expect(buildSolanaMeasuredQuoteGenerationId(1_700_000_000)).toMatch(
-      /^dex-solana-measured-quotes-1700000000-[0-9a-f]{12}$/,
-    );
-    expect(buildTronMeasuredQuoteGenerationId(1_700_000_000)).toMatch(
-      /^dex-tron-measured-quotes-1700000000-[0-9a-f]{12}$/,
-    );
-  });
 });
 
 describe("measured execution raw payload policy", () => {
@@ -1185,71 +969,6 @@ describe("measured execution last-known-good selection", () => {
   });
 });
 
-describe("Solana measured execution last-known-good selection", () => {
-  it("materializes only selected score-facing target JSON", async () => {
-    const target = solanaFixtureTarget();
-    const { db, preparedSql } = solanaEvidenceDb({
-      target,
-      latestFailureReason: "budget-deferred",
-    });
-
-    const evidence = await loadLatestPublishedSolanaMeasuredQuoteEvidence(
-      db,
-      undefined,
-      [target.targetId],
-    );
-
-    expect(evidence?.byTargetId).toHaveLength(1);
-    expect(preparedSql.some((sql) => sql.includes("selected score-facing evidence scan"))).toBe(true);
-    expect(preparedSql.some((sql) => sql.includes("sparse target-first evidence scan"))).toBe(false);
-  });
-
-  it("retains a fresh exact profile after a budget-deferred rotation row", async () => {
-    const target = solanaFixtureTarget();
-    const profile = solanaFixtureProfile(target, {
-      targetGenerationId: "solana-targets-lkg",
-      quoteGenerationId: "solana-quotes-lkg",
-    });
-    const { db } = solanaEvidenceDb({
-      target,
-      latestFailureReason: "budget-deferred",
-      historical: { profile },
-    });
-
-    const entry = (await loadLatestPublishedSolanaMeasuredQuoteEvidence(db))?.byTargetId.get(target.targetId);
-
-    expect(entry).toMatchObject({
-      status: "measured",
-      quoteGenerationId: "solana-quotes-lkg",
-      targetGenerationId: "solana-targets-lkg",
-      resolution: "last-known-good",
-      latestFailureReason: "budget-deferred",
-    });
-  });
-
-  it("does not mask a semantic latest failure with prior Solana evidence", async () => {
-    const target = solanaFixtureTarget();
-    const profile = solanaFixtureProfile(target, {
-      targetGenerationId: "solana-targets-lkg",
-      quoteGenerationId: "solana-quotes-lkg",
-    });
-    const { db } = solanaEvidenceDb({
-      target,
-      latestFailureReason: "exact-route-mismatch",
-      historical: { profile },
-    });
-
-    const entry = (await loadLatestPublishedSolanaMeasuredQuoteEvidence(db))?.byTargetId.get(target.targetId);
-
-    expect(entry).toMatchObject({
-      status: "failed",
-      failureReason: "exact-route-mismatch",
-      resolution: "latest",
-      quoteGenerationId: "solana-quotes-latest",
-    });
-  });
-});
-
 describe("measured execution generation prune", () => {
   it("deletes only terminal generations before the 3-hour cutoff in bounded oldest-first batches", async () => {
     const executed: Array<{ kind: "run" | "first"; sql: string; binds: unknown[] }> = [];
@@ -1286,8 +1005,6 @@ describe("measured execution generation prune", () => {
     expect(quotes.binds).toEqual([
       "dex-measured-execution-quotes",
       "dex-shadow-measured-execution-quotes",
-      "dex-solana-measured-execution-quotes",
-      "dex-tron-measured-execution-quotes",
       cutoff,
       16,
     ]);
@@ -1297,8 +1014,6 @@ describe("measured execution generation prune", () => {
     expect(targets.binds).toEqual([
       "dex-measured-execution-targets",
       "dex-shadow-measured-execution-targets",
-      "dex-solana-measured-execution-targets",
-      "dex-tron-measured-execution-targets",
       cutoff,
       16,
     ]);
@@ -1314,10 +1029,6 @@ describe("measured execution generation prune", () => {
       "dex-measured-execution-quotes",
       "dex-shadow-measured-execution-targets",
       "dex-shadow-measured-execution-quotes",
-      "dex-solana-measured-execution-targets",
-      "dex-solana-measured-execution-quotes",
-      "dex-tron-measured-execution-targets",
-      "dex-tron-measured-execution-quotes",
       cutoff,
       16,
     ]);

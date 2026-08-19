@@ -29,7 +29,6 @@ import { fetchRaydiumPools } from "../fetch-raydium";
 import { fetchOrcaPools } from "../fetch-orca";
 import { fetchMeteoraPools } from "../fetch-meteora";
 import { fetchPancakeSwapPools } from "../fetch-pancakeswap";
-import { fetchSunSwapPools } from "../fetch-sunswap";
 import { fetchSlipstreamPools } from "../fetch-slipstream";
 import { fetchUniswapV3BscShadowPools } from "../fetch-uniswap-v3-bsc";
 import { mergeGtPools } from "../fetch-crawlers";
@@ -185,10 +184,9 @@ export function compactDirectApiFetchPhasePools(
     pools.push(...entry.result.pools);
     measuredExecutionPools.push(...compaction.measuredExecutionPools);
   }
-  // Fluid's official ticker API identifies tokens by address but leaves
-  // symbol/decimals empty. Its exact-execution copy is intentionally split
-  // from the normalized scoring copy during provider compaction, so hydrate
-  // this bounded target-only list before target construction as well.
+  // The exact-execution copies are intentionally split from the normalized
+  // scoring copies during provider compaction, so hydrate this bounded
+  // target-only list before target construction as well.
   hydrateDirectApiPoolMetadata(measuredExecutionPools, lookups.contractMetaByChainAddress);
 
   return {
@@ -222,11 +220,7 @@ function compactDirectApiProviderEntry(
       if (exactPoolKey) authoritativeExactPoolKeys.add(exactPoolKey);
     }
     if (
-      (rawPool.source === "fluid" ||
-        rawPool.source === "pancakeswap" ||
-        rawPool.source === "raydium" ||
-        rawPool.source === "orca" ||
-        rawPool.source === "sunswap" ||
+      (rawPool.source === "pancakeswap" ||
         rawPool.source === "uniswap-v3-shadow" ||
         rawPool.source === "aerodrome-slipstream") &&
       hasTrackedDirectApiToken(rawPool, lookups)
@@ -235,7 +229,7 @@ function compactDirectApiProviderEntry(
     }
     // Exact-execution shadow censuses do not alter liquidity scores or price
     // consensus before their separate activation reviews.
-    if (rawPool.source === "sunswap" || rawPool.source === "uniswap-v3-shadow") continue;
+    if (rawPool.source === "uniswap-v3-shadow") continue;
 
     // Normalize one pool at a time so the full raw provider graph never
     // coexists with a second full normalized graph.
@@ -345,13 +339,6 @@ export function buildDexDirectApiFetchers(params: {
       normalizedProtocol: "orca",
       supportedChains: ["solana"],
       fn: (signal) => fetchOrcaPools(signal, params.db),
-    },
-    {
-      name: "SunSwap V2",
-      circuitKey: CIRCUIT_SOURCE.SUNSWAP_API,
-      normalizedProtocol: "sunswap",
-      supportedChains: ["tron"],
-      fn: fetchSunSwapPools,
     },
     {
       name: "Aerodrome Slipstream",

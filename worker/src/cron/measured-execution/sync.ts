@@ -62,14 +62,6 @@ import {
   type DexMeasuredExecutionDeployment,
 } from "./registry";
 import {
-  FLUID_RESOLVER_ADAPTER_PROFILE_ID,
-  getFluidResolverDeployment,
-  quoteFluidResolverRequests,
-  validateFluidResolverProfileProof,
-  verifyFluidResolverDeployment,
-  type FluidResolverDeployment,
-} from "./fluid-resolver";
-import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
   getCurveCryptoSwapShadowPolicy,
   quoteCurveCryptoSwapRequests,
@@ -135,7 +127,6 @@ const SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:shado
 
 type TargetDeployment =
   | { kind: "quoter-v2"; config: DexMeasuredExecutionDeployment }
-  | { kind: "fluid-resolver"; config: FluidResolverDeployment }
   | { kind: "uniswap-v4"; config: UniswapV4Deployment }
   | {
       kind: "curve-cryptoswap";
@@ -180,10 +171,6 @@ function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployme
   if (target.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID) {
     const deployment = getUniswapV4Deployment(target.chain);
     return deployment ? { kind: "uniswap-v4", config: deployment } : null;
-  }
-  if (target.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID) {
-    const deployment = getFluidResolverDeployment(target.chain);
-    return deployment ? { kind: "fluid-resolver", config: deployment } : null;
   }
   if (target.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) {
     const prefix = `${target.chain.trim().toLowerCase()}:`;
@@ -236,7 +223,6 @@ export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExe
     case "uniswap-v4":
       return deployment.config.mode === "active" && deployment.config.scoreEligible === true;
     case "quoter-v2":
-    case "fluid-resolver":
     case "curve-composite":
     case undefined:
       return false;
@@ -365,8 +351,6 @@ function estimateDeploymentSetupRpcRequests(deployment: TargetDeployment): numbe
   switch (deployment.kind) {
     case "quoter-v2":
       return 2; // Quoter and factory bytecode.
-    case "fluid-resolver":
-      return 1; // Resolver bytecode.
     case "uniswap-v4":
       return 4; // PoolManager, StateView, Quoter bytecode, then immutable bindings.
     case "curve-cryptoswap":
@@ -1085,20 +1069,6 @@ async function syncDexMeasuredExecutionLane(
           continue;
         }
         for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
-      } else if (deployment.kind === "fluid-resolver") {
-        const verified = await verifyFluidResolverDeployment({
-          deployment: deployment.config,
-          blockNumber,
-          chainRpcs,
-          signal,
-          rpcBudget,
-        });
-        if (!verified.ok) {
-          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
-          else for (const state of deploymentRows) state.failedReason = verified.reason;
-          continue;
-        }
-        for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
       } else if (deployment.kind === "uniswap-v4") {
         const verified = await verifyUniswapV4Deployment({
           deployment: deployment.config,
@@ -1349,22 +1319,6 @@ async function syncDexMeasuredExecutionLane(
           outcomes.forEach((outcome, index) =>
             applyQuoteOutcome(adapterRequests[index]!.state, outcome),
           );
-        } else if (kind === "fluid-resolver") {
-          const outcomes = await quoteFluidResolverRequests({
-            requests: adapterRequests.map(({ state, inputUsd }) => ({
-              target: state.target,
-              inputUsd,
-              blockNumber: state.blockNumber!,
-              endpointAddress: state.deployment!.config.endpointAddress,
-            })),
-            chainRpcs,
-            signal,
-            rpcBudget,
-            deploymentVerified: true,
-          });
-          outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
-          );
         } else if (kind === "uniswap-v4") {
           const outcomes = await quoteUniswapV4Requests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
@@ -1543,10 +1497,8 @@ async function syncDexMeasuredExecutionLane(
       const adapterIssues =
         state.deployment.kind === "quoter-v2"
           ? validateQuoterV2ProfileProof(profile)
-          : state.deployment.kind === "fluid-resolver"
-            ? validateFluidResolverProfileProof(profile)
-            : state.deployment.kind === "uniswap-v4"
-              ? validateUniswapV4ProfileProof(profile)
+          : state.deployment.kind === "uniswap-v4"
+            ? validateUniswapV4ProfileProof(profile)
             : state.deployment.kind === "curve-cryptoswap"
               ? validateCurveCryptoSwapProfileProof(profile)
               : state.deployment.kind === "curve-stableswap"

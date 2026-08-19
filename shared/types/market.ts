@@ -13,8 +13,6 @@ import {
   ExitRouteObservationSchema,
 } from "./exit-route";
 import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
-import { SolanaMeasuredExecutionPublicProfileSchema } from "./solana-measured-execution";
-import { TronMeasuredExecutionPublicProfileSchema } from "./tron-measured-execution";
 
 export {
   BluechipRatingSchema,
@@ -346,8 +344,6 @@ const DexLiquidityPoolSchema = z.object({
       executionCapabilityGate: DexExecutionCapabilityGateSchema.optional(),
       ammExecutionModel: DexAmmExecutionModelSchema.optional(),
       measuredExecution: DexMeasuredExecutionPublicProfileSchema.optional(),
-      solanaMeasuredExecution: SolanaMeasuredExecutionPublicProfileSchema.optional(),
-      tronMeasuredExecution: TronMeasuredExecutionPublicProfileSchema.optional(),
     })
     .optional(),
 });

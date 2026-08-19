@@ -24,8 +24,6 @@ import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityFallbackCounters, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import type { SolanaMeasuredExecutionTarget } from "@shared/types/solana-measured-execution";
-import type { TronMeasuredExecutionTarget } from "@shared/types/tron-measured-execution";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
 import {
   applyDexMeasuredExecutionGate,
@@ -39,31 +37,12 @@ import {
 import {
   publishDexMeasuredTargetInventory,
   publishDexShadowMeasuredTargetInventory,
-  publishSolanaMeasuredTargetInventory,
-  publishTronMeasuredTargetInventory,
 } from "../measured-execution/persistence";
 import { isDexMeasuredExecutionTargetScoreEligible } from "../measured-execution/sync";
 import {
   buildDexMeasuredTargetFingerprintIndex,
   resolveDexMeasuredTargetForRetainedPool,
 } from "../measured-execution/retained-target-resolution";
-import { buildSolanaMeasuredPoolDirectionKey } from "../measured-execution/solana-inventory";
-import { isSolanaMeasuredExecutionPriorityTargetScoreEligible } from "../measured-execution/solana-registry";
-import {
-  joinSolanaMeasuredExecutionEvidence,
-  loadSolanaMeasuredExecutionJoinEvidence,
-  releaseSolanaMeasuredExecutionProofFields,
-  stripSolanaMeasuredExecutionInternalFields,
-  type SolanaMeasuredExecutionJoinDiagnostics,
-} from "../measured-execution/solana-join";
-import { buildTronMeasuredPoolDirectionKey } from "../measured-execution/tron-inventory";
-import {
-  joinTronMeasuredExecutionEvidence,
-  loadTronMeasuredExecutionJoinEvidence,
-  releaseTronMeasuredExecutionProofFields,
-  stripTronMeasuredExecutionInternalFields,
-  type TronMeasuredExecutionJoinDiagnostics,
-} from "../measured-execution/tron-join";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore, initLiquidityFallbackCounters } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
@@ -108,8 +87,7 @@ function hasOperationallyInterruptedMeasuredEvidence(
 function routeEvidenceRank(pool: LiquidityMetrics["topPools"][number]): number {
   const hasMeasuredEvidence =
     pool.extra?.measuredExecution !== undefined ||
-    (pool.extra?.measuredExecutions?.length ?? 0) > 0 ||
-    pool.extra?.nativeMeasuredExecution !== undefined;
+    (pool.extra?.measuredExecutions?.length ?? 0) > 0;
   if (hasMeasuredEvidence && !hasOperationallyInterruptedMeasuredEvidence(pool)) return 0;
   if (pool.extra?.ammExecutionModel) return 1;
   if (hasMeasuredEvidence) return 2;
@@ -129,7 +107,6 @@ function selectDexRouteObservationPoolSet(
   const byPhysicalPool = new Map<string, LiquidityMetrics["topPools"][number]>();
   for (const pool of [...currentPools, ...retainedMeasuredPools]) {
     const physicalPoolId =
-      pool.extra?.nativeMeasuredExecutionPhysicalPoolId ??
       pool.extra?.measuredExecutionPhysicalPoolId ??
       pool.poolId;
     const key = canonicalExitRouteScopedKey(pool.chain, physicalPoolId);
@@ -667,8 +644,6 @@ export interface DexShadowAdmissionDiagnostics {
   /** Route-observation epoch of the emitting run (seconds). */
   cycle: number;
   targetGenerationId: string | null;
-  solanaTargetGenerationId: string | null;
-  tronTargetGenerationId: string | null;
   cohorts: Record<string, MeasuredLedgerAdmissionCohort>;
 }
 
@@ -679,22 +654,12 @@ interface ScoreDiagnostics {
   routeSelection: DexRouteSelectionDiagnostic[];
   measuredExecution: {
     join: DexMeasuredExecutionJoinDiagnostics;
-    solanaJoin: SolanaMeasuredExecutionJoinDiagnostics;
-    tronJoin: TronMeasuredExecutionJoinDiagnostics;
     inventoryTargetCount: number;
     shadowInventoryTargetCount: number;
-    solanaInventoryTargetCount: number;
-    tronInventoryTargetCount: number;
     targetPublication:
       | { status: "published"; generationId: string; rowCount: number }
       | { status: "skipped" | "failed"; reason: string };
     shadowTargetPublication:
-      | { status: "published"; generationId: string; rowCount: number }
-      | { status: "skipped" | "failed"; reason: string };
-    solanaTargetPublication:
-      | { status: "published"; generationId: string; rowCount: number }
-      | { status: "skipped" | "failed"; reason: string };
-    tronTargetPublication:
       | { status: "published"; generationId: string; rowCount: number }
       | { status: "skipped" | "failed"; reason: string };
     /** Populated only on the daily shadow-publication run; null otherwise. */
@@ -822,11 +787,8 @@ export async function computeStablecoinScores(
   mcapById?: Map<string, number>,
   routeObservedAtSec = Math.floor(Date.now() / 1000),
   pancakeMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
-  fluidMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
   signal?: AbortSignal,
-  solanaMeasuredTargets: Map<string, SolanaMeasuredExecutionTarget> = new Map(),
   slipstreamMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
-  tronMeasuredTargets: Map<string, TronMeasuredExecutionTarget> = new Map(),
   measuredTargetPublicationMode: MeasuredTargetPublicationMode = "active-and-shadow",
 ): Promise<{
   scores: Map<string, FullScoreResult>;
@@ -910,25 +872,21 @@ export async function computeStablecoinScores(
       const candidate =
         isPancakeV3
           ? pancakeMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
-          : pool.project === "fluid" && pool.poolType.includes("fluid")
-            ? fluidMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
-            : isAerodromeSlipstream
-              ? resolveDexMeasuredTargetForRetainedPool({
-                  stablecoinId: id,
-                  retainedPoolId: pool.poolId,
-                  retainedTvlUsd: pool.tvlUsd,
-                  adapterProfileId: "aerodrome-slipstream-quoter-v2",
-                  exactTargets: slipstreamMeasuredTargets,
-                  fingerprintTargets: slipstreamMeasuredTargetsByFingerprint,
-                })
+          : isAerodromeSlipstream
+            ? resolveDexMeasuredTargetForRetainedPool({
+                stablecoinId: id,
+                retainedPoolId: pool.poolId,
+                retainedTvlUsd: pool.tvlUsd,
+                adapterProfileId: "aerodrome-slipstream-quoter-v2",
+                exactTargets: slipstreamMeasuredTargets,
+                fingerprintTargets: slipstreamMeasuredTargetsByFingerprint,
+              })
             : existingTarget;
       const adapterProfileId =
         isPancakeV3
           ? "pancakeswap-v3-quoter-v2"
-          : pool.project === "fluid"
-            ? "fluid-resolver-measured"
-            : isAerodromeSlipstream
-              ? "aerodrome-slipstream-quoter-v2"
+          : isAerodromeSlipstream
+            ? "aerodrome-slipstream-quoter-v2"
             : existingTarget?.adapterProfileId;
       if (!adapterProfileId) continue;
 
@@ -960,67 +918,6 @@ export async function computeStablecoinScores(
         targetId: candidate.targetId,
       };
     }
-    for (const pool of retainedPools) {
-      const adapterProfileId =
-        pool.project === "raydium" && pool.poolType === "raydium-clmm"
-          ? "raydium-clmm-trade-api-v1"
-          : pool.project === "orca" && pool.poolType === "orca-whirlpool"
-            ? "orca-whirlpool-jupiter-v1"
-            : null;
-      if (!adapterProfileId) continue;
-      const candidate = solanaMeasuredTargets.get(buildSolanaMeasuredPoolDirectionKey(id, pool.poolId));
-      pool.extra = { ...(pool.extra ?? {}) };
-      if (!candidate || candidate.adapterProfileId !== adapterProfileId) {
-        delete pool.extra.solanaMeasuredExecutionTarget;
-        delete pool.extra.solanaMeasuredExecution;
-        delete pool.extra.solanaMeasuredExecutionProfile;
-        delete pool.extra.solanaMeasuredExecutionPhysicalPoolId;
-        pool.extra.executionCapabilityGate = { family: "measured-execution", reason: "target-unresolved" };
-        pool.extra.solanaMeasuredExecutionDiagnostic = { adapterProfileId };
-        continue;
-      }
-      pool.extra.solanaMeasuredExecutionTarget = {
-        ...candidate,
-        retainedTvlUsd: pool.tvlUsd,
-        capturedAt: routeObservedAt,
-      };
-      pool.extra.solanaMeasuredExecutionPhysicalPoolId = candidate.poolId;
-      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
-        delete pool.extra.executionCapabilityGate;
-      }
-      pool.extra.solanaMeasuredExecutionDiagnostic = {
-        adapterProfileId: candidate.adapterProfileId,
-        targetId: candidate.targetId,
-      };
-    }
-    for (const pool of retainedPools) {
-      if (!pool.project.includes("sunswap")) continue;
-      const adapterProfileId = "sunswap-v2-router-v1";
-      const candidate = tronMeasuredTargets.get(buildTronMeasuredPoolDirectionKey(id, pool.poolId));
-      pool.extra = { ...(pool.extra ?? {}) };
-      if (!candidate || candidate.adapterProfileId !== adapterProfileId) {
-        delete pool.extra.tronMeasuredExecutionTarget;
-        delete pool.extra.tronMeasuredExecution;
-        delete pool.extra.tronMeasuredExecutionProfile;
-        delete pool.extra.tronMeasuredExecutionPhysicalPoolId;
-        pool.extra.executionCapabilityGate = { family: "measured-execution", reason: "target-unresolved" };
-        pool.extra.tronMeasuredExecutionDiagnostic = { adapterProfileId };
-        continue;
-      }
-      pool.extra.tronMeasuredExecutionTarget = {
-        ...candidate,
-        retainedTvlUsd: pool.tvlUsd,
-        capturedAt: routeObservedAt,
-      };
-      pool.extra.tronMeasuredExecutionPhysicalPoolId = candidate.poolId;
-      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
-        delete pool.extra.executionCapabilityGate;
-      }
-      pool.extra.tronMeasuredExecutionDiagnostic = {
-        adapterProfileId: candidate.adapterProfileId,
-        targetId: candidate.targetId,
-      };
-    }
     preparedRetainedPools.set(id, retainedPools);
   }
 
@@ -1037,10 +934,6 @@ export async function computeStablecoinScores(
       )
       .map((target) => [target.targetId, target] as const),
   );
-  const solanaTargetInventoryById = new Map<string, SolanaMeasuredExecutionTarget>();
-  const tronTargetInventoryById = new Map(
-    [...tronMeasuredTargets.values()].map((target) => [target.targetId, target] as const),
-  );
   for (const pools of preparedRetainedPools.values()) {
     for (const pool of pools) {
       for (const target of pool.extra?.measuredExecutionTargets ?? []) {
@@ -1048,20 +941,13 @@ export async function computeStablecoinScores(
       }
       const target = pool.extra?.measuredExecutionTarget;
       if (target) targetInventoryById.set(target.targetId, target);
-      const solanaTarget = pool.extra?.solanaMeasuredExecutionTarget;
-      if (solanaTarget) solanaTargetInventoryById.set(solanaTarget.targetId, solanaTarget);
-      const tronTarget = pool.extra?.tronMeasuredExecutionTarget;
-      if (tronTarget) tronTargetInventoryById.set(tronTarget.targetId, tronTarget);
     }
   }
   // The adjusted target inventory and retained pools now own every downstream
   // descriptor. Release the producer maps before proof-heavy evidence is loaded.
   pancakeMeasuredTargets.clear();
-  fluidMeasuredTargets.clear();
-  solanaMeasuredTargets.clear();
   slipstreamMeasuredTargets.clear();
   slipstreamMeasuredTargetsByFingerprint.clear();
-  tronMeasuredTargets.clear();
 
   const activeTargetInventory = [...targetInventoryById.values()].filter(isDexMeasuredExecutionTargetScoreEligible);
   const shadowTargetInventory = [...targetInventoryById.values()].filter(
@@ -1069,11 +955,6 @@ export async function computeStablecoinScores(
   );
   const inventoryTargetCount = activeTargetInventory.length;
   const shadowInventoryTargetCount = shadowTargetInventory.length;
-  const solanaInventoryTargetCount = solanaTargetInventoryById.size;
-  const scoreFacingSolanaTargetIds = [...solanaTargetInventoryById.values()]
-    .filter(isSolanaMeasuredExecutionPriorityTargetScoreEligible)
-    .map((target) => target.targetId);
-  const tronInventoryTargetCount = tronTargetInventoryById.size;
   let targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"];
   if (measuredTargetPublicationMode === "none") {
     targetPublication = { status: "skipped", reason: "publication-not-due" };
@@ -1115,48 +996,6 @@ export async function computeStablecoinScores(
     }
   }
   targetInventoryById.clear();
-  let solanaTargetPublication: ScoreDiagnostics["measuredExecution"]["solanaTargetPublication"];
-  if (measuredTargetPublicationMode !== "active-and-shadow") {
-    solanaTargetPublication = { status: "skipped", reason: "daily-shadow-publication-not-due" };
-  } else if (solanaInventoryTargetCount === 0) {
-    solanaTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
-  } else {
-    try {
-      const publication = await publishSolanaMeasuredTargetInventory({
-        db,
-        targets: [...solanaTargetInventoryById.values()],
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      solanaTargetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      solanaTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    } finally {
-      solanaTargetInventoryById.clear();
-    }
-  }
-  let tronTargetPublication: ScoreDiagnostics["measuredExecution"]["tronTargetPublication"];
-  if (measuredTargetPublicationMode !== "active-and-shadow") {
-    tronTargetPublication = { status: "skipped", reason: "daily-shadow-publication-not-due" };
-  } else if (tronInventoryTargetCount === 0) {
-    tronTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
-  } else {
-    try {
-      const publication = await publishTronMeasuredTargetInventory({
-        db,
-        targets: [...tronTargetInventoryById.values()],
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      tronTargetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      tronTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    } finally {
-      tronTargetInventoryById.clear();
-    }
-  }
 
   // Shadow admission-opportunity capture (Phases 0.1/0.4). This is the only
   // place pre-target rejections are visible: a retained pool that failed target
@@ -1196,12 +1035,6 @@ export async function computeStablecoinScores(
       targetGenerationId: shadowTargetPublication.status === "published"
         ? shadowTargetPublication.generationId
         : null,
-      solanaTargetGenerationId: solanaTargetPublication.status === "published"
-        ? solanaTargetPublication.generationId
-        : null,
-      tronTargetGenerationId: tronTargetPublication.status === "published"
-        ? tronTargetPublication.generationId
-        : null,
       cohorts,
     };
   }
@@ -1224,28 +1057,6 @@ export async function computeStablecoinScores(
     releaseDexMeasuredExecutionProofFields(pools);
   }
   joinEvidence?.byTargetId.clear();
-  const solanaJoinEvidence = scoreFacingSolanaTargetIds.length > 0
-    ? await loadSolanaMeasuredExecutionJoinEvidence(db, signal, scoreFacingSolanaTargetIds)
-    : null;
-  const solanaMeasuredExecutionJoin = joinSolanaMeasuredExecutionEvidence({
-    poolsByStablecoin: preparedRetainedPools,
-    evidence: solanaJoinEvidence,
-    nowSec: routeObservedAt,
-  });
-  for (const pools of preparedRetainedPools.values()) {
-    releaseSolanaMeasuredExecutionProofFields(pools);
-  }
-  solanaJoinEvidence?.byTargetId.clear();
-  const tronJoinEvidence = await loadTronMeasuredExecutionJoinEvidence(db, signal);
-  const tronMeasuredExecutionJoin = joinTronMeasuredExecutionEvidence({
-    poolsByStablecoin: preparedRetainedPools,
-    evidence: tronJoinEvidence,
-    nowSec: routeObservedAt,
-  });
-  for (const pools of preparedRetainedPools.values()) {
-    releaseTronMeasuredExecutionProofFields(pools);
-  }
-  tronJoinEvidence?.byTargetId.clear();
 
   for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
     throwIfAborted(signal);
@@ -1265,8 +1076,6 @@ export async function computeStablecoinScores(
       routeSelectionDiagnostics,
     );
     stripDexMeasuredExecutionInternalFields(retainedPools);
-    stripSolanaMeasuredExecutionInternalFields(retainedPools);
-    stripTronMeasuredExecutionInternalFields(retainedPools);
     // Persistence and price publication are read-only consumers of the same
     // sanitized pool graph. Sharing it avoids cloning thousands of rich pool
     // objects at the scoring peak.
@@ -1393,16 +1202,10 @@ export async function computeStablecoinScores(
       routeSelection: routeSelectionDiagnostics,
       measuredExecution: {
         join: measuredExecutionJoin,
-        solanaJoin: solanaMeasuredExecutionJoin,
-        tronJoin: tronMeasuredExecutionJoin,
         inventoryTargetCount,
         shadowInventoryTargetCount,
-        solanaInventoryTargetCount,
-        tronInventoryTargetCount,
         targetPublication,
         shadowTargetPublication,
-        solanaTargetPublication,
-        tronTargetPublication,
         shadowAdmission,
       },
     },

@@ -2,46 +2,15 @@
  * Half-hourly trigger (0,30 * * * *):
  *   sync-cl-exit-depth (3)
  *
- * Isolated score-bearing measured-execution lane. Solana runs serially after
- * EVM so its rotating cohort stays inside the two-hour freshness horizon
- * without increasing the per-trigger connection peak. Tron remains daily.
+ * Isolated score-bearing measured-execution lane. The lane's flat metadata
+ * (including the durable `mxLedger*` evidence-ledger scalars, Liquidity Score
+ * v6 Phase 0.4) is returned directly so producer history persists it.
  */
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
-import { syncSolanaDexMeasuredExecution } from "../../cron/measured-execution/solana-sync";
-import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "../../lib/error-utils";
-import { tryParseJson } from "../../lib/json-parse";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
-
-function parseMetadata(value: string | undefined): unknown {
-  if (!value) return null;
-  return tryParseJson(value, { onFailure: () => undefined }) ?? value;
-}
-
-function hasNonDurableNativeDeferral(metadata: unknown): boolean {
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
-  const row = metadata as Record<string, unknown>;
-  const cursorWriteStatus = row.cursorWriteStatus;
-  const hasDeferredWork = [row.deferredCount, row.rateLimitDeferredCount].some(
-    (value) => typeof value === "number" && value > 0,
-  );
-  return (
-    cursorWriteStatus === "write-failed" ||
-    (hasDeferredWork && cursorWriteStatus !== "written")
-  );
-}
-
-function hasActiveNativeFailure(metadata: unknown): boolean {
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
-  const row = metadata as Record<string, unknown>;
-  return (
-    row.activation === "active" &&
-    typeof row.attemptedFailureCount === "number" &&
-    row.attemptedFailureCount > 0
-  );
-}
 
 export async function settleMeasuredExecutionLane(name: string, run: Promise<CronResult>): Promise<CronResult> {
   try {
@@ -56,91 +25,13 @@ export async function settleMeasuredExecutionLane(name: string, run: Promise<Cro
   }
 }
 
-/**
- * Producer history persists only top-level scalar metadata values, so the
- * durable measured-execution evidence-ledger chunks emitted by a lane
- * (`mxLedger*`, Liquidity Score v6 Phase 0.4) must be hoisted out of the
- * nested per-lane objects. First lane wins on collision; only the EVM shadow
- * lane emits these today.
- */
-function collectMeasuredLedgerScalars(lanes: readonly unknown[]): Record<string, string | number | boolean | null> {
-  const scalars: Record<string, string | number | boolean | null> = {};
-  for (const lane of lanes) {
-    if (!lane || typeof lane !== "object" || Array.isArray(lane)) continue;
-    for (const [key, value] of Object.entries(lane as Record<string, unknown>)) {
-      if (!key.startsWith("mxLedger") || key in scalars) continue;
-      if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-        scalars[key] = value;
-      }
-    }
-  }
-  return scalars;
-}
-
-export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResult, tron: CronResult): CronResult {
-  const evmStatus = evm.status ?? "ok";
-  const solanaStatus = solana.status ?? "ok";
-  const tronStatus = tron.status ?? "ok";
-  const evmMetadata = parseMetadata(evm.metadata);
-  const solanaMetadata = parseMetadata(solana.metadata);
-  const tronMetadata = parseMetadata(tron.metadata);
-  const nativeCursorFailure =
-    hasNonDurableNativeDeferral(solanaMetadata) ||
-    hasNonDurableNativeDeferral(tronMetadata);
-  const activeNativeFailure =
-    hasActiveNativeFailure(solanaMetadata) ||
-    hasActiveNativeFailure(tronMetadata);
-  // Shadow-only native failures remain diagnostic. Score-facing native failures,
-  // invocation errors, and non-durable deferrals must affect the merged job.
-  const status =
-    evmStatus === "error" || solanaStatus === "error" || tronStatus === "error"
-      ? "error"
-      : evmStatus === "degraded" || activeNativeFailure || nativeCursorFailure
-        ? "degraded"
-        : evmStatus === "skipped_neutral" && solanaStatus === "skipped_neutral" && tronStatus === "skipped_neutral"
-          ? "skipped_neutral"
-          : "ok";
-  const productive =
-    evm.productivity?.productive === true ||
-    solana.productivity?.productive === true ||
-    tron.productivity?.productive === true;
-  return {
-    status,
-    itemCount: (evm.itemCount ?? 0) + (solana.itemCount ?? 0) + (tron.itemCount ?? 0),
-    metadata: JSON.stringify({
-      laneStatuses: { evm: evmStatus, solana: solanaStatus, tron: tronStatus },
-      evm: evmMetadata,
-      solana: solanaMetadata,
-      tron: tronMetadata,
-      ...collectMeasuredLedgerScalars([evmMetadata, solanaMetadata, tronMetadata]),
-    }),
-    productivity: {
-      productive,
-      reason: productive ? "published-measured-execution" : "no-measured-execution",
-    },
-  };
-}
-
 export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRuntimeContext) {
   return runSingleScheduledJob(runtime, "half-hour measured execution slot", {
     job: "sync-cl-exit-depth",
-    run: async (signal, reportProgress) => {
-      const evm = await settleMeasuredExecutionLane(
+    run: (signal, reportProgress) =>
+      settleMeasuredExecutionLane(
         "evm",
         syncDexMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
-      );
-      throwIfAborted(signal);
-      const solana = await settleMeasuredExecutionLane(
-        "solana-shadow",
-        syncSolanaDexMeasuredExecution(runtime.db, runtime.env.JUPITER_API_KEY, signal, reportProgress),
-      );
-      const tron: CronResult = {
-        status: "skipped_neutral",
-        itemCount: 0,
-        metadata: JSON.stringify({ reason: "daily-native-lane" }),
-        productivity: { productive: false, reason: "daily-native-lane" },
-      };
-      return mergeMeasuredExecutionResults(evm, solana, tron);
-    },
+      ),
   });
 }

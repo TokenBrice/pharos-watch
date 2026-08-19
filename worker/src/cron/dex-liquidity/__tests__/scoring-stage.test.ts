@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DexMeasuredExecutionTargetSchema } from "@shared/types/measured-execution";
-import { SolanaMeasuredExecutionTargetSchema } from "@shared/types/solana-measured-execution";
-import { TronMeasuredExecutionTargetSchema } from "@shared/types/tron-measured-execution";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import type {
   DexLiquidityPoolState,
@@ -195,10 +193,7 @@ function poolState(totalPools = 7_402): DexLiquidityPoolState {
     metrics,
     poolRejections: [],
     pancakeMeasuredExecutionTargets: new Map(),
-    fluidMeasuredExecutionTargets: new Map(),
     slipstreamMeasuredExecutionTargets: new Map(),
-    solanaMeasuredExecutionTargets: new Map(),
-    tronMeasuredExecutionTargets: new Map(),
     stagedMergedCount: 12,
     stagedSkippedCount: 3,
     stagedSkippedByExactIdentityCount: 1,
@@ -228,7 +223,7 @@ function poolState(totalPools = 7_402): DexLiquidityPoolState {
 }
 
 function populateMeasuredTargets(state: DexLiquidityPoolState): void {
-  const evmTarget = (lane: "pancake" | "fluid" | "slipstream", index: number) =>
+  const evmTarget = (lane: "pancake" | "slipstream", index: number) =>
     DexMeasuredExecutionTargetSchema.parse({
       schemaVersion: "dex-measured-target-v1",
       targetId: `fixture-${lane}-target`,
@@ -256,74 +251,10 @@ function populateMeasuredTargets(state: DexLiquidityPoolState): void {
     });
 
   const pancake = evmTarget("pancake", 1);
-  const fluid = evmTarget("fluid", 2);
   const slipstream = evmTarget("slipstream", 3);
-  const solana = SolanaMeasuredExecutionTargetSchema.parse({
-    schemaVersion: "solana-measured-target-v1",
-    targetId: "fixture-solana-target",
-    stablecoinId: "major",
-    adapterProfileId: "raydium-clmm-trade-api-v1",
-    protocol: "raydium",
-    chain: "solana",
-    poolId: "11111111111111111111111111111111",
-    poolType: "raydium-clmm",
-    tokenIn: {
-      address: "So11111111111111111111111111111111111111112",
-      symbol: "MAJOR",
-      decimals: 9,
-      referencePriceUsd: 1.0001,
-      referencePriceSource: "tracked",
-      trackedAssetId: "major",
-    },
-    tokenOut: {
-      address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      symbol: "USDC",
-      decimals: 6,
-      referencePriceUsd: 1,
-      referencePriceSource: "pool-implied",
-    },
-    retainedTvlUsd: 2_000_000,
-    retainedPoolPriceUsd: 1.0001,
-    capturedAt: 1_000,
-  });
-  const tron = TronMeasuredExecutionTargetSchema.parse({
-    schemaVersion: "tron-measured-target-v1",
-    targetId: "fixture-tron-target",
-    stablecoinId: "major",
-    adapterProfileId: "sunswap-v2-router-v1",
-    protocol: "sunswap",
-    chain: "tron",
-    poolId: "TXhKbyPSdH2PiQXTdT1aceyJ7Yuw63JQzh",
-    poolType: "sunswap-v2",
-    factoryAddress: "TKzxdSv2FZKQrEqkKVgp5DcwEXBEKMg2Ax",
-    expectedFactoryCodeHash: `0x${"1".repeat(64)}`,
-    expectedPairCodeHash: `0x${"2".repeat(64)}`,
-    tokenIn: {
-      address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-      symbol: "MAJOR",
-      decimals: 6,
-      referencePriceUsd: 1.0001,
-      referencePriceSource: "tracked",
-      trackedAssetId: "major",
-    },
-    tokenOut: {
-      address: "TH5ydFhBnLV4ZHF2bgBVaTBfX8LY17kj9W",
-      symbol: "USDC",
-      decimals: 6,
-      referencePriceUsd: 1,
-      referencePriceSource: "pool-implied",
-    },
-    feeRate: 0.003,
-    retainedTvlUsd: 3_000_000,
-    retainedPoolPriceUsd: 1.0001,
-    capturedAt: 1_000,
-  });
 
   state.pancakeMeasuredExecutionTargets.set(pancake.targetId, pancake);
-  state.fluidMeasuredExecutionTargets.set(fluid.targetId, fluid);
   state.slipstreamMeasuredExecutionTargets.set(slipstream.targetId, slipstream);
-  state.solanaMeasuredExecutionTargets.set(solana.targetId, solana);
-  state.tronMeasuredExecutionTargets.set(tron.targetId, tron);
 }
 
 function withPayload(payload: string): DexLiquidityScoringStageChunk {
@@ -437,17 +368,8 @@ describe("DEX liquidity scoring stage", () => {
     expect([...decoded.poolState.pancakeMeasuredExecutionTargets]).toEqual(
       [...retainedPool.pancakeMeasuredExecutionTargets],
     );
-    expect([...decoded.poolState.fluidMeasuredExecutionTargets]).toEqual(
-      [...retainedPool.fluidMeasuredExecutionTargets],
-    );
     expect([...decoded.poolState.slipstreamMeasuredExecutionTargets]).toEqual(
       [...retainedPool.slipstreamMeasuredExecutionTargets],
-    );
-    expect([...decoded.poolState.solanaMeasuredExecutionTargets]).toEqual(
-      [...retainedPool.solanaMeasuredExecutionTargets],
-    );
-    expect([...decoded.poolState.tronMeasuredExecutionTargets]).toEqual(
-      [...retainedPool.tronMeasuredExecutionTargets],
     );
     const records = consumed
       .flatMap((chunk) => chunk.payload.split("\n"))
@@ -462,10 +384,7 @@ describe("DEX liquidity scoring stage", () => {
     expect(consumingSource.priceObservations.size).toBe(0);
     expect(consumingPool.metrics.size).toBe(0);
     expect(consumingPool.pancakeMeasuredExecutionTargets.size).toBe(0);
-    expect(consumingPool.fluidMeasuredExecutionTargets.size).toBe(0);
     expect(consumingPool.slipstreamMeasuredExecutionTargets.size).toBe(0);
-    expect(consumingPool.solanaMeasuredExecutionTargets.size).toBe(0);
-    expect(consumingPool.tronMeasuredExecutionTargets.size).toBe(0);
   });
 
   it("persists bounded single-row chunks and loads the newest ready generation at or before the preferred slot", async () => {

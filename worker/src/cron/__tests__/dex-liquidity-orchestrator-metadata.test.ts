@@ -62,8 +62,6 @@ describe("dex liquidity cron metadata shadow admission emission", () => {
   const shadowAdmission: DexShadowAdmissionDiagnostics = {
     cycle: 1_700_000_100,
     targetGenerationId: "dex-shadow-measured-targets-1700000100",
-    solanaTargetGenerationId: null,
-    tronTargetGenerationId: null,
     cohorts: {
       "uniswap-v3-quoter-v2@bsc": { eligible: 1, rejected: 0, published: 1, gateReason: null },
       "ethereum:76f08b0d:usd1-world-l": {

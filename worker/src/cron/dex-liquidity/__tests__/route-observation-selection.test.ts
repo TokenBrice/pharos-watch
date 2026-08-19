@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { DexMeasuredExecutionPublicProfile } from "@shared/types/measured-execution";
-import type { SolanaMeasuredExecutionPublicProfile } from "@shared/types/solana-measured-execution";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
 import { selectDexRouteObservationPools } from "../scoring";
 import type { PoolEntry } from "../types";
@@ -179,21 +178,4 @@ describe("DEX route observation selection", () => {
     expect(selected).toEqual(expect.arrayContaining([upper, lower]));
   });
 
-  it("prioritizes an active native measured profile in the private candidate set", () => {
-    const current = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS }, (_, index) => pool(index));
-    const native = pool(99);
-    native.chain = "Solana";
-    native.poolId = "solana:Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE";
-    native.extra = {
-      nativeMeasuredExecution: {
-        targetId: "native-target",
-      } as SolanaMeasuredExecutionPublicProfile,
-      nativeMeasuredExecutionPhysicalPoolId: "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
-    };
-
-    const selected = selectDexRouteObservationPools(current, [native]);
-
-    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 1);
-    expect(selected[0]).toBe(native);
-  });
 });

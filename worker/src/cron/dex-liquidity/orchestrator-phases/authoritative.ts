@@ -13,8 +13,6 @@ export function buildAuthoritativeStagedPoolConfirmationIndex(
   const confirmedExactKeysByProtocol = new Map<string, Set<string>>();
 
   for (const entry of results) {
-    // Shadow-only censuses must not suppress score-capable staged rows.
-    if (entry.normalizedProtocol === "sunswap") continue;
     const pagination = entry.result.pagination;
     if (
       !entry.result.ok ||

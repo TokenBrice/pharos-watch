@@ -218,15 +218,6 @@ describe("measured execution overflow admission", () => {
         }),
       ]),
     ).toBe(20);
-    expect(
-      estimateAdmissionCohortRpcRequests([
-        target("coin-a", 100_000),
-        target("coin-b", 100_000, "coin-b", {
-          adapterProfileId: "fluid-resolver-measured",
-          protocol: "fluid",
-        }),
-      ]),
-    ).toBe(16);
   });
 
   it("budgets V4 runtime bindings and pinned pool-state proof", () => {
@@ -612,14 +603,6 @@ describe("measured execution overflow admission", () => {
           chain: "base",
           adapterProfileId: "uniswap-v3-quoter-v2",
           protocol: "uniswap-v3",
-        }),
-      ),
-    ).toBe(false);
-    expect(
-      isDexMeasuredExecutionTargetScoreEligible(
-        target("coin-c", 100_000, "fluid", {
-          adapterProfileId: "fluid-resolver-measured",
-          protocol: "fluid",
         }),
       ),
     ).toBe(false);

@@ -8,12 +8,10 @@
  */
 import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { syncDexShadowMeasuredExecution } from "../../cron/measured-execution/sync";
-import { syncTronDexMeasuredExecution } from "../../cron/measured-execution/tron-sync";
-import { throwIfAborted } from "../../lib/abort";
 import { buildTelegramCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups } from "./slot-groups";
-import { mergeMeasuredExecutionResults, settleMeasuredExecutionLane } from "./half-hourly-measured-execution";
+import { settleMeasuredExecutionLane } from "./half-hourly-measured-execution";
 
 export async function runDaily0810Slot(runtime: ScheduledRuntimeContext) {
   return runScheduledSlotGroups(runtime, "daily 08:10 slot", [
@@ -34,25 +32,11 @@ export async function runDaily0810Slot(runtime: ScheduledRuntimeContext) {
         },
         {
           job: "sync-cl-exit-depth",
-          run: async (signal, reportProgress) => {
-            const evm = await settleMeasuredExecutionLane(
+          run: (signal, reportProgress) =>
+            settleMeasuredExecutionLane(
               "evm-shadow",
               syncDexShadowMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
-            );
-            throwIfAborted(signal);
-            const solana = {
-              status: "skipped_neutral" as const,
-              itemCount: 0,
-              metadata: JSON.stringify({ reason: "half-hour-native-lane" }),
-              productivity: { productive: false, reason: "half-hour-native-lane" },
-            };
-            const tron = await settleMeasuredExecutionLane(
-              "tron-shadow",
-              syncTronDexMeasuredExecution(runtime.db, runtime.env.TRONGRID_API_KEY, signal, reportProgress),
-            );
-            throwIfAborted(signal);
-            return mergeMeasuredExecutionResults(evm, solana, tron);
-          },
+            ),
         },
       ],
     },

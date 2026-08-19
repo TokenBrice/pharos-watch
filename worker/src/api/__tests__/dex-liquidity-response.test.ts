@@ -119,6 +119,33 @@ describe("normalizeTopPools", () => {
     expect((result[0]?.extra as Record<string, unknown>).executionCapabilityGate).toEqual(executionCapabilityGate);
   });
 
+  it("serves the post-v6 Fluid pool shape without measured-execution fields", () => {
+    // Liquidity Score v6 Phase 3 removed the Fluid measured overlay: producer
+    // rows for Fluid pools no longer carry `measuredExecution` or
+    // `executionCapabilityGate`, while both keys stay in ALLOWED_EXTRA_KEYS
+    // for active EVM measured profiles.
+    const result = normalizeTopPools(JSON.stringify([{
+      project: "fluid",
+      chain: "Ethereum",
+      symbol: "PAXG / XAUT",
+      poolType: "fluid-dex",
+      tvlUsd: 2_000_000,
+      volumeUsd1d: 50_000,
+      source: "direct_api",
+      extra: { feeTier: 5 },
+    }]));
+
+    expect(result[0]).toMatchObject({
+      project: "fluid",
+      poolType: "fluid-dex",
+      tvlUsd: 2_000_000,
+    });
+    const extra = result[0]?.extra as Record<string, unknown>;
+    expect(extra.feeTier).toBe(5);
+    expect(extra).not.toHaveProperty("measuredExecution");
+    expect(extra).not.toHaveProperty("executionCapabilityGate");
+  });
+
   it("returns an empty array for non-array JSON payloads", () => {
     expect(normalizeTopPools("{}")).toEqual([]);
     expect(normalizeTopPools("null")).toEqual([]);

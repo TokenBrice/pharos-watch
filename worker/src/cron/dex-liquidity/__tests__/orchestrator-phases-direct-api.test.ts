@@ -5,7 +5,6 @@ import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-p
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { initMetrics } from "../pool-helpers";
 import { buildChainAddressKey } from "../token-resolution";
-import { buildFluidMeasuredExecutionTargets } from "../../measured-execution/inventory";
 
 describe("integrateDirectApiLiquidityPhase", () => {
   afterEach(() => {
@@ -177,7 +176,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(authoritativeConfirmation.confirmedExactKeysByProtocol.has("balancer")).toBe(false);
   });
 
-  it("hydrates Fluid's target-only pool copy before exact target construction", () => {
+  it("keeps Fluid pools out of the measured-execution routing after the overlay removal", () => {
     const poolAddress = "0x218c659b6bbb73d47c7926fc90d9893342534b84";
     const paxg = "0x45804880de22913dafe09f4980848ece6ecbaf78";
     const xaut = "0x68749665ff8d2d112fa859aa293f07a622782f38";
@@ -195,15 +194,14 @@ describe("integrateDirectApiLiquidityPhase", () => {
               poolAddress,
               poolType: "fluid-dex",
               tokens: [
-                { address: paxg, symbol: "", decimals: 0 },
-                { address: xaut, symbol: "", decimals: 0 },
+                { address: paxg, symbol: "PAXG", decimals: 18 },
+                { address: xaut, symbol: "XAUT", decimals: 6 },
               ],
               price: 1,
               tvlUsd: 2_000_000,
               volume24hUsd: 0,
               feeRate: 0.0005,
               balances: [2_000, 2_000],
-              balancesNormalized: false,
             }],
             ok: true,
             degraded: false,
@@ -221,54 +219,18 @@ describe("integrateDirectApiLiquidityPhase", () => {
       [buildChainAddressKey("ethereum", paxg), "paxg-paxos"],
       [buildChainAddressKey("ethereum", xaut), "xaut-tether"],
     ]);
-    const contractMetaByChainAddress = new Map([
-      [
-        buildChainAddressKey("ethereum", paxg),
-        { stablecoinId: "paxg-paxos", symbol: "PAXG", decimals: 18, source: "contract" as const },
-      ],
-      [
-        buildChainAddressKey("ethereum", xaut),
-        { stablecoinId: "xaut-tether", symbol: "XAUT", decimals: 6, source: "contract" as const },
-      ],
-    ]);
     const compacted = compactDirectApiFetchPhasePools(rawPhase, {
       chainAddressToId,
       symbolToChainScopedIds: new Map(),
-      contractMetaByChainAddress,
+      contractMetaByChainAddress: new Map(),
     });
 
-    expect(compacted.measuredExecutionPools[0]?.tokens).toEqual([
-      expect.objectContaining({ address: paxg, symbol: "PAXG", decimals: 18 }),
-      expect.objectContaining({ address: xaut, symbol: "XAUT", decimals: 6 }),
-    ]);
-    const targets = buildFluidMeasuredExecutionTargets({
-      pools: compacted.measuredExecutionPools,
-      chainAddressToId,
-      symbolToChainScopedIds: new Map(),
-      stablecoinPriceById: new Map([
-        ["paxg-paxos", 3_350],
-        ["xaut-tether", 3_350],
-      ]),
-      capturedAt: 1_752_560_000,
-    });
-    expect([...targets.values()]).toEqual([
-      expect.objectContaining({
-        stablecoinId: "paxg-paxos",
-        adapterProfileId: "fluid-resolver-measured",
-        chain: "ethereum",
-        poolId: `ethereum:${poolAddress}`,
-        tokenIn: expect.objectContaining({ symbol: "PAXG", decimals: 18 }),
-        tokenOut: expect.objectContaining({ symbol: "XAUT", decimals: 6 }),
-      }),
-      expect.objectContaining({
-        stablecoinId: "xaut-tether",
-        adapterProfileId: "fluid-resolver-measured",
-        chain: "ethereum",
-        poolId: `ethereum:${poolAddress}`,
-        tokenIn: expect.objectContaining({ symbol: "XAUT", decimals: 6 }),
-        tokenOut: expect.objectContaining({ symbol: "PAXG", decimals: 18 }),
-      }),
-    ]);
+    // The Fluid measured overlay is deleted (Liquidity Score v6 Phase 3):
+    // Fluid pools still contribute normalized liquidity but no longer split
+    // into a measured-execution target copy.
+    expect(compacted.measuredExecutionPools).toHaveLength(0);
+    expect(compacted.pools).toHaveLength(1);
+    expect(compacted.pools[0]).toMatchObject({ source: "fluid", poolAddress });
   });
 
   it("reports pre-compaction exclusion counts after receiving only retained direct pools", async () => {

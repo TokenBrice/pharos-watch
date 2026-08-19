@@ -131,8 +131,6 @@ export function buildDexLiquidityCronMetadata(params: {
           shadowAdmissionReport: {
             cycle: params.shadowAdmission.cycle,
             targetGenerationId: params.shadowAdmission.targetGenerationId,
-            solanaTargetGenerationId: params.shadowAdmission.solanaTargetGenerationId,
-            tronTargetGenerationId: params.shadowAdmission.tronTargetGenerationId,
             cohorts: Object.fromEntries(
               Object.entries(params.shadowAdmission.cohorts).map(([key, cohort]) => [
                 key,
@@ -152,8 +150,11 @@ export function buildDexLiquidityCronMetadata(params: {
               kind: "A",
               cycle: params.shadowAdmission.cycle,
               targetGenerationId: params.shadowAdmission.targetGenerationId,
-              solanaTargetGenerationId: params.shadowAdmission.solanaTargetGenerationId,
-              tronTargetGenerationId: params.shadowAdmission.tronTargetGenerationId,
+              // The native measured lanes were removed in Liquidity Score v6
+              // Phase 3; the ledger schema keeps the fields so persisted
+              // Phase 0 records still decode.
+              solanaTargetGenerationId: null,
+              tronTargetGenerationId: null,
               cohorts: params.shadowAdmission.cohorts,
               truncatedCohorts: 0,
             },

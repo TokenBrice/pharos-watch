@@ -2,14 +2,6 @@ import {
   DexMeasuredExecutionTargetSchema,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import {
-  SolanaMeasuredExecutionTargetSchema,
-  type SolanaMeasuredExecutionTarget,
-} from "@shared/types/solana-measured-execution";
-import {
-  TronMeasuredExecutionTargetSchema,
-  type TronMeasuredExecutionTarget,
-} from "@shared/types/tron-measured-execution";
 import { isRecord } from "@shared/lib/type-guards";
 import { executeAtomicBatch } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -47,10 +39,7 @@ type PoolHeader = Omit<
   DexLiquidityPoolState,
   | "metrics"
   | "pancakeMeasuredExecutionTargets"
-  | "fluidMeasuredExecutionTargets"
   | "slipstreamMeasuredExecutionTargets"
-  | "solanaMeasuredExecutionTargets"
-  | "tronMeasuredExecutionTargets"
 >;
 
 type MetricHeader = Omit<LiquidityMetrics, "chains" | "pairs" | "topPools"> & {
@@ -58,7 +47,7 @@ type MetricHeader = Omit<LiquidityMetrics, "chains" | "pairs" | "topPools"> & {
   pairs: string[];
 };
 
-type TargetLane = "pancake" | "fluid" | "slipstream" | "solana" | "tron";
+type TargetLane = "pancake" | "slipstream";
 type ScoringStageChunkInsertRow = [
   generationId: string,
   chunkIndex: number,
@@ -84,7 +73,7 @@ type ScoringStageRecord =
       kind: "target";
       lane: TargetLane;
       key: string;
-      target: DexMeasuredExecutionTarget | SolanaMeasuredExecutionTarget | TronMeasuredExecutionTarget;
+      target: DexMeasuredExecutionTarget;
     };
 
 export interface DexLiquidityScoringStageInput {
@@ -177,10 +166,7 @@ interface ScoringStageDecoder {
   priceObservations: Map<string, DexPriceObs[]>;
   metrics: Map<string, LiquidityMetrics>;
   pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
-  fluidMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
-  solanaMeasuredExecutionTargets: Map<string, SolanaMeasuredExecutionTarget>;
-  tronMeasuredExecutionTargets: Map<string, TronMeasuredExecutionTarget>;
   recordCount: number;
 }
 
@@ -226,10 +212,7 @@ function buildPoolHeader(poolState: DexLiquidityPoolState): PoolHeader {
   const {
     metrics: _metrics,
     pancakeMeasuredExecutionTargets: _pancakeMeasuredExecutionTargets,
-    fluidMeasuredExecutionTargets: _fluidMeasuredExecutionTargets,
     slipstreamMeasuredExecutionTargets: _slipstreamMeasuredExecutionTargets,
-    solanaMeasuredExecutionTargets: _solanaMeasuredExecutionTargets,
-    tronMeasuredExecutionTargets: _tronMeasuredExecutionTargets,
     ...pool
   } = poolState;
   return pool;
@@ -257,14 +240,8 @@ function* iterateScoringStageRecords(
   let metrics: Map<string, LiquidityMetrics> | null = poolState.metrics;
   let pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget> | null =
     poolState.pancakeMeasuredExecutionTargets;
-  let fluidMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget> | null =
-    poolState.fluidMeasuredExecutionTargets;
   let slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget> | null =
     poolState.slipstreamMeasuredExecutionTargets;
-  let solanaMeasuredExecutionTargets: Map<string, SolanaMeasuredExecutionTarget> | null =
-    poolState.solanaMeasuredExecutionTargets;
-  let tronMeasuredExecutionTargets: Map<string, TronMeasuredExecutionTarget> | null =
-    poolState.tronMeasuredExecutionTargets;
   const pool = buildPoolHeader(poolState);
 
   yield {
@@ -328,15 +305,6 @@ function* iterateScoringStageRecords(
     poolState.pancakeMeasuredExecutionTargets = new Map();
     pancakeMeasuredExecutionTargets = null;
   }
-  for (const [key, target] of fluidMeasuredExecutionTargets) {
-    yield { kind: "target", lane: "fluid", key, target };
-    if (consumeInput) fluidMeasuredExecutionTargets.delete(key);
-  }
-  if (consumeInput) {
-    fluidMeasuredExecutionTargets.clear();
-    poolState.fluidMeasuredExecutionTargets = new Map();
-    fluidMeasuredExecutionTargets = null;
-  }
   for (const [key, target] of slipstreamMeasuredExecutionTargets) {
     yield { kind: "target", lane: "slipstream", key, target };
     if (consumeInput) slipstreamMeasuredExecutionTargets.delete(key);
@@ -345,24 +313,6 @@ function* iterateScoringStageRecords(
     slipstreamMeasuredExecutionTargets.clear();
     poolState.slipstreamMeasuredExecutionTargets = new Map();
     slipstreamMeasuredExecutionTargets = null;
-  }
-  for (const [key, target] of solanaMeasuredExecutionTargets) {
-    yield { kind: "target", lane: "solana", key, target };
-    if (consumeInput) solanaMeasuredExecutionTargets.delete(key);
-  }
-  if (consumeInput) {
-    solanaMeasuredExecutionTargets.clear();
-    poolState.solanaMeasuredExecutionTargets = new Map();
-    solanaMeasuredExecutionTargets = null;
-  }
-  for (const [key, target] of tronMeasuredExecutionTargets) {
-    yield { kind: "target", lane: "tron", key, target };
-    if (consumeInput) tronMeasuredExecutionTargets.delete(key);
-  }
-  if (consumeInput) {
-    tronMeasuredExecutionTargets.clear();
-    poolState.tronMeasuredExecutionTargets = new Map();
-    tronMeasuredExecutionTargets = null;
   }
 
   for (const [stablecoinId, metric] of metrics) {
@@ -469,10 +419,7 @@ function createScoringStageDecoder(): ScoringStageDecoder {
     priceObservations: new Map(),
     metrics: new Map(),
     pancakeMeasuredExecutionTargets: new Map(),
-    fluidMeasuredExecutionTargets: new Map(),
     slipstreamMeasuredExecutionTargets: new Map(),
-    solanaMeasuredExecutionTargets: new Map(),
-    tronMeasuredExecutionTargets: new Map(),
     recordCount: 0,
   };
 }
@@ -582,29 +529,11 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
           record.key,
           DexMeasuredExecutionTargetSchema.parse(record.target),
         );
-      } else if (record.lane === "fluid") {
-        assertUniqueMapKey(decoder.fluidMeasuredExecutionTargets, record.key, "fluid target");
-        decoder.fluidMeasuredExecutionTargets.set(
-          record.key,
-          DexMeasuredExecutionTargetSchema.parse(record.target),
-        );
       } else if (record.lane === "slipstream") {
         assertUniqueMapKey(decoder.slipstreamMeasuredExecutionTargets, record.key, "slipstream target");
         decoder.slipstreamMeasuredExecutionTargets.set(
           record.key,
           DexMeasuredExecutionTargetSchema.parse(record.target),
-        );
-      } else if (record.lane === "solana") {
-        assertUniqueMapKey(decoder.solanaMeasuredExecutionTargets, record.key, "solana target");
-        decoder.solanaMeasuredExecutionTargets.set(
-          record.key,
-          SolanaMeasuredExecutionTargetSchema.parse(record.target),
-        );
-      } else if (record.lane === "tron") {
-        assertUniqueMapKey(decoder.tronMeasuredExecutionTargets, record.key, "tron target");
-        decoder.tronMeasuredExecutionTargets.set(
-          record.key,
-          TronMeasuredExecutionTargetSchema.parse(record.target),
         );
       } else {
         throw new Error(`DEX liquidity scoring stage contains unknown target lane "${String(record.lane)}"`);
@@ -693,10 +622,7 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
       poolRejections: decoder.poolHeader.poolRejections ?? [],
       metrics: decoder.metrics,
       pancakeMeasuredExecutionTargets: decoder.pancakeMeasuredExecutionTargets,
-      fluidMeasuredExecutionTargets: decoder.fluidMeasuredExecutionTargets,
       slipstreamMeasuredExecutionTargets: decoder.slipstreamMeasuredExecutionTargets,
-      solanaMeasuredExecutionTargets: decoder.solanaMeasuredExecutionTargets,
-      tronMeasuredExecutionTargets: decoder.tronMeasuredExecutionTargets,
     },
     recordCount: decoder.recordCount,
   };
