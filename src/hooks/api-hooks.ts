@@ -251,7 +251,9 @@ export function useYieldRankings(overrides?: QueryControlOverrides) {
 }
 
 export function useYieldRankingsSummary() {
-  return useRegisteredApiQuery<YieldRankingsSummaryResponse>(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary);
+  return useRegisteredApiQuery<YieldRankingsSummaryResponse>(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary, {
+    keepPreviousData: true,
+  });
 }
 
 export function useYieldAdapterManifest() {

@@ -11,8 +11,10 @@ import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 
 const CURRENT_SCALE_RANKING_COUNT = 175;
 // Explicit per-row sourceFreshness adds 4,550 raw bytes at this scale but only
-// 39 gzip bytes; retain equivalent raw headroom while the gzip transfer guard stays fixed.
-const RAW_PAYLOAD_BUDGET_BYTES = 225_000;
+// 39 gzip bytes; per-row safetyReason (degradation diagnostics) adds ~3,700
+// raw / ~30 gzip more. Retain equivalent raw headroom while the gzip transfer
+// guard stays fixed.
+const RAW_PAYLOAD_BUDGET_BYTES = 230_000;
 const GZIP_PAYLOAD_BUDGET_BYTES = 25_000;
 
 function deterministicToken(seed: number, length: number): string {
@@ -301,6 +303,7 @@ describe("projectYieldRankingsSummary", () => {
     "sourceSwitch",
     "usedDefaultSafety",
     "safetyProvenance",
+    "safetyReason",
   ];
   const EXPECTED_SOURCE_RISK_KEYS = [
     "sourceRiskScore",

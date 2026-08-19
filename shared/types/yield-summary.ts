@@ -20,6 +20,7 @@ export const YieldRankingSummaryProvenanceSchema = DetailedYieldRankingProvenanc
   sourceSwitch: true,
   usedDefaultSafety: true,
   safetyProvenance: true,
+  safetyReason: true,
 }).strict();
 
 export const YieldRankingSummarySourceRiskSchema = DetailedYieldSourceRiskSchema.pick({
