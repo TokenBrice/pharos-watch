@@ -98,8 +98,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "reUSD has one native Ethereum issuance route and eight Chainlink CCIP burn/mint representation routes. The canonical-side CCIP BurnWithFromMintTokenPool is bridge machinery: it holds the Ethereum token MINTER_ROLE but can mint only through validated CCIP releaseOrMint flow and configured remote-chain lanes/rate limits. Its governance Safe owner, CCIP router/RMN validation path, peer mappings, rate limits, and emergency curse gate are represented below; the native InsuranceCapitalLayer remains the only collateral-backed native minter.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex FIX-05 reUSD bridge-boundary migration",
+    "reviewedAt": "2026-08-19",
+    "reviewer": "Codex FIX-05 reUSD bridge-boundary migration; Claude solana CCIP route review (issue #881)",
     "confidence": "verified",
     "protocols": [
       {
@@ -122,6 +122,10 @@
       {
         "label": "Re Protocol introduction",
         "url": "https://docs.re.xyz/getting-started-with-re/introduction-to-the-re-protocol"
+      },
+      {
+        "label": "reUSD on Solana (Solscan)",
+        "url": "https://solscan.io/account/2uxaYT1fVrp6Fg2BrxQcyKSW91hefM6dG9krpbeDiirT"
       }
     ],
     "routes": [
@@ -439,6 +443,49 @@
           {
             "label": "reUSD on Tempo explorer (verified 2026-07-20)",
             "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000e09a4cfec804f102"
+          }
+        ]
+      },
+      {
+        "id": "solana:2uxaYT1fVrp6Fg2BrxQcyKSW91hefM6dG9krpbeDiirT",
+        "destinationChain": "solana",
+        "contractAddress": "2uxaYT1fVrp6Fg2BrxQcyKSW91hefM6dG9krpbeDiirT",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on solana 2026-08-19 (slot 440124852). The SPL mint 2uxaYT1f… has decimals 9, supply 7,454,015.258947373, no freeze authority set to a program (the freeze-authority account is an unfunded system address), and mintAuthority ALGjEEQcjtJS7aQXvDPoFTLdp74t1ub9w8rVwKbsSHB2, which is an SPL multisig with numRequiredSigners 1 and numValidSigners 2. A decoded mintTo in that slot shows the live path: CCIP OffRamp offqSMQWgQud6WJz694LRzkeN5kMYpCHTpXQr3Rkcjm invokes ARM proxy RmnXLft1mSEwDgMKu2okYuHkiazxntFFcZFrrcXxYg7 and BurnMintTokenPool 41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB, which signs mintTo through multisig member HgkgFRLz76rJA2FBjJQQo41GkViewDngS4tpUKwTkhfo (a PDA holding no lamports or data). All four program IDs match Chainlink's published solana-mainnet CCIP directory entries for lane.offRamp, armProxy, poolPrograms.BurnMintTokenPool and router. Every mintTo in the 12-signature window sampled at the mint authority was CCIP OffRamp-driven and signed by that PDA. Control caveat, and the reason this route is not equivalent to the eight EVM CCIP legs: the 1-of-2 threshold means the second member, funded system account EsX25TxVd8Uc4CFBdqQCZM86aHw7KxxCdgLhpwrArJ8E, can mint unilaterally without CCIP. The sampled history shows no such mint, but the capability is unrevoked and the sample is not exhaustive.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-19",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "solana",
+        "controllerAddress": "41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:solana:41FGToCmdaWa1dgZLKFAjvmx6e6AjVTX7SVRibvsMGVB",
+          "contract:solana:ALGjEEQcjtJS7aQXvDPoFTLdp74t1ub9w8rVwKbsSHB2"
+        ],
+        "observedBlock": 440124852,
+        "sources": [
+          {
+            "label": "Chainlink CCIP directory — solana-mainnet",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/solana-mainnet"
+          },
+          {
+            "label": "reUSD SPL mint on Solana (Solscan)",
+            "url": "https://solscan.io/account/2uxaYT1fVrp6Fg2BrxQcyKSW91hefM6dG9krpbeDiirT"
+          },
+          {
+            "label": "CCIP OffRamp mintTo observed at slot 440124852",
+            "url": "https://solscan.io/tx/3AvN24hbPSLUCvyDBHpdcR6NYLnsdU9iKycUAwiCwfK6wH2UbxKKreK14EjeNy9f68AB8qHxyHwQ2qWthqCiK4ZQ"
+          },
+          {
+            "label": "Re Protocol smart-contract addresses",
+            "url": "https://docs.re.xyz/products/smart-contracts"
           }
         ]
       }
