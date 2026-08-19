@@ -199,6 +199,7 @@ export function buildCurveStableswapExecutionCapability(
   };
 }
 
+/** @internal Exported for focused Curve StableSwap model tests. */
 export function buildCurveStableswapExecutionModel(
   curveData: CurvePoolEntry | undefined,
   chainNorm: string,
@@ -222,7 +223,7 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   if (!curveData || !isCryptoSwap(curveData.registryId) || curveData.apiIsBroken) return null;
   if (!curveData.poolAddress) return null;
   const policy = getCurveCryptoSwapShadowPolicy(input.chain, curveData.poolAddress);
-  if (!policy?.scoreEligible || policy.mode !== "active") return null;
+  if (!policy) return null;
   const executionCoins = curveData.executionCoins;
   if (!executionCoins || executionCoins.length !== 2) return null;
   const poolAddress = curveData.poolAddress.toLowerCase();
@@ -550,7 +551,7 @@ export function resolveActiveCurveCryptoSwapCandidateByTvl(
     return null;
   }
   const policy = getCurveCryptoSwapShadowPolicy(chain, candidate.poolAddress);
-  return policy?.mode === "active" && policy.scoreEligible ? candidate : null;
+  return policy ? candidate : null;
 }
 
 /**

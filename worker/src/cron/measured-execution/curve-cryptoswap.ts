@@ -15,7 +15,6 @@ import {
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  type DexMeasuredExecutionAdapter,
   type DexMeasuredExecutionBudgetStopReason,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
@@ -59,9 +58,9 @@ export interface CurveCryptoSwapPoolPolicy {
   chain: "ethereum" | "arbitrum" | "base" | "polygon";
   poolAddress: `0x${string}`;
   generation: CurveCryptoSwapGeneration;
-  mode: "shadow" | "active";
+  mode: "active";
   identityAnchor: CurveCryptoSwapIdentityAnchor;
-  scoreEligible: boolean;
+  scoreEligible: true;
   expectedPoolCodeHash?: `0x${string}`;
   expectedFactoryAddress?: `0x${string}`;
   expectedFactoryCodeHash?: `0x${string}`;
@@ -180,23 +179,7 @@ function familyVerifiedPolicy(
   };
 }
 
-function shadowPolicy(
-  chain: CurveCryptoSwapPoolPolicy["chain"],
-  poolAddress: `0x${string}`,
-  generation: CurveCryptoSwapGeneration,
-): CurveCryptoSwapPoolPolicy {
-  return {
-    chain,
-    poolAddress,
-    generation,
-    mode: "shadow",
-    identityAnchor: "pinned-pool-code",
-    scoreEligible: false,
-    transferSemanticsReviewed: false,
-  };
-}
-
-/** Fixed reviewed cohort: eight active Ethereum TwoCrypto pools plus shadow-only candidates. */
+/** Fixed reviewed cohort: eight pinned plus eleven family-anchored active Ethereum TwoCrypto pools. */
 export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[] = [
   activeEthereumTwocryptoPolicy(
     "0x862cb4e988fb66e72f128d1183829f8c05b6c6a0",
@@ -233,8 +216,6 @@ export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[
   familyVerifiedPolicy("ethereum", "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852", "twocrypto-ng"),
   familyVerifiedPolicy("ethereum", "0xca546ae6c3b2bb9fba2b6e5eeb0881097cece5b0", "twocrypto-ng"),
   familyVerifiedPolicy("ethereum", "0x592878b920101946fb5915ab97961bc546f211cc", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x06ac09ca29369e2483533eb68dfe0a4d4143543d", "tricrypto-ng"),
-  shadowPolicy("ethereum", "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14", "tricrypto-ng"),
   activeEthereumTwocryptoPolicy(
     "0xf1f435b05d255a5dbde37333c0f61da6f69c6127",
     "0xd0b9195b91086bd9cafaa5e1ab8a6eab1a0d473fadb6c1a3ca69e31f687100e9",
@@ -254,20 +235,11 @@ export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[
     "0xe97fd5e910f41e3c85fd62c320b19b05e505422366e8c2cad63af015338b38d7",
   ),
   familyVerifiedPolicy("ethereum", "0xec977f46467a3021785cff88894886e617abd65b", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x66da369fc5dbba0774da70546bd20f2b242cd34d", "special-tridbr"),
-  shadowPolicy("ethereum", "0x98a7f18d4e56cfe84e3d081b40001b3d5bd3eb8b", "legacy-cryptoswap"),
   familyVerifiedPolicy("ethereum", "0x26d85588b9ed20aba4fa8fb9b3c8977c4aad133c", "twocrypto-ng"),
   familyVerifiedPolicy("ethereum", "0x57129759d0e23116c1e7402dbc084e53d2e209a2", "twocrypto-ng"),
   familyVerifiedPolicy("ethereum", "0x43b98eea5c689f0036918f590a4b55f22d853734", "twocrypto-ng"),
   familyVerifiedPolicy("ethereum", "0x51a57b0a36ef63828929683609fa1fc12c72a776", "twocrypto-ng"),
   familyVerifiedPolicy("ethereum", "0x027b40f5917fcd0eac57d7015e120096a5f92ca9", "twocrypto-ng"),
-  shadowPolicy("base", "0x6771bb9ec8da900eeba738599c3cc4f8fc07aea7d", "twocrypto-ng"),
-  shadowPolicy("base", "0xba0c274085a078d19c46f2d902698a841cbfb289", "twocrypto-ng"),
-  shadowPolicy("arbitrum", "0x590f7e2b211fa5ff7840dd3c425b543363797701", "twocrypto-ng"),
-  shadowPolicy("polygon", "0xcb6dcbcb1da63acc01e6cc9804d0aee5a0dbb3ba", "twocrypto-ng"),
-  shadowPolicy("polygon", "0xdcb72c163de84618417bec9aef7ae32b5336d70e", "twocrypto-ng"),
-  shadowPolicy("polygon", "0xbae895c43c3af0f76e8bed2af8d1063afce35f5d", "twocrypto-ng"),
-  shadowPolicy("polygon", "0xf5c83f5f7d3975726527feade0e51c6e5ecf7ba5", "twocrypto-ng"),
 ] as const;
 
 export interface CurveCryptoSwapRuntimeEvidence {
@@ -901,43 +873,3 @@ export function validateCurveCryptoSwapProfileProof(profile: DexMeasuredExecutio
   }
   return [...issues];
 }
-
-/**
- * Generic dispatcher surface. It intentionally refuses to publish shadow
- * points until the cohort policies become score-eligible.
- */
-export const CURVE_CRYPTOSWAP_ADAPTER: DexMeasuredExecutionAdapter = {
-  profileId: CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
-  async quotePoints(input) {
-    const eligibility = evaluateCurveCryptoSwapEligibility({
-      chain: input.target.chain,
-      endpointAddress: input.endpointAddress,
-    });
-    if (!eligibility.ok) {
-      return {
-        points: [],
-        failures: input.inputNotionalsUsd.map((inputUsd) => ({
-          inputUsd,
-          reason: eligibility.reason,
-        })),
-      };
-    }
-    const outcomes = await quoteCurveCryptoSwapRequests({
-      requests: input.inputNotionalsUsd.map((inputUsd) => ({
-        target: input.target,
-        inputUsd,
-        blockNumber: input.blockNumber,
-        endpointAddress: input.endpointAddress,
-      })),
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-    });
-    return {
-      points: outcomes.flatMap((outcome) => (outcome.point && outcome.eligibility.ok ? [outcome.point] : [])),
-      failures: outcomes.flatMap((outcome) => {
-        const reason = outcome.failureReason ?? (outcome.eligibility.ok ? null : outcome.eligibility.reason);
-        return reason == null ? [] : [{ inputUsd: outcome.inputUsd, reason }];
-      }),
-    };
-  },
-};

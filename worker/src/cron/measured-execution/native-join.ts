@@ -36,13 +36,6 @@ export interface NativeMeasuredExecutionJoinQuote<
   profile: TProfile | null;
 }
 
-export interface NativeMeasuredExecutionJoinEvidence<
-  TTarget extends NativeMeasuredExecutionJoinTarget,
-  TProfile extends { adapterProfileId: string },
-> extends NativeMeasuredExecutionJoinEvidenceMetadata {
-  byTargetId: Map<string, NativeMeasuredExecutionJoinQuote<TTarget, TProfile>>;
-}
-
 export interface NativeMeasuredExecutionJoinAdapter<
   TTarget extends NativeMeasuredExecutionJoinTarget,
   TProfile extends { adapterProfileId: string },

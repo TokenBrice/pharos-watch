@@ -215,8 +215,6 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/dex-liquidity/geckoterminal-shared.ts::getGtPoolKind":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/dex-liquidity/pool-identity.ts::buildKnownPoolIdentityIndex":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/dispatch-telegram-pending-lifecycle.ts::pendingQueueChanged":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/measured-execution/curve-composite.ts::CURVE_ALUSD_3CRV_METAPOOL_POLICY":

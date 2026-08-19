@@ -24,6 +24,7 @@ import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
 
 const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
+/** @internal Exported for focused scoring-stage tests. */
 export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 1;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
@@ -701,6 +702,7 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
   };
 }
 
+/** @internal Exported for focused scoring-stage tests. */
 export function decodeDexLiquidityScoringStageChunks(
   chunks: readonly DexLiquidityScoringStageChunk[],
 ): {

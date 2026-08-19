@@ -53,7 +53,7 @@ export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
   protocol: "uniswap-v4";
   chain: "ethereum";
-  mode: "active" | "shadow";
+  mode: "active";
   scoreEligible: boolean;
   poolManagerAddress: `0x${string}`;
   expectedPoolManagerCodeHash: `0x${string}`;
