@@ -10,9 +10,11 @@
  * Promotion to `shared/data/annotations/curated-annotations.ts` is always
  * editorial — this producer never writes there.
  *
- * Failure mode: source-by-source. If the worker endpoint is unreachable,
- * the producer emits a `<!-- source unreachable -->` note for that
- * source and keeps going so repo-local sources still surface.
+ * Failure mode: source-by-source. If the worker endpoint is unreachable —
+ * or `PHAROS_API_KEY` is unset, which is the same thing from the queue's
+ * point of view — the producer emits a note for that source and keeps
+ * going so the repo-local sources still surface. It exits non-zero only
+ * when it cannot write the queue at all.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -30,6 +32,13 @@ const ROOT = process.cwd();
 const OUTPUT_PATH = resolve(ROOT, "agents/annotation-candidates.md");
 const API_BASE_URL = process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;
 const API_KEY = process.env.PHAROS_API_KEY;
+
+// Named so the queue's source notes say which of the two failures happened.
+// An unset credential and an unreachable worker both degrade to "skipped",
+// but only one of them is fixed by adding a secret.
+const TAPE_SKIP_REASON = API_KEY?.trim()
+  ? `unreachable at ${API_BASE_URL}`
+  : "unavailable: PHAROS_API_KEY is not set";
 const DEFAULT_LOOKBACK_DAYS = 7;
 const LAUNCH_LOOKBACK_DAYS = 30;
 const FETCH_TIMEOUT_MS = 6000;
@@ -87,7 +96,17 @@ interface TapeEventLite {
 }
 
 async function fetchTapeEvents(classFilter: string, sinceMs: number): Promise<TapeEventLite[] | null> {
-  const request = buildMaintenanceApiRequest(API_PATHS.events(), API_KEY, API_BASE_URL);
+  // A missing or malformed credential is a source failure like any other, not
+  // a reason to abandon the repo-local sources. buildMaintenanceApiRequest
+  // throws on an empty key, and it sits outside the fetch guard below, so
+  // without this catch the whole producer exits non-zero and the launch and
+  // milestone rows are lost with it.
+  let request: { url: string; headers: Record<string, string> };
+  try {
+    request = buildMaintenanceApiRequest(API_PATHS.events(), API_KEY, API_BASE_URL);
+  } catch {
+    return null;
+  }
   const url = new URL(request.url);
   url.searchParams.set("class", classFilter);
   url.searchParams.set("severityFloor", "warning");
@@ -346,7 +365,7 @@ async function main(): Promise<void> {
   ]);
 
   if (depegEvents == null) {
-    notes.push(`depeg tape unreachable at ${API_BASE_URL} — skipped`);
+    notes.push(`depeg tape ${TAPE_SKIP_REASON} — skipped`);
   } else {
     for (const e of depegEvents) {
       const c = mapDepegCandidate(e);
@@ -355,7 +374,7 @@ async function main(): Promise<void> {
   }
 
   if (blacklistEvents == null) {
-    notes.push(`freeze tape unreachable at ${API_BASE_URL} — skipped`);
+    notes.push(`freeze tape ${TAPE_SKIP_REASON} — skipped`);
   } else {
     for (const e of blacklistEvents) {
       const c = mapBlacklistCandidate(e, resolveCoinId);
@@ -388,5 +407,11 @@ async function main(): Promise<void> {
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  void main();
+  // A genuine failure here means the queue could not be written. Report it as
+  // one line rather than an unhandled rejection: this runs in CI and the raw
+  // stack lands in the review issue body verbatim.
+  main().catch((err: unknown) => {
+    process.stderr.write(`Failed to build annotation candidates: ${err instanceof Error ? err.message : String(err)}\n`);
+    process.exitCode = 1;
+  });
 }

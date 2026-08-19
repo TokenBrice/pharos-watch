@@ -100,6 +100,12 @@ jobs:
             gh issue create --title "Agent maintenance candidates" --body-file "$body"
           fi
 
+          # Fail the run, not just the issue body. A ::warning kept this job
+          # green through three consecutive broken runs (2026-08-03, 08-10,
+          # 08-17) while PHAROS_API_KEY was missing, so the only signal was
+          # buried in an issue nobody had reason to reopen. The issue is
+          # written first, so a red run still leaves the diagnosis behind.
           if [ "$ANNOTATION_STATUS" != 0 ] || [ "$SUMMARY_STATUS" != 0 ] || [ "$DIGEST_STATUS" != 0 ]; then
-            echo "::warning title=Candidate generation incomplete::See the maintenance issue for command status and available output."
+            echo "::error title=Candidate generation incomplete::See the maintenance issue for command status and available output."
+            exit 1
           fi
