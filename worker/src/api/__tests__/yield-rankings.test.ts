@@ -564,8 +564,54 @@ describe("handleYieldRankings", () => {
     expect(body.rankings[0]?.provenance?.safetyScoreIdentity).toEqual(currentSafetyIdentity);
   });
 
-  it("returns explicit NR fields instead of crossing compact safety identities", async () => {
+  it("serves the coherent publish-time safety snapshot instead of blanking on a compact identity mismatch", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const db = makeCacheDb(v748RankingsPayload, updatedAt);
+    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map([["usdc-circle", { score: 88, grade: "A" }]]),
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: {
+        ...v9Identity("report-cards:v9:other"),
+        evaluationBuildDigest: "c".repeat(64),
+      },
+      publicationGenerationId: "report-cards:v9:other",
+      methodologyVersion: V9_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+    });
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(res.status).toBe(200);
+    // The cached payload's own publish-time values are coherent (one identity
+    // per publish); a live identity mismatch must never null them.
+    expect(body.rankings[0]).toMatchObject({
+      safetyScore: 40,
+      safetyGrade: "NR",
+      pharosYieldScore: 11,
+    });
+    expect(body.rankings[0]?.pysNullReason).toBeUndefined();
+    expect(body.rankings[0]?.warningSignals).toEqual([]);
+    expect(body.provenance?.liveSafetyHydration).toMatchObject({
+      kind: "degraded",
+      reason: "safety-identity-mismatch",
+      fallback: "publish-time-snapshot",
+      source: "safety-score-v9-publication",
+    });
+    expect(body.warnings?.[0]).toMatchObject({
+      code: "yield-safety-hydration-stale",
+      reasons: ["safety-identity-mismatch"],
+    });
+    expect(res.headers.get("Warning")).toContain("199");
+  })
+
+  it("degrades to explicit NR when the mismatched cached payload is older than the stale-coherent window", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - (24 * 3600 + 60);
     const db = makeCacheDb(v748RankingsPayload, updatedAt);
     computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
       kind: "ok",
@@ -599,6 +645,31 @@ describe("handleYieldRankings", () => {
       kind: "degraded",
       reason: "safety-identity-mismatch",
       source: "safety-score-v9-publication",
+    });
+    expect(body.provenance?.liveSafetyHydration?.fallback).toBeUndefined();
+  })
+
+  it("serves the publish-time snapshot when live safety hydration throws", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const db = makeCacheDb(v748RankingsPayload, updatedAt);
+    computeSafetyScoresSnapshotMock.mockRejectedValueOnce(new Error("D1 unavailable"));
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(res.status).toBe(200);
+    expect(body.rankings[0]).toMatchObject({
+      safetyScore: 40,
+      pharosYieldScore: 11,
+    });
+    expect(body.provenance?.liveSafetyHydration).toMatchObject({
+      kind: "degraded",
+      reason: "safety-snapshot-unavailable",
+      fallback: "publish-time-snapshot",
+    });
+    expect(body.warnings?.[0]).toMatchObject({
+      code: "yield-safety-hydration-stale",
+      reasons: ["safety-snapshot-unavailable"],
     });
   });
 
@@ -1181,7 +1252,7 @@ describe("handleYieldRankings", () => {
     ["active V9 marker", "active-safety-score:v9"],
     ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
     ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
-  ])("retains cached rows with explicit NR safety and Warning 199 for %s", async (_label, snapshotReason) => {
+  ])("serves the publish-time snapshot with Warning 199 for %s", async (_label, snapshotReason) => {
     computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
       kind: "degraded",
       mode: "map",
@@ -1208,22 +1279,21 @@ describe("handleYieldRankings", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Warning")).toContain("199");
     expect(body.warnings?.[0]).toMatchObject({
-      code: "yield-safety-hydration-degraded",
+      code: "yield-safety-hydration-stale",
       reasons: ["safety-snapshot-unavailable"],
     });
     expect(body.rankings).toHaveLength(1);
     expect(body.rankings[0]).toMatchObject({
       id: "usdc-circle",
       currentApy: 4.72,
-      safetyScore: null,
+      safetyScore: 40,
       safetyGrade: "NR",
-      safetyReason: "safety-snapshot-unavailable",
-      pharosYieldScore: null,
-      pysNullReason: "safety-unrated",
+      pharosYieldScore: 11,
     });
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
       reason: "safety-snapshot-unavailable",
+      fallback: "publish-time-snapshot",
     });
     expect(body._meta.ageSeconds).toBe(30);
   });

@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import {
   YieldRankingsResponseSchema,
   type YieldCalculationMode,
@@ -508,6 +509,58 @@ function removeSafetyDerivedRankChangeAttribution(
   };
 }
 
+/**
+ * The cached payload was published under one safety identity, so its own
+ * safety-derived values are coherent by construction. When live hydration is
+ * unusable, serving them stale (bounded by the stale-coherent window) beats
+ * blanking every safety field.
+ */
+function canServePublishTimeSafety(
+  payload: YieldRankingsResponse,
+  cached: { updatedAt: number },
+): boolean {
+  return (
+    payload.provenance?.safetySnapshot.safetyScoreIdentity != null &&
+    Math.floor(Date.now() / 1000) - cached.updatedAt <= YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC
+  );
+}
+
+function markYieldRankingsSafetyStale(
+  payload: YieldRankingsResponse,
+  reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
+  source: LiveSafetyHydrationSource,
+): YieldRankingsResponse {
+  const trackedCount = payload.rankings.length;
+  const coveredCount = payload.rankings.filter((row) => row.safetyScore !== null).length;
+  const { degradationReasons: _degradationReasons, ...liveSafetySource } = source;
+  return {
+    ...payload,
+    warnings: [
+      ...(payload.warnings ?? []),
+      {
+        code: "yield-safety-hydration-stale",
+        message:
+          "Live yield safety hydration is unavailable; serving the last coherent published safety snapshot.",
+        reasons: [reason],
+      },
+    ],
+    provenance: payload.provenance
+      ? {
+          ...payload.provenance,
+          liveSafetyHydration: {
+            kind: "degraded" as const,
+            fallback: "publish-time-snapshot" as const,
+            coveredCount,
+            trackedCount,
+            coverageRatio: trackedCount > 0 ? Number((coveredCount / trackedCount).toFixed(4)) : 1,
+            reason,
+            ...liveSafetySource,
+          },
+        }
+      : payload.provenance,
+  };
+}
+
 function degradeYieldRankingsSafety(
   payload: YieldRankingsResponse,
   reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
@@ -632,20 +685,18 @@ function createYieldRankingsCacheHandler(
           const reason = snapshot.safetyScoreIdentity == null && snapshot.kind === "ok"
             ? "safety-identity-missing"
             : "safety-snapshot-unavailable";
-          return buildYieldRankingsResponse(
-            project(degradeYieldRankingsSafety(validatedPayload, reason, hydrationSource)),
-            cached,
-            [reason],
-          );
+          const fallbackPayload = canServePublishTimeSafety(validatedPayload, cached)
+            ? markYieldRankingsSafetyStale(validatedPayload, reason, hydrationSource)
+            : degradeYieldRankingsSafety(validatedPayload, reason, hydrationSource);
+          return buildYieldRankingsResponse(project(fallbackPayload), cached, [reason]);
         }
         if (!hasCompatibleSafetyIdentity(validatedPayload, snapshot.safetyScoreIdentity)) {
           const publishedIdentity = validatedPayload.provenance?.safetySnapshot.safetyScoreIdentity;
           const reason = publishedIdentity == null ? "safety-identity-missing" : "safety-identity-mismatch";
-          return buildYieldRankingsResponse(
-            project(degradeYieldRankingsSafety(validatedPayload, reason, hydrationSource)),
-            cached,
-            [reason],
-          );
+          const fallbackPayload = canServePublishTimeSafety(validatedPayload, cached)
+            ? markYieldRankingsSafetyStale(validatedPayload, reason, hydrationSource)
+            : degradeYieldRankingsSafety(validatedPayload, reason, hydrationSource);
+          return buildYieldRankingsResponse(project(fallbackPayload), cached, [reason]);
         }
         const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.scores, hydrationSource);
         if (hydrated.degradationReasons.length > 0) {
@@ -662,11 +713,10 @@ function createYieldRankingsCacheHandler(
           publishedAt: null,
           degradationReasons: ["safety-snapshot-unavailable"],
         };
-        return buildYieldRankingsResponse(
-          project(degradeYieldRankingsSafety(validatedPayload, "safety-snapshot-unavailable", hydrationSource)),
-          cached,
-          ["safety-snapshot-unavailable"],
-        );
+        const fallbackPayload = canServePublishTimeSafety(validatedPayload, cached)
+          ? markYieldRankingsSafetyStale(validatedPayload, "safety-snapshot-unavailable", hydrationSource)
+          : degradeYieldRankingsSafety(validatedPayload, "safety-snapshot-unavailable", hydrationSource);
+        return buildYieldRankingsResponse(project(fallbackPayload), cached, ["safety-snapshot-unavailable"]);
       }
     },
   });

@@ -426,6 +426,9 @@ const YieldSafetySnapshotMetaSchema = z.object({
 
 const YieldLiveSafetyHydrationMetaSchema = z.object({
   kind: z.enum(["ok", "degraded"]),
+  // Present when live hydration is unusable but the response still carries the
+  // cached payload's own coherent publish-time safety values instead of NR.
+  fallback: z.enum(["publish-time-snapshot"]).optional(),
   coverageRatio: z.number(),
   coveredCount: z.number(),
   trackedCount: z.number(),
