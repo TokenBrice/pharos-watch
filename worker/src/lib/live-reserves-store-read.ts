@@ -1,5 +1,6 @@
 import { buildInClause } from "./db";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./collections";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import {
   parseSnapshotMetadata,
   parseWarnings,
@@ -56,10 +57,12 @@ async function loadMapByStablecoinId<Row extends { stablecoin_id: string }, Valu
 
   for (const batch of chunkArray(stablecoinIds, D1_SAFE_IN_CLAUSE_BIND_LIMIT)) {
     const inClause = buildInClause(batch);
-    const rows = await db
-      .prepare(sqlForInClause(inClause.sql))
-      .bind(...inClause.binds)
-      .all<Row>();
+    const rows = await runWithOverloadRetry(() =>
+      db
+        .prepare(sqlForInClause(inClause.sql))
+        .bind(...inClause.binds)
+        .all<Row>(),
+    );
 
     for (const row of rows.results ?? []) {
       result.set(row.stablecoin_id, mapRow(row));
