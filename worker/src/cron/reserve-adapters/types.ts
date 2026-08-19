@@ -18,6 +18,7 @@ export interface AdapterContext {
   etherscanApiKey?: string;
   alchemyApiKey?: string;
   trongridApiKey?: string;
+  m0ApiKey?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;
   nowSec?: number;
   requestCache?: Map<string, Promise<unknown>>;
