@@ -8,6 +8,9 @@ import {
   maxPublicStatus,
 } from "@shared/lib/public-health";
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
+import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
+import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
+import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import type {
   AlertBrokerHealthSummary,
   ActivePriceCoverageHealth,
@@ -32,6 +35,7 @@ import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
+import { loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9-publication-store";
 import {
   loadStablecoinCoverageHealth,
   unknownActivePriceCoverageHealth,
@@ -320,6 +324,68 @@ async function loadMintBurnHealth(
   }
 }
 
+interface YieldSafetyAvailability {
+  impactStatus: "healthy" | "degraded";
+  warning: string | null;
+}
+
+/**
+ * Detects whether /api/yield-rankings is (or is about to be) serving unrated
+ * safety fields: a publish-time-snapshot fallback is a healthy freshness note,
+ * while a missing stamped identity or a fallback aged past the stale-coherent
+ * window means the public yield surface has blanked its safety data. Reads
+ * only D1-side identity extracts — never the full payloads.
+ */
+async function assessYieldSafetyAvailability(
+  db: D1Database,
+  now: number,
+  logPrefix: string,
+): Promise<YieldSafetyAvailability> {
+  try {
+    const row = await db
+      .prepare(
+        "SELECT updated_at, json_extract(value, '$.provenance.safetySnapshot.safetyScoreIdentity') AS stamped_identity FROM cache WHERE key = ?",
+      )
+      .bind("yield-rankings")
+      .first<{ updated_at: number; stamped_identity: string | null }>();
+    if (!row) {
+      // Missing yield cache is the cache-freshness assessment's finding.
+      return { impactStatus: "healthy", warning: null };
+    }
+    let stamped = null;
+    if (row.stamped_identity != null) {
+      try {
+        const parsed = SafetyScorePublicationIdentitySchema.safeParse(JSON.parse(row.stamped_identity));
+        stamped = parsed.success ? parsed.data : null;
+      } catch {
+        stamped = null;
+      }
+    }
+    if (stamped == null) {
+      return { impactStatus: "degraded", warning: "yield-safety-unrated-serving:safety-identity-missing" };
+    }
+    const live = await loadSafetyScoreV9PublicationIdentityEnvelope(db);
+    if (live && safetyScorePublicationIdentitiesAreComparable(stamped, live)) {
+      return { impactStatus: "healthy", warning: null };
+    }
+    const reason = live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
+    const withinWindow = now - row.updated_at <= YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC;
+    return withinWindow
+      ? { impactStatus: "healthy", warning: `yield-safety-publish-time-fallback:${reason}` }
+      : { impactStatus: "degraded", warning: `yield-safety-unrated-serving:${reason}` };
+  } catch (err) {
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "yield_safety_availability_check_failed",
+      route: logPrefix,
+      message: "Failed to assess yield safety availability",
+      error: err,
+    });
+    return { impactStatus: "healthy", warning: null };
+  }
+}
+
 export async function assessPublicHealth(
   db: D1Database,
   now: number,
@@ -380,6 +446,7 @@ export async function assessPublicHealth(
     circuitResult,
     d1CapacityResult,
     stablecoinCoverageHealth,
+    yieldSafetyAvailability,
   ] = await Promise.all([
     buildCacheStatuses(db, now),
     queryBlacklistGapMetrics(db, now, {
@@ -430,6 +497,7 @@ export async function assessPublicHealth(
         return { assessment: null, error: "D1 capacity assessment unavailable." };
       }),
     loadStablecoinCoverageHealth(db),
+    assessYieldSafetyAvailability(db, now, logPrefix),
   ]);
   const { publication: stablecoinPublication, activePriceCoverage } = stablecoinCoverageHealth;
 
@@ -527,6 +595,10 @@ export async function assessPublicHealth(
         })
       : "healthy";
 
+  if (yieldSafetyAvailability.warning) {
+    warnings.push(yieldSafetyAvailability.warning);
+  }
+
   const overallStatus = maxPublicStatus(
     cacheImpactStatus,
     mintBurnResult.mintBurnImpactStatus,
@@ -536,6 +608,7 @@ export async function assessPublicHealth(
     alertBrokerImpactStatus,
     stablecoinPublicationImpactStatus,
     activePriceCoverageImpactStatus,
+    yieldSafetyAvailability.impactStatus,
   );
 
   return {

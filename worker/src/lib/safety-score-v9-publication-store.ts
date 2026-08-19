@@ -14,8 +14,10 @@ import { executeAtomicBatch } from "./db";
 import { parseJson } from "./json-parse";
 import {
   parseSafetyScoreV9Publication,
+  publicationIdentityFromStorageEnvelope,
   serializeSafetyScoreV9Publication,
 } from "./safety-score-v9-publication-codec";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
@@ -230,6 +232,26 @@ export async function loadSafetyScoreV9Publication(
   const row = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publication, signal);
   if (!row) return null;
   return parseSafetyScoreV9Publication(row.value, signal);
+}
+
+/**
+ * Reads the active publication identity from the storage envelope via a
+ * D1-side extraction, without transferring or inflating the compressed
+ * publication body. Suitable for polled monitors such as `/api/health`.
+ */
+export async function loadSafetyScoreV9PublicationIdentityEnvelope(
+  db: D1Database,
+): Promise<SafetyScoreV9PublicationIdentity | null> {
+  const row = await db
+    .prepare("SELECT json_extract(value, '$.identity') AS publication_identity FROM cache WHERE key = ?")
+    .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication)
+    .first<{ publication_identity: string | null }>();
+  if (!row?.publication_identity) return null;
+  try {
+    return publicationIdentityFromStorageEnvelope(JSON.parse(row.publication_identity));
+  } catch {
+    return null;
+  }
 }
 
 export interface PersistSafetyScoreV9PublicationInput {

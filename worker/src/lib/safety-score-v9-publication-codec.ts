@@ -5,6 +5,7 @@ import {
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9CurrentResponse,
 } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { z } from "zod";
 import { throwIfAborted } from "./abort";
 import { gunzipBytesBounded, gzipCanonicalJson } from "./canonical-json-gzip";
@@ -63,6 +64,29 @@ function publicationIdentity(
     evaluationBuildDigest: publication.evaluationBuildDigest,
     resultDigest: publication.resultDigest,
   });
+}
+
+/**
+ * Maps the storage envelope's uncompressed `identity` block to the shared
+ * publication-identity contract, mirroring `buildSafetyScoreV9PublicationIdentity`.
+ * Lets monitors read the active identity without inflating the compressed
+ * publication body (too heavy for polled request paths).
+ */
+export function publicationIdentityFromStorageEnvelope(
+  value: unknown,
+): SafetyScoreV9PublicationIdentity | null {
+  const parsed = CacheIdentitySchema.safeParse(value);
+  if (!parsed.success) return null;
+  return {
+    model: "v9",
+    schemaVersion: 1,
+    methodologyVersion: parsed.data.policyVersion,
+    policyId: parsed.data.policyId,
+    policyDigest: parsed.data.policyDigest,
+    evaluationBuildDigest: parsed.data.evaluationBuildDigest,
+    baseInputGenerationId: parsed.data.baseInputGenerationId,
+    publicationGenerationId: parsed.data.publicationGenerationId,
+  };
 }
 
 function utf8ByteLength(value: string): number {
