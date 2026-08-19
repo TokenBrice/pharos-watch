@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.39",
+    title: "Publish-time safety snapshot fallback",
+    date: "2026-08-19",
+    effectiveAt: 1787140800,
+    summary:
+      "When the live Safety Score publication is missing, held, or evaluator-incompatible with the hourly yield snapshot, the API now serves the snapshot's own coherent publish-time safety values — explicitly labeled stale — instead of clearing every safety field to NR, bounded by a 24-hour window.",
+    impact: [
+      "An evaluation-build or methodology rollout no longer blanks public yield safety for up to an hour: `/api/yield-rankings` keeps the cached payload's publish-time scores, grades, PYS, and ordering unchanged and emits `yield-safety-hydration-stale` with `liveSafetyHydration.fallback: \"publish-time-snapshot\"`",
+      "Safety fields clear to explicit NR only when the cached payload carries no stamped safety identity or the fallback ages past the 24-hour stale-coherent window; that state now degrades `/api/health` (`yield-safety-unrated-serving:*`) so it is alerted rather than discovered visually",
+      "The hourly publisher no longer withholds its publish when the safety identity changes mid-run; it publishes the coherent loaded-identity results and records `safetyIdentityChangedBeforePublish` in run metadata",
+      "No score, grade, PYS weight, or ranking rule changes: live hydration under a compatible identity is byte-for-byte the prior behavior; only the degraded-mode presentation and its bound changed",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.38",
     title: "One safety-resolution ladder and one venue-risk derivation",
     date: "2026-08-10",
