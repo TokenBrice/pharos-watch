@@ -327,23 +327,38 @@ export async function runCronDurationWatchdog(
            SUM(CASE WHEN duration_ms >= ? THEN 1 ELSE 0 END) AS cap_hits,
            SUM(CASE WHEN duration_ms >= ? AND started_at > ? THEN 1 ELSE 0 END) AS recent_cap_hits,
            MAX(CASE WHEN duration_ms >= ? THEN started_at ELSE NULL END) AS latest_cap_hit_at,
+           -- A budget truncation whose deferral cursor persisted
+           -- (cursorTailState = 'complete') is the designed graceful-deferral
+           -- path: the next run drains the tail. Only truncations that failed
+           -- to persist their cursor (work actually lost until the next full
+           -- cycle) count toward the runtime-breaching alert.
            SUM(
              CASE
                WHEN json_valid(metadata) THEN
-                 CASE WHEN json_extract(metadata, '$.runBudgetTruncated') = 1 THEN 1 ELSE 0 END
+                 CASE
+                   WHEN json_extract(metadata, '$.runBudgetTruncated') = 1
+                    AND COALESCE(json_extract(metadata, '$.cursorTailState'), '') <> 'complete'
+                   THEN 1 ELSE 0
+                 END
                ELSE 0
              END
            ) AS budget_truncations,
            SUM(
              CASE
                WHEN json_valid(metadata) AND started_at > ? THEN
-                 CASE WHEN json_extract(metadata, '$.runBudgetTruncated') = 1 THEN 1 ELSE 0 END
+                 CASE
+                   WHEN json_extract(metadata, '$.runBudgetTruncated') = 1
+                    AND COALESCE(json_extract(metadata, '$.cursorTailState'), '') <> 'complete'
+                   THEN 1 ELSE 0
+                 END
                ELSE 0
              END
            ) AS recent_budget_truncations,
            MAX(
              CASE
-               WHEN json_valid(metadata) AND json_extract(metadata, '$.runBudgetTruncated') = 1
+               WHEN json_valid(metadata)
+                AND json_extract(metadata, '$.runBudgetTruncated') = 1
+                AND COALESCE(json_extract(metadata, '$.cursorTailState'), '') <> 'complete'
                  THEN started_at
                ELSE NULL
              END

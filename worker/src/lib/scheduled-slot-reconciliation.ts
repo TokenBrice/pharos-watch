@@ -219,6 +219,7 @@ async function insertSyntheticStaleCronRun(
   lease: StaleSlotLeaseRow,
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
+  reconcilerWorkerVersion?: string | null,
 ): Promise<boolean> {
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
   const activeDurationMs = Math.max(0, progress.updated_at - startedAt) * 1000;
@@ -237,6 +238,11 @@ async function insertSyntheticStaleCronRun(
     reconciledAt: nowSec,
     activeDurationMs,
     reconciliationDelayMs,
+    // Dead isolate's version rides the worker_version column; recording the
+    // reconciler's version alongside makes deploy-eviction (versions differ at
+    // time of death) vs in-place kill (e.g. OOM) decidable from this row.
+    slotWorkerVersion: slot.worker_version ?? null,
+    reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
   });
   const idempotencyKey = ["scheduled-slot-stale", slot.slot_key, slot.slot_started_at, progress.job, startedAt].join(
     ":",
@@ -338,6 +344,7 @@ async function insertSyntheticNotStartedCronRun(
   job: string,
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
+  reconcilerWorkerVersion?: string | null,
 ): Promise<boolean> {
   const idempotencyKey = ["scheduled-slot-not-started", slot.slot_key, slot.slot_started_at, job].join(":");
   const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, job);
@@ -364,6 +371,8 @@ async function insertSyntheticNotStartedCronRun(
     slotStartedAt: slot.slot_started_at,
     slotOwner: slot.execution_owner,
     reconciledAt: nowSec,
+    slotWorkerVersion: slot.worker_version ?? null,
+    reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
   });
   const result = await runWithOverloadRetry(() =>
     db
@@ -444,6 +453,7 @@ async function reconcileStaleSlotArtifacts(
   slot: StaleSlotExecutionArtifact,
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
+  reconcilerWorkerVersion?: string | null,
 ): Promise<StaleSlotReconciliationSummary> {
   const summary: StaleSlotReconciliationSummary = {
     syntheticCronRuns: 0,
@@ -484,7 +494,7 @@ async function reconcileStaleSlotArtifacts(
     (job) => !(slot.slot_key === "digestTriggerPoll" && job === "daily-digest"),
   );
   for (const job of unconditionallyDueMissingJobs) {
-    if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec, fence)) {
+    if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec, fence, reconcilerWorkerVersion)) {
       summary.notStartedCronRuns++;
       summary.syntheticCronRuns++;
     }
@@ -563,7 +573,7 @@ async function reconcileStaleSlotArtifacts(
     summary.progressRowsCleared += cleared;
     if (cleared === 0) continue;
 
-    if (await insertSyntheticStaleCronRun(db, slot, progress, lease, nowSec, fence)) {
+    if (await insertSyntheticStaleCronRun(db, slot, progress, lease, nowSec, fence, reconcilerWorkerVersion)) {
       summary.syntheticCronRuns++;
     }
     summary.abandonedJobs.push({
@@ -616,8 +626,9 @@ export async function reconcileStaleSlotArtifactsAndRecordEvent(
   slot: StaleSlotExecutionArtifact,
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
+  reconcilerWorkerVersion?: string | null,
 ): Promise<StaleSlotReconciliationSummary> {
-  const reconciliation = await reconcileStaleSlotArtifacts(db, slot, nowSec, fence);
+  const reconciliation = await reconcileStaleSlotArtifacts(db, slot, nowSec, fence, reconcilerWorkerVersion);
   await writeStaleSlotEventMarker(db, slot, nowSec, reconciliation);
   return reconciliation;
 }
