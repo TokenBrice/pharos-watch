@@ -443,6 +443,16 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
+  "parallelizer-balances": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "parallelizerBalances",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   "europ-independent-assurance": {
     primaryInputKinds: ["http-html"],
     paramsSchema: "europAssurance",
@@ -896,6 +906,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "solomon-protocol": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "none",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+
   "spiko-api": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "spikoApi",

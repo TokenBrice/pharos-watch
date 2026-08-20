@@ -911,6 +911,18 @@ describe("adaptAccountableDashboard", () => {
       "signed-negative-bucket",
       "total-reserves-unreconciled",
     ]);
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "total-reserves-unreconciled",
+        severity: "info",
+        effect: "info",
+      }),
+      expect.objectContaining({
+        code: "signed-negative-bucket",
+        severity: "warning",
+        effect: "degraded",
+      }),
+    ]));
     expect(result.metadata).toMatchObject({
       bucket: "exposure_split",
       breakdownCount: 14,

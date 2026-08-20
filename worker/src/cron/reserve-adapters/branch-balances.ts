@@ -256,36 +256,42 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
 
   const warnings: LiveReserveWarning[] = [];
 
-  const slices = slicesFromValues(
-    pricedBranches.map(({ branch, balanceRaw }) => {
-      const price = branch.priceUsd ?? priceMap.get(branch.name);
-      if (price == null) {
-        throw new Error(`Missing DefiLlama price for ${branch.name}`);
+  const values = pricedBranches.map(({ branch, balanceRaw }) => {
+    const price = branch.priceUsd ?? priceMap.get(branch.name);
+    if (price == null) {
+      throw new Error(`Missing DefiLlama price for ${branch.name}`);
+    }
+    // Apply depeg policy tiers to USD-pegged branches when the price came
+    // from a live source (no explicit override).
+    if (isUsdPeggedBranch(branch) && branch.priceUsd == null) {
+      if (price < 0.5 || price > 1.5) {
+        throw new Error(
+          `${adapterKey} adapter: extreme depeg on wrapper ${branch.name} (price $${price.toFixed(4)})`,
+        );
       }
-      // Apply depeg policy tiers to USD-pegged branches when the price came
-      // from a live source (no explicit override).
-      if (isUsdPeggedBranch(branch) && branch.priceUsd == null) {
-        if (price < 0.5 || price > 1.5) {
-          throw new Error(
-            `${adapterKey} adapter: extreme depeg on wrapper ${branch.name} (price $${price.toFixed(4)})`,
-          );
-        }
-        if (price < 0.95 || price > 1.05) {
-          warnings.push(reserveDegradedWarning(
-            "wrapper-depeg-detected",
-            `Wrapper ${branch.name} priced at $${price.toFixed(4)} vs USD peg`,
-          ));
-        }
+      if (price < 0.95 || price > 1.05) {
+        warnings.push(reserveDegradedWarning(
+          "wrapper-depeg-detected",
+          `Wrapper ${branch.name} priced at $${price.toFixed(4)} vs USD peg`,
+        ));
       }
-      return {
-        value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, branch.token.decimals, price),
-        name: branch.name,
-        risk: branch.risk,
-        ...(branch.coinId ? { coinId: branch.coinId } : {}),
-        ...(branch.depType ? { depType: branch.depType } : {}),
-      };
-    }),
+    }
+    return {
+      value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, branch.token.decimals, price),
+      name: branch.name,
+      risk: branch.risk,
+      ...(branch.coinId ? { coinId: branch.coinId } : {}),
+      ...(branch.depType ? { depType: branch.depType } : {}),
+    };
+  });
+  const totalValue = values.reduce((sum, value) => sum + value.value, 0);
+  // The normal one-decimal display precision would drop a real sub-0.05%
+  // branch to 0.0%, which can erase a reviewed dependency edge. Preserve such
+  // measured branches at three decimals without inflating their value.
+  const hasSubTenthPercentBranch = values.some(({ value }) =>
+    Number.isFinite(value) && value > 0 && totalValue > 0 && (value / totalValue) * 100 < 0.05,
   );
+  const slices = slicesFromValues(values, hasSubTenthPercentBranch ? 3 : 1);
 
   return {
     slices,

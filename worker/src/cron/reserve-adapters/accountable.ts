@@ -10,6 +10,7 @@ import {
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
+  reserveInfoWarning,
   slicesFromValues,
 } from "./helpers";
 import { buildBrowserHeaders } from "./request";
@@ -322,9 +323,12 @@ function buildSkippedTotalValidationWarning(
   const totalValue = breakdown.reduce((sum, entry) => sum + entry.value, 0);
   const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
   if (Math.abs(totalValue - totalReserves) <= tolerance) return null;
-  return reserveDegradedWarning(
+  // Opt-in skip keeps the snapshot scoring-eligible (`lastStatus: "ok"`). A
+  // degraded effect would force requireOkStatus scoring maps to drop the coin
+  // even though the operator already accepted the structural total gap.
+  return reserveInfoWarning(
     "total-reserves-unreconciled",
-    `Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves}`,
+    `Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves} (validation skipped by config)`,
   );
 }
 

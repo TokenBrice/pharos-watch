@@ -131,7 +131,8 @@
         "[Maple]_syrupUSDG_Loop": "high",
         "[Agora]_PT_AUSD_Loop": "high",
         "[Aave]_USDT0": "medium",
-        "[Aave]_USDC": "medium"
+        "[Aave]_USDC": "medium",
+        "[Curvance]_AUSD": "high"
       },
       "coinIdMap": {
         "[Fluid]_fUSDT0": "usdt-tether",
@@ -168,7 +169,8 @@
         "[Maple]_syrupUSDG_Loop": "usdg-paxos",
         "[Agora]_PT_AUSD_Loop": "ausd-agora",
         "[Aave]_USDT0": "usdt-tether",
-        "[Aave]_USDC": "usdc-circle"
+        "[Aave]_USDC": "usdc-circle",
+        "[Curvance]_AUSD": "ausd-agora"
       },
       "depTypeMap": {
         "[Fluid]_fUSDT0": "collateral",
@@ -205,7 +207,8 @@
         "[Maple]_syrupUSDG_Loop": "collateral",
         "[Agora]_PT_AUSD_Loop": "collateral",
         "[Aave]_USDT0": "collateral",
-        "[Aave]_USDC": "collateral"
+        "[Aave]_USDC": "collateral",
+        "[Curvance]_AUSD": "collateral"
       },
       "renameMap": {
         "[Fluid]_fUSDT0": "Fluid fUSDT0",
@@ -248,7 +251,8 @@
         "[Maple]_syrupUSDG_Loop": "Maple syrupUSDG loop",
         "[Agora]_PT_AUSD_Loop": "Agora AUSD Pendle PT loop",
         "[Aave]_USDT0": "Aave USDT0",
-        "[Aave]_USDC": "Aave USDC"
+        "[Aave]_USDC": "Aave USDC",
+        "[Curvance]_AUSD": "Curvance AUSD"
       },
       "allowNegativeBuckets": [
         "[Strata]_srUSDe_Pendle_PT_Loop"

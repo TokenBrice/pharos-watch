@@ -298,6 +298,44 @@ describe("fetchEvmBranchBalancesReserves", () => {
     });
   });
 
+  it("retains a measured sub-tenth-percent tracked branch", async () => {
+    vi.mocked(fetchErc20Balance)
+      .mockResolvedValueOnce(1_000_000n)
+      .mockResolvedValueOnce(428n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
+      new Map([
+        ["Sovryn Zero ZUSD", 1],
+        ["Dollar on Chain DOC", 1],
+      ]),
+    );
+
+    const config = makeBranchConfig([
+      {
+        name: "Sovryn Zero ZUSD",
+        holder: "0xAAA",
+        token: { chain: "rootstock", address: "0xBBB", decimals: 0 },
+        risk: "medium",
+        priceUsd: 1,
+      },
+      {
+        name: "Dollar on Chain DOC",
+        holder: "0xAAA",
+        token: { chain: "rootstock", address: "0xCCC", decimals: 0 },
+        risk: "medium",
+        coinId: "doc-money-on-chain",
+        depType: "collateral",
+        priceUsd: 1,
+      },
+    ], { chain: "rootstock" });
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+
+    expect(result.slices).toEqual([
+      { name: "Sovryn Zero ZUSD", pct: 99.957, risk: "medium" },
+      { name: "Dollar on Chain DOC", pct: 0.043, risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
+    ]);
+  });
+
   it("uses an explicit branch price token for DefiLlama price lookup", async () => {
     vi.mocked(fetchErc20Balance).mockResolvedValue(1_000_000_000_000_000_000n);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["Receipt token", 75_000]]));
