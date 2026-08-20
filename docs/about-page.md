@@ -33,7 +33,7 @@ The page is organized into these sections, in order:
 1. `Why Pharos?`
 2. `Principles, AI Policy, and Corrections`
 3. `Who Is Building Pharos?`
-4. `Live Walkthrough`
+4. `Pharos in the Media`
 5. `What Pharos Tracks`
 6. `What Pharos Computes`
 7. `Companion Experiences`

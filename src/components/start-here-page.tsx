@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -13,6 +14,7 @@ import {
   START_HERE_SCORES,
   START_HERE_SHORTCUTS,
 } from "@/lib/start-here-content";
+import { WALKTHROUGH_APPEARANCES } from "@/lib/media-appearances";
 
 /** Index boundary: glossary items before this index are foundational terms (larger type). */
 const GLOSSARY_FOUNDATION_COUNT = 2;
@@ -293,6 +295,54 @@ function ScoresSection() {
   );
 }
 
+function WalkthroughSection() {
+  return (
+    <section aria-labelledby="start-walkthrough-title" className="mt-12 space-y-4 md:mt-16">
+      <div className="max-w-3xl space-y-2">
+        <p className="pharos-kicker">Prefer to watch</p>
+        <h2 id="start-walkthrough-title" className="text-2xl font-semibold tracking-tight text-foreground">
+          Watch someone drive Pharos end to end.
+        </h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Neither is a quick tour. Both are full sessions with someone using the dashboard live, hosted elsewhere and
+          recorded without a script.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-px overflow-hidden rounded-xl border border-border/65 bg-border/40 lg:flex-row">
+        {WALKTHROUGH_APPEARANCES.map((appearance) => (
+          <a
+            key={appearance.href}
+            href={appearance.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring group flex min-w-0 flex-1 items-start gap-3 bg-background p-4 transition-colors hover:bg-muted/30"
+          >
+            <Image
+              src={appearance.hostLogoSrc}
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 shrink-0 rounded-lg border border-border/60 bg-background/50"
+            />
+            <span className="min-w-0 space-y-1">
+              <span className="flex items-start gap-1 text-sm font-semibold text-foreground">
+                {appearance.title}
+                <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+              </span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                {appearance.host}
+                {appearance.durationMinutes ? ` · ${appearance.durationMinutes} min` : ""}
+              </span>
+              <span className="block text-sm leading-relaxed text-muted-foreground">{appearance.description}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function GlossarySection() {
   return (
     <section className="mt-12 space-y-3 md:mt-16">
@@ -528,6 +578,7 @@ export function StartHerePage() {
     >
       <StartHeroSection />
       <ScoresSection />
+      <WalkthroughSection />
       <GlossarySection />
       <FeatureAtlasSection />
       <PowerMovesSection />

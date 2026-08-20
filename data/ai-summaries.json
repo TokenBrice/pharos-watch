@@ -4326,5 +4326,27 @@
         "url": "https://joinopenstandard.com"
       }
     ]
+  },
+  "rd-rai-dollar": {
+    "title": "RAI, Finally Pinned to a Dollar",
+    "text": "The Reflexer team's answer to its own experiment: RAI's controller, this time aimed squarely at $1 — and, as ever, with no admin keys to fix it if they are wrong.\n\nRAI spent years proving that a stablecoin could be steered by an on-chain controller rather than a committee, and the mechanism worked; the market followed the redemption price faithfully. What it never solved was that the redemption price was not a dollar, and most of the market could not get past that. RAI Dollar keeps the machinery and pins the target. RD is an immutable CDP stablecoin on Ethereum where a PI controller reads a 24-hour TWAP of the market price and moves one system-wide borrow rate, bounded to 0.25-50% APY around a 2% bias, until supply and demand pull the price back to $1 — with Liquity's redemption arbitrage underneath as the floor. The par lever RAI made famous is still in the box, but bounded to $0.75-$1.30 and moving no faster than a tenth of a cent an hour, held for the extremes rather than left to float. Collateral sits in eight isolated branches — WETH, wstETH, rETH, weETH, WBTC, tBTC, sUSDS, and PAXG — each with its own troves, stability pool, and shutdown path, and the design answers the question Liquity V2 left open by routing a slice of healthy-branch fees to repair a branch that ends up undercollateralized, rather than convening a vote. Borrowers who dislike the redemption queue can pay a floating surcharge for a Redemption Shield that funds a matching discount for everyone who does not. It is a genuinely thoughtful synthesis, and it is also entirely theoretical: no contracts are deployed, the address registry reads TBD, the core repository is private, and the audits are still in progress — funded in part by an Ethereum Foundation subsidy awarded in August 2026. Immutability cuts both ways, and whatever ships is what runs, permanently.",
+    "updatedAt": "2026-08-20",
+    "authoredBy": "ai",
+    "model": "claude-opus-5[1m]",
+    "factsAsOf": "2026-08-20",
+    "sources": [
+      {
+        "label": "RAI Dollar — Introducing RAI Dollar",
+        "url": "https://docs.raidollar.tech/blog/introducing-rai-dollar"
+      },
+      {
+        "label": "RAI Dollar docs — How it stays stable",
+        "url": "https://docs.raidollar.tech/docs/introduction/how-it-stays-stable"
+      },
+      {
+        "label": "RAI Dollar docs — Audits & security",
+        "url": "https://docs.raidollar.tech/docs/reference/audits"
+      }
+    ]
   }
 }

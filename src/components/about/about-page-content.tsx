@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ExternalLink, GitBranch, Radio } from "lucide-react";
+import { ArrowRight, ExternalLink, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaqSection } from "@/components/faq-section";
+import { formatLongDate } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -20,6 +21,7 @@ import {
   TEAM_MEMBERS,
   type AboutFeatureItem,
 } from "@/lib/about-content";
+import { MEDIA_APPEARANCES, type MediaAppearance } from "@/lib/media-appearances";
 import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "@/lib/about-principles-content";
 import {
   ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
@@ -163,6 +165,72 @@ function AboutFeatureRow({ item }: { item: AboutFeatureItem }) {
   );
 }
 
+function appearanceDateLabel(date: string): string {
+  return formatLongDate(new Date(`${date}T00:00:00Z`), { utc: true });
+}
+
+function HostLogo({ appearance, size }: { appearance: MediaAppearance; size: number }) {
+  return (
+    <Image
+      src={appearance.hostLogoSrc}
+      alt={`${appearance.host} logo`}
+      width={size}
+      height={size}
+      className="shrink-0 rounded-lg border border-border/60 bg-background/50"
+    />
+  );
+}
+
+function FeaturedAppearance({ appearance }: { appearance: MediaAppearance }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <HostLogo appearance={appearance} size={56} />
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <p className="pharos-kicker">Featured</p>
+            <p className="text-base font-medium text-foreground">{appearance.title}</p>
+            <p className="text-xs text-muted-foreground">
+              {appearance.host} &middot;{" "}
+              <time dateTime={appearance.date}>{appearanceDateLabel(appearance.date)}</time>
+            </p>
+          </div>
+          <p>{appearance.description}</p>
+          <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+            <a href={appearance.href} target="_blank" rel="noopener noreferrer">
+              Watch the broadcast
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AppearanceRow({ appearance }: { appearance: MediaAppearance }) {
+  return (
+    <a
+      href={appearance.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="pharos-focus-ring flex items-start gap-4 rounded-lg px-1 py-4 transition-colors hover:bg-muted/40"
+    >
+      <HostLogo appearance={appearance} size={40} />
+      <div className="space-y-1">
+        <p className="inline-flex items-center gap-1 font-medium text-foreground">
+          {appearance.title}
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {appearance.host} &middot; <time dateTime={appearance.date}>{appearanceDateLabel(appearance.date)}</time>
+        </p>
+        <p>{appearance.description}</p>
+      </div>
+    </a>
+  );
+}
+
 function AboutSection({
   id,
   eyebrow,
@@ -227,6 +295,8 @@ export function AboutPageContent() {
     deadStablecoins: DEAD_STABLECOIN_COUNT,
   });
   const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT });
+  const featuredAppearance = MEDIA_APPEARANCES.find((appearance) => appearance.featured);
+  const otherAppearances = MEDIA_APPEARANCES.filter((appearance) => appearance !== featuredAppearance);
   const heroStats: readonly { label: string; value: string | number }[] = [
     { label: "Core", value: CORE_AGGREGATE_STABLECOIN_COUNT },
     { label: "Variants", value: ACTIVE_VARIANT_STABLECOIN_COUNT },
@@ -460,23 +530,19 @@ export function AboutPageContent() {
         </AboutSection>
 
         <AboutSection
+          id="media"
           eyebrow="In the wild"
-          title="Live Walkthrough"
-          contentClassName="flex flex-col gap-4 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-start"
+          title="Pharos in the Media"
+          contentClassName="space-y-4 text-sm leading-relaxed text-muted-foreground"
         >
-          <Radio className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-          <div className="space-y-3">
-            <p>
-              TokenBrice walked through Pharos live on Leviathan News &mdash; the motivation behind the project, the
-              data pipeline, and how the main risk signals should be read in practice.
-            </p>
-            <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
-              <a href="https://x.com/i/broadcasts/1qxvvkeMlyAxB" target="_blank" rel="noopener noreferrer">
-                Watch the Leviathan News broadcast
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-          </div>
+          {featuredAppearance ? <FeaturedAppearance appearance={featuredAppearance} /> : null}
+          {otherAppearances.length > 0 ? (
+            <div className="divide-y divide-border/60 border-t border-border/60">
+              {otherAppearances.map((appearance) => (
+                <AppearanceRow key={appearance.href} appearance={appearance} />
+              ))}
+            </div>
+          ) : null}
         </AboutSection>
 
         <AboutFeatureSection

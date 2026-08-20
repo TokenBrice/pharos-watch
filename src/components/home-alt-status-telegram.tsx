@@ -26,9 +26,10 @@ const LINE_LINK_CLASS =
 const ARROW_CLASS =
   "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground";
 
+// Deliberately status-derived prose only. `health.warnings` carries machine
+// slugs with id payloads (`active-price-coverage-incomplete:<coin ids>`), which
+// belong on /status/ — the line below links there for the detail.
 function statusMessage(health: HealthResponse): string {
-  const firstWarning = health.warnings[0];
-  if (firstWarning) return firstWarning;
   if (health.status === "healthy") return "All public pipelines operational";
   if (health.status === "degraded") return "Some data pipelines are delayed";
   return "Public health data is outdated";

@@ -406,6 +406,7 @@
     "aed-rakbank": "core-stablecoin",
     "bils-bitsofgold": "core-stablecoin",
     "kusd-kerne": "core-stablecoin",
-    "ousd-open-standard": "core-stablecoin"
+    "ousd-open-standard": "core-stablecoin",
+    "rd-rai-dollar": "core-stablecoin"
   }
 }

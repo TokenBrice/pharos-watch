@@ -1,0 +1,19 @@
+{
+  "id": "rd-rai-dollar",
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "RAI Dollar docs - The RD token",
+        "url": "https://docs.raidollar.tech/docs/rd/token"
+      },
+      {
+        "label": "RAI Dollar docs - Collaterals",
+        "url": "https://docs.raidollar.tech/docs/borrowing/collaterals"
+      }
+    ],
+    "evidence": "RD's documented design has no issuer freeze or blacklist surface: the token docs state RD is a standard ERC-20 with no admin keys and explicitly 'no whitelist, no blacklist', and the FAQ states the core contracts are immutable with no admin keys, no upgrade path, and no governance able to change parameters. Four of the eight collateral branches use issuer-controlled tokens that can freeze addresses or be upgraded (WBTC, weETH, sUSDS, PAXG), but that exposure sits in branch collateral rather than in holder control of RD, and the protocol responds by probing those tokens and shutting the affected branch down rather than by freezing RD holders. Pre-launch review: no contracts are deployed yet, so this is a documentation-based verdict to re-confirm against mainnet bytecode at promotion.",
+    "reviewer": "Claude pre-launch addition review",
+    "reviewedAt": "2026-08-20"
+  }
+}

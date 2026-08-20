@@ -1,6 +1,7 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { MEDIA_APPEARANCES } from "@/lib/media-appearances";
 
 /**
  * Escapes JSON-LD strings for safe embedding inside <script type="application/ld+json">.
@@ -76,6 +77,18 @@ export const PHAROS_ORG_NODE = {
       "Community support and future paid API access for heavy programmatic usage keep Pharos freely accessible.",
   },
   founder: { "@id": `${SITE_URL}#person-tokenbrice` },
+  // Third-party broadcasts and episodes about Pharos. Modeled as plain
+  // CreativeWork rather than VideoObject on purpose: this exists to corroborate
+  // the organization entity, and VideoObject would invite rich-result warnings
+  // for the thumbnail/description fields we have no reason to publish here.
+  subjectOf: MEDIA_APPEARANCES.map((appearance) => ({
+    "@type": "CreativeWork",
+    "@id": appearance.href,
+    name: appearance.title,
+    url: appearance.href,
+    datePublished: appearance.date,
+    author: { "@type": "Organization", name: appearance.host },
+  })),
 } as const;
 
 export function buildPharosOrganizationNode() {
