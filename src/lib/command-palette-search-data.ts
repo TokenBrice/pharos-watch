@@ -413,4 +413,5 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["bils-bitsofgold", "BILS", "BILS", "pre-launch"],
   ["kusd-kerne", "Kerne USD", "kUSD", "pre-launch"],
   ["ousd-open-standard", "Open USD", "OUSD", "pre-launch"],
+  ["rd-rai-dollar", "RAI Dollar", "RD", "pre-launch"],
 ] as const satisfies readonly CommandPaletteStablecoinSearchItem[];

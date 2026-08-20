@@ -1,0 +1,69 @@
+{
+  "id": "rd-rai-dollar",
+  "name": "RAI Dollar",
+  "symbol": "RD",
+  "oneLiner": "RD is a pre-launch immutable CDP stablecoin from the Reflexer team, targeting $1 across eight Ethereum collateral branches steered by an on-chain controller.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "decentralized"
+  },
+  "collateral": "Overcollateralized crypto locked in eight isolated Ethereum branches, each with its own troves, Stability Pool, interest rate, and price feed: WETH (110% MCR), wstETH (120%), rETH (120%), weETH (130%), WBTC (130%), tBTC (120%), sUSDS (105%), and PAXG (130%). Total RD supply is designed to equal outstanding trove debt plus a small gas-compensation float.",
+  "pegMechanism": "Immutable CDP targeting $1. Holders can redeem RD for branch collateral at par less a fee, setting a price floor; an on-chain PI controller reads a 24-hour TWAP of RD's market price from a curated Balancer pool and moves a single system-wide borrow rate (0.25%-50% APY around a 2% bias) to steer supply and demand. Under sustained extreme deviation a second lever adjusts the internal redemption price (par) within a bounded $0.75-$1.30 band at no more than $0.001/hour. A baton keeps rate mode and par mode from acting at once.",
+  "mechanismArchetype": "cdp",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://raidollar.tech/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/rai_dollar"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.raidollar.tech/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/rai-dollar"
+    }
+  ],
+  "governanceQuality": "immutable-code",
+  "status": "pre-launch",
+  "announcedDate": "2026-07",
+  "expectedLaunchDate": "2026-Q4",
+  "launchPhase": "auditing",
+  "launchPhaseDetail": "Built by the Reflexer team as a successor to RAI, combining Liquity's redemption floor and Stability Pool with a RAI-style controller pinned to $1. Docs and the introductory post went live 2026-07-21 and describe a finished mainnet deployment configuration for eight collateral branches, but no contract addresses are published (the deployed-addresses registry and the RDToken FAQ entry both read TBD), the core repository is private, and the audits reference page states external security audits are in progress with audit-targeted commits still to be tagged. RAI Dollar was selected for the Ethereum Foundation Audit Subsidy Program on 2026-08-04, with the team describing the subsidy as funding independent audits ahead of a public testnet and launch. Pharos holds RD at auditing until audit reports, a public testnet, or mainnet addresses are published.",
+  "milestones": [
+    {
+      "date": "2026-07-21",
+      "type": "announcement",
+      "title": "RAI Dollar announced with public docs and introductory post",
+      "description": "Reflexer's team introduced RD as an immutable, $1-targeting CDP stablecoin on Ethereum with no governance, admin keys, or upgrade path, combining Liquity redemptions and Stability Pool with a RAI-style rate and par controller.",
+      "sourceUrl": "https://docs.raidollar.tech/blog/introducing-rai-dollar"
+    },
+    {
+      "date": "2026-08-04",
+      "type": "audit",
+      "title": "Selected for the Ethereum Foundation Audit Subsidy Program",
+      "description": "The team said the subsidy will help fund independent security audits as it prepares for public testnet and launch. No audit reports have been published yet.",
+      "sourceUrl": "https://x.com/rai_dollar/status/2084630432319263214"
+    }
+  ],
+  "featuredContent": [
+    {
+      "type": "blog",
+      "url": "https://docs.raidollar.tech/blog/introducing-rai-dollar",
+      "title": "RAI Dollar: the immutable $1 stablecoin of DeFi",
+      "description": "Design walkthrough placing RD against LUSD, BOLD, and RAI, covering the rate and par controllers, Redemption Shield, auto-compounding Stability Pool deposits, and self-funded repair of undercollateralized branch debt.",
+      "source": "@rai_dollar"
+    },
+    {
+      "type": "tweet",
+      "url": "https://x.com/rai_dollar/status/2084630432319263214",
+      "title": "RAI Dollar selected for the Ethereum Audit Subsidy Program",
+      "source": "@rai_dollar"
+    }
+  ]
+}

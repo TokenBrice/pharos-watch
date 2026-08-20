@@ -40,7 +40,7 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
   hasTrackedVariantMeta,
 });
 
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 404;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 405;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -151,6 +151,7 @@ describe("tracked stablecoin metadata", () => {
       "bils-bitsofgold",
       "kusd-kerne",
       "ousd-open-standard",
+      "rd-rai-dollar",
     ]);
   });
 
