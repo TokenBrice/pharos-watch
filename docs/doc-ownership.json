@@ -253,8 +253,8 @@
     {
       "name": "safety-score-v9",
       "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9-*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts", "worker/migrations/0201_safety_score_history_v2.sql", "worker/migrations/0226_safety_score_v9_canonical_cache.sql"],
-      "docs": ["docs/report-cards.md", "docs/worker-infrastructure.md", "docs/data-flow-map.md", "docs/api-reference.md", "docs/telegram-alerts.md", "docs/tape-page.md", "docs/process/safety-score-equivalence-harness.md"],
-      "notes": ["V9 is the canonical Safety Score publication. Current consumers fail closed when the accepted publication is unavailable or held."]
+      "docs": ["docs/report-cards.md", "docs/worker-infrastructure.md", "docs/data-flow-map.md", "docs/api-reference.md", "docs/telegram-alerts.md", "docs/tape-page.md", "docs/process/safety-score-equivalence-harness.md", "docs/process/safety-score-curation-expiry-sweep.md"],
+      "notes": ["V9 is the canonical Safety Score publication. Current consumers fail closed when the accepted publication is unavailable or held. Curation expiry and stale reserve-review sweeps use the recurring process page."]
     },
     {
       "name": "pages-functions-hosting",
