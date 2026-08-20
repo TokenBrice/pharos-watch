@@ -193,6 +193,9 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
       identifiedUsd,
       residualUsd: Math.max(0, residualUsd),
       custodyNotionalUsd: optionalUsd(payload.custodyNotionalUsd),
+      // Canonical field consumed by adapter validation's material-unknown gate:
+      // the unreconciled protocolTvl residual as a share of the whole envelope.
+      unknownExposurePct: (Math.max(0, residualUsd) / protocolTvl) * 100,
       vaultNotionalUsd: optionalUsd(payload.vaultNotionalUsd),
       yieldDistributorsNotionalUsd: optionalUsd(payload.yieldDistributorsNotionalUsd),
       reserveFundNotionalUsd: optionalUsd(payload.reserveFundNotionalUsd),

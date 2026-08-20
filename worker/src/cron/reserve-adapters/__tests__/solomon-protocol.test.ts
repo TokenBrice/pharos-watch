@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 import {
   adaptSolomonProtocolData,
   type SolomonProtocolDataResponse,
@@ -79,6 +81,25 @@ describe("adaptSolomonProtocolData", () => {
     expect(result.metadata?.sourceTimestamp).toBe(
       Math.floor(Date.parse("2026-08-20T00:13:15.844Z") / 1000),
     );
+  });
+
+  it("publishes the unreconciled residual as canonical unknown exposure that degrades validation", () => {
+    const result = adaptSolomonProtocolData(FIXTURE);
+    const unknownExposurePct = result.metadata?.unknownExposurePct as number;
+    // The fixture's identified components cover ~32% of protocolTvl; the rest
+    // is the explicit unmapped residual.
+    expect(unknownExposurePct).toBeGreaterThan(60);
+    expect(unknownExposurePct).toBeLessThan(75);
+
+    const validation = validateAdapterOutput(result, {
+      adapter: getReserveAdapter("solomon-protocol") ?? undefined,
+      now: 1_787_097_700,
+    });
+    expect(
+      validation.warnings.some(
+        (warning) => warning.code === "material-unknown-exposure" && warning.effect === "degraded",
+      ),
+    ).toBe(true);
   });
 
   it("throws when protocolTvl is missing or non-positive", () => {

@@ -81,22 +81,24 @@ it lists 31-day curated compositions older than 21 days for assets with no live 
 snapshot in that capture, sorted by descending supply:
 
 ```bash
-npm run safety-score-v9:expiry-queue -- --capture "agents/v9-captures/capture-${stamp}.json"
+npm run safety-score-v9:expiry-queue -- --replay "${replay}"
 ```
 
 The queue is derived with the same admission gates production scoring uses
 (`buildSafetyScoreV9ReviewedCuratedFallbackReserveRows` /
 `buildSafetyScoreV9ReviewedStandaloneReserveRows`), re-evaluated at the capture clock
 plus the lookahead (`--days`, default 10), so it cannot drift from the 31-day window,
-the zero-known-unknown gate, or the separate 365-day prudential/audit path. `expiring`
-rows are admitted today but fail within the lookahead; `inadmissible` rows fail today
-for any gate reason.
+the zero-known-unknown gate, or the separate 365-day prudential/audit path. Only
+compositions that are admitted today and stop being admitted within the lookahead are
+listed — currently-inadmissible compositions already surface in the worklist's `RESV`
+and `DEP` streams and are deliberately excluded here.
 
-The columns are asset ID, status, curated `compositionAsOf`, age in days, whether the
-composition carries dependency-creating collateral links, and the adapter state
-(`none` or `silent-this-cycle`). Add these assets to the week's reserve-research queue
-even when they have no current `RESV` or `DEP` row. A fresh live snapshot in a later
-cycle removes the asset from this preventive queue; it does not retroactively make this
+The columns are asset ID, evaluated-set circulating USD (drain priority, largest
+first), curated `compositionAsOf`, age in days, whether the composition carries
+dependency-creating collateral links, and the adapter state (`none` or
+`silent-this-cycle`). Add these assets to the week's reserve-research queue even when
+they have no current `RESV` or `DEP` row. A fresh live snapshot in a later cycle
+removes the asset from this preventive queue; it does not retroactively make this
 cycle's missing snapshot live.
 
 ## 5. Close the weekly sweep

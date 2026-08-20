@@ -451,7 +451,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+    validation: {
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
+    },
   },
   "europ-independent-assurance": {
     primaryInputKinds: ["http-html"],
@@ -917,6 +920,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },

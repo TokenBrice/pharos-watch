@@ -129,25 +129,33 @@ async function readDeployment(
     );
   }
 
-  // Parallelizer pause state is per collateral: read it for every address
-  // instead of stamping the first collateral's flag deployment-wide.
+  // Redeem pause is GLOBAL per Parallelizer vault: LibSetters._setPauseState in
+  // parallel-protocol/parallel-parallelizer routes Mint/Burn to per-collateral
+  // flags but Redeem to the vault-wide `isRedemptionLive`, ignoring the
+  // collateral argument. One read per deployment; the flag applies to every
+  // collateral held by that vault.
+  const pauseRaw = await onchain.uint256(
+    deployment.vaultAddress,
+    encodePauseCall(collateralAddresses[0]!),
+  );
+  if (pauseRaw == null || (pauseRaw !== 0n && pauseRaw !== 1n)) {
+    throw new Error(`${ADAPTER_KEY}: ${deployment.chain} redemption pause check failed`);
+  }
+  const paused = pauseRaw === 1n;
+
   return Promise.all(collateralAddresses.map(async (address) => {
     const descriptor = configuredByAddress.get(address);
-    const [decimalsRaw, balanceRaw, oracleRaw, pauseRaw] = await Promise.all([
-      descriptor
-        ? Promise.resolve(BigInt(descriptor.decimals))
-        : onchain.uint256(
-            deployment.vaultAddress,
-            encodeAddressCall(SELECTORS.getCollateralDecimals, address),
-          ),
+    // Decimals are always read from the vault (addCollateral stores the
+    // token's on-chain decimals), so a configured descriptor is verified
+    // against chain truth instead of being trusted.
+    const [decimalsRaw, balanceRaw, oracleRaw] = await Promise.all([
+      onchain.uint256(
+        deployment.vaultAddress,
+        encodeAddressCall(SELECTORS.getCollateralDecimals, address),
+      ),
       onchain.uint256(address, `${ERC20_BALANCE_OF_SELECTOR}${encodeAddressWord(deployment.vaultAddress)}`),
       onchain.raw(deployment.vaultAddress, encodeAddressCall(SELECTORS.getOracleValues, address)),
-      onchain.uint256(deployment.vaultAddress, encodePauseCall(address)),
     ]);
-    if (pauseRaw == null || (pauseRaw !== 0n && pauseRaw !== 1n)) {
-      throw new Error(`${ADAPTER_KEY}: ${deployment.chain} ${address} redemption pause check failed`);
-    }
-    const paused = pauseRaw === 1n;
     if (decimalsRaw == null || decimalsRaw < 0n || decimalsRaw > 36n) {
       throw new Error(`${ADAPTER_KEY}: ${deployment.chain} ${address} returned invalid decimals`);
     }
@@ -232,22 +240,25 @@ export async function fetchParallelizerBalancesReserves(
   }
 
   const totalReserveUsd = positiveObservations.reduce((sum, observation) => sum + observation.value, 0);
-  // Pause is per collateral: only unpaused holdings are redeemable capacity,
-  // and the route is paused only when no unpaused positive holding remains.
+  // Redeem pause is global per vault (per chain deployment): a paused vault's
+  // whole basket is unavailable while other deployments keep redeeming, so
+  // capacity counts unpaused deployments only and a partially paused route
+  // publishes degraded.
   const unpausedReserveUsd = positiveObservations
     .filter((observation) => !observation.paused)
     .reduce((sum, observation) => sum + observation.value, 0);
-  const pausedCollateral = observations
-    .filter((observation) => observation.paused)
-    .map((observation) => `${observation.chain}:${observation.descriptor?.name ?? observation.address}`);
+  const pausedDeployments = [...new Set(
+    observations.filter((observation) => observation.paused).map((observation) => observation.chain),
+  )];
   const unlinked = slices.filter((slice) => !slice.coinId);
+  const unlinkedCollateralPct = unlinked.reduce((sum, slice) => sum + slice.pct, 0);
   const warnings = unlinked.length > 0
     ? [reserveInfoWarning(
         "parallelizer-unlinked-collateral",
-        `Parallelizer emitted ${unlinked.length} unlinked collateral slice(s): ${unlinked.map((slice) => slice.name).join(", ")}`,
+        `Parallelizer emitted ${unlinked.length} unlinked collateral slice(s) covering ${unlinkedCollateralPct.toFixed(6)}% of reserves: ${unlinked.map((slice) => slice.name).join(", ")}`,
       )]
     : [];
-  const routeStatus = pausedCollateral.length === 0
+  const routeStatus = pausedDeployments.length === 0
     ? "open" as const
     : unpausedReserveUsd > 0
       ? "degraded" as const
@@ -273,6 +284,9 @@ export async function fetchParallelizerBalancesReserves(
         ...(observation.descriptor?.coinId ? { coinId: observation.descriptor.coinId } : {}),
       })),
       totalReserveUsd,
+      unlinkedCollateralPct,
+      // Canonical field consumed by adapter validation's material-unknown gate.
+      unknownExposurePct: unlinkedCollateralPct,
       immediateRedeemableUsd: unpausedReserveUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: unpausedReserveUsd,
@@ -280,9 +294,9 @@ export async function fetchParallelizerBalancesReserves(
         freshnessKind: "same-run-onchain",
         routeStatus,
         routeStatusSource: "onchain",
-        routeStatusReason: pausedCollateral.length > 0
-          ? `Parallelizer redemption is paused for ${pausedCollateral.join(", ")}`
-          : "All configured Parallelizer redemption pause checks returned false",
+        routeStatusReason: pausedDeployments.length > 0
+          ? `Parallelizer redemption is paused on ${pausedDeployments.join(", ")}`
+          : "All Parallelizer deployment redemption pause checks returned false",
         ...(params.holderEligibility ? { holderEligibility: params.holderEligibility } : {}),
         ...(params.settlementDelaySec != null ? { settlementDelaySec: params.settlementDelaySec } : {}),
         sourceUrls: params.sourceUrls,

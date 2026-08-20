@@ -63,7 +63,7 @@ jobs:
             --output agents/sweep/worklist.md 2>&1 | tee agents/sweep/worklist-command.log
           worklist_status=${PIPESTATUS[0]}
           npm run safety-score-v9:expiry-queue -- \
-            --capture agents/sweep/capture.json \
+            --replay agents/sweep/replay.json \
             --output agents/sweep/expiry-queue.md 2>&1 | tee agents/sweep/queue-command.log
           queue_status=${PIPESTATUS[0]}
           echo "replay_status=$replay_status" >> "$GITHUB_OUTPUT"

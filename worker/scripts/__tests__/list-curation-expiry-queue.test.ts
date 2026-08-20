@@ -13,8 +13,7 @@ function isoDaysAgo(days: number): string {
   return new Date((CLOCK_SEC - days * DAY) * 1_000).toISOString().slice(0, 10);
 }
 
-function curatedMeta(id: string, overrides: Record<string, unknown> = {}): StablecoinMeta {
-  const compositionAsOf = (overrides.compositionAsOf as string | undefined) ?? isoDaysAgo(25);
+function curatedMeta(id: string, compositionAsOf: string, reviewOverrides: Record<string, unknown> = {}): StablecoinMeta {
   return {
     id,
     name: id,
@@ -37,60 +36,59 @@ function curatedMeta(id: string, overrides: Record<string, unknown> = {}): Stabl
       knownUnknownExposurePct: 0,
       compositionAsOf,
       sources: [{ label: "test", url: "https://example.com/" }],
-      ...(overrides.reserveReview as Record<string, unknown> | undefined),
+      ...reviewOverrides,
     },
-    ...Object.fromEntries(
-      Object.entries(overrides).filter(([key]) => key !== "reserveReview" && key !== "compositionAsOf"),
-    ),
   } as unknown as StablecoinMeta;
 }
 
-function capture(overrides: Record<string, unknown> = {}) {
+function replayFixture(options: {
+  liveReserveMap?: Record<string, unknown>;
+  supplyById?: Record<string, number>;
+} = {}) {
   return {
-    clockSec: CLOCK_SEC,
-    liveReserveMap: {},
-    liveToFallbackCoins: [],
-    aggregateCirculatingById: {},
-    ...overrides,
+    pipeline: {
+      fixedInput: {
+        clockSec: CLOCK_SEC,
+        liveReserveMap: options.liveReserveMap ?? {},
+      },
+      evaluatedSet: {
+        assets: Object.entries(options.supplyById ?? {}).map(([assetId, circulatingUsd]) => ({
+          assetId,
+          stressState: { exitPortfolio: { circulatingUsd } },
+        })),
+      },
+    },
   };
 }
 
 describe("buildCurationExpiryQueue", () => {
-  it("classifies expiring vs inadmissible, skips fresh and live-snapshot assets, and sorts by supply", () => {
+  it("lists only admitted compositions expiring within the lookahead, sorted by evaluated-set supply", () => {
     const metaById = new Map<string, StablecoinMeta>([
       // Admitted today, crosses the 31-day bound within the 10-day lookahead.
-      ["small-expiring", curatedMeta("small-expiring", { compositionAsOf: isoDaysAgo(25) })],
-      ["big-expiring", curatedMeta("big-expiring", { compositionAsOf: isoDaysAgo(25) })],
-      // Fails admission today (non-zero known unknown), independent of age.
-      [
-        "gap-inadmissible",
-        curatedMeta("gap-inadmissible", {
-          compositionAsOf: isoDaysAgo(5),
-          reserveReview: { knownUnknownExposurePct: 1.3 },
-        }),
-      ],
+      ["small-expiring", curatedMeta("small-expiring", isoDaysAgo(25))],
+      ["big-expiring", curatedMeta("big-expiring", isoDaysAgo(25))],
+      // Inadmissible today (non-zero known unknown): the worklist owns it.
+      ["gap-inadmissible", curatedMeta("gap-inadmissible", isoDaysAgo(5), { knownUnknownExposurePct: 1.3 })],
+      // Already past the 31-day bound: also worklist territory, not preventive.
+      ["expired-out", curatedMeta("expired-out", isoDaysAgo(40))],
       // Fresh composition: admitted now and at the lookahead — excluded.
-      ["fresh-ok", curatedMeta("fresh-ok", { compositionAsOf: isoDaysAgo(2) })],
-      // Expired but a live snapshot published this cycle — excluded.
-      ["live-covered", curatedMeta("live-covered", { compositionAsOf: isoDaysAgo(40) })],
+      ["fresh-ok", curatedMeta("fresh-ok", isoDaysAgo(2))],
+      // Would expire, but a live snapshot published this cycle — excluded.
+      ["live-covered", curatedMeta("live-covered", isoDaysAgo(25))],
     ]);
 
     const rows = buildCurationExpiryQueue(
-      capture({
+      replayFixture({
         liveReserveMap: { "live-covered": { slices: [] } },
-        aggregateCirculatingById: {
-          "big-expiring": { circulating: { peggedUSD: 5_000_000 } },
-          "small-expiring": { circulating: { peggedUSD: 10_000 } },
-        },
+        supplyById: { "big-expiring": 5_000_000, "small-expiring": 10_000 },
       }),
       10,
       metaById,
     );
 
-    expect(rows.map((row) => [row.assetId, row.status, row.supplyUsd])).toEqual([
-      ["gap-inadmissible", "inadmissible", 0],
-      ["big-expiring", "expiring", 5_000_000],
-      ["small-expiring", "expiring", 10_000],
+    expect(rows.map((row) => [row.assetId, row.supplyUsd])).toEqual([
+      ["big-expiring", 5_000_000],
+      ["small-expiring", 10_000],
     ]);
     expect(rows.every((row) => row.hasCollateralLinks)).toBe(true);
     expect(rows.every((row) => row.adapterState === "none")).toBe(true);
@@ -99,19 +97,19 @@ describe("buildCurationExpiryQueue", () => {
   it("renders the documented column set and an explicit empty state", () => {
     const markdown = renderCurationExpiryQueue(
       buildCurationExpiryQueue(
-        capture({ aggregateCirculatingById: { solo: { circulating: { peggedUSD: 1_234 } } } }),
+        replayFixture({ supplyById: { solo: 1_234 } }),
         10,
-        new Map([["solo", curatedMeta("solo", { compositionAsOf: isoDaysAgo(28) })]]),
+        new Map([["solo", curatedMeta("solo", isoDaysAgo(28))]]),
       ),
       10,
     );
     expect(markdown).toContain(
-      "| Asset | Status | Supply (USD) | compositionAsOf | Age (d) | Dependency links | Adapter |",
+      "| Asset | Supply (USD) | compositionAsOf | Age (d) | Dependency links | Adapter |",
     );
-    expect(markdown).toContain("| solo | expiring | 1,234 |");
+    expect(markdown).toContain("| solo | 1,234 |");
 
     expect(renderCurationExpiryQueue([], 10)).toContain(
-      "No curated composition is inadmissible or expiring within the lookahead window.",
+      "No admitted curated composition expires within the lookahead window.",
     );
   });
 });
