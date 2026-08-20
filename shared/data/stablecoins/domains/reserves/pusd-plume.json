@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Native USDC held by pUSD BoringVaults on Ethereum and Plume",
-      "pct": 90.03,
+      "pct": 85.87782843,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -14,7 +14,7 @@
     },
     {
       "name": "Bridged USDC.e held by the pUSD BoringVault on Plume",
-      "pct": 9.97,
+      "pct": 14.12217157,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -25,8 +25,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "OpenAI Codex Safety Score V9 backing review",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "Codex Safety Score V9 reserve refresh 2026-08-20",
     "confidence": "verified",
     "sources": [
       {
@@ -34,21 +34,21 @@
         "url": "https://docs.plume.org/plume/tokens/plume-usd"
       },
       {
-        "label": "Plume mainnet contract addresses",
+        "label": "Plume mainnet contract addresses (accessed 2026-08-20)",
         "url": "https://docs.plume.org/plume/developers/contract-addresses"
       },
       {
-        "label": "Ethereum block 25584897",
-        "url": "https://etherscan.io/block/25584897"
+        "label": "Ethereum latest block 25796849 (2026-08-20T14:12:59Z)",
+        "url": "https://etherscan.io/block/25796849"
       },
       {
-        "label": "Plume block 82560814",
-        "url": "https://explorer.plume.org/block/82560814"
+        "label": "Plume latest block 88408208 (2026-08-20T14:13:04Z)",
+        "url": "https://explorer.plume.org/block/88408208"
       }
     ],
-    "rationale": "Plume documents pUSD as a non-interest-bearing USDC wrapper and identifies the Plume pUSD, native USDC, and legacy USDC.e contracts. At Ethereum block 25584897 (2026-07-22T01:10:35Z), pUSD totalSupply was 45,069.364229 and its BoringVault held 1,004,104.519629 native USDC. At Plume block 82560814 (2026-07-22T01:10:39Z), pUSD totalSupply was 4,924,317.169452 and its BoringVault held 3,469,873.680870 native USDC plus 495,408.331533 USDC.e. The two-chain aggregate is 4,969,386.533681 pUSD against 4,969,386.532032 USDC claims, a 0.001649-token difference (99.99999997% reconciliation). The collateral mix normalizes to 90.03% native USDC and 9.97% bridged USDC.e; the bridged slice is rated medium for the additional bridge contract path.",
+    "rationale": "Plume's current documentation identifies pUSD as a 1:1 USDC wrapper and lists native USDC plus legacy USDC.e on Plume. Same-run reads at Ethereum block 25796849 (2026-08-20T14:12:59Z) found 50,155.811387 pUSD and 548,548.358112 native USDC in the BoringVault. At Plume block 88408208 (2026-08-20T14:13:04Z), the vault held 3,405,529.686841 native USDC and 650,227.999145 USDC.e against 4,554,150.234360 pUSD. Across both deployments, 4,604,306.044098 USDC claims reconcile to 4,604,306.045747 pUSD (0.001649-token difference); the current normalized mix is 85.87782843% native USDC and 14.12217157% bridged USDC.e. The bridged slice remains medium for the additional bridge contract path.",
     "compositionBasis": "Issuer-documented USDC-only composition reconciled from pUSD totalSupply and BoringVault token balances at timestamp-aligned Ethereum and Plume blocks",
-    "compositionAsOf": "2026-07-22",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
     "knownUnknownExposure": "No unresolved reserve constituent exposure in the issuer-documented and on-chain-reconciled composition.",
     "knownUnknownExposurePct": 0

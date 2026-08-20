@@ -22,8 +22,8 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-07-22",
-      "publishedAt": "2026-07-22",
+      "periodEnd": "2026-08-20",
+      "publishedAt": "2026-08-20",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
@@ -31,11 +31,11 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "OpenEden USDO reserve composition and supply API (snapshot 2026-07-22T08:00:19.092Z)",
+          "label": "OpenEden USDO reserve composition and supply API (snapshot 2026-08-20T08:00:31.209Z)",
           "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
         },
         {
-          "label": "OpenEden USDO transparency dashboard (accessed 2026-07-22)",
+          "label": "OpenEden USDO transparency dashboard (accessed 2026-08-20)",
           "url": "https://openeden.com/usdo/transparency"
         }
       ]

@@ -81,6 +81,10 @@
         "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-june-2026"
       },
       {
+        "label": "Hermetica July 2026 custodian attestation",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-july-2026"
+      },
+      {
         "label": "Hermetica USDh backing design",
         "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
       },
@@ -93,7 +97,7 @@
         "url": "https://blog.hermetica.fi/p/strc-the-second-yield-engine-for-usdh"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-30 of the June 2026 custodian attestation (snapshot 2026-06-30 17:00 UTC): USDh supply $2,465,576.78 against total backing assets $2,576,981.22 (103.92% coverage), split Ethereum Settlement Wallet $2,303,829.94 (89.4%), Stacks Redeeming Reserve $101,765.77 (4.0%), Reserve Fund $114,244.22 (4.4%: USDC $100,148.12 = 3.9% and USDh $14,096.10 = 0.5%), Copper $57,141.30 (2.2%), Ceffu $0.00, Mint Wallet $0.00. Slice weights are computed from these attested figures. Since the March 2026 snapshot the Ceffu balance went to zero and most backing moved to the Ethereum Settlement Wallet, whose contents the attestation does not itemize; Hermetica's April and July 2026 disclosures document new STRC digital-credit backing routes (Saturn USDat with Galaxy execution and Clear Street custody; tokenized STRCx issued by Backed Assets (JE) Limited via Kraken xStocks) that settle on Ethereum. The Reserve Fund's USDh portion is a circular exposure to the protocol's own token. Hermetica's backing docs still describe the delta-neutral BTC basis hedge and Copper/Ceffu off-exchange custody design.",
+    "rationale": "Write-time re-open 2026-07-30 of the June 2026 custodian attestation (snapshot 2026-06-30 17:00 UTC): USDh supply $2,465,576.78 against total backing assets $2,576,981.22 (103.92% coverage), split Ethereum Settlement Wallet $2,303,829.94 (89.4%), Stacks Redeeming Reserve $101,765.77 (4.0%), Reserve Fund $114,244.22 (4.4%: USDC $100,148.12 = 3.9% and USDh $14,096.10 = 0.5%), Copper $57,141.30 (2.2%), Ceffu $0.00, Mint Wallet $0.00. Slice weights are computed from these attested figures. Since the March 2026 snapshot the Ceffu balance went to zero and most backing moved to the Ethereum Settlement Wallet, whose contents the attestation does not itemize; Hermetica's April and July 2026 disclosures document new STRC digital-credit backing routes (Saturn USDat with Galaxy execution and Clear Street custody; tokenized STRCx issued by Backed Assets (JE) Limited via Kraken xStocks) that settle on Ethereum. The Reserve Fund's USDh portion is a circular exposure to the protocol's own token. Hermetica's backing docs still describe the delta-neutral BTC basis hedge and Copper/Ceffu off-exchange custody design. 2026-08-20 re-check: the latest July attestation adds a STRCx headline but still does not reconcile the Ethereum Settlement Wallet residual or Stacks Redeeming Reserve contents to the attested snapshot; the existing 93.4% evidence cap and basket-needs-split dispositions are accepted as honest.",
     "compositionBasis": "Hermetica June 2026 custodian attestation (2026-06-30 17:00 UTC snapshot) with venue weights computed from attested figures",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "USDt (Tether on Tezos)",
-      "pct": 91.26,
+      "pct": 95.59179212,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -20,7 +20,7 @@
     },
     {
       "name": "SIRS (XTZ/tzBTC LP tokens)",
-      "pct": 6.59,
+      "pct": 2.60534637,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Youves SIRS liquidity-pool tokens (XTZ/tzBTC)",
@@ -34,7 +34,7 @@
     },
     {
       "name": "XTZ (Tezos)",
-      "pct": 1.8,
+      "pct": 0.97560694,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Tezos native asset locked in Youves vault engines",
@@ -47,7 +47,7 @@
     },
     {
       "name": "tzBTC (wrapped Bitcoin)",
-      "pct": 0.35,
+      "pct": 0.82725457,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "tzBTC wrapped Bitcoin on Tezos",
@@ -61,48 +61,68 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "OpenAI Codex current Youves vault-state Safety Score V9 curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Finalized USDt V3 engine storage (Tezos level 14059094)",
-        "url": "https://api.tzkt.io/v1/contracts/KT1JmfujyCYTw5krfu9bSn7YbLYuz2VbNaje/storage?level=14059094"
+        "label": "Current Youves USDt engine storage",
+        "url": "https://api.tzkt.io/v1/contracts/KT1JmfujyCYTw5krfu9bSn7YbLYuz2VbNaje/storage"
       },
       {
-        "label": "Youves collateral details",
-        "url": "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details/"
+        "label": "Current Youves XTZ vault contexts",
+        "url": "https://api.tzkt.io/v1/bigmaps/287297/keys?active=true&limit=10000"
       },
       {
-        "label": "Pinned Youves mainnet engine registry",
-        "url": "https://github.com/youves-com/youves-sdk/blob/764ab33b49cbd132d952008f4259832d877fd4c6/src/networks.mainnet.ts#L850-L1070"
+        "label": "Current Youves SIRS vault contexts",
+        "url": "https://api.tzkt.io/v1/bigmaps/303307/keys?active=true&limit=10000"
+      },
+      {
+        "label": "Current Youves tzBTC vault contexts",
+        "url": "https://api.tzkt.io/v1/bigmaps/280575/keys?active=true&limit=10000"
+      },
+      {
+        "label": "Current Youves legacy tzBTC vault contexts",
+        "url": "https://api.tzkt.io/v1/bigmaps/361056/keys?active=true&limit=10000"
+      },
+      {
+        "label": "Current Youves SIRS LP reserve ratio",
+        "url": "https://api.tzkt.io/v1/contracts/KT1GqQqgLji2T5QMfzoAXgDt9T7ur1LhqfpD/storage"
+      },
+      {
+        "label": "Tezos head and XTZ/USD quote",
+        "url": "https://api.tzkt.io/v1/head"
+      },
+      {
+        "label": "Current BTC and USDt market quotes used for normalization",
+        "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,tether&vs_currencies=usd"
       }
     ],
-    "rationale": "Finalized Tezos state at level 14059094 (2026-07-14) shows uUSD debt of 11,172,864.36 across the active USDt V3 engine against 652,976.97 SIRS, 151,089.72 XTZ, and 34,460.85 tzBTC of debt across the remaining active and legacy engines, so the USDt branch carries about 93% of system debt. Weights are collateral-value estimates at each branch's enforced minimum collateral ratio (USDt 110%, SIRS/tzBTC 135%, XTZ 160%, legacy 200%), which normalizes the debt shares to 91.26/6.59/1.80/0.35 and replaces the stale 60/20/10/10 allocation that the pinned on-chain debt contradicts.",
-    "compositionBasis": "Finalized Youves engine debt at Tezos level 14059094 weighted by enforced minimum collateral ratios",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Current Tezos vault contexts at the 2026-08-20 head contain 630,593.314303 XTZ, 10,486,199 SIRS, 1.61999584 tzBTC in the active tzBTC engine plus 0.00069433 tzBTC in the legacy engine, and 13,408,639.257002 USDt. The current SIRS LP oracle reports 1,271,655,876 tzBTC atomic units against 26,125,307 SIRS, or 0.0000004867525101 tzBTC per SIRS; TzKT's head quote reports XTZ at $0.2168773476 and current BTC/USD and USDt/USD quotes normalize the balances to $13,400,138.18 USDt, $365,219.66 SIRS, $136,761.41 XTZ, and $115,965.24 tzBTC. The resulting full-composition weights are 95.59179212/2.60534637/0.97560694/0.82725457.",
+    "compositionBasis": "Current active Youves vault-context balances across all uUSD engines, the on-chain SIRS LP reserve ratio, and same-day market quotes used only to normalize collateral values",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "Actual per-vault collateralization exceeds the enforced minimums (target ratios are higher), so the crypto-branch shares are lower bounds and the USDt share an upper bound; savings-pool uUSD, accrued interest, and the SIRS LP token's internal XTZ/tzBTC split are not modeled. The uUSD savings pool holds deposited uUSD rather than reserve collateral and is excluded.",
+    "knownUnknownExposure": "All active uUSD engine vault contexts and collateral balances are identified; SIRS is represented as the protocol's LP token with its current on-chain tzBTC-per-SIRS reserve ratio. Savings-pool uUSD is a holder claim rather than reserve collateral and is excluded.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "SIRS (XTZ/tzBTC LP tokens)",
-        "pct": 6.59,
+        "pct": 2.60534637,
         "disposition": "untracked-exogenous-asset",
         "rationale": "SIRS is a Tezos-native LP token rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "XTZ (Tezos)",
-        "pct": 1.8,
+        "pct": 0.97560694,
         "disposition": "untracked-exogenous-asset",
         "rationale": "XTZ is an exogenous Layer-1 cryptoasset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "tzBTC (wrapped Bitcoin)",
-        "pct": 0.35,
+        "pct": 0.82725457,
         "disposition": "untracked-exogenous-asset",
         "rationale": "tzBTC is a wrapped-Bitcoin cryptoasset rather than a tracked stablecoin dependency."
       }

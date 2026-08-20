@@ -15,7 +15,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-08-20",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -30,11 +30,15 @@
       {
         "label": "HedgeCore hUSDC wrapper",
         "url": "https://docs.hedgecore.io/docs/protocol/husdc-wrapper"
+      },
+      {
+        "label": "HedgeCore analytics and monitoring",
+        "url": "https://docs.hedgecore.io/docs/protocol/analytics-monitoring"
       }
     ],
-    "rationale": "HedgeCore documents a USDC deposit path through StakeableAsset and StrategyRouter into a Venus USDC vault, where the vUSDC lending position accrues yield. The full reserve remains one linked USDC protocol-position slice; the issuer does not publish current vault balances or a further strategy allocation that would support a split.",
-    "compositionBasis": "Current HedgeCore protocol-architecture and yield-generation documentation",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Re-opened 2026-08-20: HedgeCore's current yield-generation and analytics documentation still specifies the sole USDC -> StakeableAsset/StrategyRouter -> VenusUSDVault path, and BSC block 117054691 confirms the documented sUSD, hUSDC, StrategyRouter, and Venus vault contracts. The current point reads do not publish a durable supply-to-vault reconciliation or a further strategy allocation, so the full documented reserve remains one linked USDC protocol-position slice.",
+    "compositionBasis": "HedgeCore yield-generation and analytics-monitoring documentation checked against BSC block 117054691",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve relationship is USDC routed through the documented HedgeCore and Venus path. Current vUSDC balances, liquidity, and contract allocation detail are not published as a durable composition.",
     "knownUnknownExposurePct": 0

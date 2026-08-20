@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Fasanara mGLOBAL (GDADF)",
-      "pct": 50.7,
+      "pct": 43.3,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "private-credit",
@@ -16,24 +16,22 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
-      "name": "Hedged STRCx",
-      "pct": 16.8,
-      "risk": "high",
-      "blacklistable": true,
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "Strategy Inc.",
+      "name": "f(x) fxSAVE",
+      "pct": 16.5,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "f(x) Protocol stability pool",
       "riskFactors": [
-        "credit",
+        "market",
         "liquidity",
         "counterparty",
-        "market",
-        "basis"
+        "smart-contract"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "seven-days"
     },
     {
       "name": "New Silver",
-      "pct": 8.3,
+      "pct": 10.5,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "private-credit",
@@ -47,7 +45,7 @@
     },
     {
       "name": "Liquid Cap stcUSD",
-      "pct": 5.1,
+      "pct": 10.3,
       "risk": "medium",
       "coinId": "stcusd-cap",
       "depType": "collateral",
@@ -62,23 +60,21 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "name": "Spark sUSDC",
-      "pct": 5.1,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Sky",
+      "name": "New Silver 2 Senior",
+      "pct": 6.2,
+      "risk": "medium",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "New Silver",
       "riskFactors": [
         "credit",
         "liquidity",
-        "smart-contract"
+        "counterparty"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "seven-days"
     },
     {
       "name": "Fasanara Genesis Fund",
-      "pct": 4.2,
+      "pct": 5.3,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "fund-share",
@@ -91,22 +87,8 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
-      "name": "Aave USDG",
-      "pct": 3.7,
-      "risk": "low",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Paxos / Aave",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "counterparty",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
       "name": "FalconX Institutional",
-      "pct": 3.3,
+      "pct": 4.1,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "private-credit",
@@ -122,7 +104,7 @@
     },
     {
       "name": "Morpho infiniFi Ecosystem Vault",
-      "pct": 1.8,
+      "pct": 2.3,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -137,25 +119,51 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "name": "Sentora PRIME Main",
-      "pct": 1,
+      "name": "Fasanara mGLOBAL temporary repo",
+      "pct": 1.3,
       "risk": "high",
-      "coinId": "pyusd-paypal",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Figure",
+      "blacklistable": true,
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Fasanara Capital",
       "riskFactors": [
         "credit",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Spark sUSDC",
+      "pct": 0.1,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "3F Bridge Facilitator",
+      "pct": 0.1,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "InfiniFi 3F Bridge Facilitator",
+      "riskFactors": [
         "liquidity",
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-27",
-    "reviewer": "Safety Score V9 Agent 09",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "Codex Safety Score V9 reserve refresh 2026-08-20",
     "confidence": "verified",
     "sources": [
       {
@@ -163,15 +171,89 @@
         "url": "https://eth-api.infinifi.xyz/api/protocol/data"
       },
       {
+        "label": "infiniFi siUSD rate history (latest point 2026-08-20T14:00:00Z)",
+        "url": "https://eth-api.infinifi.xyz/api/protocol/rate-history/siUSD?daysAgo=7"
+      },
+      {
+        "label": "infiniFi Ethereum deployment registry (temporary repo farm)",
+        "url": "https://github.com/InfiniFi-Labs/infinifi-protocol/blob/master/deployment/configuration/addresses.1.json"
+      },
+      {
+        "label": "Ethereum FarmRegistry/Accounting state (block 25797366)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Verified RWAEscrowRouterFarm source (temporary repo farm)",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0xdcc4992ee465adf97a88746ecec487a2b224f509"
+      },
+      {
         "label": "infiniFi vault documentation",
         "url": "https://docs.infinifi.xyz/vaults"
       }
     ],
-    "rationale": "The infiniFi protocol API was re-read on 2026-07-27. Its active-farm allocation explicitly identifies every material position, including Liquid Cap stcUSD at 5.1% and FalconX Institutional at 3.3%; the production adapter reports no unknown farm and only a negligible source-total reconciliation gap.",
-    "compositionBasis": "infiniFi protocol data API active-farm allocation",
-    "compositionAsOf": "2026-07-27",
+    "rationale": "On 2026-08-20, the API's 627,553.909679 USDC TVL gap (1.2904%) matches the on-chain FarmRegistry/Accounting temporary-repo row at 0xDCc4992ee465aDF97A88746ecEc487a2b224f509 (627,553.908962 USDC) plus RedeemController dust (0.000717 USDC) at block 25797366; the omitted position is therefore classified as Fasanara mGLOBAL temporary-repo exposure rather than unknown.",
+    "compositionBasis": "infiniFi /data plus Ethereum FarmRegistry/Accounting reconciliation",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unresolved material composition group remains: the only non-farm protocol position is RedeemController, whose source-total reconciliation gap is below the adapter's 0.5% threshold.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "No unresolved composition gap remains: the API omission is reconciled to the named on-chain Fasanara mGLOBAL temporary-repo farm and RedeemController dust.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fasanara mGLOBAL (GDADF)",
+        "pct": 43.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Fasanara mGLOBAL is a named private-credit fund position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "f(x) fxSAVE",
+        "pct": 16.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "f(x) fxSAVE is a named protocol position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "New Silver",
+        "pct": 10.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "New Silver is a named private-credit position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "New Silver 2 Senior",
+        "pct": 6.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "New Silver 2 Senior is a named private-credit position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "Fasanara Genesis Fund",
+        "pct": 5.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Fasanara Genesis is a named fund position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "FalconX Institutional",
+        "pct": 4.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "FalconX Institutional is a named lending position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 8,
+        "reserveName": "Fasanara mGLOBAL temporary repo",
+        "pct": 1.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The temporary repo is a named Fasanara RWA escrow farm, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "3F Bridge Facilitator",
+        "pct": 0.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "3F Bridge Facilitator is a named protocol position, not a tracked stablecoin dependency."
+      }
+    ]
   }
 }

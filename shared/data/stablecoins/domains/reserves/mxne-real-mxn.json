@@ -2,10 +2,9 @@
   "id": "mxne-real-mxn",
   "reserves": [
     {
-      "name": "Etherfuse CETES Stablebond (Mexican federal CETES exposure)",
+      "name": "Etherfuse CETES Stablebond",
       "pct": 100,
       "risk": "low",
-      "coinId": "cetes-etherfuse",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Etherfuse MX, S.A. de C.V. and the Mexican federal government",
       "riskFactors": [
@@ -21,29 +20,41 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Codex T46 live reserve re-verification",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "OpenAI Codex current-source reserve refresh",
     "confidence": "verified",
     "sources": [
       {
-        "label": "BHR México reasonable-assurance report dated June 26, 2026",
-        "url": "https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf"
+        "label": "BHR México reasonable-assurance report dated July 24, 2026",
+        "url": "https://api.etherfuse.com/statement/attestation/latest"
       },
       {
-        "label": "Etherfuse CETES Stablebond disclosure (current maturity and INDEVAL custody)",
+        "label": "Etherfuse CETES Stablebond current issuance and custody disclosure",
         "url": "https://app.etherfuse.com/bonds/cetes"
       },
       {
-        "label": "Brale MXNe launch disclosure (Etherfuse partnership)",
-        "url": "https://brale.xyz/blog/introducing-mxne"
+        "label": "Brale MXNe product page",
+        "url": "https://brale.xyz/stablecoins/MXNe"
       }
     ],
-    "rationale": "Brale's MXNe launch disclosure identifies the Etherfuse partnership; Etherfuse's current CETES page identifies the token as Mexican federal CETES with approximately seven-day maturities and INDEVAL custody; and BHR México's June 26, 2026 reasonable-assurance examination reconciles Etherfuse token commitments to bank/investment assets, including the CETES program at MXN 98,013,671 against MXN 92,643,402.94 token value (105.80%). The report names BBVA México, Casa de Bolsa BASE, and Actinver as reserve institutions. MXNe-specific liability and sub-portfolio balances remain undisclosed, so the 100% slice is a category/dependency classification, not an MXNe balance claim.",
-    "compositionBasis": "Brale MXNe product disclosure plus Etherfuse CETES disclosure and BHR México assets-and-liabilities reasonable-assurance examination",
-    "compositionAsOf": "2026-06-26",
+    "rationale": "Brale's current MXNe page identifies the Etherfuse partnership; Etherfuse's current CETES page identifies the token as Mexican federal CETES and states that brokerages use INDEVAL custody; and BHR México's July 24, 2026 reasonable-assurance examination reconciles CETES token value in circulation of MXN 93,193,000.05 to MXN 98,494,098 of backing assets (105.69%) held at BBVA México, STP, Actinver, and Casa de Bolsa BASE. The 100% row records the fully identified Etherfuse CETES Stablebond backing category, not an MXNe-specific balance claim.",
+    "compositionBasis": "Current Brale MXNe and Etherfuse CETES disclosures plus BHR México's July 24, 2026 assets-and-liabilities reasonable-assurance examination",
+    "compositionAsOf": "2026-07-24",
     "scope": "full-composition",
-    "knownUnknownExposure": "The tracked CETES reserve dependency is identified at 100%; MXNe-specific reserve balances, liability reconciliation, and the MXNe sub-portfolio split within Etherfuse are not separately disclosed.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The full backing category is identified as the Etherfuse CETES Stablebond; the current attestation covers Etherfuse's CETES issuance rather than a separately published MXNe sub-ledger, so no MXNe-specific balance claim is made.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Etherfuse CETES Stablebond",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "cetes-etherfuse is a tracked but quarantined upstream record outside the active scoring set, so the reviewed Etherfuse CETES Stablebond slice remains an exogenous reserve classification and does not create a dependency edge.",
+        "candidateCoinIds": [
+          "cetes-etherfuse"
+        ]
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
