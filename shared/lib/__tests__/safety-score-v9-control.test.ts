@@ -868,7 +868,7 @@ describe("Safety Score v9 economic control", () => {
       }),
     );
 
-    expect(peripheral.score).toBe(95);
+    expect(peripheral.score).toBe(100);
     expect(peripheral.components.find((component) => component.kind === "bridge")).toMatchObject({
       score: 45,
       binding: false,
@@ -990,7 +990,7 @@ describe("Safety Score v9 economic control", () => {
       }),
     );
 
-    expect(result).toMatchObject({ score: 95, state: "rated", reasons: [] });
+    expect(result).toMatchObject({ score: 100, state: "rated", reasons: [] });
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
     expect(result.structuralFailures).toEqual([]);
   });
@@ -1018,7 +1018,7 @@ describe("Safety Score v9 economic control", () => {
       }),
     );
 
-    expect(result).toMatchObject({ score: 95, state: "rated", reasons: [] });
+    expect(result).toMatchObject({ score: 100, state: "rated", reasons: [] });
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
   });
 
@@ -1272,7 +1272,7 @@ describe("Safety Score v9 economic control", () => {
     );
 
     expect(result.reasons).toEqual([]);
-    expect(result).toMatchObject({ score: 95, state: "rated" });
+    expect(result).toMatchObject({ score: 100, state: "rated" });
   });
 
   it("releases the known null-share bridge route materiality reason when the partition proves it subthreshold", () => {
@@ -1503,7 +1503,7 @@ describe("Safety Score v9 economic control", () => {
     const peripheral = resultFor(threshold - 0.001);
     expect(peripheral.reasons).toEqual([]);
     expect(peripheral.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
-    expect(peripheral.score).toBe(95);
+    expect(peripheral.score).toBe(100);
 
     const material = resultFor(threshold);
     expect(material.reasons.map((reason) => reason.code)).toContain("missing-bridge-route-rows");

@@ -43,6 +43,7 @@ import { fetchUsdrifRifReserves } from "./usdrif-rif";
 import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchOriginVaultBalancesReserves } from "./origin-vault-balances";
+import { fetchParallelizerBalancesReserves } from "./parallelizer-balances";
 import { fetchPusdVaultReserves } from "./pusd-vault";
 import { fetchQuantozTransparencyReserves } from "./quantoz-transparency";
 import { fetchReMetricsReserves } from "./re-metrics";
@@ -56,6 +57,8 @@ import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSghoWrapperReserves } from "./sgho-wrapper";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
+import { fetchSolomonProtocolReserves } from "./solomon-protocol";
+
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSpikoApiReserves } from "./spiko-api";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
@@ -122,6 +125,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "nest-vault-positions": fetchNestVaultPositionsReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   "origin-vault-balances": fetchOriginVaultBalancesReserves,
+  "parallelizer-balances": fetchParallelizerBalancesReserves,
   "pusd-vault": fetchPusdVaultReserves,
   "quantoz-transparency": fetchQuantozTransparencyReserves,
   "re-metrics": fetchReMetricsReserves,
@@ -135,6 +139,8 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "solstice-attestation": fetchSolsticeAttestationReserves,
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
+  "solomon-protocol": fetchSolomonProtocolReserves,
+
   "spiko-api": fetchSpikoApiReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
   "straitsx-independent-assurance": fetchStraitsxIndependentAssuranceReserves,

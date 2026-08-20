@@ -83,8 +83,12 @@ describe("Safety Score v9 methodology policy", () => {
     // fresh, scoped open control question takes the 69 ceiling instead of the
     // 55 control-unverified ceiling. Existing reasons, treatments, weights, and
     // the other named ceilings are unchanged.
+    // 9.3 (2026-08-20): mintPostureQuality["none-resolved"] moves 95 -> 100 —
+    // the mint component's top rung scores the proven absence of privileged
+    // mint ability instead of reserving unreachable headroom. Every other
+    // rung, credit, signal, gate, and ceiling is unchanged.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "106863d1b26fc03bc3e98912e15b736628a10c38bc72e17576aed438bdf73798",
+      "7ec08f98a3836d2de7e6265b77ee0c0806372c03067380ac5a34d65dd1a40143",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,

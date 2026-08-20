@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Ethena USDe backing",
-      "pct": 92.7,
+      "pct": 90.3297403,
       "risk": "high",
       "coinId": "usde-ethena",
       "depType": "collateral",
@@ -19,7 +19,7 @@
     },
     {
       "name": "Circle USDC backing",
-      "pct": 7.3,
+      "pct": 9.6702597,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -33,8 +33,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "TERRA-ULTRA backing review",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "OpenAI Codex current Ethena Whitelabel transparency review",
     "confidence": "verified",
     "sources": [
       {
@@ -50,12 +50,12 @@
         "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
       }
     ],
-    "rationale": "Ethena Whitelabel's live suiUSDe transparency API reported $13,106,396.843253 backing at 2026-07-15T00:00:57Z: $12,149,061.860536 USDe and $957,334.981717 USDC. Those amounts are 92.7% and 7.3% after rounding, with a reported backing ratio of 100.08%; the listed custodian amounts sum to $0.001 below the endpoint's totalBacking field.",
+      "rationale": "Ethena Whitelabel's live suiUSDe transparency API reported $13,108,619.396969 backing at 2026-08-20T00:03:19Z: $11,840,981.860536 USDe and $1,267,637.535433 USDC across the listed Sui and Ethereum custody/mint-redeem wallets. Those amounts normalize to 90.3297403% and 9.6702597%; the listed custodian amounts are $0.001 below totalBacking, an endpoint reconciliation difference rather than an unidentified reserve slice.",
     "compositionBasis": "Ethena Whitelabel issuer transparency API, with listed custody and mint/redeem wallets grouped by backing token.",
-    "compositionAsOf": "2026-07-15",
+      "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer's live transparency API identifies both backing assets and their aggregate quantities; its listed-custodian sum is $0.001 below totalBacking, an endpoint reconciliation difference rather than an unlinked reserve slice.",
-    "knownUnknownExposurePct": 0
+      "knownUnknownExposure": "The issuer's live transparency API identifies both backing assets and their aggregate quantities; its listed-custodian sum is $0.001 below totalBacking, an endpoint reconciliation difference rather than an unlinked reserve slice.",
+      "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

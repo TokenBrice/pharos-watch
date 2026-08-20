@@ -19,7 +19,6 @@ import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
@@ -949,7 +948,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     }
   });
 
-  it("reconciles curated collateral only when no live reserve snapshot exists", () => {
+  it("drops inadmissible curated collateral when no live reserve snapshot exists", () => {
     const metaById = new Map<string, V9ExtensionRegistryMeta>([
       [
         "alpha",
@@ -974,110 +973,40 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(curated.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
       source: "curated-reserve",
       diagnostics: { graphState: "valid", issueCodes: [] },
-      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
+      edges: [],
     });
     const compiledCurated = compileSafetyScoreV9FactSetFromFixedInput(noLiveSnapshot, curated);
-    expect(compiledCurated.assets.find((asset) => asset.assetId === "alpha")!.gaps).toContainEqual(
+    const compiledCuratedAlpha = compiledCurated.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(compiledCuratedAlpha.gaps).toContainEqual(
       expect.objectContaining({
-        reasonCode: "unreviewed-dependency-relationships",
-        responsibility: "producer-failed",
-        message: expect.stringContaining("exact fixed input contains no reserve envelope"),
+        reasonCode: "missing-reserve-composition",
       }),
     );
+    expect(compiledCuratedAlpha.dependencies.status.observationState).toBe("known");
+    expect(
+      evaluateV9FactSet(compiledCurated, V9_CANDIDATE_POLICY_V1)
+        .assets.find((asset) => asset.assetId === "alpha")!
+        .scoreInput.dependencyReasons.map((reason) => reason.code),
+    ).not.toContain("unreviewed-dependency-relationships");
 
-    // Owner ruling 2026-07-29 (usdh-hubble): the same unmapped collateral edge
-    // on an asset with NO live-reserve adapter at all is not a producer failure
-    // — no producer was ever expected to publish an envelope for it.
+    // The same inadmissible curated composition on an asset with NO live-reserve
+    // adapter also stays on the envelope-side reserve gap; it does not create a
+    // dependency gap for an edge that was never scorable this cycle.
     const noAdapter = exactTwoAssetFixedInput({ omitAlphaReserve: true });
-    const compiledNoAdapter = compileSafetyScoreV9FactSetFromFixedInput(
-      noAdapter,
-      buildSafetyScoreV9BaselineExtension(noAdapter, { metaById }),
-    );
-    expect(compiledNoAdapter.assets.find((asset) => asset.assetId === "alpha")!.gaps).toContainEqual(
+    const noAdapterExtension = buildSafetyScoreV9BaselineExtension(noAdapter, { metaById });
+    const compiledNoAdapter = compileSafetyScoreV9FactSetFromFixedInput(noAdapter, noAdapterExtension);
+    const compiledNoAdapterAlpha = compiledNoAdapter.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(compiledNoAdapterAlpha.dependencies.edges).toEqual([]);
+    expect(compiledNoAdapterAlpha.gaps).toContainEqual(
       expect.objectContaining({
-        reasonCode: "unreviewed-dependency-relationships",
-        responsibility: "method-unsupported",
-        message: expect.stringContaining("no live-reserve adapter is configured"),
+        reasonCode: "missing-reserve-composition",
       }),
     );
     expect(
       evaluateV9FactSet(compiledNoAdapter, V9_CANDIDATE_POLICY_V1)
         .assets.find((asset) => asset.assetId === "alpha")!
-        .scoreInput.dependencyReasons.find(
-          (reason) =>
-            reason.path === "dependency:collateral:beta:cause:" + "alpha%3Agap%3Aeffective-dependencies",
-        ),
-    ).toMatchObject({ responsibility: "method-unsupported" });
-    const evaluatedCurated = evaluateV9FactSet(compiledCurated, V9_CANDIDATE_POLICY_V1);
-    expect(
-      evaluatedCurated.assets
-        .find((asset) => asset.assetId === "alpha")!
-        .scoreInput.dependencyReasons.find(
-          (reason) =>
-            reason.path ===
-            "dependency:collateral:beta:cause:" +
-              "alpha%3Agap%3Aeffective-dependencies",
-        ),
-    ).toMatchObject({ responsibility: "producer-failed" });
-
-    const compiledAlpha = compiledCurated.assets.find((asset) => asset.assetId === "alpha")!;
-    const producerGap = compiledAlpha.gaps.find(
-      (gap) => gap.reasonCode === "unreviewed-dependency-relationships",
-    )!;
-    const issuerGap = {
-      ...producerGap,
-      gapId: "alpha:gap:effective-dependencies:issuer",
-      responsibility: "issuer-undisclosed" as const,
-    };
-    const mixedAssets = compiledCurated.assets.map((asset) =>
-      asset.assetId === "alpha"
-        ? {
-            ...asset,
-            dependencies: {
-              ...asset.dependencies,
-              status: {
-                ...asset.dependencies.status,
-                gapIds: [...asset.dependencies.status.gapIds, issuerGap.gapId].sort(),
-              },
-            },
-            gaps: [...asset.gaps, issuerGap].sort((left, right) =>
-              left.gapId.localeCompare(right.gapId),
-            ),
-          }
-        : asset,
-    );
-    const { v9FactSetDigest: _digest, ...compiledCore } = compiledCurated;
-    const mixedCore = { ...compiledCore, assets: mixedAssets };
-    const evaluatedMixed = evaluateV9FactSet(
-      {
-        ...mixedCore,
-        v9FactSetDigest: computeV9FactSetDigest(mixedCore),
-      },
-      V9_CANDIDATE_POLICY_V1,
-    );
-    expect(
-      evaluatedMixed.assets
-        .find((asset) => asset.assetId === "alpha")!
-        .scoreInput.dependencyReasons
-        .filter((reason) => reason.path.startsWith("dependency:collateral:beta"))
-        .map((reason) => ({
-          path: reason.path,
-          responsibility: reason.responsibility,
-        })),
-    ).toEqual([
-      {
-        path:
-          "dependency:collateral:beta:cause:" +
-          "alpha%3Agap%3Aeffective-dependencies",
-        responsibility: "producer-failed",
-      },
-      {
-        path:
-          "dependency:collateral:beta:cause:" +
-          "alpha%3Agap%3Aeffective-dependencies%3Aissuer",
-        responsibility: "issuer-undisclosed",
-      },
-    ]);
+        .scoreInput.dependencyReasons.map((reason) => reason.code),
+    ).not.toContain("unreviewed-dependency-relationships");
 
     const liveSnapshot = exactTwoAssetFixedInput();
     const liveMismatch = buildSafetyScoreV9BaselineExtension(liveSnapshot, { metaById });

@@ -41,6 +41,8 @@ An inherited claim is curated as a wrapper reserve slice naming the parent, not 
 
 Since `9.28` the same contract covers structured bridge controls via `bridgeRouteRisk.scopedQuestions`, with `controlRef` naming the control by `id`, exact label, or `controllerChain:controllerAddress`. Because the compiled bridge fact is the route-level merge of its structured controls, the merged overlay inherits the softening only when every unresolved contributor on that route is named by a fresh question — one unnamed unresolved sibling keeps the hard treatment. Conservative route-derived fallback controls, which have no reviewer behind them, never take a scoped question.
 
+Since `9.3` the live mint component's top rung is 100: a derived `none-resolved` posture states that no reviewed control can mint, authorize minting, or expand issuance on this component's scope, so the component scores its proven maximum. The motivating LUSD/BOLD case proves the absence outright on immutable, owner-renounced deployments. The oracle and bridge tier tables are independent calibrations and keep their existing values.
+
 The historical description follows.
 
 ## Methodology Versioning

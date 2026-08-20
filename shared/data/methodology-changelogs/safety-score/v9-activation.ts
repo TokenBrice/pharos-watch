@@ -1,5 +1,40 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_CURATED_DEPENDENCY_GATE: MethodologyChangelogEntry = {
+  version: "9.31",
+  title: "Curated dependency links share the reserve admission gate",
+  date: "2026-08-20",
+  effectiveAt: 1787238000,
+  summary:
+    "Curated basket links no longer assert a dependency relationship when the same reserve composition is inadmissible for Backing and no live reserve slices are present. The dependency overlay now degrades with the reserve envelope, leaving the existing reserve gap to carry the bounded score consequence instead of publishing an unrelated unreviewed-dependency reason.",
+  impact: [
+    "When a curated review is stale, incomplete, non-verified, or otherwise fails the existing full-composition admission path, its curated collateral edges are omitted for that cycle when no live reserve slices exist; the reserve envelope continues to publish its existing missing or partial-review gap",
+    "A verified, current curated composition keeps the same basket edges, and live-derived edges plus manual dependency reviews remain unchanged",
+    "No pillar weights, aggregation, caps, grade thresholds, or reason vocabulary changes; the release aligns dependency-edge admission with the reserve-envelope gate",
+    "On the current-tree replay, five affected assets keep their score and grade while six lose the stale dependency reason; jusd-juicedollar moves 40/D to 37/F because removing its expired full-weight curated edge also removes the inherited-backing path — accepted at release: the 2026-08-20 on-chain re-verification found the StablecoinBridgeUSDT reserve holding ~0.00042 USDT.e against ~10,460 JUSD supply, so the D grade rested on a stale optimistic edge",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
+export const SAFETY_SCORE_V9_NONE_RESOLVED_TOP_RUNG: MethodologyChangelogEntry = {
+  version: "9.3",
+  title: "A verified absence of privileged mint scores what it proves",
+  date: "2026-08-20",
+  effectiveAt: 1787234400,
+  summary:
+    "The mint component's top rung moves from 95 to 100. A derived `none-resolved` posture states that no reviewed control can mint, authorize minting, or expand issuance on this component's scope, so reserving five points at the top of that rung priced a residual the component does not measure. The motivating case is proven outright: LUSD and BOLD resolve `none-resolved` on immutable, owner-renounced deployments where no privileged minter can ever be added, yet their mint component was capped at a ceiling nothing could reach.",
+  impact: [
+    "`mintPostureQuality[\"none-resolved\"]` moves 95 to 100; every other posture rung, the reconciled grading rungs, the seasoned credit, and all merged mint signals are unchanged. The ladder keeps its invariants: 100 is the new top rung and bounded credits still cannot lift a lower posture class past the rung above it",
+    "The rung is mint-scoped, as the V9 derivation is: reviewed no-local-issuance wrappers and other assets whose mint component resolves `none-resolved` also take it, whatever their other control domains score. The oracle and bridge tier tables are independent calibrations and are unchanged",
+    "The curated `none-resolved-mint` annotation stays a banding-only value with no quality rung of its own; the depeg resolver consumes posture bands, not component scores, so no DDR verdict input moves",
+    "Measured on the 2026-08-20 publication capture: 30 evaluated assets move their mint component — 29 from 95 to 100 and srusd-reservoir from 92 to 97 through its unchanged -3 merged-signal penalty; 29 of them appear in published control breakdowns (syzusd-yuzu moves in the evaluated set only). Five assets move their Economic Control pillar 95 to 100 (susde-ethena, usdb-blast, usdk-kast, usdn-noble, xo-exodus) and exactly one published score moves — xo-exodus 56 to 57. No grade changes anywhere; usdn-noble's parent cap at 60 becomes its binding cap without moving its published score",
+    "The policy semantic digest rotates because a posture quality value changed; pillar weights, aggregation, caps, grade thresholds, and every score-bearing gate value are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_BRIDGE_SCOPED_QUESTIONS: MethodologyChangelogEntry = {
   version: "9.28",
   title: "Scoped open questions extend to bridge controls",

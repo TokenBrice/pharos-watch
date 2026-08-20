@@ -35,6 +35,7 @@ Public and internal material can share a source file only when the public text r
 | Reserves and exits | [live-reserves.md](./live-reserves.md), [redemption-backstops.md](./redemption-backstops.md) |
 | Risk methodology | [report-cards.md](./report-cards.md), [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md) |
 | Flow and freeze monitoring | [mint-burn-flows.md](./mint-burn-flows.md), [blacklist-tracker.md](./blacklist-tracker.md) |
+| Safety Score V9 operations | [process/safety-score-equivalence-harness.md](./process/safety-score-equivalence-harness.md), [process/safety-score-curation-expiry-sweep.md](./process/safety-score-curation-expiry-sweep.md) |
 | Yield | [yield-intelligence.md](./yield-intelligence.md), [yield-intelligence-operations.md](./yield-intelligence-operations.md) |
 | Telegram | [telegram-architecture.md](./telegram-architecture.md), [telegram-alerts.md](./telegram-alerts.md), [telegram-mini-app.md](./telegram-mini-app.md) |
 | Design and visualization | [design-context.md](./design-context.md), [design-language.md](./design-language.md), [design-tokens.md](./design-tokens.md), [data-visualization.md](./data-visualization.md) |

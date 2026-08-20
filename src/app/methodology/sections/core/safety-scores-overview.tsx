@@ -32,6 +32,13 @@ export function SafetyScoresOverview() {
         a unique normalized-name compatibility join.
       </p>
       <p>
+        Since methodology v9.31, curated collateral links share the reserve-envelope admission gate. When no live
+        reserve slices exist and the curated composition is stale or otherwise inadmissible, the dependency overlay
+        publishes no curated basket edges; the existing reserve-envelope gap carries the bounded consequence instead
+        of an unrelated unreviewed-dependency reason. Admissible curated reviews, live-derived edges, and manual
+        dependency reviews remain unchanged.
+      </p>
+      <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
         owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
         every originating owner downstream. Every attributed root receives a causal-root-qualified score path even

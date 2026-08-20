@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { normalizeChainId } from "@shared/lib/chains";
 import type { YieldRiskConfigProtocol } from "@shared/lib/yield-source-risk-registry";
@@ -71,12 +71,6 @@ export function getLendingOpportunityAbsoluteTvlFloor(chain: string | null | und
     : MIN_LENDING_POOL_TVL_USD;
 }
 
-function shouldApplyStablecoinSupplySizeGate(stablecoinId: string): boolean {
-  const meta = getActiveStablecoinMeta(stablecoinId);
-  if (!meta) return false;
-  return meta.flags.pegCurrency !== "GOLD" && meta.flags.pegCurrency !== "SILVER";
-}
-
 export function getRequiredLendingOpportunityTvlUsd(params: {
   stablecoinId: string;
   poolChain?: string | null;
@@ -84,12 +78,9 @@ export function getRequiredLendingOpportunityTvlUsd(params: {
   stablecoinSupplyById: Map<string, number>;
 }): number {
   const absoluteFloor = params.baseMinTvlUsd ?? getLendingOpportunityAbsoluteTvlFloor(params.poolChain);
-  if (!shouldApplyStablecoinSupplySizeGate(params.stablecoinId)) {
-    return absoluteFloor;
-  }
-
   const supplyUsd = params.stablecoinSupplyById.get(params.stablecoinId);
   if (typeof supplyUsd !== "number" || !Number.isFinite(supplyUsd) || supplyUsd <= 0) {
+    // Discovery gates fail open to the absolute floor when supply is unknown.
     return absoluteFloor;
   }
 
@@ -160,10 +151,6 @@ function passesLendingOpportunitySizeGate(params: {
   baseMinTvlUsd?: number;
   stablecoinSupplyById: Map<string, number>;
 }): boolean {
-  if (!shouldApplyStablecoinSupplySizeGate(params.stablecoinId)) {
-    return true;
-  }
-
   if (typeof params.sourceTvlUsd !== "number" || !Number.isFinite(params.sourceTvlUsd) || params.sourceTvlUsd <= 0) {
     return false;
   }
@@ -174,6 +161,88 @@ function passesLendingOpportunitySizeGate(params: {
     baseMinTvlUsd: params.baseMinTvlUsd,
     stablecoinSupplyById: params.stablecoinSupplyById,
   });
+}
+
+const FINAL_TVL_ELIGIBILITY_YIELD_TYPES: Record<string, true> = {
+  "lending-opportunity": true,
+  "fixed-yield": true,
+  "structured-tranche": true,
+};
+
+/**
+ * Final fail-closed TVL eligibility pass for external venue rows.
+ * Removes lending-opportunity / fixed-yield / structured-tranche candidates when
+ * stablecoin supply is unavailable, measured sourceTvlUsd is missing, or TVL is
+ * below max(chain absolute floor, supply share). Never admits on absolute floor alone.
+ * Native yield types (nav-appreciation, rebase, governance-set, lending-vault) are untouched.
+ * Discovery-time size gates keep their absolute-floor fallback when supply is missing.
+ */
+export function enforceExternalOpportunityTvlEligibility(
+  resolved: ResolvedYieldEntry[],
+  stablecoinSupplyById: Map<string, number>,
+): { "tvl-null": number; "tvl-thin": number; "supply-unavailable": number } {
+  let tvlNullDrops = 0;
+  let tvlThinDrops = 0;
+  let supplyUnavailableDrops = 0;
+  let writeIdx = 0;
+
+  for (let readIdx = 0; readIdx < resolved.length; readIdx += 1) {
+    const entry = resolved[readIdx]!;
+    const source = entry.yield;
+    const yieldType = source?.yieldType;
+    if (!source || !yieldType || !FINAL_TVL_ELIGIBILITY_YIELD_TYPES[yieldType]) {
+      resolved[writeIdx] = entry;
+      writeIdx += 1;
+      continue;
+    }
+
+    const supplyUsd = stablecoinSupplyById.get(entry.id);
+    if (typeof supplyUsd !== "number" || !Number.isFinite(supplyUsd) || supplyUsd <= 0) {
+      supplyUnavailableDrops += 1;
+      continue;
+    }
+
+    const sourceTvlUsd = source.sourceTvlUsd;
+    if (typeof sourceTvlUsd !== "number" || !Number.isFinite(sourceTvlUsd)) {
+      tvlNullDrops += 1;
+      continue;
+    }
+
+    const requiredTvlUsd = Math.max(
+      getLendingOpportunityAbsoluteTvlFloor(source.chain ?? null),
+      supplyUsd * MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY,
+    );
+    if (sourceTvlUsd < requiredTvlUsd) {
+      tvlThinDrops += 1;
+      continue;
+    }
+
+    resolved[writeIdx] = entry;
+    writeIdx += 1;
+  }
+
+  resolved.length = writeIdx;
+
+  if (tvlNullDrops > 0 || tvlThinDrops > 0 || supplyUnavailableDrops > 0) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "info",
+      event: "external-opportunity-tvl-eligibility",
+      message: "Dropped external opportunity candidates failing final TVL eligibility",
+      job: "sync-yield-data",
+      metadata: {
+        "tvl-null": tvlNullDrops,
+        "tvl-thin": tvlThinDrops,
+        "supply-unavailable": supplyUnavailableDrops,
+      },
+    });
+  }
+
+  return {
+    "tvl-null": tvlNullDrops,
+    "tvl-thin": tvlThinDrops,
+    "supply-unavailable": supplyUnavailableDrops,
+  };
 }
 
 function matchesExplicitYieldPool(

@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok T10 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "Pharos reserve research agent (2026-08-20 current-source refresh)",
     "confidence": "verified",
     "sources": [
       {
@@ -36,9 +36,9 @@
         "url": "https://docs.stablehodl.com/overview/about-hlusd"
       }
     ],
-    "rationale": "HeLa's current documentation states that HLUSD is fully backed by custodial USDC reserves managed by a licensed Australian financial institution and describes the peg as 1 HLUSD to 1 USDC. The complete direct reserve dependency is therefore USDC. 2026-07-30 re-check: no third-party reserve attestation, auditor report, proof-of-reserves dashboard, or dated reserve-to-liability reconciliation is published on docs.helalabs.com, StableHodl docs, helalabs.com (transparency/reserves/audit/attestation paths 404), or the whitepaper beyond a design intent for regular auditing.",
+    "rationale": "Current-source re-check on 2026-08-20: HeLa's live HLUSD documentation still states that HLUSD is fully backed by custodial USDC reserves managed by a licensed financial institution in Australia and that 1 HLUSD equals 1 USDC. The complete disclosed direct reserve dependency is therefore USDC (100%). No third-party reserve attestation, auditor report, proof-of-reserves dashboard, or dated reserve-to-liability reconciliation is published on the current HeLa or StableHodl documentation; the whitepaper describes regular-audit design intent without a dated report or named custodian.",
     "compositionBasis": "Current HeLa issuer documentation for the HLUSD reserve and redemption model",
-    "compositionAsOf": "2026-07-30",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
     "knownUnknownExposure": "No direct reserve asset remains unidentified in the issuer's current full-backing disclosure. Assurance cadence, third-party attestations, and named custodian continuity remain undisclosed.",
     "knownUnknownExposurePct": 0

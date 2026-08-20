@@ -1,17 +1,90 @@
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
+import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
+  buildSafetyScoreV9BaselineExtension,
   buildReviewedReserveClassifications,
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9-extension";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
 import {
   buildSafetyScoreV9ReserveClassifications,
   dependencyReserveSlices,
 } from "../safety-score-v9-extension-reserves";
+import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
+const DEPENDENCY_CLOCK_SEC = Date.UTC(2026, 7, 20) / 1_000;
+
+const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
+  adapter: "curated-validated",
+  version: 1,
+  semantics: "collateral-mix",
+  inputs: { primary: { kind: "onchain-solana" } },
+};
+
+const LINKED_RESERVES: ReserveSlice[] = [
+  {
+    name: "Beta stablecoin",
+    pct: 50,
+    risk: "low",
+    coinId: "beta",
+    depType: "collateral",
+    assetClass: "stablecoin",
+    issuerOrObligor: "asset:beta",
+    riskFactors: ["counterparty"],
+    liquidityHorizon: "immediate",
+  },
+  {
+    name: "Custodied cash",
+    pct: 50,
+    risk: "very-low",
+    assetClass: "cash",
+    issuerOrObligor: "issuer:alpha",
+    riskFactors: ["custody", "counterparty"],
+    liquidityHorizon: "immediate",
+    maturityDaysMax: 0,
+  },
+];
+
+function dependencyMeta(reviewedAt: string): V9ExtensionRegistryMeta {
+  return {
+    id: "alpha",
+    mechanismArchetype: "fiat-cash",
+    launchDate: "2020-01-01",
+    reserves: LINKED_RESERVES,
+    liveReservesConfig: LIVE_RESERVES_CONFIG,
+    reserveReview: {
+      reviewedAt,
+      reviewer: "fixture",
+      confidence: "verified",
+      sources: [{ label: "Reserve report", url: "https://example.com/reserves" }],
+      rationale: "Fixture review",
+      compositionBasis: "Fixture report",
+      compositionAsOf: reviewedAt,
+      scope: "full-composition",
+      knownUnknownExposure: "None",
+      knownUnknownExposurePct: 0,
+    },
+  };
+}
+
+function dependencyMetaById(reviewedAt: string): Map<string, V9ExtensionRegistryMeta> {
+  return new Map([
+    ["alpha", dependencyMeta(reviewedAt)],
+    [
+      "beta",
+      {
+        id: "beta",
+        mechanismArchetype: "fiat-cash",
+        launchDate: "2020-01-01",
+      },
+    ],
+  ]);
+}
 
 function reviewedMeta(
   reserves: ReserveSlice[],
@@ -89,6 +162,77 @@ describe("reviewed curated reserve admission", () => {
       evidenceClass: "static-validated",
       provenance: "curated",
       rows,
+    });
+  });
+});
+
+describe("curated reserve dependency admission", () => {
+  it("drops curated basket edges when the reserve review is expired", () => {
+    const fixed = makeV9TwoAssetFixedInput({
+      omitAlphaReserve: true,
+      liveToFallbackCoins: ["alpha"],
+      clockSec: DEPENDENCY_CLOCK_SEC,
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: dependencyMetaById("2026-01-01"),
+    });
+    const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(alpha.dependencies).toMatchObject({
+      source: "curated-reserve",
+      diagnostics: { graphState: "valid", issueCodes: [] },
+      edges: [],
+    });
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const compiledAlpha = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(compiledAlpha.reserveStatus.observationState).toBe("missing");
+    expect(compiledAlpha.gaps).toContainEqual(
+      expect.objectContaining({ reasonCode: "missing-reserve-composition" }),
+    );
+    expect(
+      evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1)
+        .assets.find((asset) => asset.assetId === "alpha")!
+        .scoreInput.dependencyReasons.map((reason) => reason.code),
+    ).not.toContain("unreviewed-dependency-relationships");
+  });
+
+  it("keeps curated basket edges when the review is admissible", () => {
+    const fixed = makeV9TwoAssetFixedInput({
+      omitAlphaReserve: true,
+      liveToFallbackCoins: ["alpha"],
+      clockSec: DEPENDENCY_CLOCK_SEC,
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: dependencyMetaById("2026-08-19"),
+    });
+    const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(alpha.dependencies).toMatchObject({
+      source: "curated-reserve",
+      diagnostics: { graphState: "valid", issueCodes: [] },
+      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
+    });
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    expect(
+      evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1)
+        .assets.find((asset) => asset.assetId === "alpha")!
+        .scoreInput.dependencyReasons.map((reason) => reason.code),
+    ).not.toContain("unreviewed-dependency-relationships");
+  });
+
+  it("leaves live-derived edges unchanged even when the curated review is expired", () => {
+    const fixed = makeV9TwoAssetFixedInput({
+      mapAlphaCollateral: true,
+      clockSec: DEPENDENCY_CLOCK_SEC,
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: dependencyMetaById("2026-01-01"),
+    });
+    const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(alpha.dependencies).toMatchObject({
+      source: "live-reserve",
+      diagnostics: { graphState: "valid", issueCodes: [] },
+      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
     });
   });
 });

@@ -2,90 +2,49 @@
   "id": "xo-exodus",
   "reserves": [
     {
-      "name": "Tokenized treasury collateral",
-      "pct": 97.9,
+      "name": "M0 M held in the XO extension vault",
+      "pct": 100,
       "risk": "low",
-      "coinId": "ustb-superstate",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Invesco Short Duration US Government Securities Fund",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Cash",
-      "pct": 2.1,
-      "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "M0 permissioned issuers' eligible custody arrangements",
-      "riskFactors": [
-        "custody",
-        "counterparty",
-        "liquidity"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Non-eligible token collateral",
-      "pct": 0.000115,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed non-eligible token collateral obligor",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Foundation permissioned issuers",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (M0 GraphQL API unreachable this pass; retained prior live capture)",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "Codex V9 reserve curation",
     "confidence": "probable",
     "sources": [
       {
-        "label": "MoonPay XO announcement",
-        "url": "https://www.moonpay.com/newsroom/exodus-stablecoin"
+        "label": "Exodus XO Cash launch announcement",
+        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
       },
       {
-        "label": "MoonPay stablecoin terms",
-        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+        "label": "M0 Dashboard — XO Cash powered by M0",
+        "url": "https://dashboard.m0.org/"
       },
       {
-        "label": "M0 collateral-composition API recipe",
-        "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
+        "label": "M0 Extensions documentation",
+        "url": "https://docs.m0.org/protocol/extensions"
       },
       {
-        "label": "M0 Protocol API GraphQL endpoint (returned HTTP 500 on 2026-08-08)",
-        "url": "https://protocol-api.m0.org/graphql"
+        "label": "M0 on Solana documentation",
+        "url": "https://docs.m0.org/protocol/solana"
+      },
+      {
+        "label": "Solana M0 extension transaction (XO ↔ M wrap/unwrap)",
+        "url": "https://solscan.io/tx/2LrRUirVnrcqJTS9LWS4aekoWNkTMLkpcrugS7QCDdpKcWJeJdUFTbTs5F9fcn7rc4EptoX5nmkkyczxUdhWg9ea"
       }
     ],
-    "rationale": "Re-checked 2026-08-08: the M0 Protocol API GraphQL endpoint returned HTTP 500 for CollateralCurrent and CollateralTimeSeries, so the previously captured M0 collateral mix is retained. MoonPay continues to describe XO as built on M0 infrastructure; the eligible token collateral is linked to USTB via the live adapter. XO-specific provider shares remain undisclosed.",
-    "compositionBasis": "Prior exact live M0 collateral capture for XO, MoonPay XO announcement, and stablecoin terms",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Exodus identifies XO as issued and managed by MoonPay using M0 infrastructure, while M0's extension documentation defines the wrap/unwrap model over $M. Current Solana transactions for the XO mint and the Solana $M mint execute through the M0 Portal and extension programs with Wrap/Unwrap, MintTo, and Burn instructions, establishing XO as a serial M0 extension claim rather than a parallel reserve basket. XO-specific legal custody terms and provider shares remain undisclosed, so the upstream M reserve is inherited rather than duplicated here.",
+    "compositionBasis": "M0 extension architecture, Exodus launch disclosure, and current Solana XO/$M wrap/unwrap transaction",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "M0 reports a 0.000115% non-eligible token-collateral residual below the displayed two-slice precision and does not identify its obligor; XO-specific provider shares remain undisclosed.",
-    "knownUnknownExposurePct": 0.000115,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 2,
-        "reserveName": "Non-eligible token collateral",
-        "pct": 0.000115,
-        "disposition": "insufficient-evidence",
-        "rationale": "The first-party current endpoint reports this residual but does not identify the token or obligor."
-      }
-    ]
+    "knownUnknownExposure": "No direct reserve asset remains unidentified: the whole claim is the tracked m-m0 parent, whose own collateral composition is reviewed on that entry. XO-specific vault custody and provider allocation remain undisclosed.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

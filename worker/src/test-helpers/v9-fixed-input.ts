@@ -536,11 +536,13 @@ export function makeV9TwoAssetFixedInput(
     omitAlphaReserve?: boolean;
     /** Assets that declare a live-reserve adapter but published no snapshot this run. */
     liveToFallbackCoins?: string[];
+    clockSec?: number;
   } = {},
 ) {
-  const alpha = makeV9FixedInput();
+  const alpha = makeV9FixedInput({ clockSec: options.clockSec });
   const alphaDex = alpha.dexLiqMap.alpha!;
   const alphaPeg = alpha.pegDataById.alpha!;
+  const betaObservedAtSec = alpha.clockSec - 100;
   const liveReserveMap = structuredClone(alpha.liveReserveMap);
   if (options.omitAlphaReserve) delete liveReserveMap.alpha;
   return reseal(alpha, {
@@ -553,7 +555,7 @@ export function makeV9TwoAssetFixedInput(
       ...alpha.dexLiqMap,
       beta: {
         ...alphaDex,
-        exitRouteObservations: [v9ExitRouteObservation("dex:beta")],
+        exitRouteObservations: [v9ExitRouteObservation("dex:beta", betaObservedAtSec, "ethereum", alpha.clockSec)],
       },
     },
     resolvedBlacklistStatuses: { alpha: false, beta: false },

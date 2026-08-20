@@ -41,20 +41,36 @@
   ],
   "governanceQuality": "multisig",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "evm-branch-balances",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "eur0-usual",
     "display": {
-      "url": "https://tech.usual.money/overview/features/eur0",
-      "label": "Usual EUR0 docs"
+      "url": "https://tech.usual.money/smart-contracts/contract-deployments",
+      "label": "Usual EUR0 Collateral Treasury"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "rpcMode": "etherscan-proxy"
       }
+    },
+    "params": {
+      "branches": [
+        {
+          "name": "Spiko EUTBL",
+          "holder": "0x11D75bC93aE69350231D8fF0F5832A697678183E",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+            "decimals": 5
+          },
+          "risk": "low",
+          "coinId": "eutbl-spiko",
+          "depType": "collateral"
+        }
+      ]
     }
   },
   "launchDate": "2025-10-03"

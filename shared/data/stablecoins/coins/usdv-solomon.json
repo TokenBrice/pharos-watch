@@ -67,57 +67,19 @@
   "custodyModel": "cex",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "attestation-pdf-index",
+    "adapter": "solomon-protocol",
     "version": 1,
-    "semantics": "attestation-mix",
+    "semantics": "collateral-mix",
     "breakerScope": "usdv-solomon",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "display": {
-      "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
-      "label": "Solomon attestations"
+      "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+      "label": "Solomon protocol data"
     },
     "inputs": {
       "primary": {
-        "kind": "http-html",
-        "url": "https://github.com/SolomonLabs/attestations/tree/main/ceffu/2026"
+        "kind": "http-json",
+        "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data"
       }
-    },
-    "params": {
-      "slices": [
-        {
-          "name": "Ceffu-custodied BTC with Binance inverse-perpetual hedge",
-          "pct": 26.13,
-          "risk": "medium"
-        },
-        {
-          "name": "USDC on-chain vault and yield-distributor balances",
-          "pct": 5.42,
-          "risk": "low",
-          "coinId": "usdc-circle",
-          "depType": "collateral",
-          "blacklistable": true
-        },
-        {
-          "name": "USDT on-chain vault balance",
-          "pct": 1.16,
-          "risk": "low",
-          "coinId": "usdt-tether",
-          "depType": "collateral",
-          "blacklistable": true
-        },
-        {
-          "name": "Ceffu-custodied SOL with Binance inverse-perpetual hedge",
-          "pct": 0.17,
-          "risk": "high"
-        },
-        {
-          "name": "Unmapped reserve positions (issuer API does not reconcile reserves to supply)",
-          "pct": 67.12,
-          "risk": "very-high"
-        }
-      ]
     }
   },
   "notices": [

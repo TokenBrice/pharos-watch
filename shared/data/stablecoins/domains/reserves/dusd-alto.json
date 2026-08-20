@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "frxUSD held by the DUSD USM",
-      "pct": 90.4,
+      "pct": 90.39360646,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral",
@@ -18,7 +18,7 @@
     },
     {
       "name": "WETH / wstETH / rETH mint-market collateral",
-      "pct": 5.9,
+      "pct": 5.94935962,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum native asset and liquid staking tokens (WETH, Lido wstETH, Rocket Pool rETH) posted as collateral in Alto DUSD mint markets",
@@ -31,7 +31,7 @@
     },
     {
       "name": "sUSDe mint-market collateral",
-      "pct": 3.6,
+      "pct": 3.61325810,
       "risk": "high",
       "coinId": "susde-ethena",
       "depType": "collateral",
@@ -49,7 +49,7 @@
     },
     {
       "name": "Syrup USDC mint-market collateral",
-      "pct": 0.1,
+      "pct": 0.04377582,
       "risk": "medium",
       "coinId": "syrupusdc-maple",
       "depType": "collateral",
@@ -64,26 +64,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Codex Safety Score V9 reserve batch 7; R13 structuring pass",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "Codex Safety Score V9 reserve refresh 2026-08-20",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Alto live protocol snapshot API",
-        "url": "https://altofoundation.org/api/protocol-snapshot"
+        "label": "Alto live protocol snapshot API (generated 2026-08-20T14:07:32Z)",
+        "url": "https://www.altofoundation.org/api/protocol-snapshot"
       },
       {
         "label": "Alto DUSD mint and borrow documentation",
         "url": "https://docs.alto.money/alto-protocol/dusd"
       },
       {
-        "label": "DUSD USM on Blockscout",
+        "label": "DUSD USM on Blockscout (Ethereum block 25796852)",
         "url": "https://eth.blockscout.com/address/0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91"
       }
     ],
-    "rationale": "Alto documents that only mint markets create DUSD; borrow markets redistribute lender-supplied DUSD and are not backing sources. The 2026-07-21 issuer API reports active mint-market DUSD debt of 32,735.51647 against sUSDe, 3,903.60575 against WETH, 885.53777 against syrupUSDC, 633.58275 against rETH, and 49,500.86509 against wstETH. Combining those debts with the USM's 822,997.840132 frxUSD balance at Ethereum block 25580115 still rounds to 90.4% frxUSD, 5.9% ETH/LST collateral, 3.6% sUSDe, and 0.1% syrupUSDC. The 2026-08-08 R13 pass added explicit V9 scoring fields (assetClass, issuerOrObligor, riskFactors, liquidityHorizon) to every slice, including the tracked-stablecoin slices.",
+    "rationale": "Alto documents that only mint markets create DUSD; borrow markets redistribute lender-supplied DUSD and are not backing sources. The issuer API generated 2026-08-20 reports active mint-market DUSD debt of 32,862.242891 against sUSDe, 3,911.386452 against WETH, 398.561458 against syrupUSDC, 635.108356 against rETH, and 49,620.058653 against wstETH. A same-run Ethereum block 25796852 read found 822,997.840132 frxUSD in the DUSD USM. Combining those values yields 90.39360646% frxUSD, 5.94935962% combined WETH/wstETH/rETH collateral, 3.61325810% sUSDe, and 0.04377582% syrupUSDC; all active mint paths are identified and the V9 scoring fields remain explicit.",
     "compositionBasis": "Current issuer API mint-market DUSD debt combined with the on-chain USM underlying balance",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
     "knownUnknownExposure": "All active DUSD issuance paths and their direct backing assets are identified.",
     "knownUnknownExposurePct": 0,
@@ -91,7 +91,7 @@
       {
         "reserveIndex": 1,
         "reserveName": "WETH / wstETH / rETH mint-market collateral",
-        "pct": 5.9,
+        "pct": 5.94935962,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The slice contains ETH and liquid-staking collateral rather than a tracked stablecoin dependency."
       }

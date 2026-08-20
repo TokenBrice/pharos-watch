@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "frxUSD (Ethereum branch)",
-      "pct": 11.7839,
+      "pct": 0.006495,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral",
@@ -18,7 +18,7 @@
     },
     {
       "name": "sfrxUSD (Ethereum branch)",
-      "pct": 22.4151,
+      "pct": 37.936296,
       "risk": "medium",
       "coinId": "sfrxusd-frax",
       "depType": "collateral",
@@ -33,7 +33,7 @@
     },
     {
       "name": "USDe (Ethereum + HyperEVM branches)",
-      "pct": 6.4615,
+      "pct": 0.805963,
       "risk": "medium",
       "coinId": "usde-ethena",
       "depType": "collateral",
@@ -51,7 +51,7 @@
     },
     {
       "name": "sUSDe (Ethereum + HyperEVM branches)",
-      "pct": 27.2609,
+      "pct": 37.105214,
       "risk": "medium",
       "coinId": "susde-ethena",
       "depType": "collateral",
@@ -69,7 +69,7 @@
     },
     {
       "name": "sUSDS (Base branch)",
-      "pct": 3.6284,
+      "pct": 11.906074,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -84,7 +84,7 @@
     },
     {
       "name": "USDS (Base branch)",
-      "pct": 0.0009,
+      "pct": 0.000997,
       "risk": "low",
       "coinId": "usds-sky",
       "depType": "collateral",
@@ -98,8 +98,8 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "USDC (Avalanche branch)",
-      "pct": 0.7326,
+      "name": "USDC (Base + Avalanche branches)",
+      "pct": 0.026161,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -115,7 +115,7 @@
     },
     {
       "name": "ygamiUSDC vault shares (Avalanche branch)",
-      "pct": 27.7166,
+      "pct": 12.2128,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -131,8 +131,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+    "reviewedAt": "2026-08-20",
+    "reviewer": "Codex Safety Score V9 dependency-cap remediation",
     "confidence": "verified",
     "sources": [
       {
@@ -146,13 +146,33 @@
       {
         "label": "ygamiUSDC contract on Avalanche",
         "url": "https://subnets.avax.network/c-chain/address/0x9fd32fd5e32c6b95483d36c5e724c5c5250ce010/contract"
+      },
+      {
+        "label": "Parallelizer Getters source",
+        "url": "https://github.com/parallel-protocol/parallel-parallelizer/blob/main/contracts/parallelizer/facets/Getters.sol"
+      },
+      {
+        "label": "Ethereum public RPC latest-state reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "HyperEVM public RPC latest-state reads",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      },
+      {
+        "label": "Base public RPC latest-state reads",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "Avalanche C-Chain public RPC latest-state reads",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
       }
     ],
-    "rationale": "Parallel's server-rendered transparency inventory reported $251,603.91 frxUSD, $478,593.65 sfrxUSD, $137,963.18 USDe, $582,058.85 sUSDe, $77,470.54 sUSDS, $19.94 USDS, $15,643.07 direct USDC, and $591,789.65 ygamiUSDC on 2026-07-21. Normalizing those values gives the stored weights. The ygamiUSDC ERC-4626 contract returns Avalanche USDC from asset(), so both direct USDC and vault-share exposure map exactly to USDC without collapsing the vault's strategy risk.",
-    "compositionBasis": "Current USD values from Parallel's official transparency inventory, aggregated by reserve token and normalized to the published total",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "Fresh latest-state reads on 2026-08-20 enumerated every collateral address from the Ethereum, HyperEVM, Base, and Avalanche Parallelizer diamonds, then read each token balance and the diamond's getOracleValues() price. The valued holdings were $138.479170 frxUSD, $808,881.779410 sfrxUSD, $17,184.826813 USDe, $791,161.330663 sUSDe, $253,862.575542 sUSDS, $21.260356 USDS, $557.809733 direct USDC, and $260,402.616831 ygamiUSDC (total $2,132,210.678518). The two USDe and sUSDe branches are aggregated under their reviewed names; direct USDC is aggregated across Base and Avalanche; ygamiUSDC remains separately labeled and risk-rated while its reviewed ERC-4626 underlying is Circle USDC.",
+    "compositionBasis": "Current on-chain ERC-20 balances held by all four live Parallelizer USDp diamonds, valued with each diamond's getOracleValues() price and normalized to the summed reserve value",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified reserve assets in the published inventory; ygamiUSDC remains separately labeled and risk-rated while its USDC underlying creates the dependency edge.",
+    "knownUnknownExposure": "No unidentified reserve assets were returned by the four on-chain collateral lists; any future collateral address without a curated descriptor is emitted as an explicitly unlinked slice and fails the next full-composition review until re-curated.",
     "knownUnknownExposurePct": 0
   }
 }

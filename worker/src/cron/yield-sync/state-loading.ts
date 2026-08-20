@@ -49,7 +49,7 @@ export interface YieldSyncLoadedState {
   onChainCooldownActive: boolean;
   onChainCooldownRemainingSec: number;
   onChainSkippedDueToCooldown: boolean;
-  onChainRates: Map<string, { rate: number }>;
+  onChainRates: Map<string, { rate: number; sourceTvlUsd?: number | null }>;
   onChainFailures: Record<string, number> | null;
   onChainAttemptedCount: number;
   allDeterministicFailed: boolean;
@@ -308,7 +308,7 @@ export async function loadYieldSyncState(params: {
   const onChainSkippedDueToCooldown = onChainCooldownActive;
   const onChainFetchResultPromise = onChainSkippedDueToCooldown
     ? {
-        rates: new Map<string, { rate: number }>(),
+        rates: new Map<string, { rate: number; sourceTvlUsd?: number | null }>(),
         failureBreakdown: null as Record<string, number> | null,
         attemptedCount: 0,
         allDeterministicFailed: false,

@@ -344,7 +344,7 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
       expect(credited).toBeLessThanOrEqual(next);
       expect(credited).toBeGreaterThan(score);
     }
-    // The top rung (none-resolved 95) has no rung above it: no credit headroom.
+    // The top rung (none-resolved 100) has no rung above it: no credit headroom.
     const top = Math.max(...ladder);
     expect(ladder.find((value) => value > top)).toBeUndefined();
   });

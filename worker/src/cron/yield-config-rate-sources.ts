@@ -46,6 +46,8 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     decimals: 18,
     inputAmount:
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    // ERC-4626 over USDS; no pinned DL pool — measure totalAssets as venue TVL.
+    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
   },
   {
     stablecoinId: "sdai-sky",
@@ -91,6 +93,8 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     decimals: 18,
     inputAmount:
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    // ERC-4626 over USN (USD-pegged); no dedicated native DL pool pin.
+    tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
   },
   {
     stablecoinId: "thbill-theo",
@@ -100,6 +104,8 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     decimals: 6,
     inputAmount:
       "0x00000000000000000000000000000000000000000000000000000000000f4240",
+    // ERC-4626 over USD T-bill exposure; no pinned DL pool.
+    tvlRead: { kind: "erc4626-total-assets", decimals: 6 },
   },
   {
     stablecoinId: "susdc-spark",

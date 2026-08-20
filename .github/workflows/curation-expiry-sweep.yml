@@ -1,0 +1,135 @@
+name: Curation Expiry Sweep
+
+# Weekly Safety Score V9 curation sweep: freeze the current production compiler
+# input, replay it at HEAD, and publish the curation worklist plus the curated
+# reserve expiry queue into a pinned review issue. Read-only against production
+# (one D1 cache-row read); no product data is changed.
+# Runbook: docs/process/safety-score-curation-expiry-sweep.md
+
+on:
+  schedule:
+    - cron: "45 5 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          tooling-cache: "true"
+      - name: Export and normalize the production compiler input
+        id: capture
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p agents/sweep
+          (cd worker && npx --no-install wrangler d1 execute stablecoin-db --remote --json \
+            --command "SELECT value FROM cache WHERE key = 'report-cards:fixed-input:exact'") \
+            > agents/sweep/capture.raw.json
+          npm run report-cards:capture-fixed-input -- \
+            --exact-cache-export agents/sweep/capture.raw.json \
+            --output agents/sweep/capture.json
+          echo "clock_sec=$(jq -r .clockSec agents/sweep/capture.json)" >> "$GITHUB_OUTPUT"
+      - name: Replay and generate the curation worklist and expiry queue
+        id: generate
+        env:
+          CLOCK_SEC: ${{ steps.capture.outputs.clock_sec }}
+        shell: bash
+        run: |
+          set +e
+          # --allow-registry-mismatch: HEAD curation legitimately postdates the
+          # captured registry fingerprint; the sweep reads worklist items, not
+          # score equivalence.
+          npm run safety-score-v9:replay -- \
+            --input agents/sweep/capture.json \
+            --output agents/sweep/replay.json \
+            --published-at "$CLOCK_SEC" \
+            --allow-registry-mismatch 2>&1 | tee agents/sweep/replay-command.log
+          replay_status=${PIPESTATUS[0]}
+          node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs \
+            --replay agents/sweep/replay.json \
+            --output agents/sweep/worklist.md 2>&1 | tee agents/sweep/worklist-command.log
+          worklist_status=${PIPESTATUS[0]}
+          npm run safety-score-v9:expiry-queue -- \
+            --replay agents/sweep/replay.json \
+            --output agents/sweep/expiry-queue.md 2>&1 | tee agents/sweep/queue-command.log
+          queue_status=${PIPESTATUS[0]}
+          echo "replay_status=$replay_status" >> "$GITHUB_OUTPUT"
+          echo "worklist_status=$worklist_status" >> "$GITHUB_OUTPUT"
+          echo "queue_status=$queue_status" >> "$GITHUB_OUTPUT"
+      - name: Open or update the sweep issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPLAY_STATUS: ${{ steps.generate.outputs.replay_status }}
+          WORKLIST_STATUS: ${{ steps.generate.outputs.worklist_status }}
+          QUEUE_STATUS: ${{ steps.generate.outputs.queue_status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(mktemp)
+          {
+            echo "<!-- curation-expiry-sweep -->"
+            echo "# Safety Score curation expiry sweep"
+            echo
+            echo "Generated from commit \`${GITHUB_SHA}\` on $(date -u +%F). Read-only review queues; no product data was changed. Drain per docs/process/safety-score-curation-expiry-sweep.md."
+            echo
+            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}."
+            echo
+            echo "## Curated reserve expiry queue"
+            echo '```text'
+            if [ -f agents/sweep/expiry-queue.md ]; then sed -n '1,160p' agents/sweep/expiry-queue.md; else echo "Queue unavailable."; fi
+            echo '```'
+            echo
+            echo "## Dependency and backing worklist streams"
+            echo '```text'
+            if [ -f agents/sweep/worklist.md ]; then
+              awk '/^## /{keep = ($0 ~ /Dependencies|Backing/)} keep' agents/sweep/worklist.md | sed -n '1,200p'
+            else
+              echo "Worklist unavailable."
+            fi
+            echo '```'
+            echo
+            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ]; then
+              echo "## Generation failures"
+              for spec in \
+                "replay:$REPLAY_STATUS:agents/sweep/replay-command.log" \
+                "worklist:$WORKLIST_STATUS:agents/sweep/worklist-command.log" \
+                "expiry queue:$QUEUE_STATUS:agents/sweep/queue-command.log"; do
+                IFS=: read -r label status log_file <<< "$spec"
+                if [ "$status" != 0 ]; then
+                  echo "### $label (status $status)"
+                  echo '```text'
+                  tail -30 "$log_file"
+                  echo '```'
+                fi
+              done
+              echo
+            fi
+          } > "$body"
+
+          issue_number=$(gh issue list --state open --search 'in:title "Safety Score curation expiry sweep"' --json number,title --jq '.[] | select(.title == "Safety Score curation expiry sweep") | .number' | head -1)
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --body-file "$body"
+          else
+            gh issue create --title "Safety Score curation expiry sweep" --body-file "$body"
+          fi
+
+          # Fail the run, not just the issue body, when any generator broke —
+          # same rationale as agent-maintenance-candidates: a green run must
+          # mean the queues are trustworthy.
+          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ]; then
+            echo "::error title=Curation sweep incomplete::See the sweep issue for command status and available output."
+            exit 1
+          fi

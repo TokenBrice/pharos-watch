@@ -42,11 +42,28 @@ import { buildWeightedYieldPoolGroupSource } from "./weighted-pools";
 function buildConfigByStablecoinId<T extends { stablecoinId: string }>(configs: readonly T[]): Map<string, T> {
   const byId = new Map<string, T>();
   for (const config of configs) {
-    if (!byId.has(config.stablecoinId)) {
-      byId.set(config.stablecoinId, config);
-    }
+    byId.set(config.stablecoinId, config);
   }
   return byId;
+}
+
+function resolveMeasuredSourceTvlUsd(params: {
+  nativePoolId: string | null;
+  dlPoolByPoolId: Map<string, DlPool>;
+  onChainTvlUsd?: number | null;
+}): number | null {
+  if (params.nativePoolId) {
+    const pinned = params.dlPoolByPoolId.get(params.nativePoolId);
+    const pinnedTvl = pinned?.tvlUsd;
+    if (typeof pinnedTvl === "number" && Number.isFinite(pinnedTvl) && pinnedTvl > 0) {
+      return pinnedTvl;
+    }
+  }
+  const onChainTvl = params.onChainTvlUsd;
+  if (typeof onChainTvl === "number" && Number.isFinite(onChainTvl) && onChainTvl > 0) {
+    return onChainTvl;
+  }
+  return null;
 }
 
 function getBenchmarkSourceObservedAt(meta: ParsedYieldBenchmarkMeta, fallbackObservedAt: number): number {
@@ -91,7 +108,7 @@ export async function resolveTrackedYieldSources(params: {
   startSec: number;
   sevenDaysAgoSec: number;
   dlPools: DlPool[];
-  onChainRates: Map<string, { rate: number }>;
+  onChainRates: Map<string, { rate: number; sourceTvlUsd?: number | null }>;
   safetyScores: Map<string, SafetyScoreSnapshot>;
   riskFreeRates: ParsedYieldBenchmarkRegistry;
   signal?: AbortSignal;
@@ -130,16 +147,22 @@ export async function resolveTrackedYieldSources(params: {
     let hasAnySource = false;
     const rateConfig = onChainRateConfigById.get(id);
     if (rateConfig && params.onChainRates.has(id)) {
-      const { rate } = params.onChainRates.get(id)!;
+      const onChainRate = params.onChainRates.get(id)!;
+      const { rate } = onChainRate;
       const prevRow = tier1PrevRateRows.get(id);
       tier1PrevRates.set(id, prevRow?.exchangeRate ?? null);
+      const nativePoolId = YIELD_POOL_MAP[id] ?? null;
+      const sourceTvlUsd = resolveMeasuredSourceTvlUsd({
+        nativePoolId,
+        dlPoolByPoolId,
+        onChainTvlUsd: onChainRate.sourceTvlUsd,
+      });
 
       if (prevRow?.exchangeRate && prevRow.exchangeRate > 0) {
         const actualDays = (params.startSec - prevRow.recordedAt) / DAY_SECONDS;
         const apy = computeApyFromRate(rate, prevRow.exchangeRate, actualDays);
         const sourceKey = buildOnChainSourceKey(id);
         if (isDeterministicApyWithinSanityBounds(apy)) {
-          const nativePoolId = YIELD_POOL_MAP[id] ?? null;
           resolved.push({
             id,
             symbol,
@@ -148,7 +171,7 @@ export async function resolveTrackedYieldSources(params: {
               apyBase: apy,
               apyReward: null,
               sourcePool: nativePoolId,
-              sourceTvlUsd: null,
+              sourceTvlUsd,
               dataSource: "onchain",
               exchangeRate: rate,
               sourceKey,
@@ -177,8 +200,8 @@ export async function resolveTrackedYieldSources(params: {
             currentApy: 0,
             apyBase: null,
             apyReward: null,
-            sourcePool: null,
-            sourceTvlUsd: null,
+            sourcePool: nativePoolId,
+            sourceTvlUsd,
             dataSource: "onchain",
             exchangeRate: rate,
             sourceKey: buildOnChainSourceKey(id),
@@ -258,6 +281,7 @@ export async function resolveTrackedYieldSources(params: {
     if (shouldTryPriceDerived) {
       const priceDerived = await getPriceDerivedApy(params.db, id);
       if (priceDerived != null) {
+        const nativePoolId = YIELD_POOL_MAP[id] ?? null;
         resolved.push({
           id,
           symbol,
@@ -265,8 +289,11 @@ export async function resolveTrackedYieldSources(params: {
             currentApy: priceDerived.apy,
             apyBase: priceDerived.apy,
             apyReward: null,
-            sourcePool: null,
-            sourceTvlUsd: null,
+            sourcePool: nativePoolId,
+            sourceTvlUsd: resolveMeasuredSourceTvlUsd({
+              nativePoolId,
+              dlPoolByPoolId,
+            }),
             dataSource: "price-derived",
             exchangeRate: null,
             sourceKey: "price-derived",

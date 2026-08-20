@@ -1257,6 +1257,37 @@ const singleAssetParamsSchema = z
   })
   .strict();
 
+const parallelizerBalanceAssetSchema = z
+  .object({
+    address: EvmAddressSchema,
+    decimals: z.number().int().nonnegative().max(36),
+    name: z.string().min(1),
+    risk: LiveReserveRiskSchema,
+    coinId: z.string().optional(),
+    depType: LiveReserveDependencyTypeSchema.optional(),
+  })
+  .strict();
+
+const parallelizerBalanceDeploymentSchema = z
+  .object({
+    chain: z.string().min(1),
+    vaultAddress: EvmAddressSchema,
+    expectedTokenP: EvmAddressSchema,
+    rpcUrl: AbsoluteUrlSchema,
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    assets: z.array(parallelizerBalanceAssetSchema).min(1),
+  })
+  .strict();
+
+const parallelizerBalancesParamsSchema = z
+  .object({
+    deployments: z.array(parallelizerBalanceDeploymentSchema).min(1).max(8),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+    holderEligibility: RedemptionHolderEligibilitySchema.optional(),
+    settlementDelaySec: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
 const abracadabraCauldronSchema = z
   .object({
     address: z.string(),
@@ -1314,6 +1345,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   mento: mentoParamsSchema,
   nestVaultPositions: nestVaultPositionsParamsSchema,
   originVaultBalances: originVaultBalancesParamsSchema,
+  parallelizerBalances: parallelizerBalancesParamsSchema,
   pusdVault: pusdVaultParamsSchema,
   quantozTransparency: quantozTransparencyParamsSchema,
   reserveProtocolDtf: reserveProtocolDtfParamsSchema,

@@ -11,7 +11,12 @@ import {
   getYieldSourceFreshnessDisplay,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
-import type { YieldBenchmarkSelectionMode, YieldRankChangeAttribution, YieldRanking } from "@shared/types/yield";
+import type {
+  YieldBenchmarkSelectionMode,
+  YieldRankChangeAttribution,
+  YieldRanking,
+  YieldSourceRole,
+} from "@shared/types/yield";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
 
 export type YieldWorkbenchRanking = YieldRanking | YieldRankingSummary;
@@ -121,4 +126,13 @@ export function getYieldWorkbenchDataSource(row: YieldWorkbenchRanking): string 
     default:
       return "unknown";
   }
+}
+
+/**
+ * Source role for a workbench row. The summary projection the leaderboard
+ * consumes omits the field, so summary rows resolve to null and callers fall
+ * back to the yield-type split.
+ */
+export function getYieldWorkbenchSourceRole(row: YieldWorkbenchRanking): YieldSourceRole | null {
+  return isYieldRankingSummary(row) ? null : (row.sourceRole ?? null);
 }

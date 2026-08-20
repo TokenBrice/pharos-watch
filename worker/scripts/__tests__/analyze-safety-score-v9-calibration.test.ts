@@ -18,7 +18,7 @@ import {
 // within its review windows so calibration assertions exercise current evidence.
 // The score-trace reconciliation suite separately owns the far-future aged-review
 // regression.
-const BASE_CLOCK_SEC = 1_787_011_200; // 2026-08-18T00:00:00Z, after the newest curated review dates
+const BASE_CLOCK_SEC = 1_787_270_400; // 2026-08-21T00:00:00Z, after the newest curated review dates
 
 // The adversarial tests need to mutate a JSON replay after the production
 // builder freezes it. JSON round-tripping gives the test a deliberately mutable

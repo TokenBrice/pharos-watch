@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.40",
+    title: "Measured Venue TVL Eligibility and Native Depth Semantics",
+    date: "2026-08-20",
+    effectiveAt: 1787184000,
+    summary:
+      "External opportunity rows now fail closed unless measured venue TVL clears the higher of the chain floor ($100K by default, $25K on configured smaller/pre-mainnet ecosystems) and 0.1% of current tracked supply, while native rows without venue TVL present honest depth-not-available semantics.",
+    impact: [
+      "A final resolve-stage pass removes `lending-opportunity`, `fixed-yield`, and `structured-tranche` candidates before evaluation and arbitration when measured `sourceTvlUsd` is null/non-finite, thin, or the coin's tracked supply is unavailable (`tvl-null` / `tvl-thin` / `supply-unavailable`), across tracked, explicit, auto-discovered, supplemental, and linked-variant paths; Royco's bespoke market/vault floors remain and the universal gate augments them",
+      "The GOLD/SILVER supply-relative bypass is removed because tracked supply values are USD-denominated for every peg type. The existing 0.1% share rule from v7.0 now applies universally to deposit-venue classes, closing the case where a roughly $2B-market-cap coin was featurable on a $366K venue",
+      "Tier-1 on-chain rate sources inherit measured TVL from their pinned DeFiLlama pool through a zero-fetch join; audited ERC-4626 `totalAssets` reads cover verified residual vaults. Only measured venue TVL populates `sourceTvlUsd`, never coin supply, and unavailable measurements remain null",
+      "Native rows without measured venue TVL now render `Native · depth n/a` and a muted `Native` TVL-cell marker instead of `Unknown depth` and a dash; no AUM or coin-supply figure is displayed or substituted, and depth gating and penalties continue to use measured venue TVL only",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.39",
     title: "Publish-time safety snapshot fallback",
     date: "2026-08-19",

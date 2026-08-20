@@ -1,6 +1,13 @@
+import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@/lib/yield-view-config";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
-import type { YieldRanking, YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types";
+import type {
+  YieldRanking,
+  YieldRankChangeAttribution,
+  YieldSourceRisk,
+  YieldSourceRole,
+  YieldType,
+} from "@shared/types";
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
 export type YieldSourcePublishedFreshness = NonNullable<
@@ -101,6 +108,81 @@ export function classifyYieldSourceDepth(params: {
   if (sourceDepthRatio >= 0.01) return "deep";
   if (sourceDepthRatio >= 0.001) return "moderate";
   return "thin";
+}
+
+/**
+ * Depth lens as displayed. `native-unmeasured` deliberately lives outside
+ * {@link YieldSourceDepthLens}: the lens drives depth filters, board counts,
+ * source posture, and URL state, none of which change here.
+ */
+export type YieldSourceDepthDisplayLens = YieldSourceDepthLens | "native-unmeasured";
+
+export interface YieldSourceDepthDisplay {
+  lens: YieldSourceDepthDisplayLens;
+  /** Short noun for chips and cells: "Deep", "Unknown", "Native". */
+  label: string;
+  /** Self-contained phrase: "Deep depth", "Native · depth n/a". */
+  phrase: string;
+  description: string;
+  /** True when the row has no venue to size apart from the asset itself. */
+  isNativeUnmeasured: boolean;
+}
+
+const NATIVE_UNMEASURED_DEPTH = {
+  label: "Native",
+  phrase: "Native · depth n/a",
+  description:
+    "Yield accrues on the asset itself, so there is no venue TVL to compare against supply. Depth is not applicable here rather than missing.",
+} as const;
+
+const NATIVE_SOURCE_ROLES: Partial<Record<YieldSourceRole, true>> = {
+  "canonical-holder": true,
+  "fallback-proxy": true,
+  "degraded-canonical": true,
+};
+
+/**
+ * Whether the yield accrues on the asset itself rather than in an external
+ * venue. `sourceRole` is authoritative wherever the row carries it; the
+ * leaderboard's summary projection omits the field, so the holder-versus-
+ * opportunity yield-type split decides there.
+ */
+export function isNativeYieldSource(
+  sourceRole: YieldSourceRole | null | undefined,
+  yieldType: YieldType,
+): boolean {
+  if (sourceRole === "external-opportunity") return false;
+  if (sourceRole && NATIVE_SOURCE_ROLES[sourceRole]) return true;
+  return !EXTERNAL_OPPORTUNITY_YIELD_TYPES.has(yieldType);
+}
+
+/**
+ * Depth for display. `classifyYieldSourceDepth` reports "unknown" whenever
+ * venue TVL is missing, which reads as a measurement we failed to make. On a
+ * native row nothing was missed — there is no venue to measure — so those rows
+ * say that instead. External rows keep "Unknown depth": there the gap is real.
+ */
+export function getYieldSourceDepthDisplay(params: {
+  depthLens: YieldSourceDepthLens;
+  yieldType: YieldType;
+  sourceRole?: YieldSourceRole | null;
+  sourceTvlUsd?: number | null;
+}): YieldSourceDepthDisplay {
+  if (
+    params.depthLens === "unknown" &&
+    finiteNumber(params.sourceTvlUsd) === null &&
+    isNativeYieldSource(params.sourceRole, params.yieldType)
+  ) {
+    return { lens: "native-unmeasured", ...NATIVE_UNMEASURED_DEPTH, isNativeUnmeasured: true };
+  }
+  const meta = YIELD_SOURCE_DEPTH_DEFINITIONS[params.depthLens];
+  return {
+    lens: params.depthLens,
+    label: meta.label,
+    phrase: `${meta.label} depth`,
+    description: meta.description,
+    isNativeUnmeasured: false,
+  };
 }
 
 export function getYieldSourceRiskDrivers(params: {

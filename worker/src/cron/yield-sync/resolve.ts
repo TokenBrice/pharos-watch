@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { resolveTrackedYieldSources } from "./resolve-tracked-sources";
-import { appendLinkedVariantParentYieldSources, appendPoolFamilyYieldSources } from "./resolve-helpers";
+import { appendLinkedVariantParentYieldSources, appendPoolFamilyYieldSources, enforceExternalOpportunityTvlEligibility } from "./resolve-helpers";
 import { type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import type {
   DlPool,
@@ -15,7 +15,7 @@ interface ResolveYieldSourcesParams {
   startSec: number;
   sevenDaysAgoSec: number;
   dlPools: DlPool[];
-  onChainRates: Map<string, { rate: number }>;
+  onChainRates: Map<string, { rate: number; sourceTvlUsd?: number | null }>;
   safetyScores: Map<string, SafetyScoreSnapshot>;
   safetySnapshotAvailable: boolean;
   riskFreeRates: ParsedYieldBenchmarkRegistry;
@@ -67,6 +67,8 @@ export async function resolveYieldSources({
   if (linkedVariantSourceCount > 0) {
     logWorkerEventArgs("handler", "info", `[sync-yield-data] Linked variant projection: ${linkedVariantSourceCount} parent sources`);
   }
+
+  enforceExternalOpportunityTvlEligibility(trackedResolution.resolved, stablecoinSupplyById);
 
   return trackedResolution;
 }

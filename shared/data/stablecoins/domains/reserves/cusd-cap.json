@@ -20,8 +20,6 @@
       "name": "WTGXX",
       "pct": 8.3,
       "risk": "low",
-      "coinId": "wtgxx-wisdomtree",
-      "depType": "collateral",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
       "riskFactors": [
@@ -64,11 +62,23 @@
         "url": "https://www.sec.gov/Archives/edgar/data/1859001/000119312526296145/primary_doc.xml"
       }
     ],
-    "rationale": "At finalized Ethereum block 25540229 (hash 0x050d9c47fab878a8bdd60775f78193c15fb10f514ba6cb80c2ba1982a4721056), the cUSD vault assets() call returned exactly USDC and WTGXX. totalSupplies() returned 55,897,897.772864 USDC and 5,092,033.265897586 WTGXX, which normalized to 91.7% and 8.3%. Their combined configured-dollar value reconciled to 99.9983% of cUSD totalSupply; both live rows therefore have exact tracked identities and reviewed asset classes.",
+    "rationale": "At finalized Ethereum block 25540229 (hash 0x050d9c47fab878a8bdd60775f78193c15fb10f514ba6cb80c2ba1982a4721056), the cUSD vault assets() call returned exactly USDC and WTGXX. totalSupplies() returned 55,897,897.772864 USDC and 5,092,033.265897586 WTGXX, which normalized to 91.7% and 8.3%. Their combined configured-dollar value reconciled to 99.9983% of cUSD totalSupply; both live rows therefore have exact reviewed identities and asset classes, with WTGXX intentionally retained as a reviewed non-link because its tracked candidate is quarantined.",
     "compositionBasis": "Fixed-block Cap vault totalSupplies by accepted asset, valued at the adapter's configured one-dollar unit values and normalized across the complete assets() enumeration",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "The vault's complete assets() enumeration contains only the two identified tracked assets. Borrower and fractional-reserve strategy risk remains a mechanism-level exposure rather than an unidentified reserve slice.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "WTGXX",
+        "pct": 8.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wtgxx-wisdomtree is a tracked but quarantined upstream record outside the active scoring set, so the reviewed WTGXX reserve slice remains an exogenous fund-share classification and does not create a dependency edge.",
+        "candidateCoinIds": [
+          "wtgxx-wisdomtree"
+        ]
+      }
+    ]
   }
 }

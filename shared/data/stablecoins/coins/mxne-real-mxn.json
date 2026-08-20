@@ -38,21 +38,21 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Mexico",
     "latestReport": {
-      "periodEnd": "2026-06-26",
-      "publishedAt": "2026-06-26",
+      "periodEnd": "2026-07-24",
+      "publishedAt": "2026-07-24",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Codex T46 live reserve re-verification",
+      "reviewer": "OpenAI Codex current-source reserve refresh",
       "confidence": "verified",
       "sources": [
         {
-          "label": "BHR México reasonable-assurance report dated June 26, 2026",
-          "url": "https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf"
+          "label": "BHR México reasonable-assurance report dated July 24, 2026",
+          "url": "https://api.etherfuse.com/statement/attestation/latest"
         },
         {
-          "label": "Brale MXNe launch disclosure (Etherfuse partnership)",
-          "url": "https://brale.xyz/blog/introducing-mxne"
+          "label": "Brale MXNe product page",
+          "url": "https://brale.xyz/stablecoins/MXNe"
         }
       ]
     }

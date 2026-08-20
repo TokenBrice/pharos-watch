@@ -394,7 +394,11 @@ function YieldInstrumentRowBase({
         {/* TVL (plain, lg+) */}
         <div className="hidden min-w-0 lg:block">
           <MetricLabel>TVL</MetricLabel>
-          <div className="font-mono text-sm font-medium tabular-nums">
+          <div
+            className={
+              labels.tvlIsNative ? "text-sm text-muted-foreground" : "font-mono text-sm font-medium tabular-nums"
+            }
+          >
             <span className="sr-only">{labels.tvlSrLabel}</span>
             <span aria-hidden="true">{labels.tvlLabel}</span>
           </div>

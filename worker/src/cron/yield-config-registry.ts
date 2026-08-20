@@ -29,6 +29,15 @@ export interface OnChainRateConfig {
   selector: string;
   decimals: number;
   inputAmount: string;
+  /**
+   * Optional measured venue-TVL read for ERC-4626 rate contracts when a
+   * pinned DeFiLlama pool join is unavailable. USD-pegged underlyings only.
+   * Fail open to null on any read error.
+   */
+  tvlRead?: {
+    kind: "erc4626-total-assets";
+    decimals: number;
+  };
 }
 
 export interface RateDerivedConfig {
