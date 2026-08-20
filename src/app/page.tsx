@@ -3,6 +3,7 @@ import { HomeAltClient } from "@/components/home-alt-client";
 import { HomeBlogBanner } from "@/components/home-blog-banner";
 import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { HomeAltHero } from "@/components/home-alt-hero";
+import { HomeMediaStrip } from "@/components/home-media-strip";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -59,6 +60,7 @@ export default function HomePage() {
       <HomeBlogBanner />
       <HomeAltHero snapshot={heroSnapshot} />
       <HomeAltClient />
+      <HomeMediaStrip />
     </div>
   );
 }

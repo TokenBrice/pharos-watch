@@ -18,11 +18,10 @@ import {
   getAboutLeadParagraphs,
   getAboutFaqItems,
   getTrackedFeatures,
-  MEDIA_APPEARANCES,
   TEAM_MEMBERS,
   type AboutFeatureItem,
-  type AboutMediaAppearance,
 } from "@/lib/about-content";
+import { MEDIA_APPEARANCES, type MediaAppearance } from "@/lib/media-appearances";
 import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "@/lib/about-principles-content";
 import {
   ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
@@ -170,7 +169,7 @@ function appearanceDateLabel(date: string): string {
   return formatLongDate(new Date(`${date}T00:00:00Z`), { utc: true });
 }
 
-function HostLogo({ appearance, size }: { appearance: AboutMediaAppearance; size: number }) {
+function HostLogo({ appearance, size }: { appearance: MediaAppearance; size: number }) {
   return (
     <Image
       src={appearance.hostLogoSrc}
@@ -182,7 +181,7 @@ function HostLogo({ appearance, size }: { appearance: AboutMediaAppearance; size
   );
 }
 
-function FeaturedAppearance({ appearance }: { appearance: AboutMediaAppearance }) {
+function FeaturedAppearance({ appearance }: { appearance: MediaAppearance }) {
   return (
     <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -209,7 +208,7 @@ function FeaturedAppearance({ appearance }: { appearance: AboutMediaAppearance }
   );
 }
 
-function AppearanceRow({ appearance }: { appearance: AboutMediaAppearance }) {
+function AppearanceRow({ appearance }: { appearance: MediaAppearance }) {
   return (
     <a
       href={appearance.href}
@@ -531,6 +530,7 @@ export function AboutPageContent() {
         </AboutSection>
 
         <AboutSection
+          id="media"
           eyebrow="In the wild"
           title="Pharos in the Media"
           contentClassName="space-y-4 text-sm leading-relaxed text-muted-foreground"
