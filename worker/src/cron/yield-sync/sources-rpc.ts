@@ -136,8 +136,14 @@ function finalizeOptionalRpcTelemetry<T extends { chain: string; symbol: string 
   logOptionalRpcTelemetry(family, telemetry);
 }
 
+export interface OnChainRateValue {
+  rate: number;
+  /** Measured venue TVL from optional config.tvlRead; null/absent when unmeasured. */
+  sourceTvlUsd?: number | null;
+}
+
 export interface OnChainRateResult {
-  rates: Map<string, { rate: number }>;
+  rates: Map<string, OnChainRateValue>;
   failureBreakdown: Record<string, number> | null;
   attemptedCount?: number;
   allDeterministicFailed?: boolean;
@@ -155,6 +161,7 @@ type OnChainRateFetchResult =
   | {
       id: string;
       rate: number;
+      sourceTvlUsd: number | null;
       status: "ok";
       resolvedVia: "rpc" | "etherscan";
       explorerAttempted: boolean;
@@ -171,6 +178,63 @@ function buildOnChainFailureStatus(
 function buildOnChainRateRpcUrls(rpc?: ChainRpcConfig): string[] {
   return resolveRpcUrls(rpc, { order: "fallback-first" });
 }
+
+const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
+
+async function readOptionalErc4626TotalAssetsUsd(params: {
+  config: (typeof ON_CHAIN_RATE_CONFIGS)[number];
+  rpcUrl?: string;
+  etherscanApiKey?: string | null;
+  signal?: AbortSignal;
+}): Promise<number | null> {
+  const tvlRead = params.config.tvlRead;
+  if (!tvlRead || tvlRead.kind !== "erc4626-total-assets") return null;
+
+  try {
+    let raw: bigint | null = null;
+    if (params.rpcUrl) {
+      raw = await fetchEvmUint256AtBlock(
+        undefined,
+        params.config.contract,
+        ERC4626_TOTAL_ASSETS_SELECTOR,
+        "latest",
+        {
+          extraRpcUrls: [params.rpcUrl],
+          signal: params.signal,
+          timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
+        },
+      );
+    }
+
+    if (raw == null) {
+      const evmChainId = CHAIN_META[params.config.chain]?.evmChainId;
+      if (typeof evmChainId === "number" && params.etherscanApiKey) {
+        raw = await fetchEtherscanUint256AtBlock(
+          evmChainId,
+          params.config.contract,
+          ERC4626_TOTAL_ASSETS_SELECTOR,
+          "latest",
+          {
+            apiKey: params.etherscanApiKey,
+            signal: params.signal,
+            timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
+          },
+        );
+      }
+    }
+
+    if (raw == null || raw <= 0n) return null;
+    const sourceTvlUsd = finiteDecimalNumberFromBigInt(raw, tvlRead.decimals);
+    if (sourceTvlUsd == null || !Number.isFinite(sourceTvlUsd) || sourceTvlUsd <= 0) return null;
+    return sourceTvlUsd;
+  } catch (err) {
+    if (params.signal?.aborted) {
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    return null;
+  }
+}
+
 
 async function fetchSingleOnChainRate(
   config: (typeof ON_CHAIN_RATE_CONFIGS)[number],
@@ -190,9 +254,16 @@ async function fetchSingleOnChainRate(
         timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
       });
       if (raw == null) continue;
+      const sourceTvlUsd = await readOptionalErc4626TotalAssetsUsd({
+        config,
+        rpcUrl,
+        etherscanApiKey,
+        signal,
+      });
       return {
         id: config.stablecoinId,
         rate: Number(raw) / 10 ** config.decimals,
+        sourceTvlUsd,
         status: "ok",
         resolvedVia: "rpc",
         explorerAttempted: false,
@@ -220,9 +291,15 @@ async function fetchSingleOnChainRate(
       timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
     });
     if (raw != null) {
+      const sourceTvlUsd = await readOptionalErc4626TotalAssetsUsd({
+        config,
+        etherscanApiKey,
+        signal,
+      });
       return {
         id: config.stablecoinId,
         rate: Number(raw) / 10 ** config.decimals,
+        sourceTvlUsd,
         status: "ok",
         resolvedVia: "etherscan",
         explorerAttempted: true,
@@ -275,7 +352,7 @@ export async function fetchOnChainRates(
     allResults.push(...batchSettled);
   }
 
-  const rates = new Map<string, { rate: number }>();
+  const rates = new Map<string, OnChainRateValue>();
   const failureCounts: Record<string, number> = {};
   let explorerAttemptedCount = 0;
   let explorerResolvedCount = 0;
@@ -283,7 +360,10 @@ export async function fetchOnChainRates(
   for (const result of allResults) {
     const val = result.status === "fulfilled" ? result.value : { id: "unknown", status: "rejected" as const };
     if ("rate" in val && val.status === "ok") {
-      rates.set(val.id, { rate: val.rate });
+      rates.set(val.id, {
+        rate: val.rate,
+        sourceTvlUsd: val.sourceTvlUsd,
+      });
       if (val.explorerAttempted) explorerAttemptedCount += 1;
       if (val.resolvedVia === "etherscan") explorerResolvedCount += 1;
     } else {

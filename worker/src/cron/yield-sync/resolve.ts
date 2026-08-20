@@ -15,7 +15,7 @@ interface ResolveYieldSourcesParams {
   startSec: number;
   sevenDaysAgoSec: number;
   dlPools: DlPool[];
-  onChainRates: Map<string, { rate: number }>;
+  onChainRates: Map<string, { rate: number; sourceTvlUsd?: number | null }>;
   safetyScores: Map<string, SafetyScoreSnapshot>;
   safetySnapshotAvailable: boolean;
   riskFreeRates: ParsedYieldBenchmarkRegistry;
