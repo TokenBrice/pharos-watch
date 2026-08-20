@@ -61,11 +61,11 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
   ],
   [
-    "bnusd-balanced::Tail borrower collateral: sodaNEAR 0.42%, sodaPOL 0.24%, sodaXLM 0.21%, sodaS 0.05%, bnUSD 0.02%; sodaLL/sodaINJ/sodaWBTC/sodaKAIA/sodaSUSDS <0.02% combined::DAI",
+    "bnusd-balanced::Tail borrower collateral (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust)::DAI",
     "Substring artifact: the DAI match sits inside sodaINJ. Balanced reports no DAI collateral in this aggregated sub-0.5% tail.",
   ],
   [
-    "bnusd-balanced::Tail borrower collateral: sodaNEAR 0.42%, sodaPOL 0.24%, sodaXLM 0.21%, sodaS 0.05%, bnUSD 0.02%; sodaLL/sodaINJ/sodaWBTC/sodaKAIA/sodaSUSDS <0.02% combined::USDS",
+    "bnusd-balanced::Tail borrower collateral (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust)::USDS",
     "Substring artifact: the USDS match sits inside sodaSUSDS, a below-0.02% wrapped sUSDS tail position that carries no separate weight.",
   ],
   [
