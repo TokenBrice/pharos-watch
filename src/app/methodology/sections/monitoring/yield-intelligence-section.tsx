@@ -15,7 +15,7 @@ import { YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
 import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
 
 const YIELD_OVERVIEW_PARAGRAPH =
-  "Pharos tracks native stablecoin yield plus reviewed lending and structured opportunities, then computes a risk-adjusted ranking through the Pharos Yield Score (PYS). Core rankings publish hourly; slower supplemental families refresh every four hours. Source resolution is identity-first and confidence-weighted, preserves valid alternatives, and keeps quarantined or pre-launch coverage visible without admitting it to the live leaderboard. Published opportunities must pass source-quality, size, venue-TVL, benchmark-freshness, and exposure-identity gates. Opportunity-level risk can affect PYS for that market, but it never rewrites the underlying stablecoin's Safety Score. The typed adapter, allowlist, exact-pool, source-risk, and lifecycle registries own the changing venue and asset inventories.";
+  "Pharos tracks native stablecoin yield plus reviewed lending and structured opportunities, then computes a risk-adjusted ranking through the Pharos Yield Score (PYS). Core rankings publish hourly; slower supplemental families refresh every four hours. Source resolution is identity-first and confidence-weighted, preserves valid alternatives, and keeps quarantined or pre-launch coverage visible without admitting it to the live leaderboard. Published external opportunities must pass source-quality, size, measured venue-TVL, benchmark-freshness, and exposure-identity gates. Opportunity-level risk can affect PYS for that market, but it never rewrites the underlying stablecoin's Safety Score. The typed adapter, allowlist, exact-pool, source-risk, and lifecycle registries own the changing venue and asset inventories.";
 
 export function YieldIntelligenceMethodologySection() {
   return (
@@ -177,13 +177,17 @@ export function YieldIntelligenceMethodologySection() {
                     canonical source disagrees materially. Protocol-native supplemental lending venues such as Aave V3 do
                     not outrank stronger native wrapper yields purely because they query protocol state directly. Within a
                     confidence tier, candidates compare source-risk-adjusted utility after source-risk penalty resolution
-                    before falling back to APY and TVL tie-breakers, and
-                    Resolv / USR-linked lending-opportunity venues are excluded from publication entirely. Published
-                    lending-opportunity rows also need observable venue TVL and must clear the higher of the absolute
-                    TVL floor or 0.1% of the tracked stablecoin&apos;s current supply. Linked tracked-variant rows can
-                    become parent alternatives when they represent native/wrapper yield, while third-party
-                    lending-opportunity rows stay on the asset that owns the venue, and explicit lending overrides only
-                    publish for active assets.
+                    before falling back to APY and TVL tie-breakers, and Resolv / USR-linked lending-opportunity venues
+                    are excluded from publication entirely. Published <code>lending-opportunity</code>,{" "}
+                    <code>fixed-yield</code>, and <code>structured-tranche</code> rows must also pass a final
+                    resolve-stage measured venue-TVL gate after tracked, explicit, auto-discovered, supplemental, and
+                    linked-variant candidates are assembled. <code>sourceTvlUsd</code> must clear the higher of the
+                    chain floor or 0.1% of current tracked supply; null or non-finite TVL fails closed, and
+                    structured-tranche floors augment Royco&apos;s bespoke market/vault floors. The supply-relative floor
+                    applies to every peg currency, including GOLD/SILVER, because tracked supply is USD-denominated.
+                    Linked tracked-variant rows can become parent alternatives when they represent native/wrapper yield,
+                    while third-party lending-opportunity rows stay on the asset that owns the venue, and explicit
+                    lending overrides only publish for active assets.
                   </p>
                   <p>
                     Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,
