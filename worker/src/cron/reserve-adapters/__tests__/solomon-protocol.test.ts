@@ -31,7 +31,6 @@ const FIXTURE: SolomonProtocolDataResponse = {
     {
       exchange: "Binance",
       baseAsset: "BTC",
-      marketType: "Inverse",
       notionalUsd: "559199.99",
     },
   ],
