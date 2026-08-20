@@ -323,6 +323,12 @@ describe("syncYieldData", () => {
           updatedAt: nowSec,
         };
       }
+      if (key === "stablecoins") {
+        return {
+          value: JSON.stringify([{ id: "100", circulating: { peggedUSD: 5_000_000_000 } }]),
+          updatedAt: nowSec,
+        };
+      }
       return null;
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -403,6 +409,12 @@ describe("syncYieldData", () => {
               },
             ],
           }),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "stablecoins") {
+        return {
+          value: JSON.stringify([{ id: "usdc-circle", circulating: { peggedUSD: 10_000_000_000 } }]),
           updatedAt: nowSec,
         };
       }
@@ -842,6 +854,12 @@ describe("syncYieldData", () => {
               underlyingTokens: ["0x68749665ff8d2d112fa859aa293f07a622782f38"],
             },
           ]),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "stablecoins") {
+        return {
+          value: JSON.stringify([{ id: "xaut-tether", circulating: { peggedGOLD: 1_000_000_000 } }]),
           updatedAt: nowSec,
         };
       }
