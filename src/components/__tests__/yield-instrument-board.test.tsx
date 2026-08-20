@@ -198,6 +198,45 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.getByText("Source risk 42/100 | 1.32x")).toBeTruthy();
   });
 
+  it("reads a native row with no venue TVL as Native depth-not-applicable, board and card alike", () => {
+    // `rebase` keeps the yield-type badge off the word "Native", so the only
+    // "Native" in the DOM is the TVL cell under test.
+    const row = {
+      ...baseRow,
+      yieldType: "rebase",
+      sourceTvlUsd: null,
+      sourceDepthLens: "unknown",
+    } as YieldViewModelRow;
+
+    const desktop = renderBoard(row);
+    expect(screen.getByText("Native")).toBeTruthy();
+    expect(screen.getByText("Venue TVL not applicable: yield accrues on the asset itself")).toBeTruthy();
+    expect(screen.getByText("Native · depth n/a")).toBeTruthy();
+    expect(screen.queryByText("Unknown depth")).toBeNull();
+    desktop.unmount();
+
+    renderMobileCard(row);
+    expect(screen.getByText("Native")).toBeTruthy();
+    expect(screen.getByText("Native · depth n/a")).toBeTruthy();
+    expect(screen.queryByText("Depth: Unknown")).toBeNull();
+  });
+
+  it("keeps the em dash and unknown depth for an external opportunity with no venue TVL", () => {
+    const row = {
+      ...baseRow,
+      yieldType: "lending-opportunity",
+      sourceTvlUsd: null,
+      sourceDepthLens: "unknown",
+    } as YieldViewModelRow;
+
+    renderBoard(row);
+
+    expect(screen.getByText("TVL unavailable")).toBeTruthy();
+    expect(screen.getByText("Unknown depth")).toBeTruthy();
+    expect(screen.queryByText("Native")).toBeNull();
+    expect(screen.queryByText("Native · depth n/a")).toBeNull();
+  });
+
   it("renders published stale status for a 4h-old default source", () => {
     const row = {
       ...baseRow,

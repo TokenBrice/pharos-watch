@@ -5,8 +5,10 @@ import {
   classifyYieldSourceAgeContext,
   formatYieldSourceRiskSummary,
   formatYieldSourceRiskDriverSummary,
+  getYieldSourceDepthDisplay,
   getYieldSourceRiskDrivers,
   getYieldSourceFreshnessDisplay,
+  isNativeYieldSource,
 } from "@/lib/yield-source-risk";
 import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
@@ -160,6 +162,75 @@ describe("yield source risk UI helpers", () => {
     })).toBe("thin");
     expect(classifyYieldSourceDepth({ sourceRisk: { sourceDepthRatio: 0.02 }, sourceTvlUsd: null })).toBe("unknown");
     expect(classifyYieldSourceDepth({ sourceRisk: null, sourceTvlUsd: 10_000_000 })).toBe("unknown");
+  });
+});
+
+describe("getYieldSourceDepthDisplay", () => {
+  it("reads a native row with no venue TVL as not applicable, not unknown", () => {
+    const display = getYieldSourceDepthDisplay({
+      depthLens: "unknown",
+      yieldType: "lending-vault",
+      sourceRole: "canonical-holder",
+      sourceTvlUsd: null,
+    });
+
+    expect(display.lens).toBe("native-unmeasured");
+    expect(display.phrase).toBe("Native · depth n/a");
+    expect(display.label).toBe("Native");
+    expect(display.isNativeUnmeasured).toBe(true);
+  });
+
+  it("keeps unknown depth for an external opportunity with no venue TVL", () => {
+    const display = getYieldSourceDepthDisplay({
+      depthLens: "unknown",
+      yieldType: "lending-opportunity",
+      sourceRole: "external-opportunity",
+      sourceTvlUsd: null,
+    });
+
+    expect(display.lens).toBe("unknown");
+    expect(display.phrase).toBe("Unknown depth");
+    expect(display.isNativeUnmeasured).toBe(false);
+  });
+
+  it("falls back to the yield-type split when the row omits sourceRole", () => {
+    const native = getYieldSourceDepthDisplay({ depthLens: "unknown", yieldType: "rebase", sourceTvlUsd: null });
+    const external = getYieldSourceDepthDisplay({ depthLens: "unknown", yieldType: "fixed-yield", sourceTvlUsd: null });
+
+    expect(native.lens).toBe("native-unmeasured");
+    expect(external.lens).toBe("unknown");
+  });
+
+  it("reports measured depth verbatim, native or not", () => {
+    const display = getYieldSourceDepthDisplay({
+      depthLens: "deep",
+      yieldType: "lending-vault",
+      sourceRole: "canonical-holder",
+      sourceTvlUsd: 10_000_000,
+    });
+
+    expect(display.lens).toBe("deep");
+    expect(display.phrase).toBe("Deep depth");
+    expect(display.isNativeUnmeasured).toBe(false);
+  });
+
+  it("stays unknown for a native row whose venue TVL is measured but ratio is missing", () => {
+    const display = getYieldSourceDepthDisplay({
+      depthLens: "unknown",
+      yieldType: "lending-vault",
+      sourceRole: "canonical-holder",
+      sourceTvlUsd: 10_000_000,
+    });
+
+    expect(display.lens).toBe("unknown");
+    expect(display.isNativeUnmeasured).toBe(false);
+  });
+
+  it("treats an audit alternate by yield type and every canonical role as native", () => {
+    expect(isNativeYieldSource("audit-alternate", "lending-opportunity")).toBe(false);
+    expect(isNativeYieldSource("audit-alternate", "lending-vault")).toBe(true);
+    expect(isNativeYieldSource("degraded-canonical", "lending-opportunity")).toBe(true);
+    expect(isNativeYieldSource("fallback-proxy", "structured-tranche")).toBe(true);
   });
 });
 

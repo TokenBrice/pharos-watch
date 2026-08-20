@@ -25,7 +25,11 @@ import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { computePysBreakdown, formatYieldWarningSignal, getPysColor } from "@/lib/yield-constants";
-import { YIELD_SOURCE_DEPTH_DEFINITIONS, formatYieldSourceRiskSummary } from "@/lib/yield-source-risk";
+import {
+  formatYieldSourceRiskSummary,
+  getYieldSourceDepthDisplay,
+  isNativeYieldSource,
+} from "@/lib/yield-source-risk";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import {
   YIELD_OPPORTUNITY_SAFETY_DESCRIPTION,
@@ -36,7 +40,11 @@ import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { trackEvent } from "@/lib/analytics";
-import { deriveYieldRowPresentation, isYieldBenchmarkFallback } from "@/lib/yield-workbench-row";
+import {
+  deriveYieldRowPresentation,
+  getYieldWorkbenchSourceRole,
+  isYieldBenchmarkFallback,
+} from "@/lib/yield-workbench-row";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
@@ -463,7 +471,18 @@ export function YieldMobileCard({
   const grade = row.safetyGrade;
   const safetyScore = row.safetyScore;
   const stabilityPct = row.yieldStability !== null ? Math.round(row.yieldStability * 100) : null;
-  const tvlLabel = row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—";
+  const sourceRole = getYieldWorkbenchSourceRole(row);
+  // Native rows have no venue to size apart from the asset itself: a null TVL
+  // there is "not applicable", not a measurement we missed.
+  const tvlIsNative = row.sourceTvlUsd === null && isNativeYieldSource(sourceRole, row.yieldType);
+  const tvlLabel =
+    row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : tvlIsNative ? "Native" : "—";
+  const depthDisplay = getYieldSourceDepthDisplay({
+    depthLens: row.sourceDepthLens,
+    yieldType: row.yieldType,
+    sourceRole,
+    sourceTvlUsd: row.sourceTvlUsd,
+  });
   const warningCount = row.warningSignals.length;
   const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
   const {
@@ -597,7 +616,10 @@ export function YieldMobileCard({
           {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
         </Badge>
         <MobileMetricPill>
-          TVL <span className="font-mono tabular-nums text-foreground">{tvlLabel}</span>
+          TVL{" "}
+          <span className={tvlIsNative ? "text-muted-foreground" : "font-mono tabular-nums text-foreground"}>
+            {tvlLabel}
+          </span>
         </MobileMetricPill>
         {stabilityPct !== null ? (
           <MobileMetricPill>
@@ -657,8 +679,8 @@ export function YieldMobileCard({
           <p>{benchmarkReferenceText}</p>
           <YieldSourceRiskBar score={sourceRiskScore} compact tooltip />
         </div>
-        <p className="mt-1" title={YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].description}>
-          Depth: {YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].label}
+        <p className="mt-1" title={depthDisplay.description}>
+          {depthDisplay.isNativeUnmeasured ? depthDisplay.phrase : `Depth: ${depthDisplay.label}`}
         </p>
         {sourceRiskSummary ? (
           <p className="mt-1 font-mono text-[11px] tabular-nums text-amber-700 dark:text-amber-300">

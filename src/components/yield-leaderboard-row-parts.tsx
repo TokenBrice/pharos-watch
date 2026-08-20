@@ -11,6 +11,7 @@ import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import {
   getYieldBenchmarkSelectionMode,
+  getYieldWorkbenchSourceRole,
   isYieldBenchmarkFallback,
   isYieldRankingSummary,
 } from "@/lib/yield-workbench-row";
@@ -26,7 +27,11 @@ import {
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
-import { YIELD_SOURCE_DEPTH_DEFINITIONS, formatYieldSourceRiskSummary } from "@/lib/yield-source-risk";
+import {
+  formatYieldSourceRiskSummary,
+  getYieldSourceDepthDisplay,
+  isNativeYieldSource,
+} from "@/lib/yield-source-risk";
 import type {
   YieldSourceConfidenceStyle,
   YieldSourceFreshnessDisplay,
@@ -278,7 +283,12 @@ export function YieldSourceDetails({
   sourceRiskScore: number | null;
   freshness: YieldSourceFreshnessDisplay | null;
 }) {
-  const depth = YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens];
+  const depth = getYieldSourceDepthDisplay({
+    depthLens: row.sourceDepthLens,
+    yieldType: row.yieldType,
+    sourceRole: getYieldWorkbenchSourceRole(row),
+    sourceTvlUsd: row.sourceTvlUsd,
+  });
   const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
   const selectionReason = isYieldRankingSummary(row)
     ? row.yieldSource
@@ -328,7 +338,7 @@ export function YieldSourceDetails({
             <span aria-hidden="true">·</span>
           </>
         ) : null}
-        <span title={depth.description}>{depth.label} depth</span>
+        <span title={depth.description}>{depth.phrase}</span>
       </div>
     </div>
   );
@@ -553,13 +563,19 @@ export function isOpportunityDerivedYieldRow(row: YieldViewModelRow): boolean {
 export function formatYieldRowLabels(row: YieldViewModelRow) {
   const grade = row.safetyGrade;
   const safetyScore = row.safetyScore;
-  const tvlLabel = row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—";
+  // A native row has no venue to size apart from the asset itself, so a null
+  // TVL is "not applicable", not a gap: it reads "Native" instead of a dash.
+  const tvlIsNative =
+    row.sourceTvlUsd === null && isNativeYieldSource(getYieldWorkbenchSourceRole(row), row.yieldType);
+  const tvlLabel =
+    row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : tvlIsNative ? "Native" : "—";
   const apyLabel = formatPercent(row.apy30d);
   const stabilityPct = row.yieldStability !== null ? Math.round(row.yieldStability * 100) : null;
 
   return {
     apyLabel,
     tvlLabel,
+    tvlIsNative,
     stabilityPct,
     apySrLabel: `30-day APY: ${row.apy30d.toFixed(1)} percent`,
     safetySrLabel:
@@ -574,7 +590,12 @@ export function formatYieldRowLabels(row: YieldViewModelRow) {
       row.pharosYieldScore !== null
         ? `Pharos Yield Score ${formatScore(row.pharosYieldScore)} out of 100`
         : "Pharos Yield Score unavailable",
-    tvlSrLabel: row.sourceTvlUsd !== null ? `TVL: ${tvlLabel}` : "TVL unavailable",
+    tvlSrLabel:
+      row.sourceTvlUsd !== null
+        ? `TVL: ${tvlLabel}`
+        : tvlIsNative
+          ? "Venue TVL not applicable: yield accrues on the asset itself"
+          : "TVL unavailable",
     stabilitySrLabel:
       stabilityPct !== null ? `30-day stability: ${stabilityPct} percent` : "30-day stability unavailable",
   };
