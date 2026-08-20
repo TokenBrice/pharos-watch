@@ -137,11 +137,11 @@ export const MEDIA_APPEARANCES = [
   {
     host: "Leviathan News",
     hostLogoSrc: "/media/leviathan-news.jpg",
-    title: "Pharos live walkthrough",
+    title: "How Stable Is Your Stablecoin?",
     description:
       "TokenBrice walked through Pharos live — the motivation behind the project, the data pipeline, and how the main risk signals should be read in practice.",
-    href: "https://x.com/i/broadcasts/1qxvvkeMlyAxB",
-    date: "2026-03-04",
+    href: "https://www.youtube.com/watch?v=n2qDkuZl3AA",
+    date: "2026-03-03",
   },
 ] as const satisfies readonly AboutMediaAppearance[];
 
