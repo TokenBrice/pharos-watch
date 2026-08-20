@@ -39,6 +39,7 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   CMC_API_KEY?: string;
   JUPITER_API_KEY?: string;
+  M0_API_KEY?: string;
   COINGECKO_API_KEY?: string;
   VAULTS_FYI_API_KEY?: string;
   VAULTS_FYI_ENABLED?: string;

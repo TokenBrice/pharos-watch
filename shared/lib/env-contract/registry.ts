@@ -254,6 +254,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "M0_API_KEY",
+    valueType: "string",
+    description: "M0 Protocol API credential for the m0 live-reserve adapter (`protocol-api.m0.org/graphql` moved to keyed access on 2026-08-19); issuer-provided, rate-limited, Pharos-use-only. Without it the m0 adapter fails closed and the seven bound coins fall back to curated reserve evidence.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
     key: "COINGECKO_API_KEY",
     valueType: "string",
     description: "CoinGecko credential used for price enrichment and depeg confirmation.",

@@ -134,6 +134,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `ANTHROPIC_API_KEY` | `string` | optional | - | - | Anthropic credential used for daily digest generation. |
 | `CMC_API_KEY` | `string` | optional | - | - | CoinMarketCap credential used by the price-fallback pass. |
 | `JUPITER_API_KEY` | `string` | optional | - | - | Jupiter credential used by Solana price fallback and shadow Orca exact-route quotes against `api.jup.ag`. |
+| `M0_API_KEY` | `string` | optional | - | - | M0 Protocol API credential for the m0 live-reserve adapter (`protocol-api.m0.org/graphql` moved to keyed access on 2026-08-19); issuer-provided, rate-limited, Pharos-use-only. Without it the m0 adapter fails closed and the seven bound coins fall back to curated reserve evidence. |
 | `COINGECKO_API_KEY` | `string` | optional | - | - | CoinGecko credential used for price enrichment and depeg confirmation. |
 | `VAULTS_FYI_API_KEY` | `string` | optional | - | - | Optional vaults.fyi credential for the disabled-by-default supplemental yield integration. |
 | `VAULTS_FYI_ENABLED` | `string` | optional | - | - | Optional vaults.fyi supplemental yield integration flag; unset, false, or malformed values keep the integration disabled. |

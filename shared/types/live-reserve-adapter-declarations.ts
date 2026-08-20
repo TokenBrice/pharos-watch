@@ -646,18 +646,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   m0: {
     primaryInputKinds: ["http-json"],
     paramsSchema: "none",
-    sourceModel: "dynamic-mix",
+    sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale:
-        "M0's Protocol API moved to keyed access and the public GraphQL endpoint returns HTTP 500 (observed across all seven bound coins on 2026-08-19); the coin configs carry a matching liveReservesConfig.suspended marker until an API key is issued.",
-      parkedSince: "2026-08-19",
-      nextReview: "2026-09-19",
-    },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,

@@ -1,29 +1,26 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonPostWithRetry,
   freshnessMetadataFromTimestamp,
+  parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
-  SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
-  summarizeSourceTimestamps,
   requireJsonInputFromConfig,
   slicesFromValues,
+  summarizeSourceTimestamps,
 } from "./helpers";
 
 interface M0GraphQlResponse {
   data?: {
-    CollateralCurrent?: {
-      totalCash: number;
-      eligibleTreasuries: number;
-      nonEligibleTreasuries: number;
-      totalTreasuries: number;
-      totalTokenCollateral: number | null;
-      eligibleTokenCollateral: number | null;
-      nonEligibleTokenCollateral: number | null;
-      remainingTerm: number;
-      yieldToMaturity: number;
-    };
+    minterGateway_totalCollateralSnapshots?: Array<{
+      timestamp?: string | number;
+      value?: string | number;
+    }>;
+    minterGateway_minters?: Array<{
+      id?: string;
+      collateral?: string | number;
+    }>;
     collateralUpdateds?: Array<{
       timestamp?: string | number;
       blockTimestamp?: string | number;
@@ -36,18 +33,21 @@ interface M0GraphQlResponse {
   errors?: Array<{ message?: string }>;
 }
 
-const M0_COLLATERAL_QUERY = `
-  query LiveReserveCurrent {
-    CollateralCurrent {
-      totalCash
-      eligibleTreasuries
-      nonEligibleTreasuries
-      totalTreasuries
-      totalTokenCollateral
-      eligibleTokenCollateral
-      nonEligibleTokenCollateral
-      remainingTerm
-      yieldToMaturity
+// M0's Protocol API retired the off-chain CollateralCurrent composition feed in
+// 2026-08 (the resolver survives in the schema but returns the gateway 500
+// envelope). The supported replacement is the on-chain-indexed Minter Gateway
+// total: minterGateway_totalCollateralSnapshots. Composition (cash vs treasury
+// split) is no longer observable through the API, so the adapter publishes one
+// protocol-constrained slice; curated reserve evidence carries the detail.
+const M0_TOTAL_COLLATERAL_QUERY = `
+  query LiveReserveTotalCollateral {
+    minterGateway_totalCollateralSnapshots(first: 1, orderBy: timestamp, orderDirection: desc) {
+      timestamp
+      value
+    }
+    minterGateway_minters {
+      id
+      collateral
     }
     collateralUpdateds(first: 1, orderBy: timestamp, orderDirection: desc) {
       timestamp
@@ -60,101 +60,81 @@ const M0_COLLATERAL_QUERY = `
   }
 `;
 
-const M0_CASH_SCALE = 1_000;
+// Minter Gateway collateral values are 6-decimal token units (observed
+// 277097642539488 -> $277.10M against the M0 dashboard on 2026-08-20).
+const M0_COLLATERAL_DECIMALS_DIVISOR = 1_000_000;
 
-function scaleM0CashToReserveUnits(rawCash: number): number {
-  return rawCash * M0_CASH_SCALE;
+// The total snapshot and the per-minter rows are written at slightly different
+// index times, so an exact match is not expected (observed skew ~4e-6 of the
+// total). A divergence beyond this ratio means the snapshot no longer describes
+// the minter set and operators should look at the upstream indexer.
+const M0_MINTER_RECONCILIATION_WARN_RATIO = 0.005;
+
+// The published value comes from the latest total-collateral snapshot; the
+// collateral-update event stream routinely runs ahead of it by an indexing
+// cadence of ~2h (observed 2026-08-20). Only a lag well beyond that cadence
+// indicates the total has stopped tracking known collateral updates.
+const M0_SNAPSHOT_LAG_DEGRADE_SEC = 6 * 60 * 60;
+
+function parseNumericValue(value: string | number | undefined): number | null {
+  if (value == null) return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getM0SourceTimestampSummary(payload: M0GraphQlResponse) {
-  const candidates = [
+export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
+  const snapshot = payload.data?.minterGateway_totalCollateralSnapshots?.[0];
+  if (!snapshot) {
+    throw new Error("M0 GraphQL response missing minterGateway_totalCollateralSnapshots");
+  }
+
+  const rawTotal = parseNumericValue(snapshot.value);
+  if (rawTotal == null || rawTotal < 0) {
+    throw new Error(`M0 total collateral snapshot value is not a usable number: ${String(snapshot.value)}`);
+  }
+  const totalUsd = rawTotal / M0_COLLATERAL_DECIMALS_DIVISOR;
+
+  const warnings = [];
+
+  const minterCollaterals = (payload.data?.minterGateway_minters ?? [])
+    .map((minter) => parseNumericValue(minter.collateral))
+    .filter((value): value is number => value != null);
+  const minterCollateralTotalUsd = minterCollaterals.length > 0
+    ? minterCollaterals.reduce((acc, value) => acc + value, 0) / M0_COLLATERAL_DECIMALS_DIVISOR
+    : null;
+  if (
+    minterCollateralTotalUsd != null
+    && totalUsd > 0
+    && Math.abs(minterCollateralTotalUsd - totalUsd) / totalUsd > M0_MINTER_RECONCILIATION_WARN_RATIO
+  ) {
+    warnings.push(reserveDegradedWarning(
+      "minter-collateral-reconciliation",
+      `M0 per-minter collateral sum ($${minterCollateralTotalUsd.toFixed(0)}) diverges from the total collateral snapshot ($${totalUsd.toFixed(0)})`,
+    ));
+  }
+
+  const snapshotTimestamp = parseTimestampLikeToUnixSeconds(snapshot.timestamp);
+  const updateTimestampSummary = summarizeSourceTimestamps([
     payload.data?.collateralUpdateds?.[0]?.timestamp,
     payload.data?.collateralUpdateds?.[0]?.blockTimestamp,
     payload.data?.minterGateway_latestUpdateTimestampSnapshots?.[0]?.value,
     payload.data?.minterGateway_latestUpdateTimestampSnapshots?.[0]?.timestamp,
-  ];
-
-  return summarizeSourceTimestamps(candidates);
-}
-
-export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
-  const current = payload.data?.CollateralCurrent;
-  if (!current) {
-    throw new Error("M0 GraphQL response missing CollateralCurrent");
-  }
-
-  if (
-    current.totalTreasuries > 0
-    && Math.abs((current.eligibleTreasuries + current.nonEligibleTreasuries) - current.totalTreasuries) > 1
-  ) {
-    throw new Error("M0 GraphQL treasury subtotals do not reconcile to totalTreasuries");
-  }
-  const tokenCollateralTotal = current.totalTokenCollateral ?? 0;
-  const eligibleTokenCollateral = current.eligibleTokenCollateral ?? tokenCollateralTotal;
-  const nonEligibleTokenCollateral = current.nonEligibleTokenCollateral ?? 0;
-  if (
-    tokenCollateralTotal > 0
-    && Math.abs((eligibleTokenCollateral + nonEligibleTokenCollateral) - tokenCollateralTotal) > 1
-  ) {
-    throw new Error("M0 GraphQL token collateral subtotals do not reconcile to totalTokenCollateral");
-  }
-
-  // The live dashboard currently exposes `totalCash` three decimal orders below the
-  // treasury/token collateral fields. Normalize it into the same reserve unit
-  // before composing the mix, and keep the applied scale explicit in metadata/tests.
-  // Sanity check: if the raw cash figure is already near the treasury scale (e.g. the
-  // dashboard stopped reporting milli-USD), multiplying by 1000 would materially
-  // inflate the reserve total. Reject the snapshot so operators catch the upstream
-  // unit change before it is written downstream.
-  if (current.totalCash > 0 && current.totalTreasuries > 0) {
-    const rawCashVsTreasuriesRatio = current.totalCash / current.totalTreasuries;
-    // Raw cash within 10% of treasuries magnitude (or larger) indicates the scale is
-    // already applied upstream. Under the documented 1000x scale the raw ratio is
-    // expected to be <=~0.001.
-    if (rawCashVsTreasuriesRatio > 0.1) {
-      throw new Error(
-        `M0 cash-scale anomaly: raw totalCash (${current.totalCash}) is ${(rawCashVsTreasuriesRatio * 100).toFixed(1)}% of totalTreasuries (${current.totalTreasuries}); cash*${M0_CASH_SCALE} would exceed treasury scale`,
-      );
-    }
-  }
-  const cashValue = scaleM0CashToReserveUnits(current.totalCash);
-  const normalizedReserveTotal = current.totalTreasuries + tokenCollateralTotal + cashValue;
-  const timestampSummary = getM0SourceTimestampSummary(payload);
-  const warnings = [];
-  if (
-    timestampSummary
-    && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
-  ) {
+  ]);
+  const snapshotLagSec = snapshotTimestamp != null && updateTimestampSummary != null
+    ? Math.max(0, updateTimestampSummary.latestSourceTimestamp - snapshotTimestamp)
+    : null;
+  if (snapshotLagSec != null && snapshotLagSec > M0_SNAPSHOT_LAG_DEGRADE_SEC) {
     warnings.push(reserveDegradedWarning(
-      "source-timestamp-spread",
-      `M0 collateral timestamp candidates span ${timestampSummary.sourceTimestampSpreadSec}s`,
+      "total-collateral-snapshot-lag",
+      `M0 total collateral snapshot lags the latest collateral update by ${snapshotLagSec}s`,
     ));
   }
+
   const slices = slicesFromValues([
     {
-      name: "Eligible U.S. Treasuries",
-      value: current.eligibleTreasuries,
+      name: "U.S. Treasury bills & cash (M0 eligible collateral)",
+      value: totalUsd,
       risk: "very-low",
-    },
-    {
-      name: "Tokenized treasury collateral",
-      value: eligibleTokenCollateral,
-      risk: "low",
-    },
-    {
-      name: "Cash",
-      value: cashValue,
-      risk: "very-low",
-    },
-    {
-      name: "Non-eligible U.S. Treasuries",
-      value: current.nonEligibleTreasuries,
-      risk: "low",
-    },
-    {
-      name: "Non-eligible token collateral",
-      value: current.nonEligibleTokenCollateral ?? 0,
-      risk: "medium",
     },
   ]);
 
@@ -163,32 +143,27 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...freshnessMetadataFromTimestamp(
-        timestampSummary?.sourceTimestamp,
-        "dashboard-graphql",
-        "M0 CollateralCurrent does not expose a trustworthy upstream disclosure timestamp",
+        snapshotTimestamp,
+        "protocol-api-graphql",
+        "M0 total collateral snapshot did not expose a parseable timestamp",
       ),
-      cashScaleApplied: M0_CASH_SCALE,
-      cashUnits: "milli-usd-to-usd",
-      ...(timestampSummary != null
+      collateralValueDivisor: M0_COLLATERAL_DECIMALS_DIVISOR,
+      normalizedReserveTotal: totalUsd,
+      ...(minterCollateralTotalUsd != null
         ? {
-            earliestCollateralSourceTimestamp: timestampSummary.sourceTimestamp,
-            latestCollateralSourceTimestamp: timestampSummary.latestSourceTimestamp,
-            sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,
-            timestampCandidateCount: timestampSummary.timestampCount,
+            minterCount: minterCollaterals.length,
+            minterCollateralTotalUsd,
           }
         : {}),
-      remainingTermDays: current.remainingTerm,
-      totalCashScaled: cashValue,
-      totalTokenCollateral: tokenCollateralTotal,
-      totalTreasuries: current.totalTreasuries,
-      normalizedReserveTotal,
-      yieldToMaturity: current.yieldToMaturity,
+      ...(updateTimestampSummary != null
+        ? {
+            earliestCollateralUpdateTimestamp: updateTimestampSummary.sourceTimestamp,
+            latestCollateralUpdateTimestamp: updateTimestampSummary.latestSourceTimestamp,
+          }
+        : {}),
+      ...(snapshotLagSec != null ? { snapshotLagSec } : {}),
     },
   };
-}
-
-export function adaptM0Current(payload: M0GraphQlResponse): ReserveSlice[] {
-  return adaptM0Collateral(payload).slices;
 }
 
 export async function fetchM0Reserves(
@@ -197,13 +172,18 @@ export async function fetchM0Reserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
+  const apiKey = ctx?.m0ApiKey?.trim();
+  if (!apiKey) {
+    throw new Error("M0_API_KEY not configured; the M0 Protocol API requires keyed access");
+  }
   const primaryInput = requireJsonInputFromConfig(config, "m0");
   const payload = await fetchJsonPostWithRetry<M0GraphQlResponse>(
     primaryInput.url,
-    { query: M0_COLLATERAL_QUERY },
+    { query: M0_TOTAL_COLLATERAL_QUERY },
     signal,
     12_000,
     ctx,
+    { headers: { Authorization: `ApiKey ${apiKey}` } },
   );
   if (payload.errors?.length) {
     const message = payload.errors.map((error) => error.message).filter(Boolean).join("; ");

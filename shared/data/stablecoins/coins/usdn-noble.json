@@ -85,11 +85,6 @@
         "kind": "http-json",
         "url": "https://protocol-api.m0.org/graphql"
       }
-    },
-    "suspended": {
-      "reason": "M0 Protocol API moved to keyed access (HTTP 500 on the public GraphQL endpoint since 2026-08-19); no API key issued yet",
-      "since": "2026-08-19",
-      "reviewBy": "2026-09-19"
     }
   },
   "yieldConfig": {

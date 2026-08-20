@@ -1,26 +1,35 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { adaptM0Collateral, adaptM0Current } from "../m0";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { StablecoinMeta } from "@shared/types/core";
+import { adaptM0Collateral, fetchM0Reserves } from "../m0";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
+// Live payload shape observed against protocol-api.m0.org on 2026-08-20, after
+// M0 retired the off-chain CollateralCurrent composition feed and moved the
+// endpoint to keyed access. Values are 6-decimal token units.
 const SAMPLE_PAYLOAD = {
   data: {
-    CollateralCurrent: {
-      totalCash: 27_250_000_000,
-      eligibleTreasuries: 137_500_000_000_000,
-      nonEligibleTreasuries: 0,
-      totalTreasuries: 137_500_000_000_000,
-      totalTokenCollateral: 30_000_000_000_000,
-      eligibleTokenCollateral: 30_000_000_000_000,
-      nonEligibleTokenCollateral: 0,
-      remainingTerm: 86,
-      yieldToMaturity: 0.036,
-    },
+    minterGateway_totalCollateralSnapshots: [
+      { timestamp: "1787171387", value: "277097642539488" },
+    ],
+    minterGateway_minters: [
+      { id: "minter-0x1d5b695d13f231a605d231631c688fb33477b249", collateral: "162911451780" },
+      { id: "minter-0x5d238f4eac94da0a635ee39fa389a4754395d5d9", collateral: "9799887431160" },
+      { id: "minter-0x7f7489582b64abe46c074a45d758d701c2ca5446", collateral: "238711590186548" },
+      { id: "minter-0xcd1394d24e1e404f9eb3609f872b0736becb9d74", collateral: "28422026810000" },
+    ],
+    collateralUpdateds: [
+      { timestamp: "1787176804", blockTimestamp: "1787176847" },
+    ],
+    minterGateway_latestUpdateTimestampSnapshots: [
+      { timestamp: "1787176847", value: "1787176847" },
+    ],
   },
 };
 
-describe("adaptM0Current", () => {
+describe("adaptM0Collateral", () => {
   it("keeps M0-backed curated tokenized collateral on the canonical low tier", () => {
     for (const coinId of ["musd-metamask", "ctusd-citrea", "usdat-saturn"]) {
       const tokenizedCollateral = TRACKED_META_BY_ID.get(coinId)?.reserves?.find(
@@ -30,153 +39,120 @@ describe("adaptM0Current", () => {
     }
   });
 
-  it("converts the current collateral query into reserve slices", () => {
-    const slices = adaptM0Current(SAMPLE_PAYLOAD);
-
-    expect(slices).toEqual([
-      { name: "Eligible U.S. Treasuries", pct: 70.6, risk: "very-low" },
-      { name: "Tokenized treasury collateral", pct: 15.4, risk: "low" },
-      { name: "Cash", pct: 14, risk: "very-low" },
-    ]);
-  });
-
-  it("keeps the cash scaling assumption explicit in adapter metadata", async () => {
+  it("converts the total collateral snapshot into the single protocol-constrained slice", () => {
     const result = adaptM0Collateral(SAMPLE_PAYLOAD);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "unverified",
-      details: {
-        freshnessSource: "dashboard-graphql",
-      },
-      cashScaleApplied: 1_000,
-      cashUnits: "milli-usd-to-usd",
-      totalCashScaled: 27_250_000_000_000,
-      normalizedReserveTotal: 194_750_000_000_000,
-    });
-    expect(result.metadata?.redemption).toBeUndefined();
+
+    expect(result.slices).toEqual([
+      { name: "U.S. Treasury bills & cash (M0 eligible collateral)", pct: 100, risk: "very-low" },
+    ]);
+    expect(result.warnings).toBeUndefined();
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("m0") ?? undefined }).valid).toBe(true);
   });
 
-  it("uses the oldest collateral update timestamp when M0 exposes multiple candidates", () => {
-    const result = adaptM0Collateral({
-      data: {
-        ...SAMPLE_PAYLOAD.data,
-        collateralUpdateds: [
-          {
-            timestamp: "1776232804",
-            blockTimestamp: "1776232835",
-          },
-        ],
-        minterGateway_latestUpdateTimestampSnapshots: [
-          {
-            timestamp: "1776232835",
-            value: "1776232835",
-          },
-        ],
-      },
-    });
+  it("normalizes 6-decimal units and reconciles the per-minter sum in metadata", () => {
+    const result = adaptM0Collateral(SAMPLE_PAYLOAD);
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: 1776232804,
-      earliestCollateralSourceTimestamp: 1776232804,
-      latestCollateralSourceTimestamp: 1776232835,
-      sourceTimestampSpreadSec: 31,
-      timestampCandidateCount: 4,
+      sourceTimestamp: 1787171387,
+      collateralValueDivisor: 1_000_000,
+      normalizedReserveTotal: 277_097_642.539488,
+      minterCount: 4,
+      minterCollateralTotalUsd: 277_096_415.879488,
+      earliestCollateralUpdateTimestamp: 1787176804,
+      latestCollateralUpdateTimestamp: 1787176847,
+      snapshotLagSec: 5460,
     });
+    expect(result.metadata?.redemption).toBeUndefined();
   });
 
-  it("degrades when M0 timestamp candidates diverge materially", () => {
+  it("tolerates the routine indexing skew between the snapshot and the update stream", () => {
+    // Observed live 2026-08-20: the collateral-update events run ~1.5h ahead of
+    // the latest total snapshot. That must not degrade every run.
+    const result = adaptM0Collateral(SAMPLE_PAYLOAD);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("degrades when the total snapshot lags known collateral updates materially", () => {
     const result = adaptM0Collateral({
       data: {
         ...SAMPLE_PAYLOAD.data,
         collateralUpdateds: [
-          {
-            timestamp: "1776225600",
-            blockTimestamp: "1776232835",
-          },
+          // 7h after the total snapshot at 1787171387.
+          { timestamp: "1787196587", blockTimestamp: "1787196587" },
+        ],
+        minterGateway_latestUpdateTimestampSnapshots: [
+          { timestamp: "1787196587", value: "1787196587" },
         ],
       },
     });
 
-    expect(result.warnings?.some((warning) => warning.code === "source-timestamp-spread")).toBe(true);
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: 1776225600,
-      latestCollateralSourceTimestamp: 1776232835,
-      sourceTimestampSpreadSec: 7235,
-    });
+    expect(result.warnings?.some((warning) => warning.code === "total-collateral-snapshot-lag")).toBe(true);
+    expect(result.metadata).toMatchObject({ snapshotLagSec: 25_200 });
   });
 
-  it("rejects snapshots where raw cash is already near the treasury scale (upstream units changed)", () => {
-    expect(() => adaptM0Collateral({
-      data: {
-        CollateralCurrent: {
-          // Raw cash already scaled to reserve units — applying *1000 would 1000x the total.
-          totalCash: 27_250_000_000_000,
-          eligibleTreasuries: 137_500_000_000_000,
-          nonEligibleTreasuries: 0,
-          totalTreasuries: 137_500_000_000_000,
-          totalTokenCollateral: 30_000_000_000_000,
-          eligibleTokenCollateral: 30_000_000_000_000,
-          nonEligibleTokenCollateral: 0,
-          remainingTerm: 86,
-          yieldToMaturity: 0.036,
-        },
-      },
-    })).toThrow(/cash-scale anomaly/);
-  });
-
-  it("accepts zero cash without tripping the scale anomaly check", () => {
+  it("degrades when the per-minter sum diverges from the total snapshot", () => {
     const result = adaptM0Collateral({
       data: {
-        CollateralCurrent: {
-          totalCash: 0,
-          eligibleTreasuries: 137_500_000_000_000,
-          nonEligibleTreasuries: 0,
-          totalTreasuries: 137_500_000_000_000,
-          totalTokenCollateral: 30_000_000_000_000,
-          eligibleTokenCollateral: 30_000_000_000_000,
-          nonEligibleTokenCollateral: 0,
-          remainingTerm: 86,
-          yieldToMaturity: 0.036,
-        },
+        ...SAMPLE_PAYLOAD.data,
+        minterGateway_minters: [
+          { id: "minter-0x1d5b695d13f231a605d231631c688fb33477b249", collateral: "200000000000000" },
+        ],
       },
     });
-    expect(result.metadata).toMatchObject({
-      cashScaleApplied: 1_000,
-      totalCashScaled: 0,
-    });
+
+    expect(result.warnings?.some((warning) => warning.code === "minter-collateral-reconciliation")).toBe(true);
   });
 
-  // Observed 2026-08-08: protocol-api.m0.org answers every `Collateral*` query with
-  // its gateway error envelope (`{"status":false,"statusCode":500,"message":"fetch
-  // failed"}`) while the rest of the schema still resolves. HTTP 500 already throws
-  // in the transport, but the envelope must never be adapted into a snapshot if the
-  // gateway ever returns it with a 200, and a null resolver result must fail loudly.
+  it("falls back to unverified freshness when the snapshot timestamp is unparseable", () => {
+    const result = adaptM0Collateral({
+      data: {
+        ...SAMPLE_PAYLOAD.data,
+        minterGateway_totalCollateralSnapshots: [
+          { timestamp: "not-a-timestamp", value: "277097642539488" },
+        ],
+      },
+    });
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: { freshnessSource: "protocol-api-graphql" },
+    });
+    expect(result.slices).toHaveLength(1);
+  });
+
+  // Observed 2026-08-08 (and still true for retired Collateral* resolvers on
+  // 2026-08-20): protocol-api.m0.org answers dead resolvers with its gateway
+  // error envelope (`{"status":false,"statusCode":500,"message":"fetch failed"}`).
+  // HTTP 500 already throws in the transport, but the envelope must never be
+  // adapted into a snapshot if the gateway ever returns it with a 200.
   it("refuses the M0 gateway error envelope instead of publishing an empty snapshot", () => {
     expect(() => adaptM0Collateral(
       { status: false, statusCode: 500, message: "fetch failed", result: {} } as never,
-    )).toThrow(/missing CollateralCurrent/);
+    )).toThrow(/missing minterGateway_totalCollateralSnapshots/);
   });
 
-  it("refuses a null CollateralCurrent resolver result", () => {
-    expect(() => adaptM0Collateral({ data: { CollateralCurrent: null } } as never))
-      .toThrow(/missing CollateralCurrent/);
+  it("refuses an empty snapshot list", () => {
+    expect(() => adaptM0Collateral({ data: { minterGateway_totalCollateralSnapshots: [] } }))
+      .toThrow(/missing minterGateway_totalCollateralSnapshots/);
   });
 
-  it("emits no publishable slices when every collateral bucket reports zero", () => {
+  it("refuses a non-numeric total collateral value", () => {
+    expect(() => adaptM0Collateral({
+      data: {
+        minterGateway_totalCollateralSnapshots: [
+          { timestamp: "1787171387", value: "fetch failed" },
+        ],
+      },
+    })).toThrow(/not a usable number/);
+  });
+
+  it("emits no publishable slices when the total collateral reports zero", () => {
     const result = adaptM0Collateral({
       data: {
-        CollateralCurrent: {
-          totalCash: 0,
-          eligibleTreasuries: 0,
-          nonEligibleTreasuries: 0,
-          totalTreasuries: 0,
-          totalTokenCollateral: 0,
-          eligibleTokenCollateral: 0,
-          nonEligibleTokenCollateral: 0,
-          remainingTerm: 0,
-          yieldToMaturity: 0,
-        },
+        minterGateway_totalCollateralSnapshots: [
+          { timestamp: "1787171387", value: "0" },
+        ],
       },
     });
 
@@ -185,5 +161,23 @@ describe("adaptM0Current", () => {
     const report = validateAdapterOutput(result, { adapter });
     expect(report.valid).toBe(false);
     expect(report.warnings.map((warning) => warning.code)).toContain("empty-slices");
+  });
+});
+
+describe("fetchM0Reserves", () => {
+  it("fails closed before fetching when M0_API_KEY is not configured", async () => {
+    const config = {
+      adapter: "m0",
+      version: 1,
+      semantics: "protocol-reserve",
+      inputs: { primary: { kind: "http-json", url: "https://protocol-api.m0.org/graphql" } },
+    } as unknown as LiveReservesConfig;
+
+    await expect(
+      fetchM0Reserves({} as StablecoinMeta, config, new AbortController().signal, {}),
+    ).rejects.toThrow(/M0_API_KEY not configured/);
+    await expect(
+      fetchM0Reserves({} as StablecoinMeta, config, new AbortController().signal, { m0ApiKey: "   " }),
+    ).rejects.toThrow(/M0_API_KEY not configured/);
   });
 });
