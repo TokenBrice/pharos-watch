@@ -53,7 +53,7 @@ const V9ScoreBearingGatesPolicySchema = z
 export type V9ScoreBearingGatesPolicy = z.infer<typeof V9ScoreBearingGatesPolicySchema>;
 
 /**
- * Safety Score methodology 9.3: digest-bound gates formerly held as code literals.
+ * Safety Score methodology 9.31: digest-bound gates formerly held as code literals.
  *
  * The gate values are unchanged from 9.22; only the label moves with each
  * release. `methodologyVersion` is deliberately digest-neutral (see "keeps a
@@ -63,7 +63,7 @@ export type V9ScoreBearingGatesPolicy = z.infer<typeof V9ScoreBearingGatesPolicy
  * mintPostureQuality change, not from this projection.
  */
 export const V9_SCORE_BEARING_GATES_POLICY_V923 = V9ScoreBearingGatesPolicySchema.parse({
-  methodologyVersion: "9.3",
+  methodologyVersion: "9.31",
   withhold: {
     maxScoreExclusive: 55,
     minimumLimitedPillarCount: 2,

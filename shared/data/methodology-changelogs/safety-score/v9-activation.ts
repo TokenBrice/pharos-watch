@@ -1,5 +1,22 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_CURATED_DEPENDENCY_GATE: MethodologyChangelogEntry = {
+  version: "9.31",
+  title: "Curated dependency links share the reserve admission gate",
+  date: "2026-08-20",
+  effectiveAt: 1787238000,
+  summary:
+    "Curated basket links no longer assert a dependency relationship when the same reserve composition is inadmissible for Backing and no live reserve slices are present. The dependency overlay now degrades with the reserve envelope, leaving the existing reserve gap to carry the bounded score consequence instead of publishing an unrelated unreviewed-dependency reason.",
+  impact: [
+    "When a curated review is stale, incomplete, non-verified, or otherwise fails the existing full-composition admission path, its curated collateral edges are omitted for that cycle when no live reserve slices exist; the reserve envelope continues to publish its existing missing or partial-review gap",
+    "A verified, current curated composition keeps the same basket edges, and live-derived edges plus manual dependency reviews remain unchanged",
+    "No pillar weights, aggregation, caps, grade thresholds, or reason vocabulary changes; the release aligns dependency-edge admission with the reserve-envelope gate",
+    "On the current-tree replay, five affected assets keep their score and grade while six lose the stale dependency reason; jusd-juicedollar moves 40/D to 37/F because removing its expired full-weight curated edge also removes the inherited-backing path — accepted at release: the 2026-08-20 on-chain re-verification found the StablecoinBridgeUSDT reserve holding ~0.00042 USDT.e against ~10,460 JUSD supply, so the D grade rested on a stale optimistic edge",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_NONE_RESOLVED_TOP_RUNG: MethodologyChangelogEntry = {
   version: "9.3",
   title: "A verified absence of privileged mint scores what it proves",

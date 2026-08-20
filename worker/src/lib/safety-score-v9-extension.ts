@@ -442,18 +442,40 @@ function collateralExposureMappingIssues(
   });
 }
 
+function hasAdmissibleCuratedReserveComposition(
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+): boolean {
+  if (buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) !== null) return true;
+  return meta.liveReservesConfig !== undefined
+    ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec) !== null
+    : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec) !== null;
+}
+
 function prepareDependency(
   meta: V9ExtensionRegistryMeta,
   liveReserveSlices: readonly ReserveSlice[] | undefined,
   activeIds: ReadonlySet<string>,
   clockSec: number,
 ): PreparedDependency {
+  const hasLiveReserveSlices = (liveReserveSlices?.length ?? 0) > 0;
   const effectiveLiveReserveSlices = liveReserveSlices
     ? dependencyReserveSlices(liveReserveSlices, meta, clockSec)
     : undefined;
   const derived = deriveEffectiveDependencySet(meta, {
     ...(effectiveLiveReserveSlices ? { liveReserveSlices: effectiveLiveReserveSlices } : {}),
   });
+  // Curated basket links are only scoreable when the same composition can enter
+  // the reserve envelope. A missing live snapshot must not keep stale curated
+  // collateral edges alive; serial/manual relationships and live-derived edges
+  // deliberately stay on their existing paths.
+  const suppressCuratedBasketEdges =
+    !hasLiveReserveSlices &&
+    derived.baseSource === "curated-reserve" &&
+    derived.dependencies.some(
+      (dependency) => (dependency.type ?? "collateral") === "collateral",
+    ) &&
+    !hasAdmissibleCuratedReserveComposition(meta, clockSec);
   const issueCodes: string[] = [];
   const expectedRelationships = derived.dependencies
     .map((dependency) => ({
@@ -503,7 +525,7 @@ function prepareDependency(
           };
         })
       : null;
-  const dependencyRelationships =
+  const dependencyRelationships = (
     reviewedRelationships ??
     derived.dependencies.map((dependency) => {
       const dependencyType = dependency.type ?? "collateral";
@@ -513,7 +535,11 @@ function prepareDependency(
         weight: dependency.weight,
         economicRole: defaultV9DependencyEconomicRole(dependencyType),
       };
-    });
+    })
+  ).filter(
+    (dependency) =>
+      !suppressCuratedBasketEdges || dependency.economicRole !== "basket-exposure",
+  );
   const edges = dependencyRelationships.flatMap((dependency) => {
     const dependencyType = dependency.type ?? "collateral";
     if (!activeIds.has(dependency.id)) {
