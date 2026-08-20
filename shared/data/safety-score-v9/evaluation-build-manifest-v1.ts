@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "7e597284a988710525295d441fa6a6bc71fa06907710bf004dcdfda95ab479c6"
+      "sha256": "074c41b65369b3ff3c3ec954cd2d7b1a52d738848f23e8ff6f553e413535be5c"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -62,11 +62,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "b4b50e420875304cb6ce610f127858e4625f802fea96fbfa7baeea58c86fa4d3"
+      "sha256": "fd749f1a4b36367bbf9ea8bcb2c9bc6e0e01f71bceb17559481e27e2b0cedfe9"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "a8122c354a820510d3744be1fb680d4e30a0ac237ec3ea3e0d9a56ffcb354030"
+      "sha256": "700e912ac2cd3e1dc15d21866c794273824dbb9873a5d47f8a8cb7f6d72c8073"
     },
     {
       "path": "shared/lib/methodology-versions/liquidity-score.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "ac840e780ddddca6da59f962fc29910ffe4a2f6981e0f804a2bcf582693ee502"
+  "digest": "8764317cd91119d36b44073aa55713722c1e7856827e47fb316504c096b36b1c"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

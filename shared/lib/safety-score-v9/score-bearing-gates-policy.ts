@@ -53,15 +53,17 @@ const V9ScoreBearingGatesPolicySchema = z
 export type V9ScoreBearingGatesPolicy = z.infer<typeof V9ScoreBearingGatesPolicySchema>;
 
 /**
- * Safety Score methodology 9.28: digest-bound gates formerly held as code literals.
+ * Safety Score methodology 9.3: digest-bound gates formerly held as code literals.
  *
- * The gate values are unchanged from 9.22; only the label moves. `methodologyVersion`
- * is deliberately digest-neutral (see "keeps a gate policy version relabel
- * digest-neutral"), so this bump republishes provenance under the active version
- * without rotating the policy semantic digest or moving any score.
+ * The gate values are unchanged from 9.22; only the label moves with each
+ * release. `methodologyVersion` is deliberately digest-neutral (see "keeps a
+ * gate policy version relabel digest-neutral"), so this label republishes
+ * provenance under the active version without itself rotating the policy
+ * semantic digest. The 9.3 digest rotation comes from the policy asset's
+ * mintPostureQuality change, not from this projection.
  */
 export const V9_SCORE_BEARING_GATES_POLICY_V923 = V9ScoreBearingGatesPolicySchema.parse({
-  methodologyVersion: "9.28",
+  methodologyVersion: "9.3",
   withhold: {
     maxScoreExclusive: 55,
     minimumLimitedPillarCount: 2,
