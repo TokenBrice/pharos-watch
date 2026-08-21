@@ -1,6 +1,7 @@
 export {
   fetchBeefySources,
   fetchBimaSusbdSource,
+  fetchBasedollarSpSource,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
   fetchEtherfuseCetesSource,

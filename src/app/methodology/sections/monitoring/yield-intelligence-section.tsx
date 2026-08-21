@@ -141,7 +141,8 @@ export function YieldIntelligenceMethodologySection() {
                     <li>
                       <span className="text-foreground">Tier 1 &mdash; Direct on-chain reads</span>: reads protocol state
                       directly, either as an exchange-rate delta (e.g.&nbsp;sUSDe), a conservative reward-only estimator
-                      (e.g.&nbsp;LUSD B.Protocol Stability Pool, LQTY only), or scrvUSD&apos;s Yearn V3 profit-unlock current-rate reader
+                      (e.g.&nbsp;LUSD B.Protocol Stability Pool, LQTY only), a multi-branch interest-only estimator
+                      (e.g.&nbsp;Base Dollar Liquity V2 Stability Pools), or scrvUSD&apos;s Yearn V3 profit-unlock current-rate reader
                     </li>
                     <li>
                       <span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a
@@ -312,6 +313,11 @@ export function YieldIntelligenceMethodologySection() {
                     <li>
                       The LUSD B.Protocol Stability Pool row is conservative by design: it includes projected LQTY
                       incentives only and excludes ETH liquidation gains
+                    </li>
+                    <li>
+                      The Base Dollar Liquity V2 Stability Pool row is conservative by design: it includes 75% of
+                      accrued borrower interest only, requires complete five-branch reads, and excludes upfront
+                      borrowing fees and liquidation collateral gains
                     </li>
                     <li>Price-derived APY (Tier 3) can be noisy for low-liquidity NAV tokens</li>
                   </ul>

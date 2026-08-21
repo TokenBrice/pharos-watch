@@ -268,19 +268,16 @@ describe("yield config registry", () => {
     }
   });
 
-  it("records the reviewed Base Dollar Stability Pool adapter gap", () => {
+  it("wires the Base Dollar Stability Pool standalone source", () => {
     expect(YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "bd-basedollar")).toMatchObject({
-      intentionalGapReason: expect.stringContaining("five branch-specific Liquity V2 Stability Pools"),
+      directProtocolApiLabel: "Base Dollar Stability Pools (interest-only)",
+      directProtocolApiSourceKey: "onchain:bd-basedollar",
     });
-    expect(YIELD_ADAPTER_LIFECYCLE["bd-basedollar"]).toMatchObject({
-      lifecycle: "intentional-gap",
-      reason: expect.objectContaining({
-        code: "source-family-adapter-unimplemented",
-        since: "2026-08-21",
-        nextReviewAt: "2026-09-21",
-      }),
-    });
-    // BD itself is not yield-bearing: the gap concerns an opt-in Stability
+    expect(
+      YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "bd-basedollar")?.intentionalGapReason,
+    ).toBeUndefined();
+    expect(YIELD_ADAPTER_LIFECYCLE["bd-basedollar"]).toBeUndefined();
+    // BD itself is not yield-bearing: the source concerns an opt-in Stability
     // Pool opportunity, so it belongs in the source registry rather than the
     // yield-bearing asset manifest.
     expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "bd-basedollar")).toBeUndefined();

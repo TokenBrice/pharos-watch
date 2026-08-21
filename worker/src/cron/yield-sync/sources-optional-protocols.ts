@@ -1,4 +1,5 @@
 export {
+  fetchBasedollarSpSource,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
 } from "./sources-optional-protocols-onchain";
