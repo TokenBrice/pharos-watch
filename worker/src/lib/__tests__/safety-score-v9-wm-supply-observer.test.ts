@@ -446,6 +446,14 @@ describe("wM reviewed deployment observer", () => {
           ],
         };
       }
+      if (method === "getBlocks") {
+        expect(params).toEqual([
+          434_885_777,
+          434_885_841,
+          { commitment: "finalized", minContextSlot: 434_885_841 },
+        ]);
+        return [434_885_839, 434_885_841];
+      }
       expect(method).toBe("getBlock");
       expect(params).toEqual([
         434_885_841,
@@ -475,7 +483,86 @@ describe("wM reviewed deployment observer", () => {
       blockHash: "B".repeat(44),
       controllerProgramOwner: identity.controllerProgramOwner,
     });
-    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledTimes(3);
+  });
+
+  it("anchors a skipped Solana context slot to the latest produced finalized block", async () => {
+    const inventory = buildReviewedDeploymentRouteInventory("wm-m0")!;
+    const route = inventory.routes.find((candidate) => candidate.chainId === "solana")!;
+    const identity = expectedWmDeploymentIdentity(route.routeId);
+    if (!identity || identity.runtime !== "solana") throw new Error("Missing Solana identity");
+    const contextSlot = 434_885_841;
+    const producedBlockSlot = contextSlot - 1;
+    let producedBlockSlots = [contextSlot - 3, producedBlockSlot];
+    const rpc = vi.fn(async (method: string) => {
+      if (method === "getMultipleAccounts") {
+        return {
+          context: { slot: contextSlot },
+          value: [
+            {
+              owner: identity.programOwner,
+              data: {
+                parsed: {
+                  info: {
+                    decimals: route.decimals,
+                    supply: "247794997129",
+                    mintAuthority: identity.mintAuthority,
+                  },
+                },
+              },
+            },
+            {
+              owner: identity.controllerProgramOwner,
+              executable: true,
+            },
+          ],
+        };
+      }
+      if (method === "getBlocks") return producedBlockSlots;
+      if (method === "getBlock") {
+        return {
+          blockhash: "B".repeat(44),
+          blockTime: 1_784_881_315,
+        };
+      }
+      throw new Error(`Unexpected RPC method ${method}`);
+    });
+
+    await expect(
+      fetchSolanaWmDeploymentObservation(
+        route.routeId,
+        route.contractAddress,
+        undefined,
+        rpc as unknown as SolanaRpcFetcher,
+      ),
+    ).resolves.toMatchObject({
+      blockNumberOrSlot: producedBlockSlot.toString(),
+      blockTimeSec: 1_784_881_315,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(
+      3,
+      "getBlock",
+      [
+        producedBlockSlot,
+        {
+          commitment: "finalized",
+          transactionDetails: "none",
+          rewards: false,
+          maxSupportedTransactionVersion: 0,
+        },
+      ],
+      undefined,
+    );
+
+    producedBlockSlots = [contextSlot - 65];
+    await expect(
+      fetchSolanaWmDeploymentObservation(
+        route.routeId,
+        route.contractAddress,
+        undefined,
+        rpc as unknown as SolanaRpcFetcher,
+      ),
+    ).resolves.toBeNull();
   });
 
   it("propagates cancellation instead of turning it into missing evidence", async () => {

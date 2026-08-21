@@ -11,6 +11,7 @@ import {
 } from "./safety-score-v9-supply-attribution-contract";
 
 const REVIEWED_DEPLOYMENT_MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
+const REVIEWED_DEPLOYMENT_SOLANA_BLOCK_ANCHOR_LOOKBACK_SLOTS = 64;
 
 export type ReviewedDeploymentObservationRejectionCode =
   | "route-inventory-unavailable"
@@ -151,6 +152,7 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
 const SOLANA_RPC_URLS = [
   "https://api.mainnet-beta.solana.com",
   "https://api.mainnet.solana.com",
+  "https://solana.api.pocket.network",
   "https://solana-rpc.publicnode.com",
 ] as const;
 
@@ -318,6 +320,7 @@ export async function fetchReviewedDeploymentSolanaObservation(
   const controller = accounts?.value?.[1];
   const info = mint?.data?.parsed?.info;
   if (
+    typeof slot !== "number" ||
     !Number.isSafeInteger(slot) ||
     typeof info?.supply !== "string" ||
     !/^(0|[1-9][0-9]*)$/.test(info.supply) ||
@@ -331,10 +334,36 @@ export async function fetchReviewedDeploymentSolanaObservation(
     return null;
   }
 
+  // A finalized bank slot is not necessarily a produced block: Solana leaders
+  // can skip slots, while getMultipleAccounts still reports the current bank
+  // context. Resolve the latest produced block at or before that context so a
+  // valid account snapshot is not rejected merely because its context slot was
+  // skipped. This gives the observation a bounded finalized chronology anchor;
+  // the mint and controller values still come from the single account request.
+  const blockAnchorStartSlot = Math.max(
+    0,
+    slot - REVIEWED_DEPLOYMENT_SOLANA_BLOCK_ANCHOR_LOOKBACK_SLOTS,
+  );
+  const blockSlots = await rpc<number[]>(
+    "getBlocks",
+    [
+      blockAnchorStartSlot,
+      slot,
+      { commitment: "finalized", minContextSlot: slot },
+    ],
+    input.signal,
+  );
+  const blockSlot = (Array.isArray(blockSlots) ? blockSlots : [])
+    .filter((candidate) => Number.isSafeInteger(candidate)
+      && candidate >= blockAnchorStartSlot
+      && candidate <= slot)
+    .reduce<number | null>((latest, candidate) => latest === null || candidate > latest ? candidate : latest, null);
+  if (blockSlot === null) return null;
+
   const block = await rpc<SolanaBlockResult>(
     "getBlock",
     [
-      slot,
+      blockSlot,
       {
         commitment: "finalized",
         transactionDetails: "none",
@@ -359,7 +388,7 @@ export async function fetchReviewedDeploymentSolanaObservation(
     contractAddress: input.contractAddress,
     decimals: info.decimals,
     rawSupply: info.supply,
-    blockNumberOrSlot: slot!.toString(),
+    blockNumberOrSlot: blockSlot.toString(),
     blockTimeSec: block!.blockTime!,
     blockHash: block!.blockhash!,
     programOwner: mint!.owner!,
