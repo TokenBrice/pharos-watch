@@ -44,6 +44,7 @@ const DEFAULT_BACKFILL_WINDOW_DAYS = 30;
 const MAX_BACKFILL_WINDOW_DAYS = 90;
 const HISTORICAL_ONCHAIN_TOTAL_SUPPLY_IDS = new Set([
   "autousd-auto-finance",
+  "bd-basedollar",
   "eearn-ember",
 ]);
 

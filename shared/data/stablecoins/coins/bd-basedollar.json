@@ -41,10 +41,129 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
   "governanceQuality": "multisig",
   "infrastructures": [
     "liquity-v2"
   ],
+  "liveReservesConfig": {
+    "adapter": "liquity-v2-branches",
+    "version": 2,
+    "semantics": "collateral-mix",
+    "breakerScope": "bd-basedollar",
+    "display": {
+      "url": "https://basedollar.org/",
+      "label": "Website"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://mainnet.base.org",
+      "fallbackRpcUrl": "https://base-rpc.publicnode.com",
+      "sourceUrls": [
+        "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/script/DeployLiquity2.s.sol",
+        "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json"
+      ],
+      "redemptionRateProbe": {
+        "contract": "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
+        "selector": "0xc52861f2"
+      },
+      "mechanismMetrics": {
+        "supplyTokenAddress": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+        "branchPriceSelector": "0x4ea15f37",
+        "stabilityPoolDepositsSelector": "0xf71c6940",
+        "maxSupplyDebtDivergencePct": 0.5,
+        "branches": [
+          {
+            "name": "WETH",
+            "troveManagerAddress": "0xa957d42c4c43eb97d5f71b8435eb638e5dd9f639",
+            "stabilityPoolAddress": "0x7d837bf114785642d225d1101145ddb8af4ba438"
+          },
+          {
+            "name": "wstETH (Lido)",
+            "troveManagerAddress": "0x79a6a3361eae4d4b80939206426f2320c11a4bfb",
+            "stabilityPoolAddress": "0xc65a05737d31e0f42c0806c739f3c88dd009c05f"
+          },
+          {
+            "name": "rETH (Rocket Pool)",
+            "troveManagerAddress": "0xd31987fcba98f471b6e4220c52f7741b11b2fc5e",
+            "stabilityPoolAddress": "0x4eb3b6970fd358d34195b5d40e4eb64e0e3c0b6a"
+          },
+          {
+            "name": "cbBTC (Coinbase)",
+            "troveManagerAddress": "0x835b04eefbb0e32d8f75cfe96acb527a42f1a0d9",
+            "stabilityPoolAddress": "0x6bd55dd953507641c84a03956760f83d29d65726"
+          },
+          {
+            "name": "cbETH (Coinbase)",
+            "troveManagerAddress": "0x482de97e667330afba99f8ced527118aec66f15d",
+            "stabilityPoolAddress": "0x25afbb09d9804482ed8e24295be4a12704fe93ea"
+          }
+        ]
+      },
+      "branches": [
+        {
+          "name": "WETH",
+          "holder": "0x254a8267d4e12a8c0f283274632a18a33e49f7c0",
+          "token": {
+            "chain": "base",
+            "address": "0x4200000000000000000000000000000000000006",
+            "decimals": 18
+          },
+          "risk": "very-low"
+        },
+        {
+          "name": "wstETH (Lido)",
+          "holder": "0x1021fefc406c9573ab3579fc55be13e3300ef6b1",
+          "token": {
+            "chain": "base",
+            "address": "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+            "decimals": 18
+          },
+          "risk": "low"
+        },
+        {
+          "name": "rETH (Rocket Pool)",
+          "holder": "0x1b9a62798e8bae0cea4eb21b4b3775359beb819f",
+          "token": {
+            "chain": "base",
+            "address": "0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c",
+            "decimals": 18
+          },
+          "risk": "low"
+        },
+        {
+          "name": "cbBTC (Coinbase)",
+          "holder": "0xcaa72df531554087318eaf24646958500668b230",
+          "token": {
+            "chain": "base",
+            "address": "0x92a7aee8afaa71ba0a9cc04a3dbe1f34237c33e0",
+            "decimals": 18
+          },
+          "priceToken": {
+            "chain": "base",
+            "address": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "cbETH (Coinbase)",
+          "holder": "0xddac84ab417677f553cced8ababf497226112218",
+          "token": {
+            "chain": "base",
+            "address": "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+            "decimals": 18
+          },
+          "risk": "low"
+        }
+      ]
+    }
+  },
   "status": "active",
   "launchDate": "2026-08-20",
   "milestones": [

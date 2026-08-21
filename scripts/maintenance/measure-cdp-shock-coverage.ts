@@ -111,6 +111,62 @@ function replayTargetFromEvidence(recorded: ShockCoverageEvidenceV1): ShockCover
     if (!pin) throw new Error(`Recorded ${recorded.assetId} evidence is missing code pin ${name}`);
     return pin.address;
   };
+  const replayOracleGraph = (branch: (typeof recorded.branches)[number]) => {
+    if (recorded.assetId !== "bd-basedollar" || recorded.family !== "liquity-v2-shock-v1") return undefined;
+    const primaryImplementationAddress = branch.contracts.ethUsdOracleImplementation;
+    if (branch.label === "WETH") return { primaryImplementationAddress };
+    if (branch.label === "wstETH") {
+      return {
+        primaryImplementationAddress,
+        secondary: {
+          signature: "stEthUsdOracle()",
+          selector: "0xd69e820d",
+          implementationAddress: branch.contracts.secondaryOracleImplementation!,
+        },
+        rateProvider: {
+          signature: "rateProviderAddress()",
+          selector: "0xe5aa1c40",
+          expectedAddress: branch.contracts.rateProvider!,
+        },
+      };
+    }
+    if (branch.label === "rETH") {
+      return {
+        primaryImplementationAddress,
+        secondary: {
+          signature: "rEthEthOracle()",
+          selector: "0x03f04756",
+          implementationAddress: branch.contracts.secondaryOracleImplementation!,
+        },
+        rateProvider: {
+          signature: "rateProviderAddress()",
+          selector: "0xe5aa1c40",
+          expectedAddress: branch.contracts.rateProvider!,
+        },
+      };
+    }
+    if (branch.label === "cbBTC") {
+      return {
+        primaryImplementationAddress,
+        secondary: {
+          signature: "btcUsdOracle()",
+          selector: "0xca1ca21c",
+          implementationAddress: branch.contracts.secondaryOracleImplementation!,
+        },
+      };
+    }
+    if (branch.label === "cbETH") {
+      return {
+        primaryImplementationAddress,
+        secondary: {
+          signature: "cbEthEthOracle()",
+          selector: "0x4403b69b",
+          implementationAddress: branch.contracts.secondaryOracleImplementation!,
+        },
+      };
+    }
+    throw new Error(`Unsupported Base Dollar replay branch ${branch.label}`);
+  };
   return {
     assetId: recorded.assetId,
     family: recorded.family,
@@ -126,6 +182,7 @@ function replayTargetFromEvidence(recorded: ShockCoverageEvidenceV1): ShockCover
     branches: recorded.branches.map((branch) => ({
       collateralSymbol: branch.label,
       addressesRegistry: branch.contracts.addressesRegistry,
+      oracleGraph: replayOracleGraph(branch),
     })),
     sourcePin: recorded.sourcePin,
     sources: recorded.sources,

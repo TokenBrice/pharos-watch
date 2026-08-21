@@ -202,6 +202,7 @@ Admin endpoint (requires Access service-token headers). Backfills `supply_histor
 
 - **Commodity tokens:** CoinGecko `market_chart` market caps; when those caps are missing, historical EVM `totalSupply()` at each UTC day close for single-deployment assets; protocol TVL fallback only after those sources fail
 - **CoinGecko-only and commodity detail providers:** CoinGecko `market_chart`
+- **Reviewed single-contract USD supplemental assets:** historical EVM `totalSupply()` at each UTC day close without inventing a market-price series; the code-owned allowlist includes assets such as BD whose live cache already uses the same single-deployment supply path
 - **Configured protocol-inventory on-chain assets:** historical EVM `totalSupply()` minus configured holder balances
 - **DefiLlama-backed regular coins:** DefiLlama detail API
 

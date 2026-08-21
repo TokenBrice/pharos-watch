@@ -178,6 +178,35 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Fresh live reserve metadata reads Liquity v2 ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
       ],
     },
+    "bd-basedollar": {
+      ...collateralRedeemBase,
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:weth", "asset:wsteth", "asset:reth", "asset:cbbtc", "asset:cbeth"],
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      reviewedAt: "2026-08-21",
+      docs: [
+        sourceRef(
+          "Base Dollar redemption mechanics",
+          "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/README.md#bold-redemptions",
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
+        sourceRef(
+          "Base Dollar production deployment",
+          "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json",
+          ["route", "capacity"],
+        ),
+        sourceRef(
+          "Base Dollar CollateralRegistry",
+          "https://basescan.org/address/0x7551ebfc8340b7f91874942be9c653733d4fb04f#code",
+          ["route", "fees", "access", "settlement"],
+        ),
+      ],
+      notes: [
+        "Fresh live reserve metadata reads all five Base Dollar ActivePool branch debts as the current direct redemption-capacity bound; an unavailable or degraded on-chain snapshot leaves the route unrated instead of falling back to full supply.",
+        "Base Dollar's launch branches settle redemptions in WETH, wstETH, rETH, wrapped cbBTC, and cbETH; the wrapped cbBTC branch is normalized to the underlying cbBTC price while preserving the branch's 18-decimal accounting token.",
+      ],
+    },
     "lusd-liquity": {
       ...collateralRedeemBase,
       outputAssets: ["asset:eth"],

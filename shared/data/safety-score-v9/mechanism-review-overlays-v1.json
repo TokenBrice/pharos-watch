@@ -3,6 +3,66 @@
   "note": "Curated Safety Score v9 mechanism-review overlays for archetypes whose review requires measured mechanism ratios or evidence-backed qualitative legal and custody facts (CDP, synthetic-delta-neutral, algorithmic, rwa-credit-fund, fiat-cash, tbill). Every numeric metric and every curated component quality must cite at least one source URL in `sources`; components without curated evidence are published bounded-unknown by the extension. Schema is enforced by MechanismReviewOverlayFileSchema in worker/src/lib/safety-score-v9-extension-mechanism.ts.",
   "overlays": [
     {
+      "assetId": "bd-basedollar",
+      "archetype": "cdp",
+      "reviewedAt": "2026-08-21",
+      "sources": [
+        {
+          "label": "Base Dollar CollateralRegistry and five-branch state on Base at block 50259336",
+          "url": "https://base.blockscout.com/address/0x7551ebfc8340b7f91874942be9c653733d4fb04f"
+        },
+        {
+          "label": "Base block 50259336",
+          "url": "https://base.blockscout.com/block/50259336"
+        },
+        {
+          "label": "Pinned Base Dollar Liquity V2 fork design and risk disclosure",
+          "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/README.md"
+        },
+        {
+          "label": "Pinned Base Dollar TroveManager liquidation, redistribution, shutdown, and urgent-redemption implementation",
+          "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/TroveManager.sol"
+        },
+        {
+          "label": "Pinned Base Dollar StabilityPool implementation",
+          "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/StabilityPool.sol"
+        },
+        {
+          "label": "Pinned Base Dollar CollateralRegistry redemption router",
+          "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/CollateralRegistry.sol"
+        },
+        {
+          "label": "Base Dollar post-audit fixes",
+          "url": "https://github.com/basedollar/basedollar/pull/129"
+        }
+      ],
+      "notes": "Measured on-chain at Base block 50259336 (2026-08-21T10:26:59Z) through the append-only journal shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336.json, then byte-replayed. The official CollateralRegistry enumerated exactly five live, redeemable branches: WETH, wstETH, rETH, cbBTC, and cbETH. Oracle-valued collateral totaled $112,548.101 against 50,943.043 BD of branch debt, giving collateralizationRatio 2.209. Token supply was 50,942.382 BD, only 0.0012% below accrued branch debt. The five branch-local Stability Pools held 14,179.305 BD, giving liquidationCapacityRatio 0.278; individual SP/debt coverage was 29.3% WETH, 8.5% wstETH, 41.5% rETH, 25.0% cbBTC, and 42.3% cbETH. A separate complete position-level shock journal at the same block (shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json; 224 calls and 92 code pins, exact offline replay passed) found that a simultaneous 50% collateral-price shock made 26,262.078 BD liquidatable and the committed pools offset 9,479.248 BD, for 36.09% stress liquidation coverage before same-branch redistribution. COLLATERALIZATION PARAMETERS (adequate): all five immutable AddressesRegistries enforce 110% MCR and 110% SCR, with 150-160% CCRs and finite branch debt limits; the registry governor can add future branches or change debt limits, which remains a control risk rather than an unmeasured parameter. LIQUIDATION MECHANICS (adequate): any caller can liquidate below MCR; the exact position snapshot and pinned implementation reproduce offset and redistribution outcomes with no keeper allowlist or auction delay. BACKSTOP (adequate): each branch has a committed Stability Pool whose deposits were reconciled on-chain, followed by same-branch debt/collateral redistribution; measured pool depth and shock coverage remain separately score-bearing. BRANCH ISOLATION (adequate): Stability Pools, Troves, and redistribution are branch-local, while unrecovered debt still impairs the shared BD claim and prevents a strong rating. SHUTDOWN AND BAD DEBT (limited): oracle failure or TCR below SCR permanently stops new borrowing, freezes interest, and enables urgent redemption, but Base Dollar discloses no unconditional insurance or recapitalization facility for system-wide residual bad debt. STRUCTURAL REDEMPTION (adequate): all five launch branches returned redeemable=true; any BD holder can use the CollateralRegistry to route permissionless redemption across redeemable branches at protocol prices, with urgent redemption after shutdown. Post-audit PR 129 includes the reviewed oracle, accounting, collateral-manager, and Stability Pool remediations; the deployed source and exact code pins are the evidence used here.",
+      "metrics": {
+        "collateralizationRatio": 2.209,
+        "liquidationCapacityRatio": 0.278
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
       "assetId": "bold-liquity",
       "archetype": "cdp",
       "reviewedAt": "2026-07-15",

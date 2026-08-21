@@ -2,9 +2,9 @@
 
 Operational reference for the automated V9 CDP shock-coverage measurement.
 
-CDP shock coverage is a score-bearing V9 fact with a **72-hour** policy freshness bound, ratified in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` under `semantic.backing.structural.cdp.stressMeasurementFreshness`. Past that bound the engine fails closed to legacy LCR: LUSD drops from roughly 77/B+ to 59/C via `unsafe-backing:high`, and BOLD's A rating falls with it.
+CDP shock coverage is a score-bearing V9 fact with a **72-hour** policy freshness bound, ratified in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` under `semantic.backing.structural.cdp.stressMeasurementFreshness`. Past that bound the engine fails closed to legacy LCR: LUSD drops from roughly 77/B+ to 59/C via `unsafe-backing:high`, and BOLD's and BD's ratings fall with it.
 
-Until now the measurement was produced by hand. The [Shock Coverage Refresh](../../.github/workflows/shock-coverage-refresh.yml) workflow closes that manual dependency under the LUSD and BOLD safety scores.
+Until now the measurement was produced by hand. The [Shock Coverage Refresh](../../.github/workflows/shock-coverage-refresh.yml) workflow closes that manual dependency under the LUSD, BOLD, and BD safety scores.
 
 ## Cadence
 
@@ -18,6 +18,7 @@ Worst-case gap between scheduled attempts is 48h, leaving a roughly 24h manual/r
 | ------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------- |
 | Measure Liquity V1        | `measure-cdp-shock-coverage.ts --asset lusd-liquity`                        | No RPC endpoint served a complete position snapshot      |
 | Measure Liquity V2        | `measure-cdp-shock-coverage.ts --asset bold-liquity`                        | Same, for the BOLD branch set                            |
+| Measure Base Dollar V2    | `measure-cdp-shock-coverage.ts --asset bd-basedollar`                      | Same, for BD's five Base branches                        |
 | Attest journal replays    | `generate-safety-score-v9-shock-coverage-attestations.ts`                   | A journal did not replay byte-identically offline        |
 | Regenerate registry       | `generate-safety-score-v9-shock-coverage-registry.ts`                       | Journal/registry projection is inconsistent              |
 | Verify self-consistency   | both generators with `--check`                                              | A generated artifact is stale after its own run          |
@@ -44,13 +45,14 @@ The workflow **arms auto-merge** on the PR it opens (`gh pr merge --squash --aut
 
 The PR step uses `SHOCK_COVERAGE_GITHUB_TOKEN`, falling back to the existing `OG_REFRESH_GITHUB_TOKEN`. A bot or PAT token is required so the automated PR triggers normal `pull_request` checks; the default `GITHUB_TOKEN` would not. The workflow fails with an explicit error when neither secret is set.
 
-The measurement itself needs **no** credential. `scripts/lib/mechanism-measurement/shock-targets.ts` carries a hardcoded list of public Ethereum archive RPC endpoints with per-endpoint failover.
+The measurement itself needs **no** credential. `scripts/lib/mechanism-measurement/shock-targets.ts` carries hardcoded lists of public Ethereum and Base RPC endpoints with per-endpoint failover.
 
 ## Manual refresh
 
 ```bash
 npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset lusd-liquity
 npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bold-liquity
+npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bd-basedollar
 npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts
 npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts
 node --import tsx scripts/ci/check-shock-coverage-freshness.ts

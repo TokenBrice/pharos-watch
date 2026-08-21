@@ -33,6 +33,20 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
     expect(pipeline.compiledFacts.baseInputGenerationId).toBe(input.baseInputGenerationId);
     expect(pipeline.compilerFactSchemaIdentity.fixedInputSchemaVersion).toBe(4);
     expect(pipeline.producerCapabilityIdentity.inputContractVersions.fixedInput).toBe(4);
+
+    const baseDollarCard = pipeline.candidate.cards.find((card) => card.id === "bd-basedollar");
+    const baseDollarFacts = pipeline.compiledFacts.assets.find((asset) => asset.assetId === "bd-basedollar");
+    expect(baseDollarCard?.grade).not.toBe("NR");
+    expect(baseDollarCard?.score).not.toBeNull();
+    expect(baseDollarFacts?.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-mechanism-review");
+    expect(baseDollarFacts?.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-oracle-review");
+    expect(baseDollarFacts?.mechanismRiskReview.status.observationState).toBe("known");
+    expect(baseDollarFacts?.controlStatus.observationState).toBe("known");
+    expect(baseDollarFacts?.cdpStressCoverage).toMatchObject({
+      complete: true,
+      exactReplayPassed: true,
+      stressLiquidationCoverageRatio: 0.360948114363,
+    });
   });
 
   it("scores the native projection identically to the exact input it projects from", () => {

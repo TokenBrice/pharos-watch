@@ -6,5 +6,499 @@
     "evidence": "Inferred review retained: BD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "BD's five immutable branch PriceFeeds consume API3 AggregatorV3-compatible dAPI proxies with a 25-hour validity bound. wstETH and rETH have alternate post-shutdown pricing paths, while WETH, cbBTC, and cbETH freeze onto lastGoodPrice if a required feed fails. All API3 proxies share one Base Api3Server and proxy owner, so the multiple feed legs are not independent provider failure domains.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-08-21",
+      "reviewer": "Codex Base Dollar oracle review",
+      "rationale": "At Base block 50259336 the official CollateralRegistry enumerated five live, positive-debt branches with separate PriceFeed, TroveManager, Stability Pool, and immutable risk-parameter contracts, so every launch branch requires its own oracle and liquidation row.",
+      "sources": [
+        {
+          "label": "Pinned Base Dollar deployment configuration",
+          "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/frontend/app/src/white-label.config.ts"
+        },
+        {
+          "label": "Base block 50259336",
+          "url": "https://base.blockscout.com/block/50259336"
+        }
+      ]
+    },
+    "reviewedAt": "2026-08-21",
+    "reviewer": "Codex Base Dollar oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned Base Dollar deployment configuration",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/frontend/app/src/white-label.config.ts"
+      },
+      {
+        "label": "Pinned Base Dollar PriceFeed base implementation",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/PriceFeeds/MainnetPriceFeedBase.sol"
+      },
+      {
+        "label": "Pinned Base Dollar composite PriceFeed implementation",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/PriceFeeds/CompositePriceFeed.sol"
+      },
+      {
+        "label": "Base Dollar post-audit fixes",
+        "url": "https://github.com/basedollar/basedollar/pull/129"
+      },
+      {
+        "label": "API3 oracle staleness arithmetic audit fix",
+        "url": "https://github.com/basedollar/basedollar/pull/128"
+      },
+      {
+        "label": "Base block 50259336",
+        "url": "https://base.blockscout.com/block/50259336"
+      }
+    ],
+    "branches": [
+      {
+        "id": "weth",
+        "label": "WETH collateral branch",
+        "tier": "standard-external",
+        "summary": "The WETH branch consumes the API3 ETH/USD dAPI through an immutable branch PriceFeed and permanently shuts onto lastGoodPrice when the answer is invalid or more than 25 hours old.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "API3 ETH/USD dAPI",
+            "path": "API3 ETH/USD ReaderProxy -> WETHPriceFeed 0x40b4199347af7738643ef4a12a771f7421b84e7f -> Trove collateral ratio",
+            "address": "0x77003c51b6febe7b88d1215004b91d4d3493fa30",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0x77003c51b6febe7b88d1215004b91d4d3493fa30"
+            ]
+          }
+        ],
+        "fallbackBehavior": "A reverting, non-positive, or more-than-90,000-second-old ETH/USD answer permanently shuts the branch and changes priceSource from primary to lastGoodPrice. There is no alternate live provider; subsequent reads retain the frozen price.",
+        "observedAt": "2026-08-21",
+        "observedBlock": 50259336,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.91,
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "CCR 150%; debt limit 100,000,000 BD; priceSource primary and shutdownTime zero at the observed block. Branch debt was 13,408.616 BD, 26.32% of measured system debt."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate a Trove below the 110% MCR. The branch Stability Pool offsets and burns BD debt first; uncovered debt and collateral are redistributed to active WETH Troves in the same branch.",
+        "liquidationState": "callable",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool held 3,932.121 BD at the observed block; same-branch redistribution handles liquidated debt not covered by deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below the 110% SCR permanently stops new borrower operations, freezes interest, and enables urgent redemption. Stability Pool losses and same-branch redistribution remain, but no unconditional recapitalization fund covers residual system bad debt.",
+        "debtSharePct": 26.32,
+        "failureDomainKeys": [
+          "base-dollar:weth:price-feed",
+          "api3:base:server-v1",
+          "base-dollar:weth:stability-pool",
+          "base-dollar:branch-redistribution",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "Verified WETH PriceFeed",
+            "url": "https://base.blockscout.com/address/0x40b4199347af7738643ef4a12a771f7421b84e7f?tab=contract"
+          },
+          {
+            "label": "API3 ETH/USD market",
+            "url": "https://market.api3.org/base?search=ETH%2FUSD"
+          },
+          {
+            "label": "Pinned Base Dollar WETH PriceFeed source",
+            "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/PriceFeeds/WETHPriceFeed.sol"
+          },
+          {
+            "label": "Base block 50259336",
+            "url": "https://base.blockscout.com/block/50259336"
+          }
+        ]
+      },
+      {
+        "id": "wsteth",
+        "label": "wstETH collateral branch",
+        "tier": "redundant-with-failover",
+        "summary": "The wstETH branch uses API3 stETH/USD, ETH/USD, and wstETH/stETH exchange-rate dAPIs; stETH/USD failure permanently shuts borrowing but retains a bounded ETH/USD-times-exchange-rate path.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "API3 stETH/USD dAPI",
+            "path": "API3 stETH/USD ReaderProxy -> WSTETHPriceFeed 0x176363a20ba1dc75b418d7954f5222499b276186 -> wstETH USD value",
+            "address": "0x3df401c6ce98d6976acb7395460e32d99eb79d05",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0x3df401c6ce98d6976acb7395460e32d99eb79d05"
+            ]
+          },
+          {
+            "provider": "API3 ETH/USD dAPI",
+            "path": "API3 ETH/USD ReaderProxy -> redemption comparison and post-shutdown fallback",
+            "address": "0x77003c51b6febe7b88d1215004b91d4d3493fa30",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0x77003c51b6febe7b88d1215004b91d4d3493fa30"
+            ]
+          },
+          {
+            "provider": "API3 wstETH/stETH exchange-rate dAPI",
+            "path": "API3 wstETH/stETH ReaderProxy -> conversion of stETH or ETH USD leg into wstETH USD",
+            "address": "0x00caeda3cb375a17a084b1bdce7136bb01bbd13d",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0x00caeda3cb375a17a084b1bdce7136bb01bbd13d"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Invalid wstETH/stETH or ETH/USD data shuts onto lastGoodPrice. Invalid stETH/USD permanently shuts borrowing and selects ETH/USD multiplied by wstETH/stETH, capped at the prior lastGoodPrice; failure of either remaining API3 leg then freezes lastGoodPrice. The fallback changes calculation but does not remove the common API3 provider domain.",
+        "observedAt": "2026-08-21",
+        "observedBlock": 50259336,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 90.91,
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "CCR 160%; debt limit 25,000,000 BD; priceSource primary and shutdownTime zero at the observed block. Branch debt was 14,040.837 BD, 27.56% of measured system debt."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate a Trove below the 110% MCR. The branch Stability Pool offsets and burns BD debt first; uncovered debt and collateral are redistributed to active wstETH Troves in the same branch.",
+        "liquidationState": "callable",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool held 1,200 BD at the observed block; same-branch redistribution handles liquidated debt not covered by deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below the 110% SCR permanently stops new borrower operations, freezes interest, and enables urgent redemption. Stability Pool losses and same-branch redistribution remain, but no unconditional recapitalization fund covers residual system bad debt.",
+        "debtSharePct": 27.56,
+        "failureDomainKeys": [
+          "base-dollar:wsteth:price-feed",
+          "api3:base:server-v1",
+          "base-dollar:wsteth:stability-pool",
+          "base-dollar:branch-redistribution",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "Verified wstETH PriceFeed",
+            "url": "https://base.blockscout.com/address/0x176363a20ba1dc75b418d7954f5222499b276186?tab=contract"
+          },
+          {
+            "label": "API3 wstETH/stETH market",
+            "url": "https://market.api3.org/base?search=wstETH%2FstETH+Exchange+Rate"
+          },
+          {
+            "label": "wstETH oracle post-audit remediation",
+            "url": "https://github.com/basedollar/basedollar/pull/121"
+          },
+          {
+            "label": "Pinned Base Dollar wstETH PriceFeed source",
+            "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/PriceFeeds/WSTETHPriceFeed.sol"
+          }
+        ]
+      },
+      {
+        "id": "reth",
+        "label": "rETH collateral branch",
+        "tier": "redundant-with-failover",
+        "summary": "The rETH branch takes the lower of API3 rETH/ETH and Rocket Pool's canonical Base rate, multiplied by API3 ETH/USD; an rETH/ETH feed failure shuts borrowing but retains ETH/USD-times-canonical pricing.",
+        "collateralAssets": [
+          "rETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "API3 ETH/USD dAPI",
+            "path": "API3 ETH/USD ReaderProxy -> RETHPriceFeed 0x6627b94533be5bba42d1aaaf982330e9746b6133 -> rETH USD value",
+            "address": "0x77003c51b6febe7b88d1215004b91d4d3493fa30",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0x77003c51b6febe7b88d1215004b91d4d3493fa30"
+            ]
+          },
+          {
+            "provider": "API3 rETH/ETH exchange-rate dAPI",
+            "path": "API3 rETH/ETH ReaderProxy -> market leg of min(market, canonical)",
+            "address": "0xd75f2752ded6995106b163da472b96186ccf0441",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0xd75f2752ded6995106b163da472b96186ccf0441"
+            ]
+          },
+          {
+            "provider": "Rocket Pool OVM rETH rate oracle",
+            "path": "Rocket Pool L1-derived Base rate() and lastUpdated() -> canonical leg and post-shutdown fallback",
+            "address": "0x658843bb859b7b85ceab5cf77167e3f0a78dfe7f",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "rocket-pool:ovm-oracle",
+              "base:0x658843bb859b7b85ceab5cf77167e3f0a78dfe7f"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Invalid ETH/USD or Rocket canonical data permanently shuts onto lastGoodPrice. Invalid API3 rETH/ETH permanently shuts borrowing but selects API3 ETH/USD multiplied by the Rocket canonical rate, capped at lastGoodPrice; later failure of either remaining leg freezes lastGoodPrice.",
+        "observedAt": "2026-08-21",
+        "observedBlock": 50259336,
+        "collateralParameters": [
+          {
+            "asset": "rETH",
+            "maximumLtvPct": 90.91,
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "CCR 160%; debt limit 25,000,000 BD; priceSource primary and shutdownTime zero at the observed block. Branch debt was 6,874.365 BD, 13.49% of measured system debt."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate a Trove below the 110% MCR. The branch Stability Pool offsets and burns BD debt first; uncovered debt and collateral are redistributed to active rETH Troves in the same branch.",
+        "liquidationState": "callable",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool held 2,850 BD at the observed block; same-branch redistribution handles liquidated debt not covered by deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below the 110% SCR permanently stops new borrower operations, freezes interest, and enables urgent redemption. Stability Pool losses and same-branch redistribution remain, but no unconditional recapitalization fund covers residual system bad debt.",
+        "debtSharePct": 13.49,
+        "failureDomainKeys": [
+          "base-dollar:reth:price-feed",
+          "api3:base:server-v1",
+          "rocket-pool:ovm-oracle",
+          "base-dollar:reth:stability-pool",
+          "base-dollar:branch-redistribution",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "Verified rETH PriceFeed",
+            "url": "https://base.blockscout.com/address/0x6627b94533be5bba42d1aaaf982330e9746b6133?tab=contract"
+          },
+          {
+            "label": "Rocket Pool canonical-rate remediation",
+            "url": "https://github.com/basedollar/basedollar/pull/144"
+          },
+          {
+            "label": "Pinned Base Dollar rETH PriceFeed source",
+            "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/PriceFeeds/RETHPriceFeed.sol"
+          },
+          {
+            "label": "Pinned Rocket Pool OVM oracle deployment documentation",
+            "url": "https://github.com/rocket-pool/rocketpool-ovm-oracle"
+          }
+        ]
+      },
+      {
+        "id": "cbbtc",
+        "label": "cbBTC collateral branch",
+        "tier": "standard-external",
+        "summary": "The cbBTC branch takes the lower of API3 cbBTC/USD and BTC/USD for borrowing and liquidation, but both same-provider feeds are required and failure of either permanently shuts onto lastGoodPrice.",
+        "collateralAssets": [
+          "cbBTC"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "API3 cbBTC/USD dAPI",
+            "path": "API3 cbBTC/USD ReaderProxy -> cbBTCPriceFeed 0x9e191d9f3f3c138c81753acf6f4ec32e84daa89e -> min(cbBTC/USD, BTC/USD)",
+            "address": "0x021d31211f81bc37ed7c9d535380cfaddd62c111",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0x021d31211f81bc37ed7c9d535380cfaddd62c111"
+            ]
+          },
+          {
+            "provider": "API3 BTC/USD dAPI",
+            "path": "API3 BTC/USD ReaderProxy -> cbBTCPriceFeed -> min(cbBTC/USD, BTC/USD)",
+            "address": "0xb15fb0fe60b20689390f8306dedebc608ae1ff3d",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0xb15fb0fe60b20689390f8306dedebc608ae1ff3d"
+            ]
+          }
+        ],
+        "fallbackBehavior": "A reverting, non-positive, or more-than-90,000-second-old answer from either API3 leg permanently shuts the branch and freezes lastGoodPrice. The second price constrains upward valuation but is not live failover because both feeds are mandatory and share API3 control.",
+        "observedAt": "2026-08-21",
+        "observedBlock": 50259336,
+        "collateralParameters": [
+          {
+            "asset": "cbBTC",
+            "maximumLtvPct": 90.91,
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "CCR 150%; debt limit 10,000,000 BD; priceSource primary and shutdownTime zero at the observed block. Branch debt was 4,801.193 BD, 9.43% of measured system debt."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate a Trove below the 110% MCR. The branch Stability Pool offsets and burns BD debt first; uncovered debt and collateral are redistributed to active cbBTC Troves in the same branch.",
+        "liquidationState": "callable",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool held 1,200.999 BD at the observed block; same-branch redistribution handles liquidated debt not covered by deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below the 110% SCR permanently stops new borrower operations, freezes interest, and enables urgent redemption. Stability Pool losses and same-branch redistribution remain, but no unconditional recapitalization fund covers residual system bad debt.",
+        "debtSharePct": 9.43,
+        "failureDomainKeys": [
+          "base-dollar:cbbtc:price-feed",
+          "api3:base:server-v1",
+          "base-dollar:cbbtc:stability-pool",
+          "base-dollar:branch-redistribution",
+          "coinbase:cbbtc",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "Verified cbBTC PriceFeed",
+            "url": "https://base.blockscout.com/address/0x9e191d9f3f3c138c81753acf6f4ec32e84daa89e?tab=contract"
+          },
+          {
+            "label": "API3 cbBTC/USD market",
+            "url": "https://market.api3.org/base?search=cbBTC%2FUSD"
+          },
+          {
+            "label": "Pinned Base Dollar cbBTC PriceFeed source",
+            "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/PriceFeeds/cbBTCPriceFeed.sol"
+          },
+          {
+            "label": "Base block 50259336",
+            "url": "https://base.blockscout.com/block/50259336"
+          }
+        ]
+      },
+      {
+        "id": "cbeth",
+        "label": "cbETH collateral branch",
+        "tier": "standard-external",
+        "summary": "The cbETH branch multiplies API3 cbETH/ETH by API3 ETH/USD; both same-provider feeds are required and failure of either permanently shuts onto lastGoodPrice.",
+        "collateralAssets": [
+          "cbETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "API3 ETH/USD dAPI",
+            "path": "API3 ETH/USD ReaderProxy -> cbETHPriceFeed 0x23bb111e94ec68009da6b8fc50c19628a972b9e0 -> cbETH USD value",
+            "address": "0x77003c51b6febe7b88d1215004b91d4d3493fa30",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0x77003c51b6febe7b88d1215004b91d4d3493fa30"
+            ]
+          },
+          {
+            "provider": "API3 cbETH/ETH exchange-rate dAPI",
+            "path": "API3 cbETH/ETH ReaderProxy -> cbETHPriceFeed -> cbETH USD value",
+            "address": "0xbe3efb4209ee6962c309e3ce8650d54b326d9cd3",
+            "chain": "base",
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-08-21",
+            "observedBlock": 50259336,
+            "failureDomainKeys": [
+              "api3:base:server-v1",
+              "api3:base:basedollar-dapp",
+              "base:0xbe3efb4209ee6962c309e3ce8650d54b326d9cd3"
+            ]
+          }
+        ],
+        "fallbackBehavior": "A reverting, non-positive, or more-than-90,000-second-old answer from either API3 leg permanently shuts the branch and freezes lastGoodPrice. There is no alternate live provider after shutdown.",
+        "observedAt": "2026-08-21",
+        "observedBlock": 50259336,
+        "collateralParameters": [
+          {
+            "asset": "cbETH",
+            "maximumLtvPct": 90.91,
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "CCR 160%; debt limit 10,000,000 BD; priceSource primary and shutdownTime zero at the observed block. Branch debt was 11,818.032 BD, 23.20% of measured system debt."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate a Trove below the 110% MCR. The branch Stability Pool offsets and burns BD debt first; uncovered debt and collateral are redistributed to active cbETH Troves in the same branch.",
+        "liquidationState": "callable",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool held 4,996.186 BD at the observed block; same-branch redistribution handles liquidated debt not covered by deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below the 110% SCR permanently stops new borrower operations, freezes interest, and enables urgent redemption. Stability Pool losses and same-branch redistribution remain, but no unconditional recapitalization fund covers residual system bad debt.",
+        "debtSharePct": 23.2,
+        "failureDomainKeys": [
+          "base-dollar:cbeth:price-feed",
+          "api3:base:server-v1",
+          "base-dollar:cbeth:stability-pool",
+          "base-dollar:branch-redistribution",
+          "coinbase:cbeth",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "Verified cbETH PriceFeed",
+            "url": "https://base.blockscout.com/address/0x23bb111e94ec68009da6b8fc50c19628a972b9e0?tab=contract"
+          },
+          {
+            "label": "API3 cbETH/ETH market",
+            "url": "https://market.api3.org/base?search=cbETH%2FETH+Exchange+Rate"
+          },
+          {
+            "label": "cbETH oracle post-audit remediation",
+            "url": "https://github.com/basedollar/basedollar/pull/114"
+          },
+          {
+            "label": "Pinned Base Dollar cbETH PriceFeed source",
+            "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/PriceFeeds/cbETHPriceFeed.sol"
+          }
+        ]
+      }
+    ]
   }
 }

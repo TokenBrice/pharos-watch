@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.191",
+    title: "Base Dollar native flow coverage",
+    date: "2026-08-21",
+    effectiveAt: 1787270400,
+    summary:
+      "Base Dollar joins the extended mint/burn lane on its canonical Base deployment from the verified creation block, with a protocol-scale threshold that retains ordinary borrower issuance while filtering sub-economic interest-distribution churn.",
+    impact: [
+      "BD Transfer mints and burns are scanned from Base block 49,406,521, the verified CREATE2 deployment block for the canonical token.",
+      "The 100 BD threshold sits below Base Dollar's 200 BD minimum debt and retains observed 300, 1,000, and 2,700 BD borrower mints that the generic 10,000-unit long-tail threshold would discard.",
+      "Public flow coverage now includes canonical issuance chains on Ethereum, Arbitrum, and Base; scoring formulas, bridge classification, and Bank Run Gauge weighting are unchanged.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.19",
     title: "Bank Run Gauge: one producer, one universe",
     date: "2026-08-10",

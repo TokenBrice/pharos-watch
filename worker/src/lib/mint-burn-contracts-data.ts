@@ -12,6 +12,7 @@ import {
 
 const ETHEREUM = chainConfig("ethereum");
 const ARBITRUM = chainConfig("arbitrum");
+const BASE = chainConfig("base");
 
 // Phase 2 readiness — USDT Tron uses these instead of Transfer
 const USDT_ISSUE_TOPIC = "0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a";
@@ -259,6 +260,23 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     stablecoinId: "bold-liquity",
     dustThreshold: 10_000,
     startBlock: ETHEREUM_COVERAGE_FLOOR_BLOCK,
+    events: transferMintBurn(),
+  },
+  {
+    // Base Dollar BoldToken deployed through the CREATE2 factory in tx
+    // 0x559cff503b5db0b09c36d3506ce761cc992ac8d82925d77be40b1de7dfbb9479.
+    // The verified token emits canonical zero-address Transfer rows for both
+    // protocol mints and debt-repayment burns. Its 200 BD MIN_DEBT and observed
+    // 300/1,000/2,700 BD borrower mints require a lower threshold than the
+    // tracker default; 100 BD retains normal debt activity while excluding
+    // sub-economic interest-distribution churn.
+    chain: BASE,
+    stablecoinId: "bd-basedollar",
+    dustThreshold: 100,
+    startBlock: 49_406_521,
+    tier: "extended",
+    startBlockSource: "blockscout-base-create2-deployment-2026-08-01",
+    startBlockConfidence: "high",
     events: transferMintBurn(),
   },
   {

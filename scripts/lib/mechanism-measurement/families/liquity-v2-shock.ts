@@ -392,13 +392,16 @@ export async function measureLiquityV2ShockCoverage(
       signature: "ethUsdOracle()",
       selector: "0x8a97f9c9",
     });
-    const ethUsdAggregatorImplementation = await readAddress(caller, {
-      name: `ethUsdOracle[${branchIndex}].aggregator`,
-      role: "oracle-graph",
-      to: ethUsdAggregator,
-      signature: "aggregator()",
-      selector: "0x245a7bfc",
-    });
+    const configuredOracleGraph = target.branches[graph.configuredIndex]!.oracleGraph;
+    const ethUsdAggregatorImplementation = configuredOracleGraph?.primaryImplementationAddress
+      ? normalizeAddress(configuredOracleGraph.primaryImplementationAddress)
+      : await readAddress(caller, {
+          name: `ethUsdOracle[${branchIndex}].aggregator`,
+          role: "oracle-graph",
+          to: ethUsdAggregator,
+          signature: "aggregator()",
+          selector: "0x245a7bfc",
+        });
     codeSpecs.push(
       {
         name: `eth-usd-oracle-${branchIndex}`,
@@ -415,9 +418,13 @@ export async function measureLiquityV2ShockCoverage(
     let secondaryAggregator: string | null = null;
     let secondaryAggregatorImplementation: string | null = null;
     let rateProvider: string | null = null;
-    if (graph.collateralSymbol === "wstETH" || graph.collateralSymbol === "rETH") {
-      const secondaryOracleSignature = graph.collateralSymbol === "wstETH" ? "stEthUsdOracle()" : "rEthEthOracle()";
-      const secondaryOracleSelector = graph.collateralSymbol === "wstETH" ? "0xd69e820d" : "0x03f04756";
+    const secondaryOracleConfig = configuredOracleGraph?.secondary;
+    if (secondaryOracleConfig || graph.collateralSymbol === "wstETH" || graph.collateralSymbol === "rETH") {
+      const secondaryOracleSignature =
+        secondaryOracleConfig?.signature ??
+        (graph.collateralSymbol === "wstETH" ? "stEthUsdOracle()" : "rEthEthOracle()");
+      const secondaryOracleSelector =
+        secondaryOracleConfig?.selector ?? (graph.collateralSymbol === "wstETH" ? "0xd69e820d" : "0x03f04756");
       secondaryAggregator = await readAddress(caller, {
         name: `priceFeed[${branchIndex}].secondaryOracle`,
         role: "oracle-graph",
@@ -425,26 +432,15 @@ export async function measureLiquityV2ShockCoverage(
         signature: secondaryOracleSignature,
         selector: secondaryOracleSelector,
       });
-      secondaryAggregatorImplementation = await readAddress(caller, {
-        name: `secondaryOracle[${branchIndex}].aggregator`,
-        role: "oracle-graph",
-        to: secondaryAggregator,
-        signature: "aggregator()",
-        selector: "0x245a7bfc",
-      });
-      rateProvider = await readAddress(caller, {
-        name: `priceFeed[${branchIndex}].rateProviderAddress`,
-        role: "oracle-graph",
-        to: graph.priceFeed,
-        signature: "rateProviderAddress()",
-        selector: "0xe5aa1c40",
-      });
-      requirePass(
-        checks,
-        `branch[${branchIndex}].oracle-rate-provider`,
-        rateProvider === graph.collateralToken,
-        `${graph.collateralSymbol} canonical rate provider equals the pinned collateral token`,
-      );
+      secondaryAggregatorImplementation = secondaryOracleConfig?.implementationAddress
+        ? normalizeAddress(secondaryOracleConfig.implementationAddress)
+        : await readAddress(caller, {
+            name: `secondaryOracle[${branchIndex}].aggregator`,
+            role: "oracle-graph",
+            to: secondaryAggregator,
+            signature: "aggregator()",
+            selector: "0x245a7bfc",
+          });
       codeSpecs.push(
         {
           name: `secondary-oracle-${branchIndex}`,
@@ -457,8 +453,31 @@ export async function measureLiquityV2ShockCoverage(
           address: secondaryAggregatorImplementation,
         },
       );
-    } else if (graph.collateralSymbol !== "WETH") {
+    } else if (!configuredOracleGraph && graph.collateralSymbol !== "WETH") {
       throw new Error(`Unsupported Liquity V2 oracle graph for ${graph.collateralSymbol}`);
+    }
+
+    const rateProviderConfig = configuredOracleGraph?.rateProvider;
+    if (rateProviderConfig || (!configuredOracleGraph && (graph.collateralSymbol === "wstETH" || graph.collateralSymbol === "rETH"))) {
+      rateProvider = await readAddress(caller, {
+        name: `priceFeed[${branchIndex}].rateProviderAddress`,
+        role: "oracle-graph",
+        to: graph.priceFeed,
+        signature: rateProviderConfig?.signature ?? "rateProviderAddress()",
+        selector: rateProviderConfig?.selector ?? "0xe5aa1c40",
+      });
+      const expectedRateProvider = normalizeAddress(rateProviderConfig?.expectedAddress ?? graph.collateralToken);
+      requirePass(
+        checks,
+        `branch[${branchIndex}].oracle-rate-provider`,
+        rateProvider === expectedRateProvider,
+        `${graph.collateralSymbol} canonical rate provider ${rateProvider} matches pinned ${expectedRateProvider}`,
+      );
+      codeSpecs.push({
+        name: `rate-provider-${branchIndex}`,
+        role: "oracle-rate-provider",
+        address: rateProvider,
+      });
     }
 
     const protocolCollateral = await readUint(caller, {

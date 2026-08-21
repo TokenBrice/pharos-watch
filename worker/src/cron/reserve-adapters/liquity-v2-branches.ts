@@ -86,6 +86,7 @@ interface LiquityV2MechanismMetricResult {
     "totalReserveUsd" | "collateralizationRatio" | "liquidationCapacityRatio" | "details"
   >;
   warnings: LiveReserveWarning[];
+  branchRedeemability: ReadonlyMap<string, boolean> | null;
 }
 
 function readParams(config: LiveReservesConfig): LiquityV2BranchParams {
@@ -246,7 +247,7 @@ function decodeMechanismBranchPrice(
       [{ type: "uint256" }, { type: "uint256" }, { type: "bool" }],
       raw,
     ) as readonly [bigint, bigint, boolean];
-    if (priceRaw <= 0n || !redeemable) {
+    if (priceRaw <= 0n) {
       throw new Error(`protocol price is ${priceRaw.toString()} with redeemable=${redeemable}`);
     }
     return { priceRaw, redeemable };
@@ -278,6 +279,7 @@ async function fetchLiquityV2MechanismMetrics(
 ): Promise<LiquityV2MechanismMetricResult | null> {
   const config = params.mechanismMetrics;
   if (!config) return null;
+  let branchRedeemability: ReadonlyMap<string, boolean> | null = null;
 
   const calls: OnchainMulticall3Call[] = [
     {
@@ -312,6 +314,7 @@ async function fetchLiquityV2MechanismMetrics(
         contract: entry.contract,
         data: entry.data,
         allowFailure: entry.allowFailure,
+        optional: true,
       })),
       read: (planCalls) => fetchOnchainMulticall3({
         calls: planCalls,
@@ -324,6 +327,20 @@ async function fetchLiquityV2MechanismMetrics(
       }),
     });
     const byLabel = observation.rawByLabel;
+
+    const branchPrices = new Map<string, { priceRaw: bigint; redeemable: boolean }>();
+    for (const binding of config.branches) {
+      branchPrices.set(
+        binding.name,
+        decodeMechanismBranchPrice(
+          byLabel.get(`mechanism:price:${binding.name}`),
+          binding.name,
+        ),
+      );
+    }
+    branchRedeemability = new Map(
+      [...branchPrices].map(([name, state]) => [name, state.redeemable]),
+    );
 
     const totalSupplyRaw = decodeRequiredUint256(
       byLabel.get("mechanism:total-supply"),
@@ -345,10 +362,7 @@ async function fetchLiquityV2MechanismMetrics(
       if (!balance || !debt || debt.debtRaw == null) {
         throw new Error(`missing reserve/debt state for ${binding.name}`);
       }
-      const { priceRaw, redeemable } = decodeMechanismBranchPrice(
-        byLabel.get(`mechanism:price:${binding.name}`),
-        binding.name,
-      );
+      const { priceRaw, redeemable } = branchPrices.get(binding.name)!;
       const stabilityPoolDepositsRaw = decodeRequiredUint256(
         byLabel.get(`mechanism:stability-pool:${binding.name}`),
         `Stability Pool deposits for ${binding.name}`,
@@ -436,17 +450,26 @@ async function fetchLiquityV2MechanismMetrics(
         },
       },
       warnings,
+      branchRedeemability,
     };
   } catch (error) {
     rethrowIfAborted(error, signal);
+    const detail = redactUrlSecrets(toErrorMessage(error));
     return {
       metadata: {},
       warnings: [
         reserveInfoWarning(
           "liquity-v2-mechanism-metrics-unavailable",
-          redactUrlSecrets(`Live collateralization/backstop metrics omitted: ${toErrorMessage(error)}`),
+          `Live collateralization/backstop metrics omitted: ${detail}`,
         ),
+        ...(branchRedeemability == null
+          ? [reserveDegradedWarning(
+              "liquity-v2-redeemability-unavailable",
+              `Live redemption capacity omitted because branch redeemability was unreadable: ${detail}`,
+            )]
+          : []),
       ],
+      branchRedeemability,
     };
   }
 }
@@ -458,11 +481,51 @@ export function buildLiquityV2RedemptionMetadata(
     "https://docs.liquity.org/v2-faq/redemptions-and-delegation",
     "https://docs.liquity.org/v2-faq/technical-resources",
   ],
+  branchRedeemability?: ReadonlyMap<string, boolean> | null,
 ): NonNullable<AdapterResult["metadata"]> {
-  const capacityUsd = sumBranchDebtUsd(snapshot.debts, debtDecimals);
-  if (capacityUsd <= 0) {
+  const totalDebtUsd = sumBranchDebtUsd(snapshot.debts, debtDecimals);
+  if (totalDebtUsd <= 0) {
     throw new Error(`${ADAPTER_KEY} active-pool debt reads returned zero capacity`);
   }
+
+  const branchDebt = snapshot.debts.map((entry) => ({
+    name: entry.entry.branch.name,
+    debtRaw: entry.debtRaw?.toString() ?? null,
+    shutDown: entry.shutDown,
+    redemptionFeeBps: entry.redemptionFeeBps,
+    ...(branchRedeemability !== undefined
+      ? { redeemable: branchRedeemability?.get(entry.entry.branch.name) ?? null }
+      : {}),
+  }));
+  const unreadableRedeemabilityBranches = branchRedeemability !== undefined
+    ? snapshot.debts
+        .filter((entry) => branchRedeemability?.has(entry.entry.branch.name) !== true)
+        .map((entry) => entry.entry.branch.name)
+    : [];
+  if (unreadableRedeemabilityBranches.length > 0) {
+    return {
+      totalDebtUsd,
+      details: {
+        proofKind: "liquity-v2-active-pool-debt",
+        branchDebt,
+        unreadableRedeemabilityBranches,
+        redemptionCapacityUnratedReason:
+          `Could not verify branch redeemability for: ${unreadableRedeemabilityBranches.join(", ")}`,
+      },
+    };
+  }
+
+  const nonRedeemableBranches = branchRedeemability
+    ? snapshot.debts
+        .filter((entry) => branchRedeemability.get(entry.entry.branch.name) === false)
+        .map((entry) => entry.entry.branch.name)
+    : [];
+  const capacityUsd = sumBranchDebtUsd(
+    branchRedeemability
+      ? snapshot.debts.filter((entry) => branchRedeemability.get(entry.entry.branch.name) === true)
+      : snapshot.debts,
+    debtDecimals,
+  );
 
   const shutdownBranches = snapshot.debts
     .filter((entry) => entry.shutDown === true)
@@ -470,20 +533,26 @@ export function buildLiquityV2RedemptionMetadata(
   const unreadableShutdownBranches = snapshot.debts
     .filter((entry) => entry.shutDown == null)
     .map((entry) => entry.entry.branch.name);
-  const routeStatus = shutdownBranches.length > 0
+  const routeStatus = shutdownBranches.length > 0 || nonRedeemableBranches.length > 0
     ? "degraded"
     : unreadableShutdownBranches.length > 0
       ? "unknown"
       : "open";
-  const routeStatusReason =
-    shutdownBranches.length > 0
-      ? `Collateral branch shutdown/sunset detected for: ${shutdownBranches.join(", ")}`
-      : unreadableShutdownBranches.length > 0
-        ? `Could not verify branch shutdown status for: ${unreadableShutdownBranches.join(", ")}`
-        : undefined;
+  const routeStatusReasons = [
+    ...(shutdownBranches.length > 0
+      ? [`Collateral branch shutdown/sunset detected for: ${shutdownBranches.join(", ")}`]
+      : []),
+    ...(nonRedeemableBranches.length > 0
+      ? [`Protocol redemption disabled for: ${nonRedeemableBranches.join(", ")}`]
+      : []),
+    ...(unreadableShutdownBranches.length > 0
+      ? [`Could not verify branch shutdown status for: ${unreadableShutdownBranches.join(", ")}`]
+      : []),
+  ];
+  const routeStatusReason = routeStatusReasons.length > 0 ? routeStatusReasons.join("; ") : undefined;
 
   return {
-    totalDebtUsd: capacityUsd,
+    totalDebtUsd,
     immediateRedeemableUsd: capacityUsd,
     ...buildRedemptionSnapshotMetadata({
       capacityUsd,
@@ -499,13 +568,9 @@ export function buildLiquityV2RedemptionMetadata(
     }),
     details: {
       proofKind: "liquity-v2-active-pool-debt",
-      branchDebt: snapshot.debts.map((entry) => ({
-        name: entry.entry.branch.name,
-        debtRaw: entry.debtRaw?.toString() ?? null,
-        shutDown: entry.shutDown,
-        redemptionFeeBps: entry.redemptionFeeBps,
-      })),
+      branchDebt,
       ...(unreadableShutdownBranches.length > 0 ? { unreadableShutdownBranches } : {}),
+      ...(nonRedeemableBranches.length > 0 ? { nonRedeemableBranches } : {}),
     },
   };
 }
@@ -602,7 +667,12 @@ export async function fetchLiquityV2BranchReserves(
       priceMap.set(name, price);
     }
   }
-  const redemptionMetadata = buildLiquityV2RedemptionMetadata(snapshot, debtDecimals, params.sourceUrls);
+  const redemptionMetadata = buildLiquityV2RedemptionMetadata(
+    snapshot,
+    debtDecimals,
+    params.sourceUrls,
+    params.mechanismMetrics ? mechanismMetrics?.branchRedeemability ?? null : undefined,
+  );
   const result = adaptBranchBalanceReserves({
     adapterKey: ADAPTER_KEY,
     balances,

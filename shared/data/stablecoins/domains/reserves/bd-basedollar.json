@@ -1,0 +1,106 @@
+{
+  "id": "bd-basedollar",
+  "reserves": [
+    {
+      "name": "WETH",
+      "pct": 24.4,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum protocol and WETH9 contract",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "wstETH (Lido)",
+      "pct": 31.3,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido DAO and Ethereum validators",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "rETH (Rocket Pool)",
+      "pct": 10.8,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Rocket Pool DAO and node operators",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "cbBTC (Coinbase)",
+      "pct": 8.7,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Coinbase and the Bitcoin network",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "cbETH (Coinbase)",
+      "pct": 24.8,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Coinbase and Ethereum validators",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-21",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Base Dollar production deployment",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json"
+      },
+      {
+        "label": "Base Dollar collateral and oracle deployment script",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/script/DeployLiquity2.s.sol"
+      },
+      {
+        "label": "Base Dollar protocol and redemption mechanics",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/README.md"
+      },
+      {
+        "label": "Base PublicNode RPC used for the fixed-block review",
+        "url": "https://base-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "Base Dollar's five launch branches are overcollateralized on-chain positions backed by WETH, wstETH, rETH, wrapped cbBTC, and cbETH. The configured Liquity V2 adapter owns current branch weights; this reviewed composition is only the reproducible point-in-time fallback and V9 asset taxonomy.",
+    "compositionBasis": "Base block 50,259,926 (hash 0x59ea75b489066fde1bb517c49ec1318ed4ac7f2b3bd27fcdf69d188e00003d53; 2026-08-21T10:46:39Z). ActivePool balances were valued with the same TroveManager protocol-price tuple used by the configured mechanism packet: WETH $27,389.46, wstETH $35,120.85, rETH $12,124.29, wrapped cbBTC $9,798.99, and cbETH $27,746.39, totaling $112,179.97. Percentages reproduce the adapter's normalized one-decimal slices and sum to 100.0%; live adapter output supersedes these dated weights.",
+    "compositionAsOf": "2026-08-21",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No launch collateral branch is unclassified in this snapshot. Weights are borrower-driven and can change every block; the live adapter, not this dated fallback, is authoritative for current composition.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Base Dollar ActivePool branch contracts",
+        "role": "other",
+        "jurisdiction": "Base"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-08-21",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Base Dollar production deployment",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json"
+      },
+      {
+        "label": "Base Dollar protocol contracts",
+        "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/README.md#branch-level-contracts"
+      }
+    ],
+    "uncertainty": "Collateral is held by on-chain ActivePool contracts rather than a conventional off-chain reserve custodian. cbBTC and cbETH retain Coinbase issuer/custody dependencies at the asset layer. The reviewed protocol sources do not establish legal segregation, bankruptcy remoteness, or rehypothecation terms, so those safeguards remain unknown.",
+    "knownUnknownExposurePct": 100
+  }
+}

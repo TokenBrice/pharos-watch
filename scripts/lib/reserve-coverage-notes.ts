@@ -22,6 +22,17 @@ export interface LiveReserveSourceQualityNote {
  * being silently skipped.
  */
 export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourceQualityNote> = {
+  "bd-basedollar": {
+    sourceUrl:
+      "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json",
+    sourceQuality: "independent",
+    expectedAdapterFamily: "liquity-v2-branches (implemented and live)",
+    freshnessEvidence:
+      "The adapter reads each launch branch's collateral balance, ActivePool debt and shutdown state, plus protocol prices, Stability Pool deposits, BD totalSupply, and the CollateralRegistry redemption rate in the same on-chain run.",
+    scoreGradePlausible: true,
+    note:
+      "Base Dollar's collateral weights are borrower-driven and change every block, so a static reserves sidecar would fabricate composition percentages. The reviewed Liquity V2 branch adapter is the canonical current-state reserve and mechanism evidence path.",
+  },
   "aa-falconx-mev-capital": {
     sourceUrl: "https://docs.pareto.credit/product/credit-vaults/live-vaults",
     sourceQuality: "weak-proof",

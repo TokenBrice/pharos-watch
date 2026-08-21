@@ -139,6 +139,10 @@ apr                  = remainingLqtyRewards * dailyIssuanceFactor * lqtyPriceUsd
 
 **Caveat:** This source captures only the projected LQTY incentive stream. It deliberately excludes ETH liquidation gains, so it is a lower-bound estimate of the full Stability Pool return.
 
+#### Reviewed gap: Base Dollar Stability Pools
+
+BD has five branch-specific Liquity V2 Stability Pools on Base. Their variable return combines BD borrower-fee distributions with collateral liquidation gains, so neither the generic ERC-4626 exchange-rate reader nor the Liquity v1 B.Protocol emissions estimator can represent it safely. At the 2026-08-21 launch review there was no verified public machine-readable APY feed or yield-bearing wrapper exchange rate. The typed yield lifecycle registry therefore records an intentional `source-family-adapter-unimplemented` gap through 2026-09-21. The next implementation step is a reusable multi-branch Liquity V2 Stability Pool adapter that snapshots every branch's deposit and reward accumulators, values collateral gains, and fails closed unless branch coverage is complete.
+
 ### Tier 2: DeFiLlama Yields API (Multi-Source)
 
 Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers). Each unique pool found becomes a separate row in `yield_data`. The row with the highest `currentApy` per coin is marked `is_best = 1`; others are `is_best = 0`.

@@ -1,5 +1,6 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import bdBaseDollar from "@shared/data/stablecoins/coins/bd-basedollar.json";
 import boldLiquity from "@shared/data/stablecoins/coins/bold-liquity.json";
 import cdpEnosys from "@shared/data/stablecoins/coins/cdp-enosys.json";
 import nectBeraborrow from "@shared/data/stablecoins/coins/nect-beraborrow.json";
@@ -159,6 +160,89 @@ describe("buildLiquityV2RedemptionMetadata", () => {
     });
   });
 
+  it("excludes protocol-disabled branches from immediate redemption capacity", () => {
+    const rEthBranch = {
+      ...branch,
+      name: "rETH (Rocket Pool)",
+      holder: "0x3333333333333333333333333333333333333333",
+    };
+    const metadata = buildLiquityV2RedemptionMetadata(
+      {
+        balances: [
+          { branch, balanceRaw: 2_000_000_000_000_000_000n },
+          { branch: rEthBranch, balanceRaw: 1_000_000_000_000_000_000n },
+        ],
+        redemptionFeeBps: 50,
+        debts: [
+          {
+            entry: { branch, balanceRaw: 2_000_000_000_000_000_000n },
+            debtRaw: 1_250_000_000_000_000_000_000n,
+            shutDown: false,
+            redemptionFeeBps: null,
+          },
+          {
+            entry: { branch: rEthBranch, balanceRaw: 1_000_000_000_000_000_000n },
+            debtRaw: 750_000_000_000_000_000_000n,
+            shutDown: false,
+            redemptionFeeBps: null,
+          },
+        ],
+      },
+      18,
+      ["https://example.com/reviewed-source"],
+      new Map([
+        ["WETH", true],
+        ["rETH (Rocket Pool)", false],
+      ]),
+    );
+
+    expect(metadata).toMatchObject({
+      totalDebtUsd: 2_000,
+      immediateRedeemableUsd: 1_250,
+      redemption: {
+        capacityUsd: 1_250,
+        routeStatus: "degraded",
+        routeStatusReason: "Protocol redemption disabled for: rETH (Rocket Pool)",
+      },
+      details: {
+        nonRedeemableBranches: ["rETH (Rocket Pool)"],
+        branchDebt: [
+          expect.objectContaining({ name: "WETH", redeemable: true }),
+          expect.objectContaining({ name: "rETH (Rocket Pool)", redeemable: false }),
+        ],
+      },
+    });
+  });
+
+  it("leaves redemption unrated when required branch redeemability is unreadable", () => {
+    const metadata = buildLiquityV2RedemptionMetadata(
+      {
+        balances: [{ branch, balanceRaw: 2_000_000_000_000_000_000n }],
+        redemptionFeeBps: 50,
+        debts: [
+          {
+            entry: { branch, balanceRaw: 2_000_000_000_000_000_000n },
+            debtRaw: 1_250_000_000_000_000_000_000n,
+            shutDown: false,
+            redemptionFeeBps: null,
+          },
+        ],
+      },
+      18,
+      ["https://example.com/reviewed-source"],
+      null,
+    );
+
+    expect(metadata.totalDebtUsd).toBe(1_250);
+    expect(metadata.immediateRedeemableUsd).toBeUndefined();
+    expect(metadata.redemption).toBeUndefined();
+    expect(metadata.details).toMatchObject({
+      unreadableRedeemabilityBranches: ["WETH"],
+      redemptionCapacityUnratedReason: "Could not verify branch redeemability for: WETH",
+      branchDebt: [expect.objectContaining({ name: "WETH", redeemable: null })],
+    });
+  });
+
   it("marks unreadable shutdown status as unknown and emits a degraded warning", () => {
     const snapshot = {
       balances: [{ branch, balanceRaw: 2_000_000_000_000_000_000n }],
@@ -203,6 +287,111 @@ describe("buildLiquityV2RedemptionMetadata", () => {
   });
 });
 
+describe("Base Dollar production bindings", () => {
+  const config = bdBaseDollar.liveReservesConfig as LiveReservesConfig;
+  const params = config.params as {
+    rpcUrl: string;
+    fallbackRpcUrl: string;
+    sourceUrls: string[];
+    redemptionRateProbe: { contract: string; selector: string };
+    branches: Array<{
+      name: string;
+      holder: string;
+      token: { chain: string; address: string; decimals: number };
+      priceToken?: { chain: string; address: string };
+    }>;
+    mechanismMetrics: {
+      supplyTokenAddress: string;
+      branchPriceSelector: string;
+      stabilityPoolDepositsSelector: string;
+      branches: Array<{
+        name: string;
+        troveManagerAddress: string;
+        stabilityPoolAddress: string;
+      }>;
+    };
+  };
+
+  it("pins all five launch branches to the production ActivePools and mechanism contracts", () => {
+    expect(config.inputs.primary).toMatchObject({ kind: "onchain-evm", chain: "base", rpcMode: "alchemy" });
+    expect(params).toMatchObject({
+      rpcUrl: "https://mainnet.base.org",
+      fallbackRpcUrl: "https://base-rpc.publicnode.com",
+      redemptionRateProbe: {
+        contract: "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
+        selector: "0xc52861f2",
+      },
+      mechanismMetrics: {
+        supplyTokenAddress: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+        branchPriceSelector: BOLD_MECHANISM_PRICE_SELECTOR,
+        stabilityPoolDepositsSelector: BOLD_STABILITY_POOL_DEPOSITS_SELECTOR,
+      },
+    });
+    expect(params.sourceUrls).toEqual(expect.arrayContaining([
+      expect.stringContaining("contracts/script/DeployLiquity2.s.sol"),
+      expect.stringContaining("contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json"),
+    ]));
+    expect(params.branches).toMatchObject([
+      {
+        name: "WETH",
+        holder: "0x254a8267d4e12a8c0f283274632a18a33e49f7c0",
+        token: { chain: "base", address: "0x4200000000000000000000000000000000000006", decimals: 18 },
+      },
+      {
+        name: "wstETH (Lido)",
+        holder: "0x1021fefc406c9573ab3579fc55be13e3300ef6b1",
+        token: { chain: "base", address: "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452", decimals: 18 },
+      },
+      {
+        name: "rETH (Rocket Pool)",
+        holder: "0x1b9a62798e8bae0cea4eb21b4b3775359beb819f",
+        token: { chain: "base", address: "0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c", decimals: 18 },
+      },
+      {
+        name: "cbBTC (Coinbase)",
+        holder: "0xcaa72df531554087318eaf24646958500668b230",
+        token: { chain: "base", address: "0x92a7aee8afaa71ba0a9cc04a3dbe1f34237c33e0", decimals: 18 },
+        priceToken: { chain: "base", address: "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf" },
+      },
+      {
+        name: "cbETH (Coinbase)",
+        holder: "0xddac84ab417677f553cced8ababf497226112218",
+        token: { chain: "base", address: "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22", decimals: 18 },
+      },
+    ]);
+    expect(params.mechanismMetrics.branches).toMatchObject([
+      {
+        name: "WETH",
+        troveManagerAddress: "0xa957d42c4c43eb97d5f71b8435eb638e5dd9f639",
+        stabilityPoolAddress: "0x7d837bf114785642d225d1101145ddb8af4ba438",
+      },
+      {
+        name: "wstETH (Lido)",
+        troveManagerAddress: "0x79a6a3361eae4d4b80939206426f2320c11a4bfb",
+        stabilityPoolAddress: "0xc65a05737d31e0f42c0806c739f3c88dd009c05f",
+      },
+      {
+        name: "rETH (Rocket Pool)",
+        troveManagerAddress: "0xd31987fcba98f471b6e4220c52f7741b11b2fc5e",
+        stabilityPoolAddress: "0x4eb3b6970fd358d34195b5d40e4eb64e0e3c0b6a",
+      },
+      {
+        name: "cbBTC (Coinbase)",
+        troveManagerAddress: "0x835b04eefbb0e32d8f75cfe96acb527a42f1a0d9",
+        stabilityPoolAddress: "0x6bd55dd953507641c84a03956760f83d29d65726",
+      },
+      {
+        name: "cbETH (Coinbase)",
+        troveManagerAddress: "0x482de97e667330afba99f8ced527118aec66f15d",
+        stabilityPoolAddress: "0x25afbb09d9804482ed8e24295be4a12704fe93ea",
+      },
+    ]);
+    expect(params.mechanismMetrics.branches.map((entry) => entry.name)).toEqual(
+      params.branches.map((entry) => entry.name),
+    );
+  });
+});
+
 describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
   const config = boldLiquity.liveReservesConfig as LiveReservesConfig;
   const params = config.params as {
@@ -230,7 +419,7 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     );
   });
 
-  it("publishes protocol-priced collateralization and live Stability Pool coverage from one multicall", async () => {
+  it("publishes mechanism metrics and excludes a protocol-disabled branch from redemption capacity", async () => {
     const unit = 10n ** 18n;
     const balances = new Map([
       ["wstETH (Lido)", 20_000n * unit],
@@ -286,7 +475,10 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
           return {
             label: call.label,
             success: true,
-            returnData: encodeMechanismPrice(protocolPrices.get(metricBranch.name) ?? 0n),
+            returnData: encodeMechanismPrice(
+              protocolPrices.get(metricBranch.name) ?? 0n,
+              metricBranch.name !== "rETH (Rocket Pool)",
+            ),
           };
         }
         return {
@@ -306,8 +498,16 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(63_900_000, 2);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(2.13, 6);
     expect(result.metadata?.liquidationCapacityRatio).toBeCloseTo(25 / 30, 6);
+    expect(result.metadata?.totalDebtUsd).toBe(30_000_000);
+    expect(result.metadata?.immediateRedeemableUsd).toBe(25_000_000);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 25_000_000,
+      routeStatus: "degraded",
+      routeStatusReason: "Protocol redemption disabled for: rETH (Rocket Pool)",
+    });
     expect(result.metadata?.details).toMatchObject({
       proofKind: "liquity-v2-active-pool-debt",
+      nonRedeemableBranches: ["rETH (Rocket Pool)"],
       mechanismMetrics: {
         proofKind: "liquity-v2-protocol-priced-system-state",
         totalSupplyRaw: (30_000_000n * unit).toString(),
@@ -336,7 +536,7 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     }));
   });
 
-  it("keeps the reserve snapshot when optional mechanism metrics are unavailable", async () => {
+  it("keeps reserves but leaves redemption unrated when branch redeemability is unreadable", async () => {
     const unit = 10n ** 18n;
     vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
@@ -362,12 +562,72 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     expect(result.slices).toHaveLength(3);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.metadata?.liquidationCapacityRatio).toBeUndefined();
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.details).toMatchObject({
+      unreadableRedeemabilityBranches: ["wstETH (Lido)", "WETH", "rETH (Rocket Pool)"],
+    });
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: "liquity-v2-mechanism-metrics-unavailable",
         severity: "info",
       }),
+      expect.objectContaining({
+        code: "liquity-v2-redeemability-unavailable",
+        effect: "degraded",
+      }),
     ]));
+  });
+
+  it("keeps redemption rated when optional solvency metrics fail after redeemability is readable", async () => {
+    const unit = 10n ** 18n;
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(50);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
+      ["wstETH (Lido)", 2_000],
+      ["WETH", 1_800],
+      ["rETH (Rocket Pool)", 1_900],
+    ]));
+    vi.mocked(fetchErc20Balance).mockResolvedValue(1_000n * unit);
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => (
+      data === "0x06ff8dfb" ? encodeUint(0) : null
+    ));
+    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ data }) => (
+      data === "0x45507998" ? 1_000_000n * unit : null
+    ));
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) =>
+      calls.map((call) => {
+        if (call.label === "mechanism:total-supply") {
+          return { label: call.label, success: false, returnData: "0x" as const };
+        }
+        if (call.label.startsWith("mechanism:price:")) {
+          return {
+            label: call.label,
+            success: true,
+            returnData: encodeMechanismPrice(2_000n * unit, true),
+          };
+        }
+        return { label: call.label, success: true, returnData: encodeUint(500_000n * unit) };
+      })
+    );
+
+    const result = await fetchLiquityV2BranchReserves(
+      boldLiquity as unknown as StablecoinMeta,
+      config,
+      AbortSignal.timeout(5_000),
+    );
+
+    expect(result.slices).toHaveLength(3);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 3_000_000,
+      routeStatus: "open",
+      feeBps: 50,
+    });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "liquity-v2-mechanism-metrics-unavailable",
+        severity: "info",
+      }),
+    ]);
   });
 });
 

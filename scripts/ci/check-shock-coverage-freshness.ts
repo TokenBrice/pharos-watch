@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REGISTRY_PATH = "shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
 const POLICY_PATH = "shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
-const REQUIRED_ASSET_IDS = ["lusd-liquity", "bold-liquity"];
+const REQUIRED_ASSET_IDS = ["bd-basedollar", "lusd-liquity", "bold-liquity"];
 
 // The refresh runs every 48h. Require the newest measurement to be comfortably
 // inside the policy bound so a single failed run still leaves usable slack.

@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.38",
+    title: "Redeemability-gated Liquity capacity and Base Dollar coverage",
+    date: "2026-08-21",
+    effectiveAt: 1787270400,
+    summary:
+      "Base Dollar gains a reviewed five-branch collateral-redemption route, while mechanism-enabled Liquity V2 adapters now count only branches that report redeemable in the same on-chain packet and withhold capacity when required redeemability is unreadable.",
+    impact: [
+      "BD adds permissionless atomic collateral redemption across its WETH, wstETH, rETH, wrapped cbBTC, and cbETH launch branches, with current capacity and the CollateralRegistry fee supplied by the four-hourly live-reserve snapshot.",
+      "For BOLD and BD, a branch whose TroveManager tuple reports `redeemable = false` is excluded from immediate capacity and degrades route status instead of leaving aggregate ActivePool debt credited as executable.",
+      "An unreadable required branch tuple leaves the nested redemption route unrated; optional solvency-metric failure after all branch redeemability facts are known can still preserve the bounded capacity observation.",
+      "Liquity V2 configs without mechanism-redeemability packets retain their prior aggregate ActivePool debt behavior.",
+      "Coverage rises to 328 configured routes, with family totals of 151 offchain-issuer, 71 stablecoin-redeem, 41 collateral-redeem, 40 queue-redeem, 16 psm-swap, and 9 basket-redeem. Scoring weights and ladders are unchanged.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.37",
     title: "Three reviewed redemption routes across collateral, PSM, and direct issuer rails",
     date: "2026-08-14",
