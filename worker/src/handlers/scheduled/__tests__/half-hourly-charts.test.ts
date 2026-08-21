@@ -265,7 +265,11 @@ describe("half-hourly charts scheduling", () => {
       expect.any(AbortSignal),
       expect.any(Function),
       scheduledRuntime.slotStartedAt,
-      { publishLiquidity: false, publishShadowTargets: false },
+      {
+        publishLiquidity: false,
+        publishShadowTargets: false,
+        stageReadyDeadlineMs: scheduledRuntime.scheduledTimeMs! + 90_000,
+      },
     );
     expect(mocks.runDexExitRouteTurnoverWatchdog).not.toHaveBeenCalled();
   });

@@ -35,7 +35,7 @@ describe("check-cron-connection-budget", () => {
     expect(v9Supply?.chains).toEqual([
       {
         chainKey: "chain-1",
-        jobs: ["compute-depeg-resolver", "sync-v9-supply-attribution"],
+        jobs: ["sync-v9-supply-attribution", "compute-depeg-resolver"],
         peak: 3,
       },
     ]);

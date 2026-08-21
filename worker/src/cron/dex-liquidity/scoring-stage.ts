@@ -5,7 +5,7 @@ import {
 import { isRecord } from "@shared/lib/type-guards";
 import { executeAtomicBatch } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "../../lib/error-utils";
 import { parseJson } from "../../lib/json-parse";
 import type {
@@ -24,6 +24,7 @@ const DEX_LIQUIDITY_SCORING_STAGE_MAX_AGE_SEC = 55 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FUTURE_TOLERANCE_SEC = 2 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FAILED_RETENTION_SEC = 2 * 3600;
 const DEX_LIQUIDITY_SCORING_STAGE_RETENTION_GENERATIONS_PER_RUN = 2;
+const DEX_LIQUIDITY_SCORING_STAGE_READY_POLL_MS = 5_000;
 
 type SourceHeader = Omit<
   DexLiquidityScoringSourceState,
@@ -989,14 +990,10 @@ async function loadStageManifest(
                 sync_started_at, created_at, ready_at, expected_chunk_count,
                 written_chunk_count, expected_record_count, payload_bytes
            FROM dex_liquidity_scoring_stages
-          WHERE source_slot_started_at <= ?
-            AND (
-              state = 'ready'
-              OR (source_slot_started_at = ? AND state = 'consumed')
-            )
-          ORDER BY source_slot_started_at DESC
+          WHERE source_slot_started_at = ?
+            AND state IN ('ready', 'consumed')
           LIMIT 1`,
-      ).bind(options.expectedSourceSlotStartedAt, options.expectedSourceSlotStartedAt);
+      ).bind(options.expectedSourceSlotStartedAt);
   const row = await runWithOverloadRetry(() => query.first<StageManifestRow>(), 3, signal);
   if (!row) {
     const suffix = options.expectedSourceSlotStartedAt == null
@@ -1102,6 +1099,48 @@ export async function loadDexLiquidityScoringStage(
     sourceState: decoded.sourceState,
     poolState: decoded.poolState,
   };
+}
+
+export async function loadDexLiquidityScoringStageWhenReady(
+  db: D1Database,
+  options: {
+    expectedSourceSlotStartedAt: number;
+    readyDeadlineMs: number;
+    pollIntervalMs?: number;
+    nowMs?: () => number;
+    wait?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  },
+  signal?: AbortSignal,
+): Promise<LoadedDexLiquidityScoringStage> {
+  assertTimestamp("expectedSourceSlotStartedAt", options.expectedSourceSlotStartedAt);
+  const nowMs = options.nowMs ?? Date.now;
+  const wait = options.wait ?? sleepWithSignal;
+  const pollIntervalMs = options.pollIntervalMs ?? DEX_LIQUIDITY_SCORING_STAGE_READY_POLL_MS;
+  if (!Number.isFinite(options.readyDeadlineMs) || options.readyDeadlineMs < 0) {
+    throw new RangeError("DEX liquidity scoring stage readyDeadlineMs must be non-negative");
+  }
+  if (!Number.isFinite(pollIntervalMs) || pollIntervalMs <= 0) {
+    throw new RangeError("DEX liquidity scoring stage pollIntervalMs must be positive");
+  }
+
+  const missingMessage =
+    `DEX liquidity scoring stage is missing for source slot ${options.expectedSourceSlotStartedAt}`;
+  while (true) {
+    throwIfAborted(signal);
+    const observedNowMs = nowMs();
+    try {
+      return await loadDexLiquidityScoringStage(db, {
+        nowSec: Math.floor(observedNowMs / 1_000),
+        expectedSourceSlotStartedAt: options.expectedSourceSlotStartedAt,
+      }, signal);
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      if (!(error instanceof Error) || error.message !== missingMessage) throw error;
+      const remainingMs = options.readyDeadlineMs - nowMs();
+      if (remainingMs <= 0) throw error;
+      await wait(Math.min(pollIntervalMs, remainingMs), signal);
+    }
+  }
 }
 
 export async function markDexLiquidityScoringStageConsumed(

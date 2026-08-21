@@ -713,6 +713,41 @@ describe("address price providers", () => {
     }
   });
 
+  it("round-robins CoinGecko batches across networks before spending a second request on one network", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
+      const ethereumTargets = Array.from({ length: 151 }, (_, index) => makeDexScreenerTarget(index, {
+        chain: "ethereum",
+        providerChainId: "eth",
+      }));
+      const crossNetworkTargets = [
+        makeDexScreenerTarget(1_000, { chain: "celo", providerChainId: "celo" }),
+        makeDexScreenerTarget(1_001, { chain: "cardano", providerChainId: "cardano" }),
+        makeDexScreenerTarget(1_002, { chain: "citrea", providerChainId: "citrea" }),
+      ];
+
+      const resultPromise = runCoingeckoOnchainAddressProvider(
+        [...ethereumTargets, ...crossNetworkTargets],
+        null,
+        undefined,
+        1_700_000_000,
+        Number.MAX_SAFE_INTEGER,
+      );
+      await vi.runAllTimersAsync();
+      await resultPromise;
+
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+      const requestedNetworks = fetchMock.mock.calls.map(([input]) => {
+        const match = String(input).match(/\/onchain\/networks\/([^/]+)\/tokens\/multi\//);
+        return match?.[1];
+      });
+      expect(requestedNetworks).toEqual(["eth", "celo", "cardano", "citrea", "eth"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("limits DexScreener address augmentation to one batch per run", async () => {
     const fetchMock = mockFetch([{ match: () => true, body: [] }]);
 

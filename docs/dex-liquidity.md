@@ -499,7 +499,7 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
 
 - **Architecture**: three dedicated cron phases feed discovery through publication:
   - Source-stage cron: `sync-dex-liquidity-stage` hourly at `10 * * * *`; the retained `:40` dispatch is a neutral no-op.
-  - Price publication: `sync-dex-liquidity` hourly at `16 * * * *`, preferring the source slot six minutes earlier and otherwise consuming the newest ready stage within 55 minutes.
+  - Price publication: `sync-dex-liquidity` hourly at `16 * * * *`, consuming only the exact source slot six minutes earlier and waiting up to 90 seconds when that stage is still finalizing. It never substitutes an older ready stage.
   - Liquidity score/history and active measured-target publication: every two hours at even-hour `:16`; odd-hour `:16` reuses the current score generation while refreshing prices.
   - Half-hour V9 bridge: the retained `:46` consumer reuses the exact current DEX generation without rewriting DEX surfaces.
   - Discovery cron: `syncDexDiscovery()` every 2 hours (`6 */2 * * *`).
