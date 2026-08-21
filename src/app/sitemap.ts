@@ -138,6 +138,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ["/upcoming/", "daily", 0.6],
     ["/digest/", "daily", 0.6, liveDataLastModified],
     ["/safety-scores/", "daily", 0.8, liveDataLastModified],
+    ["/safety-scores/map/", "daily", 0.6, liveDataLastModified],
     ["/stability-index/", "daily", 0.8, liveDataLastModified],
     ["/dependency-map/", "daily", 0.7, liveDataLastModified],
     ["/yield/", "daily", 0.7, liveDataLastModified],
