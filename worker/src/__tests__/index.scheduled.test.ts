@@ -483,7 +483,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "*/15 * * * *" } as ScheduledEvent,
+      { cron: "0 * * * *" } as ScheduledEvent,
       env,
       ctx,
     );
@@ -516,7 +516,7 @@ describe("worker.scheduled", () => {
 
     await worker.scheduled(
       {
-        cron: "8,23,38,53 * * * *",
+        cron: "8 * * * *",
         scheduledTime: Date.parse("2026-07-26T12:08:00Z"),
       } as ScheduledEvent,
       env,
@@ -557,7 +557,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "9,24,39,54 * * * *" } as ScheduledEvent,
+      { cron: "9 * * * *" } as ScheduledEvent,
       env,
       ctx,
     );
@@ -596,7 +596,7 @@ describe("worker.scheduled", () => {
     const expectedSlotStartedAt = Math.floor(scheduledTime / 1000);
 
     await worker.scheduled(
-      { cron: "*/15 * * * *", scheduledTime } as ScheduledEvent,
+      { cron: "15 * * * *", scheduledTime } as ScheduledEvent,
       env,
       ctx,
     );
@@ -643,7 +643,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "*/15 * * * *", scheduledTime } as ScheduledEvent,
+      { cron: "45 * * * *", scheduledTime } as ScheduledEvent,
       env,
       ctx,
     );
@@ -678,7 +678,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "*/15 * * * *", scheduledTime } as ScheduledEvent,
+      { cron: "45 * * * *", scheduledTime } as ScheduledEvent,
       env,
       ctx,
     );
@@ -710,7 +710,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "*/15 * * * *" } as ScheduledEvent,
+      { cron: "0 * * * *" } as ScheduledEvent,
       env,
       ctx,
     );
@@ -747,7 +747,7 @@ describe("worker.scheduled", () => {
     });
 
     await worker.scheduled(
-      { cron: "*/15 * * * *" } as ScheduledEvent,
+      { cron: "0 * * * *" } as ScheduledEvent,
       env,
       ctx,
     );

@@ -22,7 +22,20 @@ export type CronGroupKey =
  * ADR-7 schedule authority.
  */
 const CRON_SCHEDULE_DEFINITIONS = {
-  quarterHourly: { schedule: "*/15 * * * *", ...CRON_SCHEDULE_CADENCES.quarterHourly },
+  // Paired hourly physical triggers, not "*/15 * * * *". Cloudflare caps Cron
+  // expressions with intervals below one hour at 30 seconds of CPU time, and
+  // this lane's sync-stablecoins leg parses the full DefiLlama payload and runs
+  // price enrichment for every tracked coin. Under one sub-hourly expression the
+  // isolate was killed mid `price-enrichment` on ~28% of slots (measured
+  // 2026-08-21), which also starved the snapshot-supply/snapshot-chain-supply
+  // tail that never got to start. Four hourly expressions keep the same :00/:15/
+  // :30/:45 grid and the same logical 900s cadence while qualifying each
+  // invocation for the 15-minute hourly CPU class.
+  quarterHourly: {
+    schedule: "*/15 * * * *",
+    triggerSchedules: ["0 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"],
+    ...CRON_SCHEDULE_CADENCES.quarterHourly,
+  },
   // The capture must land BEFORE the fixed input it will be consumed against.
   // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
   // captureClockSec <= fixedInput.clockSec, because a publication must not depend
@@ -32,12 +45,28 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // by construction: it is never admitted, and isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred
   // then skips the publication every cycle. Verified in production on 2026-08-09 (see
   // the 10:22 skip); do not move this grid later without changing that admission rule.
+  // Paired hourly physical triggers preserve the :08/:23/:38/:53 grid above while
+  // qualifying each invocation for the 15-minute hourly Cron CPU class. Under the
+  // single sub-hourly expression the 30-second class killed the isolate on ~29% of
+  // slots (measured 2026-08-21), and because compute-depeg-resolver is second in
+  // this serial chain it absorbed the loss: 25.5% of its runs never started, with
+  // runs of six consecutive slots leaving depeg resolution blind for 90 minutes.
   v9SupplyAttributionOffset: {
     schedule: "8,23,38,53 * * * *",
+    triggerSchedules: ["8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *"],
     ...CRON_SCHEDULE_CADENCES.v9SupplyAttributionOffset,
   },
   v9PublicationOffset: { schedule: "22,52 * * * *", ...CRON_SCHEDULE_CADENCES.v9PublicationOffset },
-  statusSelfCheckOffset: { schedule: "9,24,39,54 * * * *", ...CRON_SCHEDULE_CADENCES.statusSelfCheckOffset },
+  // Paired hourly physical triggers for the hourly Cron CPU class. status-self-check
+  // serializes a ~600KB status document, so the 30-second sub-hourly class killed
+  // this isolate on ~29% of slots (measured 2026-08-21). The chain tail carried it:
+  // data-invariant-canary and cron-staleness-watchdog were starved for stretches of
+  // 75 and 90 minutes, blinding the very lanes that detect staleness.
+  statusSelfCheckOffset: {
+    schedule: "9,24,39,54 * * * *",
+    triggerSchedules: ["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"],
+    ...CRON_SCHEDULE_CADENCES.statusSelfCheckOffset,
+  },
   sixHourlyBlacklist: { schedule: "3 */6 * * *", ...CRON_SCHEDULE_CADENCES.sixHourlyBlacklist },
   halfHourlyMintBurnCritical: {
     schedule: "4,34 * * * *",
@@ -103,9 +132,20 @@ export const CRON_CONNECTION_BUDGET = {
  * Growth limits for the reviewed cron topology. Raising either limit requires
  * the consolidation/rebalance and execution-substrate review in the cron
  * trigger policy.
+ *
+ * The physical-trigger gate counts deployed Cloudflare expressions, which is
+ * deliberately not a count of logical lanes. Splitting one sub-hourly comma
+ * expression into several single-minute hourly expressions adds physical
+ * triggers without adding any scheduled work, connection pressure, or fetch
+ * surface: it only moves those invocations from Cloudflare's 30-second
+ * sub-hourly Cron CPU class into the 15-minute hourly class. ADR-20 raised the
+ * gate from 25 to 34 to buy that CPU class for quarterHourly,
+ * v9SupplyAttributionOffset, and statusSelfCheckOffset. The binding constraints
+ * remain the fetch-capable-entry and per-trigger connection limits below, plus
+ * Cloudflare's 250-Cron-Triggers-per-account platform ceiling.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
-  maxPhysicalTriggersBeforeRebalance: 25,
+  maxPhysicalTriggersBeforeRebalance: 34,
   maxFetchCapableEntriesBeforeRebalance: 32,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
