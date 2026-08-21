@@ -155,4 +155,27 @@ describe("Safety Score V9 supply observation primitives", () => {
       "https://api.mainnet-beta.solana.com",
     ]);
   });
+
+  it("falls through to the independent Pocket Network Solana endpoint", async () => {
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { error: { code: -32000, message: "unavailable" } } },
+        { body: { error: { code: -32000, message: "unavailable" } } },
+        { body: { result: { slot: 42 } } },
+      ],
+    }]);
+
+    await expect(
+      fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
+        "getSlot",
+        [{ commitment: "finalized" }],
+      ),
+    ).resolves.toEqual({ slot: 42 });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://api.mainnet-beta.solana.com",
+      "https://api.mainnet.solana.com",
+      "https://solana.api.pocket.network",
+    ]);
+  });
 });

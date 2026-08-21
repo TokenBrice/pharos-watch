@@ -136,7 +136,12 @@ observer applies the same all-or-nothing rule only to the allowlisted JTRSY and
 ACRDX burn/mint inventories: it binds every official EVM deployment to exact
 runtime code, a non-proxy implementation slot, and the authorized Centrifuge
 Spoke, then binds the official Token-2022 Solana mint to its exact direct
-authority in one finalized context. It never admits lock/mint or adapter
+authority in one finalized context. Because a finalized Solana bank context can
+land on a skipped slot, the observer anchors that context to the newest produced
+finalized block within the prior 64 slots before binding its block time and hash.
+RPC acquisition fails over across the two Solana public cluster aliases, Pocket
+Network's public gateway, and PublicNode while preserving the same strict packet.
+It never admits lock/mint or adapter
 inventories whose `totalSupply()` sums could double-count backing. The XAUT observer
 binds the configured Tether transparency disclosure to one finalized Ethereum
 token/treasury/adapter observation and the complete reviewed XAUt0

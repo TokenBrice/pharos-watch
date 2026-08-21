@@ -305,6 +305,14 @@ describe("Centrifuge reviewed deployment observer", () => {
           ],
         };
       }
+      if (method === "getBlocks") {
+        expect(params).toEqual([
+          434_941_099,
+          434_941_163,
+          { commitment: "finalized", minContextSlot: 434_941_163 },
+        ]);
+        return [434_941_162, 434_941_163];
+      }
       expect(method).toBe("getBlock");
       return {
         blockhash: "B".repeat(44),
@@ -327,6 +335,6 @@ describe("Centrifuge reviewed deployment observer", () => {
       mintAuthority: identity.mintAuthority,
       controllerProgramOwner: identity.controllerProgramOwner,
     });
-    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledTimes(3);
   });
 });
