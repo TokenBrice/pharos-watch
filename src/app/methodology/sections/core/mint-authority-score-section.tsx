@@ -22,7 +22,7 @@ const SIGNAL_ROWS = [
       signal: "Derived posture",
       effect: "Sets the base",
       meaning:
-        "Cap semantics, claim impairment, reconciliation cadence, and supervisory regime place the mint on a posture rung: no live authority, bounded admin, partially bounded, unbounded-but-reconciled, concentrated, or unbounded/compromised.",
+        "Cap semantics, claim impairment, reconciliation cadence, and supervisory regime place the mint on a posture rung. The ladder distinguishes collateral-gated issuance, unbounded minting with unknown reconciliation, and a confirmed absence of reconciliation.",
     },
   },
   {
@@ -32,6 +32,15 @@ const SIGNAL_ROWS = [
       effect: "Caps the component",
       meaning:
         "A resolved mint incident caps the component and the cap relaxes with the incident's age: while recent the mint reads no better than a concentrated admin, from two years as a partially bounded admin, and from four years as a bounded admin. It never reaches the clean-record rung, so a resolved exploit is never scored as a clean record, and the cap decays only with age — not with how severe the incident was. An active incident keeps its own critical path.",
+    },
+  },
+  {
+    id: "seasoning",
+    cells: {
+      signal: "Seasoned track record",
+      effect: "Bounded credit",
+      meaning:
+        "After 60 months, eligible postures earn 10 points without crossing the next rung. A non-active unbounded/compromised posture has a dedicated ceiling of 39; unbounded minting with unknown reconciliation is capped at 44. An active incident is ineligible.",
     },
   },
   {
@@ -74,7 +83,7 @@ const BAND_ROWS = [
     id: "hardened",
     cells: {
       band: V9_MINT_POSTURE_BANDS.hardened.label,
-      posture: "No live authority, or bounded admin",
+      posture: "No live authority (100), or bounded admin (85)",
       meaning: V9_MINT_POSTURE_BANDS.hardened.detail,
     },
   },
@@ -82,7 +91,7 @@ const BAND_ROWS = [
     id: "governed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.governed.label,
-      posture: "Partially bounded admin",
+      posture: "Partially bounded admin (70)",
       meaning: V9_MINT_POSTURE_BANDS.governed.detail,
     },
   },
@@ -90,7 +99,7 @@ const BAND_ROWS = [
     id: "managed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.managed.label,
-      posture: "Unbounded but reconciled",
+      posture: "Unbounded but reconciled (55-80)",
       meaning: V9_MINT_POSTURE_BANDS.managed.detail,
     },
   },
@@ -98,7 +107,7 @@ const BAND_ROWS = [
     id: "concentrated",
     cells: {
       band: V9_MINT_POSTURE_BANDS.concentrated.label,
-      posture: "Concentrated admin",
+      posture: "Collateral-gated (50), or concentrated admin (55)",
       meaning: V9_MINT_POSTURE_BANDS.concentrated.detail,
     },
   },
@@ -106,7 +115,7 @@ const BAND_ROWS = [
     id: "exposed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.exposed.label,
-      posture: "Unbounded or compromised",
+      posture: "Unknown reconciliation (35), or no reconciliation / compromised (25)",
       meaning: V9_MINT_POSTURE_BANDS.exposed.detail,
     },
   },
@@ -114,7 +123,7 @@ const BAND_ROWS = [
     id: "nr",
     cells: {
       band: "NR",
-      posture: "Unknown",
+      posture: "Unknown control facts (quality 45)",
       meaning: "Missing, unknown, inherited-but-unresolved, or insufficient review data.",
     },
   },

@@ -43,6 +43,41 @@ Since `9.28` the same contract covers structured bridge controls via `bridgeRout
 
 Since `9.3` the live mint component's top rung is 100: a derived `none-resolved` posture states that no reviewed control can mint, authorize minting, or expand issuance on this component's scope, so the component scores its proven maximum. The motivating LUSD/BOLD case proves the absence outright on immutable, owner-renounced deployments. The oracle and bridge tier tables are independent calibrations and keep their existing values.
 
+### Mint posture derivation and quality ladder (`9.32`)
+
+The live mint component derives its posture from reviewed control facts in a fixed order. An active mint incident first pins `unbounded-or-compromised`. A missing control or an unknown cap, claim-impairment, or economic-loss fact stays `unknown`. For economically unbounded minting, continuous or periodic reconciliation — or prudential supervision — derives `unbounded-reconciled`; an unknown reconciliation answer derives `unbounded-reconciliation-unknown`; and a confirmed `none` or `not-applicable` answer without prudential supervision derives `unbounded-or-compromised`. A reviewed absence of claim impairment derives `none-resolved` before cap grading. After that check, verified `collateral-gated` semantics derive the collateral-gated rung, followed by raiseable or periodic controls, bounded controls, and finally concentrated administration.
+
+These are posture qualities before quorum, custody, module, incident-decay, and other merged mint signals:
+
+| Derived posture or grading | Quality | Public band |
+| --- | ---: | --- |
+| `none-resolved` | 100 | Hardened |
+| `bounded-admin` | 85 | Hardened |
+| Prudentially reconciled | 80 | Managed |
+| `partially-bounded-admin` or attestation-only reconciled | 70 | Governed / Managed |
+| `concentrated-admin` | 55 | Concentrated |
+| `unbounded-reconciled` (base) | 55 | Managed |
+| `collateral-gated` | 50 | Concentrated |
+| `unknown` | 45 | NR |
+| `unbounded-reconciliation-unknown` | 35 | Exposed |
+| `unbounded-or-compromised` | 25 | Exposed |
+
+The reconciliation vocabulary records what the reviewer established, not interchangeable empty states:
+
+| Value | Meaning |
+| --- | --- |
+| `continuous` | Supply and backing are reconciled continuously. |
+| `periodic` | Reconciliation occurs on a reviewed recurring cadence. |
+| `none` | The reviewer positively established that no reconciliation regime exists. |
+| `not-applicable` | The reviewer established that reconciliation cadence does not apply to this mechanism; it is not an unknown answer. |
+| `unknown` | The review did not establish whether a reconciliation regime exists. |
+
+For an unbounded path, `unknown` therefore receives the intermediate 35 rung, below the unreviewed-control quality of 45 but above the confirmed 25 floor. `none` and `not-applicable` take the confirmed floor unless prudential supervision independently qualifies the path as reconciled.
+
+The `capSemantics` vocabulary is `unbounded`, `collateral-gated`, `raiseable`, `bounded`, and `unknown`. `collateral-gated` is curator-asserted with sources: every live mint path must require collateral by construction, no privileged party may mint arbitrarily, and every minter-authorization or mint-logic replacement or upgrade path must be absent, renounced, or behind a timelock of at least 86400 seconds. Anything weaker remains `unbounded`. `raiseable` records a numeric bound an administrator can change; `bounded` records a bound that cannot be raised through a live privileged path; `unknown` records an unresolved cap fact.
+
+Seasoned credit remains 10 points after at least 60 months. The existing reconciled-posture path is unchanged. A non-active `unbounded-or-compromised` posture and an `unbounded-reconciliation-unknown` posture are now also eligible without a reconciliation requirement because those rungs are unreconciled by definition. The adverse floor uses a dedicated ceiling of 39, rather than the generic next-rung-minus-one result of 34 introduced by the new 35 rung. The reconciliation-unknown rung uses the ordinary ladder ceiling of 44. An active incident is never eligible, and resolved-incident decay caps still apply after seasoning.
+
 The historical description follows.
 
 ## Methodology Versioning
