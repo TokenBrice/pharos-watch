@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Download, ImageOff } from "lucide-react";
 
@@ -10,10 +10,18 @@ import { Download, ImageOff } from "lucide-react";
  * deploys. Two states therefore have to look deliberate rather than broken:
  *
  * - a contributor running `npm run dev`, where no Pages Function exists at all;
- * - production after the kill switch, where the Function answers 404.
+ * - production after the kill switch, where the Function answers 404. This is
+ *   lever 2 of the documented kill switch, so the panel below is the real
+ *   degradation contract, not a development nicety.
  *
- * Both surface as an `error` on the `<img>`, which swaps in the panel below
- * instead of leaving a broken-image glyph in the middle of the page.
+ * Detecting the failure needs *two* paths, and `onError` alone is not enough.
+ * The `<img>` is server-rendered, so the browser starts fetching it during
+ * parse: for an already-404ing URL the `error` event fires long before React
+ * hydrates and attaches the handler, and React does not replay events it missed.
+ * The ref callback closes that window by inspecting the element's own state the
+ * moment React attaches to it — `complete` with a zero `naturalWidth` means the
+ * fetch already finished and produced no image — while `onError` still covers
+ * failures that happen after hydration.
  */
 const POSTER_PATH = "/safety-scores/map.png";
 const POSTER_FILENAME = "pharos-safety-score-map.png";
@@ -60,6 +68,16 @@ function PosterUnavailable() {
 export function SafetyMapPoster() {
   const [unavailable, setUnavailable] = useState(false);
 
+  // Runs in the commit phase, as React attaches to the hydrated element.
+  // `complete` is also true for a successful load, so the zero `naturalWidth` is
+  // what distinguishes a finished-and-failed fetch; an image still in flight is
+  // left to `onError`.
+  const checkAlreadyFailed = useCallback((image: HTMLImageElement | null) => {
+    if (image && image.complete && image.naturalWidth === 0) {
+      setUnavailable(true);
+    }
+  }, []);
+
   if (unavailable) {
     return <PosterUnavailable />;
   }
@@ -69,6 +87,7 @@ export function SafetyMapPoster() {
       <figure className="pharos-card-shell overflow-hidden">
         {/* Served by a Pages Function out of KV, so `next/image` has nothing to resolve at build time. */}
         <img
+          ref={checkAlreadyFailed}
           src={POSTER_PATH}
           alt={POSTER_ALT}
           width={POSTER_WIDTH}
