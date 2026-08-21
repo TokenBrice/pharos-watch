@@ -115,7 +115,11 @@ In any other state the digest omits the map section entirely — no stale link, 
 Three levers, in increasing order of what has already escaped:
 
 1. **Stop generating.** `gh workflow disable safety-map-refresh.yml`. Previously published keys stay live and served.
-2. **Stop serving.** Delete the `safety-map:latest.json` key. The Function then returns 404 with `no-store`, which auto-trips the digest's omit rule, and the page renders its unavailable panel. No Pages release is required.
+2. **Stop serving the image.** Delete `safety-map:latest.png` **and today's dated key** (`safety-map:YYYY-MM-DD.png`), then run `.github/workflows/purge-pages-zone-cache.yml`. The Function then returns 404 with `no-store` and the page renders its unavailable panel. No Pages release is required.
+
+   The purge is not optional. `latest.png` is served with `s-maxage=300, stale-while-revalidate=86400`, so a deleted key can keep being served from the edge for up to a day. Dated keys are `immutable` and will not re-validate at all until purged.
+
+   Deleting `safety-map:latest.json` is a **different** lever with a different scope: the Function never reads the manifest, so the image keeps serving. What the manifest controls is the digest's omit rule (see the degradation contract above). Delete the manifest to stop the map appearing in the digest; delete the PNG keys to stop it appearing on the site. To stop both, delete all three.
 3. **A bad image is already live and scraped.** Re-render, overwrite the keys, and run `.github/workflows/purge-pages-zone-cache.yml`. Social CDNs that already hold the dated URL are not recallable — this is why the digest embeds dated URLs, so the next post simply supersedes.
 
 ## Related
