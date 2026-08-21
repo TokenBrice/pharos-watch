@@ -26,7 +26,7 @@ describe("check-cron-connection-budget", () => {
     expect(report.failed).toBe(false);
   });
 
-  it("models DDR as a serial D1-only follow-up in the V9 supply lane", () => {
+  it("models DDR as a serial D1-only precompute in the V9 supply lane", () => {
     const report = evaluateCronConnectionBudget();
     const v9Supply = report.triggerReports.find((trigger) => trigger.scheduleKey === "v9SupplyAttributionOffset");
     const ddr = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "compute-depeg-resolver");
@@ -35,7 +35,7 @@ describe("check-cron-connection-budget", () => {
     expect(v9Supply?.chains).toEqual([
       {
         chainKey: "chain-1",
-        jobs: ["sync-v9-supply-attribution", "compute-depeg-resolver"],
+        jobs: ["compute-depeg-resolver", "sync-v9-supply-attribution"],
         peak: 3,
       },
     ]);
