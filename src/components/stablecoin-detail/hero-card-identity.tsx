@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -88,10 +89,13 @@ function HeroClassificationLine({
   coin,
   infrastructures,
   stackedSegments = false,
+  trailing,
 }: {
   coin: StablecoinMeta;
   infrastructures: Infrastructure[];
   stackedSegments?: boolean;
+  /** Stacked (mobile) only: shares the chip row so it wraps as one flow. */
+  trailing?: ReactNode;
 }) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
   const governanceHref = buildGovernanceTaxonomyUrl(coin.flags.governance);
@@ -214,6 +218,7 @@ function HeroClassificationLine({
       <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
         {segmentChipNodes}
         {taxonomyNodes}
+        {trailing}
       </div>
     );
   }
@@ -307,7 +312,6 @@ interface HeroIdentityProps {
 interface HeroMobileIdentityDetailsProps {
   coin: StablecoinMeta;
   infrastructures: Infrastructure[];
-  includeClassification?: boolean;
 }
 
 /**
@@ -344,8 +348,10 @@ export function HeroMobileIdentity({
   const verdictId = `hero-verdict-${coin.id}`;
   return (
     <div className="min-w-0 flex-1">
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 pt-10">
+      {/* The 56px mark centers on the name + ticker pair, which is all this
+          column now carries — the classification and Bluechip rows sit below. */}
+      <div className="flex items-center gap-3">
+        <div className="shrink-0">
           <StablecoinLogo
             src={logoSrc}
             name={coin.name}
@@ -364,18 +370,8 @@ export function HeroMobileIdentity({
           </h2>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="text-sm font-mono text-muted-foreground">{coin.symbol}</span>
-            <BluechipHeaderBadge stablecoinId={coin.id} />
             <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} mobile />
           </div>
-          {condensed ? (
-            <div className="mt-1">
-              <HeroClassificationLine
-                coin={coin}
-                infrastructures={infrastructures}
-                stackedSegments
-              />
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -387,19 +383,20 @@ export function HeroMobileIdentity({
 export function HeroMobileIdentityDetails({
   coin,
   infrastructures,
-  includeClassification = true,
 }: HeroMobileIdentityDetailsProps) {
   return (
     <>
-      {includeClassification ? (
-        <div className="mt-1">
-          <HeroClassificationLine
-            coin={coin}
-            infrastructures={infrastructures}
-            stackedSegments
-          />
-        </div>
-      ) : null}
+      {/* Full card width, not the identity column beside the logo and grade —
+          the classification chips fit on one line there, and the Bluechip badge
+          shares the row so it wraps as one flow instead of claiming its own. */}
+      <div className="mt-1">
+        <HeroClassificationLine
+          coin={coin}
+          infrastructures={infrastructures}
+          stackedSegments
+          trailing={<BluechipHeaderBadge stablecoinId={coin.id} />}
+        />
+      </div>
       {coin.oneLiner ? (
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
       ) : null}

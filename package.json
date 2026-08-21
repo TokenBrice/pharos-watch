@@ -160,6 +160,7 @@
     "analyze:gsc-performance": "node scripts/maintenance/analyze-gsc-performance.mjs",
     "og:capture": "node scripts/maintenance/screenshot-og.mjs",
     "build:og-editorial": "node scripts/maintenance/build-og-editorial.mjs",
+    "build:safety-score-map": "tsx scripts/maintenance/build-safety-score-map.ts",
     "check:og-editorial": "node scripts/maintenance/build-og-editorial.mjs --check",
     "build:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts",
     "check:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts --check",

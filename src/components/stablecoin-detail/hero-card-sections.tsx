@@ -169,7 +169,7 @@ export function HeroCardMobileSection({
           <SafetyGradeHero reportCard={reportCard} mobile />
         </div>
       </div>
-      <HeroMobileIdentityDetails coin={coin} infrastructures={infrastructures} includeClassification={false} />
+      <HeroMobileIdentityDetails coin={coin} infrastructures={infrastructures} />
 
       <HeroVerdict coinId={coin.id} verdict={verdict} />
 
