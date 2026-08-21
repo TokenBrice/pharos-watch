@@ -331,6 +331,21 @@ export function rotateAddressPriceTargets(
     .flatMap(([, cohort]) => rotateTargets(cohort, cursor));
 }
 
+export function resolveAddressProviderCursorAdvance(
+  targets: readonly AddressPriceTarget[],
+  result: AddressPriceProviderRunResult,
+): number {
+  if (result.processedTargets) {
+    const processedTargets = new Set(result.processedTargets);
+    const firstUnprocessedIndex = targets.findIndex((target) => !processedTargets.has(target));
+    return Math.max(1, firstUnprocessedIndex === -1 ? targets.length : firstUnprocessedIndex);
+  }
+  const capSkipped = result.diagnostics
+    .filter((diagnostic) => diagnostic.errorClass === "cap")
+    .reduce((sum, diagnostic) => sum + (diagnostic.candidateCount ?? 0), 0);
+  return Math.max(1, targets.length - capSkipped);
+}
+
 export function buildAddressPriceTargetsByProvider(params: {
   assets: AddressPriceAssetLike[];
   previousAssetsById?: Map<string, AddressPriceAssetLike>;
@@ -531,10 +546,7 @@ export async function collectAddressPriceProviderQuotes(params: {
       quotesByStablecoinId.set(quote.stablecoinId, list);
     }
     if (unrotatedTargets.length > 0) {
-      const capSkipped = result.diagnostics
-        .filter((diagnostic) => diagnostic.errorClass === "cap")
-        .reduce((sum, diagnostic) => sum + (diagnostic.candidateCount ?? 0), 0);
-      const consideredTargets = Math.max(1, targets.length - capSkipped);
+      const consideredTargets = resolveAddressProviderCursorAdvance(targets, result);
       await writeProviderTargetCursor(
         params.db,
         `address-targets:${provider}`,

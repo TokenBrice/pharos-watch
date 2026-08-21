@@ -173,6 +173,12 @@ export async function syncStablecoins(
     stalenessCheckFailed,
     stalenessCheckFailureReason,
   } = stalenessCheck;
+  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, undefined, {
+    previousCoverage: previousActivePriceCoverage,
+    previousAcceptedAssetsById: previousAssetsById,
+  });
+  const previousAssetIds = new Set(previousAssetsById.keys());
+  previousAssetsById.clear();
   const publication = await publishMainStablecoinsAndRunFollowThrough({
     assets,
     fxFallbackRates,
@@ -183,7 +189,7 @@ export async function syncStablecoins(
     rawAssetCount,
     droppedMalformedAssets,
     priceCacheEntries,
-    previousAssetsById,
+    previousAssetIds,
     returnIfAborted,
     abortResult,
     reportProgress,
@@ -193,10 +199,6 @@ export async function syncStablecoins(
   if (isAbortResult(publication)) return publication;
   if (!("cacheResult" in publication)) return publication;
   const { cacheResult, depegErrorCount, depegErrors, providerDiagnostics: depegProviderDiagnostics = [] } = publication;
-  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, undefined, {
-    previousCoverage: previousActivePriceCoverage,
-    previousAcceptedAssetsById: previousAssetsById,
-  });
   const result = buildStablecoinsSyncResult({
     assets,
     rawAssetCount,
@@ -225,7 +227,6 @@ export async function syncStablecoins(
     responseReadyCacheError: cacheResult.responseReadyCacheError,
     depegPipelineSucceeded: depegErrorCount === 0,
     previousActivePriceCoverage,
-    previousAcceptedAssetsById: previousAssetsById,
     activePriceCoverage,
   });
   await reportStablecoinsStage(reportProgress, "complete", "Completed stablecoins sync", {

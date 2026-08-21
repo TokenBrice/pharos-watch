@@ -22,7 +22,7 @@ import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 
 export interface MainPublicationInput {
   assets: PeggedAsset[];
-  previousAssetsById: Map<string, PeggedAsset>;
+  previousAssetIds: ReadonlySet<string>;
   fxFallbackRates?: Record<string, number>;
   db: D1Database;
   syncStartSec: number;
@@ -93,7 +93,7 @@ export async function publishMainStablecoinsAndRunFollowThrough(
   });
   if (priceCacheCommit) return priceCacheCommit;
   await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
-  await queueTrackedAdditionsNotice(input.db, input.previousAssetsById.keys(), input.assets);
+  await queueTrackedAdditionsNotice(input.db, input.previousAssetIds, input.assets);
   await reportStablecoinsStage(input.reportProgress, "depeg-pipeline", "Running depeg pipeline", {
     itemsTotal: input.assets.length,
   });

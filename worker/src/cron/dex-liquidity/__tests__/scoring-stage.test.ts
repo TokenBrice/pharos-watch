@@ -13,6 +13,7 @@ import {
   decodeDexLiquidityScoringStageChunks,
   encodeDexLiquidityScoringStageChunks,
   loadDexLiquidityScoringStage,
+  loadDexLiquidityScoringStageWhenReady,
   persistDexLiquidityScoringStage,
   pruneScoringStages,
   type DexLiquidityScoringStageChunk,
@@ -387,7 +388,7 @@ describe("DEX liquidity scoring stage", () => {
     expect(consumingPool.slipstreamMeasuredExecutionTargets.size).toBe(0);
   });
 
-  it("persists bounded single-row chunks and loads the newest ready generation at or before the preferred slot", async () => {
+  it("persists bounded single-row chunks and loads only the exact preferred slot", async () => {
     const harness = createLatestSchemaSqlite();
     openDatabases.push(harness.sqlite);
     const previousSource = sourceState();
@@ -466,12 +467,69 @@ describe("DEX liquidity scoring stage", () => {
           SET state = 'writing'
         WHERE generation_id = ?`,
     ).run(stored.generationId);
-    const fallback = await loadDexLiquidityScoringStage(harness.db, {
+    await expect(loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 6 * 60,
       expectedSourceSlotStartedAt: sourceSlotStartedAt,
+    })).rejects.toThrow(`missing for source slot ${sourceSlotStartedAt}`);
+    expect(previous.generationId).not.toBe(stored.generationId);
+  });
+
+  it("waits for the exact source slot to become ready without accepting an older stage", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const sourceSlotStartedAt = 12_000;
+    const previous = await persistDexLiquidityScoringStage(harness.db, {
+      sourceSlotStartedAt: sourceSlotStartedAt - 30 * 60,
+      syncStartSec: sourceSlotStartedAt - 30 * 60 + 10,
+      sourceState: sourceState(),
+      poolState: poolState(20),
     });
-    expect(fallback.generationId).toBe(previous.generationId);
-    expect(fallback.sourceSlotStartedAt).toBe(previousSlotStartedAt);
+    const stored = await persistDexLiquidityScoringStage(harness.db, {
+      sourceSlotStartedAt,
+      syncStartSec: sourceSlotStartedAt + 10,
+      sourceState: sourceState(),
+      poolState: poolState(20),
+    });
+    harness.sqlite.prepare(
+      `UPDATE dex_liquidity_scoring_stages
+          SET state = 'writing'
+        WHERE generation_id = ?`,
+    ).run(stored.generationId);
+    const wait = vi.fn(async () => {
+      harness.sqlite.prepare(
+        `UPDATE dex_liquidity_scoring_stages
+            SET state = 'ready'
+          WHERE generation_id = ?`,
+      ).run(stored.generationId);
+    });
+    const observedNowMs = (sourceSlotStartedAt + 6 * 60) * 1_000;
+
+    const loaded = await loadDexLiquidityScoringStageWhenReady(harness.db, {
+      expectedSourceSlotStartedAt: sourceSlotStartedAt,
+      readyDeadlineMs: observedNowMs + 90_000,
+      nowMs: () => observedNowMs,
+      wait,
+    });
+
+    expect(wait).toHaveBeenCalledTimes(1);
+    expect(loaded.generationId).toBe(stored.generationId);
+    expect(loaded.generationId).not.toBe(previous.generationId);
+  });
+
+  it("fails when the exact source slot is still absent at the readiness deadline", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const sourceSlotStartedAt = 14_000;
+    const deadlineMs = (sourceSlotStartedAt + 6 * 60) * 1_000;
+    const wait = vi.fn(async () => {});
+
+    await expect(loadDexLiquidityScoringStageWhenReady(harness.db, {
+      expectedSourceSlotStartedAt: sourceSlotStartedAt,
+      readyDeadlineMs: deadlineMs,
+      nowMs: () => deadlineMs,
+      wait,
+    })).rejects.toThrow(`missing for source slot ${sourceSlotStartedAt}`);
+    expect(wait).not.toHaveBeenCalled();
   });
 
   it("recovers exact chunks and finalization after ambiguous committed D1 responses", async () => {

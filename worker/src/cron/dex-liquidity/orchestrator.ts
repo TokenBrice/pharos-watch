@@ -68,6 +68,7 @@ import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
 import {
   loadDexLiquidityScoringStage,
+  loadDexLiquidityScoringStageWhenReady,
   markDexLiquidityScoringStageConsumed,
   persistDexLiquidityScoringStage,
 } from "./scoring-stage";
@@ -272,18 +273,31 @@ export async function consumeDexLiquidityScoringStage(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
   consumerSlotStartedAt?: number,
-  options: { publishLiquidity?: boolean; publishShadowTargets?: boolean } = {},
+  options: {
+    publishLiquidity?: boolean;
+    publishShadowTargets?: boolean;
+    stageReadyDeadlineMs?: number;
+  } = {},
 ): Promise<CronResult> {
   const expectedSourceSlotStartedAt =
     consumerSlotStartedAt == null ? undefined : consumerSlotStartedAt - 6 * 60;
-  const staged = await loadDexLiquidityScoringStage(
-    db,
-    {
-      nowSec: Math.floor(Date.now() / 1000),
-      expectedSourceSlotStartedAt,
-    },
-    signal,
-  );
+  const staged = expectedSourceSlotStartedAt != null && options.stageReadyDeadlineMs != null
+    ? await loadDexLiquidityScoringStageWhenReady(
+        db,
+        {
+          expectedSourceSlotStartedAt,
+          readyDeadlineMs: options.stageReadyDeadlineMs,
+        },
+        signal,
+      )
+    : await loadDexLiquidityScoringStage(
+        db,
+        {
+          nowSec: Math.floor(Date.now() / 1000),
+          expectedSourceSlotStartedAt,
+        },
+        signal,
+      );
   const ctx: DexLiquidityRunContext = {
     db,
     graphApiKey: null,

@@ -72,6 +72,7 @@ export interface AddressPriceProviderRunResult {
   rejectedTargets: Partial<Record<PricingProviderRejectionReason, number>>;
   successfulRequests: number;
   attemptedRequests: number;
+  processedTargets?: readonly AddressPriceTarget[];
 }
 
 export interface AddressPriceProviderCollectionResult {

@@ -26,6 +26,8 @@ import { tryParseJson } from "../../lib/json-parse";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups } from "./slot-groups";
 
+const DEX_SCORING_STAGE_READY_WAIT_MS = 90_000;
+
 interface DexPublication {
   status: NonNullable<CronResult["status"]>;
   generationId: string | null;
@@ -94,6 +96,9 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
                     {
                       publishLiquidity: isDexLiquidityPublicationSlot(runtime.slotStartedAt),
                       publishShadowTargets: isDailyDexShadowTargetPublicationSlot(runtime.slotStartedAt),
+                      stageReadyDeadlineMs:
+                        (runtime.scheduledTimeMs ?? runtime.slotStartedAt * 1_000)
+                        + DEX_SCORING_STAGE_READY_WAIT_MS,
                     },
                   );
             } catch (error) {
