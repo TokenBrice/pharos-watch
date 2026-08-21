@@ -254,7 +254,7 @@ describe("yield config registry", () => {
   });
 
   it("marks intentional manifest gaps explicitly instead of leaving them implicit", () => {
-    for (const stablecoinId of ["bd-basedollar", "pusd-polaris"]) {
+    for (const stablecoinId of ["pusd-polaris"]) {
       expect(
         YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId),
       ).toMatchObject({

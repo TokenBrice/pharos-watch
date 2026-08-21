@@ -2,16 +2,15 @@
   "id": "bd-basedollar",
   "name": "Base Dollar",
   "symbol": "BD",
-  "oneLiner": "BD is a pre-launch Liquity V2 fork on Base, designed as an overcollateralized dollar stablecoin minted against LP token collateral and earning AERO yield.",
+  "oneLiner": "BD is Base Dollar's live Liquity V2 fork on Base, minted against ETH, LSTs, cbETH, and cbBTC, with Stability Pool fee yield.",
   "flags": {
     "backing": "crypto-backed",
-    "governance": "decentralized",
-    "yieldBearing": true
+    "governance": "centralized-dependent"
   },
-  "collateral": "LP-collateralized stablecoin forking Liquity V2 on Base L2; yield generated from AERO farming, with revenue split between users, protocol-owned liquidity treasury, and BD stakers",
-  "pegMechanism": "Liquity V2-style Base fork: BD is minted against LP token collateral and each BaseD stablecoin is designed to be redeemable for $1 of system collateral, with collateral redemption and borrower/liquidation incentives supporting the dollar peg",
+  "collateral": "ETH, wstETH, rETH, cbETH, and cbBTC in separate overcollateralized Liquity V2-style borrowing branches on Base; AERO and Aerodrome LP collateral are planned but were not live at launch",
+  "pegMechanism": "Overcollateralized CDPs with user-set interest rates, direct on-chain redemption for system collateral, and branch-specific Stability Pools that absorb liquidations and receive borrower and liquidation fees",
   "mechanismArchetype": "cdp",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "links": [
     {
       "label": "Website",
@@ -28,12 +27,26 @@
     {
       "label": "GitHub",
       "url": "https://github.com/basedollar/basedollar"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://basedollar.org/blog/launch"
     }
   ],
-  "governanceQuality": "immutable-code",
-  "status": "pre-launch",
-  "launchPhase": "launching-soon",
-  "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit remediation merged through May 2026, with docs still describing audits as in progress. Deployed to Base Sepolia testnet in June 2026, then production contracts deployed to Base mainnet on August 1 2026 (BoldToken 0x252d36f435582ecb01686448d21e8c9ea0b2ca65, ~2,500 BD seeded) with the production frontend live at app.basedollar.org from August 3. No public launch announcement yet, docs do not yet publish contract addresses, and supply is team-seeded dust, so Pharos holds BD at launching-soon until a public launch is communicated.",
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "multisig",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "status": "active",
+  "launchDate": "2026-08-20",
   "milestones": [
     {
       "date": "2026-04-03",
@@ -69,6 +82,28 @@
       "title": "Production contracts deployed to Base mainnet",
       "description": "PR #160 merged with broadcast artifacts for chain 8453; BoldToken live at 0x252d36f435582ecb01686448d21e8c9ea0b2ca65 with ~2,500 BD seeded. Production frontend deployed August 3. No public launch announcement yet.",
       "sourceUrl": "https://github.com/basedollar/basedollar/pull/160"
+    },
+    {
+      "date": "2026-08-20",
+      "type": "milestone",
+      "title": "Base Dollar officially launches on Base",
+      "description": "Public borrowing and Stability Pool deposits opened for BD, with ETH, wstETH, rETH, cbETH, and cbBTC available as launch collateral.",
+      "sourceUrl": "https://x.com/BaseDollarOrg/status/2090457349257379980"
+    }
+  ],
+  "featuredContent": [
+    {
+      "type": "tweet",
+      "url": "https://x.com/BaseDollarOrg/status/2090457349257379980",
+      "title": "Base Dollar announces that BD is officially live",
+      "source": "@BaseDollarOrg"
+    },
+    {
+      "type": "blog",
+      "url": "https://basedollar.org/blog/launch",
+      "title": "Base Dollar launches on Base",
+      "description": "Launch details for BD borrowing, the five initial collateral branches, Stability Pool yield, and completed security reviews.",
+      "source": "Base Dollar"
     }
   ]
 }

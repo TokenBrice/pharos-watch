@@ -2165,11 +2165,25 @@
   },
   "bd-basedollar": {
     "title": "Liquity's Fork, Aerodrome's Yield",
-    "text": "BD is a pre-launch Liquity V2 fork on Base, designed as an {{term:overcollateralization}}overcollateralized{{/term}} dollar stablecoin minted against LP token collateral and earning AERO yield. Base Dollar takes Liquity V2's battle-tested {{term:cdp}}CDP{{/term}} architecture and replants it on Base with a twist: instead of ETH collateral, borrowers deposit LP tokens — routing the stablecoin's security model through Aerodrome's liquidity layer and harvesting AERO farming rewards as the yield engine. Revenue splits three ways between users, a protocol-owned liquidity treasury, and BD stakers, a design that ties the protocol's survival to the depth of Base's DEX ecosystem rather than ETH price alone. The external audit surfaced a high-severity LP token price manipulation vulnerability and a medium-severity timelock bypass, both remediated with fuzz testing added — the kind of findings that are routine for a Liquity fork adapting to exotic collateral types but worth watching post-launch. The launch itself happened the way engineers launch and marketers don't: production contracts quietly deployed to Base mainnet on August 1, 2026 with a token-seeded dust supply and a production frontend two days later, while the docs still say audits are in progress and publish no contract addresses. Base Dollar is betting that LP-collateralized debt positions can offer better capital efficiency than vanilla ETH CDPs, though the trade-off is inheriting every smart contract risk in the Aerodrome stack on top of its own — and until the team actually announces the launch it has already shipped, Pharos treats BD as launching-soon rather than live.",
-    "updatedAt": "2026-08-05",
+    "text": "BD is now live as Base's licensed Liquity V2 fork, with {{term:overcollateralization}}overcollateralized{{/term}} borrowing against ETH, wstETH, rETH, cbETH, and cbBTC rather than the Aero LP collateral its pre-launch pitch emphasized. Stability Pool depositors collect borrower and liquidation fees, while AERO and Aerodrome LP branches remain the promised second act — sensible sequencing after the audit work found and fixed a high-severity LP-price manipulation flaw. The market has started narrowly: price discovery currently rests on one BD/USDC Aerodrome stableswap pool and circulation is still modest, so a dollar print is evidence of launch, not yet evidence of depth. The control model also lands between the branding and the bytecode: existing borrowing branches are collateral-gated and the token owner is renounced, but a 2-of-6 Safe can authorize new minting branches without a token-level cap. Base Dollar has shipped the Liquity machinery; now it has to prove the Aero flywheel is more than launch copy.",
+    "updatedAt": "2026-08-21",
     "authoredBy": "ai",
-    "model": "claude-fable-5",
-    "factsAsOf": "2026-08-05"
+    "model": "gpt-5.6-sol",
+    "factsAsOf": "2026-08-21",
+    "sources": [
+      {
+        "label": "Base Dollar launch post",
+        "url": "https://basedollar.org/blog/launch"
+      },
+      {
+        "label": "BD/USDC Aerodrome pool",
+        "url": "https://dexscreener.com/base/0xffdf1e3160b60c2e499fa25e51b5c192b9b15e3b"
+      },
+      {
+        "label": "Base Dollar protocol source",
+        "url": "https://github.com/basedollar/basedollar"
+      }
+    ]
   },
   "wm-m0": {
     "title": "The Plumbing's Plumbing",

@@ -128,7 +128,6 @@ describe("tracked stablecoin metadata", () => {
       "pusd-polaris",
       "pgold-polaris",
       "klarnausd-klarna",
-      "bd-basedollar",
       "rgbp-revolut",
       "usdb-bridge",
       "hkdap-anchorpoint",

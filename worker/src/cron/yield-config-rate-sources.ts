@@ -313,11 +313,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     nextReviewAt: "2026-10-09",
     note: "2026-07-09 review: keep intentional gap for off-chain Binance account yield product; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
-  "bd-basedollar": {
-    code: "no-public-yield-source",
-    since: "2026-04-03",
-    note: "asset with no reliable runtime yield source yet",
-  },
   "brd-volpon": {
     code: "pre-launch",
     since: "2026-04-14",
