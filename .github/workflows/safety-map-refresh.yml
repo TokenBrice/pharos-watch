@@ -87,8 +87,8 @@ on:
   # actions above are done. 07:20 UTC leaves ~45 min of headroom before the
   # 08:05 UTC digest cron, deliberately wide because Actions schedules are
   # routinely delayed 5-20 minutes at peak (plan §11.2a).
-  # schedule:
-  #   - cron: "20 7 * * *"
+  schedule:
+    - cron: "20 7 * * *"
   workflow_dispatch:
 
 permissions:
