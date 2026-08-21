@@ -4,6 +4,7 @@ import {
   buildAddressPriceTargetsByProvider,
   collectAddressPriceProviderQuotes,
   resolveEnabledAddressPriceProviders,
+  resolveAddressProviderCursorAdvance,
   resolveFallbackChain,
   rotateAddressPriceTargets,
 } from "../address-price-providers";
@@ -743,6 +744,58 @@ describe("address price providers", () => {
         return match?.[1];
       });
       expect(requestedNetworks).toEqual(["eth", "celo", "cardano", "citrea", "eth"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("advances CoinGecko rotation only past the contiguous targets actually attempted", async () => {
+    vi.useFakeTimers();
+    try {
+      mockFetch([{ match: () => true, body: { data: [] } }]);
+      const ethereumTargets = Array.from({ length: 151 }, (_, index) => makeDexScreenerTarget(index, {
+        chain: "ethereum",
+        providerChainId: "eth",
+      }));
+      const targets = [
+        ...ethereumTargets,
+        makeDexScreenerTarget(1_000, { chain: "celo", providerChainId: "celo" }),
+        makeDexScreenerTarget(1_001, { chain: "cardano", providerChainId: "cardano" }),
+        makeDexScreenerTarget(1_002, { chain: "citrea", providerChainId: "citrea" }),
+      ];
+
+      const firstRunPromise = runCoingeckoOnchainAddressProvider(
+        targets,
+        null,
+        undefined,
+        1_700_000_000,
+        Number.MAX_SAFE_INTEGER,
+      );
+      await vi.runAllTimersAsync();
+      const firstRun = await firstRunPromise;
+      const cursorAdvance = resolveAddressProviderCursorAdvance(targets, firstRun);
+      expect(cursorAdvance).toBe(60);
+
+      const secondRunTargets = rotateAddressPriceTargets(targets, cursorAdvance);
+      const secondRunPromise = runCoingeckoOnchainAddressProvider(
+        secondRunTargets,
+        null,
+        undefined,
+        1_700_000_900,
+        Number.MAX_SAFE_INTEGER,
+      );
+      await vi.runAllTimersAsync();
+      const secondRun = await secondRunPromise;
+      const attemptedAcrossRuns = new Set(
+        [...(firstRun.processedTargets ?? []), ...(secondRun.processedTargets ?? [])]
+          .map((target) => target.stablecoinId),
+      );
+      expect(attemptedAcrossRuns).toEqual(new Set([
+        ...Array.from({ length: 120 }, (_, index) => `coin-${index}`),
+        "coin-1000",
+        "coin-1001",
+        "coin-1002",
+      ]));
     } finally {
       vi.useRealTimers();
     }

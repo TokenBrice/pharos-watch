@@ -148,5 +148,6 @@ export async function runCoingeckoOnchainAddressProvider(
     rejectedTargets,
     successfulRequests,
     attemptedRequests,
+    processedTargets: [...processedTargets],
   };
 }
