@@ -335,10 +335,17 @@ function requiresAuthoritativeProtocolConfirmation(
   dexId: string,
 ): boolean {
   if (!authoritativeConfirmation) return false;
+  const familyDescriptor = `${dexId} ${poolType}`.toLowerCase();
   if (protocol === "pancakeswap") {
-    const familyDescriptor = `${dexId} ${poolType}`.toLowerCase();
     if (familyDescriptor.includes("v2")) return false;
     if (!/(v3|v4|concentrated|\bclmm\b|\bcg-cl-)/.test(familyDescriptor)) return false;
+  }
+  if (protocol === "aerodrome" || protocol === "velodrome") {
+    // The protocol-native fetchers cover Slipstream only. Do not let a clean
+    // concentrated-liquidity inventory veto classic v2 pools that are outside
+    // that source's declared family; those remain eligible through exact-id
+    // staged discovery. Slipstream claims still require exact confirmation.
+    if (!/(slipstream|concentrated|\bclmm\b|\bcg-cl-)/.test(familyDescriptor)) return false;
   }
   const enforcedChains = authoritativeConfirmation.enforcedChainsByProtocol.get(protocol);
   return enforcedChains?.has(chain.toLowerCase()) ?? false;
