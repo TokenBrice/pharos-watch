@@ -301,7 +301,10 @@ jobs:
               },
             };
             // Named kv-manifest.json so it cannot be confused with the
-            // generator's own local latest.manifest.json sidecar.
+            // local latest.manifest.json sidecar the generator emits.
+            // NOTE: no apostrophes anywhere in this node -e block. It is
+            // wrapped in single quotes by the shell, so one would end the
+            // string and the rest would be parsed as shell.
             require("node:fs").writeFileSync("kv-manifest.json", `${JSON.stringify(manifest, null, 2)}\n`);
 
             const out = process.env.GITHUB_OUTPUT;
@@ -346,7 +349,7 @@ jobs:
               process.exit(1);
             }
             if (priorAt > Number(next.renderedAtSec)) {
-              console.error(`::error title=Backwards publish refused::The live manifest's render started at ${priorAt} (${new Date(priorAt * 1000).toISOString()}), later than this run's (${next.renderedAtSec}). Nothing was published; the live keys are untouched.`);
+              console.error(`::error title=Backwards publish refused::The live manifest reports a render start of ${priorAt} (${new Date(priorAt * 1000).toISOString()}), later than this run at ${next.renderedAtSec}. Nothing was published; the live keys are untouched.`);
               process.exit(1);
             }
             console.log(`Ordering OK: live=${priorAt} < this run=${next.renderedAtSec}`);
