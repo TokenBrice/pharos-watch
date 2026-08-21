@@ -39,4 +39,16 @@ describe("Safety Score V9 supply-attribution source", () => {
       exactEntry.uncompressedBytes / 20,
     );
   });
+
+  it("rejects malformed serialized and object source payloads", () => {
+    expect(() =>
+      parseSafetyScoreV9SupplyAttributionSource("{not-json"),
+    ).toThrow("Malformed V9 supply-attribution source");
+    expect(() =>
+      parseSafetyScoreV9SupplyAttributionSource({
+        schemaVersion: 1,
+        kind: "safety-score-v9-supply-attribution-source",
+      }),
+    ).toThrow();
+  });
 });
