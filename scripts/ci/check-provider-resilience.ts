@@ -15,6 +15,7 @@ const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 interface ProviderResilienceEntry {
   id?: string;
+  description?: string;
   family?: string;
   files?: readonly string[];
   tests?: readonly string[];

@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
+import type { V9StructuralSignal } from "@shared/types/safety-score-v9";
 import { buildV9AggregationCounterfactual } from "../maintenance/replay-safety-score-v9-aggregation";
 
 const DIGEST = "a".repeat(64);
+
+interface LegacyDeploymentAdjustment {
+  signalKey: string;
+  exposureKey: string;
+  riskEventKey: string;
+  failureDomainKey: string;
+  nominalExposureShare: number;
+  exposureShare: number;
+  exposedScore: number;
+}
 
 function pillar(score: number) {
   return {
@@ -14,6 +25,8 @@ function pillar(score: number) {
 }
 
 function replay(score = 80) {
+  const deploymentAdjustments: LegacyDeploymentAdjustment[] = [];
+  const dependencyStructuralSignals: V9StructuralSignal[] = [];
   return {
     pipeline: {
       evaluatedSet: {
@@ -49,14 +62,14 @@ function replay(score = 80) {
               trackRecordMonths: 120,
               parent: {
                 required: false,
-                score: null,
+                score: null as number | null,
                 propagatedReasons: [],
                 propagatedAdverseAttribution: [],
                 propagatedBoundedUncertaintyAttribution: [],
                 wrapperParentLimit: null,
               },
               dependencyReasons: [],
-              dependencyStructuralSignals: [],
+              dependencyStructuralSignals,
               methodologyReasons: [],
               unresolvedEvidence: [],
               operationalResilience: null,
@@ -65,7 +78,7 @@ function replay(score = 80) {
               finalScore: score,
               finalGrade: "B",
               pegMultiplier: 1,
-              deploymentAdjustments: [],
+              deploymentAdjustments,
               caps: [],
               adverseAttribution: [],
               boundedUncertaintyAttribution: [],

@@ -216,10 +216,10 @@ describe("ApiKeyRequestsPanel", () => {
     let attempt = 0;
     const fetchMock = mockFetch([{
       match: "/api/admin/api-key-requests-admin/",
-      respond: (request) => {
+      respond: (httpRequest) => {
         attempt += 1;
         if (attempt === 1) return new TypeError("connection closed");
-        const idempotencyKey = request.headers.get("Idempotency-Key") ?? "";
+        const idempotencyKey = httpRequest.headers.get("Idempotency-Key") ?? "";
         return {
           body: {
             ok: true,

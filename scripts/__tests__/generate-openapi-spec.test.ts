@@ -60,8 +60,9 @@ describe("OpenAPI runtime response contracts", () => {
   });
 
   it("uses canonical runtime contracts for the five promoted response families", () => {
+    const endpoints: readonly PublicApiArtifactEndpoint[] = PUBLIC_API_ARTIFACT_ENDPOINTS;
     const responseSchemas = Object.fromEntries(
-      PUBLIC_API_ARTIFACT_ENDPOINTS.map((endpoint) => [endpoint.key, endpoint.responseSchema]),
+      endpoints.map((endpoint) => [endpoint.key, endpoint.responseSchema]),
     );
 
     expect(responseSchemas).toMatchObject({

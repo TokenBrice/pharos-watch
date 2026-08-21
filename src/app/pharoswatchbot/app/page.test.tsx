@@ -60,7 +60,10 @@ function installMiniAppFetch(fetchImpl: ReturnType<typeof vi.fn>): void {
     respond: async (request) => {
       const url = new URL(request.url);
       const body = request.body == null ? undefined : await request.clone().text();
-      const result: unknown = await fetchImpl(`${url.pathname}${url.search}`, {
+      const result: unknown = await (fetchImpl as unknown as (
+        input: string,
+        init: RequestInit,
+      ) => Promise<unknown>)(`${url.pathname}${url.search}`, {
         method: request.method,
         headers: request.headers,
         body,
@@ -1044,7 +1047,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     fireEvent.click(screen.getByRole("tab", { name: "settings" }));
 
-    const compactPicker = screen.getByLabelText<HTMLSelectElement>("Timezone");
+    const compactPicker = screen.getByLabelText("Timezone") as unknown as HTMLSelectElement;
     const fullPicker = screen.getByLabelText("Timezone name") as HTMLInputElement;
     const datalist = document.getElementById("telegram-mini-app-timezone-options");
     expect(compactPicker.options.length).toBeLessThan(20);

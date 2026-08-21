@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
+import { ZERO_RATIO } from "@shared/types/ratio";
 import { buildChainHarborEntries, buildChainHarborModel } from "./harbor-map";
 
 function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
@@ -10,11 +11,11 @@ function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
     type: overrides.type ?? "evm",
     totalUsd: overrides.totalUsd ?? 100,
     change24h: overrides.change24h ?? 0,
-    change24hPct: overrides.change24hPct ?? 0,
+    change24hPct: overrides.change24hPct ?? ZERO_RATIO,
     change7d: overrides.change7d ?? 0,
-    change7dPct: overrides.change7dPct ?? 0,
+    change7dPct: overrides.change7dPct ?? ZERO_RATIO,
     change30d: overrides.change30d ?? 0,
-    change30dPct: overrides.change30dPct ?? 0,
+    change30dPct: overrides.change30dPct ?? ZERO_RATIO,
     stablecoinCount: overrides.stablecoinCount ?? 3,
     dominantStablecoin: overrides.dominantStablecoin ?? {
       id: "usdc-circle",

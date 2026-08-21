@@ -17,6 +17,7 @@ import {
 } from "../maintenance/wait-pages-release-marker.ts";
 
 const tempDirs: string[] = [];
+const TEST_ENV: NodeJS.ProcessEnv = { NODE_ENV: "test" };
 
 afterEach(() => {
   for (const path of tempDirs.splice(0)) rmSync(path, { force: true, recursive: true });
@@ -92,13 +93,13 @@ describe("priority operator CLI parsers", () => {
         "--url", "https://one.test/marker.json",
         "--attempts", "5",
         "--delay-ms", "0",
-      ], {}),
+      ], TEST_ENV),
     ).toMatchObject({ attempts: 5, delayMs: 0, url: "https://one.test/marker.json" });
-    expect(() => parseReleaseMarkerArgs(["--attempts", "5x"], {})).toThrow("must be an integer");
-    expect(() => parseReleaseMarkerArgs(["--url", "one", "--url", "two"], {})).toThrow(
+    expect(() => parseReleaseMarkerArgs(["--attempts", "5x"], TEST_ENV)).toThrow("must be an integer");
+    expect(() => parseReleaseMarkerArgs(["--url", "one", "--url", "two"], TEST_ENV)).toThrow(
       "may only be specified once",
     );
-    expect(() => parseReleaseMarkerArgs(["--marker", "one", "--marker", "two"], {})).toThrow(
+    expect(() => parseReleaseMarkerArgs(["--marker", "one", "--marker", "two"], TEST_ENV)).toThrow(
       "may only be specified once",
     );
   });

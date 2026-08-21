@@ -1,36 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
-import type { StablecoinData } from "@shared/types";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 
-function makeCoin(price: number | null): StablecoinData {
-  return {
-    id: "usdc-circle",
-    name: "USD Coin",
-    symbol: "USDC",
+function makeCoin(price: number | null) {
+  return makeStablecoin({
     geckoId: "usd-coin",
-    pegType: "peggedUSD",
-    pegMechanism: "fiat-backed",
     price,
     priceSource: "coingecko",
     priceConfidence: "high",
-    priceUpdatedAt: null,
     circulating: { peggedUSD: 1_000_000 },
     circulatingPrevDay: { peggedUSD: 1_000_000 },
     circulatingPrevWeek: { peggedUSD: 1_000_000 },
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    consensusSources: [],
-    agreeSources: [],
     supplySource: "defillama",
     chains: ["Ethereum"],
-  } as StablecoinData;
+  });
 }
 
 function build(price: number | null) {
   return buildStablecoinTableRowModel({
     coin: makeCoin(price),
     pegRates: {},
-    density: "comfortable",
+    density: "spacious",
     variant: "default",
   });
 }

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
+import { ZERO_RATIO } from "@shared/types/ratio";
 import { NauticalChart } from "./nautical-chart";
 
 vi.mock("next/image", () => ({
@@ -19,9 +20,9 @@ function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
     logoPath: overrides.logoPath ?? "/logos/chains/ethereum.svg",
     type: overrides.type ?? "evm",
     totalUsd: overrides.totalUsd ?? 100,
-    change24h: 0, change24hPct: 0,
-    change7d: 0, change7dPct: overrides.change7dPct ?? 0,
-    change30d: 0, change30dPct: 0,
+    change24h: 0, change24hPct: ZERO_RATIO,
+    change7d: 0, change7dPct: overrides.change7dPct ?? ZERO_RATIO,
+    change30d: 0, change30dPct: ZERO_RATIO,
     stablecoinCount: overrides.stablecoinCount ?? 3,
     dominantStablecoin: overrides.dominantStablecoin ?? { id: "usdc-circle", symbol: "USDC", share: 0.6 },
     topStablecoins: overrides.topStablecoins ?? [
