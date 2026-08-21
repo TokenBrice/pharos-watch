@@ -75,6 +75,7 @@ describe("check-cron-connection-budget", () => {
         chainKey: "chain-1",
         jobs: [
           "sync-dex-liquidity",
+          "dex-exit-route-turnover-watchdog",
           "prepare-safety-score-v9-input",
           "sync-stablecoin-charts",
         ],
