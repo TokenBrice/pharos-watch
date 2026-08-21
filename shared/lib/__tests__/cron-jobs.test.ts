@@ -22,6 +22,52 @@ describe("cron job schedule metadata", () => {
     ]);
   });
 
+  // Cloudflare caps Cron expressions with an interval below one hour at 30
+  // seconds of CPU time, and 15 minutes at hourly or longer. These three lanes
+  // carry CPU-heavy legs (full DefiLlama parse plus price enrichment, the V9
+  // capture/DDR pair, and a ~600KB status document serialization), so each is
+  // deployed as single-minute hourly expressions to earn the hourly class. A
+  // regression back to one comma expression silently re-enters the 30-second
+  // class and gets the isolate killed mid-chain, which starves the chain tail.
+  it("keeps CPU-heavy quarter-hour lanes on hourly physical triggers", () => {
+    const hourlyCpuClassLanes = {
+      quarterHourly: ["0 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"],
+      v9SupplyAttributionOffset: ["8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *"],
+      statusSelfCheckOffset: ["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"],
+    } as const;
+
+    for (const [scheduleKey, triggerSchedules] of Object.entries(hourlyCpuClassLanes)) {
+      const key = scheduleKey as keyof typeof hourlyCpuClassLanes;
+      expect(CRON_TRIGGER_SCHEDULES[key], scheduleKey).toEqual(triggerSchedules);
+
+      for (const triggerSchedule of triggerSchedules) {
+        const [minute, hour] = triggerSchedule.split(" ");
+        expect(
+          minute.includes(",") || minute.includes("/") || minute === "*",
+          `${scheduleKey} trigger "${triggerSchedule}" must fire on exactly one minute so the interval stays hourly`,
+        ).toBe(false);
+        expect(hour, `${scheduleKey} trigger "${triggerSchedule}" must run every hour`).toBe("*");
+      }
+    }
+
+    // The logical cadence, and therefore slot identity and status freshness,
+    // must not move when the physical topology changes.
+    expect(CRON_SCHEDULES.quarterHourly).toBe("*/15 * * * *");
+    expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe("8,23,38,53 * * * *");
+    expect(CRON_SCHEDULES.statusSelfCheckOffset).toBe("9,24,39,54 * * * *");
+
+    // Every physical alias must normalize to the logical slot it fired in.
+    expect(getCronSlotStartedAtForSchedule("quarterHourly", Date.parse("2026-08-21T19:45:03Z"))).toBe(
+      Math.floor(Date.parse("2026-08-21T19:45:00Z") / 1000),
+    );
+    expect(
+      getCronSlotStartedAtForSchedule("v9SupplyAttributionOffset", Date.parse("2026-08-21T19:53:04Z")),
+    ).toBe(Math.floor(Date.parse("2026-08-21T19:53:00Z") / 1000));
+    expect(
+      getCronSlotStartedAtForSchedule("statusSelfCheckOffset", Date.parse("2026-08-21T19:24:07Z")),
+    ).toBe(Math.floor(Date.parse("2026-08-21T19:24:00Z") / 1000));
+  });
+
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {
     const firstSlot = Date.parse("2026-04-19T16:26:30Z");
     const secondSlot = Date.parse("2026-04-19T16:56:05Z");
