@@ -988,3 +988,76 @@ describe("undisclosed-fee routes stay bounded at the portfolio level", () => {
     expect(paired.score).toBe(solo.score);
   });
 });
+
+describe("stale exit-route observations", () => {
+  const staleFactor =
+    V9_CANDIDATE_POLICY_V1.policy.semantic.exit.staleObservationConfidenceFactor;
+
+  // The instability this lever exists for is DEX-lane: a measured route whose
+  // producer window expired used to leave the capacity denominator outright.
+  // Creditable non-atomic redemption keeps its stricter `known` requirement.
+  function dexRoute(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
+    return route({
+      routeKey: "dex:usdc-circle:pool",
+      lane: "dex",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      settlement: "atomic",
+      execution: "deterministic-onchain",
+      ...overrides,
+    });
+  }
+
+  it("derates a stale route instead of dropping it out of the capacity denominator", () => {
+    const current = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [dexRoute()] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const stale = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [dexRoute({ observationState: "stale" })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    // The route still carries the exit path: an expired producer window is
+    // weaker evidence, not absent evidence.
+    expect(stale.primaryRouteKey).toBe(current.primaryRouteKey);
+    expect(stale.reasons).not.toContain("missing-runtime-route-evidence");
+    expect(stale.reasons).not.toContain("no-viable-exit-path");
+    expect(stale.score!).toBeGreaterThan(0);
+    expect(stale.score!).toBeLessThan(current.score!);
+  });
+
+  it("keeps a missing observation excluded so absent evidence still fails closed", () => {
+    const missing = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        portfolioStatus: "reviewed-complete",
+        routes: [dexRoute({ observationState: "missing" })],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(missing.primaryRouteKey).toBeNull();
+    expect(missing.reasons).toContain("missing-runtime-route-evidence");
+    expect(missing.score).toBe(0);
+  });
+
+  it("prices the stale derate off the reviewed policy lever", () => {
+    expect(staleFactor).toBeGreaterThan(0);
+    expect(staleFactor).toBeLessThan(1);
+    const current = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [dexRoute()] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const stale = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [dexRoute({ observationState: "stale" })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    // Not exactly linear: the factor derates the route's own score AND the
+    // capacity it contributes, and the capacity component is non-linear in
+    // executable notional. The derate is bounded near the lever either way.
+    expect(stale.score!).toBeLessThan(current.score!);
+    expect(stale.score!).toBeGreaterThan(current.score! * staleFactor * 0.95);
+    expect(stale.score!).toBeLessThanOrEqual(current.score! * staleFactor * 1.05);
+  });
+});

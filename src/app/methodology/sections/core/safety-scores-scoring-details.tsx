@@ -164,6 +164,14 @@ export function SafetyScoresScoringDetails() {
           and queued vault exits; newly reviewed wrappers and Nest-style vaults follow the same route-family caps and
           confidence gates as older configured routes.
         </p>
+        <p>
+          A DEX route whose measured observation ages past its freshness window is derated rather than discarded: it
+          keeps its place in the exit capacity denominator at reduced credit, because an expired producer window is
+          weaker evidence rather than absent evidence. A route with no retained observation at all still fails closed,
+          as does a stale non-atomic redemption route. Dropping expired routes outright previously let an ordinary
+          producer-schedule delay move a score with no market event behind it, and propagated that move to every asset
+          backed by the affected one.
+        </p>
       </div>
 
       <div className="space-y-2">

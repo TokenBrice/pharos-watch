@@ -1054,8 +1054,8 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     const observation = dexObservation("measured-executable-depth", true);
     observation.observationHistory = {
       ...observation.observationHistory!,
-      observationWindowStartedAt: NOW - 7_300,
-      observationWindowEndedAt: NOW - 7_201,
+      observationWindowStartedAt: NOW - 10_900,
+      observationWindowEndedAt: NOW - 10_801,
     };
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
       "usdc-circle": { exitRouteObservations: [observation] },
@@ -1066,7 +1066,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     });
   });
 
-  it("uses the uniform two-hour measured-adapter confidence window", () => {
+  it("uses the uniform three-hour measured-adapter confidence window", () => {
     const fixedInput = fixedInputStub(undefined);
     const observation = dexObservation(
       "measured-executable-depth",
@@ -1078,7 +1078,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
       completeProducerCycleCount: 3,
       successfulObservationCount: 3,
       consecutiveSuccessCount: 3,
-      observationWindowStartedAt: NOW - 7_200,
+      observationWindowStartedAt: NOW - 10_800,
       observationWindowEndedAt: NOW - 7_199,
     };
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
@@ -1096,8 +1096,8 @@ describe("buildDexRouteReview model-confidence derivation", () => {
 
     observation.observationHistory = {
       ...observation.observationHistory!,
-      observationWindowStartedAt: NOW - 7_300,
-      observationWindowEndedAt: NOW - 7_201,
+      observationWindowStartedAt: NOW - 10_900,
+      observationWindowEndedAt: NOW - 10_801,
     };
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
       modelConfidence: "medium",

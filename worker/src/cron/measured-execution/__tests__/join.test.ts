@@ -581,7 +581,7 @@ describe("measured execution join activation", () => {
         publishedAt: 1_060,
         byTargetId,
       },
-      nowSec: 1_060 + 7_199,
+      nowSec: 1_060 + 10_799,
     });
 
     expect(pool.extra?.measuredExecutions).toHaveLength(2);
@@ -609,7 +609,7 @@ describe("measured execution join activation", () => {
         publishedAt: 1_060,
         byTargetId,
       },
-      nowSec: 1_060 + 7_201,
+      nowSec: 1_060 + 10_801,
     });
     expect(pool.extra?.measuredExecutions).toBeUndefined();
     expect(pool.extra?.measuredExecutionProfiles).toBeUndefined();
@@ -1180,7 +1180,7 @@ describe("measured execution join activation", () => {
       buildDexMeasuredExecutionRetainedRoutePools({
         poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]),
         evidence,
-        nowSec: 8_261,
+        nowSec: 11_861,
       }).size,
     ).toBe(0);
   });
@@ -1244,7 +1244,7 @@ describe("measured execution join activation", () => {
           ],
         ]),
       },
-      nowSec: 8_261,
+      nowSec: 11_861,
     });
 
     expect(pool.extra?.measuredExecution).toBeUndefined();

@@ -410,7 +410,7 @@ describe("DEX measured execution contract", () => {
   it("fails closed on stale, tampered, and price-divergent profiles", () => {
     const nowSec = 20_000;
     const tampered = profile(nowSec);
-    tampered.quotedAt = nowSec - 7_201;
+    tampered.quotedAt = nowSec - 10_801;
     tampered.marginalOutputRatio = 0.95;
     tampered.quoteProof[0]!.amountOutRaw = "1030000000";
     tampered.capacityCurve[0]!.executableUsd = 99_999;
@@ -428,7 +428,7 @@ describe("DEX measured execution contract", () => {
     ]));
   });
 
-  it("gives every measured adapter the shared two-hour profile ceiling", () => {
+  it("gives every measured adapter the shared three-hour profile ceiling", () => {
     const nowSec = 20_000;
     const adapterProfileId = "curve-stableswap-main-registry-get-dy-v1";
     const targetId = buildDexMeasuredExecutionTargetId({
@@ -445,18 +445,21 @@ describe("DEX measured execution contract", () => {
       ...target(nowSec),
       targetId,
       adapterProfileId,
-      capturedAt: nowSec - 8_000,
+      capturedAt: nowSec - 11_600,
     };
     const retainedProfile = {
       ...profile(nowSec),
       targetId,
       adapterProfileId,
-      quotedAt: nowSec - 7_199,
+      quotedAt: nowSec - 10_799,
     };
 
-    expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(7_200);
-    expect(getDexMeasuredExecutionFreshnessMaxSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(7_200);
-    expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(7_200);
+    // Three hours, one publication cycle wider than the two-hour score-bearing
+    // cadence, so a single missed even-hour `:16` publication cannot expire
+    // every measured profile at once.
+    expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(10_800);
+    expect(getDexMeasuredExecutionFreshnessMaxSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(10_800);
+    expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(10_800);
     expect(validateDexMeasuredExecutionProfile({
       profile: retainedProfile,
       quotedTarget: currentTarget,
@@ -466,7 +469,7 @@ describe("DEX measured execution contract", () => {
       nowSec,
     })).not.toContain("stale-observation");
     expect(validateDexMeasuredExecutionProfile({
-      profile: { ...retainedProfile, quotedAt: nowSec - 7_201 },
+      profile: { ...retainedProfile, quotedAt: nowSec - 10_801 },
       quotedTarget: currentTarget,
       currentTarget,
       expectedTargetGenerationId: "targets-1",

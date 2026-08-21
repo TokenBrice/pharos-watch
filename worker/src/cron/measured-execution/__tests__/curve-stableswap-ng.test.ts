@@ -345,11 +345,11 @@ describe("reviewed Curve StableSwap-NG policy", () => {
     })).toEqual({ ok: false, reason: "block-header-mismatch" });
   });
 
-  it("uses the shared two-hour Curve freshness boundary in producer eligibility", async () => {
+  it("uses the shared three-hour Curve freshness boundary in producer eligibility", async () => {
     const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
       CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
     );
-    expect(freshnessMaxSec).toBe(7_200);
+    expect(freshnessMaxSec).toBe(10_800);
     expect(evaluateCurveStableSwapNgEligibility({
       chain: "ethereum",
       endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,

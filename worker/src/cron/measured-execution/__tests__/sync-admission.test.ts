@@ -325,12 +325,12 @@ describe("measured execution overflow admission", () => {
       ],
     );
 
-    // Every measured route expires at +7200, so the older NG quote (observed
+    // Every measured route expires at +10800, so the older NG quote (observed
     // at 0) expires before the normal route observed at 2000.
     expect(selected).toEqual({
       targetIds: [stable.targetId],
       observedAtSec: 0,
-      expiresAtSec: 7_200,
+      expiresAtSec: 10_800,
       estimatedRpcRequests: 19,
     });
   });
@@ -348,7 +348,7 @@ describe("measured execution overflow admission", () => {
         "target-curve-3pool-1",
       ],
       observedAtSec: 1_000,
-      expiresAtSec: 8_200,
+      expiresAtSec: 11_800,
       estimatedRpcRequests: 20,
     });
   });

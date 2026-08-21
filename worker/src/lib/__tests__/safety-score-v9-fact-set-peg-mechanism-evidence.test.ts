@@ -2139,13 +2139,17 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     };
 
     expect(compileMeasured("curve-stableswap-main-registry-get-dy-v1")).toMatchObject({
-      freshness: { state: "current", maxAgeSec: 7_200, ageSec: 4_000 },
+      freshness: { state: "current", maxAgeSec: 10_800, ageSec: 4_000 },
     });
     expect(compileMeasured("uniswap-v3-quoter-v2")).toMatchObject({
-      freshness: { state: "current", maxAgeSec: 7_200, ageSec: 4_000 },
+      freshness: { state: "current", maxAgeSec: 10_800, ageSec: 4_000 },
     });
-    expect(compileMeasured("uniswap-v3-quoter-v2", 7_201)).toMatchObject({
-      freshness: { state: "stale", maxAgeSec: 7_200, ageSec: 7_201 },
+    // Crossing the three-hour bound here would need a clock past the fixture's,
+    // which stales unrelated fixture evidence. The boundary itself is proven in
+    // shared/lib/__tests__/dex-measured-execution.test.ts; this case owns the
+    // claim that DEX route evidence carries the measured-adapter window.
+    expect(compileMeasured("uniswap-v3-quoter-v2", 9_999)).toMatchObject({
+      freshness: { state: "current", maxAgeSec: 10_800, ageSec: 9_999 },
     });
   });
 

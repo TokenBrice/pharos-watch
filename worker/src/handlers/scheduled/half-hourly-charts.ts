@@ -1,6 +1,7 @@
 /**
  * Half-hourly charts trigger (16,46 * * * *):
- *   sync-dex-liquidity (0) → prepare-safety-score-v9-input (3)
+ *   sync-dex-liquidity (0) → dex-exit-route-turnover-watchdog (0)
+ *   → prepare-safety-score-v9-input (3)
  *   sync-stablecoin-charts (1), failure-independent and serial
  *
  * :16 consumes the hourly source generation (prices hourly, score every two
@@ -18,6 +19,7 @@ import {
   isHourlyDexPriceSlot,
 } from "@shared/lib/cron-cadences";
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
+import { runDexExitRouteTurnoverWatchdog } from "../../cron/dex-exit-route-turnover-watchdog";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { CronResult } from "../../lib/cron-logger";
 import { tryParseJson } from "../../lib/json-parse";
@@ -105,6 +107,39 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
             }
             dexPublication = readDexPublication(result);
             return result;
+          },
+        },
+        {
+          job: "dex-exit-route-turnover-watchdog",
+          run: (signal) => {
+            if (!isDexLiquidityPublicationSlot(runtime.slotStartedAt)) {
+              return Promise.resolve({
+                status: "skipped_neutral" as const,
+                itemCount: 0,
+                metadata: JSON.stringify({ reason: "not-liquidity-publication-slot" }),
+              });
+            }
+            const publication = dexPublication;
+            if (
+              publication == null
+              || publication.status === "error"
+              || publication.status === "skipped_locked"
+              || publication.status === "skipped_neutral"
+              || publication.skipped
+              || publication.generationId === null
+            ) {
+              return Promise.resolve({
+                status: "skipped_neutral" as const,
+                itemCount: 0,
+                metadata: JSON.stringify({
+                  reason: "upstream-dex-publication-unavailable",
+                  upstreamJob: "sync-dex-liquidity",
+                  upstreamStatus: publication?.status ?? "not-started",
+                  upstreamSkippedReason: publication?.skippedReason ?? null,
+                }),
+              });
+            }
+            return runDexExitRouteTurnoverWatchdog(runtime.db, signal);
           },
         },
         {

@@ -90,8 +90,13 @@ describe("Safety Score v9 methodology policy", () => {
     // 9.32 (2026-08-21): mintPostureQuality gains
     // "unbounded-reconciliation-unknown"=35 and "collateral-gated"=50; grading
     // gains adverseSeasonedCreditCeiling=39. Digest rotates with those keys.
+    // 9.33 (2026-08-21): exit gains staleObservationConfidenceFactor=0.6 — a
+    // route whose observation aged past its lane freshness bound is derated to
+    // the same credit as other low-confidence evidence instead of leaving the
+    // capacity denominator outright. No other exit weight, factor, or ceiling
+    // moves; the digest rotates with the added key.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "842ed351fe52d3b03c7575cb47cd379b437db905d7505dadb5274a5e394cdb7d",
+      "68fa3395909504621c4b40f86402b4f5d2989dbf6ec661df67f5b65d3c221324",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,

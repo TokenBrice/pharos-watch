@@ -776,7 +776,7 @@ describe("dex-liquidity scoring", () => {
     expect(selected.bestOmittedCapacityUsd).toBe(1_000);
     expect(selected.observations.filter(
       (observation) => observation.adapterProfileId === "thinswap-v2-router-v1",
-    )).toHaveLength(3);
+    )).toHaveLength(7);
   });
 
   it("selects exact route evidence below the display top ten without changing the visible pool list", async () => {
@@ -1020,22 +1020,26 @@ describe("dex-liquidity scoring", () => {
     expect(metrics.topPools.map((pool) => pool.poolId)).toEqual(
       Array.from({ length: 10 }, (_, index) => `ethereum:exact-pool-${index}`),
     );
-    expect(routeResult?.exitRouteObservations).toHaveLength(3);
+    expect(routeResult?.exitRouteObservations).toHaveLength(7);
     expect(routeResult?.exitRouteObservations?.map(
       (observation) => observation.scope.contractOrPoolId,
     )).toEqual([
       "ethereum:exact-pool-0",
       "ethereum:exact-pool-1",
       "ethereum:exact-pool-10",
+      "ethereum:exact-pool-2",
+      "ethereum:exact-pool-3",
+      "ethereum:exact-pool-4",
+      "ethereum:exact-pool-5",
     ]);
     expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
       retainedPoolCount: 11,
-      observationCount: 3,
-      scoreEligibleObservationCount: 3,
-      scoreEligiblePoolCount: 3,
+      observationCount: 7,
+      scoreEligibleObservationCount: 7,
+      scoreEligiblePoolCount: 7,
       scoreEligibleCapabilityPoolCount: 11,
-      unsupportedPoolCount: 8,
-      unsupportedReasons: { routeObservationPayloadOverflow: 8 },
+      unsupportedPoolCount: 4,
+      unsupportedReasons: { routeObservationPayloadOverflow: 4 },
     });
   });
 
@@ -1129,24 +1133,29 @@ describe("dex-liquidity scoring", () => {
       };
     } | undefined;
 
-    expect(routeResult?.exitRouteObservations).toHaveLength(6);
+    expect(routeResult?.exitRouteObservations).toHaveLength(13);
     expect(routeResult?.exitRouteObservations?.map((observation) => observation.scope.contractOrPoolId)).toEqual([
-      ...Array.from({ length: 3 }, (_, index) => `ethereum:dai-curve-pool-${index}`),
-      ...Array.from({ length: 3 }, (_, index) => `ethereum:dai-balancer-three-token-${index}`),
+      // Each three-token Balancer pool emits two outputs; the widened
+      // per-protocol bound admits both instead of clipping the second.
+      ...Array.from({ length: 3 }, (_, index) => [
+        `ethereum:dai-balancer-three-token-${index}`,
+        `ethereum:dai-balancer-three-token-${index}`,
+      ]).flat(),
+      ...Array.from({ length: 7 }, (_, index) => `ethereum:dai-curve-pool-${index}`),
     ]);
-    expect(routeResult?.exitRouteObservations?.slice(0, 3).map((observation) => observation.output.trackedAssetIds)).toEqual(
-      [["usdc-circle"], ["usdc-circle"], ["usdc-circle"]],
+    // Both outputs of each three-token Balancer pool now survive the widened
+    // per-protocol bound, so the leading pair is the pool's two distinct
+    // tracked outputs rather than three clipped single-output routes.
+    expect(routeResult?.exitRouteObservations?.slice(0, 2).map((observation) => observation.output.trackedAssetIds)).toEqual(
+      [["usdc-circle"], ["usdt-tether"]],
     );
     expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
       retainedPoolCount: 10,
-      observationCount: 6,
-      scoreEligibleObservationCount: 6,
-      scoreEligiblePoolCount: 6,
+      observationCount: 13,
+      scoreEligibleObservationCount: 13,
+      scoreEligiblePoolCount: 10,
       scoreEligibleCapabilityPoolCount: 10,
-      unsupportedPoolCount: 4,
-    });
-    expect(routeResult?.exitRouteObservationCoverage?.unsupportedReasons).toMatchObject({
-      routeObservationPayloadOverflow: 4,
+      unsupportedPoolCount: 0,
     });
   });
 
@@ -1201,11 +1210,11 @@ describe("dex-liquidity scoring", () => {
       };
     } | undefined;
 
-    expect(routeResult?.exitRouteObservations).toHaveLength(3);
+    expect(routeResult?.exitRouteObservations).toHaveLength(7);
     expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
       retainedPoolCount: 2,
-      observationCount: 3,
-      scoreEligibleObservationCount: 3,
+      observationCount: 7,
+      scoreEligibleObservationCount: 7,
       scoreEligiblePoolCount: 2,
       scoreEligibleCapabilityPoolCount: 2,
       unsupportedPoolCount: 0,

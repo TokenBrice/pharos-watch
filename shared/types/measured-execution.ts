@@ -12,8 +12,18 @@ export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_0
 // cadence (even-hour :16): the half-hourly V9 input preparation sees the current
 // published measured window at up to ~96 minutes old, so a tighter bound derates
 // confidence on alternate score runs even though the evidence is on schedule.
-export const DEX_MEASURED_FRESHNESS_MAX_SEC = 2 * 60 * 60;
-export const DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC = 2 * 60 * 60;
+//
+// The bound is deliberately one publication cycle WIDER than that cadence. At a
+// two-hour bound the expiry ceiling equalled the republication period, so a
+// single delayed, skipped, or degraded even-hour `:16` publication aged every
+// measured profile past expiry at once; each expired route then left the exit
+// capacity denominator outright (see `routeExclusionReason`), which is what made
+// anchor grades oscillate for producer-schedule reasons rather than market ones.
+// Three hours keeps one whole cycle of slack so a single missed publication is
+// survivable, and `GENERATION_RETENTION_SEC` stays an hour above this bound so a
+// profile can never read fresh after its backing rows were pruned.
+export const DEX_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
+export const DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
 const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);

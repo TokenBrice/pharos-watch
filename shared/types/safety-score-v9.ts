@@ -1193,6 +1193,16 @@ const V9ExitPolicySchema = z
         unknown: z.number().finite().min(0).max(1),
       })
       .strict(),
+    /**
+     * Credit retained by a route whose observation aged past its lane freshness
+     * bound but is otherwise a known, supported, reviewed route. A retained
+     * stale observation is weaker evidence than a current one, but it is still
+     * evidence: dropping it outright made the capacity denominator itself
+     * discontinuous, so an expiring producer window re-graded an asset with no
+     * market event behind it. Applied as a multiplier on both the route's own
+     * score and the capacity it contributes.
+     */
+    staleObservationConfidenceFactor: z.number().finite().min(0).max(1),
     scoreableEvidenceKinds: z
       .object({ dex: z.array(z.string().min(1)).min(1), redemption: z.array(z.string().min(1)).min(1) })
       .strict(),

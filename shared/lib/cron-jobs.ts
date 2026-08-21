@@ -448,6 +448,16 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "half-hourly-scoring-charts-chain",
   },
   {
+    job: "dex-exit-route-turnover-watchdog",
+    label: "DEX exit-route turnover watchdog",
+    group: "multi-hourly",
+    intervalSec: 2 * 3600,
+    scheduleKey: "halfHourlyChartsOffset",
+    triggerMode: "shared",
+    maxConnections: 0, // D1-only comparison against the compact prior publication snapshot.
+    connectionGroup: "half-hourly-scoring-charts-chain",
+  },
+  {
     job: "sync-yield-data",
     label: "Yield sync",
     group: "hourly",

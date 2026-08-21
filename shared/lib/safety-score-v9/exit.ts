@@ -402,10 +402,18 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
   if (route.applicability === "not-applicable") return null;
   if (route.applicability === "unresolved") return "missing-same-notional-route";
   if (route.outputResolved === false) return "unresolved-exit-output";
-  if (route.observationState === "missing" || route.observationState === "stale") {
+  // `missing` means no retained observation at all and still excludes. `stale`
+  // does not: a retained observation that aged past its lane freshness bound is
+  // weaker evidence, not absent evidence, and is derated through
+  // `staleObservationConfidenceFactor` instead of leaving the denominator. The
+  // former cliff meant an expiring producer window subtracted whole routes from
+  // capacity at once, re-grading assets for producer-schedule reasons.
+  if (route.observationState === "missing") {
     return "missing-runtime-route-evidence";
   }
-  if (route.observationState !== "known") return "unsupported-same-notional-route";
+  if (route.observationState !== "known" && route.observationState !== "stale") {
+    return "unsupported-same-notional-route";
+  }
   const creditableNonAtomic = isCreditableNonAtomicRedemption(route, envelope);
   if ((!route.scoreEligible || route.coverageClass === "diagnostic") && !creditableNonAtomic) {
     return "unsupported-same-notional-route";
@@ -449,8 +457,25 @@ function resolveIncludedRouteCapacity(
   return {
     state: "included",
     capacityPoint,
-    valuedExecutableUsd: capacityPoint.executableUsd * route.outputValueRetention,
+    valuedExecutableUsd:
+      capacityPoint.executableUsd *
+      route.outputValueRetention *
+      staleObservationFactor(route, envelope),
   };
+}
+
+/**
+ * Credit multiplier for a retained-but-expired observation. `known` routes are
+ * unaffected (factor 1), so this is a no-op for every surface whose producer
+ * window is current.
+ */
+function staleObservationFactor(
+  route: V9ExitEvaluationRoute,
+  envelope: V9ValidatedPolicyEnvelope,
+): number {
+  return route.observationState === "stale"
+    ? envelope.policy.semantic.exit.staleObservationConfidenceFactor
+    : 1;
 }
 
 export interface V9DistinctExitCapacity {
@@ -669,7 +694,9 @@ function evaluateRoute(
   const confidenceFactor = Math.min(
     policy.observationConfidenceFactors[route.observationConfidence],
     policy.modeledConfidenceFactors[route.modelConfidence],
+    staleObservationFactor(route, envelope),
   );
+  if (route.observationState === "stale") capsApplied.push("observation:stale");
   score *= confidenceFactor * policy.holderEligibilityMultipliers[route.holderEligibility];
   const routeCap =
     route.routeScoreCap === "queue-redeem" ||

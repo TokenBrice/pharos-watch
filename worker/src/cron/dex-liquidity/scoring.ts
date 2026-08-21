@@ -164,9 +164,22 @@ function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): s
 // third copy of the same numbers.
 export const V9_DEX_STRESS_NOTIONAL_USD = EXIT_ROUTE_SCORING_TABLES.request.capUsd;
 export const V9_DEX_STRESS_MAX_COST_BPS = EXIT_ROUTE_SCORING_TABLES.request.maxCostBps;
-const MAX_ROUTES_PER_CHAIN = 6;
-const MAX_ROUTES_PER_PROTOCOL = 3;
-const MAX_ROUTES_PER_ADAPTER = 3;
+// Concentration bounds on the published payload, scaled with
+// MAX_DEX_EXIT_ROUTE_OBSERVATIONS so widening the payload actually widens the
+// evidence basis. Measured on the live surface at the previous 10/6/3/3 setting,
+// all three anchor surfaces were saturated on THESE bounds rather than on the
+// slot count (usdc-circle, usdt-tether and dai-makerdao each published exactly
+// six Ethereum routes, three Curve routes and three Uniswap-V3 routes), so
+// raising the slot count alone would have admitted almost nothing.
+//
+// The ratios are preserved (~58% one chain, ~29% one protocol/adapter) rather
+// than the absolute counts: these bounds keep the payload representative, while
+// genuine common-mode risk is modelled downstream by
+// `resolveV9DistinctExitCapacity`, which groups routes on shared
+// `physicalResourceKeys` and credits only the strongest member of each group.
+const MAX_ROUTES_PER_CHAIN = 14;
+const MAX_ROUTES_PER_PROTOCOL = 7;
+const MAX_ROUTES_PER_ADAPTER = 7;
 
 function executableCapacityAtV9Stress(observation: ExitRouteObservation): number {
   const point = observation.capacityCurve?.find(

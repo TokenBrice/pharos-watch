@@ -678,6 +678,7 @@
         "low": 0.6,
         "unknown": 0.35
       },
+      "staleObservationConfidenceFactor": 0.6,
       "scoreableEvidenceKinds": {
         "dex": [
           "measured-executable-depth",

@@ -1,5 +1,23 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_EXIT_ROUTE_STABILITY: MethodologyChangelogEntry = {
+  version: "9.33",
+  title: "An expired exit-route observation is derated, not discarded",
+  date: "2026-08-21",
+  effectiveAt: 1787328000,
+  summary:
+    "Exit-route evidence whose producer window expired now loses credit instead of leaving the capacity denominator, and the published route payload widens so no single route is a tenth of an anchor's evidence. Together these remove a scoring cliff in which an ordinary producer-schedule delay re-graded an asset with no market event behind it, and propagated that move through the dependency graph to everything the asset backs.",
+  impact: [
+    "A route whose observation aged past its lane freshness bound is now included at the reviewed `staleObservationConfidenceFactor` (0.6, the same credit other low-confidence observations receive) rather than excluded outright. The factor derates both the route's own score and the capacity it contributes, and the route reports an `observation:stale` cap in its trace. A `missing` observation — no retained evidence at all — still fails closed exactly as before, as does a stale creditable non-atomic redemption, which keeps its stricter reviewed requirement",
+    "The bounded public route payload widens from 10 observations to 24, and its concentration bounds scale with it (per-chain 6 to 14, per-protocol and per-adapter 3 to 7) so the extra slots admit genuinely new evidence. Measured on the live surface the previous bounds were saturated on concentration, not on slot count: usdc-circle, usdt-tether and dai-makerdao each published exactly six Ethereum, three Curve and three Uniswap-V3 routes. Common-mode risk continues to be modelled downstream, where routes sharing a physical resource are grouped and only the strongest member is credited",
+    "The measured-execution freshness ceiling moves from two hours to three, one full publication cycle wider than the two-hour score-bearing Liquidity Score cadence it must cover. At two hours the expiry ceiling equalled the republication period, so one delayed or degraded even-hour publication expired every measured profile simultaneously. Generation retention moves from three hours to four to stay above the widened bound",
+    "Measured on the 2026-08-21 production capture replay (337 cards): no card changes score or grade. The release is score-neutral on a healthy capture by construction — the derate only engages on evidence that the previous rule would have discarded, and the widened payload only engages where the producer had more admissible evidence than it could publish. The policy semantic digest rotates with the added exit key",
+    "A new `dex-exit-route-turnover-watchdog` reports degraded when a coin's published route set turns over substantially between publications, so producer-driven route churn is visible as an operational signal instead of surfacing only as an unexplained grade change",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_MINT_POSTURE_LADDER_REFINEMENT: MethodologyChangelogEntry = {
   version: "9.32",
   title: "Mint posture separates missing reconciliation from confirmed exposure",

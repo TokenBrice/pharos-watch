@@ -4,6 +4,7 @@ import type { ScheduledRuntimeContext } from "../context";
 const mocks = vi.hoisted(() => ({
   consumeDexLiquidityScoringStage: vi.fn(),
   reuseCurrentDexLiquidityScoringGeneration: vi.fn(),
+  runDexExitRouteTurnoverWatchdog: vi.fn(),
   prepareSafetyScoreV9Input: vi.fn(),
   syncStablecoinCharts: vi.fn(),
 }));
@@ -14,6 +15,9 @@ vi.mock("../../../cron/dex-liquidity/orchestrator", () => ({
 }));
 vi.mock("../../../cron/prepare-safety-score-v9-input", () => ({
   prepareSafetyScoreV9Input: mocks.prepareSafetyScoreV9Input,
+}));
+vi.mock("../../../cron/dex-exit-route-turnover-watchdog", () => ({
+  runDexExitRouteTurnoverWatchdog: mocks.runDexExitRouteTurnoverWatchdog,
 }));
 vi.mock("../../../cron/sync-stablecoin-charts", () => ({
   syncStablecoinCharts: mocks.syncStablecoinCharts,
@@ -59,6 +63,7 @@ describe("half-hourly charts scheduling", () => {
         },
       }),
     });
+    mocks.runDexExitRouteTurnoverWatchdog.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.prepareSafetyScoreV9Input.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.syncStablecoinCharts.mockResolvedValue({ status: "ok", itemCount: 1 });
   });
@@ -77,10 +82,12 @@ describe("half-hourly charts scheduling", () => {
     );
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "error", undefined],
+      ["dex-exit-route-turnover-watchdog", "skipped", "upstream-dex-publication-unavailable"],
       ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],
     ]);
     expect(summary.jobs[1]?.neutral).toBe(true);
+    expect(summary.jobs[2]?.neutral).toBe(true);
   });
 
   it("skips V9 input neutrally when degraded DEX scoring withholds publication", async () => {
@@ -103,10 +110,12 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "degraded", undefined],
+      ["dex-exit-route-turnover-watchdog", "skipped", "upstream-dex-publication-unavailable"],
       ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],
     ]);
     expect(summary.jobs[1]?.neutral).toBe(true);
+    expect(summary.jobs[2]?.neutral).toBe(true);
   });
 
   it.each([
@@ -132,7 +141,7 @@ describe("half-hourly charts scheduling", () => {
 
       expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
       expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
-      expect(summary.jobs[1]).toMatchObject({
+      expect(summary.jobs[2]).toMatchObject({
         job: "prepare-safety-score-v9-input",
         outcome: "skipped",
         reason: "upstream-dex-publication-unavailable",
@@ -157,10 +166,12 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "skipped", "lease-locked"],
+      ["dex-exit-route-turnover-watchdog", "skipped", "upstream-dex-publication-unavailable"],
       ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],
     ]);
     expect(summary.jobs[1]?.neutral).toBe(true);
+    expect(summary.jobs[2]?.neutral).toBe(true);
   });
 
   it("fails closed when a successful DEX result omits its generation", async () => {
@@ -180,7 +191,7 @@ describe("half-hourly charts scheduling", () => {
 
     expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
-    expect(summary.jobs[1]).toMatchObject({
+    expect(summary.jobs[2]).toMatchObject({
       job: "prepare-safety-score-v9-input",
       outcome: "error",
       error: "DEX publication result omitted its exact generation id",
@@ -205,7 +216,7 @@ describe("half-hourly charts scheduling", () => {
         job: "sync-dex-liquidity",
         outcome: "ok",
       });
-      expect(summary.jobs[1]).toMatchObject({
+      expect(summary.jobs[2]).toMatchObject({
         job: "prepare-safety-score-v9-input",
         outcome: "error",
         error: "DEX publication result omitted its exact generation id",
@@ -232,6 +243,10 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.chainRpcs,
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
+    expect(mocks.runDexExitRouteTurnoverWatchdog).toHaveBeenCalledWith(
+      scheduledRuntime.db,
+      expect.any(AbortSignal),
+    );
   });
 
   it("refreshes prices without publishing liquidity on odd-hour :16", async () => {
@@ -252,6 +267,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.slotStartedAt,
       { publishLiquidity: false, publishShadowTargets: false },
     );
+    expect(mocks.runDexExitRouteTurnoverWatchdog).not.toHaveBeenCalled();
   });
 
   it("reuses the exact current generation at :46 without consuming a source stage", async () => {
@@ -271,5 +287,6 @@ describe("half-hourly charts scheduling", () => {
       "dex-liquidity-current",
       scheduledRuntime.chainRpcs,
     );
+    expect(mocks.runDexExitRouteTurnoverWatchdog).not.toHaveBeenCalled();
   });
 });

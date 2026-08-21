@@ -59,7 +59,12 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["sync-dex-liquidity-stage"]],
   },
   halfHourlyChartsOffset: {
-    jobChains: [["sync-dex-liquidity", "prepare-safety-score-v9-input", "sync-stablecoin-charts"]],
+    jobChains: [[
+      "sync-dex-liquidity",
+      "dex-exit-route-turnover-watchdog",
+      "prepare-safety-score-v9-input",
+      "sync-stablecoin-charts",
+    ]],
   },
   dewsPsiOffset: {
     jobChains: [["compute-dews", "stability-index", "project-tape"]],
