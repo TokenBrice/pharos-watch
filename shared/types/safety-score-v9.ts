@@ -1029,7 +1029,13 @@ const V9ControlPolicySchema = z
         "bounded-admin": ScoreSchema,
         "partially-bounded-admin": ScoreSchema,
         "concentrated-admin": ScoreSchema,
+        // MINT-LADDER 9.32 (2026-08-21): collateral is a real economic bound,
+        // but the privileged administrator surface remains concentrated.
+        "collateral-gated": ScoreSchema,
         "unbounded-reconciled": ScoreSchema,
+        // MINT-LADDER 9.32 (2026-08-21): absence of reconciliation evidence
+        // stays below the unknown-everything rung and above the confirmed floor.
+        "unbounded-reconciliation-unknown": ScoreSchema,
         "unbounded-or-compromised": ScoreSchema,
         unknown: ScoreSchema,
       })
@@ -1044,6 +1050,9 @@ const V9ControlPolicySchema = z
         // the next posture rung so a credit can never relabel the posture class.
         seasonedCreditPoints: z.number().finite().min(0).max(10).default(0),
         seasonedCreditMinMonths: z.number().int().positive().default(60),
+        // MINT-LADDER 9.32 (2026-08-21): adverse seasoned credit has its own
+        // ceiling so the new reconciliation-unknown rung cannot lower it.
+        adverseSeasonedCreditCeiling: ScoreSchema,
       })
       .strict(),
     // Safety 9.1 — the merged mint grader. These knobs carry the signals the

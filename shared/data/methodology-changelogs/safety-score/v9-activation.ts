@@ -1,5 +1,25 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_MINT_POSTURE_LADDER_REFINEMENT: MethodologyChangelogEntry = {
+  version: "9.32",
+  title: "Mint posture separates missing reconciliation from confirmed exposure",
+  date: "2026-08-21",
+  effectiveAt: 1787270400,
+  summary:
+    "The mint component splits the exposed floor by reconciliation evidence, recognizes verified collateral-gated issuance, and extends bounded seasoning credit to eligible adverse postures. Economically unbounded minting with unknown reconciliation now scores 35 instead of the confirmed 25 floor; a collateral-gated path scores 50 below the concentrated-admin rung at 55; and an eligible adverse posture can season without crossing the dedicated 39 ceiling. The release also reclassifies CASH as continuously reconciled and the spUSDC and USDF vaults as raiseable rather than unbounded.",
+  impact: [
+    "The reviewed vocabulary gains reconciliation `none` for a positively established absence, cap semantics `collateral-gated`, and the derived postures `unbounded-reconciliation-unknown` and `collateral-gated`; `unknown`, `none`, and `not-applicable` remain distinct findings",
+    "A reviewer's explicit reconciliation `unknown` on a reviewed direct non-backend mint control now compiles through to the evaluator instead of being swallowed by the not-applicable inference, and the facts schema admits that known-review shape — the 9.27 doctrine that a recorded could-not-establish finding beats silence. An absent field keeps the fail-closed inference, issuer-backend minters keep the PoR-derived cadence, and inherited share wrappers keep the wrapper convention",
+    "`unbounded-reconciliation-unknown` maps to the existing Exposed band at 35, while `collateral-gated` maps to the existing Concentrated band at 50. No public band, CSV header, filter value, or saved screener URL changes",
+    "DDR conservatism is preserved: both new postures join the fragile set, only `unbounded-reconciliation-unknown` joins the economically unbounded set, and the K1 risky set is unchanged because both postures land in existing risky bands",
+    "After at least 60 months, a non-active `unbounded-or-compromised` posture and an `unbounded-reconciliation-unknown` posture can earn the existing 10-point seasoned credit without claiming reconciliation. The former uses the dedicated 39 ceiling rather than falling to the generic 34 next-rung ceiling created by the new 35 rung; the latter remains capped at 44 by the ordinary next-rung rule. An active incident remains ineligible",
+    "Curated evidence moves cash-phantom to continuously reconciled `unbounded-reconciled`, and moves susdc-spark plus usdf-astherus to raiseable `partially-bounded-admin`; no broader recuration is part of this release",
+    "Measured on the 2026-08-21 production capture replay: 60 of 337 cards move, all upward, none newly unrated. The Exposed floor shrinks from 78 to 26 cards; 49 assets derive the new unbounded-reconciliation-unknown posture, and 5 not-applicable-reconciliation assets earn the adverse seasoning lift to 35. 23 grades improve — 18 F to D, plus susdc-spark D to C+, usdf-astherus D to C, usg-tangent and yusd-yieldfi D to C-, cash-phantom F to D — and the largest single move is susdc-spark 44 to 64",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_CURATED_DEPENDENCY_GATE: MethodologyChangelogEntry = {
   version: "9.31",
   title: "Curated dependency links share the reserve admission gate",

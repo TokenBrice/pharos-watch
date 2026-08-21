@@ -845,7 +845,9 @@
         "bounded-admin": 85,
         "partially-bounded-admin": 70,
         "concentrated-admin": 55,
+        "collateral-gated": 50,
         "unbounded-reconciled": 55,
+        "unbounded-reconciliation-unknown": 35,
         "unbounded-or-compromised": 25,
         "unknown": 45
       },
@@ -853,7 +855,8 @@
         "prudentialReconciled": 80,
         "attestationOnlyReconciled": 70,
         "seasonedCreditPoints": 10,
-        "seasonedCreditMinMonths": 60
+        "seasonedCreditMinMonths": 60,
+        "adverseSeasonedCreditCeiling": 39
       },
       "mintMergedSignals": {
         "resolvedIncidentQualityCaps": {

@@ -41,7 +41,14 @@ export const V9ControlCapabilitySchema = z.enum([
 ]);
 export const V9ControlKindSchema = z.enum(["mint", "upgrade", "custody", "oracle", "bridge", "freeze", "governance"]);
 export const V9ControlScopeSchema = z.enum(["global", "deployment", "exposure", "route"]);
-export const V9ControlCapKindSchema = z.enum(["bounded", "raiseable", "unbounded", "not-applicable", "unknown"]);
+export const V9ControlCapKindSchema = z.enum([
+  "bounded",
+  "collateral-gated",
+  "raiseable",
+  "unbounded",
+  "not-applicable",
+  "unknown",
+]);
 export const V9ControlCapUnitSchema = z.enum(["token-units", "usd-notional", "supply-fraction"]);
 export const V9ClaimImpairmentSchema = z.enum(["none", "bounded", "unbounded", "unknown"]);
 export const V9EconomicLossScopeSchema = z.enum(["access-only", "deployment", "reserve-claim", "global-claim", "unknown"]);

@@ -87,8 +87,11 @@ describe("Safety Score v9 methodology policy", () => {
     // the mint component's top rung scores the proven absence of privileged
     // mint ability instead of reserving unreachable headroom. Every other
     // rung, credit, signal, gate, and ceiling is unchanged.
+    // 9.32 (2026-08-21): mintPostureQuality gains
+    // "unbounded-reconciliation-unknown"=35 and "collateral-gated"=50; grading
+    // gains adverseSeasonedCreditCeiling=39. Digest rotates with those keys.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "7ec08f98a3836d2de7e6265b77ee0c0806372c03067380ac5a34d65dd1a40143",
+      "842ed351fe52d3b03c7575cb47cd379b437db905d7505dadb5274a5e394cdb7d",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,
@@ -134,6 +137,52 @@ describe("Safety Score v9 methodology policy", () => {
       expect(loadChangedGates((gates) => { gates.evidenceExpiry[field] += 1; }), field)
         .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
     }
+  });
+
+  it("pins the 9.32 mint posture ladder keys and rotates the digest when they move", () => {
+    const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality;
+    const grading = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureGrading;
+    expect(quality).toMatchObject({
+      "unbounded-or-compromised": 25,
+      "unbounded-reconciliation-unknown": 35,
+      unknown: 45,
+      "collateral-gated": 50,
+      "concentrated-admin": 55,
+      "unbounded-reconciled": 55,
+      "none-resolved": 100,
+    });
+    expect(Object.keys(quality).sort()).toEqual(
+      [
+        "bounded-admin",
+        "collateral-gated",
+        "concentrated-admin",
+        "none-resolved",
+        "partially-bounded-admin",
+        "unbounded-or-compromised",
+        "unbounded-reconciled",
+        "unbounded-reconciliation-unknown",
+        "unknown",
+      ].sort(),
+    );
+    expect(grading.adverseSeasonedCreditCeiling).toBe(39);
+    expect(grading.seasonedCreditPoints).toBe(10);
+    expect(grading.seasonedCreditMinMonths).toBe(60);
+
+    const bumpedUnknownRecon = candidateClone();
+    bumpedUnknownRecon.semantic.control.mintPostureQuality["unbounded-reconciliation-unknown"] = 36;
+    expect(loadV9MethodologyPolicy(bumpedUnknownRecon).semanticDigest).not.toBe(
+      V9_CANDIDATE_POLICY_V1.semanticDigest,
+    );
+    const bumpedCollateral = candidateClone();
+    bumpedCollateral.semantic.control.mintPostureQuality["collateral-gated"] = 51;
+    expect(loadV9MethodologyPolicy(bumpedCollateral).semanticDigest).not.toBe(
+      V9_CANDIDATE_POLICY_V1.semanticDigest,
+    );
+    const bumpedCeiling = candidateClone();
+    bumpedCeiling.semantic.control.mintPostureGrading.adverseSeasonedCreditCeiling = 40;
+    expect(loadV9MethodologyPolicy(bumpedCeiling).semanticDigest).not.toBe(
+      V9_CANDIDATE_POLICY_V1.semanticDigest,
+    );
   });
 
   it("lets policy-only replay change a danger gate without editing production scoring", () => {
@@ -404,10 +453,21 @@ describe("Safety Score v9 methodology policy", () => {
     // centralized-mint high signal ceiling (59), so the reconciled-unbounded-mint
     // archetype is pinned at C and can never be lifted to C+/B by the headroom.
     // This makes the "C, not C+" boundary a policy invariant, not a coincidence.
+    // 9.32: the new rungs deliberately share their band-mates' ceilings — the
+    // 35 unknown-reconciliation rung sits under the same high ceiling (its blend
+    // lift is trimmed at 59, exactly like unbounded-reconciled without
+    // supervision), and the 50 collateral-gated rung sits under the moderate
+    // ceiling (74) like the concentrated rung. The invariant for them is that
+    // the in-pillar posture price stays BELOW its own signal ceiling, so the
+    // ceiling can only trim blend lift and never prices a card below its
+    // measured posture.
     const formula = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
-    const centralizedMintHigh =
-      V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["centralized-mint"].high;
-    expect(centralizedMintHigh).not.toBeNull();
-    expect(25 + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(centralizedMintHigh!);
+    const signalLimits = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["centralized-mint"];
+    const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality;
+    expect(signalLimits.high).not.toBeNull();
+    expect(signalLimits.moderate).not.toBeNull();
+    expect(25 + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(signalLimits.high!);
+    expect(quality["unbounded-reconciliation-unknown"]).toBeLessThan(signalLimits.high!);
+    expect(quality["collateral-gated"]).toBeLessThan(signalLimits.moderate!);
   });
 });

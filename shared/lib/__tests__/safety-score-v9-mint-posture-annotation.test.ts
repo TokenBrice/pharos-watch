@@ -18,7 +18,9 @@ describe("V9 mint posture bands", () => {
     expect(resolveV9MintPostureBand("partially-bounded-admin")).toBe("governed");
     expect(resolveV9MintPostureBand("unbounded-reconciled")).toBe("managed");
     expect(resolveV9MintPostureBand("concentrated-admin")).toBe("concentrated");
+    expect(resolveV9MintPostureBand("collateral-gated")).toBe("concentrated");
     expect(resolveV9MintPostureBand("unbounded-or-compromised")).toBe("exposed");
+    expect(resolveV9MintPostureBand("unbounded-reconciliation-unknown")).toBe("exposed");
     expect(resolveV9MintPostureBand("unknown")).toBeNull();
   });
 
@@ -37,7 +39,7 @@ describe("mint posture predicates", () => {
   // These predicates are the single source of posture set membership for every
   // engine (V9 bands, DDR structural class, DDR K1/R1). The exhaustiveness case
   // below is deliberately total over `MINT_AUTHORITY_POSTURE_VALUES`, so adding
-  // a ninth posture fails here first and forces an explicit set decision rather
+  // a new posture fails here first and forces an explicit set decision rather
   // than a silent fall-through at each consumer.
   const expected: Record<
     (typeof MINT_AUTHORITY_POSTURE_VALUES)[number],
@@ -54,7 +56,14 @@ describe("mint posture predicates", () => {
     },
     "unbounded-reconciled": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: true },
     "concentrated-admin": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: false },
+    "collateral-gated": { noPrivilegedMint: false, noPrivilegedMintChain: false, fragile: true, unbounded: false },
     "unbounded-or-compromised": {
+      noPrivilegedMint: false,
+      noPrivilegedMintChain: false,
+      fragile: true,
+      unbounded: true,
+    },
+    "unbounded-reconciliation-unknown": {
       noPrivilegedMint: false,
       noPrivilegedMintChain: false,
       fragile: true,

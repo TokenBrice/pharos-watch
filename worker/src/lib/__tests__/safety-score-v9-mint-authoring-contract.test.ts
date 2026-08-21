@@ -278,6 +278,56 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(mintControl?.capSemantics.kind).toBe("unbounded");
   });
 
+  it("maps reviewed economicCapSemantics collateral-gated onto cap kind collateral-gated (9.32)", () => {
+    const profile: MintAuthorityProfile = {
+      ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+      economicCapSemantics: "collateral-gated",
+      reconciliation: "periodic",
+      supervision: "none",
+    };
+    const { review, mintControl } = mintReviewFor(profile);
+    expect(mintControl?.capSemantics.kind).toBe("collateral-gated");
+    expect(review.reconciliation).toBe("periodic");
+    expect(review.supervision).toBe("none");
+  });
+
+  it("lets reviewed reconciliation none supersede inference (9.32)", () => {
+    const profile: MintAuthorityProfile = {
+      ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+      economicCapSemantics: "unbounded",
+      reconciliation: "none",
+      supervision: "none",
+    };
+    const { review, mintControl } = mintReviewFor(profile);
+    // Inferred reconciliation would be "unknown" without proof-of-reserves;
+    // the reviewed "none" (confirmed absence) wins over inference.
+    expect(review.reconciliation).toBe("none");
+    expect(review.supervision).toBe("none");
+    expect(mintControl?.capSemantics.kind).toBe("unbounded");
+  });
+
+  it("passes a reviewer's explicit unknown reconciliation through on a direct non-backend mint control (9.32)", () => {
+    const profile: MintAuthorityProfile = {
+      ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+      controls: [
+        {
+          ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE.controls![0]!,
+          authorityType: "multisig",
+          directMintAbility: "direct",
+        },
+      ],
+      economicCapSemantics: "unbounded",
+      reconciliation: "unknown",
+      supervision: "none",
+    };
+    const { review, mintControl } = mintReviewFor(profile);
+    // Pre-9.32 the not-applicable inference swallowed the reviewer's explicit
+    // "unknown"; it now passes through so the evaluator can price the
+    // unbounded-reconciliation-unknown rung instead of the confirmed floor.
+    expect(review.reconciliation).toBe("unknown");
+    expect(mintControl?.capSemantics.kind).toBe("unbounded");
+  });
+
   it("stays byte-identical to today when the reviewed fields are absent (fail-closed inertness)", () => {
     const { economicCapSemantics, reconciliation, supervision, ...withoutReviewedFields } =
       AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE;

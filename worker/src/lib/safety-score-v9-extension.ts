@@ -329,6 +329,9 @@ function adaptMintControl(
     if (reviewedCap === "unbounded") return { kind: "unbounded", bound: null };
     if (reviewedCap === "raiseable") return { kind: "raiseable", bound: null };
     if (reviewedCap === "bounded") return { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } };
+    // MINT-LADDER 9.32 (2026-08-21): collateral-gated is a distinct reviewed
+    // economic bound, not an arbitrary-mint or raiseable-cap fallback.
+    if (reviewedCap === "collateral-gated") return { kind: "collateral-gated", bound: null };
     if (control.directMintAbility === "direct") return { kind: "unbounded", bound: null };
     if (capped) {
       // Reviewed caps exist but the campaign records raise authority, not the
@@ -344,7 +347,13 @@ function adaptMintControl(
   const claimImpairment: ControlOverlay["claimImpairment"] = (() => {
     if (hasMint) {
       if (reviewedCap === "unbounded") return "unbounded";
-      if (reviewedCap === "raiseable" || reviewedCap === "bounded") return "bounded";
+      if (
+        reviewedCap === "raiseable" ||
+        reviewedCap === "bounded" ||
+        reviewedCap === "collateral-gated"
+      ) {
+        return "bounded";
+      }
       return capped ? "bounded" : "unbounded";
     }
     if (capabilities.includes("upgrade")) return "unbounded";
@@ -979,10 +988,10 @@ function latestResolvedMintIncidentAtSec(
  *
  * `"unknown"` is the correct fallback rather than a known negative: an
  * undisclosed cadence tells us nothing about whether the issuer reconciles
- * internally, only that it publishes nothing we can check. The mint
- * reconciliation vocabulary (`continuous | periodic | not-applicable |
- * unknown`) has no member for "established that none occurs", and inventing
- * one would assert more than the evidence carries.
+ * internally, only that it publishes nothing we can check. MINT-LADDER 9.32
+ * (2026-08-21) adds explicit reviewed `"none"` reconciliation; unlike this
+ * inference helper, `adaptMintReview` passes that reviewed value through
+ * alongside the other non-unknown cadences.
  */
 export function hasPublishedReserveReconciliationEvidence(
   proof: StablecoinMeta["proofOfReserves"] | undefined,
@@ -1140,10 +1149,24 @@ function adaptMintReview(
           ? "periodic"
           : "unknown"
         : "not-applicable";
-  // A reviewed reconciliation cadence supersedes the inferred one; absent or
-  // "unknown" keeps the inference (fail-closed inertness).
+  // A reviewed reconciliation cadence supersedes the inferred one; an ABSENT
+  // field keeps the inference (fail-closed inertness). MINT-LADDER 9.32
+  // (2026-08-21): reviewed "none" is intentionally passed through here, and a
+  // reviewer's EXPLICIT "unknown" on a reviewed non-issuer-backend mint control
+  // now also passes through instead of being swallowed by the not-applicable
+  // inference — the reviewer looked and could not establish a cadence, which is
+  // limited evidence (the 9.27 scoped-question doctrine), priced at the
+  // unbounded-reconciliation-unknown rung rather than the confirmed floor.
+  // Issuer-backend, inherited-share-fallback, and absent-mint-control paths
+  // keep the inference: PoR evidence may establish "periodic" for a backend
+  // minter, a share wrapper's cadence is structurally not-applicable by the
+  // wrapper convention, and a missing control is not a cadence finding.
   const reconciliation =
-    profile.reconciliation && profile.reconciliation !== "unknown" ? profile.reconciliation : inferredReconciliation;
+    profile.reconciliation && profile.reconciliation !== "unknown"
+      ? profile.reconciliation
+      : profile.reconciliation === "unknown" && directMintControl !== null && !issuerBackendMint
+        ? "unknown"
+        : inferredReconciliation;
   const immutableWithoutMint = mintControl === null && upgrade.state === "immutable";
   // A reviewed no-local-issuance exception is a measured fact, not missing data: the
   // product genuinely holds no canonical issuance authority. It is granted only when

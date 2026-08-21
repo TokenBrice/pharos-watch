@@ -27,7 +27,7 @@ const UNATTESTED_EOA_PENALTY =
  *   self-reported / concentrated custodian / open legal events             => <=55
  *   any graded fact unknown                                                => current conservative value
  *     (unbounded-reconciled/concentrated-admin 55, unbounded-or-compromised 25,
- *      unknown posture 45)
+ *      unbounded-reconciliation-unknown 35, collateral-gated 50, unknown posture 45)
  *
  * The ACTIVE table pins the conservative values and the "must NOT lift" guards
  * for TUSD-shaped and USDD-shaped fixtures — they must pass before AND after
@@ -162,12 +162,27 @@ describe("R4 conservative fallback — active (TUSD/USDD shapes must NOT lift)",
     expect(result.score).toBe(45 - UNATTESTED_EOA_PENALTY);
   });
 
-  it("keeps unreconciled/self-reported unbounded mints at 25 (USDD-shaped)", () => {
+  it("splits unreconciled unbounded mints by reconciliation evidence (9.32)", () => {
+    // Confirmed absence of reconciliation (none / not-applicable) stays on the
+    // floor. Unknown reconciliation is a distinct exposed rung at 35 — above the
+    // floor, below unknown-everything (45). Prudential supervision still counts
+    // as reconciled even when cadence is unknown.
+    for (const reconciliation of ["none", "not-applicable"] as const) {
+      for (const supervision of ["none", "unknown", "attestation-only"] as const) {
+        const result = mintComponentScore(mintControl(), supervision, reconciliation);
+        expect(result.posture, `${supervision}/${reconciliation}`).toBe("unbounded-or-compromised");
+        expect(result.score, `${supervision}/${reconciliation}`).toBe(25);
+      }
+    }
     for (const supervision of ["none", "unknown", "attestation-only"] as const) {
       const result = mintComponentScore(mintControl(), supervision, "unknown");
-      expect(result.posture, supervision).toBe("unbounded-or-compromised");
-      expect(result.score, supervision).toBe(25);
+      expect(result.posture, supervision).toBe("unbounded-reconciliation-unknown");
+      // EOA key-custody penalty floors at the adverse rung (25), so 35-3 = 32.
+      expect(result.score, supervision).toBe(35 - UNATTESTED_EOA_PENALTY);
     }
+    const prudentialUnknown = mintComponentScore(mintControl(), "prudential", "unknown");
+    expect(prudentialUnknown.posture).toBe("unbounded-reconciled");
+    expect(prudentialUnknown.score).toBe(55 - UNATTESTED_EOA_PENALTY);
   });
 
   it("keeps unresolved-supervision reconciled mints at the flat conservative 55", () => {
@@ -348,6 +363,10 @@ describe("R4 ruled grading table — Stage B", () => {
       openLegalEvents: "none",
     };
     expect(gradeV9MintControlPosture!("unbounded-or-compromised", benign)).toBe(25);
+    // 9.32 exposed/concentrated refinements stay at their quality pins under
+    // Stage B grading — graded facts refine reconciled postures, not these rungs.
+    expect(gradeV9MintControlPosture!("unbounded-reconciliation-unknown", benign)).toBe(35);
+    expect(gradeV9MintControlPosture!("collateral-gated", benign)).toBe(50);
   });
 
   it("grades the supervision x reconciliation slice through the existing evaluation seam", () => {
