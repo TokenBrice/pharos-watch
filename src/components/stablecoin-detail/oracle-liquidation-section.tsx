@@ -6,7 +6,7 @@ import { CollapsibleProse } from "@/components/stablecoin-detail/collapsible-pro
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -123,7 +123,7 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
   return (
     <Card id="oracle" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{summary.title}</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>{summary.title}</StablecoinModuleTitle>
         <Badge variant="outline" className={cn("text-[11px] font-medium", summary.tierToneClass)}>
           {summary.tierLabel}
         </Badge>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Flame } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
@@ -83,9 +83,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
     return (
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader>
-          <DetailSectionTitle as="h3" className={DETAIL_MODULE_TITLE_CLASS}>
+          <StablecoinModuleTitle as="h3" className={DETAIL_MODULE_TITLE_CLASS}>
             Mint &amp; Burn Flows
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
         </CardHeader>
         <CardContent>
           <QueryStateNotice state="unavailable" label="Mint and burn flow data" onRetry={() => void query.refetch()} />
@@ -129,9 +129,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-4 sm:px-5">
-        <DetailSectionTitle as="h3" className={DETAIL_MODULE_TITLE_CLASS}>
+        <StablecoinModuleTitle as="h3" className={DETAIL_MODULE_TITLE_CLASS}>
           Mint &amp; Burn Flows
-        </DetailSectionTitle>
+        </StablecoinModuleTitle>
         <div className="flex items-center gap-2">
         <FreshnessIndicator
           compact

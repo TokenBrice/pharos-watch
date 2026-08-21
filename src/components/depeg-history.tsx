@@ -11,7 +11,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { TableCell, TableRow } from "@/components/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -58,7 +58,7 @@ function DepegHistoryShell({ children }: { children: ReactNode }) {
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Depeg History</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Depeg History</StablecoinModuleTitle>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         <p className="text-sm text-muted-foreground">{DEPEG_HISTORY_DESCRIPTION}</p>

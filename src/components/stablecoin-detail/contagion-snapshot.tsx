@@ -8,7 +8,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CollateralUsageSection } from "./collateral-usage-section";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -109,7 +109,7 @@ export function ContagionSnapshot({
   return (
     <section className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency Context</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency Context</StablecoinModuleTitle>
       </div>
       <div className={DETAIL_MODULE_BODY_CLASS}>
         {sourceError ? (

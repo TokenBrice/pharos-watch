@@ -60,7 +60,7 @@ The gradient runs Discovery → Analytics → Power-user. Drift between adjacent
 
 Every scored/evidence module on `/stablecoin/[id]/` compiles to one shape (owner decisions, 2026-08-08):
 
-- **Header**: `DETAIL_MODULE_*` constants + `DetailSectionTitle` with `MethodologyLabel`; right slot order is score (`ScorePill`) → status chip → freshness (`FreshnessIndicator`).
+- **Header**: `DETAIL_MODULE_*` constants + `StablecoinModuleTitle` with `MethodologyLabel`; the title lockup is coin icon → ticker → module title so standalone screenshots retain their subject. Right slot order is score (`ScorePill`) → status chip → freshness (`FreshnessIndicator`). Recommendation and cross-coin modules that are not about the current asset keep an ordinary `DetailSectionTitle`.
 - **Summary layer** (always visible): verdict line, bounded-vocabulary facts (`FactGrid`, the hero passport grammar), at most one primary visual, and **current-state** callouts only.
 - **Detail layer**: breakdowns, tables, long prose, and historical incidents fold behind `ModuleDisclosure` (named labels, native `<details>`), collapsed by default **at every breakpoint** — desktop included. The one sanctioned auto-open is the weakest Safety Score pillar at `lg+`.
 - **Footer**: `EvidenceFooter` — one line of methodology links, folded `Sources (N)` (collapsed everywhere, kept in the DOM for crawlers), right-aligned reviewed/updated stamp.

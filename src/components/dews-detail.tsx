@@ -14,7 +14,7 @@ import { CHART_PALETTE, THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart
 const DEWS_CHART_HEX = CHART_PALETTE[0];
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   ChartAreaGradient,
   DateTooltip,
@@ -171,9 +171,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     return (
       <Card className="animate-pulse">
         <CardHeader>
-          <DetailSectionTitle>
+          <StablecoinModuleTitle>
             <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
         </CardHeader>
         <CardContent>
           <div className="h-32 bg-muted rounded" />
@@ -190,9 +190,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     return (
       <Card>
         <CardHeader>
-          <DetailSectionTitle>
+          <StablecoinModuleTitle>
             <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
@@ -227,9 +227,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           lead beneath the title. */}
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
         <div className="min-w-0 space-y-4">
-          <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+          <StablecoinModuleTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
             Depeg Early Warning
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
           <ScoreBadgeWrapper topic="dews" variant="tooltip-only">
             <span className="flex items-center gap-2.5">
               <span className="pharos-numeric text-3xl font-extrabold leading-none tabular-nums">{score}</span>

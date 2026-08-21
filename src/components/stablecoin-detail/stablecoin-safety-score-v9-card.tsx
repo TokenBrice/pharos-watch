@@ -10,7 +10,6 @@ import {
   Table2,
 } from "lucide-react";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -20,7 +19,7 @@ import { AccessPosturePanel } from "@/components/stablecoin-detail/access-postur
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_HEADER_CLASS,
   DETAIL_MODULE_SHELL_CLASS,
@@ -635,23 +634,13 @@ export function StablecoinSafetyScoreV9Card({
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS} data-safety-model="v9">
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        {/* One inline lockup — logo · ticker · module title (owner call): this is
-            the site's most-screenshotted module, so it names its subject on the
-            same line rather than stacking a second identity row. */}
-        <div className="flex min-w-0 items-center gap-2">
-          {stablecoinSymbol ? (
-            <>
-              <StablecoinLogo src={logoSrc} name={stablecoinSymbol} size={26} />
-              <span className="truncate text-sm font-semibold text-foreground">{stablecoinSymbol}</span>
-              <span className="text-muted-foreground/50" aria-hidden="true">
-                ·
-              </span>
-            </>
-          ) : null}
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
-            Safety Score
-          </DetailSectionTitle>
-        </div>
+        <StablecoinModuleTitle
+          className={DETAIL_MODULE_TITLE_CLASS}
+          symbol={stablecoinSymbol}
+          logoSrc={logoSrc}
+        >
+          Safety Score
+        </StablecoinModuleTitle>
         <HeaderActions updatedAtMs={updatedAtMs} />
       </CardHeader>
       <CardContent className="px-0 py-0">

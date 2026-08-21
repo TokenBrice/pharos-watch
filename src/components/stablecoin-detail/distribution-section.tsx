@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
 import type { PieSectorDataItem } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -180,7 +180,7 @@ function DonutCard({
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</StablecoinModuleTitle>
         {headerEnd}
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-3")}>
@@ -260,7 +260,7 @@ function DistributionUnavailableCard({
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</StablecoinModuleTitle>
       </CardHeader>
       <CardContent className={DETAIL_MODULE_BODY_CLASS}>
         <QueryStateNotice state="unavailable" label={label} onRetry={onRetry} />
@@ -273,7 +273,7 @@ function DonutCardSkeleton({ title }: { title: ReactNode }) {
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</StablecoinModuleTitle>
       </CardHeader>
       <CardContent className={DETAIL_MODULE_BODY_CLASS}>
         <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
@@ -394,7 +394,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Liquidity by Protocol</DetailSectionTitle>
+          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Liquidity by Protocol</StablecoinModuleTitle>
         </CardHeader>
         <CardContent className={DETAIL_MODULE_BODY_CLASS}>
           <div className="rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground">

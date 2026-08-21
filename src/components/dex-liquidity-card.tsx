@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -96,9 +96,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="liquidityScore">DEX market liquidity</MethodologyLabel>
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
         </CardHeader>
         <CardContent className={DETAIL_MODULE_BODY_CLASS}>
           <QueryStateNotice state="unavailable" label="DEX liquidity data" onRetry={() => void query.refetch()} />
@@ -126,9 +126,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+            <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
               <MethodologyLabel topic="liquidityScore">DEX market liquidity</MethodologyLabel>
-            </DetailSectionTitle>
+            </StablecoinModuleTitle>
             <Badge
               variant="outline"
               className={`text-[11px] ${coverageBadge.className}`}

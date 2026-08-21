@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -56,9 +56,9 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
     <section id="blacklist" className={SECTION_SCROLL_MT}>
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="blacklistTracker">Blacklist Activity</MethodologyLabel>
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
           <FreshnessIndicator
             compact
             updatedAtMs={state.dataUpdatedAt}
@@ -109,9 +109,9 @@ export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
     <section id="blacklist-history">
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="blacklistTracker">Recent Blacklist Events</MethodologyLabel>
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
         </CardHeader>
         <CardContent className={`${DETAIL_MODULE_BODY_CLASS} space-y-4`}>
           <p className="mt-1 text-sm text-muted-foreground">
