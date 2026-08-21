@@ -73,7 +73,6 @@ const FOOTER_RULE_Y = 848;
 const RAIL_WIDTH = 170;
 const FLOW_X = MARGIN_X + RAIL_WIDTH;
 const FLOW_RIGHT = WIDTH - MARGIN_X;
-const FLOW_W = FLOW_RIGHT - FLOW_X;
 const BODY_TOP = 192;
 // The headline stat owns a reserved column inside the A stratum. Reserving it
 // in layout is what stops the poster's one sentence from silently vanishing
