@@ -241,6 +241,7 @@ describe("prepareSafetyScoreV9Input", () => {
     const [, entries] = mockSetCacheMany.mock.calls[0]!;
     expect(entries.map((entry: { key: string }) => entry.key)).toEqual([
       "report-cards:fixed-input:exact",
+      "safety-score-v9:supply-attribution-source:v1",
       "report-cards:v9-peg-provenance-seed:exact",
       "safety-score-v9:transfer-materiality-generation:v1",
     ]);
@@ -263,7 +264,12 @@ describe("prepareSafetyScoreV9Input", () => {
       envelope.safetyScoreIdentity,
     );
     const observedTransferInput = mockObserveTransferMateriality.mock.calls[0]![0];
-    const transferMateriality = JSON.parse(entries[2].value) as Record<string, unknown>;
+    expect(JSON.parse(entries[1].value)).toMatchObject({
+      schemaVersion: 1,
+      kind: "safety-score-v9-supply-attribution-source",
+      activeAssetIds: [],
+    });
+    const transferMateriality = JSON.parse(entries[3].value) as Record<string, unknown>;
     expect(transferMateriality).toMatchObject({
       sourceBaseInputGenerationId:
         (envelope.safetyScoreIdentity as { baseInputGenerationId: string }).baseInputGenerationId,
@@ -303,6 +309,7 @@ describe("prepareSafetyScoreV9Input", () => {
     const [, entries] = mockSetCacheMany.mock.calls[0]!;
     expect(entries.map((entry: { key: string }) => entry.key)).toEqual([
       "report-cards:fixed-input:exact",
+      "safety-score-v9:supply-attribution-source:v1",
       "report-cards:v9-peg-provenance-seed:exact",
     ]);
     expect(result).toMatchObject({

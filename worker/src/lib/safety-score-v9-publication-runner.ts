@@ -42,6 +42,8 @@ type SafetyScoreV9PublicationFailureStage =
 export interface RunSafetyScoreV9PublicationInput {
   db: D1Database;
   fixedInput: unknown;
+  /** The cache parser already normalized this value; avoid cloning it again on the production hot path. */
+  fixedInputAlreadyNormalized?: boolean;
   prepareFixedInput?: (
     fixedInput: Readonly<SafetyScoreV9CompilerInput>,
     signal: AbortSignal,
@@ -83,28 +85,13 @@ export type SafetyScoreV9PublicationRunResult =
       message: string;
     };
 
-function fixedInputWithoutV9Enrichment(
-  input: Readonly<SafetyScoreV9CompilerInput>,
-) {
-  const {
-    safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
-    evidenceJournalById: _evidenceJournal,
-    supplyAttributionJournalById: _supplyAttributionJournal,
-    pegProvenanceById: _pegProvenance,
-    ...baseInput
-  } = input;
-  return baseInput;
-}
-
 function sameBaseInput(
   left: Readonly<SafetyScoreV9CompilerInput>,
   right: Readonly<SafetyScoreV9CompilerInput>,
 ): boolean {
   return (
     left.baseInputGenerationId === right.baseInputGenerationId &&
-    left.sourceGeneration === right.sourceGeneration &&
-    JSON.stringify(fixedInputWithoutV9Enrichment(left)) ===
-      JSON.stringify(fixedInputWithoutV9Enrichment(right))
+    left.sourceGeneration === right.sourceGeneration
   );
 }
 
@@ -376,7 +363,9 @@ export async function runSafetyScoreV9Publication(
         "Safety Score v9 publication clock must be epoch seconds",
       );
     }
-    let fixedInput = normalizeSafetyScoreV9CompilerInput(input.fixedInput);
+    let fixedInput = input.fixedInputAlreadyNormalized
+      ? input.fixedInput as SafetyScoreV9CompilerInput
+      : normalizeSafetyScoreV9CompilerInput(input.fixedInput);
     attemptedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     attemptId = `${SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX}:${attemptedAtSec}`;
 

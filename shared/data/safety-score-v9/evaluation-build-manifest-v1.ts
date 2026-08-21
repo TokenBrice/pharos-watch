@@ -517,8 +517,12 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "36c7e0f932053b37d7b027451a82a77b7e810be4ec0a22922bcdf407420b20a6"
     },
     {
+      "path": "worker/src/lib/safety-score-v9-supply-attribution-source.ts",
+      "sha256": "1999b45a97817c157ec3ad80f1938cd49d05908adc26e1e881176e140f9b1ca7"
+    },
+    {
       "path": "worker/src/lib/safety-score-v9-supply-attribution.ts",
-      "sha256": "0b0ce3d4e92384b8bc7dad52ccc277142f94de7244560381f4d3048510af865c"
+      "sha256": "32c3e1f867cc6d3868655eacc5cb59e14bd730ad34c9c65a0c3813860cec189d"
     },
     {
       "path": "worker/src/lib/safety-score-v9-wm-supply-observer.ts",
@@ -533,7 +537,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "d072c1c3f81a672c06468c7088ab5706907889d9c04024d6da6e3d21a4506208"
+  "digest": "4cd08f87298196234c413e14b73233100ece17af249bf2e8584c81f6caa7a5be"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -236,6 +236,24 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
+  it("rejects changed base content even when preparation preserves the claimed generation id", async () => {
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+      nowSec: fixedInput.clockSec,
+      prepareFixedInput: async (input) => ({
+        ...input,
+        clockSec: input.clockSec + 1,
+      }),
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "v9-enrichment",
+    });
+    expect(mocks.build).not.toHaveBeenCalled();
+  });
+
   it("records a failed attempt when compilation fails", async () => {
     mocks.build.mockImplementation(() => {
       throw new Error("compiler fixture failure");

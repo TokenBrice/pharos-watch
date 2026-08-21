@@ -28,14 +28,14 @@ import {
 import {
   observeXautRepresentationGroupSupplyAttributionAttempt,
 } from "./safety-score-v9-xaut-supply-observer";
+import {
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
+  type SafetyScoreV9SupplyAttributionInput,
+} from "./safety-score-v9-supply-attribution-source";
+
+export { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS } from "./safety-score-v9-supply-attribution-source";
 
 const LOCK_MINT_SHARE_SCALE = 10n ** 15n;
-
-export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS = Object.freeze([
-  "wm-m0",
-  XAUT_ASSET_ID,
-  ...CENTRIFUGE_BURN_MINT_ASSET_IDS,
-]);
 
 export interface LockMintSupplyPartition {
   currentSupplyUsdByChain: Record<string, number>;
@@ -59,14 +59,14 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
 }
 
 function aggregateSupplyUsd(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   assetId: string,
 ): number {
   return getCirculatingRaw(fixedInput.aggregateCirculatingById[assetId] ?? {});
 }
 
 function hasUpstreamChainSupply(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   assetId: string,
 ): boolean {
   return Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).some(
@@ -75,7 +75,7 @@ function hasUpstreamChainSupply(
 }
 
 export function safetyScoreV9SupplyAttributionExpectedAssetIds(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
 ): string[] {
   const activeAssetIds = new Set(fixedInput.activeAssetIds);
   return SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.filter(
@@ -203,7 +203,7 @@ function supplyAttributionAssetDescriptors():
 
 function buildSupplyAttributionJournalRecord(input: {
   descriptor: SupplyAttributionAssetDescriptor;
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
   attemptId: string;
   attemptedAtSec: number;
   completedAtSec: number;
@@ -257,7 +257,7 @@ function buildSupplyAttributionJournalRecord(input: {
 
 async function runSupplyAttributionAssetCapture(input: {
   descriptor: SupplyAttributionAssetDescriptor;
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   observationClockSec: (attemptedAtSec: number) => number;
@@ -322,7 +322,7 @@ async function runSupplyAttributionAssetCapture(input: {
  * row or the V8 chain map used by exact replay.
  */
 export async function captureSafetyScoreV9SupplyAttribution(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   options: SafetyScoreV9SupplyAttributionCaptureOptions = {
