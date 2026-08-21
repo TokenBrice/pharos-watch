@@ -65,6 +65,8 @@ describe("canonical V9 alert safety source", () => {
     )).toMatchObject({
       state: "corrupt",
       failureReason: "v9-publication-held",
+      heldSinceSec: current.updatedAt + 60,
+      holdReasonCodes: ["dex-stale"],
     });
     expect(assessActiveAlertSafetySource(
       { kind: "v9", snapshot: current },
@@ -159,7 +161,14 @@ describe("persisted V9 alert source envelope", () => {
         heldSinceSec: healthStatus === "held" ? response.updatedAt : null,
         reasons:
           healthStatus === "held"
-            ? [{ code: "coverage-floor-failed" as const, floorIds: ["minimum-rateable-assets"] }]
+            ? [
+                { code: "dex-stale" as const },
+                { code: "dex-unavailable" as const },
+                { code: "redemption-stale" as const },
+                { code: "redemption-unavailable" as const },
+                { code: "live-reserves-unavailable" as const },
+                { code: "coverage-floor-failed" as const, floorIds: ["minimum-rateable-assets"] },
+              ]
             : [],
       };
       const rows = new Map<string, { value: string; updated_at: number }>([
@@ -194,6 +203,14 @@ describe("persisted V9 alert source envelope", () => {
       state: "corrupt",
       envelope: null,
       failureReason: "v9-publication-held",
+      heldSinceSec: response.updatedAt,
+      holdReasonCodes: [
+        "dex-stale",
+        "dex-unavailable",
+        "redemption-stale",
+        "redemption-unavailable",
+        "live-reserves-unavailable",
+      ],
     });
   });
 
