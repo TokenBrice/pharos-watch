@@ -2,7 +2,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.0`
+- **Current methodology version:** `v6.1`
 - **Runtime/version source:** `shared/lib/methodology-versions/liquidity-score.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/liquidity-score/`
@@ -80,7 +80,7 @@ Once primary and direct pools have been projected into metrics and identity evid
 
 The consumer prefers direct-API pools over overlapping DeFiLlama pools via a conservative pool-identity model (exact pool id first, derived token-shape match second) before score computation, but only after those direct-API pools pass the shared TVL sanity gates used elsewhere in the pipeline. Direct-source precedence also requires measured non-zero 24h volume, which lets pool-state-only sources such as Slipstream expand coverage without replacing stronger overlapping DeFiLlama rows when authoritative volume telemetry is absent. The execution split changes only heap ownership and scheduling; scoring inputs, iteration order, publication fences, and methodology remain unchanged.
 
-For protocol families that already have a clean protocol-native direct fetch on that chain, staged discovery now also needs authoritative exact-id confirmation before it can contribute liquidity. That means GT/CG/DS rows cannot invent new Balancer, Fluid, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, or Velodrome pools when the native fetch completed without degradation, even if the source emitted non-degrading parser or pagination warnings; the guard deliberately fails open only when that direct source is degraded or unavailable so staged discovery can still act as recovery coverage during an upstream incident.
+For protocol families that already have a clean protocol-native direct fetch on that chain, staged discovery also needs authoritative exact-id confirmation before it can contribute liquidity. The confirmation scope matches the inventory the native source actually covers: PancakeSwap v3/v4 claims are checked against its concentrated-liquidity inventory, and Aerodrome/Velodrome Slipstream claims are checked against their Slipstream inventories, while classic v2 pools remain eligible through exact-id staged discovery because those native fetchers do not enumerate them. GT/CG/DS rows therefore cannot invent pools inside a clean authoritative family, even when the source emitted non-degrading parser or pagination warnings; the guard deliberately fails open only when that family source is degraded or unavailable so staged discovery can still act as recovery coverage during an upstream incident. Full-family native sources such as Balancer, Fluid, Raydium, Orca, and Meteora continue to require exact confirmation across their declared chains.
 
 Dead or explicitly blocked DEX ids are excluded before they can become pool contributions. The live runtime blocklist currently includes Retro variants and Bunni variants, and those blocked venues are also ignored again during retained-pool filtering, challenger publication, and `dex_prices` publication for defense in depth.
 

@@ -9,6 +9,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // are newest-first by version.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.1",
+    title: "Family-scoped authoritative confirmation for classic v2 pools",
+    date: "2026-08-21",
+    effectiveAt: 1787270400,
+    summary:
+      "Authoritative staged-pool confirmation now follows the exact protocol family enumerated by each native source, so Slipstream-only inventories no longer veto classic Aerodrome or Velodrome v2 pools outside their coverage.",
+    impact: [
+      "Aerodrome and Velodrome staged pools identified as Slipstream or concentrated liquidity still require an exact id from the clean protocol-native Slipstream inventory",
+      "Classic v2 Aerodrome and Velodrome pools remain eligible through exact-address CoinGecko Onchain, GeckoTerminal, or DexScreener discovery because the native Slipstream fetchers do not enumerate those pools",
+      "Full-family direct inventories such as Balancer, Fluid, Raydium, Orca, and Meteora retain exact-id confirmation across every declared chain, while PancakeSwap keeps its existing v3/v4-only confirmation scope",
+      "Base Dollar's launch BD/USDC Aerodrome stableswap can therefore contribute its discovered pool TVL, volume, and price instead of being mislabeled unobserved solely because an unrelated Slipstream inventory completed cleanly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.0",
     title: "Raydium double-count correction and native measured-lane retirement",
     date: "2026-08-20",

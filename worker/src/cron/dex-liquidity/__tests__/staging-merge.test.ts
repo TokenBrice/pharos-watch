@@ -1043,6 +1043,103 @@ describe("mergeStagedPools", () => {
     ]);
   });
 
+  it("does not apply Slipstream confirmation to classic Aerodrome staged pools", async () => {
+    const now = 1710000000;
+    const poolAddress = "0xffdf1e3160b60c2e499fa25e51b5c192b9b15e3b";
+    const mockDb = createMockDb([
+      {
+        pool_id: `base:${poolAddress}`,
+        stablecoin_id: "bd-basedollar",
+        source: "cg_onchain",
+        chain: "base",
+        protocol: "aerodrome",
+        dex_id: "aerodrome-base",
+        symbol: "BD/USDC",
+        tvl_usd: 83019.74,
+        volume_24h: 27452.2,
+        quality_multiplier: 0.3,
+        pool_type: "cg-amm",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+        quote_token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        quote_symbol: "USDC",
+        price_usd: 1.0047,
+        locked_liq_pct: null,
+        discovered_at: now - 60,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      mockDb,
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+      undefined,
+      makeAuthoritativeConfirmationIndex([{ protocol: "aerodrome", chains: ["base"] }]),
+    );
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(0);
+    expect(metrics.get("bd-basedollar")?.topPools[0]).toMatchObject({
+      poolId: `base:${poolAddress}`,
+      project: "aerodrome",
+    });
+  });
+
+  it("still requires exact confirmation for staged Aerodrome Slipstream pools", async () => {
+    const now = 1710000000;
+    const poolAddress = "0x1111111111111111111111111111111111111111";
+    const mockDb = createMockDb([
+      {
+        pool_id: `base:${poolAddress}`,
+        stablecoin_id: "bd-basedollar",
+        source: "cg_onchain",
+        chain: "base",
+        protocol: "aerodrome",
+        dex_id: "aerodrome-slipstream",
+        symbol: "BD/USDC",
+        tvl_usd: 100000,
+        volume_24h: 30000,
+        quality_multiplier: 0.7,
+        pool_type: "cg-cl-1bp",
+        fee_tier: 1,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+        quote_token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        quote_symbol: "USDC",
+        price_usd: 1.0047,
+        locked_liq_pct: null,
+        discovered_at: now - 60,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      mockDb,
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+      undefined,
+      makeAuthoritativeConfirmationIndex([{ protocol: "aerodrome", chains: ["base"] }]),
+    );
+
+    expect(result.mergedCount).toBe(0);
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(1);
+    expect(metrics.size).toBe(0);
+    expect(result.skipDimensions).toContainEqual({
+      reason: "authoritative_confirmation_missing",
+      protocol: "aerodrome",
+      chain: "base",
+      count: 1,
+    });
+  });
+
   it("fails open for staged pools when authoritative confirmation is unavailable", async () => {
     const now = 1710000000;
     const confirmedBalancerPool = "0x01e2c7fcde2b8d5d1413732c4e274ba5b06b1e54";
