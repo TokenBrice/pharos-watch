@@ -224,6 +224,25 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     });
   });
 
+  it("rejects a wall-clock capture floor before the exact source clock", async () => {
+    await expect(
+      captureSafetyScoreV9SupplyAttribution(
+        xautFixedInput(),
+        chainRpcs(),
+        undefined,
+        {
+          clockMode: "wall",
+          notBeforeSec: OBSERVED_AT_SEC - 1,
+        },
+      ),
+    ).rejects.toThrow(
+      "Supply attribution capture floor must be a safe integer at or after its exact base-input clock",
+    );
+    expect(
+      rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt,
+    ).not.toHaveBeenCalled();
+  });
+
   it("partitions aggregate XAUT without double-counting its XAUt0 lockbox", () => {
     const partition = deriveLockMintSupplyPartition({
       aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
@@ -339,6 +358,15 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
         },
       },
     };
+
+    expect(
+      safetyScoreV9ChainRows(fixedInput, "xaut-tether"),
+    ).toEqual({
+      Ethereum: { current: XAUT_AGGREGATE_SUPPLY_USD * 0.96 },
+      "XAUt0 lock-mint pool": {
+        current: XAUT_AGGREGATE_SUPPLY_USD * 0.04,
+      },
+    });
 
     expect(
       safetyScoreV9ChainSupplyObservedAtSec(

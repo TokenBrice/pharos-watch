@@ -75,6 +75,7 @@ const cronMocks = vi.hoisted(() => ({
       },
     }),
   })),
+  runDexExitRouteTurnoverWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldSupplemental: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncBluechip: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -295,6 +296,9 @@ vi.mock("../cron/dex-liquidity/orchestrator", () => ({
   stageDexLiquidityScoring: cronMocks.stageDexLiquidityScoring,
   consumeDexLiquidityScoringStage: cronMocks.consumeDexLiquidityScoringStage,
   reuseCurrentDexLiquidityScoringGeneration: cronMocks.reuseCurrentDexLiquidityScoringGeneration,
+}));
+vi.mock("../cron/dex-exit-route-turnover-watchdog", () => ({
+  runDexExitRouteTurnoverWatchdog: cronMocks.runDexExitRouteTurnoverWatchdog,
 }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
 vi.mock("../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronMocks.syncYieldSupplemental }));

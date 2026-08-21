@@ -779,6 +779,121 @@ describe("Safety Score v9 economic control", () => {
     expect(centralizedMint(compromised)).toMatchObject({ severity: "critical" });
   });
 
+  it("derives unbounded-reconciliation-unknown for unknown cadence without prudential supervision (9.32)", () => {
+    const mintControl = control("mint:unknown-recon", "mint", {
+      authority: { authorityKey: "authority:issuer", model: "issuer-backend", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded",
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: facts([mintControl]),
+        mint: {
+          status: requiredKnown("mint"),
+          controlKey: mintControl.controlKey,
+          reconciliation: "unknown",
+          supervision: "none",
+          upgrade: { state: "immutable", controlKey: null },
+        },
+      }),
+    );
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "unbounded-reconciliation-unknown",
+      score: 35,
+    });
+    expect(result.structuralFailures.find((failure) => failure.kind === "centralized-mint")).toMatchObject({
+      severity: "high",
+      reason: "Minting is economically unbounded and its reconciliation is unverified.",
+    });
+  });
+
+  it("derives collateral-gated posture from verified collateral-gated cap semantics (9.32)", () => {
+    const mintControl = control("mint:collateral-gated", "mint", {
+      authority: { authorityKey: "authority:admin", model: "issuer-backend", threshold: null },
+      capSemantics: { kind: "collateral-gated", bound: null },
+      claimImpairment: "bounded",
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: facts([mintControl]),
+        mint: {
+          status: requiredKnown("mint"),
+          controlKey: mintControl.controlKey,
+          reconciliation: "not-applicable",
+          supervision: "none",
+          upgrade: { state: "immutable", controlKey: null },
+        },
+      }),
+    );
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "collateral-gated",
+      score: 50,
+    });
+    expect(result.structuralFailures.find((failure) => failure.kind === "centralized-mint")).toMatchObject({
+      severity: "moderate",
+      reason: "Minting is collateral-gated behind a privileged administrator surface.",
+    });
+  });
+
+  it("applies adverse-rung seasoning under the 9.32 ceiling rules", () => {
+    const unboundedControl = control("mint:adverse-seasoned", "mint", {
+      authority: { authorityKey: "authority:issuer", model: "issuer-backend", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded",
+      incidentState: "none",
+    });
+    const mintReview = (
+      reconciliation: V9MintMechanismReview["reconciliation"],
+      controlKey: string,
+    ): V9MintMechanismReview => ({
+      status: requiredKnown("mint"),
+      controlKey,
+      reconciliation,
+      supervision: "none",
+      upgrade: { state: "immutable", controlKey: null },
+    });
+    const mintScore = (
+      controlFact: V9DeploymentControlFactV2,
+      reconciliation: V9MintMechanismReview["reconciliation"],
+      trackRecordMonths: number,
+    ) => {
+      const result = evaluateV9EconomicControl(
+        args({
+          facts: facts([controlFact]),
+          mint: mintReview(reconciliation, controlFact.controlKey),
+          trackRecordMonths,
+        }),
+      );
+      const component = result.components.find((entry) => entry.kind === "mint");
+      if (!component) throw new Error("mint component missing");
+      return { posture: component.posture, score: component.score };
+    };
+
+    // Floor rung: 25+10 under the dedicated adverse ceiling 39 → 35.
+    expect(mintScore(unboundedControl, "not-applicable", 61)).toMatchObject({
+      posture: "unbounded-or-compromised",
+      score: 35,
+    });
+    // Below the min-months gate: no credit.
+    expect(mintScore(unboundedControl, "not-applicable", 59)).toMatchObject({
+      posture: "unbounded-or-compromised",
+      score: 25,
+    });
+    // Active compromise stays ineligible even with a long track record.
+    expect(
+      mintScore({ ...unboundedControl, incidentState: "active" }, "not-applicable", 61),
+    ).toMatchObject({
+      posture: "unbounded-or-compromised",
+      score: 25,
+    });
+    // Unknown-reconciliation rung uses the generic next-rung-minus-one ceiling
+    // (35+10 capped one under unknown 45 → 44).
+    expect(mintScore(unboundedControl, "unknown", 61)).toMatchObject({
+      posture: "unbounded-reconciliation-unknown",
+      score: 44,
+    });
+  });
+
   it("bounds a stale material control with a non-critical reason instead of failing closed", () => {
     const staleMintControl = control("mint:stale", "mint", { status: stale("mint-control") });
     const result = evaluateV9EconomicControl(

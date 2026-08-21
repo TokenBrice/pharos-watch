@@ -1,7 +1,3 @@
-import {
-  NATIVE_V9_INPUT_CACHE_KEY,
-  parseNativeV9InputCacheArtifact,
-} from "../lib/safety-score-v9-native-input";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
@@ -15,6 +11,11 @@ import {
 import {
   captureSafetyScoreV9SupplyAttribution,
 } from "../lib/safety-score-v9-supply-attribution";
+import {
+  parseSafetyScoreV9SupplyAttributionSource,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
+  type SafetyScoreV9SupplyAttributionSource,
+} from "../lib/safety-score-v9-supply-attribution-source";
 import {
   createSafetyScoreV9SupplyAttributionGeneration,
   isSafetyScoreV9SupplyAttributionGenerationCompatible,
@@ -46,10 +47,12 @@ export async function syncSafetyScoreV9SupplyAttribution(
   const startedAtSec = Math.floor(Date.now() / 1_000);
   throwIfAborted(signal);
   const caches = await getCaches(db, [
-    NATIVE_V9_INPUT_CACHE_KEY,
+    SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   ]);
-  const sourceCache = caches.get(NATIVE_V9_INPUT_CACHE_KEY);
+  const sourceCache = caches.get(
+    SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
+  );
   if (!sourceCache) {
     return {
       status: "degraded",
@@ -65,9 +68,9 @@ export async function syncSafetyScoreV9SupplyAttribution(
     };
   }
 
-  let sourceArtifact: Awaited<ReturnType<typeof parseNativeV9InputCacheArtifact>>;
+  let fixedInput: SafetyScoreV9SupplyAttributionSource;
   try {
-    sourceArtifact = await parseNativeV9InputCacheArtifact(sourceCache.value);
+    fixedInput = parseSafetyScoreV9SupplyAttributionSource(sourceCache.value);
   } catch (error) {
     return {
       status: "degraded",
@@ -86,7 +89,6 @@ export async function syncSafetyScoreV9SupplyAttribution(
       },
     };
   }
-  const fixedInput = sourceArtifact.input;
   if (
     fixedInput.clockSec > startedAtSec ||
     startedAtSec - fixedInput.clockSec > SOURCE_FIXED_INPUT_MAX_AGE_SEC

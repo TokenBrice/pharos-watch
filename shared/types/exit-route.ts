@@ -156,7 +156,26 @@ export const ExitRouteObservationHistorySchema = z
 export type ExitRouteObservationHistory = z.infer<typeof ExitRouteObservationHistorySchema>;
 
 export const MAX_EXIT_ROUTE_COMMON_MODE_KEYS = 16;
-export const MAX_DEX_EXIT_ROUTE_OBSERVATIONS = 10;
+/**
+ * Bounded public route payload per surface.
+ *
+ * Raised from 10 on the 2026-08-21 exit-stability pass. At 10 slots the three
+ * anchor surfaces (`usdc-circle` 977 capability pools, `usdt-tether` 488,
+ * `dai-makerdao` 73) published a tenth of their evidence, so one measured route
+ * losing eligibility swapped 10% of the capacity basis and moved the composite
+ * by ~9 points — which the dependency graph then propagated to every surface
+ * backed by them. Widening the payload makes each individual slot a smaller
+ * share of the basis, so ordinary producer churn no longer re-grades an anchor.
+ *
+ * A flat bound rather than a per-coin tier is deliberate: measured against the
+ * live surface only those three coins reach 10 (nothing else exceeds 7), so a
+ * tier keyed on capability count would add a second fluctuating input — the
+ * budget itself — to the instability this pass exists to remove.
+ *
+ * Cost is bounded: observations serialize at ~1.8KB, so the widened ceiling adds
+ * at most ~75KB across the whole published dataset.
+ */
+export const MAX_DEX_EXIT_ROUTE_OBSERVATIONS = 24;
 
 const ExitRouteObservationBaseSchema = z.object({
   routeId: z.string().min(1),

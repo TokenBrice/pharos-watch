@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Info } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_HEADER_CLASS,
   DETAIL_MODULE_SHELL_CLASS,
@@ -128,9 +128,9 @@ export function PegStabilityCard({
   return (
     <Card id="mechanism" className={cn(DETAIL_MODULE_SHELL_CLASS, "scroll-mt-24")}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
           Peg Stability
-        </DetailSectionTitle>
+        </StablecoinModuleTitle>
         {/* Header info affordance (Figma coin template) → mechanism explainer. */}
         {effectiveArchetype != null ? (
           <Link

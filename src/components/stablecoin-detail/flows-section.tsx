@@ -1,7 +1,7 @@
 "use client";
 
 import { FlowEventFeed } from "@/components/flow-event-feed";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -36,9 +36,9 @@ export function FlowHistorySection({ stablecoinId }: FlowHistorySectionProps) {
     <section id="flow-history">
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flow History</MethodologyLabel>
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
         </CardHeader>
         <CardContent className={`${DETAIL_MODULE_BODY_CLASS} space-y-4`}>
           <p className="mt-1 text-sm text-muted-foreground">

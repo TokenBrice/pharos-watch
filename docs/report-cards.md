@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.31`
+- **Current methodology version:** `v9.33`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus the versioned score-bearing gate projection in `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -91,7 +91,7 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
   return (
     <Card id="ddr-track-record" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>DDR track record</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>DDR track record</StablecoinModuleTitle>
         <Badge variant="outline" className={cn("text-[11px] font-medium", record.chipToneClass)}>
           {record.chipLabel}
         </Badge>

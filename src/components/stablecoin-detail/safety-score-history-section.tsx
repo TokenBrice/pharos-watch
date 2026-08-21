@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -150,9 +150,9 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
           <MethodologyLabel topic="safetyScore">Grade History</MethodologyLabel>
-        </DetailSectionTitle>
+        </StablecoinModuleTitle>
         {meta?.updatedAt != null && meta.updatedAt > 0 ? (
           <FreshnessIndicator
             compact

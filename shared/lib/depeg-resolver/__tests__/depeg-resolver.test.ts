@@ -97,6 +97,16 @@ describe("structuralClass", () => {
     ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-or-compromised" })));
   });
 
+  it("keeps 9.32 exposed/concentrated refinements fragile without relaxing DDR", () => {
+    // Finer vocabulary must never relax a verdict: both new postures join the
+    // fragile set; only unbounded-reconciliation-unknown also joins unbounded.
+    expect(structuralClass(coin({ authorityPosture: "unbounded-reconciliation-unknown" }))).toBe("fragile");
+    expect(structuralClass(coin({ authorityPosture: "collateral-gated" }))).toBe(
+      structuralClass(coin({ authorityPosture: "concentrated-admin" })),
+    );
+    expect(structuralClass(coin({ authorityPosture: "collateral-gated" }))).toBe("fragile");
+  });
+
   it("reads none-resolved-mint as benign but not as structurally robust", () => {
     // The mint-scoped value states only that *this* asset has no minter. It is
     // therefore not a fragile posture — it must not by itself force fragile the

@@ -786,7 +786,9 @@ const V9MintMechanismReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     controlKey: CanonicalTextSchema.nullable(),
-    reconciliation: z.enum(["continuous", "periodic", "not-applicable", "unknown"]),
+    // MINT-LADDER 9.32 (2026-08-21): `none` records a reviewer-confirmed
+    // absence of any reconciliation regime, distinct from unverified `unknown`.
+    reconciliation: z.enum(["continuous", "periodic", "none", "not-applicable", "unknown"]),
     // Prudential supervision is a reviewed fact, never inferred. Under R3 a
     // reconciled unbounded mint emits no centralized-mint cap only when a
     // per-coin review establishes a prudential supervisory regime; unknown
@@ -808,13 +810,12 @@ const V9MintMechanismReviewV2Schema = z
         ctx.addIssue({ code: "custom", message: "Not-applicable mint review cannot claim mint facts" });
       }
     }
-    if (
-      review.status.observationState === "known" &&
-      review.status.applicability.state === "required" &&
-      review.reconciliation === "unknown"
-    ) {
-      ctx.addIssue({ code: "custom", path: ["reconciliation"], message: "Known mint review needs reconciliation" });
-    }
+    // MINT-LADDER 9.32 (2026-08-21): a known, required mint review MAY carry
+    // reconciliation "unknown" — a reviewer's explicit could-not-establish
+    // finding on a direct mint control is a priceable measured state (the
+    // unbounded-reconciliation-unknown rung), no longer a compiler bug the
+    // schema needs to reject. Issuer-backend unknowns still compile as
+    // bounded-unknown reviews, so they never reach this shape.
   });
 
 const V9OracleBranchKindV2Schema = z.enum([

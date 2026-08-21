@@ -5,6 +5,11 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { buildNativeSafetyScoreV9Capture } from "../lib/safety-score-v9-capture";
 import { buildNativeV9InputCacheEntry } from "../lib/safety-score-v9-native-input";
+import {
+  buildSafetyScoreV9SupplyAttributionSource,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
+  serializeSafetyScoreV9SupplyAttributionSource,
+} from "../lib/safety-score-v9-supply-attribution-source";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import {
@@ -173,6 +178,10 @@ export async function prepareSafetyScoreV9Input(
     publicationGenerationId,
   });
   const inputEntry = await buildNativeV9InputCacheEntry(input, safetyScoreIdentity);
+  const supplyAttributionSourceValue =
+    serializeSafetyScoreV9SupplyAttributionSource(
+      buildSafetyScoreV9SupplyAttributionSource(input),
+    );
   let v9SeedEntry:
     ReturnType<typeof buildSafetyScoreV9PegProvenanceSeedCacheEntry> | null =
     null;
@@ -256,6 +265,10 @@ export async function prepareSafetyScoreV9Input(
     db,
     [
       inputEntry,
+      {
+        key: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
+        value: supplyAttributionSourceValue,
+      },
       ...(v9SeedEntry ? [v9SeedEntry] : []),
       ...(transferMaterialityEntry ? [transferMaterialityEntry] : []),
     ],
@@ -290,6 +303,8 @@ export async function prepareSafetyScoreV9Input(
       redemptionStale: input.redemptionStale,
       fixedInputCacheBytes: inputEntry.storedBytes,
       fixedInputUncompressedBytes: inputEntry.uncompressedBytes,
+      supplyAttributionSourceBytes:
+        new TextEncoder().encode(supplyAttributionSourceValue).byteLength,
       safetyScoreIdentity,
       v9ExactSeed,
       transferMateriality,

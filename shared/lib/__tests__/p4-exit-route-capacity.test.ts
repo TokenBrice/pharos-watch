@@ -876,8 +876,8 @@ describe("P4 DEX exit route observations", () => {
     expect(retainedMature.observations.every(
       (observation) => observation.evidenceKind === "measured-executable-depth",
     )).toBe(true);
-    expect(run(3, 7_199).observations).toHaveLength(2);
-    const expired = run(3, 7_201);
+    expect(run(3, 10_799).observations).toHaveLength(2);
+    const expired = run(3, 10_801);
     expect(expired.observations).toEqual([]);
     expect(expired.coverage.unsupportedReasons["invalidMeasuredExecution:stale-profile"]).toBe(2);
 
@@ -1117,7 +1117,7 @@ describe("P4 DEX exit route observations", () => {
     const observedAt = 1_752_560_000;
     const cases = [
       {
-        profile: measuredProfile(observedAt - 7_201),
+        profile: measuredProfile(observedAt - 10_801),
         extra: {},
         reason: "invalidMeasuredExecution:stale-profile",
       },
@@ -1215,19 +1215,20 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it("excludes route-selection overflow from the budget-accounting denominator only", () => {
-    // USD1-shaped surface: 283 capability pools, 10 selected and observed,
-    // 273 omitted solely by the bounded route-selection budget.
+    // USD1-shaped surface: 283 capability pools, 24 selected and observed
+    // (the full MAX_DEX_EXIT_ROUTE_OBSERVATIONS payload), 259 omitted solely by
+    // the bounded route-selection budget.
     const overflowOnlyCoverage = {
       status: "populated" as const,
       capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 283,
-      observationCount: 10,
-      scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 10,
+      observationCount: 24,
+      scoreEligibleObservationCount: 24,
+      scoreEligiblePoolCount: 24,
       scoreEligibleCapabilityPoolCount: 283,
-      unsupportedPoolCount: 273,
-      evidenceCounts: { "measured-executable-depth": 10 },
-      unsupportedReasons: { routeObservationPayloadOverflow: 273 },
+      unsupportedPoolCount: 259,
+      evidenceCounts: { "measured-executable-depth": 24 },
+      unsupportedReasons: { routeObservationPayloadOverflow: 259 },
     };
     expect(isDexExitRouteCoverageComplete(overflowOnlyCoverage)).toBe(false);
     expect(isDexExitRouteCoverageWithinRouteBudget(overflowOnlyCoverage)).toBe(true);
@@ -1254,7 +1255,11 @@ describe("P4 DEX exit route observations", () => {
     const strictComplete = {
       ...overflowOnlyCoverage,
       retainedPoolCount: 10,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 10,
       scoreEligibleCapabilityPoolCount: 10,
+      evidenceCounts: { "measured-executable-depth": 10 },
       unsupportedPoolCount: 0,
       unsupportedReasons: {},
     };
@@ -1287,12 +1292,12 @@ describe("P4 DEX exit route observations", () => {
       status: "populated" as const,
       capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 372,
-      observationCount: 10,
-      scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 10,
+      observationCount: 24,
+      scoreEligibleObservationCount: 24,
+      scoreEligiblePoolCount: 24,
       scoreEligibleCapabilityPoolCount: 277,
-      unsupportedPoolCount: 362,
-      evidenceCounts: { "reserve-based-amm-simulation": 7, "measured-executable-depth": 3 },
+      unsupportedPoolCount: 348,
+      evidenceCounts: { "reserve-based-amm-simulation": 17, "measured-executable-depth": 7 },
       unsupportedReasons: {
         "executionCapabilityGate:measured-execution:activation-pending": 2,
         "executionCapabilityGate:measured-execution:quote-failed": 8,
@@ -1302,7 +1307,7 @@ describe("P4 DEX exit route observations", () => {
         "executionCapabilityGate:raydium-amm:incomplete-exact-capture": 1,
         "nonExecutableEvidence:defillama-pool-shaped": 8,
         "nonExecutableEvidence:discovery-pool-shaped": 87,
-        routeObservationPayloadOverflow: 245,
+        routeObservationPayloadOverflow: 231,
       },
     };
     expect(ExitRouteObservationCoverageSchema.safeParse(producerCoverage).success).toBe(true);
@@ -1320,7 +1325,7 @@ describe("P4 DEX exit route observations", () => {
       unsupportedReasons: {
         "nonExecutableEvidence:defillama-pool-shaped": 8,
         "nonExecutableEvidence:discovery-pool-shaped": 87,
-        routeObservationPayloadOverflow: 267,
+        routeObservationPayloadOverflow: 253,
       },
     };
     expect(ExitRouteObservationCoverageSchema.safeParse(gatesClearedCoverage).success).toBe(true);
@@ -1349,17 +1354,17 @@ describe("P4 DEX exit route observations", () => {
       status: "populated" as const,
       capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 372,
-      observationCount: 10,
-      scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 10,
+      observationCount: 24,
+      scoreEligibleObservationCount: 24,
+      scoreEligiblePoolCount: 24,
       scoreEligibleCapabilityPoolCount: 277,
-      unsupportedPoolCount: 362,
-      evidenceCounts: { "reserve-based-amm-simulation": 7, "measured-executable-depth": 3 },
+      unsupportedPoolCount: 348,
+      evidenceCounts: { "reserve-based-amm-simulation": 17, "measured-executable-depth": 7 },
       unsupportedReasons: {
         "executionCapabilityGate:measured-execution:budget-deferred": 3,
         "nonExecutableEvidence:defillama-pool-shaped": 8,
         "nonExecutableEvidence:discovery-pool-shaped": 87,
-        routeObservationPayloadOverflow: 264,
+        routeObservationPayloadOverflow: 250,
       },
     };
     expect(ExitRouteObservationCoverageSchema.safeParse(rotationDeferredCoverage).success).toBe(true);
@@ -1376,7 +1381,7 @@ describe("P4 DEX exit route observations", () => {
           "executionCapabilityGate:measured-execution:quote-failed": 3,
           "nonExecutableEvidence:defillama-pool-shaped": 8,
           "nonExecutableEvidence:discovery-pool-shaped": 87,
-          routeObservationPayloadOverflow: 264,
+          routeObservationPayloadOverflow: 250,
         },
       }),
     ).toBe(true);
@@ -1387,12 +1392,12 @@ describe("P4 DEX exit route observations", () => {
       status: "populated" as const,
       capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 1307,
-      observationCount: 10,
-      scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 10,
+      observationCount: 24,
+      scoreEligibleObservationCount: 24,
+      scoreEligiblePoolCount: 24,
       scoreEligibleCapabilityPoolCount: 802,
-      unsupportedPoolCount: 1297,
-      evidenceCounts: { "measured-executable-depth": 10 },
+      unsupportedPoolCount: 1283,
+      evidenceCounts: { "measured-executable-depth": 24 },
       unsupportedReasons: {
         "executionCapabilityGate:constant-product-v2:incomplete-exact-capture": 13,
         "executionCapabilityGate:measured-execution:target-unresolved": 461,
@@ -1409,7 +1414,7 @@ describe("P4 DEX exit route observations", () => {
         "nonExecutableEvidence:direct-api-amm-shaped": 1,
         "nonExecutableEvidence:defillama-pool-shaped": 224,
         invalidRetainedPool: 2,
-        routeObservationPayloadOverflow: 171,
+        routeObservationPayloadOverflow: 157,
       },
     };
     expect(isDexExitRouteCoverageComplete(usdtShaped)).toBe(false);
@@ -1419,19 +1424,19 @@ describe("P4 DEX exit route observations", () => {
       status: "populated" as const,
       capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 119,
-      observationCount: 10,
-      scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 10,
+      observationCount: 24,
+      scoreEligibleObservationCount: 24,
+      scoreEligiblePoolCount: 24,
       scoreEligibleCapabilityPoolCount: 61,
-      unsupportedPoolCount: 109,
-      evidenceCounts: { "measured-executable-depth": 10 },
+      unsupportedPoolCount: 95,
+      evidenceCounts: { "measured-executable-depth": 24 },
       unsupportedReasons: {
         "executionCapabilityGate:measured-execution:quote-missing": 4,
         "executionCapabilityGate:measured-execution:target-unresolved": 19,
         "executionCapabilityGate:balancer-amm:unsupported-invariant": 2,
         "nonExecutableEvidence:defillama-pool-shaped": 50,
         "nonExecutableEvidence:discovery-pool-shaped": 8,
-        routeObservationPayloadOverflow: 26,
+        routeObservationPayloadOverflow: 12,
       },
     };
     expect(isDexExitRouteCoverageWithinRouteBudget(daiShaped)).toBe(true);

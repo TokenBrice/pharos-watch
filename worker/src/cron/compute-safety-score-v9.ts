@@ -251,6 +251,7 @@ export async function computeSafetyScoreV9(
   const publication = await runSafetyScoreV9Publication({
     db,
     fixedInput: v9SeedInput,
+    fixedInputAlreadyNormalized: true,
     transferMaterialityGeneration,
     prepareFixedInput: async (seedInput, publicationSignal) => {
       await reportProgress?.({

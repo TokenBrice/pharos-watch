@@ -283,6 +283,8 @@ export const MINT_AUTHORITY_POSTURE_VALUES = [
   "partially-bounded-admin",
   "unbounded-reconciled",
   "concentrated-admin",
+  "collateral-gated",
+  "unbounded-reconciliation-unknown",
   "unbounded-or-compromised",
   "unknown",
 ] as const;
@@ -348,10 +350,30 @@ export type MintAuthoritySafeSource = (typeof MINT_AUTHORITY_SAFE_SOURCE_VALUES)
 // optional on the profile; when absent the engine keeps its inferred/encoding
 // behavior (fail-closed inertness). Evidence lives in the profile's existing
 // review.sources — these fields do not carry their own citations.
-export const MINT_AUTHORITY_ECONOMIC_CAP_SEMANTICS_VALUES = ["unbounded", "raiseable", "bounded", "unknown"] as const;
+/**
+ * MINT-LADDER 9.32 (2026-08-21): `collateral-gated` means every live mint path
+ * requires collateral by construction;
+ * no privileged party can mint arbitrarily; any minter-authorization or
+ * mint-logic-replacement/upgrade path is absent, renounced, or behind a
+ * timelock of at least 86400 seconds. Curator-asserted with sources; anything
+ * weaker stays `unbounded`.
+ */
+export const MINT_AUTHORITY_ECONOMIC_CAP_SEMANTICS_VALUES = [
+  "unbounded",
+  "raiseable",
+  "bounded",
+  "collateral-gated",
+  "unknown",
+] as const;
 export type MintAuthorityEconomicCapSemantics = (typeof MINT_AUTHORITY_ECONOMIC_CAP_SEMANTICS_VALUES)[number];
 
-export const MINT_AUTHORITY_RECONCILIATION_VALUES = ["continuous", "periodic", "not-applicable", "unknown"] as const;
+export const MINT_AUTHORITY_RECONCILIATION_VALUES = [
+  "continuous",
+  "periodic",
+  "none",
+  "not-applicable",
+  "unknown",
+] as const;
 export type MintAuthorityReconciliation = (typeof MINT_AUTHORITY_RECONCILIATION_VALUES)[number];
 
 export const MINT_AUTHORITY_SUPERVISION_VALUES = ["prudential", "attestation-only", "none", "unknown"] as const;

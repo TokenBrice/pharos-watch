@@ -2,7 +2,7 @@
   "id": "cash-phantom",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "upgradeability": {
       "model": "custom",
@@ -176,7 +176,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
@@ -195,11 +195,15 @@
         {
           "label": "Official CASH reserve policy",
           "url": "https://www.cashstable.com/"
+        },
+        {
+          "label": "Bridge Open Issuance CASH transparency",
+          "url": "https://reserves.bridge.xyz/cash"
         }
       ],
-      "evidence": "At the current reviewed boundary, only Solana native issuance is compiled here: the Bridge-controlled Token-2022 mint uses a reserve-ledger-backed backend path with immediately changeable governance and current no-delay Bridge-program upgradeability. HyperEVM CASH, the Solana OFTStore, LayerZero OApp/Endpoint, peers, limits, and route administrators are bridge machinery and are scored separately under bridgeRouteRisk. No whole-supply CASH reserve reconciliation is evidenced; the official policy statement is not a dated CASH-specific reserve-to-liability report or prudential supervision, so reconciliation remains unknown.",
-      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-16"
+      "evidence": "At the current reviewed boundary, only Solana native issuance is compiled here: the Bridge-controlled Token-2022 mint uses a reserve-ledger-backed backend path with immediately changeable governance and current no-delay Bridge-program upgradeability. HyperEVM CASH, the Solana OFTStore, LayerZero OApp/Endpoint, peers, limits, and route administrators are bridge machinery and are scored separately under bridgeRouteRisk. No whole-supply CASH reserve reconciliation is evidenced; the official policy statement is not a dated CASH-specific reserve-to-liability report or prudential supervision, so reconciliation remains unknown. 2026-08-21 reconciliation update: that gap is now closed. Bridge's Open Issuance transparency page for CASH (accessed 2026-08-21) publishes a continuously updated whole-supply reserves comparison, showing supply 119,013,344 CASH against reserves of $119,014,177 with composition 7% cash and 93% T-bills, page updated 2026-08-21 13:50 UTC. That live feed reconciles the complete CASH liability against reserve assets, so reconciliation moves from unknown to continuous. Supervision stays none: no prudential supervisor is named, and the reconciliation is issuer-published rather than examined by an independent attestor. The mint-side authority findings above are unchanged; only the reconciliation evidence changed.",
+      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Safety Score 9.32 mint posture reclassification 2026-08-21",
+      "reviewedAt": "2026-08-21"
     }
   }
 }

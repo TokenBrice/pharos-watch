@@ -11,7 +11,6 @@ import { toErrorMessage } from "../../lib/error-utils";
 // 202; this poll slot is the execution surface. See
 // `2026-04-17-daily-digest-root-cause-and-fix-plan.md` for why HTTP
 // `ctx.waitUntil` was abandoned.
-import { generateDailyDigest } from "../../cron/daily-digest";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import { drainTelegramDigestOutbox } from "../../lib/telegram-digest-outbox";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
@@ -150,6 +149,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   let caught: unknown = null;
 
   try {
+    const { generateDailyDigest } = await import("../../cron/daily-digest");
     result = (await runtime.runLeasedCron("daily-digest", (signal, reportProgress) =>
       generateDailyDigest(
         runtime.db,

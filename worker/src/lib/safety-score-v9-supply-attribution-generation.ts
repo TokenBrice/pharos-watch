@@ -27,6 +27,7 @@ import type {
 import {
   safetyScoreV9SupplyAttributionExpectedAssetIds,
 } from "./safety-score-v9-supply-attribution";
+import type { SafetyScoreV9SupplyAttributionInput } from "./safety-score-v9-supply-attribution-source";
 import { parseJson } from "./json-parse";
 
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =
@@ -253,7 +254,7 @@ function exactStrings(
 }
 
 function aggregateSupplyUsd(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   assetId: string,
 ): number {
   return getCirculatingRaw(fixedInput.aggregateCirculatingById[assetId] ?? {});
@@ -318,7 +319,7 @@ function expectedJournalSourceIdForAsset(
 }
 
 function assertCaptureBindings(input: {
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
   capture: SafetyScoreV9SupplyAttributionCapture;
   capturedAtSec: number;
   recordsByAsset: ReadonlyMap<string, SupplyAttributionJournalV1>;
@@ -390,7 +391,7 @@ function assertCaptureBindings(input: {
 }
 
 export function createSafetyScoreV9SupplyAttributionGeneration(input: {
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
   capture: SafetyScoreV9SupplyAttributionCapture;
   capturedAtSec: number;
 }): SafetyScoreV9SupplyAttributionGeneration {
@@ -516,7 +517,7 @@ type SupplyAttributionGenerationCompatibilityReason =
   | "generation-stale";
 
 function withoutSupplyAttribution(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
 ): SafetyScoreV9CompilerInput {
   return normalizeSafetyScoreV9CompilerInput({
     ...fixedInput,
@@ -525,7 +526,7 @@ function withoutSupplyAttribution(
 }
 
 export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   generation: SafetyScoreV9SupplyAttributionGeneration,
   consumerClockSec = fixedInput.clockSec,
 ): SupplyAttributionGenerationCompatibilityReason | null {
@@ -561,7 +562,7 @@ export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
 }
 
 export function isSafetyScoreV9SupplyAttributionGenerationCompatible(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   generation: SafetyScoreV9SupplyAttributionGeneration,
   consumerClockSec = fixedInput.clockSec,
 ): boolean {

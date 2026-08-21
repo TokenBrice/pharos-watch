@@ -5,10 +5,10 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
-  buildNativeV9InputCacheEntry,
-  NATIVE_V9_INPUT_CACHE_KEY,
-} from "../../lib/safety-score-v9-native-input";
-import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
+  buildSafetyScoreV9SupplyAttributionSource,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
+  serializeSafetyScoreV9SupplyAttributionSource,
+} from "../../lib/safety-score-v9-supply-attribution-source";
 import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
@@ -41,6 +41,23 @@ function openDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
 }
 
+function insertSourceInput(
+  sqlite: DatabaseSync,
+  fixedInput: ReturnType<typeof createNativeSafetyScoreV9FullRegistryInput>,
+): void {
+  sqlite
+    .prepare(
+      "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+    )
+    .run(
+      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
+      serializeSafetyScoreV9SupplyAttributionSource(
+        buildSafetyScoreV9SupplyAttributionSource(fixedInput),
+      ),
+      fixedInput.clockSec,
+    );
+}
+
 describe("syncSafetyScoreV9SupplyAttribution", () => {
   beforeEach(() => {
     mocks.capture.mockReset();
@@ -57,23 +74,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
       const nowSec = fixedInput.clockSec + 15 * 60;
       vi.setSystemTime(nowSec * 1_000);
-      const cacheEntry = await buildNativeV9InputCacheEntry(
-        fixedInput,
-        buildSafetyScoreV9InputIdentity({
-          methodologyVersion: fixedInput.methodologyVersion,
-          baseInputGenerationId: fixedInput.baseInputGenerationId,
-          publicationGenerationId: fixedInput.sourceGeneration,
-        }),
-      );
-      sqlite
-        .prepare(
-          "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-        )
-        .run(
-          NATIVE_V9_INPUT_CACHE_KEY,
-          cacheEntry.value,
-          fixedInput.clockSec,
-        );
+      insertSourceInput(sqlite, fixedInput);
       const journal = createSupplyAttributionJournalV1({
         schemaVersion: 1,
         lane: "supply-attribution",
@@ -160,23 +161,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
       const nowSec = fixedInput.clockSec + 15 * 60;
       vi.setSystemTime(nowSec * 1_000);
-      const cacheEntry = await buildNativeV9InputCacheEntry(
-        fixedInput,
-        buildSafetyScoreV9InputIdentity({
-          methodologyVersion: fixedInput.methodologyVersion,
-          baseInputGenerationId: fixedInput.baseInputGenerationId,
-          publicationGenerationId: fixedInput.sourceGeneration,
-        }),
-      );
-      sqlite
-        .prepare(
-          "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-        )
-        .run(
-          NATIVE_V9_INPUT_CACHE_KEY,
-          cacheEntry.value,
-          fixedInput.clockSec,
-        );
+      insertSourceInput(sqlite, fixedInput);
       const journal = createSupplyAttributionJournalV1({
         schemaVersion: 1,
         lane: "supply-attribution",
@@ -256,23 +241,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
     try {
       const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
       vi.setSystemTime((fixedInput.clockSec + 30 * 60 + 1) * 1_000);
-      const cacheEntry = await buildNativeV9InputCacheEntry(
-        fixedInput,
-        buildSafetyScoreV9InputIdentity({
-          methodologyVersion: fixedInput.methodologyVersion,
-          baseInputGenerationId: fixedInput.baseInputGenerationId,
-          publicationGenerationId: fixedInput.sourceGeneration,
-        }),
-      );
-      sqlite
-        .prepare(
-          "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-        )
-        .run(
-          NATIVE_V9_INPUT_CACHE_KEY,
-          cacheEntry.value,
-          fixedInput.clockSec,
-        );
+      insertSourceInput(sqlite, fixedInput);
 
       const result = await syncSafetyScoreV9SupplyAttribution(
         db,

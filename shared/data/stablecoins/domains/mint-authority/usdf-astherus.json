@@ -2,7 +2,7 @@
   "id": "usdf-astherus",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDF has one verified canonical BSC issuance deployment. AccessControl grants MINTER_AND_BURN_ROLE (0x144dc672...) to the USDFEarn UUPS proxy (0xc271fc70...), which mints USDF 1:1 on exact USDT deposits under the 500 million USDFMaxSupply check. The token's DEFAULT_ADMIN_ROLE and USDFEarn's immutable upgrade authority are the same 6-hour TimelockController; the current 4-of-7 Safe is its external proposer, executor, and canceller and separately holds USDFEarn's ADMIN_ROLE for direct cap changes. The co-located LayerZero OFT transfer rail, owner-controlled peer surface, and Endpoint delegate are assessed separately under Bridge Risk.",
     "upgradeability": {
@@ -162,7 +162,7 @@
         ]
       }
     ],
-    "economicCapSemantics": "unbounded",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
@@ -190,11 +190,15 @@
         {
           "label": "Aster USDF capital-flow documentation",
           "url": "https://docs.asterdex.com/product/usdf-stablecoin/how-usdf-works"
+        },
+        {
+          "label": "Sourcify-verified USDFEarn source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x9be60400d043864a99a8fe1be479c9eb299198c1?fields=sources"
         }
       ],
-      "evidence": "Canonical issuance review at BSC block 116356251 (2026-08-16T22:57:18Z): USDF remained a non-proxy token with USDFEarn 0xc271fc70... recognized as a MINTER_AND_BURN_ROLE holder and timelock 0xe829a87f... recognized as DEFAULT_ADMIN_ROLE. USDFEarn was a UUPS proxy with implementation 0x9be60400..., zero admin/beacon slots, immutable upgrade authority equal to that timelock, and a 500 million USDFMaxSupply cap directly administered by Safe 0xa8c0c6ee.... The timelock delay was 21,600 seconds; its external proposer, executor, and canceller was the current 4-of-7 Safe, whose reads showed no enabled modules, zero guard/module-guard storage, and the standard Safe Compatibility Fallback Handler. The Safe can raise the cap directly, and no whole-supply recurring attestation, live reserve feed, prudential supervisor, or independent attestor is evidenced. The USDF token's co-located LayerZero OFT burn/mint and peer/delegate controls are assessed separately under Bridge Risk; the current checked mainnet peers and transfer-limit configurations were zero, so no representation route is treated as active. Wave 2 external research reviewed 2026-08-15: Aster's USDF product and custody materials, Ceffu MirrorX materials, and targeted attestation searches still disclose no recurring independent report or live feed reconciling the complete USDF liability across its strategy reserves. 2026-08-15 reconciliation research: Aster's official USDF product and custody materials describe 1:1 USDT minting, Ceffu/MirrorX custody, delta-neutral positions, and weekly profit distribution to asUSDF, but publish no dated recurring report or named examiner reconciling complete USDF liabilities against reserve/custody assets, and no prudential supervisor is identified.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Canonical issuance review at BSC block 116356251 (2026-08-16T22:57:18Z): USDF remained a non-proxy token with USDFEarn 0xc271fc70... recognized as a MINTER_AND_BURN_ROLE holder and timelock 0xe829a87f... recognized as DEFAULT_ADMIN_ROLE. USDFEarn was a UUPS proxy with implementation 0x9be60400..., zero admin/beacon slots, immutable upgrade authority equal to that timelock, and a 500 million USDFMaxSupply cap directly administered by Safe 0xa8c0c6ee.... The timelock delay was 21,600 seconds; its external proposer, executor, and canceller was the current 4-of-7 Safe, whose reads showed no enabled modules, zero guard/module-guard storage, and the standard Safe Compatibility Fallback Handler. The Safe can raise the cap directly, and no whole-supply recurring attestation, live reserve feed, prudential supervisor, or independent attestor is evidenced. The USDF token's co-located LayerZero OFT burn/mint and peer/delegate controls are assessed separately under Bridge Risk; the current checked mainnet peers and transfer-limit configurations were zero, so no representation route is treated as active. Wave 2 external research reviewed 2026-08-15: Aster's USDF product and custody materials, Ceffu MirrorX materials, and targeted attestation searches still disclose no recurring independent report or live feed reconciling the complete USDF liability across its strategy reserves. 2026-08-15 reconciliation research: Aster's official USDF product and custody materials describe 1:1 USDT minting, Ceffu/MirrorX custody, delta-neutral positions, and weekly profit distribution to asUSDF, but publish no dated recurring report or named examiner reconciling complete USDF liabilities against reserve/custody assets, and no prudential supervisor is identified. 2026-08-21 economic cap review (Sourcify-verified USDFEarn source, accessed 2026-08-21): the exact-match USDFEarn implementation mints USDF only against exact USDT deposits and enforces USDFMaxSupply = 500,000,000 USDF on every mint; the only path past that ceiling is the ADMIN_ROLE Safe raising the cap, while token-role changes and UUPS implementation replacement stay behind the 21,600-second timelock. That is a raiseable numeric cap rather than an undelayed arbitrary-mint path, so economic cap semantics move from unbounded to raiseable and the annotation moves from unbounded-or-compromised to partially-bounded-admin. Reconciliation stays unknown and supervision stays none; no new reserve reconciliation evidence was found in this pass.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; Codex reconciliation wave 1 2026-08-15; Safety Score 9.32 mint posture reclassification 2026-08-21",
+      "reviewedAt": "2026-08-21"
     }
   }
 }

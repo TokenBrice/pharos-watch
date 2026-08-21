@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -71,9 +71,9 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
     <Card id="redemption" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="redemptionBackstop">{viewModel.title}</MethodologyLabel>
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
           {/* Score in the header, not on its own body row: the header slot is
               where every other scored module states its band, and the label
               "Standalone route score" plus a lone pill cost a full row for one

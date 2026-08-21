@@ -231,10 +231,10 @@ function evidenceDb(input: {
 }
 
 describe("measured execution publication", () => {
-  it("retains a two-hour history window for every measured adapter", () => {
-    expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-main-registry-get-dy-v1")).toBe(7_200);
-    expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(7_200);
-    expect(getDexMeasuredHistoryFreshnessSec("uniswap-v3-quoter-v2")).toBe(7_200);
+  it("retains a three-hour history window for every measured adapter", () => {
+    expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-main-registry-get-dy-v1")).toBe(10_800);
+    expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(10_800);
+    expect(getDexMeasuredHistoryFreshnessSec("uniswap-v3-quoter-v2")).toBe(10_800);
   });
 
   it("classifies StableSwap transport outages as operational but not semantic drift", () => {
@@ -970,7 +970,7 @@ describe("measured execution last-known-good selection", () => {
 });
 
 describe("measured execution generation prune", () => {
-  it("deletes only terminal generations before the 3-hour cutoff in bounded oldest-first batches", async () => {
+  it("deletes only terminal generations before the 4-hour cutoff in bounded oldest-first batches", async () => {
     const executed: Array<{ kind: "run" | "first"; sql: string; binds: unknown[] }> = [];
     const db = {
       prepare: (sql: string) => ({
@@ -995,7 +995,7 @@ describe("measured execution generation prune", () => {
     const retention = await pruneDexMeasuredExecutionGenerations(db, nowSec);
 
     expect(executed).toHaveLength(4);
-    const cutoff = nowSec - 3 * 60 * 60;
+    const cutoff = nowSec - 4 * 60 * 60;
     const [quotes, targets, ledger, oldest] = executed;
 
     expect(quotes.sql).toContain("DELETE FROM dex_measured_execution_quotes");

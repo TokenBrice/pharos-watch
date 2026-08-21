@@ -2,7 +2,7 @@
   "id": "susdc-spark",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "spUSDC shares are minted against deposited USDC in Spark's Ethereum and Avalanche ERC-4626 vaults and inherit Circle's reviewed USDC issuer mint authority. Both vaults are UUPS proxies: Ethereum upgrades resolve through Spark's SubProxy and Sky's 48-hour DSPause path, while Avalanche upgrades resolve through the Spark executor driven by its LayerZero governance receiver.",
     "inheritedFrom": "usdc-circle",
@@ -192,7 +192,7 @@
         "evidence": "Inherited from the verified `usdc-circle` mintAuthority. Circle's MasterMinter can authorize issuer minters and raise mint allowances; wrapper share issuance cannot bypass this base-supply authority."
       }
     ],
-    "economicCapSemantics": "unbounded",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -212,11 +212,15 @@
         {
           "label": "SparkVault verified implementation",
           "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+        },
+        {
+          "label": "Spark Vaults V2 documentation",
+          "url": "https://docs.spark.fi/dev/savings/spark-vaults-v2"
         }
       ],
-      "evidence": "Fixed-block reads on 2026-07-21 resolved both tracked wrapper deployments. At Ethereum block 25579815, spUSDC was a UUPS proxy using SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455; its DEFAULT_ADMIN_ROLE holder was the Spark SubProxy governed through Sky's 172800-second DSPause path. At Avalanche block 90859314, the same-address vault was a UUPS proxy using implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12; its DEFAULT_ADMIN_ROLE holder was SPARK_EXECUTOR, identified by the Spark registry with LayerZero receiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F. Both asset() reads returned the local native USDC deployment. Wrapper shares remain deposit-backed; base supply authority, reconciliation, and supervision inherit from reviewed USDC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper.",
-      "reviewer": "P2 mint-free cohort; Sol Ultra V9 curation pass",
-      "reviewedAt": "2026-07-21",
+      "evidence": "Fixed-block reads on 2026-07-21 resolved both tracked wrapper deployments. At Ethereum block 25579815, spUSDC was a UUPS proxy using SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455; its DEFAULT_ADMIN_ROLE holder was the Spark SubProxy governed through Sky's 172800-second DSPause path. At Avalanche block 90859314, the same-address vault was a UUPS proxy using implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12; its DEFAULT_ADMIN_ROLE holder was SPARK_EXECUTOR, identified by the Spark registry with LayerZero receiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F. Both asset() reads returned the local native USDC deployment. Wrapper shares remain deposit-backed; base supply authority, reconciliation, and supervision inherit from reviewed USDC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. 2026-08-21 economic cap review (Spark Vaults V2 documentation, accessed 2026-08-21): spUSDC shares are minted only against deposited USDC under ERC-4626 accounting, and the Ethereum vault enforces a numeric depositCap whose setDepositCap entry point is gated to the Spark SubProxy behind Sky's 172800-second DSPause path already recorded at upgradeability.delaySec. No privileged party can mint uncapped shares, and no separate uncapped share-minter role exists. Economic cap semantics therefore move from unbounded to raiseable - the ceiling is a real numeric cap that delayed governance can raise, not an arbitrary-mint path - and the annotated posture moves to partially-bounded-admin. Reconciliation and supervision keep their wrapper-level values.",
+      "reviewer": "P2 mint-free cohort; Sol Ultra V9 curation pass; Safety Score 9.32 mint posture reclassification 2026-08-21",
+      "reviewedAt": "2026-08-21",
       "disposition": "scoreable"
     }
   }

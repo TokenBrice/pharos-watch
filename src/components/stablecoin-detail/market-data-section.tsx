@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { ChartAnnotationLegend } from "@/components/chart-primitives/annotations";
 import { ChartBrush, MarketDataChartSyncProvider, useMarketDataChartSync } from "@/components/chart-primitives/sync";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -119,7 +119,7 @@ function MarketDataSectionBody({
   return (
     <section id="chart" aria-label="Market data charts" className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Data</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Data</StablecoinModuleTitle>
         <div className="flex flex-wrap items-center gap-2">
           {updatedAtMs ? (
             <FreshnessIndicator

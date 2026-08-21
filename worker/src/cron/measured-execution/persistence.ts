@@ -21,8 +21,13 @@ const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
 const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
 const DEX_SHADOW_MEASURED_TARGET_SURFACE = "dex-shadow-measured-execution-targets";
 const DEX_SHADOW_MEASURED_QUOTE_SURFACE = "dex-shadow-measured-execution-quotes";
-/** Retain the complete two-hour scoring window plus one missed producer cycle. */
-const GENERATION_RETENTION_SEC = 3 * 60 * 60;
+/**
+ * Retain the complete scoring window plus one missed producer cycle. This must
+ * stay strictly above `DEX_MEASURED_FRESHNESS_MAX_SEC` (three hours): a profile
+ * that still reads fresh while its backing generation rows were already pruned
+ * would fail closed on read instead of scoring.
+ */
+const GENERATION_RETENTION_SEC = 4 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
 const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC =

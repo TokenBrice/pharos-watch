@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { AreaChart, Area, ReferenceDot } from "recharts";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
@@ -151,7 +151,7 @@ export function McapChart({
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Cap</DetailSectionTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Cap</StablecoinModuleTitle>
         {readout ? (
           <div className="flex items-baseline gap-2 font-mono text-xs tabular-nums">
             <span className="text-foreground/85">{formatCurrency(readout.mcap)}</span>

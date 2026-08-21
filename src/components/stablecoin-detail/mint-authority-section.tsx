@@ -12,7 +12,7 @@ import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosu
 import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -206,9 +206,9 @@ export function MintAuthoritySection({
     <Card id="mint-authority" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="mintAuthorityScore">Mint Authority</MethodologyLabel>
-          </DetailSectionTitle>
+          </StablecoinModuleTitle>
           {score ? (
             <ScoreBadgeWrapper topic="mintAuthorityScore" variant="tooltip-only" triggerAriaLabel={scoreTriggerLabel}>
               <ScorePill label={score.scoreLabel} toneClass={score.badgeClassName} title={score.detail} />

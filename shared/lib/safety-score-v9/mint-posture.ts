@@ -31,11 +31,11 @@ export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; d
   },
   concentrated: {
     label: "Concentrated",
-    detail: "Minting depends on one concentrated administrator path.",
+    detail: "Minting depends on a concentrated or collateral-gated administrator path.",
   },
   exposed: {
     label: "Exposed",
-    detail: "Economically effective minting is unbounded or compromised.",
+    detail: "Economically effective minting is unbounded — unreconciled, unverified, or compromised.",
   },
 };
 
@@ -48,12 +48,16 @@ export const V9_MINT_POSTURE_BAND_ORDER = [
   "exposed",
 ] as const satisfies readonly V9MintPostureBand[];
 
+// MINT-LADDER 9.32 (2026-08-21): the finer postures reuse existing public
+// bands, so filter values and screener URLs remain unchanged.
 const POSTURE_BANDS: Record<V9MintPosture, V9MintPostureBand | null> = {
   "none-resolved": "hardened",
   "bounded-admin": "hardened",
   "partially-bounded-admin": "governed",
   "unbounded-reconciled": "managed",
   "concentrated-admin": "concentrated",
+  "collateral-gated": "concentrated",
+  "unbounded-reconciliation-unknown": "exposed",
   "unbounded-or-compromised": "exposed",
   // An unresolved posture is not a band: it is the absence of a review.
   unknown: null,
@@ -97,9 +101,10 @@ export function curatedMintPostureBand(posture: MintAuthorityPosture | null | un
  *
  * Every engine that asks a yes/no question about a mint posture asks it here,
  * so a vocabulary addition is handled once instead of falling through unnamed
- * literal comparisons at each call site. The vocabulary has grown twice
- * (`unbounded-reconciled`, `none-resolved-mint`) and both times the membership
- * of these sets had to be re-derived by hand at every site.
+ * literal comparisons at each call site. The vocabulary has grown repeatedly
+ * (`unbounded-reconciled`, `none-resolved-mint`, and the 9.32 ladder values),
+ * and each time the membership of these sets had to be re-derived by hand at
+ * every site.
  *
  * The predicates take `string | null | undefined` rather than
  * `MintAuthorityPosture`: consumers such as the Depeg Duration Resolver carry
@@ -136,7 +141,9 @@ const NO_PRIVILEGED_MINT_CHAIN_POSTURES: ReadonlySet<string> = new Set<MintAutho
  */
 const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([
   "concentrated-admin",
+  "collateral-gated",
   "unbounded-reconciled",
+  "unbounded-reconciliation-unknown",
   "unbounded-or-compromised",
 ]);
 
@@ -147,6 +154,7 @@ const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>
  */
 const UNBOUNDED_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([
   "unbounded-reconciled",
+  "unbounded-reconciliation-unknown",
   "unbounded-or-compromised",
 ]);
 

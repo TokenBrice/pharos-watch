@@ -327,8 +327,10 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
 
   it("policy carries the ruled credit knobs", () => {
     // D5 (2026-07-22): T5 mint seasoned credit 5 -> 10, still next-rung-capped.
+    // 9.32: adverse rungs earn the same credit under a dedicated ceiling (39).
     expect(policy.control.mintPostureGrading.seasonedCreditPoints).toBe(10);
     expect(policy.control.mintPostureGrading.seasonedCreditMinMonths).toBe(60);
+    expect(policy.control.mintPostureGrading.adverseSeasonedCreditCeiling).toBe(39);
     expect(policy.backing.assuranceSeasonedCredit).toEqual({ points: 3, minMonths: 60 });
   });
 
@@ -338,7 +340,12 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
       policy.control.mintPostureGrading.prudentialReconciled,
       policy.control.mintPostureGrading.attestationOnlyReconciled,
     ].sort((left, right) => left - right);
-    for (const score of [55, 70, 80, 85]) {
+    // 9.32 ladder gains the 35 (unbounded-reconciliation-unknown) and 50
+    // (collateral-gated) quality keys between the floor and concentrated-admin.
+    expect(ladder).toEqual(expect.arrayContaining([25, 35, 50, 55, 70, 80, 85, 100]));
+    expect(policy.control.mintPostureQuality["unbounded-reconciliation-unknown"]).toBe(35);
+    expect(policy.control.mintPostureQuality["collateral-gated"]).toBe(50);
+    for (const score of [25, 35, 50, 55, 70, 80, 85]) {
       const next = ladder.find((value) => value > score)!;
       const credited = Math.min(score + policy.control.mintPostureGrading.seasonedCreditPoints, next);
       expect(credited).toBeLessThanOrEqual(next);
@@ -349,13 +356,22 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
     expect(ladder.find((value) => value > top)).toBeUndefined();
   });
 
-  it("adverse/unknown postures are ineligible for the mint credit", () => {
-    // The eligibility gate excludes exactly the fail-closed postures; the three
-    // hard pins (u-united unbounded, eurs compromised-tier, mim) resolve there.
-    for (const posture of ["unknown", "unbounded-or-compromised"] as const) {
-      expect(["unknown", "unbounded-or-compromised"]).toContain(posture);
-    }
-    expect(policy.control.mintPostureQuality["unbounded-or-compromised"]).toBe(25);
+  it("pins the adverse seasoning ceiling below unknown and above floor+credit", () => {
+    // 9.32: unbounded-or-compromised and unbounded-reconciliation-unknown can
+    // earn seasoned credit. The dedicated adverse ceiling (39) stops the floor
+    // rung from silently capping at next-rung-minus-one (34) once the 35 rung
+    // exists; the unknown-reconciliation rung keeps the generic ladder (44).
+    const quality = policy.control.mintPostureQuality;
+    const grading = policy.control.mintPostureGrading;
+    expect(quality["unbounded-or-compromised"]).toBe(25);
+    expect(quality["unbounded-reconciliation-unknown"]).toBe(35);
+    expect(quality["collateral-gated"]).toBe(50);
+    expect(grading.adverseSeasonedCreditCeiling).toBe(39);
+    expect(grading.adverseSeasonedCreditCeiling).toBeLessThan(quality.unknown);
+    expect(grading.adverseSeasonedCreditCeiling).toBeGreaterThanOrEqual(
+      quality["unbounded-or-compromised"] + grading.seasonedCreditPoints,
+    );
+    expect(quality["unbounded-reconciliation-unknown"] + grading.seasonedCreditPoints - 1).toBe(44);
   });
 });
 

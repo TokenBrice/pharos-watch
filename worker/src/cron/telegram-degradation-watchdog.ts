@@ -58,7 +58,12 @@ interface WatchdogResult {
     sentCleanup: number | null;
     executionUnknownLowerBound: boolean | null;
   };
-  safetySource: WatchdogOutcome & { state: string | null };
+  safetySource: WatchdogOutcome & {
+    state: string | null;
+    heldSinceSec?: number | null;
+    holdAgeSec?: number | null;
+    holdReasonCodes?: string[];
+  };
   zeroSend: WatchdogOutcome & {
     streak: number;
     evaluated: boolean;
@@ -245,20 +250,37 @@ async function evaluateSafetySource(
     preloadedAssessment ??
     await loadActiveAlertSafetySourceAssessment(db, nowSec);
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.safetySourceSince);
-  const outcome: WatchdogResult["safetySource"] = { ...emptyOutcome(), state: assessment.state };
+  const carriesHeldDiagnostics =
+    assessment.heldSinceSec !== undefined ||
+    assessment.holdReasonCodes !== undefined;
+  const heldSinceSec = assessment.heldSinceSec ?? null;
+  const holdAgeSec = heldSinceSec == null
+    ? null
+    : Math.max(0, nowSec - heldSinceSec);
+  const holdReasonCodes = assessment.holdReasonCodes ?? [];
+  const heldDetail = carriesHeldDiagnostics
+    ? `, heldSinceSec=${heldSinceSec ?? "null"}, holdAgeSec=${holdAgeSec ?? "null"}, holdReasonCodes=${holdReasonCodes.join("|") || "none"}`
+    : "";
+  const outcome: WatchdogResult["safetySource"] = {
+    ...emptyOutcome(),
+    state: assessment.state,
+    ...(carriesHeldDiagnostics
+      ? { heldSinceSec, holdAgeSec, holdReasonCodes }
+      : {}),
+  };
 
   if (assessment.state !== "ok") {
     if (flagSince == null) {
       await setCache(db, WATCHDOG_KEYS.safetySourceSince, String(nowSec));
-      outcome.detail = `state=${assessment.state} (newly tripped)`;
+      outcome.detail = `state=${assessment.state}${heldDetail} (newly tripped)`;
       return outcome;
     }
     const ageSec = Math.max(0, nowSec - flagSince);
     if (ageSec >= sustainedSec) {
       outcome.triggered = true;
-      outcome.detail = `state=${assessment.state}, sustainedSec=${ageSec}`;
+      outcome.detail = `state=${assessment.state}, sustainedSec=${ageSec}${heldDetail}`;
     } else {
-      outcome.detail = `state=${assessment.state}, ageSec=${ageSec}`;
+      outcome.detail = `state=${assessment.state}, ageSec=${ageSec}${heldDetail}`;
     }
     return outcome;
   }

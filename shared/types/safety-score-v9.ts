@@ -1029,7 +1029,13 @@ const V9ControlPolicySchema = z
         "bounded-admin": ScoreSchema,
         "partially-bounded-admin": ScoreSchema,
         "concentrated-admin": ScoreSchema,
+        // MINT-LADDER 9.32 (2026-08-21): collateral is a real economic bound,
+        // but the privileged administrator surface remains concentrated.
+        "collateral-gated": ScoreSchema,
         "unbounded-reconciled": ScoreSchema,
+        // MINT-LADDER 9.32 (2026-08-21): absence of reconciliation evidence
+        // stays below the unknown-everything rung and above the confirmed floor.
+        "unbounded-reconciliation-unknown": ScoreSchema,
         "unbounded-or-compromised": ScoreSchema,
         unknown: ScoreSchema,
       })
@@ -1044,6 +1050,9 @@ const V9ControlPolicySchema = z
         // the next posture rung so a credit can never relabel the posture class.
         seasonedCreditPoints: z.number().finite().min(0).max(10).default(0),
         seasonedCreditMinMonths: z.number().int().positive().default(60),
+        // MINT-LADDER 9.32 (2026-08-21): adverse seasoned credit has its own
+        // ceiling so the new reconciliation-unknown rung cannot lower it.
+        adverseSeasonedCreditCeiling: ScoreSchema,
       })
       .strict(),
     // Safety 9.1 — the merged mint grader. These knobs carry the signals the
@@ -1184,6 +1193,16 @@ const V9ExitPolicySchema = z
         unknown: z.number().finite().min(0).max(1),
       })
       .strict(),
+    /**
+     * Credit retained by a route whose observation aged past its lane freshness
+     * bound but is otherwise a known, supported, reviewed route. A retained
+     * stale observation is weaker evidence than a current one, but it is still
+     * evidence: dropping it outright made the capacity denominator itself
+     * discontinuous, so an expiring producer window re-graded an asset with no
+     * market event behind it. Applied as a multiplier on both the route's own
+     * score and the capacity it contributes.
+     */
+    staleObservationConfidenceFactor: z.number().finite().min(0).max(1),
     scoreableEvidenceKinds: z
       .object({ dex: z.array(z.string().min(1)).min(1), redemption: z.array(z.string().min(1)).min(1) })
       .strict(),

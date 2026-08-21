@@ -1,11 +1,29 @@
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 import { computeDepegResolver } from "../../cron/compute-depeg-resolver";
+import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { parseStablecoinsCapabilities } from "./context";
 import { runScheduledSlotGroups } from "./slot-groups";
 
 const V9_SUPPLY_WINDOW_MS = 3 * 60_000;
 const V9_SUPPLY_MINIMUM_REMAINING_MS = 60_000;
+// Covers DDR abort propagation, terminal-row persistence, and serial handoff
+// before attribution evaluates its minimum-remaining admission contract.
+const DDR_HANDOFF_MARGIN_MS = 10_000;
+
+function ddrBudgetExhausted(): CronResult {
+  const reason = "ddr-budget-exhausted";
+  return {
+    status: "skipped_neutral",
+    itemCount: 0,
+    metadata: JSON.stringify({ reason }),
+    productivity: {
+      productive: false,
+      reason,
+    },
+  };
+}
 
 interface StablecoinsCapabilityRow {
   metadata: string | null;
@@ -44,6 +62,12 @@ async function loadLatestStablecoinsCapabilities(
 export async function runV9SupplyAttributionSlot(
   runtime: ScheduledRuntimeContext,
 ) {
+  const scheduledTimeMs =
+    runtime.scheduledTimeMs ?? runtime.slotStartedAt * 1_000;
+  const ddrDeadlineMs =
+    scheduledTimeMs + V9_SUPPLY_WINDOW_MS -
+    V9_SUPPLY_MINIMUM_REMAINING_MS - DDR_HANDOFF_MARGIN_MS;
+
   return runScheduledSlotGroups(runtime, "fenced V9 supply-attribution slot", [
     {
       mode: "serial",
@@ -56,18 +80,36 @@ export async function runV9SupplyAttributionSlot(
         {
           job: "compute-depeg-resolver",
           run: async (signal) => {
-            const capabilities = await loadLatestStablecoinsCapabilities(
-              runtime.db,
-              runtime.slotStartedAt,
-            );
-            return computeDepegResolver({
-              db: runtime.db,
-              signal,
-              slot: "v9-supply-attribution-follow-up",
-              stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
-              depegPipelineHealthy: capabilities.depegPipelineHealthy,
-              syncCapabilities: capabilities.syncCapabilities,
+            const remainingMs = ddrDeadlineMs - Date.now();
+            if (remainingMs <= 0) return ddrBudgetExhausted();
+
+            // This is cooperative mitigation only: it cannot contain an
+            // isolate OOM or a D1 stall that ignores cancellation. Hard
+            // containment would require a separate physical trigger.
+            const timeout = createTimeoutSignal({
+              timeoutMs: remainingMs,
+              timeoutReason: new DOMException(
+                "compute-depeg-resolver exceeded its V9 supply attribution admission budget",
+                "TimeoutError",
+              ),
+              parentSignal: signal,
             });
+            try {
+              const capabilities = await loadLatestStablecoinsCapabilities(
+                runtime.db,
+                runtime.slotStartedAt,
+              );
+              return await computeDepegResolver({
+                db: runtime.db,
+                signal: timeout.signal,
+                slot: "v9-supply-attribution-follow-up",
+                stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
+                depegPipelineHealthy: capabilities.depegPipelineHealthy,
+                syncCapabilities: capabilities.syncCapabilities,
+              });
+            } finally {
+              timeout.dispose();
+            }
           },
         },
         {

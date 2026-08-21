@@ -332,6 +332,37 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
 });
 
 describe("runTelegramDegradationWatchdog · safety source", () => {
+  it("includes held-publication diagnostics after the sustained window", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+      state: "corrupt",
+      ageSeconds: null,
+      generation: null,
+      envelope: null,
+      failureReason: "v9-publication-held",
+      heldSinceSec: nowSec - 7200,
+      holdReasonCodes: ["dex-stale", "coverage-floor-failed"],
+    });
+    store.values.set(WATCHDOG_KEYS.safetySourceSince, {
+      value: String(nowSec - 4000),
+      updatedAt: nowSec - 4000,
+    });
+
+    const result = await runTelegramDegradationWatchdog(makeDb({ pendingCount: 0 }));
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(meta.safetySource).toMatchObject({
+      triggered: true,
+      heldSinceSec: nowSec - 7200,
+      holdAgeSec: 7200,
+      holdReasonCodes: ["dex-stale", "coverage-floor-failed"],
+    });
+    expect(meta.safetySource.detail).toBe(
+      `state=corrupt, sustainedSec=4000, heldSinceSec=${nowSec - 7200}, holdAgeSec=7200, holdReasonCodes=dex-stale|coverage-floor-failed`,
+    );
+  });
+
   it("triggers when safety-source cache is missing for sustained window", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
@@ -392,6 +423,42 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
 
     expect(meta.safetySource.recovered).toBe(true);
     expect(store.values.has(WATCHDOG_KEYS.safetySourceSince)).toBe(false);
+    expect(mockDeleteCache).toHaveBeenCalledWith(
+      expect.anything(),
+      WATCHDOG_KEYS.safetySourceSince,
+    );
+  });
+
+  it("preserves an already-flagged held episode without rewriting its onset", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const episodeSince = nowSec - 4000;
+    const assessment = {
+      state: "corrupt" as const,
+      ageSeconds: null,
+      generation: null,
+      envelope: null,
+      failureReason: "v9-publication-held",
+      heldSinceSec: nowSec - 7200,
+      holdReasonCodes: ["dex-stale"],
+    };
+    mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue(assessment);
+    store.values.set(WATCHDOG_KEYS.safetySourceSince, {
+      value: String(episodeSince),
+      updatedAt: episodeSince,
+    });
+    const db = makeDb({ pendingCount: 0 });
+
+    const first = await runTelegramDegradationWatchdog(db);
+    const firstDetail = JSON.parse(first.metadata ?? "{}").safetySource.detail;
+    mockSetCache.mockClear();
+    const second = await runTelegramDegradationWatchdog(db);
+    const secondMeta = JSON.parse(second.metadata ?? "{}");
+
+    expect(secondMeta.safetySource.triggered).toBe(true);
+    expect(secondMeta.safetySource.detail).toBe(firstDetail);
+    expect(store.values.get(WATCHDOG_KEYS.safetySourceSince)?.value).toBe(String(episodeSince));
+    expect(mockSetCache.mock.calls.some(([, key]) => key === WATCHDOG_KEYS.safetySourceSince)).toBe(false);
   });
 });
 

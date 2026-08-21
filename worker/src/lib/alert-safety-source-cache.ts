@@ -26,6 +26,7 @@ const ALERT_SAFETY_V9_SOURCE_GENERATION = "safety-v9-alert-source-v1";
  */
 export const ALERT_SAFETY_V9_SOURCE_CACHE_KEY = "alert-safety-v9-source";
 const ALERT_SAFETY_DETAIL_MAX_CHARS = 160;
+const ALERT_SAFETY_HOLD_REASON_CODE_LIMIT = 5;
 
 export interface AlertSafetyV9ExplainSnapshot {
   reasons: Array<{ code: string; message: string }>;
@@ -75,6 +76,19 @@ export interface AlertSafetySourceAssessment {
   generation: string | null;
   envelope: AlertSafetySourceEnvelope | null;
   failureReason?: string;
+  heldSinceSec?: number | null;
+  holdReasonCodes?: string[];
+}
+
+function heldPublicationDiagnostics(
+  health: ReportCardsV9CurrentResponse["publicationHealth"],
+): Pick<AlertSafetySourceAssessment, "heldSinceSec" | "holdReasonCodes"> {
+  return {
+    heldSinceSec: health.heldSinceSec,
+    holdReasonCodes: health.reasons
+      .slice(0, ALERT_SAFETY_HOLD_REASON_CODE_LIMIT)
+      .map((reason) => reason.code),
+  };
 }
 
 function truncateDetail(value: string): string {
@@ -299,6 +313,9 @@ export function assessActiveAlertSafetySource(
         activeSource.kind === "held"
           ? activeSource.reason
           : "v9-snapshot-invalid",
+      ...(activeSource.kind === "held"
+        ? heldPublicationDiagnostics(activeSource.snapshot.publicationHealth)
+        : {}),
     };
   }
   return assessAlertSafetyEnvelope(envelope, options.nowSec);
@@ -412,6 +429,7 @@ export async function loadActiveAlertSafetySourceAssessment(
             generation: null,
             envelope: null,
             failureReason: "v9-publication-held",
+            ...heldPublicationDiagnostics(health),
           };
         }
         return assessAlertSafetyEnvelope(cached, nowSec);

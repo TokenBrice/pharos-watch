@@ -6,7 +6,7 @@ import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -52,9 +52,9 @@ function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNod
           <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <DetailSectionTitle id="yield-intelligence-heading" className={DETAIL_MODULE_TITLE_CLASS}>
+                <StablecoinModuleTitle id="yield-intelligence-heading" className={DETAIL_MODULE_TITLE_CLASS}>
                   <MethodologyLabel topic="pys">Yield Intelligence</MethodologyLabel>
-                </DetailSectionTitle>
+                </StablecoinModuleTitle>
               </div>
               {headerEnd}
             </div>

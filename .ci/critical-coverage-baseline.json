@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-18",
+  "generatedAt": "2026-08-21",
   "files": {
     "src/lib/api.ts": 95.5,
     "worker/src/api/safety-score-history-v2.ts": 100,
@@ -145,6 +145,7 @@
     "worker/src/lib/safety-score-v9-supply-attribution-contract.ts": 92.5,
     "worker/src/lib/safety-score-v9-supply-attribution-generation.ts": 86.5,
     "worker/src/lib/safety-score-v9-supply-attribution-journal-store.ts": 100,
+    "worker/src/lib/safety-score-v9-supply-attribution-source.ts": 100,
     "worker/src/lib/safety-score-v9-supply-attribution.ts": 92.5,
     "worker/src/lib/safety-score-v9-wm-supply-observer.ts": 88.7,
     "worker/src/lib/safety-score-v9-xaut-supply-attribution-contract.ts": 93.2,
