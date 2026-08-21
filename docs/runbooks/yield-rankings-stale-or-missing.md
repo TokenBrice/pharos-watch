@@ -5,7 +5,7 @@ Triggered by:
 - `/status/` impacted surfaces naming yield data
 - `/admin/` -> Crons showing stale or unhealthy `sync-yield-data`
 - `/admin/` -> Endpoint probes showing unhealthy `/api/yield-rankings`
-- `/api/health` degraded with a `yield-safety-unrated-serving:*` warning, or `/yield/` showing all rows as Safety NR (see [Safety Identity Mismatch](#safety-identity-mismatch-blank-scatter--all-nr-safety))
+- `/api/health` degraded with a `yield-safety-unrated-serving:*` warning, or `/yield/` showing all rows as Safety NR (see [Safety Identity Mismatch](#safety-identity-mismatch))
 
 ## Symptom
 
@@ -94,7 +94,7 @@ WHERE generation_id = '<generation_id>' AND stablecoin_id = '<stablecoin_id>';
 
 The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per selected row. It keeps at most four alternate sources with short rejected/retained reasons and anomaly samples, so it is debug evidence rather than a full replay log.
 
-## Safety Identity Mismatch (blank scatter / all-NR safety)
+## Safety Identity Mismatch
 
 `/yield/` showing every row as Safety NR — blank scatter chart, `—` hero PYS, zeroed risk-tolerance bands — while APYs still populate is the *safety hydration* failure mode, not a rankings-cache failure. The read path hydrates safety from the live V9 publication only when the identity stamped into the `yield-rankings` cache is evaluator-compatible with it (`safetyScorePublicationIdentitiesAreComparable`). Every scoring deploy rotates the evaluation-build digest, so a mismatch window is expected after each rollout until the next hourly `sync-yield-data` publish.
 

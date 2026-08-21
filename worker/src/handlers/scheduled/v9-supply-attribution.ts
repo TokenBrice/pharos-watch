@@ -49,6 +49,27 @@ export async function runV9SupplyAttributionSlot(
       mode: "serial",
       label: "v9-supply-ddr",
       tasks: [
+        // DDR is D1-only and reads the latest stablecoins capability metadata,
+        // not the V9 supply-attribution generation captured below. Keep it
+        // ahead of the heavier capture so it does not inherit that isolate's
+        // memory pressure.
+        {
+          job: "compute-depeg-resolver",
+          run: async (signal) => {
+            const capabilities = await loadLatestStablecoinsCapabilities(
+              runtime.db,
+              runtime.slotStartedAt,
+            );
+            return computeDepegResolver({
+              db: runtime.db,
+              signal,
+              slot: "v9-supply-attribution-follow-up",
+              stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
+              depegPipelineHealthy: capabilities.depegPipelineHealthy,
+              syncCapabilities: capabilities.syncCapabilities,
+            });
+          },
+        },
         {
           job: "sync-v9-supply-attribution",
           run: (signal) =>
@@ -75,23 +96,6 @@ export async function runV9SupplyAttributionSlot(
                     ),
                 ),
             ),
-        },
-        {
-          job: "compute-depeg-resolver",
-          run: async (signal) => {
-            const capabilities = await loadLatestStablecoinsCapabilities(
-              runtime.db,
-              runtime.slotStartedAt,
-            );
-            return computeDepegResolver({
-              db: runtime.db,
-              signal,
-              slot: "v9-supply-attribution-follow-up",
-              stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
-              depegPipelineHealthy: capabilities.depegPipelineHealthy,
-              syncCapabilities: capabilities.syncCapabilities,
-            });
-          },
         },
       ],
     },
