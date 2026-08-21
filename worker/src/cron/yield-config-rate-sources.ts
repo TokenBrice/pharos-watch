@@ -307,16 +307,18 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
 };
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
+  "bd-basedollar": {
+    code: "source-family-adapter-unimplemented",
+    since: "2026-08-21",
+    nextReviewAt: "2026-09-21",
+    evidenceUrl: "https://github.com/basedollar/basedollar",
+    note: "2026-08-21 launch review: Base Dollar has five branch-specific Liquity V2 Stability Pools whose variable return combines borrower-fee BD distributions and liquidation collateral gains. Pharos has no reusable multi-branch Liquity V2 Stability Pool realized-return adapter, no yield-bearing wrapper exchange rate, and no verified public machine-readable APY feed. Keep this as an intentional gap until a deterministic adapter snapshots each branch's deposit/reward accumulators, values collateral gains, and aggregates only complete branch coverage.",
+  },
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",
     nextReviewAt: "2026-10-09",
     note: "2026-07-09 review: keep intentional gap for off-chain Binance account yield product; no public runtime APY feed is wired or confirmed for holder-rate resolution",
-  },
-  "bd-basedollar": {
-    code: "no-public-yield-source",
-    since: "2026-04-03",
-    note: "asset with no reliable runtime yield source yet",
   },
   "brd-volpon": {
     code: "pre-launch",

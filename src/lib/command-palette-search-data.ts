@@ -348,7 +348,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["usg-tangent", "Tangent USD", "USG"],
   ["klarnausd-klarna", "KlarnaUSD", "KLARNAUSD", "pre-launch"],
   ["ftusd-flying-tulip", "Flying Tulip USD", "ftUSD"],
-  ["bd-basedollar", "Base Dollar", "BD", "pre-launch"],
+  ["bd-basedollar", "Base Dollar", "BD"],
   ["brla-brla-digital", "BRLA Digital", "BRLA"],
   ["silk-shade-protocol", "SILK", "SILK", "quarantined"],
   ["idrx-idrx", "IDRX", "IDRX"],

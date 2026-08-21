@@ -880,6 +880,80 @@ describe("handleBackfillSupplyHistory", () => {
     ]);
   });
 
+  it("backfills USD-valued Base Dollar supply from historical totalSupply without a CoinGecko ID", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const day1 = Math.floor(Date.UTC(2026, 7, 4) / 1000);
+    const day2 = Math.floor(Date.UTC(2026, 7, 5) / 1000);
+    const blockNumber = 49_507_741;
+    const totalSupplyByCall = [
+      2_500n * 10n ** 18n,
+      2_750n * 10n ** 18n,
+    ];
+
+    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockResolvedValue(blockNumber);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      if (!url.includes("fake-base-rpc")) throw new Error(`Unexpected fetch: ${url}`);
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        method?: string;
+        params?: Array<{ data?: string } | string>;
+      };
+      expect(body.method).toBe("eth_call");
+      const call = body.params?.[0];
+      const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
+      expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
+      const raw = totalSupplyByCall.shift();
+      if (raw == null) throw new Error("Unexpected extra Base Dollar totalSupply call");
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(raw) }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    const chainRpcs = new Map<string, ChainRpcConfig>([
+      [
+        "base",
+        {
+          chainId: "base",
+          chainName: "Base",
+          type: "evm",
+          rpcUrl: "https://fake-base-rpc.test",
+          explorerUrl: "https://base.blockscout.com",
+        },
+      ],
+    ]);
+
+    const path = "/api/backfill-supply-history?stablecoin=bd-basedollar&startDay=2026-08-04&endDay=2026-08-05";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db: makeDb(capturedStatements),
+      url: makeApiUrl(path),
+      request: makeApiRequest(path, { adminKey: "secret" }),
+      coingeckoApiKey: null,
+      chainRpcs,
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coinsProcessed: number;
+      rowsInserted: number;
+      errors?: string[];
+      skipped?: string[];
+    };
+    expect(body).toMatchObject({ coinsProcessed: 1, rowsInserted: 2 });
+    expect(body.errors).toBeUndefined();
+    expect(body.skipped).toBeUndefined();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    const inserts = capturedStatements.filter((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    expect(inserts.map((stmt) => stmt.args)).toEqual([
+      ["bd-basedollar", day1, 2_500, null],
+      ["bd-basedollar", day2, 2_750, null],
+    ]);
+    expect(fetchMarketBackfillPriceSeries).not.toHaveBeenCalled();
+  });
+
   it("shares same-chain block search cache across historical totalSupply coins in one page", async () => {
     const historicalTotalSupplyCoins = psiEligibleMocks.defaultStablecoins.filter((coin) =>
       ["autousd-auto-finance", "eearn-ember"].includes(coin.id),

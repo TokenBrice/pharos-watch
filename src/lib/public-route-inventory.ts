@@ -35,7 +35,8 @@ export interface PublicRouteInventoryEntry {
 
 const PRIMARY_PUBLIC_ROUTE_PATHS = [
   "/", "/coverage/", "/alt-pegs/", "/start/", "/freezewatch/", "/depeg/", "/cemetery/",
-  "/compare/", "/liquidity/", "/upcoming/", "/digest/", "/safety-scores/", "/stability-index/",
+  "/compare/", "/liquidity/", "/upcoming/", "/digest/", "/safety-scores/", "/safety-scores/map/",
+  "/stability-index/",
   "/dependency-map/", "/yield/", "/screener/", "/funding/", "/status/", "/flows/", "/timeline/",
   "/compliance/", "/pharoswatchbot/", "/methodology/",
 ] as const;

@@ -174,6 +174,18 @@ describe("getRedemptionBackstopConfig", () => {
       reviewedAt: "2026-03-22",
     });
 
+    expect(getRedemptionBackstopConfig("bd-basedollar")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:weth", "asset:wsteth", "asset:reth", "asset:cbbtc", "asset:cbeth"],
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula" },
+      reviewedAt: "2026-08-21",
+    });
+
     expect(getRedemptionBackstopConfig("fpi-frax")).toMatchObject({
       routeFamily: "collateral-redeem",
       capacityModel: { kind: "reserve-sync-metadata" },

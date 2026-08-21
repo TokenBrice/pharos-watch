@@ -478,6 +478,34 @@ const ADDITIONAL_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
 
 export const CDP_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
   {
+    assetId: "bd-basedollar",
+    family: "liquity-v2",
+    chain: { key: "base", evmChainId: 8453 },
+    rpcs: ["https://mainnet.base.org", "https://base-rpc.publicnode.com", "https://base.llamarpc.com"],
+    contracts: {
+      token: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      collateralRegistry: "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
+    },
+    spDeposits: { signature: "getTotalBoldDeposits()", selector: "0xf71c6940" },
+    sanity: {
+      minCollateralizationRatio: 1,
+      maxCollateralizationRatio: 100,
+      maxSupplyDebtDivergencePct: 0.5,
+      maxBranches: 16,
+    },
+    overlaySources: [
+      {
+        label:
+          "Base Dollar on-chain system state (CollateralRegistry branch enumeration, per-branch TroveManager collateral/debt/price, and Stability Pool deposits)",
+        url: "https://base.blockscout.com/address/0x7551ebfc8340b7f91874942be9c653733d4fb04f",
+      },
+      {
+        label: "Pinned Base Dollar deployment configuration and Liquity V2 fork design",
+        url: "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/README.md",
+      },
+    ],
+  },
+  {
     assetId: "bold-liquity",
     family: "liquity-v2",
     chain: { key: "ethereum", evmChainId: 1 },

@@ -2,10 +2,10 @@ name: Shock Coverage Refresh
 
 # Keeps the V9 CDP shock-coverage fact inside its 72h policy freshness bound.
 #
-# Closes the last manual dependency under the LUSD and BOLD safety scores: the
+# Closes the manual dependency under the LUSD, BOLD, and BD safety scores: the
 # measurement was previously produced by hand. Past the 72h bound the engine
 # fails closed to legacy LCR, dropping LUSD to `unsafe-backing:high` (~77/B+ ->
-# 59/C) and taking BOLD's rating down with it.
+# 59/C) and taking BOLD's and BD's ratings down with it.
 #
 # Cadence is every other day at 03:41 UTC. The 48h gap leaves a roughly 24h
 # manual/rerun remediation window after one scheduled failure; the next automatic
@@ -40,7 +40,7 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
-      # Measurement uses the hardcoded public Ethereum archive RPC list in
+      # Measurement uses the hardcoded public Ethereum and Base RPC lists in
       # scripts/lib/mechanism-measurement/shock-targets.ts with per-endpoint
       # failover. No RPC credential is required. Any target that cannot be
       # measured on any endpoint fails the job before anything is committed.
@@ -49,6 +49,9 @@ jobs:
 
       - name: Measure Liquity V2 shock coverage
         run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bold-liquity
+
+      - name: Measure Base Dollar Liquity V2 shock coverage
+        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bd-basedollar
 
       # Byte-replays every new journal offline and attests it. A journal that
       # does not replay byte-identically throws here, so an unverified
@@ -67,7 +70,7 @@ jobs:
 
       # Fail loudly on a partial or non-scoring refresh rather than committing
       # a measurement the engine would reject.
-      - name: Assert both targets produced a fresh scoring measurement
+      - name: Assert all targets produced a fresh scoring measurement
         run: node --import tsx scripts/ci/check-shock-coverage-freshness.ts
 
       # A refresh must pass the shock-coupled Vitest suites the PR gate runs.
@@ -122,9 +125,9 @@ jobs:
             echo "Existing open PR for $BRANCH updated by force-push."
           else
             cat > /tmp/shock-coverage-pr-body.md <<'BODY'
-          Automated shock-coverage refresh for `lusd-liquity` and `bold-liquity`. Every journal in this PR replayed byte-identically offline before the registry was regenerated.
+          Automated shock-coverage refresh for `lusd-liquity`, `bold-liquity`, and `bd-basedollar`. Every journal in this PR replayed byte-identically offline before the registry was regenerated.
 
-          **Merge promptly.** The V9 CDP freshness bound is 72h measured from the pinned block timestamp, not from merge time. Past it the engine fails closed to legacy LCR and LUSD drops to `unsafe-backing:high`, taking BOLD's rating with it.
+          **Merge promptly.** The V9 CDP freshness bound is 72h measured from the pinned block timestamp, not from merge time. Past it the engine fails closed to legacy LCR and LUSD drops to `unsafe-backing:high`, taking BOLD's and BD's ratings with it.
 
           See [docs/process/shock-coverage-refresh.md](../blob/main/docs/process/shock-coverage-refresh.md).
           BODY

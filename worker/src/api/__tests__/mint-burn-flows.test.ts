@@ -131,7 +131,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const usdai = body.coins.find((coin) => coin.stablecoinId === "usdai-usd-ai");
 
     expect(body.scope).toEqual({
-      chainIds: ["ethereum", "arbitrum"],
+      chainIds: ["ethereum", "base", "arbitrum"],
       label: "Configured issuance chains",
     });
     expect(usdai?.netFlow24hUsd).toBe(7_000_000);
@@ -889,7 +889,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
-        matchBinds: ["ethereum", "arbitrum", sevenDayStart],
+        matchBinds: ["ethereum", "base", "arbitrum", sevenDayStart],
         rows: [
           {
             stablecoin_id: "usdt-tether",
@@ -964,7 +964,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const history = db.getHistory();
     const windowScans = history.filter((entry) => entry.sql.includes("pharos:mint-burn-flows:window-rows"));
     expect(windowScans).toHaveLength(1);
-    expect(windowScans[0]?.binds).toEqual(["ethereum", "arbitrum", sevenDayStart]);
+    expect(windowScans[0]?.binds).toEqual(["ethereum", "base", "arbitrum", sevenDayStart]);
     expect(history.some((entry) => entry.sql.includes("pharos:mint-burn-flows:window-24h-rows"))).toBe(false);
   });
 
@@ -984,7 +984,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
-        matchBinds: ["ethereum", "arbitrum", twentyFourHourStart],
+        matchBinds: ["ethereum", "base", "arbitrum", twentyFourHourStart],
         rows: [
           {
             stablecoin_id: "usdt-tether",
@@ -1066,7 +1066,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const history = db.getHistory();
     const windowScans = history.filter((entry) => entry.sql.includes("pharos:mint-burn-flows:window-rows"));
     expect(windowScans).toHaveLength(1);
-    expect(windowScans[0]?.binds).toEqual(["ethereum", "arbitrum", twentyFourHourStart]);
+    expect(windowScans[0]?.binds).toEqual(["ethereum", "base", "arbitrum", twentyFourHourStart]);
     expect(history.some((entry) => entry.sql.includes("pharos:mint-burn-flows:window-24h-rows"))).toBe(false);
   });
 

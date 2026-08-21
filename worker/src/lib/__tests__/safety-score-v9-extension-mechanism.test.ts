@@ -99,6 +99,27 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), boldMeta, "fiat-cash")).toBeNull();
   });
 
+  it("compiles Base Dollar's five-branch review after the date-only admission gate", () => {
+    const admittedClockSec = Date.parse("2026-08-22T00:00:00Z") / 1_000;
+    const review = buildSafetyScoreV9MechanismReview(
+      fixedInputStub({}, admittedClockSec),
+      { id: "bd-basedollar" } as MechanismMeta,
+      "cdp",
+    );
+    if (review?.archetype !== "cdp") throw new Error("expected the curated Base Dollar CDP overlay");
+    expect(review.collateralizationRatio).toBe(2.209);
+    expect(review.liquidationCapacityRatio).toBe(0.278);
+    expect(review.collateralizationParameters).toMatchObject({
+      quality: "adequate",
+      status: { observationState: "known" },
+    });
+    expect(review.liquidationMechanics.quality).toBe("adequate");
+    expect(review.backstop.quality).toBe("adequate");
+    expect(review.branchIsolation.quality).toBe("adequate");
+    expect(review.shutdownAndBadDebt.quality).toBe("limited");
+    expect(review.structuralRedemption.quality).toBe("adequate");
+  });
+
   it("keeps LUSD's measured liquidation capacity and unsafe-backing ceiling outside control changes", () => {
     const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "lusd-liquity" } as MechanismMeta, "cdp");
     if (review?.archetype !== "cdp") throw new Error("expected the curated LUSD CDP overlay");

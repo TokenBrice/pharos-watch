@@ -35,7 +35,24 @@ export interface LiquityV2ShockCoverageTarget extends ShockCoverageTargetBase {
     collateralRegistry: string;
   };
   spDeposits: { signature: string; selector: string };
-  branches: readonly { collateralSymbol: string; addressesRegistry: string }[];
+  branches: readonly {
+    collateralSymbol: string;
+    addressesRegistry: string;
+    oracleGraph?: {
+      /** Pin a direct AggregatorV3-compatible proxy implementation when the proxy has no aggregator() getter. */
+      primaryImplementationAddress?: string;
+      secondary?: {
+        signature: string;
+        selector: string;
+        implementationAddress?: string;
+      };
+      rateProvider?: {
+        signature: string;
+        selector: string;
+        expectedAddress: string;
+      };
+    };
+  }[];
   maxBranches: number;
 }
 
@@ -49,6 +66,99 @@ const ETHEREUM_ARCHIVE_RPCS = [
 ] as const;
 
 export const SHOCK_COVERAGE_TARGETS: readonly ShockCoverageTarget[] = [
+  {
+    assetId: "bd-basedollar",
+    family: "liquity-v2-shock-v1",
+    chain: { key: "base", evmChainId: 8453 },
+    rpcs: ["https://base-rpc.publicnode.com", "https://base.llamarpc.com", "https://mainnet.base.org"],
+    maxPositionsPerBranch: 5_000,
+    maxBranches: 16,
+    contracts: {
+      token: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      collateralRegistry: "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
+    },
+    spDeposits: { signature: "getTotalBoldDeposits()", selector: "0xf71c6940" },
+    branches: [
+      {
+        collateralSymbol: "WETH",
+        addressesRegistry: "0xdad2735973d29e3a8ce26667774a624e0ea97556",
+        oracleGraph: { primaryImplementationAddress: "0x5ab26742abe7c904ddf35b4cae288eb4e4a36df2" },
+      },
+      {
+        collateralSymbol: "wstETH",
+        addressesRegistry: "0x3e35fcc70d2ed82adce6c1e8f111554a04b74f3f",
+        oracleGraph: {
+          primaryImplementationAddress: "0x5ab26742abe7c904ddf35b4cae288eb4e4a36df2",
+          secondary: {
+            signature: "stEthUsdOracle()",
+            selector: "0xd69e820d",
+            implementationAddress: "0xbaf71b9a60c5fe2a6a448c0f2e3d66e42f5b5db8",
+          },
+          rateProvider: {
+            signature: "rateProviderAddress()",
+            selector: "0xe5aa1c40",
+            expectedAddress: "0x00caeda3cb375a17a084b1bdce7136bb01bbd13d",
+          },
+        },
+      },
+      {
+        collateralSymbol: "rETH",
+        addressesRegistry: "0xd4763ae6021927784a7a787c1a98b287f919d165",
+        oracleGraph: {
+          primaryImplementationAddress: "0x5ab26742abe7c904ddf35b4cae288eb4e4a36df2",
+          secondary: {
+            signature: "rEthEthOracle()",
+            selector: "0x03f04756",
+            implementationAddress: "0x73f526b1611f9cebbacd3110b4df3a0342864ae7",
+          },
+          rateProvider: {
+            signature: "rateProviderAddress()",
+            selector: "0xe5aa1c40",
+            expectedAddress: "0x658843bb859b7b85ceab5cf77167e3f0a78dfe7f",
+          },
+        },
+      },
+      {
+        collateralSymbol: "cbBTC",
+        addressesRegistry: "0x1fdea10dc1f6ff27ed9881bdf464fe070dda6f76",
+        oracleGraph: {
+          primaryImplementationAddress: "0x4b9188dcb11c73b62e49e10791ebc276a2a66fc5",
+          secondary: {
+            signature: "btcUsdOracle()",
+            selector: "0xca1ca21c",
+            implementationAddress: "0xc1b881e528cf9b3ea4838a327fa0104f49da1489",
+          },
+        },
+      },
+      {
+        collateralSymbol: "cbETH",
+        addressesRegistry: "0x98f5ddda4c0250966a446d39167d0bfb8e4ca1b6",
+        oracleGraph: {
+          primaryImplementationAddress: "0x5ab26742abe7c904ddf35b4cae288eb4e4a36df2",
+          secondary: {
+            signature: "cbEthEthOracle()",
+            selector: "0x4403b69b",
+            implementationAddress: "0x9823fffe5ff8aaaa142dd6a398e501d49aaae9d9",
+          },
+        },
+      },
+    ],
+    sourcePin: {
+      repository: "https://github.com/basedollar/basedollar",
+      commit: "fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941",
+      liquidationContractPath: "contracts/src/TroveManager.sol",
+    },
+    sources: [
+      {
+        label: "Pinned Base Dollar liquidation state machine",
+        url: "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/TroveManager.sol",
+      },
+      {
+        label: "Base Dollar Base mainnet CollateralRegistry",
+        url: "https://base.blockscout.com/address/0x7551ebfc8340b7f91874942be9c653733d4fb04f",
+      },
+    ],
+  },
   {
     assetId: "lusd-liquity",
     family: "liquity-v1-shock-v1",

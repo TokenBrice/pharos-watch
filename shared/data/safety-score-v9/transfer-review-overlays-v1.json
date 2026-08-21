@@ -3,6 +3,38 @@
   "note": "V9-only reviewed transfer-posture facts. Rows are added only after deployment-scoped primary-source review.",
   "reviews": [
     {
+      "assetId": "bd-basedollar",
+      "reviewedAt": "2026-08-21",
+      "reviewer": "Codex Base Dollar transfer review",
+      "deployments": [
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Base block 50259336, BD was a direct non-proxy deployment: owner() was zero and the EIP-1967 implementation slot was zero. The pinned BoldToken implementation exposes ordinary holder transfer and allowance-gated transferFrom, rejects only the zero address and the token contract itself, and contains no holder-selective blacklist, freeze, pause, seizure, or transfer hook. Protocol branch contracts can mint and burn only through their scoped debt and Stability Pool paths; they cannot block an ordinary holder transfer.",
+          "sources": [
+            {
+              "label": "Base Blockscout verified BD source",
+              "url": "https://base.blockscout.com/address/0x252d36f435582ecb01686448d21e8c9ea0b2ca65?tab=contract"
+            },
+            {
+              "label": "Pinned Base Dollar BoldToken source",
+              "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/contracts/src/BoldToken.sol"
+            },
+            {
+              "label": "Pinned Base Dollar deployment configuration",
+              "url": "https://github.com/basedollar/basedollar/blob/fd325e5aeafa2e4881a4a2d32451dfc9dfa0d941/frontend/app/src/white-label.config.ts"
+            },
+            {
+              "label": "Base block 50259336",
+              "url": "https://base.blockscout.com/block/50259336"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "assetId": "bold-liquity",
       "reviewedAt": "2026-07-17",
       "reviewer": "Codex TRANSFER-FACT",

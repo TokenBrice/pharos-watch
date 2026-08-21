@@ -27,6 +27,33 @@ function sha256Json(value: unknown): string {
 }
 
 describe("selectSafetyScoreV9CdpShockMeasurement", () => {
+  it("selects Base Dollar's replay-attested five-branch stress measurement", () => {
+    const measurement = requireMeasurement("bd-basedollar", 1_787_308_020);
+    expect(measurement).toMatchObject({
+      family: "liquity-v2-shock-v1",
+      applicability: "measured",
+      complete: true,
+      exactReplayPassed: true,
+      replayVerification: {
+        attestedAt: "2026-08-21",
+        mode: "offline-byte-identical",
+        callsConsumed: 224,
+        codePinsConsumed: 92,
+      },
+      source: {
+        journalPath:
+          "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json",
+        journalSha256: "95ebfb8c569bc9efded67574f8135198c7734dd0d4e89e471541a44d58761f4d",
+        block: { number: 50_259_336, timestampUnix: 1_787_308_019 },
+      },
+      stressLiquidatableDebt: "26262078110240219381698",
+      stressPoolOffsetDebt: "9479247573156543215626",
+      stressLiquidationCoverageRatio: 0.360948114363,
+    });
+    expect(measurement.branchContributions).toHaveLength(5);
+    expect(measurement.codeHashPins).toHaveLength(92);
+  });
+
   it("selects the complete chronology-valid LUSD and BOLD journals at the capture-9 clock", () => {
     const lusd = requireMeasurement("lusd-liquity", CAPTURE_9_CLOCK_SEC);
     const bold = requireMeasurement("bold-liquity", CAPTURE_9_CLOCK_SEC);

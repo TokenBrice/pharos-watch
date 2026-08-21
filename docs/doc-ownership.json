@@ -149,6 +149,17 @@
       "exactPaths": ["package.json", "package-lock.json", ".gitignore"]
     },
     {
+      "id": "safety-score-map",
+      "label": "Safety Score map poster surface",
+      "risk": "medium",
+      "docsToRead": ["docs/safety-score-map.md", "docs/report-cards.md", "matched docs/scripts.md section"],
+      "docsLikelyRequired": ["docs/safety-score-map.md", "docs/scripts.md when the generator CLI or guards change", "docs/digest-pipeline.md when the digest pairing changes"],
+      "checks": ["npx vitest run functions/__tests__/safety-map-png.test.ts", "npm run seo:check when the route changes", "npm run check:verified-doc-links"],
+      "hardRules": ["The KV manifest is written last and is the publication commit marker.", "A missing binding or object is a 404 with no-store; that behavior is the kill switch.", "Archive keys use the UTC run date; the visible stamp uses asOfSec.", "The digest embeds the dated image URL, never latest.png, and never blocks on the map."],
+      "prefixes": ["src/app/safety-scores/map/", "functions/safety-scores/"],
+      "exactPaths": ["scripts/maintenance/build-safety-score-map.ts", ".github/workflows/safety-map-refresh.yml", "functions/__tests__/safety-map-png.test.ts"]
+    },
+    {
       "id": "agent-hooks-process",
       "label": "Agent guidance or local hook process",
       "risk": "medium",
@@ -255,6 +266,12 @@
       "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9-*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts", "worker/migrations/0201_safety_score_history_v2.sql", "worker/migrations/0226_safety_score_v9_canonical_cache.sql"],
       "docs": ["docs/report-cards.md", "docs/worker-infrastructure.md", "docs/data-flow-map.md", "docs/api-reference.md", "docs/telegram-alerts.md", "docs/tape-page.md", "docs/process/safety-score-equivalence-harness.md", "docs/process/safety-score-curation-expiry-sweep.md"],
       "notes": ["V9 is the canonical Safety Score publication. Current consumers fail closed when the accepted publication is unavailable or held. Curation expiry and stale reserve-review sweeps use the recurring process page."]
+    },
+    {
+      "name": "safety-score-map",
+      "sources": ["scripts/maintenance/build-safety-score-map.ts", ".github/workflows/safety-map-refresh.yml", "functions/safety-scores/**", "src/app/safety-scores/map/**"],
+      "docs": ["docs/safety-score-map.md", "docs/scripts.md", "docs/report-cards.md", "docs/digest-pipeline.md"],
+      "notes": ["The poster image is published to KV out of band and served by a Pages Function, so its cadence is decoupled from Pages deploys. Generator guards, KV publish order, the serving 404 contract, and the digest degradation contract are one coupled set."]
     },
     {
       "name": "pages-functions-hosting",

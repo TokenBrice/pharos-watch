@@ -9,6 +9,14 @@
   "attestedAt": "2026-08-21",
   "attestations": [
     {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json",
+      "journalSha256": "95ebfb8c569bc9efded67574f8135198c7734dd0d4e89e471541a44d58761f4d",
+      "attestedAt": "2026-08-21",
+      "exactReplayPassed": true,
+      "callsConsumed": 224,
+      "codePinsConsumed": 92
+    },
+    {
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-07-16-block-25546976-shock-coverage.json",
       "journalSha256": "51bcb1b5c177ad7b31ff0faab0b055b300edc7ea30be86c0f318ab9fe4056751",
       "attestedAt": "2026-07-20",

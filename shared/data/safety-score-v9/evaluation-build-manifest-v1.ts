@@ -6,7 +6,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   "files": [
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "3c87504b29098ab4205d19f8856320feec2af4db2f1ac6c8db83ff54808b8131"
+      "sha256": "df0745e868d3a3e90af8caac850e9b2d3608f41078c152a4632a7d5015621892"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -62,7 +62,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "fd749f1a4b36367bbf9ea8bcb2c9bc6e0e01f71bceb17559481e27e2b0cedfe9"
+      "sha256": "e183069904626a9424ba820041e5af7846834143da4c8e857105e0d830fb8d06"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -86,7 +86,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "63f2b2f89ed9fdf23f1702d386f3e8b37d605220a416a6ddbd69411b6ed056a3"
+      "sha256": "856a3e3a01b6e7822b9a23ce9396b5dfe0b7b671dffab99a8c9ec1d09c3370bc"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "dcf687dd2ced4507d25cb9ba2d7053a6223a25e49a0dff2a3acddd353a567400"
+  "digest": "cba3e17da0cebff405278717a8d9b666a55d388a80169cd3c793cf2b938c7018"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

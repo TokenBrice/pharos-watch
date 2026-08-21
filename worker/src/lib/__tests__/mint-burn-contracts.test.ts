@@ -72,6 +72,41 @@ describe("mint-burn-contracts 3Jane USD3 config", () => {
   });
 });
 
+describe("mint-burn-contracts Base Dollar config", () => {
+  it("tracks canonical Base zero-address Transfers from the verified deployment block", () => {
+    const configs = getMintBurnConfigsForStablecoin("bd-basedollar");
+    expect(configs).toHaveLength(1);
+    expect(configs[0]).toMatchObject({
+      chain: { chainId: "base" },
+      symbol: "BD",
+      contractAddress: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      decimals: 18,
+      dustThreshold: 100,
+      startBlock: 49_406_521,
+      tier: "extended",
+      adapterKind: "transfer-zero-address",
+      startBlockSource: "blockscout-base-create2-deployment-2026-08-01",
+      startBlockConfidence: "high",
+    });
+    expect(configs[0]!.events).toEqual([
+      {
+        signature: "Transfer(address,address,uint256)",
+        topicHash: TRANSFER_TOPIC,
+        direction: "mint",
+        amountEncoding: "transfer-value",
+        filterTopic: { index: 1, value: ZERO_ADDRESS_PADDED },
+      },
+      {
+        signature: "Transfer(address,address,uint256)",
+        topicHash: TRANSFER_TOPIC,
+        direction: "burn",
+        amountEncoding: "transfer-value",
+        filterTopic: { index: 2, value: ZERO_ADDRESS_PADDED },
+      },
+    ]);
+  });
+});
+
 describe("mint-burn-contracts removals", () => {
   it("does not track explicitly removed no-signal tokens", () => {
     const trackedIds = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));
@@ -82,11 +117,11 @@ describe("mint-burn-contracts removals", () => {
 });
 
 describe("mint-burn-contracts configured scope", () => {
-  it("exposes both Ethereum and Arbitrum tracking after the USDai canonical-chain switch", () => {
+  it("exposes Ethereum, Arbitrum, and Base issuance tracking", () => {
     const uniqueChains = new Set(MINT_BURN_CONFIGS.map((c) => c.chain.chainId));
-    expect(uniqueChains).toEqual(new Set(["ethereum", "arbitrum"]));
+    expect(uniqueChains).toEqual(new Set(["ethereum", "arbitrum", "base"]));
     expect(buildMintBurnScope()).toEqual({
-      chainIds: ["ethereum", "arbitrum"],
+      chainIds: ["ethereum", "base", "arbitrum"],
       label: "Configured issuance chains",
     });
   });
