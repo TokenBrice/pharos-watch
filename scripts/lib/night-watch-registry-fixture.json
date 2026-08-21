@@ -33,6 +33,7 @@
     "cron-staleness-watchdog",
     "daily-digest",
     "data-invariant-canary",
+    "dex-exit-route-turnover-watchdog",
     "dispatch-telegram-alerts",
     "fetch-tbill-rate",
     "mint-burn-growth-watchdog",
