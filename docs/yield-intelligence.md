@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.40`
+- **Current methodology version:** `v8.41`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/yield-methodology.ts`
 
@@ -139,9 +139,24 @@ apr                  = remainingLqtyRewards * dailyIssuanceFactor * lqtyPriceUsd
 
 **Caveat:** This source captures only the projected LQTY incentive stream. It deliberately excludes ETH liquidation gains, so it is a lower-bound estimate of the full Stability Pool return.
 
-#### Reviewed gap: Base Dollar Stability Pools
+#### Special-case Tier 1 estimator: Base Dollar Liquity V2 Stability Pools
 
-BD has five branch-specific Liquity V2 Stability Pools on Base. Their variable return combines BD borrower-fee distributions with collateral liquidation gains, so neither the generic ERC-4626 exchange-rate reader nor the Liquity v1 B.Protocol emissions estimator can represent it safely. At the 2026-08-21 launch review there was no verified public machine-readable APY feed or yield-bearing wrapper exchange rate. The typed yield lifecycle registry therefore records an intentional `source-family-adapter-unimplemented` gap through 2026-09-21. The next implementation step is a reusable multi-branch Liquity V2 Stability Pool adapter that snapshots every branch's deposit and reward accumulators, values collateral gains, and fails closed unless branch coverage is complete.
+Base Dollar has five branch-specific Liquity V2 Stability Pools on Base: WETH, wstETH, rETH, cbBTC, and cbETH. This deterministic row is labeled `Base Dollar Stability Pools (interest-only)` and publishes under source key `onchain:bd-basedollar` with `yieldType: lending-vault`; `sourceTvlUsd` is the total BD deposited across the five pools. Base Dollar itself is not yield-bearing — the Stability Pool is the deposit venue, as with LUSD.
+
+**Reads:**
+
+- One batched `eth_call` read per refresh: the CollateralRegistry branch count plus each branch's Stability Pool BD deposits, `aggWeightedDebtSum`, and shutdown state
+
+**Formula:**
+
+```
+aggregateBorrowerInterest = Σ activeBranch(aggWeightedDebtSum)
+apr = 0.75 * aggregateBorrowerInterest / totalStabilityPoolBDDeposits * 100
+```
+
+Shutdown branches contribute zero. The reader fails closed if any read fails or if the CollateralRegistry reports a branch count different from the five configured branches (e.g. after a governor registers an announced AERO/LP branch), so the row is published only with complete branch coverage.
+
+**Caveat:** This is a deliberately conservative interest-only undercount. It excludes upfront borrowing fees and liquidation collateral gains, so it does not represent the full Stability Pool return.
 
 ### Tier 2: DeFiLlama Yields API (Multi-Source)
 
@@ -213,6 +228,7 @@ External `lending-opportunity`, `fixed-yield`, and `structured-tranche` rows und
 | `usbd-bima`           | `BIMA savings (sUSBD)`              | `https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000` |
 | `cetes-etherfuse`     | `Etherfuse CETES current issuance`  | Etherfuse first-party Next data at `https://app.etherfuse.com/bonds/cetes`                           |
 | `lusd-liquity`        | `B.Protocol LQTY-only source`       | deterministic on-chain LQTY-only source reader                                                       |
+| `bd-basedollar`       | `Base Dollar Stability Pools (interest-only)` | deterministic on-chain five-branch Liquity V2 Stability Pool reader                              |
 | `usyc-hashnote`       | `Hashnote USYC`                     | Hashnote protocol API                                                                                |
 | `mmev-midas`          | `Midas mMEV/USD Oracle`             | on-chain issuer-listed mMEV/USD NAV oracle with historical anchor rows                               |
 | `usdy-ondo-finance`   | `Ondo USDY oracle`                  | on-chain Ondo oracle with historical anchor rows                                                     |

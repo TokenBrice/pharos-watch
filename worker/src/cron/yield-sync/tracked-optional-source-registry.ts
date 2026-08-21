@@ -1,6 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildOnChainSourceKey } from "../yield-helpers";
 import {
+  fetchBasedollarSpSource,
   fetchBimaSusbdSource,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
@@ -16,6 +17,7 @@ import type { ResolvedYield } from "./types";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
+const BASEDOLLAR_BD_ID = "bd-basedollar";
 const SCRVUSD_CURVE_ID = "scrvusd-curve";
 const BIMA_USBD_ID = "usbd-bima";
 const CETES_ETHERFUSE_ID = "cetes-etherfuse";
@@ -226,6 +228,20 @@ export const STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: readonly TrackedOption
           budgetSignal,
           context.chainRpcs,
           context.coingeckoApiKey,
+        ),
+        null,
+      ),
+  },
+  {
+    stablecoinId: BASEDOLLAR_BD_ID,
+    sourceKey: buildOnChainSourceKey(BASEDOLLAR_BD_ID),
+    run: (context) =>
+      runTimedOptionalSource(
+        "Base Dollar SP interest-only source",
+        context.signal,
+        (budgetSignal) => fetchBasedollarSpSource(
+          budgetSignal,
+          context.chainRpcs,
         ),
         null,
       ),

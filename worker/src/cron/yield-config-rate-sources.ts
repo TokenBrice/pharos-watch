@@ -285,6 +285,7 @@ export const QUARANTINED_DETERMINISTIC_ADAPTERS: Record<string, string> = Object
 export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "scrvusd-curve": "Curve scrvUSD current-rate reader",
   "lusd-liquity": "B.Protocol LQTY-only",
+  "bd-basedollar": "Base Dollar Stability Pools (interest-only)",
   "usbd-bima": "BIMA savings",
   "cetes-etherfuse": "Etherfuse CETES current issuance",
   "usyc-hashnote": "Hashnote NAV feed",
@@ -297,6 +298,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
 export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
   "scrvusd-curve": "onchain:scrvusd-curve:scrvusd-current-rate",
   "lusd-liquity": buildOnChainSourceKey("lusd-liquity"),
+  "bd-basedollar": buildOnChainSourceKey("bd-basedollar"),
   "usbd-bima": "protocol-api:bima-susbd",
   "cetes-etherfuse": "protocol-api:etherfuse-cetes-current-issuance",
   "usyc-hashnote": "protocol-api:hashnote-usyc",
@@ -307,13 +309,6 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
 };
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
-  "bd-basedollar": {
-    code: "source-family-adapter-unimplemented",
-    since: "2026-08-21",
-    nextReviewAt: "2026-09-21",
-    evidenceUrl: "https://github.com/basedollar/basedollar",
-    note: "2026-08-21 launch review: Base Dollar has five branch-specific Liquity V2 Stability Pools whose variable return combines borrower-fee BD distributions and liquidation collateral gains. Pharos has no reusable multi-branch Liquity V2 Stability Pool realized-return adapter, no yield-bearing wrapper exchange rate, and no verified public machine-readable APY feed. Keep this as an intentional gap until a deterministic adapter snapshots each branch's deposit/reward accumulators, values collateral gains, and aggregates only complete branch coverage.",
-  },
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",

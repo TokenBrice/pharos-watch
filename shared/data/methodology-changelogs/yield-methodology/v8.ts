@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.41",
+    title: "Base Dollar Liquity V2 Stability Pool Source",
+    date: "2026-08-21",
+    effectiveAt: 1787270400,
+    summary:
+      "The first multi-branch Liquity V2 Stability Pool on-chain source now covers Base Dollar through a deterministic interest-only APR: 75% of aggregate accrued borrower interest across its five Base branches divided by total Stability Pool BD deposits. Direct eth_call reads fail closed unless every branch is readable, and the deliberately conservative estimate excludes upfront borrowing fees and liquidation collateral gains; this replaces the 2026-08-21 `source-family-adapter-unimplemented` intentional gap for `bd-basedollar`.",
+    impact: [
+      "`bd-basedollar` moves from intentional-gap to covered through the deterministic `onchain:bd-basedollar` reader, publishing the Base Dollar Stability Pools (interest-only) lending-vault row with total Stability Pool deposits as `sourceTvlUsd`; Base Dollar itself remains non-yield-bearing, with yield attributed to the deposit venue",
+      "The reader aggregates `aggWeightedDebtSum` across WETH, wstETH, rETH, cbBTC, and cbETH Stability Pool branches, treats shut-down branches as zero, and requires complete branch coverage before publishing",
+      "The Liquity V2 Stability Pool source family is reusable for other Liquity V2 forks while preserving the same conservative interest-only undercount and fail-closed branch-read contract",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.40",
     title: "Measured Venue TVL Eligibility and Native Depth Semantics",
     date: "2026-08-20",
