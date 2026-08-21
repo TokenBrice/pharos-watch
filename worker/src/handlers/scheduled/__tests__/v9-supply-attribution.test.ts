@@ -113,7 +113,7 @@ describe("V9 supply-attribution scheduling", () => {
     vi.useRealTimers();
   });
 
-  it("aborts hung DDR with handoff margin and admits attribution through the real window", async () => {
+  it("captures attribution before DDR heap work and aborts hung DDR at its derived deadline", async () => {
     let ddrSignal: AbortSignal | undefined;
     mocks.computeDepegResolver.mockImplementation(({
       signal,
@@ -129,18 +129,20 @@ describe("V9 supply-attribution scheduling", () => {
     const run = runV9SupplyAttributionSlot(runtime());
     await vi.advanceTimersByTimeAsync(0);
 
+    expect(mocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledOnce();
     expect(mocks.computeDepegResolver).toHaveBeenCalledOnce();
+    expect(
+      mocks.syncSafetyScoreV9SupplyAttribution.mock.invocationCallOrder[0],
+    ).toBeLessThan(mocks.computeDepegResolver.mock.invocationCallOrder[0]!);
     expect(ddrSignal?.aborted).toBe(false);
 
     await vi.advanceTimersByTimeAsync(DDR_BUDGET_MS);
     expect(ddrSignal?.aborted).toBe(true);
-    expect(mocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(HANDOFF_DELAY_MS);
     await run;
 
     expect(ddrSignal?.reason).toMatchObject({ name: "TimeoutError" });
-    expect(mocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledOnce();
 
     vi.setSystemTime(
       SCHEDULED_TIME_MS +
@@ -176,7 +178,7 @@ describe("V9 supply-attribution scheduling", () => {
 
     const summary = await runV9SupplyAttributionSlot(scheduledRuntime);
     const ddrResult = await vi.mocked(scheduledRuntime.runLeasedCron)
-      .mock.results[0]?.value;
+      .mock.results[1]?.value;
 
     expect(mocks.computeDepegResolver).not.toHaveBeenCalled();
     expect(ddrResult).toEqual({
@@ -188,7 +190,7 @@ describe("V9 supply-attribution scheduling", () => {
         reason: "ddr-budget-exhausted",
       },
     });
-    expect(summary.jobs[0]).toMatchObject({
+    expect(summary.jobs[1]).toMatchObject({
       job: "compute-depeg-resolver",
       outcome: "skipped",
       reason: "ddr-budget-exhausted",

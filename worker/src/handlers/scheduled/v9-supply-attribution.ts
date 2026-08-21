@@ -1,6 +1,5 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
-import { computeDepegResolver } from "../../cron/compute-depeg-resolver";
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { parseStablecoinsCapabilities } from "./context";
@@ -73,45 +72,10 @@ export async function runV9SupplyAttributionSlot(
       mode: "serial",
       label: "v9-supply-ddr",
       tasks: [
-        // DDR is D1-only and reads the latest stablecoins capability metadata,
-        // not the V9 supply-attribution generation captured below. Keep it
-        // ahead of the heavier capture so it does not inherit that isolate's
-        // memory pressure.
-        {
-          job: "compute-depeg-resolver",
-          run: async (signal) => {
-            const remainingMs = ddrDeadlineMs - Date.now();
-            if (remainingMs <= 0) return ddrBudgetExhausted();
-
-            // This is cooperative mitigation only: it cannot contain an
-            // isolate OOM or a D1 stall that ignores cancellation. Hard
-            // containment would require a separate physical trigger.
-            const timeout = createTimeoutSignal({
-              timeoutMs: remainingMs,
-              timeoutReason: new DOMException(
-                "compute-depeg-resolver exceeded its V9 supply attribution admission budget",
-                "TimeoutError",
-              ),
-              parentSignal: signal,
-            });
-            try {
-              const capabilities = await loadLatestStablecoinsCapabilities(
-                runtime.db,
-                runtime.slotStartedAt,
-              );
-              return await computeDepegResolver({
-                db: runtime.db,
-                signal: timeout.signal,
-                slot: "v9-supply-attribution-follow-up",
-                stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
-                depegPipelineHealthy: capabilities.depegPipelineHealthy,
-                syncCapabilities: capabilities.syncCapabilities,
-              });
-            } finally {
-              timeout.dispose();
-            }
-          },
-        },
+        // Capture before DDR allocates its large review graph. Both jobs share
+        // one Worker isolate even though they are serial, so running DDR first
+        // can leave enough live heap for the observer import to exceed the
+        // isolate memory limit.
         {
           job: "sync-v9-supply-attribution",
           run: (signal) =>
@@ -138,6 +102,48 @@ export async function runV9SupplyAttributionSlot(
                     ),
                 ),
             ),
+        },
+        // DDR is D1-only and reads the latest stablecoins capability metadata,
+        // not the supply-attribution generation captured above. Import it only
+        // after capture so its module and run-scoped review state cannot raise
+        // the observer's peak heap.
+        {
+          job: "compute-depeg-resolver",
+          run: async (signal) => {
+            const remainingMs = ddrDeadlineMs - Date.now();
+            if (remainingMs <= 0) return ddrBudgetExhausted();
+
+            // This is cooperative mitigation only: it cannot contain an
+            // isolate OOM or a D1 stall that ignores cancellation. Hard
+            // containment would require a separate physical trigger.
+            const timeout = createTimeoutSignal({
+              timeoutMs: remainingMs,
+              timeoutReason: new DOMException(
+                "compute-depeg-resolver exceeded its V9 supply attribution admission budget",
+                "TimeoutError",
+              ),
+              parentSignal: signal,
+            });
+            try {
+              const capabilities = await loadLatestStablecoinsCapabilities(
+                runtime.db,
+                runtime.slotStartedAt,
+              );
+              const { computeDepegResolver } = await import(
+                "../../cron/compute-depeg-resolver"
+              );
+              return await computeDepegResolver({
+                db: runtime.db,
+                signal: timeout.signal,
+                slot: "v9-supply-attribution-follow-up",
+                stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
+                depegPipelineHealthy: capabilities.depegPipelineHealthy,
+                syncCapabilities: capabilities.syncCapabilities,
+              });
+            } finally {
+              timeout.dispose();
+            }
+          },
         },
       ],
     },
