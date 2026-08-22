@@ -595,6 +595,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
     watchlistPreviousById,
     scoreResults: params.scoreResults,
     retainedPoolsByStablecoin: params.retainedPoolsByStablecoin,
+    previousMajorTvlById: new Map(
+      (previousTopCoverageRows.results ?? []).map((row) => [row.stablecoin_id, row.total_tvl_usd]),
+    ),
   });
 
   return {
@@ -661,6 +664,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       qualityDriftSeverity: driftSummary.qualityDriftSeverity,
       qualityDriftMetrics: driftSummary.qualityDriftMetrics,
       topAssetCoverageDeltas: driftSummary.topAssetCoverageDeltas,
+      majorTvlCliffs: driftSummary.majorTvlCliffs,
     },
   };
 }
