@@ -35,6 +35,7 @@ import {
   checkDigestSafetyContextForDelivery,
   findUnboundDigestSafetyClaimMarkers,
 } from "../lib/digest-safety-context";
+import { resolveDigestSafetyMap, type DigestSafetyMapResolution } from "../lib/digest-safety-map";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -337,6 +338,22 @@ export async function generateDailyDigest(
   throwIfAborted(signal);
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
   const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
+  let safetyMap: DigestSafetyMapResolution | null = null;
+  if (!qualityGateStatus && (twitterCreds || telegramCreds)) {
+    safetyMap = await resolveDigestSafetyMap(digestDate, now, signal);
+    if (safetyMap.kind === "unavailable") {
+      degradedReasons.push(`safety-map-${safetyMap.reason}`);
+      logWorkerEvent({
+        scope: "handler",
+        level: "warn",
+        event: "daily_digest_safety_map_omitted",
+        job: "daily-digest",
+        message: "Daily digest omitted the Safety Score map",
+        metadata: { reason: safetyMap.reason, date: digestDate },
+      });
+    }
+  }
+  const safetyMapImageUrl = safetyMap?.kind === "available" ? safetyMap.imageUrl : null;
   throwIfAborted(signal);
   await reportCronProgress(reportProgress, {
     stage: "twitter-delivery",
@@ -382,7 +399,16 @@ export async function generateDailyDigest(
       }
 
       try {
-        await postDigestTweet(digestCopy.digestTitle, digestCopy.digestText, creds, editionNumber);
+        const posted = await postDigestTweet(
+          digestCopy.digestTitle,
+          digestCopy.digestText,
+          creds,
+          editionNumber,
+          safetyMapImageUrl,
+        );
+        if (safetyMapImageUrl && !posted.mediaAttached) {
+          degradedReasons.push("safety-map-twitter-attachment");
+        }
       } catch (err) {
         try {
           await deleteCache(db, markerKey);
@@ -433,6 +459,7 @@ export async function generateDailyDigest(
         date: digestDate,
         editionNumber,
         appendixHtml: telegramAppendices?.appendixHtml ?? null,
+        imageUrl: safetyMapImageUrl,
         successActions: telegramAppendices?.successActions ?? [],
         safetyContext: inputData.safetyContext ?? {
           status: "unavailable",

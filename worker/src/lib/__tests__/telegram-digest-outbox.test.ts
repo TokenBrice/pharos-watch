@@ -103,6 +103,27 @@ afterEach(() => {
 });
 
 describe("Telegram digest outbox", () => {
+  it("persists the dated map link and requests a large preview during delivery", async () => {
+    const { db } = createHarness();
+    const imageUrl = "https://pharos.watch/safety-scores/map.png?date=2026-07-10";
+    await enqueueDaily(db, { imageUrl });
+    const fetchSpy = mockFetch([{
+      match: () => true,
+      respond: () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    }]);
+
+    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+
+    expect(result).toMatchObject({ outcome: "sent", chunksSent: 1 });
+    const body = JSON.parse(String(fetchSpy.getHistory()[0]!.body));
+    expect(body.text).toContain(imageUrl);
+    expect(body.link_preview_options).toEqual({
+      url: imageUrl,
+      prefer_large_media: true,
+      show_above_text: true,
+    });
+  });
+
   it("persists sending before the Bot API effect and commits success actions with sent", async () => {
     const { sqlite, db } = createHarness();
     const successActions = [{ key: "telegram:appendix-pointer", value: "edition-42" }];

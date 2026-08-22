@@ -80,6 +80,7 @@ export function buildTelegramMessage(
   date: string,
   editionNumber?: number | null,
   appendixHtml?: string | null,
+  imageUrl?: string | null,
 ): string {
   // Escape HTML first, then convert markdown bold **text** to <b>text</b>
   const body = escapeHtml(extended).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
@@ -88,6 +89,7 @@ export function buildTelegramMessage(
     `${kicker}<b>${escapeHtml(title)}</b>`,
     body,
     appendixHtml ?? "",
+    imageUrl ? `<a href="${escapeHtml(imageUrl)}">View today’s map →</a>` : "",
     `<a href="https://pharos.watch/digest/${date}/">Read on Pharos →</a>`,
   ].filter((section) => section.trim().length > 0);
   return sections.join("\n\n");

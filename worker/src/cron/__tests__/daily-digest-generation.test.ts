@@ -89,6 +89,20 @@ vi.mock("../../lib/twitter", () => ({
   postDigestTweet: vi.fn(),
 }));
 
+vi.mock("../../lib/digest-safety-map", () => ({
+  resolveDigestSafetyMap: vi.fn(async (date: string) => ({
+    kind: "available",
+    imageUrl: `https://pharos.watch/safety-scores/map.png?date=${date}`,
+    manifest: {
+      date,
+      asOfSec: 1_772_796_000,
+      renderedAtSec: 1_772_798_400,
+      edition: "daily",
+      bytes: { png: 1_000_000 },
+    },
+  })),
+}));
+
 vi.mock("../../lib/telegram-digest-appendices", () => ({
   prepareTelegramDigestAppendices: vi.fn(),
 }));
@@ -127,6 +141,7 @@ import {
 } from "../../lib/safety-score-active-source";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestTweet } from "../../lib/twitter";
+import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
 import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../../lib/telegram-digest-outbox";
 import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
@@ -587,7 +602,7 @@ describe("generateDailyDigest", () => {
       .mockReset()
       .mockImplementation(async () => mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT));
 
-    vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
+    vi.mocked(postDigestTweet).mockReset().mockResolvedValue({ mediaAttached: true, mediaError: null });
     vi.mocked(enqueueTelegramDigestEdition)
       .mockReset()
       .mockResolvedValue({
@@ -685,7 +700,21 @@ describe("generateDailyDigest", () => {
     expect(storedInput.editorialAudit?.usedCandidateIds).toEqual(["depeg:usdt-tether:active"]);
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    expect(postDigestTweet).toHaveBeenCalledWith(
+      "Calm Drift",
+      "USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.",
+      expect.any(Object),
+      expect.any(Number),
+      "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+    );
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+      }),
+      undefined,
+    );
     expect(runTelegramDigestDeliveryWithPermit).toHaveBeenCalledWith(expect.objectContaining({
       db,
       owner: "daily-digest",
@@ -1397,6 +1426,37 @@ describe("generateDailyDigest", () => {
     expect(result.metadata).toContain("telegram: failed:");
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
+  });
+
+  it("posts text-only and records degraded telemetry when the daily map is unavailable", async () => {
+    vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({
+      kind: "unavailable",
+      reason: "manifest-not-today",
+    });
+    const db = mockD1(makeBaseTables());
+
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" },
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toContain("safety-map-manifest-not-today");
+    expect(postDigestTweet).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(Object),
+      expect.any(Number),
+      null,
+    );
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ imageUrl: null }),
+      undefined,
+    );
   });
 
   it("persists the Twitter sent marker before sending on the happy path", async () => {

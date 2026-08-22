@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { drainResponseBody } from "./response-body";
+import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
 
 export interface TwitterCreds {
   apiKey: string;
@@ -99,7 +99,7 @@ export function buildTweetText(digestTitle: string, digestText: string, editionN
 }
 
 /** Post a single tweet using OAuth 1.0a. Throws on API error. */
-async function postTweet(text: string, creds: TwitterCreds): Promise<void> {
+async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): Promise<void> {
   const url = "https://api.twitter.com/2/tweets";
   const authHeader = await buildOAuthHeader("POST", url, creds);
 
@@ -109,7 +109,10 @@ async function postTweet(text: string, creds: TwitterCreds): Promise<void> {
       Authorization: authHeader,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({
+      text,
+      ...(mediaId ? { media: { media_ids: [mediaId] } } : {}),
+    }),
     signal: AbortSignal.timeout(10_000),
   });
 
@@ -121,6 +124,57 @@ async function postTweet(text: string, creds: TwitterCreds): Promise<void> {
   await drainResponseBody(res);
 }
 
+const TWITTER_MEDIA_UPLOAD_URL = "https://upload.twitter.com/1.1/media/upload.json";
+const TWITTER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+async function uploadTweetImage(imageUrl: string, creds: TwitterCreds): Promise<string> {
+  const imageSignal = AbortSignal.timeout(10_000);
+  const imageResponse = await fetch(imageUrl, { signal: imageSignal });
+  if (!imageResponse.ok) {
+    await drainResponseBody(imageResponse);
+    throw new Error(`Safety map image HTTP ${imageResponse.status}`);
+  }
+  const contentType = imageResponse.headers.get("Content-Type")?.toLowerCase() ?? "";
+  if (!contentType.startsWith("image/png")) {
+    await drainResponseBody(imageResponse);
+    throw new Error(`Safety map image has unsupported content type: ${contentType || "missing"}`);
+  }
+  const declaredLength = Number(imageResponse.headers.get("Content-Length"));
+  if (Number.isFinite(declaredLength) && declaredLength > TWITTER_IMAGE_MAX_BYTES) {
+    await drainResponseBody(imageResponse);
+    throw new Error(`Safety map image exceeds ${TWITTER_IMAGE_MAX_BYTES} bytes`);
+  }
+  const imageBytes = await imageResponse.arrayBuffer();
+  if (imageBytes.byteLength === 0 || imageBytes.byteLength > TWITTER_IMAGE_MAX_BYTES) {
+    throw new Error(`Safety map image size is invalid: ${imageBytes.byteLength}`);
+  }
+
+  const authHeader = await buildOAuthHeader("POST", TWITTER_MEDIA_UPLOAD_URL, creds);
+  const body = new FormData();
+  body.append("media", new Blob([imageBytes], { type: "image/png" }), "pharos-safety-score-map.png");
+  body.append("media_category", "tweet_image");
+  const uploadSignal = AbortSignal.timeout(15_000);
+  const response = await fetch(TWITTER_MEDIA_UPLOAD_URL, {
+    method: "POST",
+    headers: { Authorization: authHeader },
+    body,
+    signal: uploadSignal,
+  });
+  const raw = await readResponseTextBoundedWithSignal(response, 16_384, uploadSignal);
+  if (!response.ok) throw new Error(`Twitter media API ${response.status}: ${raw.slice(0, 300)}`);
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(raw);
+  } catch {
+    throw new Error("Twitter media API returned invalid JSON");
+  }
+  const mediaId = (decoded as { media_id_string?: unknown })?.media_id_string;
+  if (typeof mediaId !== "string" || !/^\d+$/.test(mediaId)) {
+    throw new Error("Twitter media API response omitted media_id_string");
+  }
+  return mediaId;
+}
+
 /**
  * Build tweet text from digest and post it.
  * The caller is responsible for catching errors.
@@ -130,8 +184,20 @@ export async function postDigestTweet(
   digestText: string,
   creds: TwitterCreds,
   editionNumber?: number | null,
-): Promise<void> {
+  imageUrl?: string | null,
+): Promise<{ mediaAttached: boolean; mediaError: string | null }> {
   const tweetText = buildTweetText(digestTitle, digestText, editionNumber);
-  await postTweet(tweetText, creds);
-  logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars)`);
+  let mediaId: string | undefined;
+  let mediaError: string | null = null;
+  if (imageUrl) {
+    try {
+      mediaId = await uploadTweetImage(imageUrl, creds);
+    } catch (error) {
+      mediaError = error instanceof Error ? error.message : String(error);
+      logWorkerEventArgs("lib", "warn", `[twitter] Safety map attachment omitted: ${mediaError}`);
+    }
+  }
+  await postTweet(tweetText, creds, mediaId);
+  logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars${mediaId ? ", safety map attached" : ""})`);
+  return { mediaAttached: Boolean(mediaId), mediaError };
 }

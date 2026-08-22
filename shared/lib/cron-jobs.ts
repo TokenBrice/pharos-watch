@@ -667,7 +667,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
-    maxConnections: 1, // Anthropic LLM call, then Twitter + Telegram posts (sequential)
+    maxConnections: 1, // Anthropic, map readiness/media upload, Twitter, then Telegram (all sequential)
     connectionGroup: "digest-chain",
   },
   {
