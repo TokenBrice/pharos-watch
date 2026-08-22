@@ -47,7 +47,16 @@ function aggregateReserveDependencies(
 }
 
 function sumDependencyWeight(dependencies: readonly DependencyWeight[]): number {
-  return dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
+  const total = dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
+
+  // Reserve adapters publish decimal percentages. Converting each slice to a
+  // fraction before summing can put an exact 100% basket one ULP above 1,
+  // which is not a real overweight condition but is outside FractionSchema.
+  // Canonicalize only negligible boundary drift; material overweights remain
+  // visible to the dependency validator and fail closed.
+  if (Math.abs(total) <= 1e-12) return 0;
+  if (Math.abs(total - 1) <= 1e-12) return 1;
+  return total;
 }
 
 function injectVariantParent(

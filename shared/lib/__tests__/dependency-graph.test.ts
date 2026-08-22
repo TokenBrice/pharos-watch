@@ -123,6 +123,35 @@ describe("dependency-graph", () => {
     expect(dependencies).toEqual([{ id: "live-upstream", weight: 0.4, type: "collateral" }]);
   });
 
+  it("canonicalizes machine-precision drift for an exact full-weight live reserve basket", () => {
+    const result = deriveEffectiveDependencySet(makeMeta({ id: "dependent" }), {
+      liveReserveSlices: [
+        { name: "sfrxUSD", pct: 37.976681, risk: "medium", coinId: "sfrxusd-frax" },
+        { name: "sUSDe", pct: 37.173171, risk: "medium", coinId: "susde-ethena" },
+        { name: "ygamiUSDC", pct: 12.235688, risk: "high", coinId: "usdc-circle" },
+        { name: "sUSDS", pct: 11.924473, risk: "low", coinId: "susds-sky" },
+        { name: "USDe", pct: 0.657631, risk: "medium", coinId: "usde-ethena" },
+        { name: "USDC", pct: 0.024855, risk: "low", coinId: "usdc-circle" },
+        { name: "frxUSD", pct: 0.006503, risk: "low", coinId: "frxusd-frax" },
+        { name: "USDS", pct: 0.000998, risk: "low", coinId: "usds-sky" },
+      ],
+    });
+
+    expect(result.dependencies.reduce((sum, dependency) => sum + dependency.weight, 0)).toBeGreaterThan(1);
+    expect(result.mappedLiveReserveWeight).toBe(1);
+  });
+
+  it("preserves material live reserve overweights for fail-closed validation", () => {
+    const result = deriveEffectiveDependencySet(makeMeta({ id: "dependent" }), {
+      liveReserveSlices: [
+        { name: "Upstream A", pct: 60, risk: "low", coinId: "upstream-a" },
+        { name: "Upstream B", pct: 40.001, risk: "low", coinId: "upstream-b" },
+      ],
+    });
+
+    expect(result.mappedLiveReserveWeight).toBeCloseTo(1.00001, 12);
+  });
+
   it("falls back to curated dependencies when live reserve slices have no tracked upstreams", () => {
     const dependencies = deriveEffectiveDependencies(
       makeMeta({
