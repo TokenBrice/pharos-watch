@@ -36,6 +36,13 @@ const NO_CONSUMER_FRESHNESS_SURFACE_JOBS = new Set([
   "telegram-retention-cleanup",
 ]);
 
+// Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
+// prune-cron-history deletes cron_runs rows older than one week. A producer
+// whose 3x-interval staleness threshold exceeds that retention (e.g. the
+// monthly yield-coverage-audit) can never be observed fresh here and would
+// alert forever; such cadences need their own audit trail, not this watchdog.
+const CRON_RUNS_OBSERVABILITY_RETENTION_SEC = 7 * 24 * 3600;
+
 const WATCHDOG_STATE_KEY = "cron-staleness-watchdog:producer-state:v1";
 const WATCHDOG_ALERT_KEY = "cron-staleness-watchdog:alert:direct:v1";
 export const CRON_STALENESS_ALERT_COOLDOWN_SEC = 30 * 60;
@@ -69,6 +76,7 @@ export function deriveCronFreshnessProducers(
         thresholdSec: cacheLane.lane.producerIntervalSec * 2,
       }];
     }
+    if (definition.intervalSec * 3 > CRON_RUNS_OBSERVABILITY_RETENTION_SEC) return [];
     return [{
       producerJob: definition.job,
       laneKey: null,
