@@ -36,7 +36,13 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
           run: (signal) =>
             runDataInvariantCanary(runtime.db, {
               mode: runtime.env.WORKER_CANARY_MODE,
-              observedAt: runtime.slotStartedAt,
+              // The serial slot can reach the canary after a newer producer
+              // publication. Freshness checks must use execution time; the
+              // scheduled slot clock remains available in cron telemetry.
+              observedAt: Math.max(
+                runtime.slotStartedAt,
+                Math.floor(Date.now() / 1_000),
+              ),
               signal,
             }),
         },

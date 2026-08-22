@@ -3,6 +3,7 @@ import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9
 import { makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import {
   assessV9Publication,
+  buildSafetyScoreV9AcceptedPublicationBaseline,
   type V9PublicationInputHealth,
 } from "../safety-score-v9-publication-assessment";
 
@@ -47,7 +48,7 @@ function candidate(
 }
 
 function acceptedPublication(value = candidate()) {
-  return value;
+  return buildSafetyScoreV9AcceptedPublicationBaseline(value);
 }
 
 function currentInputHealth(): V9PublicationInputHealth {
@@ -260,7 +261,7 @@ describe("Safety Score V9 publication assessment", () => {
     const accepted = candidate(acceptedCards);
     const assessmentInput = {
       inputHealth: currentInputHealth(),
-      acceptedPublication: accepted,
+      acceptedPublication: acceptedPublication(accepted),
       coverageFloors: [],
     };
 
@@ -356,7 +357,7 @@ describe("Safety Score V9 publication assessment", () => {
               : card,
           ),
         ),
-        acceptedPublication: accepted,
+        acceptedPublication: acceptedPublication(accepted),
         coverageFloors: [],
         quarantinedAssetIds: ["asset-0"],
         quarantineAffectedAssetIds: [
@@ -401,7 +402,7 @@ describe("Safety Score V9 publication assessment", () => {
       assessV9Publication({
         inputHealth: currentInputHealth(),
         candidate: chronicCandidate,
-        acceptedPublication: chronicAccepted,
+        acceptedPublication: acceptedPublication(chronicAccepted),
         coverageFloors: [],
       }),
     ).toEqual({
