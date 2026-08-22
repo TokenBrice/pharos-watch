@@ -175,6 +175,46 @@ describe("evaluateAccessGate", () => {
     expect(getResult.response?.headers.get("Allow")).toBe("POST");
   });
 
+  it("rejects site-api requests without the site-proxy credential", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins");
+
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+
+    expect(result.response?.status).toBe(401);
+    expect(result.requestLane).toBe("site-api");
+    expect(result.isSiteProxy).toBe(false);
+  });
+
+  it("grants the site-api lane to allowed site-api GETs with the site-proxy secret", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+
+    expect(result.response).toBeNull();
+    expect(result.isSiteProxy).toBe(true);
+    expect(result.requestLane).toBe("site-api");
+  });
+
+  it("allows only the site-proxy POST for the adoption mutation on preview hosts", async () => {
+    const postRequest = new Request("https://pharos-watch-preview.workers.dev/api/telegram-adoption", {
+      method: "POST",
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+    const getRequest = new Request("https://pharos-watch-preview.workers.dev/api/telegram-adoption", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+
+    const postResult = await evaluateAccessGate(postRequest, new URL(postRequest.url), makeEnv());
+    const getResult = await evaluateAccessGate(getRequest, new URL(getRequest.url), makeEnv());
+
+    expect(postResult.response).toBeNull();
+    expect(postResult.isSiteProxy).toBe(true);
+    expect(getResult.response?.status).toBe(405);
+    expect(getResult.response?.headers.get("Allow")).toBe("POST");
+  });
+
   it("grants the site-api lane to allowed preview (*.workers.dev) GETs with the site-proxy secret", async () => {
     const request = new Request("https://pharos-watch-preview.workers.dev/api/stablecoins", {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },

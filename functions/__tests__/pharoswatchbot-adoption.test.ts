@@ -1,4 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+const siteApiEnvOverride = vi.hoisted(() => ({ forceNullOrigin: false }));
+
+vi.mock("../lib/site-api-env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/site-api-env")>();
+  return {
+    ...actual,
+    resolveSiteApiOrigin: (env: Parameters<typeof actual.resolveSiteApiOrigin>[0]) =>
+      siteApiEnvOverride.forceNullOrigin ? null : actual.resolveSiteApiOrigin(env),
+  };
+});
+
 import { onRequest } from "../pharoswatchbot-adoption";
 
 const ENV = {
@@ -126,6 +138,23 @@ describe("PharosWatchBot adoption Pages forwarder", () => {
       })).status,
     ).toBe(503);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when origin resolution diverges from env validation", async () => {
+    // Defends the buildUpstreamRequest guard: validatePagesSiteDataProxyEnv and
+    // resolveSiteApiOrigin are separate functions that could drift apart.
+    const fetchMock = installFetch(new Response(null, { status: 204 }));
+    siteApiEnvOverride.forceNullOrigin = true;
+    try {
+      const result = await onRequest({
+        request: request({ campaign: "landing", placement: "hero" }),
+        env: ENV,
+      });
+      expect(result.status).toBe(500);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      siteApiEnvOverride.forceNullOrigin = false;
+    }
   });
 
   it("normalizes upstream fetch failures to the proxy error contract", async () => {
