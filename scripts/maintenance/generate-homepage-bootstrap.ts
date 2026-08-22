@@ -18,8 +18,8 @@ import {
 import { SITE_DATA_PATH_PREFIX } from "@shared/lib/site-data-lane";
 import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "../../src/lib/api-query-descriptors";
-import { buildHomepageBootstrapDescriptors } from "../../src/lib/homepage-bootstrap-shared";
-import { resolveSchemaLike, type SchemaLikeSource } from "../../src/lib/schema-like";
+import { buildHomepageBootstrapDescriptors } from "@shared/lib/homepage-bootstrap-shared";
+import { resolveSchemaLike, type SchemaLikeSource } from "@shared/lib/schema-like";
 import {
   HOMEPAGE_BOOTSTRAP_VERSION,
   normalizeHomepageBootstrapPayload,

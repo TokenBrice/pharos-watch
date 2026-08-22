@@ -10,7 +10,7 @@ import { buildApiUrl } from "@/lib/api";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
-import type { SchemaLike } from "@/lib/schema-like";
+import type { SchemaLike } from "@shared/lib/schema-like";
 
 type FeedbackType = "bug" | "data-correction" | "feature-request";
 

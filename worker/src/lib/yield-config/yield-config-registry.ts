@@ -4,7 +4,7 @@ import type {
   YieldAdapterLifecycleReason,
   YieldBenchmarkKey,
 } from "@shared/types/yield";
-import { buildOnChainSourceKey } from "../lib/yield-utils";
+import { buildOnChainSourceKey } from "../yield-utils";
 
 export type { YieldAdapterLifecycle, YieldAdapterLifecycleReason };
 

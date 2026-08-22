@@ -7,7 +7,7 @@ Route contract for `/screener/picker/`, the noindex profile-driven stablecoin sh
 - Shell and metadata: `src/app/screener/picker/page.tsx`
 - Client orchestration: `src/app/screener/picker/client.tsx`
 - URL/wizard state: `src/lib/selector-state.ts`
-- Result composition and handoff: `src/app/screener/picker/result-pane.tsx`, `handoff.ts`
+- Result composition and handoff: `src/components/selector/result-pane.tsx`, `src/lib/selector-handoff.ts`
 - Wizard/result components: `src/components/selector/`
 - Engine and data adapter: `shared/lib/selector/`
 - Snapshot Pages Function: `functions/selector-snapshot/[[path]].ts`
@@ -37,7 +37,7 @@ Desktop uses a stepwise wizard; browser history walks completed steps. Mobile us
 
 Step changes are announced politely and move focus to the active question. Loading states expose `aria-busy`; result generation and snapshot replay move focus to the result summary. Option cards, skipped rows, near misses, relax actions, and result links remain keyboard operable and usable at narrow widths and 200 percent zoom.
 
-Result actions include adjusting answers, verifying the projected filters in `/screener/`, creating a share link, and contextual compare, Telegram, Yield, or per-coin links when the output supports them. `src/app/screener/picker/handoff.ts` is the authority for the Screener URL and human-readable filter chips. The handoff emits only keys recognized by `SCREENER_URL_SCHEMA`, uses V9-native Backing and Exit names, and includes the recommendation IDs in `coins=`. Constraints the Screener cannot reproduce—yield/source warnings, Bluechip, active-depeg, legal uncertainty, and one-hour effective TVL—remain explicit Picker-only divergence chips.
+Result actions include adjusting answers, verifying the projected filters in `/screener/`, creating a share link, and contextual compare, Telegram, Yield, or per-coin links when the output supports them. `src/lib/selector-handoff.ts` is the authority for the Screener URL and human-readable filter chips. The handoff emits only keys recognized by `SCREENER_URL_SCHEMA`, uses V9-native Backing and Exit names, and includes the recommendation IDs in `coins=`. Constraints the Screener cannot reproduce—yield/source warnings, Bluechip, active-depeg, legal uncertainty, and one-hour effective TVL—remain explicit Picker-only divergence chips.
 
 ## Browser Storage
 

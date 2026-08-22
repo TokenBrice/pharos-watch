@@ -14,7 +14,7 @@ import {
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
-} from "../yield-config";
+} from "../../lib/yield-config/yield-config";
 import {
   getPriceDerivedApy,
 } from "./sources";

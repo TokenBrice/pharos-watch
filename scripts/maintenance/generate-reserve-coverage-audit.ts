@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { resolve } from "node:path";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters-definitions";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import {
   ACTIVE_STABLECOINS,
   FROZEN_STABLECOINS,

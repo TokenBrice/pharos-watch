@@ -31,7 +31,9 @@ const STABLECOINS_CACHE_PAYLOAD = {
       name: "USD Coin",
       price: 1.0,
       pegType: "peggedUSD",
+      pegMechanism: "fiat-backed",
       circulating: { peggedUSD: 50_000_000_000 },
+      chains: ["Ethereum"],
     },
     {
       id: "usdt-tether",
@@ -39,7 +41,9 @@ const STABLECOINS_CACHE_PAYLOAD = {
       name: "Tether",
       price: 1.0,
       pegType: "peggedUSD",
+      pegMechanism: "fiat-backed",
       circulating: { peggedUSD: 110_000_000_000 },
+      chains: ["Ethereum"],
     },
   ],
 };
@@ -335,6 +339,7 @@ describe("snapshotPublicDataset", () => {
 
     const decompressed = await gunzipToText(payloadGz);
     const envelope = JSON.parse(decompressed) as {
+      version: number;
       snapshotDate: string;
       generatedAt: number;
       methodologyVersions: Record<string, string>;
@@ -345,6 +350,7 @@ describe("snapshotPublicDataset", () => {
       liquidity: { stablecoinId: string }[];
     };
 
+    expect(envelope.version).toBe(2);
     expect(envelope.snapshotDate).toBe(ISO_DATE);
     expect(envelope.generatedAt).toBe(NOW_SEC);
     expect(envelope.stablecoins).toHaveLength(2);

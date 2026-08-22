@@ -11,7 +11,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   canonicalizeChainCirculating,
   type RawChainCirculating,
-} from "@shared/lib/chain-circulating";
+} from "@shared/lib/chains/circulating";
 
 const TRACKED_CHAINS_BY_COIN: Map<string, Set<string>> = (() => {
   const map = new Map<string, Set<string>>();

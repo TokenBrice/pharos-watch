@@ -837,6 +837,11 @@ describe("runSelector — universal properties", () => {
 });
 
 describe("runSelector — purity", () => {
+  it("does not emit the removed ambient debug survivor payload", () => {
+    const output = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
+    expect(output).not.toHaveProperty("debug");
+  });
+
   it("no Date.now() / Math.random in the runSelector return shape", () => {
     // Run twice with the same dataset.timestamp; output must be byte-identical.
     const a = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);

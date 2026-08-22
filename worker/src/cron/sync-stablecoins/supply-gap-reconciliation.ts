@@ -1,4 +1,4 @@
-import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
+import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { CHAIN_META } from "@shared/lib/chains";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRaw } from "@shared/lib/supply";

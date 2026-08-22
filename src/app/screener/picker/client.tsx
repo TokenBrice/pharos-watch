@@ -17,7 +17,7 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { SelectorQuestionCard } from "@/components/selector/selector-question-card";
 import { SelectorMobileForm } from "@/components/selector/selector-mobile-form";
 import type { SelectorOutput } from "@shared/lib/selector";
-import { ResultPane } from "./result-pane";
+import { ResultPane } from "@/components/selector/result-pane";
 import {
   PROFILE_LABEL,
   PROFILE_LEGEND,
@@ -33,9 +33,9 @@ import {
   wizardStateFromOutput,
   writeStoredSelectorRun,
 } from "./session-storage";
-import { useSelector } from "./use-selector";
+import { useSelector } from "@/hooks/use-selector";
 import { RequestSequence, requestJson } from "@/lib/request";
-import type { SchemaLike } from "@/lib/schema-like";
+import type { SchemaLike } from "@shared/lib/schema-like";
 
 interface SnapshotWriteResponse {
   sid: string;
@@ -389,4 +389,4 @@ function formatTimestamp(timestamp: number): string {
 }
 
 export { decodeSelectorState, highestValidStep, useSelector };
-export type { UseSelectorResult } from "./use-selector";
+export type { UseSelectorResult } from "@/hooks/use-selector";

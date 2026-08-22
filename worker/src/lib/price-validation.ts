@@ -2,10 +2,9 @@ import { logWorkerEventArgs } from "./structured-log";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   classifyPegClass,
-  HARDCODED_PRICE_BOUNDS,
   type PegClass,
 } from "@shared/lib/peg-price-bounds";
-import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { PEG_HARDCODED_PRICE_BOUNDS, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getFxReferenceTypeFromState, loadFxRateState } from "./fx-rate-state";
 import { sanitizeRecordValues } from "./normalizers";
 
@@ -68,8 +67,7 @@ export interface PriceReasonablenessOptions {
 const MAX_PRICE = 100_000;
 const DEFAULT_REFERENCE_STALE_SEC = 6 * 3600;
 
-export const PRICE_BOUNDS = HARDCODED_PRICE_BOUNDS;
-const FIAT_FX_REFERENCE_UPPER_RATIO = PRICE_BOUNDS.USD[1];
+const FIAT_FX_REFERENCE_UPPER_RATIO = PEG_HARDCODED_PRICE_BOUNDS.USD[1];
 
 function sanitizeRates(input: unknown): Record<string, number> {
   return sanitizeRecordValues(input, (value) => (
@@ -229,11 +227,11 @@ function getHardcodedBounds(context: PriceValidationContext): { min: number; max
   if (!context.pegType) return null;
 
   if (context.pegType.includes("USD")) {
-    const [min, max] = HARDCODED_PRICE_BOUNDS.USD;
+    const [min, max] = PEG_HARDCODED_PRICE_BOUNDS.USD;
     return { min, max };
   }
 
-  for (const [key, [min, max]] of Object.entries(HARDCODED_PRICE_BOUNDS)) {
+  for (const [key, [min, max]] of Object.entries(PEG_HARDCODED_PRICE_BOUNDS)) {
     if (key === "USD") continue;
     if (context.pegType.includes(key)) {
       const scale = (key === "GOLD" || key === "SILVER")
@@ -251,7 +249,7 @@ function isFixedPegContext(context: PriceValidationContext): boolean {
 }
 
 function getReferenceUpperBound(context: PriceValidationContext, referencePrice: number): number {
-  if (context.pegClass === "usd") return PRICE_BOUNDS.USD[1];
+  if (context.pegClass === "usd") return PEG_HARDCODED_PRICE_BOUNDS.USD[1];
   if (context.pegClass === "fiat_fx") return FIAT_FX_REFERENCE_UPPER_RATIO * referencePrice;
   return 2 * referencePrice;
 }
@@ -510,7 +508,7 @@ export function isReasonablePrice(
   if (!context.pegType) return true;
 
   if (context.pegType.includes("USD")) {
-    const [min, max] = PRICE_BOUNDS.USD;
+    const [min, max] = PEG_HARDCODED_PRICE_BOUNDS.USD;
     return price > min && price < max;
   }
 

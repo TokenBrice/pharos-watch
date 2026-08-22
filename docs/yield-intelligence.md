@@ -66,7 +66,7 @@ Reads protocol state directly via `eth_call` RPC. The main path reads vault exch
 
 Tier 1 rate sources inherit measured venue TVL from their pinned DeFiLlama pool through a zero-fetch join. Audited ERC-4626 `totalAssets` reads cover verified residual vaults. Only measured venue TVL is written to `sourceTvlUsd` — never coin supply — and unavailable measurements remain null and fail closed for external-opportunity eligibility.
 
-**Config:** `ON_CHAIN_RATE_CONFIGS` in `worker/src/cron/yield-config.ts`
+**Config:** `ON_CHAIN_RATE_CONFIGS` in `worker/src/lib/yield-config/yield-config.ts`
 
 ```ts
 interface OnChainRateConfig {
@@ -299,7 +299,7 @@ The same 300% deterministic APY sanity envelope applies to price-derived rows. A
 
 ### Tier 4: Rate-Derived APY
 
-For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token mints), rebase proxies, and T-bill-backed funds whose yield mechanically tracks short-term rates. Configured via `RATE_DERIVED_CONFIGS` in `yield-config.ts`.
+For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token mints), rebase proxies, and T-bill-backed funds whose yield mechanically tracks short-term rates. Configured via `RATE_DERIVED_CONFIGS` in `worker/src/lib/yield-config/yield-config.ts`.
 
 ```
 apy = max(0, benchmarkRate - spreadBps / 100)
@@ -343,7 +343,7 @@ Rate-derived runs after Tier 3 in the resolution loop and participates in the `i
 For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), the sync cron can append the best lending pool from a curated protocol allowlist. This runs after the base four-tier resolution, so yield-bearing coins can also receive an additional `defillama-auto` source row when a distinct lending market passes filters. LUSD uses this to retain Aave as an alternative source alongside the deterministic B.Protocol estimate.
 The non-gold/silver condition limits this generic discovery lane only; it does not create a supply-gate bypass for GOLD/SILVER candidates admitted through explicit or other paths.
 
-**Allowlist** (`LENDING_PROTOCOL_ALLOWLIST` in `worker/src/cron/yield-config.ts`):
+**Allowlist** (`LENDING_PROTOCOL_ALLOWLIST` in `worker/src/lib/yield-config/yield-config.ts`):
 
 | Tier                                                       | Protocols                                                                                                                                                                                                          |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -579,7 +579,7 @@ The methodology above is the durable public contract. Runtime topology, storage 
 | Yield resolution and publication | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/` |
 | Optional slower source families | `worker/src/cron/sync-yield-supplemental.ts` |
 | Benchmark registry | `worker/src/cron/fetch-tbill-rate.ts` |
-| Source configuration and scoring helpers | `worker/src/cron/yield-config.ts`, `worker/src/cron/yield-helpers.ts` |
+| Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-helpers.ts` |
 | Rankings and history APIs | `worker/src/api/cache-handlers.ts`, `worker/src/api/yield-history.ts` |
 | Shared wire types | `shared/types/index.ts` |
 | Frontend queries and formatting | `src/hooks/api-hooks.ts`, `src/lib/yield-constants.ts` |

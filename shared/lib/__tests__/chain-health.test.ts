@@ -9,7 +9,7 @@ import {
   getHealthBand,
   HEALTH_METHODOLOGY_VERSION,
   CHAIN_ENVIRONMENT_SCORES,
-} from "../chain-health";
+} from "../chains/health";
 import {
   computeL2BeatChainEnvironmentScore,
   computeL2BeatRiskScore,

@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/api-endpoints";
 import { ADMIN_STATIC_ROUTES } from "./admin-routes";
 import { getDynamicRouteMatch } from "./dynamic-routes";
-import { MESSAGING_STATIC_ROUTES } from "./messaging-routes";
+import { MESSAGING_STATIC_ROUTES, TELEGRAM_ADOPTION_API_PATH, TELEGRAM_ADOPTION_ROUTE } from "./messaging-routes";
 import { OPS_STATIC_ROUTES } from "./ops-routes";
 import { PUBLIC_STATIC_ROUTES } from "./public-routes";
 import type { RouteDependency, RouteMatch, StaticRouteDefinition } from "./shared";
@@ -33,6 +33,10 @@ function getStaticRouteDependencies(staticRoute: StaticRouteDefinition): readonl
 }
 
 export function getRouteMatch(path: string): RouteMatch | null {
+  if (path === TELEGRAM_ADOPTION_API_PATH) {
+    return TELEGRAM_ADOPTION_ROUTE;
+  }
+
   const staticRoute = getStaticRouteDefinition(path);
   if (staticRoute) {
     return {

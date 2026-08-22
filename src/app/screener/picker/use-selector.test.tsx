@@ -70,7 +70,7 @@ const OUTPUT = {
   datasetHash: "hash",
 } satisfies SelectorOutput;
 
-import { useSelector } from "./use-selector";
+import { useSelector } from "@/hooks/use-selector";
 
 describe("useSelector", () => {
   beforeEach(() => {

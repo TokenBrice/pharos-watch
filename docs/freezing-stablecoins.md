@@ -43,7 +43,7 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 - `worker/src/lib/mint-burn-contracts-data.ts` — remove from `MINT_BURN_CONFIG_SPECS` if present.
 - `worker/src/lib/blacklist-contracts.ts` — remove from `CONTRACT_CONFIGS` if present.
 - `shared/lib/bluechip-slugs.ts` — remove from `BLUECHIP_SLUG_MAP` if present.
-- `worker/src/cron/yield-config-pools.ts` — remove from `YIELD_POOL_MAP` if present; `yield-config.ts` derives/re-exports it.
+- `worker/src/lib/yield-config/yield-config-pools.ts` — remove from `YIELD_POOL_MAP` if present; `yield-config.ts` derives/re-exports it.
 - `src/lib/compare-pages.ts` — remove from `STATIC_COMPARE_PAIRS` if any pair includes the coin.
 - Any per-coin sync cron (e.g. `sync-usds-status.ts`, `sync-kinesis-supply.ts`) — disable or remove.
 - **`liveReservesConfig` block in the coin's own meta JSON.** If the frozen coin has a `liveReservesConfig` field on its `StablecoinMeta`, **delete that field**. Otherwise the live-reserves cron's `ACTIVE_STABLECOINS.filter(coin.liveReservesConfig)` would still include the coin once the registry filter widens (it is currently safe because `ACTIVE_STABLECOINS` excludes frozen, but removing the config eliminates ambiguity and matches the "no live data sources" intent of the freeze).

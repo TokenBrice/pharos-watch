@@ -4,7 +4,7 @@ import { decodeState } from "@/lib/url-state";
 import { buildScreenerUrl } from "@shared/lib/selector";
 import type { SelectorOutput } from "@shared/lib/selector";
 import { makeInput } from "@shared/lib/selector/__tests__/fixture";
-import { buildScreenerHandoff } from "./handoff";
+import { buildScreenerHandoff } from "@/lib/selector-handoff";
 
 describe("Picker → Screener URL contract", () => {
   it("decodes every emitted field through the real schema and preserves the exact shortlist", () => {

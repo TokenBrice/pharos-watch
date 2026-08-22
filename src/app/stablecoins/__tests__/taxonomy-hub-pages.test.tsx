@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import StablecoinBackingHubPage, { metadata as backingMetadata } from "../backing/page";
 import StablecoinGovernanceHubPage, { metadata as governanceMetadata } from "../governance/page";
 import StablecoinInfrastructureHubPage, { metadata as infrastructureMetadata } from "../infrastructure/page";
+import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import { STABLECOIN_TAXONOMY_HUB_ROUTES, getStablecoinTaxonomyHubTotal } from "@/lib/stablecoin-taxonomy";
 
 function expectMetadataForRoute(
@@ -53,5 +54,23 @@ describe("stablecoin taxonomy hub pages", () => {
     expect(html).toContain("Stablecoins by Shared Infrastructure");
     expect(html).toContain("Shared infrastructure stablecoin hubs");
     expect(html).toContain("/stablecoins/infrastructure/");
+  });
+
+  it("keeps long taxonomy hub titles while using canonical short labels", () => {
+    const governancePage = STABLECOIN_TAXONOMY_HUB_ROUTES.governance.pages.find(
+      (page) => page.value === "centralized-dependent",
+    );
+    const backingPage = STABLECOIN_TAXONOMY_HUB_ROUTES.backing.pages.find(
+      (page) => page.value === "rwa-backed",
+    );
+
+    expect(governancePage).toMatchObject({
+      shortLabel: GOVERNANCE_LABELS_SHORT["centralized-dependent"],
+    });
+    expect(governancePage?.title).toContain("CeFi-Dependent Stablecoins");
+    expect(backingPage).toMatchObject({
+      shortLabel: BACKING_LABELS_SHORT["rwa-backed"],
+    });
+    expect(backingPage?.title).toContain("RWA-Backed Stablecoins");
   });
 });

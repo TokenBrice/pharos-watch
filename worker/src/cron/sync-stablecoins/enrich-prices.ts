@@ -8,7 +8,7 @@ import {
   type EnrichmentProgressReporter,
 } from "./enrich-prices-progress";
 
-export { isReasonablePrice, PRICE_BOUNDS } from "../../lib/price-validation";
+export { isReasonablePrice } from "../../lib/price-validation";
 export {
   applyPoolChallenge,
   fetchPrimaryPrices,

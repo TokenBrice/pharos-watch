@@ -2,7 +2,7 @@ import {
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
-} from "../yield-config";
+} from "../../lib/yield-config/yield-config";
 import type { DlPool } from "./types";
 
 function isNativeYieldPoolId(poolId: string): boolean {

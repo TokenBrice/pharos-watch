@@ -17,8 +17,8 @@ Contract for the public chain analytics surfaces:
 - **Data hook:** `src/hooks/use-chains.ts`
 - **Profile coordination hook:** `src/hooks/use-chain-profile-data.ts`
 - **Primary API:** `GET /api/chains`
-- **Methodology version source:** `shared/lib/methodology-versions/chain-health.ts` (compatibility re-export: `shared/lib/chains/health-version.ts`)
-- **Scoring implementation:** `shared/lib/chain-health.ts`, `shared/lib/chain-aggregator.ts`, `shared/lib/chains/index.ts`
+- **Methodology version source:** `shared/lib/methodology-versions/chain-health.ts`
+- **Scoring implementation:** `shared/lib/chains/health.ts`, `shared/lib/chains/aggregator.ts`, `shared/lib/chains/index.ts`
 - **Shared chain UI helpers:** `src/lib/chain-ui.ts` (formatting + health band color maps)
 - **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains/index.ts`
 
@@ -80,7 +80,7 @@ Default sort is `totalUsd desc`.
 
 1. `QueryErrorNotice` (inline banner when error + stale data)
 2. `StaleDataBanner` when coordinated chain/stablecoin snapshots are stale or mismatched
-3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (30d deltas and percentages use only chain rows with known previous-month anchors; all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `chain-health.ts`
+3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (30d deltas and percentages use only chain rows with known previous-month anchors; all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `shared/lib/chains/health.ts`
 4. `ShowYourWorkPanel` rendered immediately below the hero card, exposing the factor math
 5. stablecoin composition treemap — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
 6. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type
@@ -95,7 +95,7 @@ Default sort is `totalUsd desc`.
 
 ## Chain Health Score
 
-The route displays the Chain Health composite and its factor detail from `GET /api/chains`. Formula, factors, weights, coverage gates, evidence precedence, bands, and current methodology version are owned by [chain-health.md](./chain-health.md) and `shared/lib/chain-health.ts`. Do not duplicate those volatile values here.
+The route displays the Chain Health composite and its factor detail from `GET /api/chains`. Formula, factors, weights, coverage gates, evidence precedence, bands, and current methodology version are owned by [chain-health.md](./chain-health.md) and `shared/lib/chains/health.ts`. Do not duplicate those volatile values here.
 
 The page contract is limited to presentation: the leaderboard exposes the composite for comparison, and chain profiles show factor/evidence detail when the coordinated API snapshot provides it.
 

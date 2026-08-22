@@ -4,6 +4,8 @@ import {
   GOVERNANCE_LABELS_SHORT,
   BACKING_LABELS,
   BACKING_LABELS_SHORT,
+  BACKING_SENTENCE_LABELS,
+  BACKING_CHART_FILL_CLASSES,
   PEG_LABELS,
   PEG_LABELS_SHORT,
   GOVERNANCE_BADGE_STYLES,
@@ -80,6 +82,22 @@ describe("BACKING_LABELS_SHORT", () => {
   });
 });
 
+// BACKING_SENTENCE_LABELS
+// ---------------------------------------------------------------------------
+describe("BACKING_SENTENCE_LABELS", () => {
+  it("has the same keys as BACKING_LABELS", () => {
+    expect(Object.keys(BACKING_SENTENCE_LABELS).sort()).toEqual(
+      Object.keys(BACKING_LABELS).sort(),
+    );
+  });
+
+  it("uses sentence-case backing labels", () => {
+    expect(BACKING_SENTENCE_LABELS["rwa-backed"]).toBe("RWA-backed");
+    expect(BACKING_SENTENCE_LABELS["crypto-backed"]).toBe("Crypto-backed");
+    expect(BACKING_SENTENCE_LABELS.algorithmic).toBe("algorithmic");
+  });
+});
+
 // ---------------------------------------------------------------------------
 // PEG_LABELS
 // ---------------------------------------------------------------------------
@@ -141,5 +159,14 @@ describe("Badge style maps", () => {
       expect(typeof v.cls).toBe("string");
       expect(v.cls.length).toBeGreaterThan(0);
     }
+  });
+
+  it("BACKING_CHART_FILL_CLASSES covers backing types and the other bucket", () => {
+    expect(BACKING_CHART_FILL_CLASSES).toEqual({
+      "rwa-backed": "bg-blue-500",
+      "crypto-backed": "bg-purple-500",
+      algorithmic: "bg-orange-500",
+      other: "bg-zinc-400",
+    });
   });
 });

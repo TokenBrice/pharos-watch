@@ -37,7 +37,7 @@ export interface ResolvedTrackedContractConfig {
   decimals: number;
 }
 
-export function findTrackedContract(
+function findTrackedContract(
   stablecoinOrId: StablecoinMeta | string,
   chainId: string,
   options?: FindTrackedContractOptions,

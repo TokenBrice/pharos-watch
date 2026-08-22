@@ -226,6 +226,23 @@ describe("generate-public-datasets", () => {
     );
   });
 
+  it("rejects a fetched snapshot that fails the shared envelope schema", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-18T12:30:00.000Z"));
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockFetchStrict([{
+      match: "https://api.example.test/api/snapshots/2026-05-16.json",
+      body: { ...makeEnvelope("2026-05-16"), stablecoins: "not-an-array" },
+    }]);
+
+    await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
+      "refusing live-endpoint fallback",
+    );
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining("invalid public snapshot envelope"),
+    );
+  });
+
   it("can fetch release inputs through the site-data lane without exposing service credentials", async () => {
     vi.stubEnv("PUBLIC_DATASETS_API_KEY", "public-key");
     vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");

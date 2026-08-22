@@ -125,7 +125,7 @@ The active runtime gate and research-packet format are documented in [Adding a S
 - Classification or taxonomy changes: `docs/classification.md`
 - Listing scope or lifecycle policy changes: `docs/listing-policy.md`
 - Compliance metadata changes: `docs/compliance-page.md` plus `docs/mica-tracker.md` when MiCA semantics change
-- Public source roster changes: `docs/about-page.md` and `src/app/about/content.ts`
+- Public source roster changes: `docs/about-page.md` and `src/lib/about-content.ts`
 - Reserve config changes: `docs/live-reserves.md`
 - Redemption-route changes: `docs/redemption-backstops.md`
 - Yield config changes: `docs/yield-intelligence.md`

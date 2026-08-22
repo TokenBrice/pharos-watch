@@ -558,7 +558,7 @@ If no live source exists:
 
 If `flags.yieldBearing` is `true`, add `yieldConfig`.
 
-Then evaluate whether runtime config is also needed. `worker/src/cron/yield-config.ts` is the aggregator; the actual tables live in per-concern files beside it:
+Then evaluate whether runtime config is also needed. `worker/src/lib/yield-config/yield-config.ts` is the aggregator; the actual tables live in per-concern files beside it:
 
 - `YIELD_POOL_MAP` (`yield-config-pools.ts`): explicit DeFiLlama pool mapping.
 - `YIELD_VARIANT_MAP` (`yield-config-variants.ts`): separate wrapper/savings token that Pharos does not track directly.

@@ -51,9 +51,6 @@ const RELAXED_FALLBACK_ALLOWED_REASONS: ReadonlySet<ExclusionReason> = new Set([
   "peg-score-floor",
 ]);
 
-const SELECTOR_DEBUG =
-  typeof process !== "undefined" && process.env?.SELECTOR_DEBUG === "true";
-
 interface EligibilityPhase {
   excluded: ExclusionRecord[];
   skippedForCoverage: SkippedCoin[];
@@ -344,27 +341,6 @@ function buildRecommendationPhase(
   return { excluded: nextExcluded, recommended, relaxedReasons };
 }
 
-function appendSelectorDebug(
-  output: SelectorOutput,
-  ranked: readonly ScoredEntry[],
-  input: SelectorInput,
-): void {
-  if (!SELECTOR_DEBUG) return;
-  const allSurvivors: SelectorRecommendation[] = [];
-  ranked.forEach((entry, index) => {
-    const rank = Math.min(index + 1, 3) as 1 | 2 | 3;
-    const rec = buildRecommendation(
-      entry,
-      rank,
-      input.profile,
-      [],
-      rankRobustnessFor(ranked, index),
-    );
-    if (rec != null) allSurvivors.push(rec);
-  });
-  output.debug = { allSurvivors };
-}
-
 export function runSelector(
   input: SelectorInput,
   data: SelectorData,
@@ -438,8 +414,6 @@ export function runSelector(
     methodologyVersions: dataset.methodologyVersions,
     datasetHash: dataset.datasetHash,
   };
-
-  appendSelectorDebug(output, ranked, input);
 
   return output;
 }

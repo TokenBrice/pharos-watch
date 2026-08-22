@@ -548,12 +548,6 @@ export interface SelectorOutput {
   snapshotSchemaVersion?: 2 | 3;
   /** Present only when the Pages Function recomputed the output from canonical sources. */
   verification?: SelectorSnapshotVerification;
-  /**
-   * Debug-only: full ranked survivor list, gated by `SELECTOR_DEBUG=true` at
-   * build time. Tests read this; production output omits the field.
-   * @internal
-   */
-  debug?: { allSurvivors: SelectorRecommendation[] };
 }
 
 // ---------------------------------------------------------------------------

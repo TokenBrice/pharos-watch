@@ -53,6 +53,13 @@ export const BACKING_LABELS_SHORT: Record<BackingType, string> = {
   algorithmic: "Algo",
 };
 
+/** Sentence-case labels used in inline classification prose. */
+export const BACKING_SENTENCE_LABELS: Record<BackingType, string> = {
+  "rwa-backed": "RWA-backed",
+  "crypto-backed": "Crypto-backed",
+  algorithmic: "algorithmic",
+};
+
 /** Prose phrases used inline in metadata descriptions. */
 export const BACKING_PROSE_LABELS: Record<BackingType, string> = {
   "rwa-backed": "backed by real-world assets",

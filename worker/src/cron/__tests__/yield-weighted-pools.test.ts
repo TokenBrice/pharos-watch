@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildWeightedYieldPoolGroupSource } from "../yield-sync/weighted-pools";
 import type { DlPool } from "../yield-sync/types";
-import type { WeightedYieldPoolGroupConfig } from "../yield-config-weighted-pools";
+import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";
 
 function makePool(overrides: Partial<DlPool> & Pick<DlPool, "pool" | "tvlUsd" | "apy">): DlPool {
   return {

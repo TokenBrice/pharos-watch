@@ -1,7 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { YieldType } from "@shared/types/core";
 import type { YieldCalculationMode, YieldEvidenceClass } from "@shared/types/yield";
-import { LENDING_PROTOCOL_LABELS } from "../yield-config";
+import { LENDING_PROTOCOL_LABELS } from "../../lib/yield-config/yield-config";
 import type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
 import type { ResolvedYield } from "./types";
 

@@ -1,4 +1,4 @@
-import type { WeightedYieldPoolGroupConfig } from "../yield-config-weighted-pools";
+import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";
 import type { DlPool, ResolvedYield } from "./types";
 
 function normalizeDlIdentity(value: string): string {

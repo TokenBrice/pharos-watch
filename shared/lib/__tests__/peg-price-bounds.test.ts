@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { PEG_CURRENCY_VALUES } from "@shared/types/core";
+import { PEG_HARDCODED_PRICE_BOUNDS } from "../peg-taxonomy";
 
 import {
   classifyPegClass,
   FX_RATE_BOUNDS,
-  HARDCODED_PRICE_BOUNDS,
   normalizeLegacyPegType,
   normalizePegTypeFromCurrency,
   type PegClass,
@@ -78,7 +78,7 @@ describe("peg price bounds", () => {
 
   for (const entry of boundsCases) {
     it(`pins ${entry.label} absolute price bounds`, () => {
-      const hardcodedBounds = HARDCODED_PRICE_BOUNDS[entry.hardcodedKey];
+      const hardcodedBounds = PEG_HARDCODED_PRICE_BOUNDS[entry.hardcodedKey];
 
       expect(hardcodedBounds).toEqual(entry.hardcodedBounds);
       expect(hardcodedBounds![1] - hardcodedBounds![0]).toBeCloseTo(entry.hardcodedWidth, 12);
@@ -126,7 +126,7 @@ describe("peg price bounds", () => {
 
   it("covers every supported fiat and commodity peg currency", () => {
     const unsupported: string[] = [];
-    const hardcodedKeys = Object.keys(HARDCODED_PRICE_BOUNDS).filter((key) => key !== "USD");
+    const hardcodedKeys = Object.keys(PEG_HARDCODED_PRICE_BOUNDS).filter((key) => key !== "USD");
     let covered = 0;
 
     for (const pegCurrency of PEG_CURRENCY_VALUES) {
@@ -152,7 +152,7 @@ describe("peg price bounds", () => {
   });
 
   it("keeps non-USD hardcoded maxima within 0.1x-10x of FX maxima", () => {
-    for (const [currency, [, hardcodedMax]] of Object.entries(HARDCODED_PRICE_BOUNDS)) {
+    for (const [currency, [, hardcodedMax]] of Object.entries(PEG_HARDCODED_PRICE_BOUNDS)) {
       if (currency === "USD") continue;
       const pegType = normalizePegTypeFromCurrency(currency);
       const fxMax = pegType ? FX_RATE_BOUNDS[pegType]?.[1] : undefined;

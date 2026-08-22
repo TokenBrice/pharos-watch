@@ -21,7 +21,7 @@ import {
   ON_CHAIN_RATE_CONFIGS,
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
-} from "../yield-config";
+} from "../../lib/yield-config/yield-config";
 import { buildDlChainFilter, buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, getTrackedContractAddresses, resolveYieldCandidateStablecoinId } from "./identity";
 import type {
   DlPool,

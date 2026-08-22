@@ -2,11 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FRONTEND_API_QUERY_DESCRIPTORS, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
 import { type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
-import { resolveSchemaLike } from "../schema-like";
+import { resolveSchemaLike } from "@shared/lib/schema-like";
 import {
   StabilityIndexLightResponseSchema,
   STABILITY_INDEX_QUERY_DESCRIPTOR,
 } from "../api-query-domains/stability-light";
+import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "../api-query-domains/stability-detail";
 import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 
 const EXPECTED_RESPONSE_MODES: {
@@ -92,6 +93,21 @@ describe("frontend API query descriptors", () => {
     });
     expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).not.toHaveProperty("producerIntervalMs");
     expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).not.toHaveProperty("metaMaxAgeSec");
+  });
+
+  it("aligns PSI and DEWS detail descriptors with their producer intervals", () => {
+    expect(STABILITY_INDEX_QUERY_DESCRIPTOR.producerIntervalMs).toBe(
+      STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR.producerIntervalMs,
+    );
+
+    const stressDetail = resolveEntry(
+      FRONTEND_API_QUERY_DESCRIPTORS.stressSignalDetail,
+      "stressSignalDetail",
+    );
+    if (!("producerIntervalMs" in stressDetail)) throw new Error("stressSignalDetail must be a polling descriptor");
+    expect(stressDetail.producerIntervalMs).toBe(
+      FRONTEND_API_QUERY_DESCRIPTORS.stressSignals.producerIntervalMs,
+    );
   });
 
   it("pins every descriptor's response mode", () => {

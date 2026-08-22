@@ -200,7 +200,7 @@ vi.mock("../yield-helpers", async (importOriginal) => {
   };
 });
 
-vi.mock("../yield-config", () => ({
+vi.mock("../../lib/yield-config/yield-config", () => ({
   YIELD_VARIANT_MAP: {
     "usde-ethena": { variantSymbol: "sUSDe" },
   },
@@ -274,7 +274,7 @@ import { getCache, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
-import * as yieldConfigModule from "../yield-config";
+import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import * as yieldSourcesModule from "../yield-sync/sources";
 import {
   appendOptionalYieldCandidate,

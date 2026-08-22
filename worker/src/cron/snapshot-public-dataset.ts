@@ -42,6 +42,11 @@ import { safeErrorMessage, stripSensitive } from "../lib/safe-error-message";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import {
+  PUBLIC_SNAPSHOT_ENVELOPE_VERSION,
+  PublicSnapshotEnvelopeV2Schema,
+  type PublicSnapshotEnvelopeV2,
+} from "@shared/types/public-snapshot";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
@@ -409,6 +414,7 @@ export async function snapshotPublicDataset(
   };
 
   const envelope = {
+    version: PUBLIC_SNAPSHOT_ENVELOPE_VERSION,
     snapshotDate,
     generatedAt: nowSec,
     methodologyVersions,
@@ -448,7 +454,8 @@ export async function snapshotPublicDataset(
       coverageClass: row.coverage_class,
       updatedAt: row.updated_at,
     })),
-  };
+  } satisfies PublicSnapshotEnvelopeV2;
+  PublicSnapshotEnvelopeV2Schema.parse(envelope);
 
   const jsonText = JSON.stringify(envelope);
   const jsonBytes = new TextEncoder().encode(jsonText);

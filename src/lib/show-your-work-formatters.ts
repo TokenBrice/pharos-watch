@@ -17,7 +17,7 @@ import {
   CONCENTRATION_WEIGHT,
   PEG_STABILITY_WEIGHT,
   QUALITY_WEIGHT,
-} from "@shared/lib/chain-health";
+} from "@shared/lib/chains/health";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";

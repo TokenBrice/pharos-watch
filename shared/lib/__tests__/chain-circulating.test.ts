@@ -3,7 +3,7 @@ import {
   canonicalizeChainCirculating,
   findCanonicalChainData,
   type RawChainCirculating,
-} from "../chain-circulating";
+} from "../chains/circulating";
 
 describe("chain-circulating", () => {
   it("canonicalizes aliases into one chain bucket", () => {

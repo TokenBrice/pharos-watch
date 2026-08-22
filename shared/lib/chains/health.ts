@@ -4,7 +4,7 @@ import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } 
 import { bandFromThresholds } from "../math";
 import { deriveDepegSignal } from "../depeg-signals";
 
-export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "./health-version";
+export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "../methodology-versions/chain-health";
 
 export const QUALITY_WEIGHT = 0.30;
 export const CHAIN_ENVIRONMENT_WEIGHT = 0.20;

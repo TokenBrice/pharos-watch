@@ -15,7 +15,7 @@ import { ApiRequestAttributionResponseSchema } from "@shared/types/request-sourc
 import { StatusHistoryResponseSchema, StatusResponseSchema } from "@shared/types/status";
 import { AdminActionAuditLogResponseSchema, type AdminActionAuditLogResponse } from "@/lib/actions-workbench-model";
 import { CRON_1MIN } from "@/lib/cron-intervals";
-import type { SchemaLikeSource } from "@/lib/schema-like";
+import type { SchemaLikeSource } from "@shared/lib/schema-like";
 
 /**
  * Admin-surface twin of `FRONTEND_API_QUERY_DESCRIPTORS`. Every admin polling

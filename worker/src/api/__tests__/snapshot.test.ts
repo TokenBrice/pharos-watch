@@ -286,6 +286,42 @@ describe("handleSnapshotDay", () => {
     expect(res.headers.get("etag")).toBe(`"${row.content_hash}"`);
   });
 
+  it("serves a valid v2 envelope without rewriting its payload", async () => {
+    const envelope = {
+      ...SAMPLE_ENVELOPE,
+      version: 2 as const,
+      fxFallbackRates: null,
+      stablecoins: SAMPLE_ENVELOPE.stablecoins.map((coin) => ({
+        ...coin,
+        pegMechanism: "fiat-backed",
+        chains: ["Ethereum"],
+      })),
+    };
+    const row = await buildSnapshotRow(envelope);
+    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+
+    const response = await handleSnapshotDay(db, ISO_DATE);
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe(JSON.stringify(envelope));
+  });
+
+  it("rejects a malformed versioned envelope through the corrupt-payload path", async () => {
+    const row = await buildSnapshotRow({
+      ...SAMPLE_ENVELOPE,
+      version: 2,
+      generatedAt: "not-a-timestamp",
+    } as unknown as SnapshotEnvelope);
+    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+
+    const response = await handleSnapshotDay(db, ISO_DATE);
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Snapshot payload corrupted",
+    });
+  });
+
   it("rejects an identified snapshot whose completeness does not match its cards", async () => {
     const row = await buildSnapshotRow({
       ...SAMPLE_ENVELOPE,

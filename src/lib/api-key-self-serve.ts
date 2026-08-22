@@ -11,7 +11,7 @@ import type {
   ApiKeySelfServeRequest,
 } from "@shared/types";
 import { ApiFetchError, SchemaValidationError, apiFetch } from "@/lib/api";
-import type { SchemaLike } from "@/lib/schema-like";
+import type { SchemaLike } from "@shared/lib/schema-like";
 
 const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,

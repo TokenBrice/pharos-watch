@@ -1,5 +1,5 @@
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { aggregateChains } from "@shared/lib/chain-aggregator";
+import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";

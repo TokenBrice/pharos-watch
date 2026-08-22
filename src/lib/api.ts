@@ -7,7 +7,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import type { ApiDependencyMeta, ApiMeta as ApiMetaWithAge } from "@shared/types/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
 import { buildRequestUrl } from "@/lib/api-url";
-import { formatSchemaLikeIssues, type SchemaLike } from "@/lib/schema-like";
+import { formatSchemaLikeIssues, type SchemaLike } from "@shared/lib/schema-like";
 import { normalizeRequestTimeoutMs, resolveRequestSignal } from "@/lib/request-lifecycle";
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";

@@ -28,14 +28,7 @@ interface ApiCronAllowlistEntry {
 // Keep this separate from BOUNDARY_WAIVERS: it is a scoped, production-only
 // exception for the API↔cron rule and must not weaken the worker→frontend
 // waiver cap or its existing fingerprint test.
-const API_CRON_IMPORT_ALLOWLIST: readonly ApiCronAllowlistEntry[] = [
-  {
-    direction: "api-to-cron",
-    sourceFile: "worker/src/api/yield-adapter-manifest.ts",
-    importSpecifiers: ["../cron/yield-config"],
-    reason: "The public adapter manifest currently consumes the six-module cron-owned yield config graph; relocating that graph is a separately scoped migration because it is large and registry-sensitive.",
-  },
-];
+const API_CRON_IMPORT_ALLOWLIST: readonly ApiCronAllowlistEntry[] = [];
 
 if (API_CRON_IMPORT_ALLOWLIST.some((entry) => entry.reason.trim().length === 0)) {
   console.error("[boundary] every API_CRON_IMPORT_ALLOWLIST entry must include a reason");

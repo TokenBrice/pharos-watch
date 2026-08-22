@@ -115,7 +115,7 @@ vi.mock("../yield-helpers", async (importOriginal) => {
 });
 
 // Stub yield-config
-vi.mock("../yield-config", () => ({
+vi.mock("../../lib/yield-config/yield-config", () => ({
   YIELD_VARIANT_MAP: {},
   YIELD_POOL_MAP: {},
   YIELD_WEIGHTED_POOL_GROUPS: {},
@@ -196,7 +196,7 @@ import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
 import * as safetyScoresModule from "../../lib/safety-scores";
-import * as yieldConfigModule from "../yield-config";
+import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import * as yieldHelpersModule from "../yield-helpers";
 import * as publicationModule from "../yield-sync/publication";
 import * as evmRpcModule from "../../lib/evm-rpc";

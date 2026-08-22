@@ -243,7 +243,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - `/api/api-key-requests` and `/api/api-key-requests/verify` are exempt from `X-API-Key`, return no-store responses, and have their own request/verification throttles in `api_key_request_rate_limit_v2`; successful issuance is additionally capped through `api_key_self_serve_issuance_limits`.
 - `/api/telegram-webhook` is exempt from the gate because Telegram authenticates separately with `X-Telegram-Bot-Api-Secret-Token`.
 - `/api/telegram-mini-app/session` and `/api/telegram-mini-app/mutate` are exempt from the public API-key gate because the Worker validates Telegram Mini App `initData`; they deny the site-data lane and return no-store responses.
-- `site-api.pharos.watch` accepts only `GET` requests to allowlisted public-read paths and requires `X-Pharos-Site-Proxy-Secret`.
+- `site-api.pharos.watch` accepts `GET` requests to allowlisted public-read paths and the exact `POST /api/telegram-adoption` mutation, all requiring `X-Pharos-Site-Proxy-Secret`.
 - Website-only browser reads such as `public-status-history` and `telegram-pulse` must use same-origin `/_site-data/*`, which in turn proxies to the `site-api` lane.
 
 ### Request Attribution

@@ -820,7 +820,7 @@ export const CRON_INTERVALS = Object.freeze(
 );
 
 /** Set of all valid cron job names, derived from definitions. */
-export const VALID_CRON_JOB_IDS: ReadonlySet<string> = new Set(CRON_JOB_DEFINITIONS.map((def) => def.job));
+const VALID_CRON_JOB_IDS: ReadonlySet<string> = new Set(CRON_JOB_DEFINITIONS.map((def) => def.job));
 
 const CRON_JOB_META_BY_ID = new Map(CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]));
 

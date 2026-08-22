@@ -5,7 +5,7 @@ import { mockFetchRetry } from "../../test-helpers/cron";
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { fetchHashnoteUsycSource } from "../yield-sync/sources";
-import { RATE_DERIVED_CONFIGS } from "../yield-config";
+import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config";
 
 describe("fetchHashnoteUsycSource", () => {
   afterEach(() => {

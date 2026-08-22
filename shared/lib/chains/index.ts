@@ -177,7 +177,7 @@ const CHAIN_ALIASES: Record<string, string> = {
  */
 export type ChainResilienceTier = 1 | 2 | 3;
 
-export const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
+const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
   // Tier 1 — gold standard for decentralization & censorship resistance
   ethereum: 1,
 

@@ -16,12 +16,12 @@ import {
   YIELD_ADAPTER_MANIFEST,
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
-} from "../yield-config";
+} from "../../lib/yield-config/yield-config";
 import {
   INTENTIONAL_GAP_REASONS,
   QUARANTINED_DETERMINISTIC_PROBE_CONFIGS,
   YIELD_ADAPTER_LIFECYCLE,
-} from "../yield-config-rate-sources";
+} from "../../lib/yield-config/yield-config-rate-sources";
 
 const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId));
 const rateDerivedIds = new Set(RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId));

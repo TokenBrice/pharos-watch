@@ -176,7 +176,7 @@ function getPegRuntimeSupportIssue(coin: StablecoinMeta): string | null {
   return (
     `pegCurrency ${pegCurrency} classifies as "unknown" peg class at runtime: price validation accepts any ` +
     "price under $100k with no peg band, no FX reference, and no depeg coverage. Before activating a coin " +
-    "on this peg, add it to classifyPegClass + FX_RATE_BOUNDS + HARDCODED_PRICE_BOUNDS and wire its FX rate " +
+    "on this peg, add it to classifyPegClass + FX_RATE_BOUNDS + PEG_HARDCODED_PRICE_BOUNDS and wire its FX rate " +
     "(see the GELT/GEL promotion checklist pattern)"
   );
 }

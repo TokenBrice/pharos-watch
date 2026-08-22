@@ -13,6 +13,8 @@ export const CRON_1H = 60 * 60 * 1000;
 export const CRON_24H = 24 * 60 * 60 * 1000;
 
 export const CRON_15MIN = CRON_INTERVALS["sync-stablecoins"] * 1000;
+export const CRON_STABILITY_INDEX = CRON_INTERVALS["stability-index"] * 1000;
+export const CRON_TAPE = CRON_INTERVALS["project-tape"] * 1000;
 export const CRON_30MIN = 30 * 60 * 1000;
 export const CRON_BLACKLIST = CRON_INTERVALS["sync-blacklist"] * 1000;
 export const CRON_MINT_BURN = CRON_INTERVALS["sync-mint-burn"] * 1000;

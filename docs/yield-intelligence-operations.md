@@ -86,7 +86,7 @@ vaults.fyi audit evidence should be classified through the same queue actions. `
 
 ## Adapter lifecycle states
 
-Each yield-bearing adapter sits in one of four lifecycle states tracked by `YIELD_ADAPTER_LIFECYCLE` in `worker/src/cron/yield-config-rate-sources.ts`. The monthly coverage audit emits a `lifecycleSummary` count plus bounded `quarantinedAdapters` and `intentionalGaps` lists in the `yield-coverage-audit` cache so operators can act on structured reasons (`code`, `since`, optional `nextReviewAt`, `note`).
+Each yield-bearing adapter sits in one of four lifecycle states tracked by `YIELD_ADAPTER_LIFECYCLE` in `worker/src/lib/yield-config/yield-config-rate-sources.ts`. The monthly coverage audit emits a `lifecycleSummary` count plus bounded `quarantinedAdapters` and `intentionalGaps` lists in the `yield-coverage-audit` cache so operators can act on structured reasons (`code`, `since`, optional `nextReviewAt`, `note`).
 
 | State | Use when | Operator classification cue |
 | --- | --- | --- |

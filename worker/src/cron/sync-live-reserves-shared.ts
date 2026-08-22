@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters-definitions";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
 import type { ReserveSyncStateRecord } from "../lib/live-reserves-store";

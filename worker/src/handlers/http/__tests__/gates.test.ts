@@ -157,6 +157,24 @@ describe("evaluateAccessGate", () => {
     expect(result.isSiteProxy).toBe(false);
   });
 
+  it("allows only the site-proxy POST for the Telegram adoption mutation", async () => {
+    const postRequest = new Request("https://site-api.pharos.watch/api/telegram-adoption", {
+      method: "POST",
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+    const getRequest = new Request("https://site-api.pharos.watch/api/telegram-adoption", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+
+    const postResult = await evaluateAccessGate(postRequest, new URL(postRequest.url), makeEnv());
+    const getResult = await evaluateAccessGate(getRequest, new URL(getRequest.url), makeEnv());
+
+    expect(postResult.response).toBeNull();
+    expect(postResult.isSiteProxy).toBe(true);
+    expect(getResult.response?.status).toBe(405);
+    expect(getResult.response?.headers.get("Allow")).toBe("POST");
+  });
+
   it("grants the site-api lane to allowed preview (*.workers.dev) GETs with the site-proxy secret", async () => {
     const request = new Request("https://pharos-watch-preview.workers.dev/api/stablecoins", {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },

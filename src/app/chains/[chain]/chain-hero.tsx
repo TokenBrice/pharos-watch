@@ -11,7 +11,7 @@ import {
   PEG_STABILITY_WEIGHT,
   QUALITY_WEIGHT,
   getHealthBand,
-} from "@shared/lib/chain-health";
+} from "@shared/lib/chains/health";
 import { formatCompactUsd, formatElapsedSeconds, formatSignedPercent } from "@shared/lib/format";
 import type { ChainEnvironmentEvidence, ChainSummary, HealthBand } from "@shared/types/chains";
 import type { ApiMeta } from "@/lib/api";

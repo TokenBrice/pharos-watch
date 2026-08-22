@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { COVERAGE_FEATURES } from "@/lib/coverage";
 import type { CoverageFeatureSummary } from "@/lib/coverage";
-import { CoverageFeatureSnapshotRow } from "./coverage-feature-snapshot";
+import { CoverageFeatureSnapshotRow } from "@/components/coverage/coverage-feature-snapshot";
 
 afterEach(cleanup);
 

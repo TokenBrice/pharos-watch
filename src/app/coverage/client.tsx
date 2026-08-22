@@ -9,8 +9,8 @@ import {
   CoverageMatrixDataStateCard,
   CoveragePricingSourcesCard,
   CoverageSafetyScoreDataCard,
-} from "./coverage-page-sections";
-import { useCoveragePageModel } from "./use-coverage-page-model";
+} from "@/components/coverage/coverage-page-sections";
+import { useCoveragePageModel } from "@/hooks/use-coverage-page-model";
 import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
 
 export default function CoveragePageClient() {

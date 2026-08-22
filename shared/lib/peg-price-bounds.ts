@@ -1,6 +1,5 @@
 import {
   PEG_FX_RATE_BOUNDS,
-  PEG_HARDCODED_PRICE_BOUNDS,
   getPegTaxonomyByCurrency,
   getPegTaxonomyByType,
   normalizePegTypeAlias,
@@ -9,9 +8,6 @@ import {
 } from "./peg-taxonomy";
 
 export type { PegClass } from "./peg-taxonomy";
-
-/** Absolute input-price admission bounds keyed by currency, including legacy currency aliases. */
-export const HARDCODED_PRICE_BOUNDS = PEG_HARDCODED_PRICE_BOUNDS;
 
 /** Live FX/commodity reference bounds keyed by canonical DefiLlama peg type. */
 export const FX_RATE_BOUNDS = PEG_FX_RATE_BOUNDS;

@@ -3,7 +3,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { CoverageBadge } from "./coverage-badge";
+import { CoverageBadge } from "@/components/coverage/coverage-badge";
 import type { CoverageStatus } from "@/lib/coverage";
 
 function status(overrides: Partial<CoverageStatus> = {}): CoverageStatus {

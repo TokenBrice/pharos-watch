@@ -2,9 +2,9 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isFiniteNumber, isRecord } from "@shared/lib/type-guards";
 import type { StabilityIndexResponse } from "@shared/types/stability";
-import { CRON_30MIN } from "@/lib/cron-intervals";
+import { CRON_STABILITY_INDEX } from "@/lib/cron-intervals";
 import { defineApiQuery } from "@/lib/api-query-contract";
-import type { SchemaLike, SchemaLikeResult } from "@/lib/schema-like";
+import type { SchemaLike, SchemaLikeResult } from "@shared/lib/schema-like";
 
 function invalid(path: readonly PropertyKey[], message: string): SchemaLikeResult<StabilityIndexResponse> {
   return { success: false, error: { issues: [{ path, message }] } };
@@ -65,7 +65,7 @@ export const STABILITY_INDEX_QUERY_DESCRIPTOR = defineApiQuery(
   {
     queryKey: ["stability-index"] as const,
     path: API_PATHS.stabilityIndex(),
-    producerIntervalMs: CRON_30MIN,
+    producerIntervalMs: CRON_STABILITY_INDEX,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
   },
   "meta",

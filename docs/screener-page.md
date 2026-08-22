@@ -60,7 +60,7 @@ Since safety `9.1` the mint columns come from the published V9 mint component. T
 
 ## Picker Handoff
 
-The dismissible Picker callout links to `/screener/picker/`. Picker results return through a URL assembled by `src/app/screener/picker/handoff.ts`; the Screener decodes that state through the same canonical schema. The URL includes `coins=` for exact shortlist identity plus the reusable Picker constraints. Picker-only gates are shown as divergence chips instead of being encoded under unsupported or retired filter keys. The Picker remains a guided input flow, while this route is the exact inspection, sorting, and export surface.
+The dismissible Picker callout links to `/screener/picker/`. Picker results return through a URL assembled by `src/lib/selector-handoff.ts`; the Screener decodes that state through the same canonical schema. The URL includes `coins=` for exact shortlist identity plus the reusable Picker constraints. Picker-only gates are shown as divergence chips instead of being encoded under unsupported or retired filter keys. The Picker remains a guided input flow, while this route is the exact inspection, sorting, and export surface.
 
 ## Update Rules
 

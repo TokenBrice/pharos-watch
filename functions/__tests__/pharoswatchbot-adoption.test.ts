@@ -1,6 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { onRequest } from "../pharoswatchbot-adoption";
-import { createMockD1 } from "./helpers/mock-d1";
+
+const ENV = {
+  SITE_ORIGIN: "https://pharos.watch",
+  OPS_UI_ORIGIN: "https://ops.pharos.watch",
+  SITE_API_ORIGIN: "https://site-api.pharos.watch",
+  SITE_API_SHARED_SECRET: "shared-secret",
+  TELEGRAM_ADOPTION_IP_HASH_SECRET: "test-secret",
+};
 
 function request(body: unknown, headers: HeadersInit = {}): Request {
   return new Request("https://pharos.watch/pharoswatchbot-adoption", {
@@ -15,84 +22,119 @@ function request(body: unknown, headers: HeadersInit = {}): Request {
   });
 }
 
-describe("PharosWatchBot adoption Pages Function", () => {
-  beforeEach(() => vi.useFakeTimers().setSystemTime(new Date("2026-07-10T12:34:56Z")));
-  afterEach(() => vi.useRealTimers());
+function installFetch(response: Response | Error): ReturnType<typeof vi.fn> {
+  const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => {
+    if (response instanceof Error) throw response;
+    return response;
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
 
-  it("admits a catalog click through per-client and global quotas", async () => {
-    const db = createMockD1([
-      { match: "telegram_adoption_client_quota", first: { request_count: 1 } },
-      { match: "telegram_adoption_ingress_quota", first: { request_count: 1 } },
-      { match: "INSERT INTO telegram_adoption_daily", run: { success: true } },
-    ]);
+describe("PharosWatchBot adoption Pages forwarder", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("forwards the same-origin click to the Worker and preserves the response contract", async () => {
+    const fetchMock = installFetch(new Response(null, {
+      status: 204,
+      headers: {
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "X-Analytics-Quality": "best-effort; suppression=5",
+      },
+    }));
+
     const result = await onRequest({
       request: request({ campaign: "landing", placement: "hero" }),
-      env: { DB: db, TELEGRAM_ADOPTION_IP_HASH_SECRET: "test-secret" },
+      env: ENV,
     });
 
     expect(result.status).toBe(204);
-    const history = db.getHistory();
-    expect(history[0].binds).toEqual([
-      expect.any(Number),
-      expect.stringMatching(/^[0-9a-f]{32}$/),
-      expect.any(Number),
-      10,
-    ]);
-    expect(history[1].binds).toEqual([expect.any(Number), expect.any(Number), 3_000]);
-    expect(history[2].binds).toEqual(["2026-07-10", "landing", "hero", expect.any(Number), expect.any(Number)]);
-    expect(history.flatMap((entry) => entry.binds)).not.toContain(expect.stringMatching(/user|chat|referer/i));
+    expect(result.headers.get("X-Analytics-Quality")).toBe("best-effort; suppression=5");
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("https://site-api.pharos.watch/api/telegram-adoption");
+    expect(init?.method).toBe("POST");
+    const upstreamHeaders = new Headers(init?.headers);
+    expect(upstreamHeaders.get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
+    expect(upstreamHeaders.get("X-Pharos-Telegram-Adoption-Client-Hash")).toMatch(/^[0-9a-f]{32}$/);
+    expect(upstreamHeaders.get("CF-Connecting-IP")).toBeNull();
+    expect(upstreamHeaders.get("Origin")).toBe("https://pharos.watch");
+    await expect(new Response(init?.body as BodyInit).json()).resolves.toEqual({
+      campaign: "landing",
+      placement: "hero",
+    });
   });
 
-  it("rejects foreign origins, arbitrary placements, and exhausted global quota", async () => {
-    const db = createMockD1([
-      { match: "telegram_adoption_client_quota", first: { request_count: 1 } },
-      { match: "telegram_adoption_ingress_quota", first: null },
-    ]);
-    const foreign = request({ campaign: "landing", placement: "hero" }, { Origin: "https://evil.example" });
-    expect(
-      (await onRequest({ request: foreign, env: { DB: db, TELEGRAM_ADOPTION_IP_HASH_SECRET: "test-secret" } })).status,
-    ).toBe(404);
-    expect(
-      (
-        await onRequest({
-          request: request({ campaign: "landing", placement: "custom" }),
-          env: { DB: db, TELEGRAM_ADOPTION_IP_HASH_SECRET: "test-secret" },
-        })
-      ).status,
-    ).toBe(400);
-    expect(
-      (
-        await onRequest({
-          request: request({ campaign: "landing", placement: "hero" }),
-          env: { DB: db, TELEGRAM_ADOPTION_IP_HASH_SECRET: "test-secret" },
-        })
-      ).status,
-    ).toBe(429);
+  it("keeps method and same-origin rejection in Pages without forwarding", async () => {
+    const fetchMock = installFetch(new Response(null, { status: 204 }));
+    const getRequest = new Request("https://pharos.watch/pharoswatchbot-adoption", { method: "GET" });
+    const foreignRequest = request(
+      { campaign: "landing", placement: "hero" },
+      { Origin: "https://evil.example" },
+    );
+
+    expect((await onRequest({ request: getRequest, env: ENV })).status).toBe(405);
+    expect((await onRequest({ request: foreignRequest, env: ENV })).status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("rejects an exhausted per-client quota before consuming the global quota", async () => {
-    const db = createMockD1([{ match: "telegram_adoption_client_quota", first: null }]);
+  it("passes Worker validation and quota responses through unchanged", async () => {
+    const fetchMock = installFetch(new Response(null, {
+      status: 429,
+      headers: { "Retry-After": "60" },
+    }));
 
     const result = await onRequest({
       request: request({ campaign: "landing", placement: "hero" }),
-      env: { DB: db, TELEGRAM_ADOPTION_IP_HASH_SECRET: "test-secret" },
+      env: ENV,
     });
 
     expect(result.status).toBe(429);
-    expect(db.getHistory()).toHaveLength(1);
+    expect(result.headers.get("Retry-After")).toBe("60");
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it("fails closed when the primary Pages D1 binding or IP hash secret is missing", async () => {
-    expect((await onRequest({ request: request({ campaign: "landing", placement: "hero" }), env: {} })).status).toBe(
-      503,
-    );
+  it("forwards Worker schema rejection instead of validating the body in Pages", async () => {
+    const fetchMock = installFetch(new Response(null, { status: 400 }));
+
+    const result = await onRequest({
+      request: request({ campaign: "landing", placement: "custom" }),
+      env: ENV,
+    });
+
+    expect(result.status).toBe(400);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed for missing proxy configuration or client-IP secret", async () => {
+    const fetchMock = installFetch(new Response(null, { status: 204 }));
+
     expect(
-      (
-        await onRequest({
-          request: request({ campaign: "landing", placement: "hero" }, { "CF-Connecting-IP": "" }),
-          env: { DB: createMockD1([]), TELEGRAM_ADOPTION_IP_HASH_SECRET: "test-secret" },
-        })
-      ).status,
+      (await onRequest({
+        request: request({ campaign: "landing", placement: "hero" }),
+        env: { ...ENV, SITE_API_ORIGIN: undefined },
+      })).status,
+    ).toBe(500);
+    expect(
+      (await onRequest({
+        request: request({ campaign: "landing", placement: "hero" }),
+        env: { ...ENV, TELEGRAM_ADOPTION_IP_HASH_SECRET: undefined },
+      })).status,
     ).toBe(503);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("normalizes upstream fetch failures to the proxy error contract", async () => {
+    installFetch(new Error("upstream unavailable"));
+    const result = await onRequest({
+      request: request({ campaign: "landing", placement: "hero" }),
+      env: ENV,
+    });
+
+    expect(result.status).toBe(502);
   });
 });

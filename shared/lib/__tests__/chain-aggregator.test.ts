@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aggregateChains, type ChainAggregatorInput } from "../chain-aggregator";
+import { aggregateChains, type ChainAggregatorInput } from "../chains/aggregator";
 
 function makeInput(overrides: Partial<ChainAggregatorInput> = {}): ChainAggregatorInput {
   return {

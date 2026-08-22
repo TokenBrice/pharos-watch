@@ -44,6 +44,11 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types";
+import {
+  PublicSnapshotEnvelopeSchema,
+  type PublicSnapshotEnvelope,
+  type PublicSnapshotEnvelopeV2,
+} from "@shared/types/public-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { type CsvColumn, escapeCsvField } from "@shared/lib/csv";
 import {
@@ -78,23 +83,8 @@ const CHECK_ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
 };
 const FRESHNESS_CONTRACT = "point-in-time sample; not guaranteed to track production freshness";
 
-interface SnapshotEnvelope {
-  snapshotDate: string;
-  generatedAt: number;
+type SnapshotEnvelope = Pick<PublicSnapshotEnvelopeV2, "snapshotDate" | "generatedAt" | "stablecoins"> & {
   methodologyVersions?: Record<string, string>;
-  stablecoins: Array<{
-    id: string;
-    name: string;
-    symbol: string;
-    pegType: string;
-    pegMechanism: string;
-    price: number | null;
-    circulating: Record<string, number>;
-    chains: string[];
-    mechanismArchetype?: string | null;
-    pegReferenceId?: string | null;
-    jurisdiction?: { country?: string | null } | null;
-  }>;
   reportCards: {
     scores?: Record<string, ReportCardScore>;
     cards?: Array<{
@@ -105,7 +95,7 @@ interface SnapshotEnvelope {
   } | null;
   dews: Array<{ stablecoinId: string; score: number; band: string }>;
   liquidity: Array<{ stablecoinId: string; liquidityScore: number | null; coverageClass: string | null }>;
-}
+};
 
 /**
  * Normalized view of a safety-score entry. The aliases remain only so dated
@@ -174,7 +164,42 @@ async function safeFetchJson<T>(url: string): Promise<T | null> {
 }
 
 async function fetchSnapshot(apiBase: string, date: string): Promise<SnapshotEnvelope | null> {
-  return safeFetchJson<SnapshotEnvelope>(resolveApiPathUrl(apiBase, `/api/snapshots/${date}.json`));
+  const url = resolveApiPathUrl(apiBase, `/api/snapshots/${date}.json`);
+  const payload = await safeFetchJson<unknown>(url);
+  if (payload == null) return null;
+
+  const parsed = PublicSnapshotEnvelopeSchema.safeParse(payload);
+  if (!parsed.success || !isProjectionEnvelope(parsed.data)) {
+    console.warn(`[generate-public-datasets] ${url} returned an invalid public snapshot envelope`);
+    return null;
+  }
+  return parsed.data;
+}
+
+function isProjectionEnvelope(envelope: PublicSnapshotEnvelope): envelope is PublicSnapshotEnvelope & SnapshotEnvelope {
+  return (
+    typeof envelope.snapshotDate === "string"
+    && typeof envelope.generatedAt === "number"
+    && Array.isArray(envelope.stablecoins)
+    && envelope.stablecoins.every((coin) => (
+      typeof coin.name === "string"
+      && typeof coin.symbol === "string"
+      && typeof coin.pegType === "string"
+      && typeof coin.pegMechanism === "string"
+      && (typeof coin.price === "number" || coin.price === null)
+      && typeof coin.circulating === "object"
+      && coin.circulating !== null
+      && Array.isArray(coin.chains)
+    ))
+    && (envelope.reportCards === null || (typeof envelope.reportCards === "object" && envelope.reportCards !== null))
+    && Array.isArray(envelope.dews)
+    && envelope.dews.every((row) => typeof row.score === "number" && typeof row.band === "string")
+    && Array.isArray(envelope.liquidity)
+    && envelope.liquidity.every((row) => (
+      (typeof row.liquidityScore === "number" || row.liquidityScore === null)
+      && (typeof row.coverageClass === "string" || row.coverageClass === null)
+    ))
+  );
 }
 
 async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
