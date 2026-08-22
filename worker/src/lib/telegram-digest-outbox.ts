@@ -17,6 +17,7 @@ import {
   DigestSafetyContextSchema,
   type DigestSafetyContext,
 } from "@shared/types/digest";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import {
   checkDigestSafetyContextForDelivery,
   findUnboundDigestSafetyClaimMarkers,
@@ -28,6 +29,7 @@ const TELEGRAM_DIGEST_OUTBOX_DRAIN_LIMIT = 4;
 const TELEGRAM_DIGEST_OUTBOX_SENT_RETENTION_SEC = 90 * 86_400;
 const TELEGRAM_DIGEST_OUTBOX_MAX_SUCCESS_ACTIONS = 20;
 const TELEGRAM_DIGEST_OUTBOX_MAX_BACKOFF_SEC = 60 * 60;
+const SAFETY_MAP_URL_PATTERN = /https:\/\/pharos\.watch\/safety-scores\/map\.png\?date=\d{4}-\d{2}-\d{2}/;
 
 export type TelegramDigestKind = "daily" | "weekly";
 export type TelegramDigestOutboxState =
@@ -75,6 +77,7 @@ export interface EnqueueTelegramDigestEditionInput {
   date: string;
   editionNumber?: number | null;
   appendixHtml?: string | null;
+  imageUrl?: string | null;
   successActions?: readonly TelegramDigestSuccessAction[];
   safetyContext: DigestSafetyContext;
 }
@@ -235,12 +238,17 @@ export async function enqueueTelegramDigestEdition(
   signal?: AbortSignal,
 ): Promise<EnqueueTelegramDigestEditionResult> {
   throwIfAborted(signal);
+  const expectedImageUrl = `${SITE_ORIGIN}/safety-scores/map.png?date=${encodeURIComponent(input.date)}`;
+  if (input.imageUrl && input.imageUrl !== expectedImageUrl) {
+    throw new Error("Telegram digest image URL must be the canonical dated Safety Score map");
+  }
   const rendered = buildTelegramMessage(
     input.title,
     input.extended,
     input.date,
     input.editionNumber,
     input.appendixHtml,
+    input.imageUrl,
   );
   const chunks = splitMessage(rendered);
   const payloadJson = JSON.stringify(chunks);
@@ -248,7 +256,10 @@ export async function enqueueTelegramDigestEdition(
   const safetyContext = DigestSafetyContextSchema.parse(input.safetyContext);
   const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
     safetyContext,
-    { extended: rendered },
+    // The independently freshness-gated map publication is allowed even when
+    // the authored digest copy omitted Safety Score claims. Remove only the
+    // exact canonical URL; all human-readable copy remains under this guard.
+    { extended: input.imageUrl ? rendered.replace(input.imageUrl, "") : rendered },
   );
   if (unboundSafetyClaimMarkers.length > 0) {
     throw new Error(
@@ -713,9 +724,11 @@ export async function deliverTelegramDigestEdition(
     });
   }
 
+  const storedCopy = claim.chunks.join("\n");
+  const safetyMapUrl = storedCopy.match(SAFETY_MAP_URL_PATTERN)?.[0];
   const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
     claim.safetyContext,
-    { extended: claim.chunks.join("\n") },
+    { extended: safetyMapUrl ? storedCopy.replace(safetyMapUrl, "") : storedCopy },
   );
   if (unboundSafetyClaimMarkers.length > 0) {
     const errorClass = `unbound_safety_copy:${unboundSafetyClaimMarkers.join(",")}`;
@@ -765,11 +778,18 @@ export async function deliverTelegramDigestEdition(
   let chunksSent = 0;
   for (let chunkIndex = claim.row.next_chunk_index; chunkIndex < claim.chunks.length; chunkIndex++) {
     throwIfAborted(signal);
+    const chunk = claim.chunks[chunkIndex]!;
+    const safetyMapUrl = chunk.match(SAFETY_MAP_URL_PATTERN)?.[0];
     const result = await sendToChat(
       claim.row.target_chat_id,
-      claim.chunks[chunkIndex]!,
+      chunk,
       creds.botToken,
-      { signal },
+      {
+        signal,
+        ...(safetyMapUrl
+          ? { linkPreviewOptions: { url: safetyMapUrl, prefer_large_media: true, show_above_text: true } }
+          : {}),
+      },
     );
     const completedAt = Math.floor(Date.now() / 1000);
     if (result.ok) {

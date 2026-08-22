@@ -183,7 +183,7 @@ An idle `digestTriggerPoll` with no force-run request is a neutral conditional p
 
 ## Distribution
 
-After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. Twitter/X retains its same-day marker contract; Telegram first persists the exact rendered edition in `telegram_digest_outbox`, then sends only that stored payload.
+After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. Before either channel send, the worker reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old enables the attachment; every unavailable or stale state omits it and records degraded ops telemetry without blocking the digest. Twitter/X retains its same-day marker contract; Telegram first persists the exact rendered edition in `telegram_digest_outbox`, then sends only that stored payload.
 
 ### Web archive and sitemap policy
 
@@ -195,7 +195,7 @@ After the digest is stored in D1, it is posted to configured Twitter/X and Teleg
 
 - Auth: **OAuth 1.0a** signed with `crypto.subtle.HMAC-SHA1` (no third-party library)
 - Format: `{title} (#N)\n\n{text}` — an edition-number suffix `(#N)` is appended to the title (N = running count of non-weekly digests, present on every post); a `$` cashtag prefix auto-injected on the single earliest tracked-ticker mention in the text (only one cashtag per tweet; Twitter rejects multiple); truncated to 270 chars if needed
-- Endpoint: `POST https://api.twitter.com/2/tweets`
+- Endpoints: `POST https://upload.twitter.com/1.1/media/upload.json` for the PNG, then `POST https://api.twitter.com/2/tweets` with its media id
 
 **Required secrets:**
 
@@ -206,7 +206,7 @@ After the digest is stored in D1, it is posted to configured Twitter/X and Teleg
 | `TWITTER_ACCESS_TOKEN` | OAuth access token |
 | `TWITTER_ACCESS_TOKEN_SECRET` | OAuth access token secret |
 
-If any of the four are absent, Twitter posting is skipped silently. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically claims `daily-digest:twitter-sent:YYYY-MM-DD` before posting, skips later same-day retries as `already-sent`, and deletes the marker only when the post attempt itself fails. If the marker claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention.
+If any of the four are absent, Twitter posting is skipped silently. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically claims `daily-digest:twitter-sent:YYYY-MM-DD` before posting, skips later same-day retries as `already-sent`, and deletes the marker only when the post attempt itself fails. If the marker claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention. A map download or media-upload failure is handled before tweet creation and falls back to the text-only post; the map can never turn a publishable digest into a failed Twitter delivery.
 
 ### Telegram
 
@@ -221,11 +221,13 @@ If any of the four are absent, Twitter posting is skipped silently. Twitter/X de
 
   {extended}
 
+  <a href="https://pharos.watch/safety-scores/map.png?date=YYYY-MM-DD">View today’s map →</a>
+
   <a href="https://pharos.watch/digest/YYYY-MM-DD/">Read on Pharos →</a>
   ```
 - Endpoint: `POST https://api.telegram.org/bot{token}/sendMessage`
 
-The `extended` field is used instead of `text`. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
+The `extended` field is used instead of `text`. When today's map passes the readiness contract, the canonical dated URL is persisted in the rendered HTML and the matching chunk is sent with `link_preview_options` selecting a large preview above the text. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
 
 Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram-digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body:
 

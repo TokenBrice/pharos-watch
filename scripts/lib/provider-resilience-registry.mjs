@@ -218,6 +218,32 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
   },
   {
+    id: "digest-safety-map-readiness",
+    family: "provider-transport",
+    description: "Daily digest Safety Score map manifest and dated-image readiness probes.",
+    files: ["worker/src/lib/digest-safety-map.ts", "worker/src/cron/daily-digest.ts"],
+    tests: [
+      "worker/src/lib/__tests__/digest-safety-map.test.ts",
+      "worker/src/cron/__tests__/daily-digest-generation.test.ts",
+    ],
+    allowBareFetch: true,
+    directFetchJustification:
+      "The same-owned Pages publication is an optional social attachment: reads are globally time-bounded, response bodies are consumed or cancelled, and every failure degrades to text-only delivery rather than retrying or blocking the digest.",
+    resilience: {
+      transport: "direct-fetch",
+      timeout: "Uses one composed three-second AbortSignal across the manifest GET and dated-image HEAD probe.",
+      body: "Reads the manifest through a bounded response helper and cancels unsuccessful or bodyless image responses.",
+      circuitSources: [],
+    },
+    requiredMarkers: [
+      "AbortSignal.timeout",
+      "readResponseTextBoundedWithSignal",
+      "body?.cancel",
+      "resolveDigestSafetyMap",
+      "daily_digest_safety_map_omitted",
+    ],
+  },
+  {
     id: "twitter-digest-delivery",
     family: "twitter",
     description: "Twitter/X daily digest delivery.",

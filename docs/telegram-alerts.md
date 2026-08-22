@@ -876,7 +876,7 @@ Subscriber alert messages no longer carry a top-level `Pharos Alerts` header —
 
 The reserve-drift family (C123) ships **glyph-less**: a `Reserve Drift` section with a bold-symbol line and no data-tied glyph. Per the rule above, adding a reserve glyph requires a separate review.
 
-Subscriber alert messages end with a `View on Pharos` link. Telegram digest posts end with `Read on Pharos →`, even when cemetery or tracking appendices are present.
+Subscriber alert messages end with a `View on Pharos` link. Telegram digest posts end with `Read on Pharos →`, even when cemetery or tracking appendices are present. A current daily Safety Score map adds a canonical dated `View today’s map →` link immediately before it and requests a large preview; the exact link remains part of the durable digest outbox payload.
 
 For single-coin alerts the first chunk is sent with `link_preview_options: { is_disabled: false, prefer_small_media: true, show_above_text: false }` so the "View on Pharos" link renders a compact preview card below the message body. Multi-coin alerts, overflow chunks, and pending-queue replays continue to use the batch-wide `disable_web_page_preview: true` default. Behavior requires Telegram Bot API 7.0+ (Mar 2024); older Bot API versions ignore the field and fall back to default link-preview rendering.
 

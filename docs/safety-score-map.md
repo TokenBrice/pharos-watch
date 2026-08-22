@@ -76,15 +76,13 @@ Failure surfaces as a red run and a GitHub notification. It does **not** page an
 
 `vars.SAFETY_MAP_KV_NAMESPACE_ID` and `secrets.SAFETY_MAP_KV_TOKEN` are provisioned. The token is scoped to *Workers KV Storage: Edit* on that one namespace and is deliberately **not** `CLOUDFLARE_API_TOKEN`, which deploys production Pages and is used only from workflows running under the `production` environment protection that this unattended job does not have.
 
-### Outstanding owner action
-
-The workflow is `workflow_dispatch` only. Its `schedule:` block (`cron: "20 7 * * *"`) is present but commented out.
-
-**Uncomment the cron only after a successful post-merge `workflow_dispatch` run on the default branch has produced a same-day manifest.** 07:20 UTC leaves roughly 45 minutes of headroom before the 08:05 UTC digest cron — deliberately wide, because Actions schedules are routinely delayed 5-20 minutes at peak.
+The workflow runs daily at 07:20 UTC and also supports `workflow_dispatch`. That leaves roughly 45 minutes of headroom before the 08:05 UTC digest cron — deliberately wide, because Actions schedules are routinely delayed 5-20 minutes at peak.
 
 ## Serving
 
 `functions/safety-scores/map.png.ts` serves `/safety-scores/map.png` from KV. `GET` and `HEAD` only; HEAD answers exactly as GET does minus the body, because several social platforms probe an image URL with HEAD before fetching it.
+
+`functions/safety-scores/map.json.ts` serves the manifest commit marker at `/safety-scores/map.json` with `no-store`. The daily digest reads this bounded endpoint to validate publication date and data freshness without adding the Pages KV namespace to the API Worker. Missing, malformed, or unreachable manifest state fails closed as an omitted attachment.
 
 `?date=YYYY-MM-DD` selects the dated archive, validated against a strict pattern; anything else is a 400. The Function never lists the namespace and never accepts a caller-supplied key fragment beyond the date. The archive lives on a query parameter rather than a nested path segment so it cannot shadow the static `/safety-scores/map/` page; Cloudflare includes the query string in the default cache key, so the two remain distinct cache entries.
 
@@ -96,17 +94,18 @@ The page at `src/app/safety-scores/map/page.tsx` embeds the image with a downloa
 
 ## Digest Degradation Contract
 
-The digest pairing is not implemented. The contract is fixed here so the pairing work has something to build against.
-
 The digest includes the map **iff all three hold**:
 
 1. `safety-map:latest.json` exists,
 2. `manifest.date` is today (UTC), and
-3. `manifest.asOfSec` is under 24 hours old.
+3. `manifest.asOfSec` is under 24 hours old, and
+4. a HEAD probe confirms that today's dated PNG exists and is served as `image/png`.
 
 It embeds the **dated** URL, never `latest.png`. Telegram and X cache by URL, so a stable URL lets their CDNs keep serving a superseded image and makes a bad poster unrecallable. With dated URLs, rollback is simply "the next post uses a new URL".
 
-In any other state the digest omits the map section entirely — no stale link, no placeholder — and appends one internal ops line. That ops line is the monitoring: it turns "the map job died" into a message where someone is already looking.
+When available, X downloads the PNG, uploads it through the OAuth 1.0a media endpoint, and references the returned media id on the digest post. Telegram stores the canonical dated link inside the immutable outbox payload and requests a large link preview above the message. This preserves Telegram's exact-payload replay and accepted-chunk cursor contracts without creating a separate photo send.
+
+In any other state the digest omits the map section entirely — no stale link, no placeholder — and emits a structured internal ops warning plus a `safety-map-*` degraded reason. An X media-upload failure falls back to the normal text-only tweet and records `safety-map-twitter-attachment`; it never suppresses the digest.
 
 **The digest never fails, blocks, or delays on the map**, in any state, including the namespace being unreachable.
 

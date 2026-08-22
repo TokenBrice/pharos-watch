@@ -88,6 +88,20 @@ vi.mock("../../lib/twitter", () => ({
   postDigestTweet: vi.fn(),
 }));
 
+vi.mock("../../lib/digest-safety-map", () => ({
+  resolveDigestSafetyMap: vi.fn(async (date: string) => ({
+    kind: "available",
+    imageUrl: `https://pharos.watch/safety-scores/map.png?date=${date}`,
+    manifest: {
+      date,
+      asOfSec: 1_772_796_000,
+      renderedAtSec: 1_772_798_400,
+      edition: "daily",
+      bytes: { png: 1_000_000 },
+    },
+  })),
+}));
+
 vi.mock("../../lib/telegram-digest-appendices", () => ({
   prepareTelegramDigestAppendices: vi.fn(),
 }));

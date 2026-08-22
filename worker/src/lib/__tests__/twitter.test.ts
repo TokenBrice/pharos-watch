@@ -73,6 +73,60 @@ describe("twitter helpers", () => {
     expect(response.bodyUsed).toBe(true);
   });
 
+  it("uploads and attaches the daily Safety Score map", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const image = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("pharos.watch/safety-scores/map.png")) {
+        return new Response(image, { status: 200, headers: { "Content-Type": "image/png" } });
+      }
+      if (url === "https://upload.twitter.com/1.1/media/upload.json") {
+        expect(init?.body).toBeInstanceOf(FormData);
+        expect((init?.headers as Record<string, string>).Authorization).toContain('oauth_consumer_key="api-key"');
+        return new Response(JSON.stringify({ media_id_string: "1234567890123456789" }), { status: 200 });
+      }
+      const payload = JSON.parse(String(init?.body));
+      expect(payload.media).toEqual({ media_ids: ["1234567890123456789"] });
+      return new Response(JSON.stringify({ data: { id: "1" } }), { status: 201 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await expect(postDigestTweet(
+      "Daily Digest",
+      "USDT held steady.",
+      creds,
+      42,
+      "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
+    )).resolves.toEqual({ mediaAttached: true, mediaError: null });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("falls back to a text-only tweet when the map upload is unavailable", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("pharos.watch/safety-scores/map.png")) {
+        return new Response("missing", { status: 404 });
+      }
+      expect(JSON.parse(String(init?.body))).toEqual({ text: "Daily Digest\n\n$USDT held steady." });
+      return new Response(JSON.stringify({ data: { id: "1" } }), { status: 201 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await postDigestTweet(
+      "Daily Digest",
+      "USDT held steady.",
+      creds,
+      null,
+      "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
+    );
+    expect(result.mediaAttached).toBe(false);
+    expect(result.mediaError).toContain("HTTP 404");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
   it("throws when the Twitter API responds with an error", async () => {
     const response = new Response("denied", { status: 403 });
     mockFetch([{ match: () => true, respond: () => response }]);
