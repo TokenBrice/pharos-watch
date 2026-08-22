@@ -249,6 +249,9 @@ export async function generateDailyDigest(
       prevDepegFacts: previousInputData?.topDepegs ?? [],
       recentTitles,
       forbidSafetyClaims: inputData.safetyContext?.status !== "available",
+      suppressedCandidateIds: (inputData.editorialCandidates ?? [])
+        .filter((candidate) => candidate.suppressReason)
+        .map((candidate) => candidate.id),
     },
   });
   if (digestCopy.kind === "circuit-open") {

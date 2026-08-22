@@ -46,6 +46,13 @@ export interface DigestValidationProfile {
   recentTitles?: string[];
   /** Fail closed and allow the standard corrective retry when canonical safety evidence is unavailable. */
   forbidSafetyClaims?: boolean;
+  /**
+   * Candidate ids the editorial layer refused to let lead. Leading one is a
+   * hard failure: suppression exists because the underlying signal is
+   * artifact-prone or uncorroborated, and edition #179 shipped a false USDS
+   * liquidity collapse precisely because suppression was advisory only.
+   */
+  suppressedCandidateIds?: string[];
 }
 
 export interface DigestDepegFact {
@@ -370,6 +377,15 @@ export function validateDigestModelOutput(
     digestExtended: parsed.digestExtended,
     leadRequirements: profile.leadRequirements,
   }));
+
+  const declaredLeadSignalId = getMetaString(parsedMeta, "leadSignalId");
+  if (declaredLeadSignalId && (profile.suppressedCandidateIds ?? []).includes(declaredLeadSignalId)) {
+    issues.push({
+      code: "suppressed-lead",
+      severity: "hard",
+      message: `Lead signal '${declaredLeadSignalId}' is a suppressed candidate and may not lead.`,
+    });
+  }
 
   const currentFingerprint = openingFingerprint(parsed.digestExtended);
   if (currentFingerprint) {

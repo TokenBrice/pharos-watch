@@ -4,6 +4,11 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
+import {
+  admitLiquidityShift,
+  type LiquidityShiftRejection,
+  type LiquidityShiftSnapshot,
+} from "@shared/lib/digest-liquidity-admission";
 import { buildInClause } from "../../lib/db";
 import {
   getGaugeBand,
@@ -411,14 +416,23 @@ export async function collectLiquidityShifts(
     const lookbackStart = ctx.yesterdayTs - 2 * SECONDS.ONE_DAY;
     const rows = await ctx.db
       .prepare(
-        `SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date
+        `SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date,
+                h.coverage_class, h.coverage_confidence, h.methodology_version
          FROM dex_liquidity_history h
          WHERE h.snapshot_date <= ? AND h.snapshot_date > ?
            AND h.liquidity_score IS NOT NULL
          ORDER BY h.stablecoin_id, h.snapshot_date DESC`,
       )
       .bind(ctx.yesterdayTs, lookbackStart)
-      .all<{ stablecoin_id: string; liquidity_score: number; total_tvl_usd: number; snapshot_date: number }>();
+      .all<{
+        stablecoin_id: string;
+        liquidity_score: number;
+        total_tvl_usd: number;
+        snapshot_date: number;
+        coverage_class: string | null;
+        coverage_confidence: number | null;
+        methodology_version: string | null;
+      }>();
 
     type LiqRow = (typeof rows.results)[number];
     const byId = new Map<string, { latest?: LiqRow; previous?: LiqRow }>();
@@ -429,7 +443,16 @@ export async function collectLiquidityShifts(
       byId.set(row.stablecoin_id, entry);
     }
 
+    const toSnapshot = (row: LiqRow): LiquidityShiftSnapshot => ({
+      snapshotDate: row.snapshot_date,
+      liquidityScore: row.liquidity_score,
+      totalTvlUsd: row.total_tvl_usd,
+      coverageClass: row.coverage_class,
+      coverageConfidence: row.coverage_confidence,
+      methodologyVersion: row.methodology_version,
+    });
     const shifts: NonNullable<DigestInputData["liquidityShifts"]> = [];
+    const rejections = new Set<LiquidityShiftRejection>();
     for (const [id, { latest, previous }] of byId) {
       if (!latest || !previous) continue;
       const delta = latest.liquidity_score - previous.liquidity_score;
@@ -441,6 +464,23 @@ export async function collectLiquidityShifts(
       const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === id);
       if (!coin) continue;
 
+      // Fail closed: an inadmissible pair yields no signal at all. The prompt
+      // renders raw TVL evidence, so a hedged shift is still quotable.
+      const admission = admitLiquidityShift(toSnapshot(latest), toSnapshot(previous));
+      if (!admission.admissible) {
+        rejections.add(admission.rejection!);
+        logWorkerEventArgs(
+          "handler",
+          "info",
+          `[daily-digest] Rejected ${coin.symbol} liquidity shift: ${admission.rejection} ` +
+            `(score ${previous.liquidity_score}->${latest.liquidity_score}, ` +
+            `tvl ${previous.total_tvl_usd}->${latest.total_tvl_usd}, ` +
+            `coverage ${previous.coverage_class}/${latest.coverage_class}, ` +
+            `methodology ${previous.methodology_version}->${latest.methodology_version})`,
+        );
+        continue;
+      }
+
       shifts.push({
         symbol: coin.symbol,
         currentScore: latest.liquidity_score,
@@ -449,7 +489,17 @@ export async function collectLiquidityShifts(
         currentTvl: latest.total_tvl_usd,
         previousTvl: previous.total_tvl_usd,
         mcapUsd,
+        tvlChangePct: admission.tvlChangePct,
+        expectedScoreDeltaFromTvl: admission.expectedScoreDeltaFromTvl,
+        coverageClass: latest.coverage_class ?? "unknown",
+        coverageConfidence: latest.coverage_confidence ?? 0,
       });
+    }
+
+    // Surface the drop so the prompt's data-quality block and the status page
+    // record that a liquidity story was withheld rather than never existed.
+    for (const rejection of rejections) {
+      markCollectorDegraded(degradedReasons, `liquidity-shift-${rejection}`);
     }
 
     shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
