@@ -12,7 +12,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { computeCostsTotal, computeMonthlyHistory, summarizeDonations } from "@shared/lib/funding/helpers";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
-import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
+import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
 
 export const metadata = buildPageMetadata({
   title: "Pharos Funding: Costs, Donations & Public Ledger",
@@ -28,8 +28,8 @@ export const metadata = buildPageMetadata({
 const BUILD_TIMESTAMP_SEC = Math.floor(Date.now() / 1000);
 
 export default function FundingPage() {
-  const costs = costsData as CostsFile;
-  const donations = donationsData as DonationsFile;
+  const costs = CostsFileSchema.parse(costsData);
+  const donations = DonationsFileSchema.parse(donationsData);
   const summary = summarizeDonations(donations.donations, BUILD_TIMESTAMP_SEC);
   const monthlyHistory = computeMonthlyHistory(donations.donations, BUILD_TIMESTAMP_SEC);
   const monthlyTargetUsd = computeCostsTotal(costs.items);

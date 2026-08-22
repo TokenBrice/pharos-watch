@@ -63,9 +63,13 @@ export async function fetchFiatCoinGeckoTokens(
         }
         const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
         // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for
-        // USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
-        const usdPegDefault = meta.flags.pegCurrency === "USD" ? 1.0 : undefined;
-        const priceForSupply = priceResolution?.price ?? pegReferencePrice ?? usdPegDefault;
+        // plain USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
+        // NAV/yield-bearing assets need an observed market price; do not par-value them or use an FX reference.
+        const navLikeAsset = meta.flags.navToken || meta.flags.yieldBearing;
+        const usdPegDefault = !navLikeAsset && meta.flags.pegCurrency === "USD" ? 1.0 : undefined;
+        const priceForSupply = navLikeAsset
+          ? priceResolution?.price
+          : priceResolution?.price ?? pegReferencePrice ?? usdPegDefault;
 
         if (isZephyrScannerAssetId(meta.id)) {
           if (!zephyrProtocolStats) {
@@ -81,7 +85,7 @@ export async function fetchFiatCoinGeckoTokens(
         let chainCirculating: PeggedAsset["chainCirculating"] = {};
 
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
-        // This keeps preview-only fiat assets in supply coverage without inventing a live market quote.
+        // This keeps preview-only plain-par fiat assets in supply coverage without inventing a live market quote.
         if (priceForSupply != null) {
           const aggregateOnChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceForSupply, chainRpcs, signal);
           if (aggregateOnChainMcap) {

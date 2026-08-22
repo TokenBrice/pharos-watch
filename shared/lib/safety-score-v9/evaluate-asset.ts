@@ -11,6 +11,7 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import { isDexMeasuredExecutionObservationHistoryMature } from "../../types/measured-execution";
+import { clampShare } from "../math";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
 import {
   createUnavailableV9BackingResult,
@@ -750,10 +751,6 @@ function unresolvedEvidenceReasons(
       ),
     ),
   );
-}
-
-function clampShare(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }
 
 function measuredOperationalMarketDepth(

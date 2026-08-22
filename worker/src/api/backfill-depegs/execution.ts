@@ -104,7 +104,7 @@ export async function executeBackfillForCoin(opts: {
   } else if (isCommodityPeg(peg)) {
     // Commodity peg (gold/silver): use historical spot price series
     const series = commoditySeries[peg] ?? [];
-    const fallback = currentPegRef > 0 ? currentPegRef : 1;
+    const fallback = currentPegRef != null && currentPegRef > 0 ? currentPegRef : 1;
     const spotLookup = buildFxLookup(series, fallback);
     if (meta.commodityOunces && meta.commodityOunces > 0) {
       const oz = meta.commodityOunces;
@@ -119,7 +119,7 @@ export async function executeBackfillForCoin(opts: {
     const fallback =
       typeof fallbackRate === "number" && fallbackRate > 0
         ? fallbackRate
-        : currentPegRef > 0
+        : currentPegRef != null && currentPegRef > 0
           ? currentPegRef
           : peg === "RUB"
             ? RUB_FALLBACK

@@ -51,7 +51,7 @@ export interface DetailMarketSnapshot {
 }
 
 export interface DetailPegPriceSnapshot {
-  pegRef: number;
+  pegRef: number | null;
   deviationBps: number | null;
   gaugeDeviationBps: number;
   pegReferenceUnavailable: boolean;
@@ -148,7 +148,7 @@ export function buildDetailPegPriceSnapshot(
     pegRef,
     deviationBps,
     gaugeDeviationBps: deriveGaugeDeviationBps(deviationBps, isNavToken),
-    pegReferenceUnavailable: !isNavToken && pegScoreResult?.pegReferenceUnavailable === true,
+    pegReferenceUnavailable: !isNavToken && (pegRef == null || pegScoreResult?.pegReferenceUnavailable === true),
     pegScoreResult,
     consensusSources: pegScoreResult?.consensusSources ?? [],
     agreeSources: pegScoreResult?.agreeSources ?? [],

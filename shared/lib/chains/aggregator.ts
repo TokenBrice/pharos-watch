@@ -1,4 +1,4 @@
-import { CHAIN_META, getChainResilienceTier } from "./index";
+import { CHAIN_META, getChainResilienceTier, resolveChainId } from "./index";
 import { canonicalizeChainCirculating } from "./circulating";
 import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
@@ -33,7 +33,7 @@ export interface ChainAggregatorAsset {
   circulating?: Record<string, number>;
   circulatingPrevDay?: Record<string, number>;
   circulatingPrevWeek?: Record<string, number>;
-  circulatingPrevMonth?: Record<string, number>;
+  circulatingPrevMonth?: Record<string, number> | null;
   chainCirculating?: Record<string, { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>;
 }
 
@@ -47,7 +47,8 @@ interface ChainAccumulator {
   totalUsd: number;
   prevDay: number;
   prevWeek: number;
-  prevMonth: number;
+  pairedCurrent30d: number;
+  pairedPrevMonth: number;
   coins: Array<{
     id: string;
     symbol: string;
@@ -68,6 +69,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   let aggregatePrevDayUsd = 0;
   let aggregatePrevWeekUsd = 0;
   let aggregatePrevMonthUsd = 0;
+  let aggregatePairedCurrent30dUsd = 0;
   let hasAggregateSupply = false;
 
   for (const asset of peggedAssets) {
@@ -76,10 +78,31 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       aggregateTotalUsd += getCirculatingRaw(asset);
       aggregatePrevDayUsd += getPrevDayRaw(asset);
       aggregatePrevWeekUsd += getPrevWeekRaw(asset);
-      aggregatePrevMonthUsd += getPrevMonthRawOrNull(asset) ?? 0;
+      const prevMonth = getPrevMonthRawOrNull(asset);
+      if (prevMonth != null) {
+        aggregatePairedCurrent30dUsd += getCirculatingRaw(asset);
+        aggregatePrevMonthUsd += prevMonth;
+      }
     }
 
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
+    const pairedChainCirculating = new Map<string, { current: number; prevMonth: number }>();
+    for (const [rawChainId, data] of Object.entries(asset.chainCirculating ?? {})) {
+      if (!data || typeof data !== "object") continue;
+      const chainId = resolveChainId(rawChainId);
+      const prevMonth = data.circulatingPrevMonth;
+      if (!chainId || typeof prevMonth !== "number" || !Number.isFinite(prevMonth) || prevMonth < 0) continue;
+      const current = typeof data.current === "number" && Number.isFinite(data.current) && data.current >= 0
+        ? data.current
+        : 0;
+      const existing = pairedChainCirculating.get(chainId);
+      if (existing) {
+        existing.current += current;
+        existing.prevMonth += prevMonth;
+      } else {
+        pairedChainCirculating.set(chainId, { current, prevMonth });
+      }
+    }
 
     for (const [chainId, data] of canonicalChainCirculating) {
       const current = data.current;
@@ -87,14 +110,18 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
 
       let acc = accumulators.get(chainId);
       if (!acc) {
-        acc = { totalUsd: 0, prevDay: 0, prevWeek: 0, prevMonth: 0, coins: [] };
+        acc = { totalUsd: 0, prevDay: 0, prevWeek: 0, pairedCurrent30d: 0, pairedPrevMonth: 0, coins: [] };
         accumulators.set(chainId, acc);
       }
 
       acc.totalUsd += current;
       acc.prevDay += data.circulatingPrevDay;
       acc.prevWeek += data.circulatingPrevWeek;
-      acc.prevMonth += data.circulatingPrevMonth;
+      const paired = pairedChainCirculating.get(chainId);
+      if (paired) {
+        acc.pairedCurrent30d += paired.current;
+        acc.pairedPrevMonth += paired.prevMonth;
+      }
 
       const meta = TRACKED_META_BY_ID.get(asset.id);
       acc.coins.push({
@@ -114,17 +141,20 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   let chainPrevDayUsd = 0;
   let chainPrevWeekUsd = 0;
   let chainPrevMonthUsd = 0;
+  let chainPairedCurrent30dUsd = 0;
   for (const a of accumulators.values()) {
     rawChainAttributedTotalUsd += a.totalUsd;
     chainPrevDayUsd += a.prevDay;
     chainPrevWeekUsd += a.prevWeek;
-    chainPrevMonthUsd += a.prevMonth;
+    chainPairedCurrent30dUsd += a.pairedCurrent30d;
+    chainPrevMonthUsd += a.pairedPrevMonth;
   }
   const useAggregateSupply = hasAggregateSupply && aggregateTotalUsd > 0;
   const globalTotalUsd = useAggregateSupply ? aggregateTotalUsd : rawChainAttributedTotalUsd;
   const globalPrevDayUsd = useAggregateSupply ? aggregatePrevDayUsd : chainPrevDayUsd;
   const globalPrevWeekUsd = useAggregateSupply ? aggregatePrevWeekUsd : chainPrevWeekUsd;
   const globalPrevMonthUsd = useAggregateSupply ? aggregatePrevMonthUsd : chainPrevMonthUsd;
+  const globalPairedCurrent30dUsd = useAggregateSupply ? aggregatePairedCurrent30dUsd : chainPairedCurrent30dUsd;
   const chainAttributedTotalUsd = Math.min(rawChainAttributedTotalUsd, globalTotalUsd);
   const chainAttributionScale = rawChainAttributedTotalUsd > globalTotalUsd
     ? globalTotalUsd / rawChainAttributedTotalUsd
@@ -141,7 +171,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     // Deltas
     const change24h = acc.totalUsd - acc.prevDay;
     const change7d = acc.totalUsd - acc.prevWeek;
-    const change30d = acc.totalUsd - acc.prevMonth;
+    const change30d = acc.pairedCurrent30d - acc.pairedPrevMonth;
 
     // Dominant stablecoin
     const sorted = [...acc.coins].sort((a, b) => b.supplyUsd - a.supplyUsd);
@@ -167,10 +197,10 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     }
 
     // Peg stability
-    const pegCoins = acc.coins.map((c) => {
+    const pegCoins = acc.coins.flatMap((c) => {
       const coinMeta = TRACKED_META_BY_ID.get(c.id);
       const pegRef = getPegReference(c.pegType, pegRates, coinMeta?.commodityOunces);
-      return { price: c.price, pegRef, supplyUsd: c.supplyUsd };
+      return pegRef == null ? [] : [{ price: c.price, pegRef, supplyUsd: c.supplyUsd }];
     });
 
     // Quality
@@ -205,7 +235,9 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       change7d,
       change7dPct: acc.prevWeek > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevWeek) ?? ZERO_RATIO) : ZERO_RATIO,
       change30d,
-      change30dPct: acc.prevMonth > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevMonth) ?? ZERO_RATIO) : ZERO_RATIO,
+      change30dPct: acc.pairedPrevMonth > 0
+        ? (relativeChangeRatio(acc.pairedCurrent30d, acc.pairedPrevMonth) ?? ZERO_RATIO)
+        : ZERO_RATIO,
       stablecoinCount: acc.coins.length,
       dominantStablecoin: {
         id: dominant.id,
@@ -230,7 +262,9 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     unattributedTotalUsd,
     globalChange24hPct: globalPrevDayUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevDayUsd) ?? ZERO_RATIO) : ZERO_RATIO,
     globalChange7dPct: globalPrevWeekUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevWeekUsd) ?? ZERO_RATIO) : ZERO_RATIO,
-    globalChange30dPct: globalPrevMonthUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevMonthUsd) ?? ZERO_RATIO) : ZERO_RATIO,
+    globalChange30dPct: globalPrevMonthUsd > 0
+      ? (relativeChangeRatio(globalPairedCurrent30dUsd, globalPrevMonthUsd) ?? ZERO_RATIO)
+      : ZERO_RATIO,
     updatedAt: Math.floor(Date.now() / 1000),
     healthMethodologyVersion: HEALTH_METHODOLOGY_VERSION,
   };

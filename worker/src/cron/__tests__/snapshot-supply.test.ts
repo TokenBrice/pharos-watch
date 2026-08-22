@@ -287,6 +287,59 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(2);
   });
 
+  it("skips restored rows while writing non-restored rows", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", supplyRestored: true, price: 1.0, circulating: { peggedUSD: 100 } },
+        { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50 } },
+      ],
+    });
+    const db = mockD1([{
+      match: "cache",
+      matchBinds: ["stablecoins"],
+      rows: [],
+      first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
+    }]);
+
+    const result = await snapshotSupply(db, undefined, {
+      requiredActiveIds: ["usdc-circle"],
+      snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+    });
+
+    expect(result.itemCount).toBe(1);
+    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    expect(inserts.flatMap((entry) => entry.binds)).toContain("usdc-circle");
+    expect(inserts.flatMap((entry) => entry.binds)).not.toContain("usdt-tether");
+  });
+
+  it("blocks restored-only required assets and lists them in guard metadata", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", supplyRestored: true, price: 1.0, circulating: { peggedUSD: 100 } },
+        { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50 } },
+      ],
+    });
+    const db = mockD1([{
+      match: "cache",
+      matchBinds: ["stablecoins"],
+      rows: [],
+      first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
+    }]);
+
+    const result = await snapshotSupply(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "partial_snapshot_blocked",
+      missingActiveIds: ["usdt-tether"],
+      invalidSupplyIds: ["usdt-tether"],
+      restoredOnlyIds: ["usdt-tether"],
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+  });
+
   it("skips assets with zero circulating supply", async () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
     const cacheValue = JSON.stringify({
@@ -526,6 +579,7 @@ describe("snapshotSupply", () => {
         JSON.stringify({ peggedAssets: [
           { id: "usdt-tether", symbol: "USDT", price: 1.001, circulating: { peggedUSD: 100 } },
           { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50 } },
+          { id: "eurt-test", symbol: "EURT", price: 0.99, supplyRestored: true, circulating: { peggedEUR: 25 } },
         ] }),
         nowSec - 60,
       );
@@ -540,11 +594,14 @@ describe("snapshotSupply", () => {
       sqlite.prepare(
         "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
       ).run("usdc-circle", snapshotDate, 45, 0.998);
+      sqlite.prepare(
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+      ).run("eurt-test", snapshotDate, 25, null);
 
       const result = await snapshotSupply(createSqliteD1(sqlite), undefined, {
         nowSec,
         requiredActiveIds: DEFAULT_REQUIRED_IDS,
-        snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+        snapshotEligibleIds: [...DEFAULT_REQUIRED_IDS, "eurt-test"],
       });
 
       expect(result.itemCount).toBe(1);
@@ -555,6 +612,7 @@ describe("snapshotSupply", () => {
       expect(sqlite.prepare(
         "SELECT stablecoin_id, circulating_usd, price FROM supply_history ORDER BY stablecoin_id",
       ).all()).toEqual([
+        { stablecoin_id: "eurt-test", circulating_usd: 25, price: null },
         { stablecoin_id: "usdc-circle", circulating_usd: 45, price: 0.998 },
         { stablecoin_id: "usdt-tether", circulating_usd: 90, price: 1.001 },
       ]);

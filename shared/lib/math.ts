@@ -12,6 +12,11 @@ export function clampScore(value: number): number {
   return clamp(value, 0, 100);
 }
 
+/** Clamp a share to [0, 1]. NaN → 0, ±Infinity → nearest bound. */
+export function clampShare(value: number): number {
+  return clamp(value, 0, 1);
+}
+
 export function roundScore(value: number): number {
   return Math.round(clampScore(value));
 }

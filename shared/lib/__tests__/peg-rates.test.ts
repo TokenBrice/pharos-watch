@@ -188,8 +188,14 @@ describe("getPegReference", () => {
     expect(getPegReference("peggedSILVER", { peggedSILVER: 100 }, 2)).toBe(200);
   });
 
-  it("returns 1 for unknown peg types when no rate is available", () => {
-    expect(getPegReference("peggedDOGE", {})).toBe(1);
+  it("returns null for unknown peg types when no rate is available", () => {
+    expect(getPegReference("peggedDOGE", {})).toBeNull();
+    expect(getPegReference("peggedGOLD", {})).toBeNull();
+    expect(getPegReference(undefined, {})).toBeNull();
+  });
+
+  it("keeps the USD reference at 1 without a derived rate", () => {
+    expect(getPegReference("peggedUSD", {})).toBe(1);
   });
 
   it("uses the canonical BRL peg rate for legacy peggedBRL references", () => {

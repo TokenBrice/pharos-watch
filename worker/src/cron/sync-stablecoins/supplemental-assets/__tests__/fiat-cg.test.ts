@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../../test-helpers/cron";
 
 const fetchWithRetryMock = vi.fn();
@@ -24,11 +24,33 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
         navToken: false,
       },
     },
+    {
+      id: "susds-sky",
+      name: "Savings USDS",
+      symbol: "sUSDS",
+      geckoId: "susds",
+      detailProvider: "coingecko",
+      contracts: [
+        { chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 },
+      ],
+      flags: {
+        pegCurrency: "USD",
+        backing: "rwa-backed",
+        governance: "centralized",
+        yieldBearing: true,
+        navToken: true,
+      },
+    },
   ],
 }));
 
 vi.mock("../../../../lib/fetch-retry", () => ({
   fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
+  fetchTextWithRetry: async (...args: unknown[]) => {
+    const response = await fetchWithRetryMock(...args);
+    if (!response) return null;
+    return { response, body: await response.text() };
+  },
 }));
 
 vi.mock("../../../reserve-adapters/helpers", () => ({
@@ -39,6 +61,11 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
 import { fetchFiatCoinGeckoTokens } from "../fiat-cg";
 
 describe("fetchFiatCoinGeckoTokens", () => {
+  beforeEach(() => {
+    fetchWithRetryMock.mockReset();
+    probeTrackedTokenSupplyMock.mockReset();
+  });
+
   it("prefers curated aggregate on-chain supply over stale CoinGecko market cap for ftUSD", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     fetchWithRetryMock.mockResolvedValueOnce(
@@ -82,5 +109,24 @@ describe("fetchFiatCoinGeckoTokens", () => {
       },
     });
     expect(probeTrackedTokenSupplyMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips NAV supply fallback when the price lane is missing instead of par-valuing", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ coins: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await fetchFiatCoinGeckoTokens({
+      susds: { usd_market_cap: 0 },
+    });
+
+    expect(result).toEqual([]);
+    const susdsProbeCalls = probeTrackedTokenSupplyMock.mock.calls.filter(
+      ([probeMeta]) => probeMeta != null && typeof probeMeta === "object" && "id" in probeMeta && probeMeta.id === "susds-sky",
+    );
+    expect(susdsProbeCalls).toHaveLength(0);
   });
 });

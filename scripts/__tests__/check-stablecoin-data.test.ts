@@ -1,9 +1,38 @@
 import { describe, expect, it } from "vitest";
 import {
+  getCommodityProtocolSlugIssue,
   getCommodityAllocatedPegMatchIssues,
   getDependencyReserveOverlapIssues,
   getReservePublicLabelIssues,
 } from "../ci/check-stablecoin-data";
+
+describe("commodity protocol identity guard", () => {
+  const flags = {
+    backing: "rwa-backed",
+    pegCurrency: "GOLD",
+    governance: "centralized",
+    yieldBearing: false,
+    rwa: true,
+    navToken: false,
+  } as never;
+
+  it("flags a commodity protocol umbrella slug", () => {
+    const issue = getCommodityProtocolSlugIssue({
+      id: "vnxau-vnx",
+      name: "VNX Gold",
+      symbol: "VNXAU",
+      flags,
+      protocolSlug: "vnx",
+    } as never);
+
+    expect(issue).toContain("non-dedicated protocolSlug");
+    expect(issue).toContain("vnx");
+  });
+
+  it("accepts the dedicated Tether Gold protocol slug", () => {
+    expect(getCommodityProtocolSlugIssue({ flags, protocolSlug: "tether-gold" } as never)).toBeNull();
+  });
+});
 
 describe("stablecoin dependency/reserve source ownership", () => {
   it("allows manual and reserve-derived relationships to coexist when their keys differ", () => {

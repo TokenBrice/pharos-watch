@@ -201,7 +201,7 @@ export function sortStablecoins({
       const meta = metaById.get(r.id);
       if (meta?.flags.navToken) return null;
       const ref = getPegReference(r.pegType, pegRates, meta?.commodityOunces);
-      const signal = r.price == null ? null : deriveDepegSignal(r.price, ref);
+      const signal = r.price == null || ref == null ? null : deriveDepegSignal(r.price, ref);
       return signal?.absRawBps ?? null;
     },
   };

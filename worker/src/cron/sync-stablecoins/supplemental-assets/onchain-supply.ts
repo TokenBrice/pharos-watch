@@ -127,8 +127,8 @@ async function readContractSupplyRaw(input: {
   );
 }
 
-function contractDecimals(contract: NonNullable<StablecoinMeta["contracts"]>[number]): number {
-  return contract.decimals ?? (contract.chain === "solana" ? 6 : 18);
+function contractDecimals(contract: NonNullable<StablecoinMeta["contracts"]>[number]): number | null {
+  return contract.decimals ?? null;
 }
 
 function contractChainLabel(contract: NonNullable<StablecoinMeta["contracts"]>[number]): string {
@@ -201,6 +201,13 @@ async function fetchOnChainSupplyForContract(input: {
 } | null> {
   const family = onchainSupplyProbeFamily(input.supplyContract);
   if (family === null) return null;
+  const decimals = contractDecimals(input.supplyContract);
+  if (decimals == null) {
+    logWorkerEventArgs("handler", "warn",
+      `[fiat-cg] ${contractChainLabel(input.supplyContract)} supply probe skipped for ${input.meta.symbol}: contract decimals are missing`,
+    );
+    return null;
+  }
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
   const chainRpc = family === "evm" ? input.chainRpcs?.get(input.supplyContract.chain) : undefined;
   const allowZeroSupply = input.curated?.allowZeroSupply === true;
@@ -231,7 +238,7 @@ async function fetchOnChainSupplyForContract(input: {
       : null;
     const supplyRaw = adjustment?.raw ?? raw;
     const supplySource = adjustment?.supplySource ?? "onchain-total-supply";
-    const supply = Number(supplyRaw) / 10 ** contractDecimals(input.supplyContract);
+    const supply = Number(supplyRaw) / 10 ** decimals;
     const mcap = supply * input.priceUsd;
     if (Number.isFinite(mcap) && (mcap > 0 || allowZeroSupply)) {
       const chainLabel = contractChainLabel(input.supplyContract);
@@ -266,6 +273,13 @@ async function fetchEscrowHeldMcap(input: {
   curated?: { rpcUrl?: string; fallbackRpcUrl?: string };
 }): Promise<number | null> {
   const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
+  const decimals = contractDecimals(input.supplyContract);
+  if (decimals == null) {
+    logWorkerEventArgs("handler", "warn",
+      `[fiat-cg] ${contractChainLabel(input.supplyContract)} escrow balance probe skipped for ${input.meta.symbol}: contract decimals are missing`,
+    );
+    return null;
+  }
 
   try {
     const balance = await fetchOnchainUint256({
@@ -279,7 +293,7 @@ async function fetchEscrowHeldMcap(input: {
     });
     if (balance == null || balance <= 0n) return null;
 
-    const mcap = (Number(balance) / 10 ** contractDecimals(input.supplyContract)) * input.priceUsd;
+    const mcap = (Number(balance) / 10 ** decimals) * input.priceUsd;
     return Number.isFinite(mcap) && mcap > 0 ? mcap : null;
   } catch (err) {
     logWorkerEvent({

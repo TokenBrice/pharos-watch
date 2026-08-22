@@ -134,7 +134,7 @@ export function formatPrice(price: number | null | undefined, symbol = "$", deci
 export function formatNativePrice(
   usdPrice: number | null | undefined,
   pegCurrency: string,
-  pegRef: number,
+  pegRef: number | null,
   decimals = 4,
 ): string {
   if (!isFiniteNumber(usdPrice)) return "N/A";
@@ -143,7 +143,7 @@ export function formatNativePrice(
   if (taxonomy?.nativePriceUsesUsdSymbol === true) {
     return formatPrice(usdPrice, "$", decimals);
   }
-  if (!Number.isFinite(pegRef) || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
+  if (pegRef == null || !Number.isFinite(pegRef) || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
   return formatPrice(usdPrice / pegRef, symbol, decimals);
 }
 
@@ -159,9 +159,9 @@ export function formatBps(bps: number): string {
  * `pegValue` should be the USD price of one unit of the peg currency
  * (e.g. ~1.19 for EUR, ~1.30 for CHF, ~3200 for gold oz, 1 for USD).
  */
-export function formatPegDeviation(price: number | null | undefined, pegValue = 1): string {
+export function formatPegDeviation(price: number | null | undefined, pegValue: number | null = 1): string {
   if (!isFiniteNumber(price)) return "N/A";
-  if (!Number.isFinite(pegValue) || pegValue === 0) return "N/A";
+  if (pegValue == null || !Number.isFinite(pegValue) || pegValue === 0) return "N/A";
   // Deviation as basis points relative to peg: ((price / pegValue) - 1) * BPS_PER_UNIT
   const ratio = price / pegValue;
   const bps = Math.round((ratio - 1) * BPS_PER_UNIT);

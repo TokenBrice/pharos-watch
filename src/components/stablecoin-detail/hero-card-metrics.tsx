@@ -24,7 +24,7 @@ const HERO_METRIC_LABEL_CLASS = "text-sm font-medium text-muted-foreground";
 export function formatHeroNativePrice(
   usdPrice: number | null | undefined,
   pegCurrency: string,
-  pegRef: number,
+  pegRef: number | null,
   decimals?: number,
 ): string {
   const formatted = formatNativePrice(usdPrice, pegCurrency, pegRef, decimals);
@@ -97,7 +97,7 @@ function formatPriceReferenceLine({
   isNavToken,
 }: {
   coinData: StablecoinData;
-  pegRef: number;
+  pegRef: number | null;
   pegReferenceUnavailable: boolean;
   isNavToken: boolean;
 }): string {

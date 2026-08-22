@@ -42,6 +42,37 @@ describe("aggregateChains", () => {
     expect(eth!.change24h).toBeCloseTo(7); // (300-295) + (250-248) = 5+2
   });
 
+  it("pairs 30d deltas only across assets with a previous-month value", () => {
+    const result = aggregateChains(makeInput({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 100 },
+          circulatingPrevMonth: null,
+          chainCirculating: { ethereum: { current: 100 } },
+        },
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 50 },
+          circulatingPrevMonth: { peggedUSD: 40 },
+          chainCirculating: { ethereum: { current: 50, circulatingPrevMonth: 40 } },
+        },
+      ],
+    }));
+    const ethereum = result.chains.find((chain) => chain.id === "ethereum")!;
+
+    expect(result.globalTotalUsd).toBe(150);
+    expect(result.globalChange30dPct).toBeCloseTo(0.25);
+    expect(ethereum.change30d).toBe(10);
+    expect(ethereum.change30dPct).toBeCloseTo(0.25);
+  });
+
   it("sorts by totalUsd descending", () => {
     const result = aggregateChains(makeInput());
     expect(result.chains[0].id).toBe("ethereum");

@@ -47,4 +47,23 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
     expect(model.absPegDeviationBps).toBe(0);
     expect(model.pegDeviationColorClass).toBe("text-green-700 dark:text-green-400");
   });
+
+  it("renders an absent commodity reference as an em dash and skips deviation", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        id: "xaut-tether",
+        symbol: "XAUT",
+        pegType: "peggedGOLD",
+        price: 3_000,
+        circulating: { peggedGOLD: 1_000_000 },
+      }),
+      pegRates: {},
+      density: "spacious",
+      variant: "default",
+    });
+
+    expect(model.pegRef).toBeNull();
+    expect(model.priceCell).toBe("—");
+    expect(model.absPegDeviationBps).toBeNull();
+  });
 });

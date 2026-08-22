@@ -109,25 +109,6 @@ function buildKnownDisplayChains(assetId: string, existing: string[] | undefined
   return [...labels];
 }
 
-function sumCanonicalChainTotals(
-  asset: PeggedAsset,
-): { current: number; day: number; week: number; month: number } {
-  let current = 0;
-  let day = 0;
-  let week = 0;
-  let month = 0;
-
-  for (const entry of canonicalizeChainCirculating(asset.chainCirculating)) {
-    const point = entry[1];
-    current += point.current;
-    day += point.circulatingPrevDay;
-    week += point.circulatingPrevWeek;
-    month += point.circulatingPrevMonth;
-  }
-
-  return { current, day, week, month };
-}
-
 function findNearestMarketCap(
   points: [number, number][],
   targetMs: number,
@@ -353,27 +334,21 @@ function buildSupplyGapCandidates(
 function applySingleMissingChainRemainder(
   candidate: MissingChainSupplyGapCandidate,
   totals: { current: number; day: number; week: number; month: number },
-): void {
-  if (candidate.missingChainIds.length !== 1) return;
+): number | null {
+  if (candidate.missingChainIds.length !== 1) return null;
 
-  const existingTotals = sumCanonicalChainTotals(candidate.asset);
-  const remainderCurrent = totals.current - existingTotals.current;
-  const remainderDay = totals.day - existingTotals.day;
-  const remainderWeek = totals.week - existingTotals.week;
-  const remainderMonth = totals.month - existingTotals.month;
+  const dlTotals = {
+    current: getCirculatingRaw(candidate.asset),
+    day: getCirculatingRaw({ circulating: candidate.asset.circulatingPrevDay ?? undefined }),
+    week: getCirculatingRaw({ circulating: candidate.asset.circulatingPrevWeek ?? undefined }),
+    month: getCirculatingRaw({ circulating: candidate.asset.circulatingPrevMonth ?? undefined }),
+  };
+  const remainderCurrent = Math.max(0, totals.current - dlTotals.current);
+  const remainderDay = Math.max(0, totals.day - dlTotals.day);
+  const remainderWeek = Math.max(0, totals.week - dlTotals.week);
+  const remainderMonth = Math.max(0, totals.month - dlTotals.month);
 
-  if (
-    !Number.isFinite(remainderCurrent) ||
-    !Number.isFinite(remainderDay) ||
-    !Number.isFinite(remainderWeek) ||
-    !Number.isFinite(remainderMonth) ||
-    remainderCurrent < 0 ||
-    remainderDay < 0 ||
-    remainderWeek < 0 ||
-    remainderMonth < 0
-  ) {
-    return;
-  }
+  if (![remainderCurrent, remainderDay, remainderWeek, remainderMonth].every(Number.isFinite)) return null;
 
   const chainId = candidate.missingChainIds[0];
   const chainLabel = CHAIN_META[chainId]?.name ?? chainId;
@@ -385,6 +360,7 @@ function applySingleMissingChainRemainder(
     circulatingPrevMonth: remainderMonth,
   };
   candidate.asset.chainCirculating = chainCirculating;
+  return remainderCurrent;
 }
 
 function getPegReferencePriceUsd(
@@ -545,20 +521,30 @@ export async function reconcileTrackedSupplyGaps(
       month,
     };
 
+    if (candidate.kind === "missing-chain") {
+      const remainderCurrent = applySingleMissingChainRemainder(candidate, totals);
+      if (remainderCurrent == null) continue;
+
+      candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
+      reconciledIds.push(candidate.asset.id);
+      reconciledAssets.push({
+        id: candidate.asset.id,
+        reason: "coingecko-gap-fill",
+        fromSource: candidate.asset.supplySource ?? null,
+        toValue: remainderCurrent,
+      });
+      byReason["coingecko-gap-fill"] += 1;
+      continue;
+    }
+
     const fromSource = candidate.asset.supplySource ?? null;
-    const reason: SupplyGapReconciliationReason = candidate.kind === "zero-supply-collapse"
-      ? "defillama-history-gap-fill"
-      : "coingecko-gap-fill";
+    const reason: SupplyGapReconciliationReason = "defillama-history-gap-fill";
     candidate.asset.circulating = { [candidate.pegKey]: totals.current };
     candidate.asset.circulatingPrevDay = { [candidate.pegKey]: totals.day };
     candidate.asset.circulatingPrevWeek = { [candidate.pegKey]: totals.week };
     candidate.asset.circulatingPrevMonth = { [candidate.pegKey]: totals.month };
     candidate.asset.supplySource = reason;
     candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
-
-    if (candidate.kind === "missing-chain") {
-      applySingleMissingChainRemainder(candidate, totals);
-    }
     reconciledIds.push(candidate.asset.id);
     reconciledAssets.push({
       id: candidate.asset.id,

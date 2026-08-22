@@ -42,4 +42,18 @@ describe("deriveAuthoritativePegSignal", () => {
       },
     });
   });
+
+  it("rejects a commodity peg when its derived rate is missing", () => {
+    expect(deriveAuthoritativePegSignal({
+      price: 3_000,
+      pegCurrency: "GOLD",
+      pegType: "peggedGOLD",
+      pegRates: {},
+      pegRateSources: {},
+      pegRateCounts: {},
+    })).toMatchObject({
+      kind: "rejected",
+      reason: "non-authoritative-reference",
+    });
+  });
 });

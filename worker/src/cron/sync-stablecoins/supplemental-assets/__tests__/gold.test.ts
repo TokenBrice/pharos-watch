@@ -119,13 +119,13 @@ describe("fetchGoldTokens curated aggregate supply", () => {
     expect(probeTrackedTokenSupplyMock).toHaveBeenCalledTimes(4);
   });
 
-  it("keeps the upstream market cap and empty chain rows without a curated config", async () => {
+  it("ignores a non-dedicated protocol mcap and falls back to CoinGecko market cap", async () => {
     selectCuratedAggregateContractsMock.mockReturnValue(null);
-    stubGoldUpstreams(78_852_290);
+    stubGoldUpstreams(99_000_000);
 
     const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: PGOLD_PRICE, usd_market_cap: 78_852_290 } });
 
-    expect(asset?.supplySource).toBe("defillama");
+    expect(asset?.supplySource).toBe("coingecko-fallback");
     expect(asset?.circulating?.peggedGOLD).toBe(78_852_290);
     expect(asset?.chainCirculating).toEqual({});
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe("fetchGoldTokens curated aggregate supply", () => {
 
     const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: PGOLD_PRICE, usd_market_cap: 78_852_290 } });
 
-    expect(asset?.supplySource).toBe("defillama");
+    expect(asset?.supplySource).toBe("coingecko-fallback");
     expect(asset?.circulating?.peggedGOLD).toBe(78_852_290);
     expect(asset?.chainCirculating).toEqual({});
   });
@@ -189,6 +189,20 @@ describe("fetchGoldTokens curated aggregate supply", () => {
         usd: PGOLD_PRICE,
         usd_market_cap: 0,
         last_updated_at: staleAt,
+      },
+    });
+
+    expect(assets).toEqual([]);
+  });
+
+  it("skips a gold row with zero mcap even when its price is fresh", async () => {
+    selectCuratedAggregateContractsMock.mockReturnValue(null);
+    stubGoldUpstreams(null);
+
+    const assets = await fetchGoldTokens({
+      "pleasing-gold": {
+        usd: PGOLD_PRICE,
+        usd_market_cap: 0,
       },
     });
 

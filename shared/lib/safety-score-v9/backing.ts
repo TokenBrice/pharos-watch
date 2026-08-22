@@ -17,11 +17,12 @@ import type {
 import type { MechanismArchetype } from "../../types/stablecoin-taxonomy";
 export type { V9MechanismFactV1, V9MechanismQualityLevel } from "../../types/safety-score-v9-backing";
 import type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
+import { clampScore } from "../math";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { decimalSnap } from "./formula";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
-import { canonicalDomains, clampScore, compareText, domainKey, uniqueSorted } from "./primitives";
+import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
 
 type ReserveAssetClass = NonNullable<V9ReserveExposureFactV2["assetClass"]>;
 export interface V9ResolvedUpstreamExposure {

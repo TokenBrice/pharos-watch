@@ -45,12 +45,7 @@ const DlDetailResponseSchema = z
   .passthrough();
 
 function isNonUsdPeg(meta: PegMeta | undefined): boolean {
-  return (
-    !!meta &&
-    meta.flags.pegCurrency !== "USD" &&
-    meta.flags.pegCurrency !== "GOLD" &&
-    meta.flags.pegCurrency !== "SILVER"
-  );
+  return !!meta && meta.flags.pegCurrency !== "USD";
 }
 
 function toPegBuckets(value: unknown): PegBuckets | undefined {
@@ -187,25 +182,33 @@ export function normalizeDefiLlamaDetailBody(
     const rawCirculating = toPegBuckets(entry.circulating);
     const rawTotalCirculatingUsd = toPegBuckets(entry.totalCirculatingUSD);
 
-    if (isNonUsd && price != null) {
+    if (isNonUsd) {
       const nativeBuckets = rawTotalCirculating ?? rawCirculating;
       if (nativeBuckets) {
         entry.totalCirculating = nativeBuckets;
-        entry.totalCirculatingUSD = scalePegBuckets(nativeBuckets, price);
-        continue;
-      }
-
-      if (rawTotalCirculatingUsd) {
+        if (price != null) {
+          entry.totalCirculatingUSD = scalePegBuckets(nativeBuckets, price);
+        } else if (rawTotalCirculatingUsd) {
+          entry.totalCirculatingUSD = rawTotalCirculatingUsd;
+        }
+      } else if (rawTotalCirculatingUsd) {
         entry.totalCirculatingUSD = rawTotalCirculatingUsd;
-        entry.totalCirculating = scalePegBuckets(rawTotalCirculatingUsd, 1 / price);
+        if (price != null) {
+          entry.totalCirculating = scalePegBuckets(rawTotalCirculatingUsd, 1 / price);
+        }
       }
       continue;
     }
 
-    const nativeOrUsdBuckets = rawTotalCirculating ?? rawCirculating ?? rawTotalCirculatingUsd;
-    if (nativeOrUsdBuckets) {
-      entry.totalCirculating = rawTotalCirculating ?? rawCirculating ?? nativeOrUsdBuckets;
-      entry.totalCirculatingUSD = rawTotalCirculatingUsd ?? nativeOrUsdBuckets;
+    const nativeBuckets = rawTotalCirculating ?? rawCirculating;
+    if (nativeBuckets) {
+      entry.totalCirculating = nativeBuckets;
+    }
+    if (rawTotalCirculatingUsd) {
+      entry.totalCirculatingUSD = rawTotalCirculatingUsd;
+      if (!nativeBuckets) {
+        entry.totalCirculating = rawTotalCirculatingUsd;
+      }
     }
   }
 

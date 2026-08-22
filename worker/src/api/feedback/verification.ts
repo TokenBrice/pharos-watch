@@ -37,7 +37,7 @@ export async function verifyDataCorrection(
     let deviationStr = "N/A";
     let verifiedLabel: VerificationResult["verifiedLabel"] = "verified: unconfirmed";
 
-    if (price != null && price > 0) {
+    if (price != null && price > 0 && pegRef != null) {
       const dev = ((price - pegRef) / pegRef) * 100;
       deviationStr = `${dev >= 0 ? "+" : ""}${dev.toFixed(3)}%`;
       if (Math.abs(dev) * 100 >= thresholdBps) verifiedLabel = "verified: confirmed";
@@ -49,7 +49,7 @@ export async function verifyDataCorrection(
       price != null ? `**Cached price:** $${price.toFixed(6)}` : "**Cached price:** N/A",
       totalUsd > 0 ? `**USD circulating market cap:** ${formatCurrency(totalUsd)}` : "",
       `**Peg deviation:** ${deviationStr}`,
-      `**Peg reference:** $${pegRef.toFixed(6)}${pegRateSource ? ` (${pegRateSource === "fx" ? "FX" : pegRateSource})` : ""}`,
+      `**Peg reference:** ${pegRef != null ? `$${pegRef.toFixed(6)}` : "N/A"}${pegRateSource ? ` (${pegRateSource === "fx" ? "FX" : pegRateSource})` : ""}`,
       `**Depeg threshold:** ${thresholdBps} bps`,
       `**Cache age:** ${cacheAgeSec}s`,
       `**Verification result:** ${verificationSummary}`,

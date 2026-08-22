@@ -198,6 +198,18 @@ describe("fetchOnChainMcap", () => {
       chainLabel: expect.any(String),
     });
   });
+
+  it("skips the supply probe when contract decimals are missing", async () => {
+    const source = makeSingleContractMeta();
+    const meta = {
+      ...source,
+      contracts: [{ chain: "ethereum", address: source.contracts?.[0]?.address ?? "0x0" }],
+    } as unknown as StablecoinMeta;
+
+    await expect(fetchOnChainMcap(meta, 1)).resolves.toBeNull();
+    expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
+    expect(fetchErc20TotalSupplyMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("fetchCuratedAggregateOnChainMcap", () => {

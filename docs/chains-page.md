@@ -80,7 +80,7 @@ Default sort is `totalUsd desc`.
 
 1. `QueryErrorNotice` (inline banner when error + stale data)
 2. `StaleDataBanner` when coordinated chain/stablecoin snapshots are stale or mismatched
-3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `chain-health.ts`
+3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (30d deltas and percentages use only chain rows with known previous-month anchors; all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `chain-health.ts`
 4. `ShowYourWorkPanel` rendered immediately below the hero card, exposing the factor math
 5. stablecoin composition treemap — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
 6. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type
@@ -110,7 +110,7 @@ The page contract is limited to presentation: the leaderboard exposes the compos
 `worker/src/api/chains.ts`:
 
 - loads the strict stablecoins cache
-- derives non-USD peg references from `fxFallbackRates`
+- derives non-USD peg references from `fxFallbackRates`; missing commodity references are withheld rather than defaulted to `$1`
 - hydrates safety scores from the report-card cache when available
 - computes the response via `aggregateChains(...)`
 - computes `globalTotalUsd` from all tracked circulating supply, while preserving `chainAttributedTotalUsd` and `unattributedTotalUsd` for chain-specific residuals

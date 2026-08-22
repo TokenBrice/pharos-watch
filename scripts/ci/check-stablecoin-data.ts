@@ -34,6 +34,13 @@ import {
 
 const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
 const SAFETY_SCORE_V9_PUBLIC_BACKING_COMPONENT_LABEL_MAX_LENGTH = 160;
+// Keep synchronized with DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS in
+// worker/src/cron/sync-stablecoins/supplemental-assets/gold.ts. This CI script
+// mirrors the small runtime allowlist instead of importing the Worker fetch graph.
+const DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS = new Set([
+  "tether-gold",
+  "paxos-gold",
+]);
 const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   // Kava USDX remains a live tracked feed while the cemetery keeps the 2022
   // UST-collateral depeg incident as a separate historical row.
@@ -144,6 +151,17 @@ function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
     "GOLD/SILVER-pegged asset must declare commodityOunces (troy ounces per token); " +
     "without it peg-rates silently treats the price as per-troy-ounce, fabricating peg deviation " +
     "for non-1oz denominations and contaminating the commodity peer median"
+  );
+}
+
+export function getCommodityProtocolSlugIssue(coin: StablecoinMeta): string | null {
+  if (!isCommodityPeg(coin.flags.pegCurrency) || !coin.protocolSlug) return null;
+  if (DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS.has(coin.protocolSlug)) return null;
+
+  return (
+    `${coin.flags.pegCurrency}-pegged commodity asset has non-dedicated protocolSlug "${coin.protocolSlug}" ` +
+    "(allowlisted for protocol-mcap supply: tether-gold, paxos-gold); the gold supply lane ignores it, " +
+    "but confirm the slug is intentional for TVL history / selector concentration grouping"
   );
 }
 
@@ -591,6 +609,11 @@ function runStablecoinDataCheck(): void {
       const commodityOuncesIssue = getCommodityOuncesIssue(entry.coin);
       if (commodityOuncesIssue) {
         reportError(`${entry.file} (${entry.coin.id}): ${commodityOuncesIssue}`);
+      }
+
+      const commodityProtocolSlugIssue = getCommodityProtocolSlugIssue(entry.coin);
+      if (commodityProtocolSlugIssue) {
+        reportWarning(`${entry.file} (${entry.coin.id}): ${commodityProtocolSlugIssue}`);
       }
 
       const pegRuntimeSupportIssue = getPegRuntimeSupportIssue(entry.coin);

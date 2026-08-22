@@ -102,8 +102,9 @@ export async function runFallbackIntakePhase(
  * restored carry — fail closed per asset, never a partial map. Both curated
  * assets are USD NAV tokens, so the per-chain supply shares the V9 review derives
  * are price-invariant and the aggregate reuses the same on-chain-units x price
- * basis as `circulating`. The probe reads each contract sequentially, so the
- * added calls stay within Cloudflare's 6-connection per-trigger pool.
+ * basis as `circulating`; a missing observed price is not replaced with par.
+ * The probe reads each contract sequentially, so the added calls stay within
+ * Cloudflare's 6-connection per-trigger pool.
  */
 export async function overlayFallbackCuratedAggregateSupply(
   assets: PeggedAsset[],
@@ -114,7 +115,9 @@ export async function overlayFallbackCuratedAggregateSupply(
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
     if (!meta || !selectCuratedAggregateOnchainSupplyProbeContracts(meta)) continue;
 
-    const priceUsd = toPositiveFiniteNumber(asset.price) ?? (meta.flags.pegCurrency === "USD" ? 1 : null);
+    const navLikeAsset = meta.flags.navToken || meta.flags.yieldBearing;
+    const priceUsd = toPositiveFiniteNumber(asset.price)
+      ?? (!navLikeAsset && meta.flags.pegCurrency === "USD" ? 1 : null);
     if (priceUsd == null) continue;
 
     const onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal);

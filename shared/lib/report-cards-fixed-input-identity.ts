@@ -6,6 +6,7 @@ import {
 } from "../types/market";
 import type { RedemptionBackstopMap } from "../types/redemption";
 import { REPORT_CARDS_REGISTRY_FINGERPRINT } from "../data/stablecoins/report-card-registry-fingerprint.generated";
+import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
 
@@ -71,11 +72,11 @@ export const ReportCardsFixedInputMethodologyVersionsSchema = z.object({
 export type ReportCardsFixedInputMethodologyVersions = z.infer<typeof ReportCardsFixedInputMethodologyVersionsSchema>;
 
 function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
-  return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
+  return Object.fromEntries(Object.entries(record).sort(([left], [right]) => compareText(left, right)));
 }
 
 function uniqueSorted(values: Iterable<string>): string[] {
-  return [...new Set(values)].sort();
+  return [...new Set(values)].sort(compareText);
 }
 
 export function normalizeReportCardsFixedInputMethodologyVersions(
@@ -95,21 +96,21 @@ function normalizeFixedInputExitRouteObservation<T extends ExitRouteObservation>
     output: {
       ...observation.output,
       ...(observation.output.trackedAssetIds
-        ? { trackedAssetIds: [...observation.output.trackedAssetIds].sort() }
+        ? { trackedAssetIds: [...observation.output.trackedAssetIds].sort(compareText) }
         : {}),
-      ...(observation.output.assetKeys ? { assetKeys: [...observation.output.assetKeys].sort() } : {}),
+      ...(observation.output.assetKeys ? { assetKeys: [...observation.output.assetKeys].sort(compareText) } : {}),
       ...(observation.output.basketWeights
         ? {
             basketWeights: [...observation.output.basketWeights].sort(
               (left, right) =>
-                (left.assetId ?? "").localeCompare(right.assetId ?? "") ||
-                (left.symbol ?? "").localeCompare(right.symbol ?? "") ||
+                compareText(left.assetId ?? "", right.assetId ?? "") ||
+                compareText(left.symbol ?? "", right.symbol ?? "") ||
                 left.weight - right.weight,
             ),
           }
         : {}),
     },
-    commonModeKeys: [...observation.commonModeKeys].sort(),
+    commonModeKeys: [...observation.commonModeKeys].sort(compareText),
     ...(observation.capacityCurve
       ? {
           capacityCurve: [...observation.capacityCurve].sort(
@@ -129,8 +130,8 @@ export function normalizeFixedInputExitRouteObservations<T extends ExitRouteObse
     .map(normalizeFixedInputExitRouteObservation)
     .sort(
       (left, right) =>
-        left.routeId.localeCompare(right.routeId) ||
-        stableJsonStringifyV1(left).localeCompare(stableJsonStringifyV1(right)),
+        compareText(left.routeId, right.routeId) ||
+        compareText(stableJsonStringifyV1(left), stableJsonStringifyV1(right)),
     );
 }
 

@@ -152,6 +152,7 @@ export function derivePegRates(
 
 /**
  * Get the expected USD price for a coin given its pegType and the derived rates.
+ * Returns null when a non-USD reference is unavailable; USD remains fixed at 1.
  * For gold-pegged tokens, adjusts the per-ounce reference by commodityOunces
  * so that gram-denominated tokens get the correct per-gram reference.
  */
@@ -159,10 +160,13 @@ export function getPegReference(
   pegType: string | undefined,
   rates: Record<string, number>,
   commodityOunces?: number
-): number {
-  if (!pegType) return 1;
+): number | null {
+  if (!pegType) return null;
   const peg = normalizePegType(pegType);
-  const rate = peg ? rates[peg] ?? 1 : 1;
+  if (!peg) return null;
+  if (peg === "peggedUSD") return 1;
+  const rate = rates[peg];
+  if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
   // For gold/silver tokens, scale the per-ounce rate by the token's weight
   if ((peg === "peggedGOLD" || peg === "peggedSILVER") && commodityOunces && commodityOunces > 0) {
     return rate * commodityOunces;

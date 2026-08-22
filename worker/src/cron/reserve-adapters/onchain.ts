@@ -9,6 +9,7 @@ import {
 } from "../../lib/evm-rpc";
 import { tronBase58ToHex } from "../../lib/tron-address";
 import { rethrowIfAborted } from "../../lib/abort";
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
@@ -179,7 +180,13 @@ export async function fetchOnchainRateBps(
   rpcUrl?: string,
   fallbackRpcUrl?: string,
 ): Promise<number | null> {
-  const decimals = probe.decimals ?? 18;
+  const decimals = probe.decimals;
+  if (decimals == null) {
+    logWorkerEventArgs("handler", "warn",
+      `[onchain-rate] probe skipped for ${probe.contract}: decimals are missing`,
+    );
+    return null;
+  }
   const scale = 10n ** BigInt(decimals);
   const raw = await fetchOnchainUint256({
     contract: probe.contract,
