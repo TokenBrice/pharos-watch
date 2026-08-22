@@ -1567,6 +1567,8 @@ describe("collectLiquidityShifts", () => {
     vi.useRealTimers();
   });
 
+  const COVERAGE = { coverage_class: "primary", coverage_confidence: 0.9, methodology_version: "6.1" };
+
   it("returns shifts with delta >= 8 sorted by |delta| * mcap", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const todayTs = nowSec - (nowSec % 86_400);
@@ -1577,12 +1579,12 @@ describe("collectLiquidityShifts", () => {
       {
         match: "FROM dex_liquidity_history",
         rows: [
-          { stablecoin_id: "usdt-tether", liquidity_score: 85, total_tvl_usd: 500_000_000, snapshot_date: yesterdayTs },
-          { stablecoin_id: "usdt-tether", liquidity_score: 75, total_tvl_usd: 480_000_000, snapshot_date: dayBeforeTs },
-          { stablecoin_id: "usdc-circle", liquidity_score: 70, total_tvl_usd: 300_000_000, snapshot_date: yesterdayTs },
-          { stablecoin_id: "usdc-circle", liquidity_score: 68, total_tvl_usd: 290_000_000, snapshot_date: dayBeforeTs },
-          { stablecoin_id: "dai-makerdao", liquidity_score: 50, total_tvl_usd: 1_000_000, snapshot_date: yesterdayTs },
-          { stablecoin_id: "dai-makerdao", liquidity_score: 30, total_tvl_usd: 800_000, snapshot_date: dayBeforeTs },
+          { stablecoin_id: "usdt-tether", liquidity_score: 85, total_tvl_usd: 500_000_000, snapshot_date: yesterdayTs, ...COVERAGE },
+          { stablecoin_id: "usdt-tether", liquidity_score: 75, total_tvl_usd: 480_000_000, snapshot_date: dayBeforeTs, ...COVERAGE },
+          { stablecoin_id: "usdc-circle", liquidity_score: 70, total_tvl_usd: 300_000_000, snapshot_date: yesterdayTs, ...COVERAGE },
+          { stablecoin_id: "usdc-circle", liquidity_score: 68, total_tvl_usd: 290_000_000, snapshot_date: dayBeforeTs, ...COVERAGE },
+          { stablecoin_id: "dai-makerdao", liquidity_score: 50, total_tvl_usd: 1_000_000, snapshot_date: yesterdayTs, ...COVERAGE },
+          { stablecoin_id: "dai-makerdao", liquidity_score: 30, total_tvl_usd: 800_000, snapshot_date: dayBeforeTs, ...COVERAGE },
         ],
       },
     ]);
@@ -1599,6 +1601,8 @@ describe("collectLiquidityShifts", () => {
     expect(result![0].scoreDelta).toBe(10);
     expect(result![0].currentScore).toBe(85);
     expect(result![0].previousScore).toBe(75);
+    expect(result![0].coverageClass).toBe("primary");
+    expect(result![0].tvlChangePct).toBeCloseTo(0.0417, 4);
   });
 
   it("returns undefined when no shifts exceed threshold", async () => {
@@ -1611,8 +1615,8 @@ describe("collectLiquidityShifts", () => {
       {
         match: "FROM dex_liquidity_history",
         rows: [
-          { stablecoin_id: "usdt-tether", liquidity_score: 80, total_tvl_usd: 500_000_000, snapshot_date: yesterdayTs },
-          { stablecoin_id: "usdt-tether", liquidity_score: 78, total_tvl_usd: 480_000_000, snapshot_date: dayBeforeTs },
+          { stablecoin_id: "usdt-tether", liquidity_score: 80, total_tvl_usd: 500_000_000, snapshot_date: yesterdayTs, ...COVERAGE },
+          { stablecoin_id: "usdt-tether", liquidity_score: 78, total_tvl_usd: 480_000_000, snapshot_date: dayBeforeTs, ...COVERAGE },
         ],
       },
     ]);
@@ -1620,6 +1624,77 @@ describe("collectLiquidityShifts", () => {
     const ctx = makeCollectorCtx(db);
     const result = await collectLiquidityShifts(ctx);
     expect(result).toBeUndefined();
+  });
+
+  it("keeps a comparable collapse so the editorial layer can judge corroboration", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    const yesterdayTs = todayTs - 86_400;
+    const dayBeforeTs = yesterdayTs - 86_400;
+
+    const db = mockD1([
+      {
+        match: "FROM dex_liquidity_history",
+        rows: [
+          { stablecoin_id: "usdt-tether", liquidity_score: 75, total_tvl_usd: 13_720_000, snapshot_date: yesterdayTs, ...COVERAGE },
+          { stablecoin_id: "usdt-tether", liquidity_score: 85, total_tvl_usd: 152_000_000, snapshot_date: dayBeforeTs, ...COVERAGE },
+        ],
+      },
+    ]);
+
+    const degradedReasons: string[] = [];
+    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
+
+    // A real 91% drain must survive collection; suppression is the candidate
+    // layer's call, because only it can see prices, flows, and supply.
+    expect(result![0].tvlChangePct).toBeCloseTo(-0.9097, 4);
+    expect(degradedReasons).toEqual([]);
+  });
+
+  it("drops a pair that straddles a methodology version change", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    const yesterdayTs = todayTs - 86_400;
+    const dayBeforeTs = yesterdayTs - 86_400;
+
+    const db = mockD1([
+      {
+        match: "FROM dex_liquidity_history",
+        rows: [
+          { stablecoin_id: "usdt-tether", liquidity_score: 71, total_tvl_usd: 480_000_000, snapshot_date: yesterdayTs, ...COVERAGE, methodology_version: "6.0" },
+          { stablecoin_id: "usdt-tether", liquidity_score: 85, total_tvl_usd: 500_000_000, snapshot_date: dayBeforeTs, ...COVERAGE, methodology_version: "5.91" },
+        ],
+      },
+    ]);
+
+    const degradedReasons: string[] = [];
+    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
+
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("liquidity-shift-methodology-basis-change");
+  });
+
+  it("drops fallback-sourced rows the public API already marks untrendworthy", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    const yesterdayTs = todayTs - 86_400;
+    const dayBeforeTs = yesterdayTs - 86_400;
+
+    const db = mockD1([
+      {
+        match: "FROM dex_liquidity_history",
+        rows: [
+          { stablecoin_id: "usdt-tether", liquidity_score: 75, total_tvl_usd: 400_000_000, snapshot_date: yesterdayTs, coverage_class: "fallback", coverage_confidence: 0.5, methodology_version: "6.1" },
+          { stablecoin_id: "usdt-tether", liquidity_score: 85, total_tvl_usd: 500_000_000, snapshot_date: dayBeforeTs, ...COVERAGE },
+        ],
+      },
+    ]);
+
+    const degradedReasons: string[] = [];
+    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
+
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("liquidity-shift-non-trendworthy-coverage");
   });
 });
 

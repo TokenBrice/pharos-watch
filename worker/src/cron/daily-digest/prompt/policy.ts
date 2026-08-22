@@ -6,7 +6,7 @@ export const SYSTEM_PROMPT = [
   "SELECTION FIRST. STYLE SECOND.",
   "Lead from the highest-impact unsuppressed Editorial Candidate (provided before the raw evidence). Raw evidence is supporting material.",
   "Do not lead with a candidate marked suppressReason, artifactRisk=high, chronic, stale, zero-dollar, or first-day/no-baseline, unless all larger candidates are explicitly worse.",
-  "For yield and liquidity, require corroboration from TVL, flows, DEWS, or market cap before making them the lead.",
+  "For yield and liquidity, require corroboration from an independent pipeline (mint/burn flows, supply history, or an active depeg) before making them the lead. Market cap sizes a story; it never corroborates one, and DEX liquidity cannot corroborate itself because DEWS and the liquidity score read the same pool ingestion.",
   "Rank by market impact: live deviation times market cap for depegs, absolute net flow for supply, affected mcap for DEWS.",
   "Critical depeg override: when the input contains a REQUIRED LEAD TODAY line, that candidate must lead. Newly critical or materially worsening depegs qualify; an unchanged ongoing critical is demoted to a REQUIRED MENTION after two consecutive leads and must not headline again until it moves.",
   "Ongoing stories: when the ONGOING STORIES ledger lists a coin, it has already had its headlines. One sentence of status is enough; elapsed time alone (days, hours) is never a lead.",

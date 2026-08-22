@@ -1,6 +1,7 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
 import { computeLeadStreak } from "@shared/lib/digest-lead-policy";
+import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admission";
 import { round1 } from "@shared/lib/math";
 import { classifyRegime } from "./prompt/regime";
 import {
@@ -308,10 +309,25 @@ export function buildUserPrompt(
 
   if (data.liquidityShifts && data.liquidityShifts.length > 0) {
     lines.push("", "DEX Liquidity Shifts (day-over-day):");
+    lines.push(
+      "  TVL Depth is a log-scale component at 30% weight, so large TVL moves compress into small",
+      "  composite moves by design. `tvl-implies` is the composite move the TVL change alone accounts for.",
+      "  Never frame a score that moved close to `tvl-implies` as the score failing to react.",
+      "  A shift marked UNVERIFIED shed enough TVL in one day that a partial pool snapshot is as likely",
+      "  as a real drain. Do not state its TVL figures as fact anywhere in the digest, lead or body,",
+      "  unless an Editorial Candidate shows independent corroboration for that coin.",
+    );
     for (const shift of data.liquidityShifts) {
       const dir = shift.scoreDelta > 0 ? "+" : "";
+      const tvlMove = shift.tvlChangePct != null ? ` (${(shift.tvlChangePct * 100).toFixed(1)}%)` : "";
+      const implied =
+        shift.expectedScoreDeltaFromTvl != null
+          ? `, tvl-implies ${shift.expectedScoreDeltaFromTvl > 0 ? "+" : ""}${shift.expectedScoreDeltaFromTvl.toFixed(1)} pts`
+          : "";
+      const unverified =
+        shift.tvlChangePct != null && shift.tvlChangePct <= -UNCORROBORATED_TVL_DROP_RATIO ? " | UNVERIFIED" : "";
       lines.push(
-        `  ${shift.symbol} | score ${shift.previousScore} -> ${shift.currentScore} (${dir}${shift.scoreDelta}) | ${formatCurrency(shift.mcapUsd)} mcap | TVL ${formatCurrency(shift.previousTvl)} -> ${formatCurrency(shift.currentTvl)}`,
+        `  ${shift.symbol} | score ${shift.previousScore} -> ${shift.currentScore} (${dir}${shift.scoreDelta}${implied}) | ${formatCurrency(shift.mcapUsd)} mcap | TVL ${formatCurrency(shift.previousTvl)} -> ${formatCurrency(shift.currentTvl)}${tvlMove} | coverage ${shift.coverageClass}${unverified}`,
       );
     }
   }

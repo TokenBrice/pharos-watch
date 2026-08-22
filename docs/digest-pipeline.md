@@ -56,7 +56,7 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 | Grade transitions | `safety_score_history_v2` | Organic report-card grade changes from the active model/policy/build (last 48h); activation, rollback, restoration, and methodology/build baselines are excluded |
 | PSI contributors | `stability_index_samples` (input_snapshot) | Top 3 coins driving PSI severity by market impact (|bps| x mcap x factor) |
 | Yield anomalies | `yield_data` (is_best rows) | Coins with active warning signals (spike, divergence, tvl-outflow); APY vs 7d/30d averages; filtered to mcap >$10M |
-| DEX liquidity shifts | `dex_liquidity_history` | Day-over-day score changes >=8 points; TVL comparison; filtered to mcap >$10M |
+| DEX liquidity shifts | `dex_liquidity_history` | Day-over-day score changes >=8 points; TVL comparison; filtered to mcap >$10M. Every pair must clear the [liquidity admission gate](#dex-liquidity-admission-gate) before it becomes editorial evidence |
 | Cross-day trends | `daily_digest` (archived input_data) | 7-day trajectories for PSI score/band, total mcap, and Bank Run Gauge; requires >=3 days of history |
 | Data quality | collector status + window metadata | Degraded collectors, cache age, PSI source time, mint/burn and blacklist windows |
 | Recent digests | last 7 non-weekly rows from `daily_digest` | Passed to LLM to enforce daily variety |
@@ -84,6 +84,36 @@ Digest safety reads resolve through `worker/src/lib/safety-score-active-source.t
 The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
 
 **Bank Run Gauge — one producer, one universe.** The gauge is computed exactly once, by `refreshAggregateMintBurnFlowCache()` (`worker/src/api/mint-burn-flows.ts`), over the active tracked-pair universe with tracked-chain mcap weighting. The digest reads that publication through `worker/src/lib/mint-burn-published-gauge.ts` and re-bins it (gauge score, band, per-coin pressure, per-chain net flow, and the net flows the FTQ split runs on); it no longer queries `mint_burn_hourly`. Fail-closed behavior: a publication that is unparseable or older than 24 h is dropped and marks the run degraded (`mint-burn-gauge-malformed` / `mint-burn-gauge-expired`); a publication older than 2 h (≈6 missed producer runs) is still used but marks `mint-burn-gauge-stale`; a gauge that has never been published is silently omitted, matching the pre-existing "no flow rows yet" behavior.
+
+### DEX liquidity admission gate
+
+Edition #179 (2026-08-21) published "USDS bled 91% of its DEX liquidity to $13.72M in a day" to X and Telegram. Nothing had drained. A partial upstream pool inventory — DefiLlama's `/protocols` index is accepted whenever it is non-empty and then used as a project whitelist, and partial direct-API pages are recorded only as `fallbackSignals` — dropped most of one coin's pools. The producer's abort guards are aggregate (global TVL, top-10 TVL, row coverage), so a single coin's hole passed every one. The digest then compared two `dex_liquidity_history` rows on score delta and market cap alone.
+
+DEX liquidity is a **single-source signal**: score, TVL, pool count, and the DEWS liquidity input all descend from the same ingestion. When that ingestion is partial, every number agrees with every other number and the artifact reads as a coherent story. Four layers now stand in the way, each of which independently withholds the #179 claim.
+
+**1. Producer visibility.** `computeDexLiquidityDriftSummary()` (`worker/src/cron/dex-liquidity/orchestrator-drift.ts`) flags `major-tvl-cliff:<id>` at `qualityDriftSeverity: "high"` for any coin that was among the previous run's ten largest by TVL, held at least $5M, and landed below 60% of that value. Same ratio as `hardValueGuard`, applied per coin instead of in aggregate. The run still publishes — the primary dataset must record real crises — but the cliff reaches cron metadata, the status page drift line, and the `199` warning header on `/api/dex-liquidity`.
+
+**2. Collector admission — comparability only.** `admitLiquidityShift()` (`shared/lib/digest-liquidity-admission.ts`) decides whether a history pair is a comparable measurement of the same thing on two adjacent days. Every rule is decidable from the pair itself:
+
+| Rejection | Rule |
+|---|---|
+| `non-adjacent-snapshots` | The rows are not exactly 86,400s apart |
+| `methodology-basis-change` | `methodology_version` differs across the pair — a recompute, not a market move. Liquidity v6.0 moved USDS 58 → 46 with no on-chain change |
+| `non-trendworthy-coverage` | Either row fails `isTrendworthyLiquiditySnapshot()` (fallback class or confidence <0.75), or carries a non-finite measurement |
+
+A rejected pair produces **no signal at all**, recorded as `liquidity-shift-<rejection>` in `degradedSources` so a withheld story is distinguishable from a quiet day. Admitted shifts carry `coverageClass`, `coverageConfidence`, `tvlChangePct`, and `expectedScoreDeltaFromTvl`.
+
+Magnitude is deliberately **not** an admission rule. A large drop is either a partial snapshot or a genuine crisis, and nothing in the pair distinguishes them; the collector has no access to prices, flows, or supply. Rejecting on magnitude here would discard real drains unread — exactly the events Pharos exists to report.
+
+**3. Editorial corroboration.** A liquidity candidate is suppressed unless an **independent pipeline** agrees on the same coin: an active depeg (prices), mint/burn pressure (transfer flows), or supply velocity (supply history). DEWS is deliberately excluded — its liquidity signal reads the same `dex_liquidity` rows, so a band move can be the artifact agreeing with itself. Market cap sizes a story and never corroborates one; the system prompt said otherwise until this change.
+
+This is where magnitude is judged, because this layer can see the corroborating evidence. An uncorroborated drop past `UNCORROBORATED_TVL_DROP_RATIO` (40%, the producer's own aggregate "this cannot be real" bound, above v6.0's documented 2-35% recompute range) is suppressed as an `unverified single-source DEX TVL collapse` at `artifactRisk: "high"`, and the prompt's raw evidence line is marked `UNVERIFIED` so the model may not state its TVL figures as fact anywhere — lead or body. A **corroborated** collapse of the same size is not suppressed: a real drain alongside a depeg or a supply exodus is the story.
+
+Liquidity impact is scored per $1B of market cap, matching `getDepegMarketImpactScore`; the previous per-$1M divisor put liquidity on a 1000x inflated scale against every depeg, which is how an 8-point move on a mega-cap outranked real peg breaks. DEWS band moves and ALERT+ breadth moved to the same basis for the same reason — DEWS's liquidity input reads the same `dex_liquidity` rows, so a partial pool snapshot could have bought the headline through DEWS instead, and its impact carried no severity term at all (a mega-cap merely *being* ALERT+ scored ~6,710). Artifact risk now outranks impact at any gap for `liquidity` and `yield` candidates, not only within 25 points.
+
+**4. Publication gate.** `validateDigestModelOutput()` raises a hard `suppressed-lead` issue when the declared `meta.leadSignalId` resolves to a suppressed candidate. Suppression used to be advisory: the prompt asked the model not to lead with one and nothing checked. A hard issue takes the existing path — one corrective retry, then `qualityGate = "blocked"`, no X post and no Telegram edition.
+
+What was deliberately **not** built: no coverage-weighted rescoring (coverage never fed the score, and damping it would hide genuinely thin coins); no rule that the composite must move proportionally with TVL (TVL Depth is `35 * log10(depthRatio / 0.0007)` at 30% weight, so a 91% TVL drop implies only about -11 points **by design** — #179's "score fell only ten points" was a correct number framed as a scandal, and the prompt now carries the implied move as `tvl-implies` so coverage cannot repeat that reading); no per-coin publication hold in the producer, because withholding a real crisis from the primary dataset is worse than reporting it and refusing to headline it; and no magnitude cap anywhere that a corroborated event cannot pass, because every gate here must fail toward *not publishing an unverified claim*, never toward *not seeing a real one*.
 
 ### LLM call
 
@@ -118,6 +148,8 @@ The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificatio
 If quality validation fails with **hard** issues, the worker sends one corrective retry to Opus containing the hard checks plus the failed response itself, so the model fixes the flagged problems instead of regenerating blind. Soft-only issues never trigger a retry (during the July 2026 forced-lead streak, unfixable soft variety issues burned a second full Opus call every day). A `stop_reason=max_tokens` stream is treated as a hard failure before parsing — truncated output can no longer flow into the raw-text fallback.
 
 If the retry still has hard quality issues, the digest row is stored with `digest_meta.qualityGate = "blocked"` for operator inspection: blocked rows are excluded from every public read endpoint, from edition numbering, from recent-copy variety context, and from lead-streak history (they never reached readers), and external delivery is skipped as `quality-gate`. Soft-only quality issues remain visible in run metadata without changing cron health. Forbidden throat-clearing phrases are now flagged as a soft `forbidden-phrase` issue rather than silently stripped (which left grammar fragments), and `meta.coins` labels are cross-checked against the copy (`meta-coins-mismatch`).
+
+`suppressed-lead` is a hard issue: a declared `meta.leadSignalId` that resolves to a suppressed editorial candidate fails validation instead of publishing. Suppression previously lived only in prompt instructions, which is how edition #179's suppression-eligible USDS liquidity claim reached X and Telegram. See [DEX liquidity admission gate](#dex-liquidity-admission-gate).
 
 The active-depeg collector also computes **lifecycle review flags** over the full open-event set (`worker/src/lib/depeg-lifecycle.ts`): `stalled-collapse` (open ≥21d at ≥2,500 bps live deviation) and `chronic-shallow` (open ≥30d under 300 bps). Flags are persisted to the `depeg:lifecycle-flags` cache entry and appended to cron metadata as `lifecycle-review: SYMBOL:kind|…` for owner review — see [`runbooks/depeg-lifecycle-review.md`](./runbooks/depeg-lifecycle-review.md). Flagging never freezes or closes anything automatically.
 

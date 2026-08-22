@@ -299,7 +299,19 @@ describe("next-trigger lifecycle (Batch 4)", () => {
       ...fixture18.inputData,
       yieldAnomalies: [{ symbol: "USD1", currentApy: 25.6, apy7d: 9.1, apy30d: 8.4, warnings: ["spike"], mcapUsd: 2e9 }],
       liquidityShifts: [
-        { symbol: "USDF", currentScore: 44, previousScore: 60, scoreDelta: -16, currentTvl: 1e8, previousTvl: 2e8, mcapUsd: 1.4e9 },
+        {
+          symbol: "USDF",
+          currentScore: 44,
+          previousScore: 60,
+          scoreDelta: -16,
+          currentTvl: 1e8,
+          previousTvl: 2e8,
+          mcapUsd: 1.4e9,
+          tvlChangePct: -0.5,
+          expectedScoreDeltaFromTvl: -3.2,
+          coverageClass: "primary",
+          coverageConfidence: 0.9,
+        },
       ],
       editorialCandidates: [
         {

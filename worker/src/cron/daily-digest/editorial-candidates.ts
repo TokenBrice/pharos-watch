@@ -14,6 +14,7 @@ import {
   getDepegMarketImpactScore,
   isCriticalDepegRisk,
 } from "@shared/lib/digest-risk";
+import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admission";
 
 const BAND_RANK: Record<string, number> = THREAT_BAND_ORDER;
 
@@ -263,7 +264,13 @@ function addDewsCandidates(candidates: DigestEditorialCandidate[], data: DigestI
       kind: "dews",
       title: `${change.symbol} moved ${change.from} to ${change.to}`,
       symbols: [change.symbol],
-      impactScore: Math.max(1, Math.abs(toRank - fromRank) * Math.max(mcapUsd, 10_000_000) / 1_000_000),
+      // Per $1B of market cap, matching `getDepegMarketImpactScore`. On the old
+      // per-$1M basis a single-rank move on a mega-cap scored ~6,710 and
+      // outranked every real peg break on mcap alone — the same arithmetic that
+      // handed edition #179's lead to a liquidity artifact. DEWS matters here
+      // because its liquidity input reads the same `dex_liquidity` rows, so one
+      // partial pool snapshot can move a band and buy the headline.
+      impactScore: Math.max(1, Math.abs(toRank - fromRank) * mcapUsd / 1_000_000_000),
       novelty: worsened ? "worsening" : "improving",
       confidence: confidenceForData(data.degradedSources, "dews"),
       artifactRisk: mcapUsd > 0 && mcapUsd < 20_000_000 ? "medium" : "low",
@@ -284,7 +291,9 @@ function addDewsCandidates(candidates: DigestEditorialCandidate[], data: DigestI
       kind: "dews",
       title: "ALERT+ stress has material market cap",
       symbols: dews.elevatedCoins.map((coin) => coin.symbol),
-      impactScore: elevatedMcap / 1_000_000,
+      // Breadth frames the market; it should not outrank a specific coin's
+      // peg break. Same per-$1B basis as every other mcap-scaled candidate.
+      impactScore: elevatedMcap / 1_000_000_000,
       novelty: "structural",
       confidence: confidenceForData(data.degradedSources, "dews"),
       artifactRisk: elevatedMcap < 50_000_000 ? "medium" : "low",
@@ -342,25 +351,71 @@ function addRiskCandidates(candidates: DigestEditorialCandidate[], data: DigestI
   }
 }
 
+/**
+ * Independent same-coin evidence that a liquidity move is a market event and
+ * not a measurement change. DEX liquidity is a single-source signal: every
+ * pool number comes from the same ingestion path, so a partial upstream
+ * inventory moves score and TVL together and looks exactly like a real drain.
+ * Edition #179 led on a $6.71B coin's uncorroborated 91% TVL collapse that
+ * never happened.
+ *
+ * DEWS is deliberately excluded: its liquidity signal reads the same
+ * `dex_liquidity` rows, so a band move can be the artifact agreeing with
+ * itself. Only pipelines with independent inputs count — peg prices,
+ * mint/burn transfer flows, and supply history.
+ */
+function liquidityCorroboration(data: DigestInputData, symbol: string): string | undefined {
+  const target = symbol.toUpperCase();
+
+  if (data.topDepegs.some((depeg) => depeg.symbol.toUpperCase() === target)) return "active depeg";
+  const pressure = (data.mintBurnFlows?.topPressure ?? []).find((entry) => entry.symbol.toUpperCase() === target);
+  if (pressure) return `mint/burn pressure ${pressure.intensity}`;
+  const velocity = (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === target);
+  if (velocity) return `supply ${velocity.signal}`;
+  if (data.biggestSupplyChange?.symbol.toUpperCase() === target) return "largest supply mover";
+  return undefined;
+}
+
 function addLiquidityAndBlacklistCandidates(candidates: DigestEditorialCandidate[], data: DigestInputData): void {
   for (const shift of data.liquidityShifts ?? []) {
     const tinyTvl = shift.currentTvl < 100_000 || shift.previousTvl < 100_000;
+    const corroboration = liquidityCorroboration(data, shift.symbol);
+    const tvlMovePct = shift.tvlChangePct != null ? Math.round(shift.tvlChangePct * 100) : null;
+    // A cliff this deep is either a partial pool snapshot or a genuine crisis,
+    // and magnitude alone cannot tell them apart. This is the only layer that
+    // can: it sees prices, flows, and supply. Edition #179's 91% USDS drop had
+    // none of them.
+    const cliff = shift.tvlChangePct != null && shift.tvlChangePct <= -UNCORROBORATED_TVL_DROP_RATIO;
+    const suppressReason = tinyTvl
+      ? "liquidity TVL too thin, likely artifact-prone"
+      : corroboration
+        ? undefined
+        : cliff
+          ? "unverified single-source DEX TVL collapse, no independent pipeline confirms it"
+          : "single-source liquidity move with no independent depeg, flow, or supply corroboration";
     addCandidate(candidates, {
       id: candidateId("liquidity", [shift.symbol]),
       kind: "liquidity",
       title: `${shift.symbol} DEX liquidity score moved ${shift.scoreDelta > 0 ? "up" : "down"}`,
       symbols: [shift.symbol],
-      impactScore: Math.abs(shift.scoreDelta) * shift.mcapUsd / 1_000_000,
+      // Scored per $1B of market cap, matching `getDepegMarketImpactScore`.
+      // The old `|scoreDelta| * mcap / 1e6` put liquidity on a 1000x inflated
+      // scale against every depeg, so an 8-point move on a mega-cap outranked
+      // real peg breaks and only a suppressReason could stop it leading.
+      impactScore: Math.abs(shift.scoreDelta) * shift.mcapUsd / 1_000_000_000,
       novelty: shift.scoreDelta > 0 ? "improving" : "worsening",
-      confidence: "medium",
-      artifactRisk: tinyTvl ? "high" : "medium",
+      confidence: shift.coverageClass === "primary" ? "high" : "medium",
+      artifactRisk: artifactRiskForSuppression(suppressReason, "medium"),
       headlineFacts: [
         `score ${shift.previousScore} -> ${shift.currentScore}`,
-        `TVL ${formatCurrency(shift.previousTvl)} -> ${formatCurrency(shift.currentTvl)}`,
+        tvlMovePct != null
+          ? `TVL ${formatCurrency(shift.previousTvl)} -> ${formatCurrency(shift.currentTvl)} (${sign(tvlMovePct)}${tvlMovePct}%)`
+          : `TVL ${formatCurrency(shift.previousTvl)} -> ${formatCurrency(shift.currentTvl)}`,
         `${formatCurrency(shift.mcapUsd)} market cap`,
+        corroboration ? `corroborated by ${corroboration}` : `coverage ${shift.coverageClass}, no corroborating signal`,
       ],
       whyItMatters: "Liquidity score changes matter when exit capacity changed alongside meaningful market cap.",
-      ...(tinyTvl ? { suppressReason: "liquidity TVL too thin, likely artifact-prone" } : {}),
+      ...(suppressReason ? { suppressReason } : {}),
     });
   }
 
@@ -412,6 +467,22 @@ function addPsiCandidate(candidates: DigestEditorialCandidate[], data: DigestInp
   });
 }
 
+const ARTIFACT_RISK_RANK: Record<DigestEditorialCandidateArtifactRisk, number> = {
+  none: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+};
+
+/**
+ * Kinds whose entire evidence base is one ingestion pipeline, so an upstream
+ * gap produces a coherent-looking story with no contradicting input.
+ */
+const SINGLE_SOURCE_KINDS: Partial<Record<DigestEditorialCandidateKind, true>> = {
+  liquidity: true,
+  yield: true,
+};
+
 const MOMENTUM_NOVELTIES = new Set<DigestEditorialCandidateNovelty>(["new", "accelerating", "reversal"]);
 
 export function selectMomentumCandidates(candidates: DigestEditorialCandidate[]): DigestEditorialCandidate[] {
@@ -440,13 +511,11 @@ export function buildEditorialCandidates(
     const bSuppressed = b.suppressReason ? 1 : 0;
     if (aSuppressed !== bSuppressed) return aSuppressed - bSuppressed;
 
-    const riskRank: Record<DigestEditorialCandidateArtifactRisk, number> = {
-      none: 0,
-      low: 1,
-      medium: 2,
-      high: 3,
-    };
-    const riskDelta = riskRank[a.artifactRisk] - riskRank[b.artifactRisk];
+    const riskDelta = ARTIFACT_RISK_RANK[a.artifactRisk] - ARTIFACT_RISK_RANK[b.artifactRisk];
+    // Single-source kinds cede to cleaner evidence at any impact gap. The
+    // 25-point window below is why a medium-risk USDS liquidity shift still
+    // outranked every corroborated signal in edition #179.
+    if (riskDelta !== 0 && (SINGLE_SOURCE_KINDS[a.kind] || SINGLE_SOURCE_KINDS[b.kind])) return riskDelta;
     if (riskDelta !== 0 && Math.abs(a.impactScore - b.impactScore) < 25) return riskDelta;
 
     return b.impactScore - a.impactScore;

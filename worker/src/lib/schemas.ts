@@ -241,6 +241,16 @@ export const DexLiquidityCronMetadataSchema = z.object({
           }),
         )
         .optional(),
+      majorTvlCliffs: z
+        .array(
+          z.object({
+            stablecoinId: z.string(),
+            previousTvlUsd: z.number(),
+            currentTvlUsd: z.number(),
+            tvlPctDelta: z.number().nullable(),
+          }),
+        )
+        .optional(),
       nearCoverageGuard: z.boolean().optional().default(false),
       nearValueGuard: z.boolean().optional().default(false),
       nearMajorCoverageGuard: z.boolean().optional().default(false),

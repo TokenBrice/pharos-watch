@@ -33,6 +33,19 @@ export function readPreviousDexLiquiditySummary(parsed: DexLiquidityCronMetadata
   };
 }
 
+/**
+ * A previously-major coin whose TVL lands below this fraction of its prior
+ * published value is reported as a per-coin cliff. Same bound as
+ * `hardValueGuard`/`hardMajorCoverageGuard`, which abort the run on the same
+ * ratio in aggregate. Those aggregate guards cannot see a single coin's hole:
+ * USDS shed ~91% of its measured TVL on 2026-08-20 while global and top-10
+ * totals stayed inside every bound, and edition #179 published the hole as news.
+ */
+const MAJOR_TVL_CLIFF_RATIO = 0.6;
+
+/** Prior TVL below this is dust oscillation, not a cliff worth flagging. */
+const MAJOR_TVL_CLIFF_MIN_PREVIOUS_USD = 5_000_000;
+
 export interface DexLiquidityDriftWatchlistDelta {
   stablecoinId: string;
   previousPoolCount: number;
@@ -42,6 +55,13 @@ export interface DexLiquidityDriftWatchlistDelta {
   currentCoverageConfidence: number | null;
   previousMeasuredShare: number | null;
   currentMeasuredShare: number | null;
+}
+
+export interface DexLiquidityMajorTvlCliff {
+  stablecoinId: string;
+  previousTvlUsd: number;
+  currentTvlUsd: number;
+  tvlPctDelta: number | null;
 }
 
 export interface DexLiquidityDriftSummary {
@@ -65,6 +85,7 @@ export interface DexLiquidityDriftSummary {
     weakCoverageDelta: number | null;
   };
   topAssetCoverageDeltas: DexLiquidityDriftWatchlistDelta[];
+  majorTvlCliffs: DexLiquidityMajorTvlCliff[];
 }
 
 export function computeDexLiquidityDriftSummary(params: {
@@ -83,6 +104,12 @@ export function computeDexLiquidityDriftSummary(params: {
   }>;
   scoreResults: Map<string, FullScoreResult>;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
+  /**
+   * Prior published TVL for the coins that were the largest by TVL last run.
+   * Reuses the rows the major-coverage guard already loads: a per-coin cliff
+   * only matters for coins big enough to be part of the market's exit capacity.
+   */
+  previousMajorTvlById: Map<string, number>;
 }): DexLiquidityDriftSummary {
   const watchlistDeltas = DRIFT_WATCHLIST.map((stablecoinId) => {
     const previous = params.watchlistPreviousById.get(stablecoinId);
@@ -107,6 +134,19 @@ export function computeDexLiquidityDriftSummary(params: {
       currentMeasuredShare: currentScore ? round4(currentMeasuredShare) : null,
     };
   });
+
+  const majorTvlCliffs: DexLiquidityMajorTvlCliff[] = [];
+  for (const [stablecoinId, previousTvlUsd] of params.previousMajorTvlById) {
+    if (previousTvlUsd < MAJOR_TVL_CLIFF_MIN_PREVIOUS_USD) continue;
+    const currentTvlUsd = params.scoreResults.get(stablecoinId)?.tvl ?? 0;
+    if (currentTvlUsd >= previousTvlUsd * MAJOR_TVL_CLIFF_RATIO) continue;
+    majorTvlCliffs.push({
+      stablecoinId,
+      previousTvlUsd,
+      currentTvlUsd,
+      tvlPctDelta: pctDelta(currentTvlUsd, previousTvlUsd),
+    });
+  }
 
   const priceObservationPctDelta = params.previousSummary
     ? pctDelta(params.priceObservations.size, params.previousSummary.priceObservationCoins)
@@ -142,10 +182,18 @@ export function computeDexLiquidityDriftSummary(params: {
       qualityDriftFlags.push(`watchlist-pool-drop:${delta.stablecoinId}`);
     }
   }
+  for (const cliff of majorTvlCliffs) {
+    qualityDriftFlags.push(`major-tvl-cliff:${cliff.stablecoinId}`);
+  }
   const qualityDriftSeverity: DexLiquidityDriftSummary["qualityDriftSeverity"] =
     qualityDriftFlags.length === 0
       ? "none"
-      : qualityDriftFlags.some((flag) => flag === "measured-balance-drop" || flag.startsWith("watchlist-pool-drop:"))
+      : qualityDriftFlags.some(
+            (flag) =>
+              flag === "measured-balance-drop" ||
+              flag.startsWith("watchlist-pool-drop:") ||
+              flag.startsWith("major-tvl-cliff:"),
+          )
         ? "high"
         : "medium";
 
@@ -170,5 +218,6 @@ export function computeDexLiquidityDriftSummary(params: {
       weakCoverageDelta,
     },
     topAssetCoverageDeltas: watchlistDeltas,
+    majorTvlCliffs,
   };
 }
