@@ -22,6 +22,8 @@ export type UrlStateField<V> =
       kind: "enum";
       defaultValue: V;
       allowedValues: readonly V[];
+      normalize?: (value: string) => string;
+      encode?: (value: V) => string;
     }
   | {
       kind: "boundedNumber";
@@ -33,6 +35,7 @@ export type UrlStateField<V> =
   | {
       kind: "string";
       defaultValue: V;
+      trim?: boolean;
     }
   | {
       kind: "boolean";
@@ -70,7 +73,10 @@ function decodeField<V>(
         params,
         key,
         field.allowedValues as readonly string[],
-        { fallback: field.defaultValue as unknown as string },
+        {
+          fallback: field.defaultValue as unknown as string,
+          normalize: field.normalize,
+        },
       );
       return (result ?? field.defaultValue) as V;
     }
@@ -86,6 +92,7 @@ function decodeField<V>(
     case "string": {
       const result = parseStringSearchParam(params, key, {
         fallback: field.defaultValue as unknown as string,
+        trim: field.trim,
       });
       return (result ?? field.defaultValue) as V;
     }
@@ -131,7 +138,7 @@ function isEqualValue<V>(a: V, b: V, field: UrlStateField<V>): boolean {
 function encodeField<V>(value: V, field: UrlStateField<V>): string | null {
   switch (field.kind) {
     case "enum":
-      return String(value);
+      return field.encode ? field.encode(value) : String(value);
     case "boundedNumber":
       return String(value);
     case "string":

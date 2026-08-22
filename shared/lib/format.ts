@@ -74,11 +74,10 @@ export function formatCurrency(value: number, decimals = 2): string {
 export function abbreviateNumberParts(value: number): { short: number; suffix: string } {
   if (!Number.isFinite(value)) return { short: 0, suffix: "" };
   const abs = Math.abs(value);
-  if (abs >= 1e12) return { short: value / 1e12, suffix: "T" };
-  if (abs >= 1e9) return { short: value / 1e9, suffix: "B" };
-  if (abs >= 1e6) return { short: value / 1e6, suffix: "M" };
-  if (abs >= 1e3) return { short: value / 1e3, suffix: "K" };
-  return { short: value, suffix: "" };
+  const selected = COMPACT_USD_TIERS.find(({ divisor }) => abs >= divisor);
+  return selected
+    ? { short: value / selected.divisor, suffix: selected.suffix }
+    : { short: value, suffix: "" };
 }
 
 export function formatCompactUsd(value: number): string {
@@ -331,7 +330,10 @@ export function formatDeathDate(d: string): string {
   return formatYearMonthWithStyle(d, "short") ?? d;
 }
 
-/** Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d". */
+/**
+ * Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d".
+ * This intentionally keeps composite units; use formatRelativeAgeSeconds for single-unit relative ages.
+ */
 export function formatElapsedSeconds(seconds: number): string {
   if (!Number.isFinite(seconds)) return "N/A";
   if (seconds < SECONDS_PER_MINUTE) return `${Math.floor(seconds)}s`;

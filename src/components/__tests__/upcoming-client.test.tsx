@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", async () => {
@@ -13,17 +13,24 @@ vi.mock("next/image", () => ({
 }));
 
 const { UpcomingClient } = await import("../upcoming-client");
-const { CLIENT_TRACKED_STABLECOINS } = await import("@shared/lib/stablecoins/client-registry");
+const { PRE_LAUNCH_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
+const { logosById } = await import("@/lib/logos");
+
+const upcomingLogos = Object.fromEntries(
+  PRE_LAUNCH_STABLECOINS.map((coin) => [coin.id, logosById[coin.id]]),
+);
 
 describe("UpcomingClient", () => {
   afterEach(() => cleanup());
 
   it("renders AI-summary term markers as plain labels inside linked teaser cards", () => {
-    const preLaunchId = CLIENT_TRACKED_STABLECOINS.find((coin) => coin.status === "pre-launch")?.id;
+    const preLaunchId = PRE_LAUNCH_STABLECOINS[0]?.id;
     expect(preLaunchId).toBeTruthy();
 
     const { container } = render(
       <UpcomingClient
+        coins={PRE_LAUNCH_STABLECOINS}
+        logos={upcomingLogos}
         teasers={{
           [preLaunchId as string]:
             "An {{term:overcollateralization}}overcollateralized{{/term}} note parked in {{term:money-market-fund}}MMFs{{/term}}.",
@@ -36,5 +43,20 @@ describe("UpcomingClient", () => {
     expect(text).not.toContain("{{/term}}");
     expect(text).toContain("overcollateralized");
     expect(text).toContain("MMFs");
+  });
+
+  it("hydrates phase and sort filters from the URL", () => {
+    window.history.replaceState(null, "", "/upcoming/?phase=beta&sort=alphabetical");
+
+    render(
+      <UpcomingClient
+        coins={PRE_LAUNCH_STABLECOINS}
+        logos={upcomingLogos}
+        teasers={{}}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Beta" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Name" }).getAttribute("aria-pressed")).toBe("true");
   });
 });

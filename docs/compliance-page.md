@@ -45,7 +45,7 @@ Do not restate regime eligibility or legal classification logic in this route do
 - `peg=<PegCurrency>`
 - `q=<search>`
 
-Absent `regime` selects Overview unless a legacy deep link can infer a regime from a MiCA-only status/type value or GENIUS-only status value. The client accepts legacy `tokenType` and `pegCurrency` aliases and writes canonical `type` and `peg` parameters. Changing views clears regime-specific status and token-type state; status badges and hero segments write the destination regime and status together. Search state stays synchronized with browser Back/Forward navigation.
+Absent `regime` selects Overview unless a legacy deep link can infer a regime from a MiCA-only status/type value or GENIUS-only status value. `COMPLIANCE_URL_SCHEMA` decodes the canonical keys plus the legacy `tokenType` and `pegCurrency` aliases; writers emit canonical `type` and `peg` parameters. Changing views clears regime-specific status and token-type state; status badges and hero segments write the destination regime and status together. Search state stays synchronized with browser Back/Forward navigation.
 
 ## Data Projection
 

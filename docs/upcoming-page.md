@@ -23,7 +23,7 @@ Primary audience:
 - **Hero wrapper:** `src/components/upcoming-horizon-hero.tsx`
 - **Shared constellation:** `src/components/horizon-constellation.tsx`, also composed by `src/components/home-alt-upcoming-horizon-constellation.tsx`
 - **Shared helpers:** `src/lib/pre-launch.ts`
-- **Primary dataset:** the client card/filter universe is derived in `src/components/upcoming-client.tsx` from `CLIENT_TRACKED_STABLECOINS` (`@shared/lib/stablecoins/client-registry`) filtered on `status: "pre-launch"`; the registry-exported `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`) is consumed only by the server shell (`page.tsx`) for JSON-LD and the crawlable `sr-only` nav. Both derive from the catalog backed by `shared/data/stablecoins/coins/*.json`
+- **Primary dataset:** `page.tsx` projects `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`) into the client card/filter payload; the full server registry remains available to the server shell for JSON-LD and the crawlable `sr-only` nav. Both derive from the catalog backed by `shared/data/stablecoins/coins/*.json`
 
 The route renders through `FeaturePageShell` with:
 
@@ -45,8 +45,7 @@ Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/up
 
 | Source                                                                                                                                | Used for                                                                                                     |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `CLIENT_TRACKED_STABLECOINS` (`@shared/lib/stablecoins/client-registry`), filtered on `status: "pre-launch"` in `upcoming-client.tsx` | the client card/filter universe                                                                              |
-| `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`)                                                                         | server-only: JSON-LD and the crawlable `sr-only` nav in `page.tsx`                                           |
+| `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`)                                                                         | server-side source for the client card/filter projection, JSON-LD, and the crawlable `sr-only` nav             |
 | `shared/data/stablecoins/coins/*.json`                                                                                                | editable stablecoin catalog source of truth; pre-launch membership comes from `status: "pre-launch"`         |
 | Generated stablecoin projections                                                                                                     | full and client registries refreshed together with `npm run bootstrap:generated`                               |
 | `data/logos.json`                                                                                                                     | per-coin logo display                                                                                        |
@@ -72,7 +71,9 @@ The route does not call the Worker API directly. It is a metadata-driven surface
 - `Clear filters`, shown only while any filter set is active
 - the filter surface now uses the shared Pharos card/pill treatment instead of standalone flat chip rows, so dark mode stays visually consistent with the rest of the product
 
-Filtering always starts from the full locally-derived pre-launch set (the `upcoming-client.tsx` const filtered from `CLIENT_TRACKED_STABLECOINS`). Sorting is then applied to the filtered result.
+Filtering always starts from the full pre-launch projection passed by `page.tsx`. Sorting is then applied to the filtered result.
+
+The `phase`, `peg`, `backing`, and `sort` filters are URL-backed through the shared URL-state codec. Phase, peg, and backing are comma-delimited multi-selects; the default sort is `expected`, and defaults are omitted from the URL.
 
 ---
 

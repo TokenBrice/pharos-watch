@@ -1,7 +1,7 @@
 import type { ChainResilienceTier } from "./index";
 import type { ChainEnvironmentEvidence, ChainHealthFactors, HealthBand } from "../../types/chains";
 import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
-import { bandFromThresholds } from "../math";
+import { bandFromThresholds, hhiToDiversityScore } from "../math";
 import { deriveDepegSignal } from "../depeg-signals";
 
 export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "../methodology-versions/chain-health";
@@ -32,7 +32,7 @@ export const CHAIN_ENVIRONMENT_SCORES: Record<ChainResilienceTier, number> = {
 export function computeConcentrationScore(shares: number[]): number {
   if (shares.length <= 1) return 0;
   const hhi = shares.reduce((sum, s) => sum + s * s, 0);
-  return Math.round(100 * (1 - hhi));
+  return Math.round(hhiToDiversityScore(hhi));
 }
 
 export const ACTIVE_BACKING_DIVERSITY_TYPES = ["rwa-backed", "crypto-backed"] as const;

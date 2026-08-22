@@ -1,4 +1,5 @@
 import { formatElapsedSeconds, formatIsoDate } from "@shared/lib/format";
+import { median } from "@shared/lib/stats";
 import {
   DDRR_PUBLIC_WARNING,
   type DdrrResponse,
@@ -110,13 +111,6 @@ function getErratumLabel(row: DdrrRow): string | null {
   const count = Number.isFinite(row.errataCount) ? row.errataCount : 0;
   if (count <= 0) return null;
   return count === 1 ? "1 erratum" : `${count} errata`;
-}
-
-function median(values: readonly number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
 function pluralize(count: number, singular: string, plural: string): string {

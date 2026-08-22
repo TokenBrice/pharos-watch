@@ -11,7 +11,6 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import { isDexMeasuredExecutionObservationHistoryMature } from "../../types/measured-execution";
-import { clampShare } from "../math";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
 import {
   createUnavailableV9BackingResult,
@@ -19,7 +18,6 @@ import {
   type V9BackingResult,
   type V9CdpLiquidationCapacitySelection,
   type V9InheritedStablecoinBacking,
-  type V9ResolvedUpstreamExposure,
 } from "./backing";
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
@@ -33,7 +31,6 @@ import {
 import {
   evaluateV9ExitAssetFacts,
   projectV9ExitEvaluationRoute,
-  resolveV9DistinctExitCapacity,
   type V9ExitEvaluationResult,
 } from "./exit";
 import {
@@ -44,12 +41,12 @@ import {
   hasV9PreExitDangerSignal,
   type V9PillarAdverseAttribution,
 } from "./formula";
+import { evaluateV9OperationalResilience, type V9OperationalResilienceResult } from "./operational-resilience";
 import {
-  evaluateV9OperationalResilience,
-  type V9OperationalResilienceBlockers,
-  type V9OperationalResilienceMeasuredMarketDepth,
-  type V9OperationalResilienceResult,
-} from "./operational-resilience";
+  applyOperationalResilienceCredits,
+  measuredOperationalMarketDepth,
+  operationalResilienceBlockers,
+} from "./operational-market-depth";
 import { resolveV9ReasonPolicy } from "./policy";
 import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
 import {
@@ -65,9 +62,15 @@ import {
   type V9ProductionScoreInput,
   type V9ProductionScoreTrace,
 } from "./score";
-import { canonicalizeV9PublicReasons } from "./reasons";
 import { buildV9RetainedStressState, type V9RetainedStressState } from "./stress";
 import { projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
+import {
+  canonicalReasons,
+  resolvedBackingExposures,
+  resolveUnavailabilityRoots,
+} from "./unavailability-roots";
+
+export { projectV9ResolvedBackingExposure } from "./unavailability-roots";
 
 export interface V9EvaluatedAsset {
   assetId: string;
@@ -118,10 +121,6 @@ function pillarReason(
     responsibility,
     ...(sourceGapId == null ? {} : { sourceGapId }),
   };
-}
-
-function canonicalReasons(reasons: readonly V9PillarReason[]): V9PillarReason[] {
-  return canonicalizeV9PublicReasons(reasons);
 }
 
 function pillarReasonsForGaps(
@@ -753,134 +752,6 @@ function unresolvedEvidenceReasons(
   );
 }
 
-function measuredOperationalMarketDepth(
-  asset: V9AssetFactsV3,
-  exit: V9ExitEvaluationResult,
-  envelope: V9ValidatedPolicyEnvelope,
-): V9OperationalResilienceMeasuredMarketDepth | null {
-  const request = exit.stressRequest;
-  if (request === null) return null;
-  const measuredRoutes = asset.exitRoutes.filter(
-    (route) =>
-      route.lane === "dex" &&
-      route.evidenceKind === "measured-executable-depth" &&
-      route.status.observationState === "known" &&
-      route.scoreEligible &&
-      route.observationHistory !== null &&
-      route.observationHistory !== undefined,
-  );
-  const distinctCapacity = resolveV9DistinctExitCapacity(
-    measuredRoutes.map(projectV9ExitEvaluationRoute),
-    request,
-    envelope,
-  );
-  const includedRouteKeys = new Set(distinctCapacity.includedRouteKeys);
-  const includedRoutes = measuredRoutes.filter((route) => includedRouteKeys.has(route.routeKey));
-  if (includedRoutes.length === 0) return null;
-  return {
-    completeProducerCycleCount: Math.min(
-      ...includedRoutes.map((route) => route.observationHistory!.completeProducerCycleCount),
-    ),
-    successfulObservationCount: Math.min(
-      ...includedRoutes.map((route) => route.observationHistory!.successfulObservationCount),
-    ),
-    conservativeCompletionRatio: clampShare(
-      distinctCapacity.valuedExecutableUsd / request.requestedNotionalUsd,
-    ),
-    evidenceRefIds: uniqueSorted(
-      includedRoutes.flatMap((route) => [
-        ...route.status.evidenceRefIds,
-        ...route.settlementEvidenceRefIds,
-        ...route.output.status.evidenceRefIds,
-        ...(route.output.valuation?.evidenceRefIds ?? []),
-      ]),
-    ),
-  };
-}
-
-function operationalResilienceBlockers(
-  resolved: V9ResolvedDependencyInputs,
-  pillars: Readonly<Record<"backing" | "exit" | "control", V9PillarEvaluation>>,
-  peg: V9ProductionScoreInput["peg"],
-  dependencyReasonsInput: readonly V9PillarReason[],
-  dependencySignals: readonly V9StructuralSignal[],
-  methodologyReasons: readonly V9PillarReason[],
-  envelope: V9ValidatedPolicyEnvelope,
-): V9OperationalResilienceBlockers {
-  const pillarSignals = [
-    ...pillars.backing.structuralSignals,
-    ...pillars.exit.structuralSignals,
-    ...pillars.control.structuralSignals,
-  ];
-  const scoreBearingReasons = [
-    ...pillars.backing.reasons,
-    ...pillars.exit.reasons,
-    ...pillars.control.reasons,
-    ...peg.reasons,
-    ...dependencyReasonsInput,
-    ...methodologyReasons,
-  ];
-  const issuerOpacity = scoreBearingReasons.some((reason) => {
-    if (reason.responsibility !== "issuer-undisclosed") return false;
-    // Visibility-only diagnostics do not reduce a pillar, impose a ceiling, or
-    // make the score unavailable. Treating one as material issuer opacity
-    // would let an immaterial disclosure gap erase independently documented
-    // operating history. Pillar, ceiling, and NR reasons remain blockers.
-    return resolveV9ReasonPolicy(envelope, reason.code).reason.defaultTreatment !== "diagnostic";
-  });
-  const globalReserveImpairment = pillarSignals.some(
-    (signal) =>
-      (signal.economicLossScope === "reserve-claim" || signal.economicLossScope === "global-claim") &&
-      ((signal.kind === "unsafe-backing" && signal.severity !== "low") || signal.severity === "critical"),
-  );
-  const criticalControlFailure = pillars.control.structuralSignals.some(
-    (signal) =>
-      signal.severity === "critical" &&
-      (signal.kind === "active-control-incident" || signal.economicLossScope === "global-claim"),
-  );
-  const criticalDependency =
-    resolved.cycleBlocked ||
-    resolved.serial.some((dependency) => dependency.blocked) ||
-    dependencySignals.some((signal) => signal.severity === "critical");
-  return {
-    activeDepeg: peg.activeDepegBps !== null && peg.activeDepegBps > 0,
-    globalReserveImpairment,
-    criticalControlFailure,
-    criticalDependency,
-    issuerOpacity,
-  };
-}
-
-function applyOperationalResilienceCredits(
-  pillars: Readonly<Record<"backing" | "exit" | "control", V9PillarEvaluation>>,
-  result: V9OperationalResilienceResult | null,
-): V9ProductionScoreInput["pillars"] {
-  if (result === null) return pillars;
-  return {
-    backing: {
-      ...pillars.backing,
-      score:
-        pillars.backing.score === null
-          ? null
-          : Math.min(100, pillars.backing.score + result.pillarCredits.backing),
-    },
-    exit: {
-      ...pillars.exit,
-      score:
-        pillars.exit.score === null
-          ? null
-          : Math.min(100, pillars.exit.score + result.pillarCredits.exit),
-    },
-    control: {
-      ...pillars.control,
-      score:
-        pillars.control.score === null
-          ? null
-          : Math.min(100, pillars.control.score + result.pillarCredits.control),
-    },
-  };
-}
-
 export function upstreamExitAccessScore(result: V9ExitEvaluationResult): number | null {
   if (result.primaryRouteKey === null) return null;
   return result.routes.find((route) => route.routeKey === result.primaryRouteKey)?.components?.access ?? null;
@@ -1035,60 +906,6 @@ function applyRoleDependencyPillarLimits(
     exit: applyRoleDependencyProjection(pillars.exit, projections!.exit, envelope, evaluatedById),
     control: applyRoleDependencyProjection(pillars.control, projections!.control, envelope, evaluatedById),
   };
-}
-
-export function projectV9ResolvedBackingExposure(
-  exposureKey: string,
-  dependency: V9ResolvedDependencyInputs["basket"][number],
-  upstream: Pick<V9EvaluatedAsset, "backing" | "scoreInput"> | undefined,
-  failureRootAssetIds: readonly string[],
-): V9ResolvedUpstreamExposure {
-  const backingReasons = canonicalReasons(upstream?.scoreInput.pillars.backing.reasons ?? []);
-  const reasons =
-    backingReasons.length > 0 &&
-    backingReasons.every((reason) => reason.responsibility !== undefined)
-      ? backingReasons.map(({ code, path, responsibility }) => ({
-          code,
-          path,
-          responsibility,
-        }))
-      : undefined;
-  return {
-    exposureKey,
-    upstreamAssetId: dependency.upstreamAssetId,
-    score: dependency.score,
-    evidenceLevel: upstream?.scoreInput.pillars.backing.evidenceLevel ?? "insufficient",
-    reasonCodes: uniqueSorted(backingReasons.map((reason) => reason.code)),
-    ...(reasons === undefined ? {} : { reasons }),
-    failureDomains: canonicalDomains(upstream?.backing.failureDomains ?? []),
-    failureRootAssetIds: uniqueSorted(failureRootAssetIds),
-  };
-}
-
-function resolvedBackingExposures(
-  asset: V9AssetFactsBase,
-  dependencyInputs: V9ResolvedDependencyInputs,
-  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
-  unavailabilityRootsById: ReadonlyMap<string, readonly string[]>,
-): V9ResolvedUpstreamExposure[] {
-  const basketByUpstream = new Map(
-    dependencyInputs.basket.map((dependency) => [dependency.upstreamAssetId, dependency]),
-  );
-  // The availability materiality decision lives in backing, which aggregates by
-  // the propagated terminal failure roots (VER2-001) under the shared
-  // materiality predicate (VER2-010). This projection only carries the roots
-  // and evidence; it no longer emits an availability reason code.
-  return asset.reserveExposures.flatMap((exposure) => {
-    if (exposure.trackedAssetId === null) return [];
-    const dependency = basketByUpstream.get(exposure.trackedAssetId);
-    if (!dependency) return [];
-    const upstream = evaluatedById.get(dependency.upstreamAssetId);
-    const unavailable = dependency.score === null;
-    const failureRootAssetIds = unavailable
-      ? (unavailabilityRootsById.get(dependency.upstreamAssetId) ?? [dependency.upstreamAssetId])
-      : [dependency.upstreamAssetId];
-    return [projectV9ResolvedBackingExposure(exposure.exposureKey, dependency, upstream, failureRootAssetIds)];
-  });
 }
 
 /**
@@ -1607,17 +1424,12 @@ export function evaluateV9Asset({
     operationalResilience,
   };
   const trace = scoreV9EvaluatedAsset(scoreInput, envelope);
-  const unavailableUpstreamRoots = uniqueSorted(
-    [...resolved.basket, ...resolved.serial]
-      .filter((dependency) => dependency.score === null)
-      .flatMap(
-        (dependency) => unavailabilityRootsById.get(dependency.upstreamAssetId) ?? [dependency.upstreamAssetId],
-      ),
+  const unavailabilityRoots = resolveUnavailabilityRoots(
+    asset,
+    resolved,
+    trace,
+    unavailabilityRootsById,
   );
-  const unavailabilityRoots =
-    trace.finalScore !== null || unavailableUpstreamRoots.length === 0
-      ? [asset.assetId]
-      : unavailableUpstreamRoots;
   const stressState = buildV9RetainedStressState(scoreInput, {
     circulatingUsd: asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null,
     portfolioStatus:

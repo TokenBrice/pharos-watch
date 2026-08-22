@@ -73,6 +73,6 @@ export function isDailyDexShadowTargetPublicationSlot(slotStartedAtSec: number):
 export const V9_EVIDENCE_PRODUCER_INTERVAL_SEC = {
   "sync-live-reserves": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
   "sync-stablecoins": CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec,
-  "sync-dex-liquidity": 2 * 3600,
+  "sync-dex-liquidity": CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery.intervalSec,
   "sync-redemption-backstops": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
 } as const;

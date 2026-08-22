@@ -99,16 +99,31 @@ export function getPresetCoins(preset: ComparePreset): readonly string[] {
   return preset.getCoinsAtRuntime ? preset.getCoinsAtRuntime() : preset.coins;
 }
 
+export function parseIdList(
+  param: string | null,
+  options: { max: number; normalize?: (value: string) => string | null },
+): string[] {
+  if (!param || options.max <= 0) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of param.split(",")) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const value = options.normalize ? options.normalize(trimmed) : trimmed;
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+    if (out.length >= options.max) break;
+  }
+  return out;
+}
+
 export function resolveCompareSelectedIds(param: string | null): string[] {
-  if (!param) return [];
-  return param
-    .split(",")
-    .map((segment) => {
-      const trimmed = segment.trim();
-      const decodedId = decodeStablecoinUrlToken(trimmed);
-      return decodedId ? (ID_TO_COMPARE_COIN.get(decodedId) ?? null) : null;
-    })
-    .filter((coin): coin is CoinOption => coin != null)
-    .slice(0, MAX_COMPARE_COINS)
-    .map((coin) => coin.id);
+  return parseIdList(param, {
+    max: MAX_COMPARE_COINS,
+    normalize: (segment) => {
+      const decodedId = decodeStablecoinUrlToken(segment);
+      return decodedId ? (ID_TO_COMPARE_COIN.get(decodedId)?.id ?? null) : null;
+    },
+  });
 }

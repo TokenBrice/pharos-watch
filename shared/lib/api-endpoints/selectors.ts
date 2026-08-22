@@ -65,7 +65,7 @@ export function getStaticEndpointDependenciesByKey(key: EndpointKey | string): r
   return STATIC_ENDPOINT_DEPENDENCIES_BY_KEY.get(key);
 }
 
-export function getEndpointProbePaths(group: EndpointProbeGroup): string[] {
+export function getProbePaths(group: EndpointProbeGroup): string[] {
   return ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === group).map((probe) => probe.path);
 }
 

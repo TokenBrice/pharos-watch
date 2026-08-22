@@ -1,7 +1,7 @@
 import type { PegAssetBase, StablecoinMeta } from "../types";
 import { normalizeLegacyPegType } from "./peg-price-bounds";
 import { PEG_TAXONOMY } from "./peg-taxonomy";
-import { medianOf } from "./peg-utils";
+import { median } from "@shared/lib/stats";
 import { getCirculatingRaw } from "./supply";
 
 /**
@@ -106,9 +106,9 @@ export function derivePegRates(
   const counts: Record<string, number> = Object.create(null) as Record<string, number>;
   for (const [peg, prices] of groups.entries()) {
     // Keep the scoring reference unrounded; display medians round at the API edge.
-    // medianOf() returns null for empty groups, so no separate empty-array guard is needed.
-    const median = medianOf(prices);
-    if (median == null) continue;
+    // median() returns null for empty groups, so no separate empty-array guard is needed.
+    const medianValue = median(prices);
+    if (medianValue == null) continue;
 
     // A live FX rate is authoritative for fiat pegs regardless of peer count.
     // Peer medians remain a fallback only when an FX rate is unavailable.
@@ -128,7 +128,7 @@ export function derivePegRates(
       continue;
     }
 
-    rates[peg] = median;
+    rates[peg] = medianValue;
     sources[peg] = "median";
     counts[peg] = prices.length;
   }

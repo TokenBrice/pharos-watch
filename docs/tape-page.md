@@ -57,7 +57,7 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 
 ## URL Filter Contract
 
-Filter state is read from URL search params via `useUrlFilters`, parsed in `readTapeFilterState` (`src/components/tape/tape-filters.tsx`):
+Filter state is read from URL search params via `useUrlFilters` and decoded in `TIMELINE_URL_SCHEMA` (`src/app/timeline/client.tsx`) through the shared URL-state codec. The schema preserves the legacy `alltime` and `all` window tokens:
 
 | Param      | Values                                                                                | Default  | Notes                                                                                  |
 | ---------- | ------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------- |

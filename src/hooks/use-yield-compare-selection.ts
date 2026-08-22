@@ -3,24 +3,11 @@
 import { useCallback, useMemo } from "react";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent } from "@/lib/analytics";
+import { parseIdList } from "@/lib/compare-config";
 
 export const MAX_YIELD_COMPARE_IDS = 4;
 
 const COMPARE_PARAM = "compare";
-
-function parseCompareIds(raw: string | null): string[] {
-  if (!raw) return [];
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const part of raw.split(",")) {
-    const trimmed = part.trim();
-    if (!trimmed || seen.has(trimmed)) continue;
-    seen.add(trimmed);
-    out.push(trimmed);
-    if (out.length >= MAX_YIELD_COMPARE_IDS) break;
-  }
-  return out;
-}
 
 export interface UseYieldCompareSelectionResult {
   ids: string[];
@@ -38,7 +25,10 @@ export function useYieldCompareSelection(): UseYieldCompareSelectionResult {
   const { searchParams, replaceParams } = useUrlFilters();
 
   const rawCompare = searchParams.get(COMPARE_PARAM);
-  const ids = useMemo(() => parseCompareIds(rawCompare), [rawCompare]);
+  const ids = useMemo(
+    () => parseIdList(rawCompare, { max: MAX_YIELD_COMPARE_IDS }),
+    [rawCompare],
+  );
   const idSet = useMemo(() => new Set(ids), [ids]);
 
   const has = useCallback((id: string) => idSet.has(id), [idSet]);
