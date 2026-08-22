@@ -12,8 +12,8 @@ import {
 } from "./d1-capacity-store";
 
 export const D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY = "ops:d1-table-growth:v1";
-export const D1_TABLE_GROWTH_RUN_MARKER_CACHE_KEY = "ops:d1-table-growth:last-run:v1";
-export const D1_TABLE_GROWTH_SNAPSHOT_INTERVAL_SEC = 24 * 60 * 60;
+const D1_TABLE_GROWTH_RUN_MARKER_CACHE_KEY = "ops:d1-table-growth:last-run:v1";
+const D1_TABLE_GROWTH_SNAPSHOT_INTERVAL_SEC = 24 * 60 * 60;
 const D1_TABLE_GROWTH_SNAPSHOT_VERSION = 1;
 const D1_TABLE_GROWTH_TOP_N = 10;
 
@@ -347,6 +347,9 @@ async function readD1TableGrowthMeasurement(
     ? `, MIN(${quotedTimestampColumn}) AS oldest_timestamp, MAX(${quotedTimestampColumn}) AS newest_timestamp`
     : "";
   return db
+    // SAFETY: quotedTableName comes from the sqlite_master allowlist discovery and
+    // quoteD1Identifier's strict [A-Za-z_][A-Za-z0-9_]* validation; the timestamp
+    // column is a literal from D1_TABLE_GROWTH_TIMESTAMP_COLUMNS, same validation.
     .prepare(`SELECT COUNT(*) AS row_count${timestampProjection} FROM ${quotedTableName}`)
     .first<D1TableGrowthMeasurement>();
 }
@@ -367,7 +370,7 @@ async function claimD1TableGrowthRun(db: D1Database, utcDay: number): Promise<bo
   return result.meta.changes > 0;
 }
 
-export async function loadCachedD1TableGrowthSnapshot(
+async function loadCachedD1TableGrowthSnapshot(
   db: D1Database,
 ): Promise<D1TableGrowthSnapshot | null> {
   const cached = await getCache(db, D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY);

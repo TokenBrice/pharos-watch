@@ -23,4 +23,3 @@ export {
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG = chainHealth.changelog;
 
 /** Resolve Chain Health methodology version active at a given Unix timestamp (seconds). */
-export const getChainHealthMethodologyVersionAt = chainHealth.getVersionAt;

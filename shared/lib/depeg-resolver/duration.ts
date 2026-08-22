@@ -12,7 +12,7 @@ import type { DdrDuration, DdrHorizon, DdrHorizonCell } from "../../types/depeg-
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { groupDurationLabelIncidents, type DdrIncident } from "./incident-groups";
 import { candidateStrata, depthBucket, stratumLabel, stratumMatches, type DdrStratumCandidate, type DdrStratumKey } from "./strata";
-import { percentileLinear } from "@shared/lib/stats";
+import { percentileLinear } from "../stats";
 
 export const HORIZON_SECONDS: Record<DdrHorizon, number> = {
   "6h": 6 * 3600,

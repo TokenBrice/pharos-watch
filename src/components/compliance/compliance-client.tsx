@@ -91,7 +91,7 @@ const COMPLIANCE_PEG_VALUES: readonly (PegCurrency | "all")[] = [
   ...(Object.keys(PEG_METADATA) as PegCurrency[]),
 ];
 
-export const COMPLIANCE_URL_SCHEMA: UrlStateSchema<ComplianceUrlState> = {
+const COMPLIANCE_URL_SCHEMA: UrlStateSchema<ComplianceUrlState> = {
   regime: {
     kind: "enum",
     defaultValue: "all",

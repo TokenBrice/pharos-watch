@@ -1,8 +1,8 @@
-import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
+import type { V9AssetFactsV3 } from "../../types/safety-score-v9-facts";
 import type {
   V9StructuralSignal,
   V9ValidatedPolicyEnvelope,
-} from "@shared/types/safety-score-v9";
+} from "../../types/safety-score-v9";
 import { clampShare } from "../math";
 import {
   projectV9ExitEvaluationRoute,

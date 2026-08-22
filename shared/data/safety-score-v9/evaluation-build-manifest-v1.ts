@@ -186,7 +186,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/report-cards-fixed-input-identity.ts",
-      "sha256": "bf16dae038a8a3693ab9a8da6b33ab33dee264b9abc3684a82ac7f5c83ffc498"
+      "sha256": "a664bf902f6f2d85a039413e236a28e8ae40fa9079e200c751d2c666f4fb1c3f"
     },
     {
       "path": "shared/lib/safety-score-v9/access-posture.ts",
@@ -537,7 +537,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "b24fe6b74d8da5e4dac546a623a9d7eac98993356c8c2dd704ef853ec1f9ab05"
+  "digest": "f75f8eefd9cf8b40ecc6287d94a015bc77c621341d047ee0e6fe1d2e573c64bf"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

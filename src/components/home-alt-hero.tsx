@@ -29,19 +29,19 @@ export function HomeAltHero({
       : null,
     [stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt],
   );
-  const [selection, setSelection] = useState(() => selectHomepageHeroSnapshot({
-    liveSnapshot: null,
-    fallbackSnapshot: snapshot,
-    nowMs: fallbackSelectedAtMs,
-  }));
-
+  // Hydration-stable first render: the build-time clock keeps server and
+  // client output identical, then a deferred tick re-evaluates fallback
+  // expiry with the viewer's clock (setState inside a timer callback, never
+  // synchronously in the effect body).
+  const [nowMs, setNowMs] = useState(fallbackSelectedAtMs);
   useEffect(() => {
-    setSelection(selectHomepageHeroSnapshot({
-      liveSnapshot,
-      fallbackSnapshot: snapshot,
-      nowMs: Date.now(),
-    }));
-  }, [liveSnapshot, snapshot]);
+    const timer = setTimeout(() => setNowMs(Date.now()), 0);
+    return () => clearTimeout(timer);
+  }, []);
+  const selection = useMemo(
+    () => selectHomepageHeroSnapshot({ liveSnapshot, fallbackSnapshot: snapshot, nowMs }),
+    [liveSnapshot, snapshot, nowMs],
+  );
 
   const visibleSnapshot = selection.snapshot;
   const latest = visibleSnapshot?.cohort ?? null;

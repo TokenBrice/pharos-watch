@@ -3,7 +3,6 @@ import { V9_GRADE_THRESHOLDS } from "../types/safety-score-v9-grade";
 import type { ReportCardGradeRange } from "../types/report-card-grade";
 
 export { V9_GRADE_THRESHOLDS, scoreToGrade } from "../types/safety-score-v9-grade";
-export { GRADE_RADAR_COLORS, REPORT_CARD_GRADE_COLORS } from "./classification";
 export type { ReportCardGradeRange } from "../types/report-card-grade";
 
 /**

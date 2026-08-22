@@ -1,7 +1,7 @@
 import type { PegAssetBase, StablecoinMeta } from "../types";
 import { normalizeLegacyPegType } from "./peg-price-bounds";
 import { PEG_TAXONOMY } from "./peg-taxonomy";
-import { median } from "@shared/lib/stats";
+import { median } from "./stats";
 import { getCirculatingRaw } from "./supply";
 
 /**

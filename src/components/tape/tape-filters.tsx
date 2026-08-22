@@ -6,7 +6,7 @@ import { FilterSearchInput } from "@/components/filter-search-input";
 import { FilterCombobox } from "@/components/filter-combobox";
 import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
-import { isUrlFilterClearValue } from "@/hooks/use-url-filters";
+
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
 import {
   SEVERITY_LABEL_INCLUSIVE,
@@ -59,14 +59,6 @@ export interface TapeFilterState {
 
 export { DEFAULT_SEVERITY as TAPE_DEFAULT_SEVERITY };
 
-function parseTapeWindow(value: string): TapeWindowKey {
-  if (value === "alltime") return "all";
-  if (value === "24h" || value === "7d" || value === "30d" || value === "90d" || value === "all") {
-    return value;
-  }
-  return "7d";
-}
-
 export function tapeWindowSince(window: TapeWindowKey, nowMs: number = Date.now()): number | undefined {
   switch (window) {
     case "24h": return nowMs - 24 * 3600 * 1000;
@@ -75,35 +67,6 @@ export function tapeWindowSince(window: TapeWindowKey, nowMs: number = Date.now(
     case "90d": return nowMs - 90 * 86400 * 1000;
     case "all": return undefined;
   }
-}
-
-function parseTapeTypes(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
-function parseSeverity(raw: string): TapeEventSeverity {
-  if (!raw || isUrlFilterClearValue(raw)) return DEFAULT_SEVERITY;
-  if ((TAPE_FILTER_SEVERITY_VALUES as readonly string[]).includes(raw)) {
-    return raw as TapeEventSeverity;
-  }
-  return DEFAULT_SEVERITY;
-}
-
-export function readTapeFilterState(getParam: (key: string, defaultValue?: string) => string): TapeFilterState {
-  const typeRaw = getParam("type", "");
-  return {
-    typeRaw,
-    type: parseTapeTypes(typeRaw),
-    severity: parseSeverity(getParam("severity", "")),
-    coin: getParam("coin", ""),
-    peg: getParam("peg", "all"),
-    chain: getParam("chain", "all"),
-    window: parseTapeWindow(getParam("window", "7d")),
-    q: getParam("q", ""),
-  };
 }
 
 interface TapeFiltersProps {

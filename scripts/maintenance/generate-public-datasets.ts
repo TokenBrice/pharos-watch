@@ -43,7 +43,7 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/safety-score";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import {
   PublicSnapshotEnvelopeSchema,
   type PublicSnapshotEnvelope,

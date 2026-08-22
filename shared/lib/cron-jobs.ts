@@ -819,9 +819,6 @@ export const CRON_INTERVALS = Object.freeze(
   Object.fromEntries(CRON_JOB_DEFINITIONS.map((item) => [item.job, item.intervalSec])) as Record<string, number>,
 );
 
-/** Set of all valid cron job names, derived from definitions. */
-const VALID_CRON_JOB_IDS: ReadonlySet<string> = new Set(CRON_JOB_DEFINITIONS.map((def) => def.job));
-
 const CRON_JOB_META_BY_ID = new Map(CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]));
 
 export function getCronJobMeta(job: string): CronJobMeta | null {

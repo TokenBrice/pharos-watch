@@ -6,7 +6,7 @@ import {
 } from "../types/market";
 import type { RedemptionBackstopMap } from "../types/redemption";
 import { REPORT_CARDS_REGISTRY_FINGERPRINT } from "../data/stablecoins/report-card-registry-fingerprint.generated";
-import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
+import { compareText } from "../types/safety-score-v9-fact-primitives";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
 

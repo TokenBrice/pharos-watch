@@ -38,7 +38,7 @@ import { evaluatePromotionDecision } from "./pending-depeg-confirmation-decision
 import { collectConfirmationEvidence } from "./pending-depeg-confirmation-evidence";
 
 /** Bound open-event hydration so pending confirmation cannot materialize an unbounded set. */
-export const MAX_OPEN_DEPEG_EVENTS = 200;
+const MAX_OPEN_DEPEG_EVENTS = 200;
 
 /**
  * Process pending depeg records that require secondary confirmation.

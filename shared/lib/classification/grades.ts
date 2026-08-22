@@ -1,4 +1,4 @@
-import type { ReportCardGrade, ReportCardGradeRange } from "@shared/types/report-card-grade";
+import type { ReportCardGrade, ReportCardGradeRange } from "../../types/report-card-grade";
 
 export interface ReportCardGradeRangeMetadata {
   barClassName: string;

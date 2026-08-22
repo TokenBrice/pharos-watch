@@ -217,8 +217,7 @@ export function getCachedRequest<T>(
     return cached;
   }
 
-  let promise: Promise<T>;
-  promise = factory()
+  const promise: Promise<T> = factory()
     .then((value) => {
       reconcileRequestCache(cache, state);
       if (cache.get(key) !== promise) return value;

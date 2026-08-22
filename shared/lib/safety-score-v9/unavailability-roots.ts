@@ -1,4 +1,4 @@
-import type { V9AssetFactsBase } from "@shared/types/safety-score-v9-facts";
+import type { V9AssetFactsBase } from "../../types/safety-score-v9-facts";
 import type { V9ResolvedUpstreamExposure } from "./backing";
 import { canonicalDomains, uniqueSorted } from "./primitives";
 import { canonicalizeV9PublicReasons } from "./reasons";

@@ -3,7 +3,7 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 import { logWorkerEvent } from "./structured-log";
 
-export const TWITTER_DIGEST_MAX_ATTEMPTS = 3;
+const TWITTER_DIGEST_MAX_ATTEMPTS = 3;
 const TWITTER_DIGEST_SENDING_TTL_SEC = 120;
 
 export class TwitterDigestLedgerPersistenceError extends Error {

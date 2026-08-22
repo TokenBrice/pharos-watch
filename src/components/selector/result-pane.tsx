@@ -329,7 +329,7 @@ export function ResultPane({
   );
 }
 
-export function SessionRecoveredBanner() {
+function SessionRecoveredBanner() {
   return (
     <div
       role="status"

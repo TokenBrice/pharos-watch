@@ -1,5 +1,5 @@
 import { bucketTimestampToUtcDay, type TimestampedRatePoint } from "./rate-series";
-import { median } from "@shared/lib/stats";
+import { median } from "./stats";
 
 export type CommodityPeg = "GOLD" | "SILVER";
 

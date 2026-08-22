@@ -53,7 +53,7 @@ const DEFAULT_RESILIENCE_FACTORS: Record<`${BackingType}:${GovernanceType}`, Res
   },
 };
 
-export const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
+const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
   "very-low": 100,
   low: 75,
   medium: 50,

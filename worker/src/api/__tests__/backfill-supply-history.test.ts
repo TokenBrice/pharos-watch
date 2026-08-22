@@ -815,8 +815,6 @@ describe("handleBackfillSupplyHistory", () => {
 
   it("skips autoUSD days without a CoinGecko ID or historical price", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
-    const day1 = Math.floor(Date.UTC(2026, 5, 9) / 1000);
-    const day2 = Math.floor(Date.UTC(2026, 5, 10) / 1000);
     const blockNumber = 22_500_000;
     const totalSupplyRaw = 6_700_000n * 10n ** 18n;
 

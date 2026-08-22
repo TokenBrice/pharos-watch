@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "../chains";
 
 const FUNDING_CHAIN_VALUES = [
   "ethereum",
@@ -13,12 +13,12 @@ const FUNDING_CHAIN_VALUES = [
 const UnixSecondsSchema = z.number().finite().int().min(946_684_800).max(4_102_444_800);
 const NonNegativeFiniteSchema = z.number().finite().nonnegative();
 
-export const FundingChainSchema = z.enum(FUNDING_CHAIN_VALUES).refine(
+const FundingChainSchema = z.enum(FUNDING_CHAIN_VALUES).refine(
   (chain) => Object.prototype.hasOwnProperty.call(CHAIN_META, chain),
   "Funding chain is not registered in shared/lib/chains",
 );
 
-export const CostLineItemSchema = z.object({
+const CostLineItemSchema = z.object({
   label: z.string().min(1),
   category: z.enum(["team", "infra"]),
   usd_per_month: NonNegativeFiniteSchema,

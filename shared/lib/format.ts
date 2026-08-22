@@ -130,6 +130,16 @@ export function formatPrice(price: number | null | undefined, symbol = "$", deci
   return `${symbol}${price.toFixed(decimals)}`;
 }
 
+/**
+ * Format a USD price in the peg's native unit (e.g. gold ounces for XAUT).
+ *
+ * Null/unusable `pegRef` contract: fall back to the observed USD price with an
+ * explicit "$" symbol — real data, clearly USD-labeled, never a fabricated
+ * native-unit figure. Reference-derived surfaces (deviation, depeg signals,
+ * peg scores) must fail closed at their own call sites instead; callers whose
+ * cell IS the native conversion render "—" themselves (see
+ * stablecoin-table-row-model.ts priceCell).
+ */
 export function formatNativePrice(
   usdPrice: number | null | undefined,
   pegCurrency: string,

@@ -17,6 +17,10 @@ import {
 } from "@/lib/stablecoin-static-data";
 
 const HOMEPAGE_OG_IMAGE = `${SITE_URL}/og-card.png?v=market-pulse-2026-06-28`;
+// Build-time reference clock for the hero's static-fallback age gate. The
+// statically exported page renders once at build; the client re-evaluates
+// expiry with its own clock after hydration (see HomeAltHero).
+const HERO_FALLBACK_SELECTED_AT_MS = Date.now();
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Stablecoin Analytics Dashboard: Track ${TRACKED_STABLECOIN_COUNT} Coins | Pharos`,
@@ -58,7 +62,7 @@ export default function HomePage() {
         }}
       />
       <HomeBlogBanner />
-      <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={Date.now()} />
+      <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={HERO_FALLBACK_SELECTED_AT_MS} />
       <HomeAltClient />
       <HomeMediaStrip />
     </div>
