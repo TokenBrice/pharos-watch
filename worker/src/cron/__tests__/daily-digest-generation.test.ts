@@ -963,6 +963,63 @@ describe("generateDailyDigest", () => {
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
+  it("blocks the edition and both channels when the model leads with a suppressed candidate", async () => {
+    // Edition #179's regression test at the outermost seam: a suppressed
+    // liquidity signal reached X and Telegram because suppression was advisory.
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    const yesterdayTs = todayTs - 86_400;
+    const suppressedLeadText = JSON.stringify({
+      title: "Pool Drains, Score Shrugs",
+      extended: VALID_DAILY_EXTENDED,
+      text: "USDC's measured DEX depth thinned while the composite score barely moved.",
+      meta: {
+        leadSignalId: "liquidity:usdc",
+        lead: "liquidity",
+        tone: "dry",
+        coins: ["USDC"],
+        usedCandidateIds: ["liquidity:usdc"],
+      },
+    });
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(mockAnthropicStreamResponse(suppressedLeadText))
+      .mockResolvedValueOnce(mockAnthropicStreamResponse(suppressedLeadText));
+
+    const db = mockD1([
+      {
+        match: "FROM dex_liquidity_history",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            liquidity_score: 60,
+            total_tvl_usd: 80_000,
+            snapshot_date: yesterdayTs,
+            coverage_class: "primary",
+            coverage_confidence: 0.9,
+            methodology_version: "6.1",
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            liquidity_score: 70,
+            total_tvl_usd: 90_000,
+            snapshot_date: yesterdayTs - 86_400,
+            coverage_class: "primary",
+            coverage_confidence: 0.9,
+            methodology_version: "6.1",
+          },
+        ],
+      },
+      ...makeBaseTables(),
+    ]);
+    const result = await generateDailyDigest(db, "anthropic-key");
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    expect(JSON.parse(String(insertBinds?.[5]))).toMatchObject({ qualityGate: "blocked" });
+    expect(result.metadata).toContain("suppressed-lead");
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
   it("repairs unbound daily copy during the standard corrective retry", async () => {
     vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce({
       kind: "error",
