@@ -96,6 +96,53 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
+  it("projects the accepted publication before compiling the next candidate", async () => {
+    const order: string[] = [];
+    const accepted = makeWorkerSafetyScoreV9Publication({
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      publicationGenerationId: "report-cards:v9:accepted",
+      publishedAtSec: fixedInput.clockSec - 30,
+    });
+    mocks.loadPublication.mockImplementation(async () => {
+      order.push("accepted-loaded");
+      return accepted;
+    });
+    mocks.build.mockImplementation(() => {
+      order.push("candidate-compiled");
+      return {
+        candidate: makeWorkerSafetyScoreV9Publication({
+          baseInputGenerationId: fixedInput.baseInputGenerationId,
+          publishedAtSec: fixedInput.clockSec,
+        }),
+        compilerFactSchemaDigest: "1".repeat(64),
+        producerCapabilityDigest: "2".repeat(64),
+        quarantines: [],
+        quarantineAffectedAssetIds: [],
+      };
+    });
+
+    await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+    });
+
+    expect(order).toEqual(["accepted-loaded", "candidate-compiled"]);
+    expect(mocks.assess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acceptedPublication: expect.objectContaining({
+          publicationGenerationId: accepted.publicationGenerationId,
+          policyId: accepted.policy.id,
+          cards: expect.arrayContaining([
+            expect.objectContaining({
+              id: accepted.cards[0]!.id,
+              producerFailedBindings: expect.any(Array),
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
+
   it("does not persist an alert source envelope when the assessment holds", async () => {
     mocks.assess.mockReturnValue({
       decision: "hold",

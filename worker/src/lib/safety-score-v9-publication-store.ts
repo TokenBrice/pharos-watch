@@ -254,6 +254,36 @@ export async function loadSafetyScoreV9PublicationIdentityEnvelope(
   }
 }
 
+async function loadStoredSafetyScoreV9PublicationReference(
+  db: D1Database,
+): Promise<{
+  publicationGenerationId: string | null;
+  publishedAtSec: number;
+} | null> {
+  const row = await db
+    .prepare(
+      `SELECT
+         updated_at AS published_at_sec,
+         COALESCE(
+           json_extract(value, '$.identity.publicationGenerationId'),
+           json_extract(value, '$.publicationGenerationId')
+         ) AS publication_generation_id
+       FROM cache
+       WHERE key = ?`,
+    )
+    .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication)
+    .first<{
+      publication_generation_id: string | null;
+      published_at_sec: number;
+    }>();
+  return row === null
+    ? null
+    : {
+        publicationGenerationId: row.publication_generation_id,
+        publishedAtSec: row.published_at_sec,
+      };
+}
+
 export interface PersistSafetyScoreV9PublicationInput {
   publication?: SafetyScoreV9CurrentResponse;
   publicationHealth: V9PublicationHealth;
@@ -425,29 +455,20 @@ export async function persistSafetyScoreV9Publication(
   if (health.status === "current") {
     // Compare the raw row clock so a newer valid publication can replace an
     // older retained payload that the current reader can no longer parse.
-    const existingPublicationRow = await getCache(
+    const existingPublicationRow = await loadStoredSafetyScoreV9PublicationReference(
       db,
-      SAFETY_SCORE_V9_CACHE_KEYS.publication,
-      input.signal,
     );
     if (
       existingPublicationRow !== null &&
-      (
-        existingPublicationRow.updatedAt > input.publicationClockSec ||
-        (
-          existingPublicationRow.updatedAt === input.publicationClockSec &&
-          existingPublicationRow.value !== publicationValue
-        )
-      )
+      existingPublicationRow.publishedAtSec > input.publicationClockSec
     ) {
       throw new SafetyScoreV9PublicationConflictError(
         "Stale or conflicting Safety Score v9 publication update",
       );
     }
   } else {
-    const existingPublication = await loadSafetyScoreV9Publication(
+    const existingPublication = await loadStoredSafetyScoreV9PublicationReference(
       db,
-      input.signal,
     );
     const healthMatchesPublication = existingPublication === null
       ? health.acceptedPublicationGenerationId === null &&

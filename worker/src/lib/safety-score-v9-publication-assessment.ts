@@ -77,8 +77,85 @@ function producerFailedBindings(card: SafetyScoreV9Card) {
   );
 }
 
+type ProducerFailedBinding = Pick<
+  ReturnType<typeof producerFailedBindings>[number],
+  "source" | "code" | "path"
+>;
+
+export interface SafetyScoreV9AcceptedCardBaseline {
+  id: string;
+  grade: V9Grade;
+  score: number | null;
+  producerFailedBindings: ProducerFailedBinding[];
+  primaryRouteKey: string | null;
+  primaryRouteCapacityUsd: number | null;
+  pillarScores: {
+    backing: number;
+    exit: number;
+    control: number;
+  } | null;
+}
+
+/**
+ * The publication gate only needs identity, deterioration, and delta fields
+ * from the previously accepted publication. Keeping this compact projection
+ * lets the full stored response be collected before the next candidate is
+ * compiled inside Cloudflare's 128 MiB isolate.
+ */
+export interface SafetyScoreV9AcceptedPublicationBaseline {
+  publicationGenerationId: string;
+  publishedAtSec: number;
+  policyVersion: string;
+  policyId: string;
+  policyDigest: string;
+  evaluationBuildDigest: string;
+  cards: SafetyScoreV9AcceptedCardBaseline[];
+}
+
+export function buildSafetyScoreV9AcceptedPublicationBaseline(
+  publication: SafetyScoreV9CurrentResponse,
+): SafetyScoreV9AcceptedPublicationBaseline {
+  return {
+    publicationGenerationId: publication.publicationGenerationId,
+    publishedAtSec: publication.publishedAtSec,
+    policyVersion: publication.policyVersion,
+    policyId: publication.policy.id,
+    policyDigest: publication.policy.semanticDigest,
+    evaluationBuildDigest: publication.evaluationBuildDigest,
+    cards: publication.cards.map((card) => {
+      const breakdowns =
+        "breakdowns" in card && card.breakdowns !== null
+          ? card.breakdowns
+          : null;
+      return {
+        id: card.id,
+        grade: card.grade,
+        score: card.score,
+        producerFailedBindings: producerFailedBindings(card).map(
+          (item) => ({
+            source: item.source,
+            code: item.code,
+            path: item.path,
+          }),
+        ),
+        primaryRouteKey:
+          breakdowns?.exit.primaryRoute?.key ?? null,
+        primaryRouteCapacityUsd:
+          breakdowns?.exit.primaryRoute?.capacity?.executableUsd ?? null,
+        pillarScores: breakdowns === null
+          ? null
+          : {
+              backing: breakdowns.backing.publishedScore,
+              exit: breakdowns.exit.publishedScore,
+              control: breakdowns.control.publishedScore,
+            },
+      };
+    }),
+  };
+}
+
 function bindingKey(
-  item: ReturnType<typeof producerFailedBindings>[number],
+  item: ProducerFailedBinding,
   effect: Extract<
     V9PublicationHoldReason,
     { code: "producer-failed-downgrade" | "producer-failed-nr" }
@@ -94,7 +171,7 @@ function bindingKey(
 
 function cardDeteriorated(
   candidate: SafetyScoreV9Card,
-  accepted: SafetyScoreV9Card,
+  accepted: SafetyScoreV9AcceptedCardBaseline,
 ): boolean {
   if (accepted.grade !== "NR" && candidate.grade === "NR") return true;
   if (
@@ -109,12 +186,12 @@ function cardDeteriorated(
 
 function scoringIdentityMatches(
   candidate: SafetyScoreV9CurrentResponse,
-  accepted: SafetyScoreV9CurrentResponse,
+  accepted: SafetyScoreV9AcceptedPublicationBaseline,
 ): boolean {
   return (
     candidate.policyVersion === accepted.policyVersion &&
-    candidate.policy.id === accepted.policy.id &&
-    candidate.policy.semanticDigest === accepted.policy.semanticDigest &&
+    candidate.policy.id === accepted.policyId &&
+    candidate.policy.semanticDigest === accepted.policyDigest &&
     candidate.evaluationBuildDigest === accepted.evaluationBuildDigest
   );
 }
@@ -158,7 +235,7 @@ function affectedAssetsRequireGlobalHold(
 export function assessV9Publication(input: {
   inputHealth: V9PublicationInputHealth;
   candidate: SafetyScoreV9CurrentResponse;
-  acceptedPublication: SafetyScoreV9CurrentResponse | null;
+  acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
   coverageFloors: readonly V9PublicationCoverageFloor[];
   quarantinedAssetIds?: readonly string[];
   quarantineAffectedAssetIds?: readonly string[];
@@ -239,7 +316,7 @@ export function assessV9Publication(input: {
           ? "not-rated"
           : "score-or-grade-downgrade";
       const acceptedBindings = new Set(
-        producerFailedBindings(accepted).map((binding) =>
+        accepted.producerFailedBindings.map((binding) =>
           bindingKey(binding, acceptedEffect),
         ),
       );

@@ -3,6 +3,7 @@ import type {
   V9PublicationHealth,
   V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import {
   normalizeSafetyScoreV9CompilerInput,
   type SafetyScoreV9CompilerInput,
@@ -12,6 +13,8 @@ import {
 } from "./safety-score-v9-candidate";
 import {
   assessV9Publication,
+  buildSafetyScoreV9AcceptedPublicationBaseline,
+  type SafetyScoreV9AcceptedPublicationBaseline,
   type V9PublicationCoverageFloor,
 } from "./safety-score-v9-publication-assessment";
 import {
@@ -165,9 +168,7 @@ function combinedPublicationSignal(signal?: AbortSignal): AbortSignal {
 function heldPublicationHealth(args: {
   attemptedAtSec: number;
   reasons: V9PublicationHoldReason[];
-  acceptedPublication: Awaited<
-    ReturnType<typeof loadSafetyScoreV9Publication>
-  >;
+  acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
   previousHealth: V9PublicationHealth | null;
 }): V9PublicationHealth {
   return {
@@ -187,6 +188,25 @@ function heldPublicationHealth(args: {
         ? args.previousHealth.heldSinceSec
         : args.attemptedAtSec,
     reasons: args.reasons,
+  };
+}
+
+async function loadAcceptedPublicationState(
+  db: D1Database,
+  signal: AbortSignal,
+): Promise<{
+  acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
+  previousHealth: V9PublicationHealth | null;
+}> {
+  const [publication, previousHealth] = await Promise.all([
+    loadSafetyScoreV9Publication(db, signal),
+    loadSafetyScoreV9PublicationHealth(db, signal),
+  ]);
+  return {
+    acceptedPublication: publication === null
+      ? null
+      : buildSafetyScoreV9AcceptedPublicationBaseline(publication),
+    previousHealth,
   };
 }
 
@@ -247,10 +267,10 @@ async function persistFailedPublicationAttempt(args: {
 }
 
 function logPublicationGenerationDeltas(
-  candidate: Awaited<ReturnType<typeof loadSafetyScoreV9Publication>>,
-  accepted: Awaited<ReturnType<typeof loadSafetyScoreV9Publication>>,
+  candidate: SafetyScoreV9CurrentResponse,
+  accepted: SafetyScoreV9AcceptedPublicationBaseline | null,
 ): void {
-  if (candidate === null || accepted === null) return;
+  if (accepted === null) return;
   const acceptedById = new Map(accepted.cards.map((card) => [card.id, card]));
   const primaryRouteChurn: Array<Record<string, unknown>> = [];
   const capacityChanges: Array<Record<string, unknown>> = [];
@@ -260,18 +280,16 @@ function logPublicationGenerationDeltas(
     if (
       prior === undefined ||
       !("breakdowns" in card) ||
-      !("breakdowns" in prior) ||
       card.breakdowns === null ||
-      prior.breakdowns === null
+      prior.pillarScores === null
     ) {
       continue;
     }
     const candidatePrimary = card.breakdowns.exit.primaryRoute?.key ?? null;
-    const acceptedPrimary = prior.breakdowns.exit.primaryRoute?.key ?? null;
+    const acceptedPrimary = prior.primaryRouteKey;
     const candidateCapacity =
       card.breakdowns.exit.primaryRoute?.capacity?.executableUsd ?? null;
-    const acceptedCapacity =
-      prior.breakdowns.exit.primaryRoute?.capacity?.executableUsd ?? null;
+    const acceptedCapacity = prior.primaryRouteCapacityUsd;
     if (
       candidatePrimary !== acceptedPrimary &&
       primaryRouteChurn.length < 20
@@ -282,7 +300,7 @@ function logPublicationGenerationDeltas(
         candidatePrimary,
         exitScoreDelta:
           card.breakdowns.exit.publishedScore -
-          prior.breakdowns.exit.publishedScore,
+          prior.pillarScores.exit,
       });
     }
     if (
@@ -302,7 +320,7 @@ function logPublicationGenerationDeltas(
     for (const pillar of ["backing", "exit", "control"] as const) {
       const delta =
         card.breakdowns[pillar].publishedScore -
-        prior.breakdowns[pillar].publishedScore;
+        prior.pillarScores[pillar];
       if (Math.abs(delta) >= 1 && pillarChanges.length < 20) {
         pillarChanges.push({ assetId: card.id, pillar, delta });
       }
@@ -382,6 +400,15 @@ export async function runSafetyScoreV9Publication(
       fixedInput = preparedFixedInput;
     }
 
+    stage = "publication-gate";
+    const {
+      acceptedPublication,
+      previousHealth,
+    } = await loadAcceptedPublicationState(
+      input.db,
+      publicationSignal,
+    );
+
     stage = "compile";
     const pipeline = buildSafetyScoreV9PublicationFromNormalizedInput({
       fixedInput,
@@ -396,14 +423,6 @@ export async function runSafetyScoreV9Publication(
     );
 
     stage = "publication-gate";
-    let acceptedPublication: Awaited<
-      ReturnType<typeof loadSafetyScoreV9Publication>
-    > = null;
-    let previousHealth: V9PublicationHealth | null = null;
-    [acceptedPublication, previousHealth] = await Promise.all([
-      loadSafetyScoreV9Publication(input.db, publicationSignal),
-      loadSafetyScoreV9PublicationHealth(input.db, publicationSignal),
-    ]);
     let assessment;
     try {
       logPublicationGenerationDeltas(publication, acceptedPublication);
