@@ -1,5 +1,5 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import type { BlacklistStatus } from "@shared/lib/report-cards";
+import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import { COVERAGE_FEATURES } from "@/lib/coverage-features";
 import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
 import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";

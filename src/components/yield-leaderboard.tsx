@@ -30,7 +30,7 @@ import {
   getYieldSourceDepthDisplay,
   isNativeYieldSource,
 } from "@/lib/yield-source-risk";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import {
   YIELD_OPPORTUNITY_SAFETY_DESCRIPTION,
   isOpportunityDerivedSafety,

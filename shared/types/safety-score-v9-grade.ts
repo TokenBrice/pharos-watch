@@ -1,4 +1,5 @@
 import candidatePolicyAsset from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
+import type { ReportCardGrade } from "./report-card-grade";
 import { V9MethodologyPolicySchema, type V9Grade } from "./safety-score-v9";
 
 // This helper is consumed by the public schemas, so it stays in shared/types;
@@ -11,14 +12,16 @@ export const V9_GRADE_THRESHOLDS: readonly { grade: Exclude<V9Grade, "NR">; min:
   V9_POLICY.semantic.formula.gradeThresholds.map(({ grade, minScore }) => ({ grade, min: minScore })),
 );
 
-export type V9GradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
-
-export function scoreToV9Grade(score: number | null): V9Grade {
+export function scoreToGrade(score: number | null): ReportCardGrade {
   if (score === null) return "NR";
-  return V9_GRADE_THRESHOLDS.find((threshold) => score >= threshold.min)?.grade ?? "F";
+  const clampedScore = !Number.isFinite(score)
+    ? score !== score
+      ? 0
+      : score > 0
+        ? 100
+        : 0
+    : Math.max(0, Math.min(100, score));
+  return V9_GRADE_THRESHOLDS.find((threshold) => clampedScore >= threshold.min)?.grade ?? "F";
 }
 
-export function v9GradeRange(grade: V9Grade): V9GradeRange {
-  if (grade === "NR") return "NR";
-  return grade[0] as Exclude<V9GradeRange, "NR">;
-}
+export type { ReportCardGradeRange } from "./report-card-grade";

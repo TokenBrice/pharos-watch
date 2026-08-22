@@ -10,6 +10,7 @@ export * from "./pegs";
 export * from "./badges";
 export * from "./risk";
 export * from "./control-posture";
+export * from "./grades";
 export * from "./mechanism-archetypes";
 export * from "./resolve-mechanism-archetype";
 export * from "./resolve-implementation-launch-date";

@@ -223,15 +223,6 @@ vi.mock("../../lib/yield-config/yield-config", () => ({
   isAutoLendingCollisionBlockedForStablecoin: () => false,
 }));
 
-vi.mock("@shared/lib/report-cards", () => ({
-  computeOverallGrade: vi.fn(() => ({ score: 80, grade: "B+" })),
-  scoreDecentralization: vi.fn(() => ({ score: 80, grade: "B+" })),
-  scoreDependencyRisk: vi.fn(() => ({ score: 90, grade: "A-" })),
-  scoreLiquidity: vi.fn(() => ({ score: 70, grade: "B" })),
-  scorePegStability: vi.fn(() => ({ score: 85, grade: "A-" })),
-  scoreResilience: vi.fn(() => ({ score: 75, grade: "B" })),
-}));
-
 vi.mock("@shared/lib/peg-score", () => ({
   computePegScore: vi.fn(() => ({
     pegScore: 95,

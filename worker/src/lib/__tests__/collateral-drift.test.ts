@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
+import { computeCollateralQualityFromReserves } from "@shared/lib/report-card-policy";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
 

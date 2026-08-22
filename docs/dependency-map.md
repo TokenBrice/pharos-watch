@@ -72,7 +72,7 @@ Graph construction lives in `src/lib/contagion-layout.ts` and is called through 
 - Sorts remaining coins by market cap descending.
 - Takes the top N coins where N comes from the runtime Limit toggle (50 / 100 / 200 / All; default `DEFAULT_NODE_LIMIT = 200`, and `All` uncaps to the full ranked set), then iteratively prunes coins that become isolated inside the displayed subset and backfills from lower-ranked candidates.
 - Node radius uses square-root scaling between `MIN_RADIUS = 10` and `MAX_RADIUS = 34`.
-- Node ring color comes from the V9 grade band via `v9GradeRange()` and `GRADE_RADAR_COLORS`.
+- Node ring color comes from the canonical grade band via `gradeRange()` and `GRADE_RADAR_COLORS` in `shared/lib/classification`.
 
 ## Dependency Hubs Model And Board
 

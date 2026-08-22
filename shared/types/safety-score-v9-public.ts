@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { scoreToV9Grade } from "./safety-score-v9-grade";
+import { scoreToGrade } from "./safety-score-v9-grade";
 import { V9DependencyEconomicRoleSchema } from "./dependency-types";
 import {
   V9AssetPremiumKindSchema,
@@ -1347,7 +1347,7 @@ function refineCardBase(
   if ((card.score === null) !== (card.grade === "NR")) {
     ctx.addIssue({ code: "custom", path: ["grade"], message: "NR grade and null score must agree" });
   }
-  if (card.score !== null && card.grade !== scoreToV9Grade(card.score)) {
+  if (card.score !== null && card.grade !== scoreToGrade(card.score)) {
     ctx.addIssue({
       code: "custom",
       path: ["grade"],

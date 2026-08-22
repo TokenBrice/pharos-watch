@@ -19,7 +19,7 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { YieldAccessStructure } from "@/components/yield-access-structure";
 import { PysBreakdown } from "@/components/pys-breakdown";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import {
   YIELD_OPPORTUNITY_SAFETY_DESCRIPTION,
   isOpportunityDerivedSafety,

@@ -1,4 +1,4 @@
-import type { BlacklistStatus } from "@shared/lib/report-cards";
+import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 
 export type CoverageFeatureKey =
   | "price"

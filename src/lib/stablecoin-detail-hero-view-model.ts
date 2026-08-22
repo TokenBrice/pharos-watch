@@ -22,7 +22,7 @@ import {
 } from "@/lib/stablecoin-detail-hero-metrics";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { buildHeroPassportItems, type HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import { getVariantDisplay } from "@shared/lib/variant-display";

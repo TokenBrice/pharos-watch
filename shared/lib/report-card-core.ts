@@ -1,10 +1,10 @@
 import type { ReportCardGrade } from "../types";
 import { V9_GRADE_THRESHOLDS } from "../types/safety-score-v9-grade";
-import { bandFromThresholds, clampScore } from "./math";
+import type { ReportCardGradeRange } from "../types/report-card-grade";
 
-export { V9_GRADE_THRESHOLDS, scoreToV9Grade } from "../types/safety-score-v9-grade";
-
-export type ReportCardGradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
+export { V9_GRADE_THRESHOLDS, scoreToGrade } from "../types/safety-score-v9-grade";
+export { GRADE_RADAR_COLORS, REPORT_CARD_GRADE_COLORS } from "./classification";
+export type { ReportCardGradeRange } from "../types/report-card-grade";
 
 /**
  * Presentation uses the grade thresholds projected from the active V9 policy
@@ -35,35 +35,6 @@ export function getReportCardGradeRank(
 ): number | null {
   if (!grade) return fallback;
   return (REPORT_CARD_GRADE_RANK as Record<string, number | undefined>)[grade] ?? fallback;
-}
-
-export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
-  "A+": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  A: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  "A-": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  "B+": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  B: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  "B-": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  "C+": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  C: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  "C-": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  D: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  F: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-  NR: "bg-muted text-muted-foreground border-muted",
-};
-
-export const GRADE_RADAR_COLORS: Record<ReportCardGradeRange, string> = {
-  A: "#10b981",
-  B: "#3b82f6",
-  C: "#f59e0b",
-  D: "#f97316",
-  F: "#ef4444",
-  NR: "#71717a",
-};
-
-export function scoreToGrade(score: number | null): ReportCardGrade {
-  if (score === null) return "NR";
-  return bandFromThresholds(clampScore(score), GRADE_THRESHOLDS, { grade: "F" as const, min: 0 }).grade;
 }
 
 export function gradeRange(grade: ReportCardGrade): ReportCardGradeRange {

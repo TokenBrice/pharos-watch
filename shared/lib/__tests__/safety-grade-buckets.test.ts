@@ -1,22 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import { V9GradeSchema, type V9Grade } from "@shared/types/safety-score-v9";
-import { REPORT_CARD_GRADE_RANK } from "../report-card-core";
+import { REPORT_CARD_GRADE_RANK, scoreToGrade } from "../report-card-core";
 import { getV9GradeRiskBucket, RISKY_GRADES, SAFE_GRADES, type V9GradeRiskBucket } from "../safety-grade-buckets";
 
-const ALL_V9_GRADES: readonly V9Grade[] = [
-  "A+",
-  "A",
-  "A-",
-  "B+",
-  "B",
-  "B-",
-  "C+",
-  "C",
-  "C-",
-  "D",
-  "F",
-  "NR",
-];
+const ALL_V9_GRADES: readonly V9Grade[] = V9GradeSchema.options;
 
 const EXPECTED_BUCKETS: Record<V9Grade, V9GradeRiskBucket> = {
   "A+": "safe",
@@ -40,8 +28,14 @@ describe("safety grade buckets", () => {
   // cases pin the two encodings to each other, and pin the enumeration used to
   // compare them against the grade vocabulary itself — otherwise a new grade
   // could land in one encoding and be missed by the other without failing.
+  it("aliases the report-card schema and uses the clamped grade converter", () => {
+    expect(V9GradeSchema).toBe(ReportCardGradeSchema);
+    expect(scoreToGrade(-10)).toBe("F");
+    expect(scoreToGrade(150)).toBe("A+");
+    expect(scoreToGrade(null)).toBe("NR");
+  });
+
   it("enumerates the whole published grade vocabulary", () => {
-    expect([...ALL_V9_GRADES].sort()).toEqual([...V9GradeSchema.options].sort());
     expect([...ALL_V9_GRADES].sort()).toEqual(Object.keys(REPORT_CARD_GRADE_RANK).sort());
   });
 

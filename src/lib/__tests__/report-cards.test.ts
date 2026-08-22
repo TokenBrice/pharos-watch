@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
+import { computeCollateralQualityFromReserves } from "@shared/lib/report-card-policy";
 
 describe("computeCollateralQualityFromReserves", () => {
   it("returns 0 for empty reserves array", () => {

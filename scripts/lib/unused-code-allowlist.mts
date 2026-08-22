@@ -55,8 +55,6 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/redemption-backstop-configs/shared.ts::cloneRedemptionDocSource":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/report-cards.ts::inferResilienceDefaults":
-    "Unreferenced here: consumers import the same name from '../report-card-policy' instead.",
   "shared/lib/stablecoins/schema.ts::StablecoinReservesSidecarSchema":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetSchema":

@@ -6,7 +6,7 @@ import {
   DEPENDENCY_TYPE_PRESENTATION,
   gradeColor,
 } from "@/components/contagion-graph-model";
-import { GRADE_RADAR_COLORS } from "@shared/lib/report-cards";
+import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 import type { ContagionEdgeRelationship } from "@/lib/contagion-layout";
 
 describe("contagion graph dependency type presentation", () => {

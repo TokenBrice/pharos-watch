@@ -1,4 +1,4 @@
-import type { BlacklistStatus } from "@shared/lib/report-cards";
+import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import type { StablecoinMeta } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";

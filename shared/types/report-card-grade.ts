@@ -23,3 +23,5 @@ const REPORT_CARD_GRADE_VALUES = [...SAFETY_GRADE_VALUES, "NR"] as const;
 
 export type ReportCardGrade = (typeof REPORT_CARD_GRADE_VALUES)[number];
 export const ReportCardGradeSchema = z.enum(REPORT_CARD_GRADE_VALUES);
+
+export type ReportCardGradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
