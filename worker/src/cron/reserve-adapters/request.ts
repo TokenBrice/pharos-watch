@@ -3,6 +3,7 @@ import {
   fetchWithRetry,
 } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { requireHtmlInput, requireJsonInputFromConfig } from "./input-guards";
 import type { AdapterContext } from "./types";
@@ -16,6 +17,20 @@ export const NEUTRAL_ADAPTER_HEADERS = {
   "Accept-Language": "en-US,en;q=0.9",
 };
 const DEFAULT_ADAPTER_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
+export const REQUEST_CACHE_MAX_TOTAL_BYTES = 16 * 1024 * 1024;
+export const REQUEST_CACHE_MAX_ENTRY_BYTES = 4 * 1024 * 1024;
+
+interface RequestCacheEntry {
+  bytes: number;
+  promise: Promise<unknown>;
+}
+
+interface RequestCacheState {
+  entries: Map<string, RequestCacheEntry>;
+  totalBytes: number;
+}
+
+const requestCacheStates = new WeakMap<Map<string, Promise<unknown>>, RequestCacheState>();
 
 /**
  * Some issuer dashboards gate their JSON/HTML endpoints with CORS-style
@@ -69,6 +84,56 @@ function buildJsonParseError(url: string, res: Response, raw: string, error: unk
 
 function getRequestCache(ctx?: AdapterContext): Map<string, Promise<unknown>> | null {
   return ctx?.requestCache ?? null;
+}
+
+function getRequestCacheState(cache: Map<string, Promise<unknown>>): RequestCacheState {
+  const existing = requestCacheStates.get(cache);
+  if (existing) return existing;
+  const state: RequestCacheState = { entries: new Map(), totalBytes: 0 };
+  requestCacheStates.set(cache, state);
+  return state;
+}
+
+function removeTrackedRequest(state: RequestCacheState, key: string): void {
+  const entry = state.entries.get(key);
+  if (!entry) return;
+  state.entries.delete(key);
+  state.totalBytes = Math.max(0, state.totalBytes - entry.bytes);
+}
+
+function reconcileRequestCache(cache: Map<string, Promise<unknown>>, state: RequestCacheState): void {
+  for (const [key, entry] of state.entries) {
+    if (cache.get(key) !== entry.promise) removeTrackedRequest(state, key);
+  }
+}
+
+function estimateDecodedByteSize(value: unknown): number {
+  if (typeof value === "string") {
+    // String length is an acceptable decoded-byte proxy for this cache budget.
+    return value.length;
+  }
+  if (value instanceof Uint8Array) return value.byteLength;
+  if (typeof ArrayBuffer !== "undefined" && value instanceof ArrayBuffer) return value.byteLength;
+  if (value === null || typeof value !== "object") return 0;
+  try {
+    return JSON.stringify(value)?.length ?? 0;
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+function evictRequestCacheLru(
+  cache: Map<string, Promise<unknown>>,
+  state: RequestCacheState,
+): void {
+  while (state.totalBytes > REQUEST_CACHE_MAX_TOTAL_BYTES) {
+    const oldest = state.entries.entries().next().value;
+    if (!oldest) return;
+    const [key, entry] = oldest;
+    state.entries.delete(key);
+    state.totalBytes = Math.max(0, state.totalBytes - entry.bytes);
+    if (cache.get(key) === entry.promise) cache.delete(key);
+  }
 }
 
 function isHeadersInstance(headers: HeadersInit): headers is Headers {
@@ -138,15 +203,48 @@ export function getCachedRequest<T>(
     return factory();
   }
 
+  const state = getRequestCacheState(cache);
+  reconcileRequestCache(cache, state);
   const cached = cache.get(key) as Promise<T> | undefined;
   if (cached) {
+    cache.delete(key);
+    cache.set(key, cached);
+    const entry = state.entries.get(key);
+    if (entry?.promise === cached) {
+      state.entries.delete(key);
+      state.entries.set(key, entry);
+    }
     return cached;
   }
 
-  const promise = factory().catch((error) => {
-    cache.delete(key);
-    throw error;
-  });
+  let promise: Promise<T>;
+  promise = factory()
+    .then((value) => {
+      reconcileRequestCache(cache, state);
+      if (cache.get(key) !== promise) return value;
+
+      const bytes = estimateDecodedByteSize(value);
+      if (bytes > REQUEST_CACHE_MAX_ENTRY_BYTES) {
+        cache.delete(key);
+        removeTrackedRequest(state, key);
+        return value;
+      }
+
+      removeTrackedRequest(state, key);
+      state.entries.set(key, { bytes, promise });
+      state.totalBytes += bytes;
+      cache.delete(key);
+      cache.set(key, promise);
+      evictRequestCacheLru(cache, state);
+      return value;
+    })
+    .catch((error) => {
+      if (cache.get(key) === promise) {
+        cache.delete(key);
+        removeTrackedRequest(state, key);
+      }
+      throw error;
+    });
   cache.set(key, promise);
   return promise;
 }
@@ -358,6 +456,14 @@ async function readBinaryBodyWithinLimit(response: Response, url: string, maxByt
   return bytes;
 }
 
+function requestHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "unknown-host";
+  }
+}
+
 /** Fetches a binary body (e.g. an attestation PDF) through the shared retry
  *  and adapter-IO plumbing, so adapters never call the network directly. */
 export async function fetchBinaryWithRetry(
@@ -390,7 +496,9 @@ export async function fetchBinaryResponseWithRetry(
       { timeoutMs, returnFinalResponse: true },
     );
     if (!response?.ok) {
-      throw new Error(response ? `HTTP ${response.status} for ${url}` : `Fetch failed for ${url}`);
+      await cancelResponseBodyQuietly(response);
+      const host = requestHost(url);
+      throw new Error(response ? `HTTP ${response.status} for ${host}` : `Fetch failed for ${host}`);
     }
     return {
       body: await readBinaryBodyWithinLimit(response, url, maxResponseBytes),

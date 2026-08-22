@@ -1,4 +1,4 @@
-import { ALCHEMY_CHAINS } from "./chain-registry";
+import { ALCHEMY_CHAINS, buildAlchemyRpcUrl, getAlchemyAuthHeaders } from "./chain-registry";
 import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { batchExecute, buildInClause } from "./db";
@@ -90,7 +90,7 @@ export interface ResolveBlockTimestampOptions {
 export function buildAlchemyUrl(chainId: string, apiKey: string): string | null {
   const slug = ALCHEMY_CHAINS[chainId];
   if (!slug) return null;
-  return `https://${slug}.g.alchemy.com/v2/${apiKey}`;
+  return buildAlchemyRpcUrl(slug, apiKey);
 }
 
 // --- Helpers ---
@@ -106,7 +106,10 @@ async function jsonRpcCall<T>(
     alchemyUrl,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(getAlchemyAuthHeaders(alchemyUrl) ?? {}),
+      },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
       signal,
     },
@@ -281,7 +284,10 @@ export async function getAlchemyTransactionContextBatchMany(
     alchemyUrl,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(getAlchemyAuthHeaders(alchemyUrl) ?? {}),
+      },
       body: JSON.stringify(payload),
       signal,
     },
@@ -643,7 +649,10 @@ async function fetchBlockTimestampBatch(
       alchemyUrl,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(getAlchemyAuthHeaders(alchemyUrl) ?? {}),
+        },
         body: JSON.stringify(payload),
         signal,
       },

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
-import { getD1UsageSummary } from "../d1-usage";
+import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import {
+  D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY,
+  getD1UsageSummary,
+  refreshD1TableGrowthSnapshot,
+} from "../d1-usage";
 
 const CONFIG = {
   accountId: "acct-123",
@@ -139,6 +144,7 @@ describe("getD1UsageSummary", () => {
         exhaustionAt: null,
         daysUntilExhaustion: null,
       },
+      tableGrowth: null,
     });
   });
 
@@ -166,6 +172,7 @@ describe("getD1UsageSummary", () => {
       rowsRead24h: 0,
       rowsWritten24h: 0,
       capacity: null,
+      tableGrowth: null,
     });
   });
 
@@ -254,5 +261,128 @@ describe("getD1UsageSummary", () => {
     await expect(getD1UsageSummary(CONFIG, NOW)).rejects.toThrow(
       "Cloudflare D1 database info fetch failed: invalid JSON response",
     );
+  });
+});
+
+describe("refreshD1TableGrowthSnapshot", () => {
+  it("records bounded per-table rows, deltas, timestamps, and top growers", async () => {
+    const previousSnapshot = {
+      version: 1,
+      snapshot: {
+        checkedAt: NOW - 86_400,
+        utcDay: NOW - 86_400,
+        previousCheckedAt: null,
+        tables: [
+          {
+            tableName: "cron_runs",
+            rowCount: 10,
+            previousRowCount: null,
+            rowCountDelta: null,
+            oldestTimestamp: NOW - 20_000,
+            newestTimestamp: NOW - 10_000,
+          },
+          {
+            tableName: "supply_history",
+            rowCount: 100,
+            previousRowCount: null,
+            rowCountDelta: null,
+            oldestTimestamp: NOW - 30_000,
+            newestTimestamp: NOW - 10_000,
+          },
+        ],
+        topGrowers: [],
+      },
+    };
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY],
+        rows: [{
+          key: D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY,
+          value: JSON.stringify(previousSnapshot),
+          updated_at: NOW - 86_400,
+        }],
+      },
+      {
+        match: "FROM sqlite_master",
+        rows: [{ name: "cron_runs" }, { name: "supply_history" }],
+      },
+      {
+        match: 'FROM "cron_runs"',
+        rows: [{ row_count: 15, oldest_timestamp: NOW - 21_000, newest_timestamp: NOW - 1_000 }],
+      },
+      {
+        match: 'FROM "supply_history"',
+        rows: [{ row_count: 120, oldest_timestamp: NOW - 31_000, newest_timestamp: NOW - 500 }],
+      },
+    ], { requireMatch: true });
+
+    await expect(refreshD1TableGrowthSnapshot(db, NOW)).resolves.toEqual({
+      checkedAt: NOW,
+      utcDay: Math.floor(NOW / 86_400) * 86_400,
+      previousCheckedAt: NOW - 86_400,
+      tables: [
+        {
+          tableName: "cron_runs",
+          rowCount: 15,
+          previousRowCount: 10,
+          rowCountDelta: 5,
+          oldestTimestamp: NOW - 21_000,
+          newestTimestamp: NOW - 1_000,
+        },
+        {
+          tableName: "supply_history",
+          rowCount: 120,
+          previousRowCount: 100,
+          rowCountDelta: 20,
+          oldestTimestamp: NOW - 31_000,
+          newestTimestamp: NOW - 500,
+        },
+      ],
+      topGrowers: [
+        { tableName: "supply_history", rowCount: 120, rowCountDelta: 20 },
+        { tableName: "cron_runs", rowCount: 15, rowCountDelta: 5 },
+      ],
+    });
+    expect(db.getHistory().filter((entry) => entry.sql.includes("FROM \""))).toHaveLength(2);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("uses the UTC-day marker to avoid rerunning the snapshot", async () => {
+    const cachedSnapshot = {
+      version: 1,
+      snapshot: {
+        checkedAt: NOW,
+        utcDay: Math.floor(NOW / 86_400) * 86_400,
+        previousCheckedAt: NOW - 86_400,
+        tables: [],
+        topGrowers: [],
+      },
+    };
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY],
+        rows: [{
+          key: D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY,
+          value: JSON.stringify(cachedSnapshot),
+          updated_at: NOW,
+        }],
+      },
+    ], { requireMatch: true });
+
+    await expect(refreshD1TableGrowthSnapshot(db, NOW + 3_600)).resolves.toEqual(cachedSnapshot.snapshot);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM sqlite_master"))).toBe(false);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 });

@@ -435,6 +435,7 @@ function makeBaseTables(
     { match: "SELECT history_id, stablecoin_id, recorded_at, model, identity_schema_version", rows: [] },
     { match: "INSERT INTO daily_digest", rows: [] },
     { match: "INSERT OR IGNORE INTO cache", rows: [] },
+    { match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?", rows: [] },
     { match: "INSERT OR REPLACE INTO cache", rows: [] },
     { match: "DELETE FROM cache", rows: [] },
     {
@@ -602,7 +603,7 @@ describe("generateDailyDigest", () => {
       .mockReset()
       .mockImplementation(async () => mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT));
 
-    vi.mocked(postDigestTweet).mockReset().mockResolvedValue({ mediaAttached: true, mediaError: null });
+    vi.mocked(postDigestTweet).mockReset().mockResolvedValue({ tweetId: "1", mediaAttached: true, mediaError: null });
     vi.mocked(enqueueTelegramDigestEdition)
       .mockReset()
       .mockResolvedValue({
@@ -1538,7 +1539,7 @@ describe("generateDailyDigest", () => {
     expect(markerDeletes).toHaveLength(0);
   });
 
-  it("rolls back the Twitter sent marker when delivery fails so the next run can resend", async () => {
+  it("retains an execution-unknown Twitter ledger marker when delivery may have crossed the send boundary", async () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
 
     const db = mockD1(makeBaseTables());
@@ -1556,11 +1557,13 @@ describe("generateDailyDigest", () => {
     const markerWrites = history.filter(
       (entry) => entry.sql.includes("INSERT OR IGNORE INTO cache") && entry.binds[0] === markerKey,
     );
-    const markerDeletes = history.filter(
-      (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
+    const executionUnknownWrites = history.filter(
+      (entry) => entry.sql.includes("UPDATE cache SET value")
+        && entry.binds[2] === markerKey
+        && String(entry.binds[0]).includes('\"state\":\"execution_unknown\"'),
     );
     expect(markerWrites).toHaveLength(1);
-    expect(markerDeletes).toHaveLength(1);
+    expect(executionUnknownWrites).toHaveLength(1);
   });
 
   it("skips Twitter delivery when the same-day marker claim is already taken", async () => {
@@ -1570,6 +1573,12 @@ describe("generateDailyDigest", () => {
         match: "INSERT OR IGNORE INTO cache",
         rows: [],
         runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: [markerKey],
+        rows: [],
+        first: { value: JSON.stringify({ sentAt: Math.floor(Date.now() / 1000), editionNumber: 1 }) },
       },
       ...makeBaseTables(),
     ]);
@@ -1597,7 +1606,14 @@ describe("generateDailyDigest", () => {
     const db = mockD1([
       {
         match: "INSERT OR IGNORE INTO cache",
-        matchBinds: [twitterMarkerKey, JSON.stringify({ sentAt: nowSec, editionNumber: 1 }), nowSec],
+        matchBinds: [twitterMarkerKey, JSON.stringify({
+          schemaVersion: 1,
+          state: "queued",
+          editionNumber: 1,
+          attempts: 0,
+          createdAt: nowSec,
+          updatedAt: nowSec,
+        }), nowSec],
         rows: [],
         throwError: new Error("twitter marker down"),
       },

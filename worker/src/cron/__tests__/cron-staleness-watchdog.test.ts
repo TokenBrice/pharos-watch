@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { buildCacheStatusesMock, detailUpdatedAtStore, deletedCacheKeys } = vi.hoisted(() => ({
+const { buildCacheStatusesMock, detailUpdatedAtStore, deletedCacheKeys, sendToChatMock } = vi.hoisted(() => ({
   buildCacheStatusesMock: vi.fn(),
   detailUpdatedAtStore: new Map<string, number>(),
   deletedCacheKeys: [] as string[],
+  sendToChatMock: vi.fn(async (..._args: unknown[]) => ({ ok: true })),
 }));
 
 vi.mock("../../lib/api-freshness", async (importOriginal) => ({
@@ -11,11 +12,19 @@ vi.mock("../../lib/api-freshness", async (importOriginal) => ({
   buildCacheStatuses: buildCacheStatusesMock,
 }));
 
-vi.mock("../../lib/db-cache", () => ({
-  getCacheUpdatedAt: vi.fn(async (_db: D1Database, key: string) => detailUpdatedAtStore.get(key) ?? null),
+vi.mock("../../lib/telegram", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/telegram")>()),
+  sendToChat: sendToChatMock,
 }));
 
-import { evaluateCronStaleness, loadDetailWriteFailures, runCronStalenessWatchdog } from "../cron-staleness-watchdog";
+import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
+import {
+  CRON_STALENESS_ALERT_COOLDOWN_SEC,
+  deriveCronFreshnessProducers,
+  evaluateCronStaleness,
+  loadDetailWriteFailures,
+  runCronStalenessWatchdog,
+} from "../cron-staleness-watchdog";
 
 interface FakeFailureRow {
   key: string;
@@ -24,11 +33,20 @@ interface FakeFailureRow {
 }
 
 function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
+  const cacheRows = new Map<string, { value: string; updated_at: number }>();
   return {
     prepare: (sql: string) => ({
       bind: (...args: unknown[]) => ({
+        first: async () => {
+          if (sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ?")) {
+            return cacheRows.get(args[0] as string) ?? null;
+          }
+          return null;
+        },
         run: async () => {
-          if (sql.startsWith("DELETE FROM cache WHERE key IN")) {
+          if (sql.startsWith("INSERT OR REPLACE INTO cache")) {
+            cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number });
+          } else if (sql.startsWith("DELETE FROM cache WHERE key IN")) {
             deletedCacheKeys.push(...(args as string[]));
           } else if (sql.startsWith("DELETE")) {
             const cutoff = args[1] as number;
@@ -39,6 +57,10 @@ function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
           return { meta: { changes: 0 } };
         },
         all: async () => {
+          if (sql.startsWith("SELECT job, MAX(started_at)")) {
+            const started_at = Math.floor(Date.now() / 1000);
+            return { results: (args as string[]).map((job) => ({ job, started_at })) };
+          }
           if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
             const keys = args as string[];
             return { results: keys.filter((key) => detailUpdatedAtStore.has(key)).map((key) => ({ key, updated_at: detailUpdatedAtStore.get(key) })) };
@@ -58,7 +80,13 @@ function mockCacheStatus(ages: Record<string, number | null>) {
       "dex-liquidity": { ageSeconds: ages["dex-liquidity"] ?? 0 },
       "yield-data": { ageSeconds: ages["yield-data"] ?? 0 },
       dews: { ageSeconds: ages.dews ?? 0 },
+      "stablecoin-charts": { ageSeconds: ages["stablecoin-charts"] ?? 0 },
+      "usds-status": { ageSeconds: ages["usds-status"] ?? 0 },
+      "bluechip-ratings": { ageSeconds: ages["bluechip-ratings"] ?? 0 },
     },
+    warnings: [],
+    failures: [],
+    diagnostics: [],
   });
 }
 
@@ -67,17 +95,42 @@ describe("cron staleness watchdog", () => {
     buildCacheStatusesMock.mockReset();
     detailUpdatedAtStore.clear();
     deletedCacheKeys.length = 0;
+    sendToChatMock.mockClear();
+    sendToChatMock.mockResolvedValue({ ok: true });
+  });
+
+  it("derives consumer freshness coverage from the canonical producer registry", () => {
+    const added = {
+      ...CRON_JOB_DEFINITIONS[0],
+      job: "sync-new-consumer-surface",
+      intervalSec: 600,
+    };
+    const producers = deriveCronFreshnessProducers([...CRON_JOB_DEFINITIONS, added]);
+    expect(producers.map((producer) => producer.producerJob)).toEqual(expect.arrayContaining([
+      "sync-stablecoin-charts",
+      "sync-blacklist",
+      "sync-mint-burn",
+      "sync-live-reserves",
+      "compute-safety-score-v9",
+    ]));
+    expect(producers)
+      .toContainEqual(expect.objectContaining({
+        producerJob: "sync-new-consumer-surface",
+        thresholdSec: 1_800,
+      }));
   });
 
   it("flags watched freshness lanes beyond twice their producer interval", () => {
     expect(evaluateCronStaleness({
       stablecoins: { ageSeconds: 1_801 }, "fx-rates": { ageSeconds: 1_799 }, "dex-liquidity": { ageSeconds: 14_401 }, "yield-data": { ageSeconds: 3_600 }, dews: { ageSeconds: 1_000 },
+      "stablecoin-charts": { ageSeconds: 0 }, "usds-status": { ageSeconds: 0 }, "bluechip-ratings": { ageSeconds: 0 },
     }).map((entry) => entry.cacheKey)).toEqual(["stablecoins", "dex-liquidity"]);
   });
 
   it("treats missing or malformed watched cache freshness as stale", () => {
     expect(evaluateCronStaleness({
       stablecoins: { ageSeconds: Number.NaN }, "fx-rates": { ageSeconds: Number.POSITIVE_INFINITY }, "dex-liquidity": { ageSeconds: 0 }, dews: { ageSeconds: 0 },
+      "stablecoin-charts": { ageSeconds: 0 }, "usds-status": { ageSeconds: 0 }, "bluechip-ratings": { ageSeconds: 0 },
     }).map((entry) => entry.cacheKey)).toEqual(["stablecoins", "fx-rates", "yield-data"]);
   });
 
@@ -86,6 +139,43 @@ describe("cron staleness watchdog", () => {
     const result = await runCronStalenessWatchdog(fakeDb());
     const metadata = JSON.parse(result.metadata ?? "{}") as { dependencyRecoveryChecks?: Array<{ root: string; dependent: string; state: string }> };
     expect(metadata.dependencyRecoveryChecks).toContainEqual(expect.objectContaining({ root: "dex-liquidity", dependent: "dews", state: "root-recovered-dependent-stale" }));
+  });
+
+  it("alerts only on stale and recovery transitions", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const db = fakeDb();
+    mockCacheStatus({ stablecoins: 2_000 });
+    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
+    mockCacheStatus({ stablecoins: 0 });
+    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Recovered producers");
+    vi.useRealTimers();
+  });
+
+  it("suppresses a flapping transition during the alert cooldown", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const db = fakeDb();
+    mockCacheStatus({ stablecoins: 2_000 });
+    await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+
+    vi.setSystemTime(new Date((Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000 - 1_000)));
+    mockCacheStatus({ stablecoins: 0 });
+    const recovery = await runCronStalenessWatchdog(db, undefined, { telegramCreds: { botToken: "bot", chatId: "ops" } });
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(recovery.metadata ?? "{}").alertTransitions).toMatchObject({
+      recovered: ["sync-stablecoins"],
+      sent: false,
+      cooldown: true,
+    });
+    vi.useRealTimers();
   });
 
   it("degrades when detail cache writes are failing", async () => {

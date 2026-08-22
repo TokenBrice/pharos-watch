@@ -7,11 +7,25 @@ interface FakeRow {
   updated_at: number;
 }
 
-function fakeDb(rows: FakeRow[], deleted: string[]): D1Database {
+function fakeDb(rows: FakeRow[], deleted: string[], selectBinds: unknown[][] = []): D1Database {
   return {
     prepare: (sql: string) => ({
       bind: (...args: unknown[]) => ({
-        all: async () => ({ results: rows }),
+        all: async () => {
+          if (sql.startsWith("SELECT")) {
+            selectBinds.push(args);
+            const prefix = String(args[0]).replace(/%$/, "");
+            const lastKey = String(args[1]);
+            const pageSize = Number(args[2]);
+            return {
+              results: rows
+                .filter((row) => row.key.startsWith(prefix) && row.key > lastKey)
+                .sort((a, b) => a.key.localeCompare(b.key))
+                .slice(0, pageSize),
+            };
+          }
+          return { results: rows };
+        },
         run: async () => {
           if (sql.startsWith("DELETE")) deleted.push(args[0] as string);
           return { meta: { changes: 1 } };
@@ -57,5 +71,27 @@ describe("runPruneDetailCache", () => {
     expect(metadata.orphansDeleted).toBe(2);
     expect(metadata.staleDeleted).toBe(1);
     expect(deleted.sort()).toEqual(["detail:146", `detail:${liveId}`, "detail:retired-coin-id"].sort());
+  });
+
+  it("keyset-paginates through every detail-cache page", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const rows = Array.from({ length: 501 }, (_, index) => ({
+      key: `detail:orphan-${String(index).padStart(3, "0")}`,
+      updated_at: nowSec - 8 * 24 * 3600,
+    }));
+    const deleted: string[] = [];
+    const selectBinds: unknown[][] = [];
+    const db = fakeDb(rows, deleted, selectBinds);
+
+    const result = await runPruneDetailCache(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as { scanned: number };
+
+    expect(result.itemCount).toBe(501);
+    expect(metadata.scanned).toBe(501);
+    expect(deleted).toHaveLength(501);
+    expect(selectBinds).toEqual([
+      ["detail:%", "", 500],
+      ["detail:%", "detail:orphan-499", 500],
+    ]);
   });
 });

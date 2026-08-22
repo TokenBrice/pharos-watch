@@ -2,6 +2,7 @@ import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-covera
 import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { USER_AGENT } from "../../lib/constants";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {
   CURVE_API_BASE,
@@ -11,6 +12,10 @@ import {
 import type { CurveApiPayload } from "../dex-liquidity/types";
 import { DISCOVERY_STAGE_TIMEOUT_MS, buildStageSignal, type CrawlStageContext } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";
+
+const CURVE_DISCOVERY_FETCH_CONCURRENCY = 2;
+// Curve getPools payloads are large but should stay below the generic 16 MiB body cap.
+const CURVE_DISCOVERY_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 
 export interface CurvePoolsStageResult {
   providerChecks: DexDeploymentProviderCheck[];
@@ -34,8 +39,10 @@ export async function crawlCurvePoolsStage(input: {
   }
   if (targetsByChain.size === 0 || input.context.timeExceeded()) return { providerChecks: [] };
 
-  const checks = await Promise.all(
-    [...targetsByChain].map(async ([chain, targets]): Promise<DexDeploymentProviderCheck[]> => {
+  const checks = await mapWithConcurrency(
+    [...targetsByChain],
+    CURVE_DISCOVERY_FETCH_CONCURRENCY,
+    async ([chain, targets]): Promise<DexDeploymentProviderCheck[]> => {
       try {
         const result = await fetchJsonWithRetry<CurveApiPayload>(
           // Curve addresses some chains under a different id than Pharos does;
@@ -48,7 +55,10 @@ export async function crawlCurvePoolsStage(input: {
             signal: buildStageSignal(input.context.signal, input.context.deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.curve),
           },
           1,
-          { timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.curve },
+          {
+            timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.curve,
+            maxResponseBytes: CURVE_DISCOVERY_MAX_RESPONSE_BYTES,
+          },
         );
         const payload = result?.body ?? null;
 
@@ -70,7 +80,8 @@ export async function crawlCurvePoolsStage(input: {
         if (input.context.signal?.aborted) throw err;
         return targets.map(({ address }) => ({ chain, address, provider: "curve", status: "failure" }));
       }
-    }),
+    },
+    { signal: input.context.signal },
   );
   return { providerChecks: checks.flat() };
 }

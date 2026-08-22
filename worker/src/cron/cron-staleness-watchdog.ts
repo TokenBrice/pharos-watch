@@ -3,20 +3,83 @@ import {
   type CacheFreshnessLaneKey,
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
+import { CRON_JOB_DEFINITIONS, type CronJobMeta } from "@shared/lib/cron-jobs";
 import type { CacheStatus } from "@shared/types/status";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
 import { runChunkedInFilter } from "../lib/db";
 import { buildCacheStatuses } from "../lib/api-freshness";
+import { getCache, setCache } from "../lib/db-cache";
+import { escapeHtml, sendToChat, type TelegramCreds } from "../lib/telegram";
 
-const WATCHED_LANE_KEYS = [
-  "stablecoins",
-  "fxRates",
-  "dexLiquidity",
-  "yieldData",
-  "dews",
-] as const satisfies readonly CacheFreshnessLaneKey[];
+const NO_CONSUMER_FRESHNESS_SURFACE_JOBS = new Set([
+  // Control-plane observers and watchdogs produce telemetry, not consumer data.
+  "cron-slot-sweeper",
+  "reserve-recovery",
+  "cron-staleness-watchdog",
+  "telegram-degradation-watchdog",
+  "dex-exit-route-turnover-watchdog",
+  "reserve-post-sync-watchdog",
+  "mint-burn-growth-watchdog",
+  "cron-duration-watchdog",
+  // Delivery/planning jobs mutate transport state rather than a freshness surface.
+  "dispatch-telegram-alerts",
+  "telegram-personalized-recap-planner",
+  // Retention and repair jobs only delete or reconcile internal rows.
+  "telegram-disambiguation-cleanup",
+  "prune-status-probe-runs",
+  "prune-cron-history",
+  "worker-repair-runner",
+  "prune-detail-cache",
+  "telegram-inactive-cleanup",
+  "telegram-retention-cleanup",
+]);
+
+const WATCHDOG_STATE_KEY = "cron-staleness-watchdog:producer-state:v1";
+const WATCHDOG_ALERT_KEY = "cron-staleness-watchdog:alert:direct:v1";
+export const CRON_STALENESS_ALERT_COOLDOWN_SEC = 30 * 60;
+
+export interface ProducerFreshnessLane {
+  producerJob: string;
+  laneKey: CacheFreshnessLaneKey | null;
+  cacheKey: string | null;
+  producerIntervalSec: number;
+  thresholdSec: number;
+}
+
+export function deriveCronFreshnessProducers(
+  definitions: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS,
+): ProducerFreshnessLane[] {
+  const cacheLaneByProducer = new Map(
+    (Object.entries(CACHE_FRESHNESS_LANES) as Array<[CacheFreshnessLaneKey, CacheFreshnessLaneConfig]>).map(
+      ([laneKey, lane]) => [lane.producerJob, { laneKey, lane }],
+    ),
+  );
+
+  return definitions.flatMap((definition): ProducerFreshnessLane[] => {
+    if (NO_CONSUMER_FRESHNESS_SURFACE_JOBS.has(definition.job)) return [];
+    const cacheLane = cacheLaneByProducer.get(definition.job);
+    if (cacheLane) {
+      return [{
+        producerJob: definition.job,
+        laneKey: cacheLane.laneKey,
+        cacheKey: cacheLane.lane.cacheKey,
+        producerIntervalSec: cacheLane.lane.producerIntervalSec,
+        thresholdSec: cacheLane.lane.producerIntervalSec * 2,
+      }];
+    }
+    return [{
+      producerJob: definition.job,
+      laneKey: null,
+      cacheKey: null,
+      producerIntervalSec: definition.intervalSec,
+      // Registry producers without an existing lane budget tolerate two missed
+      // runs and become stale at 3x their canonical producer interval.
+      thresholdSec: definition.intervalSec * 3,
+    }];
+  });
+}
 
 // Markers written by the detail handler when a per-coin cache write fails or
 // exceeds the D1 value cap (see stablecoin-detail/shared.ts). Demand-refreshed
@@ -127,8 +190,8 @@ export async function loadDetailWriteFailures(
 }
 
 export interface CronStalenessObservation {
-  laneKey: CacheFreshnessLaneKey;
-  cacheKey: string;
+  laneKey: CacheFreshnessLaneKey | null;
+  cacheKey: string | null;
   producerJob: string;
   ageSeconds: number | null;
   thresholdSec: number;
@@ -162,6 +225,25 @@ function buildFullObservation(
   };
 }
 
+function buildCronObservation(
+  producer: ProducerFreshnessLane,
+  lastSuccessfulAt: number | null,
+  nowSec: number,
+): CronStalenessObservation {
+  const ageSeconds = lastSuccessfulAt == null ? null : Math.max(0, nowSec - lastSuccessfulAt);
+  return {
+    laneKey: producer.laneKey,
+    cacheKey: producer.cacheKey,
+    producerJob: producer.producerJob,
+    ageSeconds,
+    thresholdSec: producer.thresholdSec,
+    producerThresholdSec: producer.thresholdSec,
+    endpointThresholdSec: producer.thresholdSec,
+    availabilityThresholdSec: producer.thresholdSec,
+    availabilityImpacting: !isFreshAge(ageSeconds, producer.thresholdSec),
+  };
+}
+
 function isStale(observation: CronStalenessObservation): boolean {
   return !isFreshAge(observation.ageSeconds, observation.thresholdSec);
 }
@@ -173,7 +255,9 @@ function buildDependencyRecoveryChecks(observations: readonly CronStalenessObser
   rootAgeSeconds: number | null;
   dependentAgeSeconds: number | null;
 }> {
-  const byCacheKey = new Map(observations.map((observation) => [observation.cacheKey, observation]));
+  const byCacheKey = new Map(
+    observations.flatMap((observation) => observation.cacheKey == null ? [] : [[observation.cacheKey, observation] as const]),
+  );
   const dexLiquidity = byCacheKey.get("dex-liquidity");
   const dews = byCacheKey.get("dews");
   if (!dexLiquidity || !dews) {
@@ -218,7 +302,8 @@ function buildObservation(
 
 export function evaluateCronStaleness(
   caches: Record<string, Pick<CacheStatus, "ageSeconds"> | undefined>,
-  laneKeys: readonly CacheFreshnessLaneKey[] = WATCHED_LANE_KEYS,
+  laneKeys: readonly CacheFreshnessLaneKey[] = deriveCronFreshnessProducers()
+    .flatMap((producer) => producer.laneKey == null ? [] : [producer.laneKey]),
 ): CronStalenessObservation[] {
   return laneKeys.flatMap((laneKey) => {
     const lane = CACHE_FRESHNESS_LANES[laneKey];
@@ -227,19 +312,121 @@ export function evaluateCronStaleness(
   });
 }
 
+async function loadProducerSuccessTimestamps(
+  db: D1Database,
+  producerJobs: readonly string[],
+): Promise<Map<string, number>> {
+  const timestamps = new Map<string, number>();
+  if (producerJobs.length === 0) return timestamps;
+  await runChunkedInFilter(
+    producerJobs,
+    (inClauseSql) => `SELECT job, MAX(started_at) AS started_at FROM cron_runs WHERE status IN ('ok', 'degraded') AND job IN (${inClauseSql}) GROUP BY job`,
+    async (sql, binds) => {
+      const rows = await runWithOverloadRetry(() =>
+        db.prepare(sql).bind(...binds).all<{ job: string; started_at: number | null }>(),
+      );
+      for (const row of rows.results ?? []) {
+        if (row.started_at != null) timestamps.set(row.job, row.started_at);
+      }
+    },
+  );
+  return timestamps;
+}
+
+type ProducerFreshnessState = Record<string, "ok" | "stale">;
+
+function parseProducerFreshnessState(value: string | null | undefined): ProducerFreshnessState {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry): entry is [string, "ok" | "stale"] =>
+        entry[1] === "ok" || entry[1] === "stale"),
+    );
+  } catch {
+    return {};
+  }
+}
+
+export interface CronStalenessWatchdogOptions {
+  telegramCreds?: TelegramCreds | null;
+}
+
+async function alertOnFreshnessTransitions(params: {
+  db: D1Database;
+  observations: readonly CronStalenessObservation[];
+  nowSec: number;
+  telegramCreds: TelegramCreds | null;
+  signal?: AbortSignal;
+}): Promise<{ stale: string[]; recovered: string[]; sent: boolean; cooldown: boolean }> {
+  const [stateCache, alertCache] = await Promise.all([
+    getCache(params.db, WATCHDOG_STATE_KEY),
+    getCache(params.db, WATCHDOG_ALERT_KEY),
+  ]);
+  const previous = parseProducerFreshnessState(stateCache?.value);
+  const next: ProducerFreshnessState = {};
+  const stale: string[] = [];
+  const recovered: string[] = [];
+
+  for (const observation of params.observations) {
+    const current = isStale(observation) ? "stale" : "ok";
+    const prior = previous[observation.producerJob] ?? "ok";
+    next[observation.producerJob] = current;
+    if (prior === current) continue;
+    if (current === "stale") stale.push(observation.producerJob);
+    else recovered.push(observation.producerJob);
+  }
+  await setCache(params.db, WATCHDOG_STATE_KEY, JSON.stringify(next));
+
+  if (stale.length === 0 && recovered.length === 0) {
+    return { stale, recovered, sent: false, cooldown: false };
+  }
+  const lastAlertAt = Number(alertCache?.value);
+  const cooldown = Number.isFinite(lastAlertAt) && params.nowSec - lastAlertAt < CRON_STALENESS_ALERT_COOLDOWN_SEC;
+  if (cooldown || !params.telegramCreds) {
+    return { stale, recovered, sent: false, cooldown };
+  }
+
+  const sections = [
+    stale.length > 0 ? `<b>Stale producers</b>: ${stale.map(escapeHtml).join(", ")}` : null,
+    recovered.length > 0 ? `<b>Recovered producers</b>: ${recovered.map(escapeHtml).join(", ")}` : null,
+  ].filter((section): section is string => section != null);
+  const delivery = await sendToChat(
+    params.telegramCreds.chatId,
+    `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`,
+    params.telegramCreds.botToken,
+    { disableWebPagePreview: true, signal: params.signal },
+  );
+  if (delivery.ok) {
+    await setCache(params.db, WATCHDOG_ALERT_KEY, String(params.nowSec));
+  }
+  return { stale, recovered, sent: delivery.ok, cooldown: false };
+}
+
 export async function runCronStalenessWatchdog(
   db: D1Database,
   signal?: AbortSignal,
+  options: CronStalenessWatchdogOptions = {},
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const status = await buildCacheStatuses(db, nowSec);
-  const watchedObservations = WATCHED_LANE_KEYS.map((laneKey) =>
-    buildFullObservation(
-      laneKey,
-      CACHE_FRESHNESS_LANES[laneKey],
-      status.caches[CACHE_FRESHNESS_LANES[laneKey].cacheKey],
-    ),
+  const producers = deriveCronFreshnessProducers();
+  const cronOnlyProducers = producers.filter((producer) => producer.laneKey == null);
+  const producerSuccessTimestamps = await loadProducerSuccessTimestamps(
+    db,
+    cronOnlyProducers.map((producer) => producer.producerJob),
   );
+  const watchedObservations = producers.map((producer) => producer.laneKey == null
+    ? buildCronObservation(
+        producer,
+        producerSuccessTimestamps.get(producer.producerJob) ?? null,
+        nowSec,
+      )
+    : buildFullObservation(
+        producer.laneKey,
+        CACHE_FRESHNESS_LANES[producer.laneKey],
+        status.caches[CACHE_FRESHNESS_LANES[producer.laneKey].cacheKey],
+      ));
   const stale = watchedObservations.filter(isStale);
   const dependencyRecoveryChecks = buildDependencyRecoveryChecks(watchedObservations);
 
@@ -248,13 +435,22 @@ export async function runCronStalenessWatchdog(
   }
 
   const detailWriteFailures = await loadDetailWriteFailures(db, nowSec);
+  const alertTransitions = await alertOnFreshnessTransitions({
+    db,
+    observations: watchedObservations,
+    nowSec,
+    telegramCreds: options.telegramCreds ?? null,
+    signal,
+  });
 
   return {
     status: stale.length > 0 || detailWriteFailures.length > 0 ? "degraded" : "ok",
     itemCount: stale.length + detailWriteFailures.length,
     metadata: JSON.stringify({
+      checkedProducers: watchedObservations.map((observation) => observation.producerJob),
       stale,
       detailWriteFailures,
+      alertTransitions,
       dependencyRecoveryChecks,
       warnings: status.warnings,
       failures: status.failures,

@@ -12,7 +12,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 
 ## Runtime Guardrails
 
-- Deterministic on-chain vault reads now run one asset at a time with a 6 second per-RPC timeout, explicit per-URL failover, and an explorer-proxy fallback for supported EVM chains when Worker RPC reads all return empty.
+- Deterministic on-chain vault reads now run one asset at a time with a 6 second per-RPC timeout, explicit per-URL failover, and an explorer-proxy fallback for supported EVM chains when Worker RPC reads all return empty. HTTP failures advance directly to the next RPC URL, while thrown transport failures retain their bounded retry allowance.
 - When both a provider RPC and a public fallback are configured for a deterministic yield source, the reader probes the fallback/public URL first to avoid inheriting a sticky provider failure across the whole post-V9 slot.
 - The post-V9 yield runtime forwards `ETHERSCAN_API_KEY` into deterministic reads so Ethereum-family explorer proxies can keep the publication path alive during transient Worker-to-RPC outages.
 - Immediately before publishing, the post-V9 yield runtime rechecks the active Safety Score V9 publication identity. If the identity changed to an evaluator-incompatible V9 snapshot after yield inputs were loaded, the run still publishes — its results are coherent under the identity it loaded, and `/api/yield-rankings` serves them as a publish-time snapshot (`yield-safety-hydration-stale`) until the next hourly run re-aligns. The change is logged (`yield-safety-identity-changed-before-publish`) and recorded in cron metadata as `safetyIdentityChangedBeforePublish`. The pre-2026-08-19 behavior of blocking the publish only pinned an older, equally mismatched cache and lengthened the mismatch window.
@@ -43,7 +43,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `Yearn/Kong`
   - `Beefy`
   - `Royco Dawn`
-- Optional RPC families use a 30 second family budget on the supplemental lane, a 10 second per-call timeout, two retries per URL, and alternating fallback/primary endpoint order across targets so one hot endpoint does not absorb the whole family burst:
+- Optional RPC families use a 30 second family budget on the supplemental lane, a 10 second per-call timeout, two transport retries per URL, and alternating fallback/primary endpoint order across targets so one hot endpoint does not absorb the whole family burst; HTTP failures advance directly to the next URL:
   - `Compound V3`
   - `Aave V3`
 - Optional RPC family metadata now records target counts, attempted counts, resolved target counts, emitted row counts, missing target counts, chain-level miss breakdowns, miss reasons, bounded missing-target examples, and whether the family budget exhausted before all targets were attempted. `sourceCoverage.sourceFamilySummaries` carries a compact per-family status/raw/emitted/inventory/budget view for operator triage; `sourceCoverage.sourceFamilyInventoryCounts` keeps audit-only inventory volume separate from candidate-oriented `sourceFamilyCounts`. Detailed `optionalRpcTelemetry` keeps the same counters but caps missing-target examples to avoid oversized cron metadata.

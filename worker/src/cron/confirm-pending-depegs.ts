@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import type { PegAssetBase } from "@shared/types/core";
@@ -36,6 +36,9 @@ import {
 } from "./pending-depeg-confirmation";
 import { evaluatePromotionDecision } from "./pending-depeg-confirmation-decision";
 import { collectConfirmationEvidence } from "./pending-depeg-confirmation-evidence";
+
+/** Bound open-event hydration so pending confirmation cannot materialize an unbounded set. */
+export const MAX_OPEN_DEPEG_EVENTS = 200;
 
 /**
  * Process pending depeg records that require secondary confirmation.
@@ -101,9 +104,22 @@ export async function confirmPendingDepegs(
 
   throwIfAborted(signal);
   const openEvents = await db
-    .prepare("SELECT stablecoin_id FROM depeg_events WHERE ended_at IS NULL")
+    .prepare("SELECT stablecoin_id FROM depeg_events WHERE ended_at IS NULL LIMIT ?")
+    .bind(MAX_OPEN_DEPEG_EVENTS)
     .all<{ stablecoin_id: string }>();
-  const openSet = new Set((openEvents.results ?? []).map((r) => r.stablecoin_id));
+  const openEventRows = openEvents.results ?? [];
+  if (openEventRows.length >= MAX_OPEN_DEPEG_EVENTS) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "warn",
+      event: "depeg_open_event_limit_reached",
+      message: "Skipped pending depeg confirmation because the open-event query reached its limit",
+      status: "degraded",
+      metadata: { pass: "confirmation", maxOpenDepegEvents: MAX_OPEN_DEPEG_EVENTS },
+    });
+    return { providerDiagnostics };
+  }
+  const openSet = new Set(openEventRows.map((r) => r.stablecoin_id));
 
   let cexPrices: Map<string, number> | null = null;
   const cexAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);

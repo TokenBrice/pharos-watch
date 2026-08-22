@@ -106,6 +106,78 @@ describe("detectDepegEvents", () => {
     vi.useRealTimers();
   });
 
+  it("skips detection and emits a degraded warning when open-event hydration reaches its limit", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const openRows = Array.from({ length: 200 }, (_, id) => ({
+      id,
+      stablecoin_id: `open-${id}`,
+      symbol: `OPEN${id}`,
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -200,
+      started_at: 1_700_000_000,
+      ended_at: null,
+      start_price: 0.98,
+      peak_price: 0.98,
+      recovery_price: null,
+      peg_reference: 1,
+      source: "live",
+      recovery_first_seen_at: null,
+    }));
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      { match: "depeg_events", rows: openRows },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return originalPrepare(sql);
+    }) as typeof db.prepare;
+
+    try {
+      await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 })]);
+
+      expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_pending"))).toBe(false);
+      expect(warnSpy.mock.calls.map(([message]) => String(message))).toContainEqual(
+        expect.stringContaining('"event":"depeg_open_event_limit_reached"'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("skips orphan cleanup and emits a degraded warning when its open-event query reaches the limit", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const openRows = Array.from({ length: 200 }, (_, id) => ({
+      id,
+      stablecoin_id: `orphan-${id}`,
+      started_at: 1_700_000_000,
+    }));
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      { match: "SELECT id, stablecoin_id, symbol", rows: [] },
+      { match: "SELECT id, stablecoin_id, started_at FROM depeg_events", rows: openRows },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return originalPrepare(sql);
+    }) as typeof db.prepare;
+
+    try {
+      await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.001 })]);
+
+      expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET ended_at"))).toBe(false);
+      expect(warnSpy.mock.calls.map(([message]) => String(message))).toContainEqual(
+        expect.stringContaining('"pass":"orphan-cleanup"'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("no events created when prices are stable", async () => {
     const prepareSpy = vi.fn();
     const db = mockD1([

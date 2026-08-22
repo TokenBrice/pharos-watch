@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY } from "../../lib/status/d1-usage";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -347,6 +348,31 @@ describe("handleStatus", () => {
 
     const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: [D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY],
+        rows: [{
+          key: D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY,
+          updated_at: now - 3_600,
+          value: JSON.stringify({
+            version: 1,
+            snapshot: {
+              checkedAt: now - 3_600,
+              utcDay: Math.floor((now - 3_600) / 86_400) * 86_400,
+              previousCheckedAt: now - 90_000,
+              tables: [{
+                tableName: "supply_history",
+                rowCount: 120,
+                previousRowCount: 100,
+                rowCountDelta: 20,
+                oldestTimestamp: now - 2_000_000,
+                newestTimestamp: now - 3_600,
+              }],
+              topGrowers: [{ tableName: "supply_history", rowCount: 120, rowCountDelta: 20 }],
+            },
+          }),
+        }],
+      },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
       { match: "stress_signals", rows: [], first: { age: 300 } },
@@ -381,6 +407,11 @@ describe("handleStatus", () => {
         writeQueries24h: number | null;
         rowsRead24h: number | null;
         rowsWritten24h: number | null;
+        tableGrowth?: {
+          checkedAt: number;
+          tables: Array<{ tableName: string; rowCountDelta: number | null }>;
+          topGrowers: Array<{ tableName: string; rowCountDelta: number }>;
+        } | null;
         capacity?: {
           utilizationPercent: number;
           thresholdState: string;
@@ -401,6 +432,10 @@ describe("handleStatus", () => {
       writeQueries24h: 709_241,
       rowsRead24h: 1_633_139_670,
       rowsWritten24h: 1_555_568,
+      tableGrowth: {
+        tables: [{ tableName: "supply_history", rowCountDelta: 20 }],
+        topGrowers: [{ tableName: "supply_history", rowCountDelta: 20 }],
+      },
       capacity: {
         utilizationPercent: 15.89,
         thresholdState: "normal",

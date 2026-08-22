@@ -54,7 +54,7 @@ Loss concentrates on the **tail of a serial job chain**. Chains are defined in `
 ## Prevention
 
 - Treat a sub-hourly logical cadence carrying CPU-heavy work as requiring the paired-hourly physical form. `shared/lib/__tests__/cron-jobs.test.ts` asserts the converted lanes keep single-minute hourly aliases so a regression to one comma expression fails CI instead of silently re-entering the 30-second class.
-- Put the cheapest, most load-bearing jobs first in a chain and observers last only when the observer can tolerate loss. `cron-slot-sweeper` runs first in the status chain on purpose: it is the self-heal path and must not be starved.
+- Put the cheapest, most load-bearing jobs first in a chain and observers last only when the observer can tolerate loss. `cron-slot-sweeper` runs first in the status chain on purpose, and the daily 03:00 `mint-burn-growth-watchdog` and `cron-duration-watchdog` now run before retention work so they are not starved.
 - Watch the tail, not the average. `cron-duration-watchdog` excludes synthetic reconciled rows from duration statistics (`worker/src/cron/cron-duration-watchdog.ts`) and counts slot abandonment separately, so a lane can look healthy on duration while losing a quarter of its runs.
 - Prefer durable queues for delivery work. `dispatch-telegram-alerts` reads a durable pending queue, so an abandoned slot costs delivery latency rather than lost alerts; one-shot writers such as time-series snapshot jobs have no equivalent safety net.
 

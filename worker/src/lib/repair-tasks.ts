@@ -10,6 +10,7 @@ import {
 } from "./depeg-resolver-incident-store";
 import { buildInClause, isMissingTableError } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { resolveDdrRepairTaskRunnerConfig } from "./env";
 
 export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "failed" | "cancelled";
 
@@ -135,9 +136,8 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason ?? new Error("repair-task executor aborted");
 }
 
-export function isDdrRepairTaskRunnerEnabled(value: unknown): boolean {
-  if (typeof value !== "string") return true;
-  return !["0", "false", "no", "off", "disabled"].includes(value.trim().toLowerCase());
+export function isDdrRepairTaskRunnerEnabled(value: string | undefined): boolean {
+  return resolveDdrRepairTaskRunnerConfig({ DDR_REPAIR_TASK_RUNNER_ENABLED: value }).enabled;
 }
 
 export function buildDdrRepairTaskId(subjectId: string): string {

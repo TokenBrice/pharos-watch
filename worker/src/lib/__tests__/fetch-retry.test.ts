@@ -111,6 +111,16 @@ describe("fetchWithRetry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not retry non-passthrough 404 responses", async () => {
+    const fetchMock = mockFetch([{ match: () => true, body: { error: "not found" }, status: 404 }]);
+
+    const res = await fetchWithRetry("https://example.com/token", undefined, 2);
+
+    expect(res).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sleepWithSignalMock).not.toHaveBeenCalled();
+  });
+
   it("returns and consumes the first HTTP response in network-only retry mode", async () => {
     const first = new Response("upstream down", { status: 503 });
     const fetchMock = mockFetch([{
@@ -165,6 +175,22 @@ describe("fetchWithRetry", () => {
     expect(res?.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(sleepWithSignalMock).toHaveBeenCalledWith(1000, undefined);
+  });
+
+  it("honors Retry-After on 503 responses before succeeding", async () => {
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { error: "unavailable" }, status: 503, headers: { "Retry-After": "3" } },
+        { body: { ok: true } },
+      ],
+    }]);
+
+    const res = await fetchWithRetry("https://example.com/token", undefined, 1);
+
+    expect(res?.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleepWithSignalMock).toHaveBeenCalledWith(3000, undefined);
   });
 
   it("handles a Response-like 429 without headers", async () => {

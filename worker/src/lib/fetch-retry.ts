@@ -52,10 +52,10 @@ function fetchErrorMetadata(error: unknown): Record<string, unknown> {
 }
 
 /**
- * Rate-limit wait for a 429 response: the upstream `Retry-After` header when it
- * is a sane delta-seconds value, otherwise the caller's fallback backoff.
- * Exported so hand-rolled 429 loops (paginated direct-API fetchers) honour
- * `Retry-After` through the same parse as `fetchWithRetry`.
+ * Retry-After wait for a retryable HTTP response: the upstream `Retry-After`
+ * header when it is a sane delta-seconds value, otherwise the caller's
+ * fallback backoff. Exported so hand-rolled 429 loops (paginated direct-API
+ * fetchers) honour `Retry-After` through the same parse as `fetchWithRetry`.
  */
 export function resolveRateLimitDelayMs(
   response: Response,
@@ -72,15 +72,21 @@ function getRetryDelayMs(response: Response, attempt: number, maxRetryDelayMs?: 
   if (response.status === 429) {
     return resolveRateLimitDelayMs(response, 5000, maxRetryDelayMs);
   }
-  if (response.status === 529) {
-    const delayMs = Math.min(30_000, jitterDelayMs(5_000 * 2 ** attempt));
-    return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
+  if (response.status === 408 || (response.status >= 500 && response.status <= 599)) {
+    const fallbackDelayMs = response.status === 529
+      ? Math.min(30_000, jitterDelayMs(5_000 * 2 ** attempt))
+      : jitterDelayMs(1000 * 2 ** attempt);
+    return response.status >= 500
+      ? resolveRateLimitDelayMs(response, fallbackDelayMs, maxRetryDelayMs)
+      : maxRetryDelayMs != null
+        ? Math.min(fallbackDelayMs, maxRetryDelayMs)
+        : fallbackDelayMs;
   }
   return null;
 }
 /**
  * Fetch with retry and exponential backoff.
- * Respects Retry-After header on 429 responses.
+ * Respects Retry-After headers on 429 and 5xx responses.
  * Returns null if all attempts fail.
  *
  * If opts.signal is provided (e.g. from a cron AbortController), it is composed
@@ -211,7 +217,7 @@ async function fetchWithRetryInternal<TResult>(
         }
         const retryDelayMs = i < maxRetries ? getRetryDelayMs(res, i, maxRetryDelayMs) : null;
         if (retryDelayMs != null) {
-          const label = res.status === 529 ? "overloaded" : "rate-limited";
+          const label = res.status === 529 ? "overloaded" : res.status === 429 ? "rate-limited" : "server error";
           logWorkerEvent({ scope: "lib", level: "warn", event: "fetch_retry_http_retry_scheduled", message: `Fetch ${label}; retry scheduled`, status: res.status, metadata: { url: logUrl, delayMs: retryDelayMs, attempt: i + 1, maxAttempts: maxRetries + 1 } });
           await cancelResponseBodyQuietly(res);
           perRequestTimeout.dispose();
@@ -219,10 +225,11 @@ async function fetchWithRetryInternal<TResult>(
           continue;
         }
         logWorkerEvent({ scope: "lib", level: "warn", event: "fetch_retry_http_error", message: "Fetch returned an HTTP error", status: res.status, metadata: { url: logUrl, attempt: i + 1, maxAttempts: maxRetries + 1 } });
-        if (options?.returnFinalResponse && i >= maxRetries) {
+        if (options?.returnFinalResponse) {
           return await readFinalResponse(res);
         }
         await cancelResponseBodyQuietly(res);
+        return null;
       } finally {
         perRequestTimeout.dispose();
       }

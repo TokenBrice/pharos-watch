@@ -217,6 +217,22 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Webhook authentication is evaluated from current request and Env secrets; counters only sample logs.",
   },
   {
+    sourcePath: "worker/src/cron/reserve-adapters/request.ts",
+    stateNames: ["requestCacheStates"],
+    owner: "Live-reserve adapter request cache",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by each run's requestCache Map; LRU byte accounting lives only as long as the run's cache object and resets with the isolate.",
+    durableTruth: "Issuer endpoints are authoritative; cached bodies are per-run fetch dedup only, bounded to a 16 MiB budget.",
+  },
+  {
+    sourcePath: "worker/src/lib/chain-registry.ts",
+    stateNames: ["ALCHEMY_AUTHORIZATION_BY_URL"],
+    owner: "Alchemy RPC bearer-auth routing",
+    kind: "key",
+    resetOrTtl: "Repopulated on every buildAlchemyRpcUrl call for the configured key; resets with the isolate.",
+    durableTruth: "Env ALCHEMY_API_KEY is authoritative; the map only pairs key-free URLs with their Authorization header.",
+  },
+  {
     sourcePath: "worker/src/lib/telegram-mini-app-auth.ts",
     stateNames: ["warnedNovelMiniAppChatTypes"],
     owner: "Telegram Mini App auth telemetry",

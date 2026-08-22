@@ -220,7 +220,7 @@ Detection persistence commits all mutations for one stablecoin as one ordered at
 
 ### Orphan Cleanup
 
-After the main loop, load all open events. Close any that were not in the `seen` set and were not created during the current run. These are true "orphans" -- the coin was removed from tracking or exited the PSI-eligible set. Tracked coins are intentionally kept open through transient missing-price or ambiguous-input cycles and are **not** force-closed just because one run lacked a trusted recovery signal. Orphans are closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL`.
+After the main loop, load open events with the `MAX_OPEN_DEPEG_EVENTS = 200` bound. If the read reaches that bound, skip orphan cleanup and emit a structured degraded warning rather than operating on a truncated set. Otherwise, close any rows that were not in the `seen` set and were not created during the current run. These are true "orphans" -- the coin was removed from tracking or exited the PSI-eligible set. Tracked coins are intentionally kept open through transient missing-price or ambiguous-input cycles and are **not** force-closed just because one run lacked a trusted recovery signal. Orphans are closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL`.
 
 ## Stage 2 -- Confirmation
 
@@ -354,6 +354,7 @@ While event is open:
   - Price returns to the deadband or depeg range: clear the recovery timer and keep the event open
 
 Orphan cleanup:
+  - If a bounded open-event read reaches `MAX_OPEN_DEPEG_EVENTS = 200`, skip the affected detection, confirmation, or orphan-cleanup pass and emit a structured degraded warning
   - Open event for a coin no longer tracked by Pharos: close with `close_reason='orphan-tracking-removed'` and `recovery_price=NULL`
   - Open event for a tracked coin not observed in the current run: keep open to avoid false recoveries during upstream gaps
 ```

@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { getChainRpc, type ChainRpcConfig } from "./chain-registry";
+import { getAlchemyAuthHeaders, getChainRpc, type ChainRpcConfig } from "./chain-registry";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchJsonWithRetry } from "./fetch-retry";
@@ -239,6 +239,13 @@ function buildRpcUrls(chainId?: string, extraRpcUrls?: string[], chainRpcs?: Map
   return Array.from(new Set(urls.filter((url) => typeof url === "string" && url.length > 0)));
 }
 
+function buildJsonRpcHeaders(rpcUrl: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    ...(getAlchemyAuthHeaders(rpcUrl) ?? {}),
+  };
+}
+
 async function fetchJsonRpcResult<T>(
   urls: string[],
   method: string,
@@ -268,7 +275,7 @@ async function fetchJsonRpcResult<T>(
         rpcUrl,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: buildJsonRpcHeaders(rpcUrl),
           signal: options?.signal,
           body: JSON.stringify({
             jsonrpc: "2.0",
@@ -278,7 +285,7 @@ async function fetchJsonRpcResult<T>(
           }),
         },
         maxRetries,
-        { timeoutMs },
+        { timeoutMs, retryMode: "network-only" },
       );
 
       if (!result?.response.ok) {
@@ -360,7 +367,7 @@ export async function fetchEvmRpcBatch(
         rpcUrl,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: buildJsonRpcHeaders(rpcUrl),
           signal: options?.signal,
           body: JSON.stringify(
             calls.map((call, index) => ({
@@ -372,7 +379,7 @@ export async function fetchEvmRpcBatch(
           ),
         },
         maxRetries,
-        { timeoutMs: options?.timeoutMs ?? 10_000 },
+        { timeoutMs: options?.timeoutMs ?? 10_000, retryMode: "network-only" },
       );
       if (!result?.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
 
@@ -426,7 +433,7 @@ export async function fetchEvmRpcBatchDetailed(
         rpcUrl,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: buildJsonRpcHeaders(rpcUrl),
           signal: options?.signal,
           body: JSON.stringify(
             calls.map((call, index) => ({
@@ -438,7 +445,7 @@ export async function fetchEvmRpcBatchDetailed(
           ),
         },
         maxRetries,
-        { timeoutMs: options?.timeoutMs ?? 10_000 },
+        { timeoutMs: options?.timeoutMs ?? 10_000, retryMode: "network-only" },
       );
       if (!result?.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
 

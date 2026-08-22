@@ -38,6 +38,7 @@ import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yiel
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { safeJsonParse } from "../lib/api-cache-read";
+import { safeErrorMessage, stripSensitive } from "../lib/safe-error-message";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
@@ -460,11 +461,12 @@ export async function snapshotPublicDataset(
     throwIfAborted(signal);
   } catch (err) {
     rethrowIfAborted(err, signal);
-    recordCronFailure("snapshot-public-dataset", err, { metadata: { stage: "compress" } });
+    const safeMessage = stripSensitive(safeErrorMessage(err));
+    recordCronFailure("snapshot-public-dataset", safeMessage, { metadata: { stage: "compress_failed" } });
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "compress_failed", error: String(err).slice(0, 200) }),
+      metadata: JSON.stringify({ reason: "compress_failed", error: safeMessage }),
     };
   }
 

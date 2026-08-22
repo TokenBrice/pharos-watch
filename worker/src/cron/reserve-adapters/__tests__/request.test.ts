@@ -6,8 +6,11 @@ import {
   fetchJsonAdapterInput,
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
+  fetchBinaryResponseWithRetry,
   fetchTextWithRetry,
   getCachedRequest,
+  REQUEST_CACHE_MAX_ENTRY_BYTES,
+  REQUEST_CACHE_MAX_TOTAL_BYTES,
 } from "../request";
 
 describe("buildBrowserHeaders", () => {
@@ -44,10 +47,39 @@ describe("buildBrowserHeaders", () => {
     expect(recovered).toBe("ok");
     expect(calls).toBe(2);
   });
+
+  it("evicts least-recently-used successful bodies within the byte budget", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    const ctx = { requestCache: cache };
+    const body = "x".repeat(REQUEST_CACHE_MAX_ENTRY_BYTES);
+
+    for (const key of ["first", "second", "third", "fourth"]) {
+      await getCachedRequest(key, async () => body, ctx);
+    }
+    await getCachedRequest("first", async () => "unused", ctx);
+    await getCachedRequest("fifth", async () => body, ctx);
+
+    expect(cache.has("first")).toBe(true);
+    expect(cache.has("second")).toBe(false);
+    expect(cache.has("third")).toBe(true);
+    expect(cache.has("fourth")).toBe(true);
+    expect(cache.has("fifth")).toBe(true);
+    expect(cache.size).toBe(REQUEST_CACHE_MAX_TOTAL_BYTES / REQUEST_CACHE_MAX_ENTRY_BYTES);
+  });
+
+  it("does not retain a successful body larger than the per-entry cap", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    const ctx = { requestCache: cache };
+    const body = "x".repeat(REQUEST_CACHE_MAX_ENTRY_BYTES + 1);
+
+    await expect(getCachedRequest("oversized", async () => body, ctx)).resolves.toBe(body);
+    expect(cache.has("oversized")).toBe(false);
+  });
 });
 
 describe("adapter request cache", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -267,6 +299,35 @@ describe("adapter request cache", () => {
     const payload = await fetchJsonAdapterInput<{ reserves: string }>(config, "ethena", signal, 1_000);
 
     expect(payload).toEqual({ reserves: "ok" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels binary error bodies and reports only the host and status", async () => {
+    let cancelled = false;
+    const responseBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("private error details"));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const fetchMock = vi.fn(async () => new Response(responseBody, { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const reason = await fetchBinaryResponseWithRetry(
+      "https://issuer.example/private/report.pdf?token=secret",
+      new AbortController().signal,
+      1_000,
+      undefined,
+      { maxRetries: 0 },
+    ).then(() => null, (err: unknown) => err);
+    const error = reason instanceof Error ? reason : new Error("expected an Error rejection");
+
+    expect(error.message).toBe("HTTP 503 for issuer.example");
+    expect(error.message).not.toContain("/private/report.pdf");
+    expect(cancelled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

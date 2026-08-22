@@ -76,30 +76,29 @@ function installFetch(options?: {
   indexFinalUrl?: string;
   pdfFinalUrl?: string;
 }) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.endsWith("/transparency")) {
-        return responseWithFinalUrl(
-          '<a href="/reviewed.pdf">June 2026 Report</a>',
-          { headers: { "content-type": "text/html" } },
-          options?.indexFinalUrl,
-        );
-      }
-      if (options?.rejectPdf) throw new Error("network unreachable");
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/transparency")) {
       return responseWithFinalUrl(
-        options?.pdf ?? PDF_BYTES,
-        {
-          headers: {
-            "content-type": "application/pdf",
-            "content-length": String((options?.pdf ?? PDF_BYTES).length),
-          },
-        },
-        options?.pdfFinalUrl,
+        '<a href="/reviewed.pdf">June 2026 Report</a>',
+        { headers: { "content-type": "text/html" } },
+        options?.indexFinalUrl,
       );
-    }),
-  );
+    }
+    if (options?.rejectPdf) throw new Error("network unreachable");
+    return responseWithFinalUrl(
+      options?.pdf ?? PDF_BYTES,
+      {
+        headers: {
+          "content-type": "application/pdf",
+          "content-length": String((options?.pdf ?? PDF_BYTES).length),
+        },
+      },
+      options?.pdfFinalUrl,
+    );
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 async function verify(manifestOverride: Partial<IndependentAssuranceManifest> = {}) {
@@ -175,9 +174,14 @@ describe("independent-assurance manifest framework", () => {
   });
 
   it("fails closed when the official PDF is unreachable", async () => {
-    installFetch({ rejectPdf: true });
+    const fetchMock = installFetch({ rejectPdf: true });
 
-    await expect(verify()).rejects.toThrow("Fetch failed for https://www.audxtoken.com/reviewed.pdf");
+    await expect(verify()).rejects.toThrow("Fetch failed for www.audxtoken.com");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://www.audxtoken.com/reviewed.pdf",
+      expect.any(Object),
+    );
   });
 
   it("fails closed when the official index redirects to an unreviewed host", async () => {

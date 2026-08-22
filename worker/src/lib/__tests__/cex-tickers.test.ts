@@ -305,7 +305,7 @@ describe("fetchCoinbasePrices", () => {
     const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 404 });
     mockFetch([{
       match: () => true,
-      outcomes: [{ response: failedResponse() }, { response: failedResponse() }],
+      outcomes: [{ response: failedResponse() }],
     }]);
 
     const outcome = await fetchCoinbasePrices(["USDT"]);
@@ -315,7 +315,7 @@ describe("fetchCoinbasePrices", () => {
     // as upstream-error so the breaker tracks consecutive failures.
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it("returns upstream-error outcome when every product request throws", async () => {

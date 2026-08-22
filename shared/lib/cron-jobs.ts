@@ -458,7 +458,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "twoHourlyDexDiscovery",
     triggerMode: "isolated",
-    maxConnections: 1, // Rate-limited sequential GeckoTerminal/CoinGecko crawl
+    maxConnections: 2, // Nested Curve fan-out is capped at two requests
   },
   {
     job: "sync-cl-exit-depth",

@@ -9,6 +9,22 @@ export interface TwitterCreds {
   accessTokenSecret: string;
 }
 
+export class TwitterPostError extends Error {
+  readonly twitterDeliveryFailureKind: "definitive_failure" | "execution_unknown";
+  readonly statusCode: number | null;
+
+  constructor(
+    message: string,
+    failureKind: "definitive_failure" | "execution_unknown",
+    statusCode: number | null = null,
+  ) {
+    super(message);
+    this.name = "TwitterPostError";
+    this.twitterDeliveryFailureKind = failureKind;
+    this.statusCode = statusCode;
+  }
+}
+
 const TRACKED_CASHTAG_SYMBOLS = [...new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol))];
 // eslint-disable-next-line security/detect-non-literal-regexp -- tracked symbols are curated and bounded to whole-word matches.
 const TRACKED_CASHTAG_PATTERN = new RegExp(`\\b(?:${TRACKED_CASHTAG_SYMBOLS.join("|")})\\b`, "i");
@@ -98,30 +114,62 @@ export function buildTweetText(digestTitle: string, digestText: string, editionN
   return `${titlePrefix}${fittedText}`;
 }
 
-/** Post a single tweet using OAuth 1.0a. Throws on API error. */
-async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): Promise<void> {
+/** Post a single tweet using OAuth 1.0a. Throws with delivery ambiguity attached on API error. */
+async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): Promise<string> {
   const url = "https://api.twitter.com/2/tweets";
-  const authHeader = await buildOAuthHeader("POST", url, creds);
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: authHeader,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      text,
-      ...(mediaId ? { media: { media_ids: [mediaId] } } : {}),
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Twitter API ${res.status}: ${body.slice(0, 300)}`);
+  let authHeader: string;
+  try {
+    authHeader = await buildOAuthHeader("POST", url, creds);
+  } catch (error) {
+    throw new TwitterPostError(`Twitter request signing failed before send: ${error instanceof Error ? error.message : String(error)}`, "definitive_failure");
   }
 
-  await drainResponseBody(res);
+  const requestSignal = AbortSignal.timeout(10_000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text,
+        ...(mediaId ? { media: { media_ids: [mediaId] } } : {}),
+      }),
+      signal: requestSignal,
+    });
+  } catch (error) {
+    throw new TwitterPostError(`Twitter tweet request failed with an unknown execution outcome: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown");
+  }
+
+  let body: string;
+  try {
+    body = await readResponseTextBoundedWithSignal(res, 16_384, requestSignal);
+  } catch (error) {
+    throw new TwitterPostError(`Twitter API ${res.status} response could not be read: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown", res.status);
+  }
+
+  if (!res.ok) {
+    const clearRejection = res.status >= 400 && res.status < 500 && body.trim().length > 0;
+    throw new TwitterPostError(
+      `Twitter API ${res.status}: ${body.slice(0, 300) || "empty response"}`,
+      clearRejection ? "definitive_failure" : "execution_unknown",
+      res.status,
+    );
+  }
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(body);
+  } catch (error) {
+    throw new TwitterPostError(`Twitter accepted the request but returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`, "execution_unknown", res.status);
+  }
+  const tweetId = (decoded as { data?: { id?: unknown } })?.data?.id;
+  if (typeof tweetId !== "string" || tweetId.length === 0) {
+    throw new TwitterPostError("Twitter accepted the request but omitted the tweet id", "execution_unknown", res.status);
+  }
+  return tweetId;
 }
 
 const TWITTER_MEDIA_UPLOAD_URL = "https://upload.twitter.com/1.1/media/upload.json";
@@ -185,7 +233,7 @@ export async function postDigestTweet(
   creds: TwitterCreds,
   editionNumber?: number | null,
   imageUrl?: string | null,
-): Promise<{ mediaAttached: boolean; mediaError: string | null }> {
+): Promise<{ tweetId: string; mediaAttached: boolean; mediaError: string | null }> {
   const tweetText = buildTweetText(digestTitle, digestText, editionNumber);
   let mediaId: string | undefined;
   let mediaError: string | null = null;
@@ -197,7 +245,7 @@ export async function postDigestTweet(
       logWorkerEventArgs("lib", "warn", `[twitter] Safety map attachment omitted: ${mediaError}`);
     }
   }
-  await postTweet(tweetText, creds, mediaId);
+  const tweetId = await postTweet(tweetText, creds, mediaId);
   logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars${mediaId ? ", safety map attached" : ""})`);
-  return { mediaAttached: Boolean(mediaId), mediaError };
+  return { tweetId, mediaAttached: Boolean(mediaId), mediaError };
 }

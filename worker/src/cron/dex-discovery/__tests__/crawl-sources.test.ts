@@ -399,7 +399,7 @@ describe("crawlCoin DexScreener hardening", () => {
       "https://api.curve.finance/v1/getPools/all/ethereum",
       expect.anything(),
       1,
-      { timeoutMs: 8_000 },
+      { timeoutMs: 8_000, maxResponseBytes: 4 * 1024 * 1024 },
     );
   });
 

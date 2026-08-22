@@ -4743,7 +4743,7 @@ Mutating delete/repair runs and false-positive deletes stage any required PSI st
 
 ### `POST /api/trigger-digest`
 
-Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup check. The HTTP handler writes a `digest:force-run-request` flag into the D1 `cache` table and returns `202`; the dedicated `*/5 * * * *` digest-trigger poll slot runs the digest on the next tick under the scheduled-event wall-clock and the existing `daily-digest` lease.
+Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup check. The HTTP handler writes a bounded retryable intent into the `digest:force-run-request` D1 cache row and returns `202`; the dedicated `*/5 * * * *` digest-trigger poll slot runs due intents under the scheduled-event wall-clock and the existing `daily-digest` lease. Transient failures retry with bounded backoff for up to three attempts, while permanent or exhausted failures remain as retained `dead_letter` state.
 
 **Response**
 
@@ -4758,7 +4758,7 @@ Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup c
 
 **Status:** `202 Accepted`
 
-The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the request in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs the eventual run against the `daily-digest` cron history and persists a compact `digest:last-trigger-result` cache entry for D1 inspection/future UI surfacing, including manual `skipped_locked` outcomes when another digest run already holds the lease. The current admin panel shows the enqueue result from the browser session; it does not yet render the persisted poll outcome.
+The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the intent in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs each run against the `daily-digest` cron history and persists a compact `digest:last-trigger-result` cache entry for D1 inspection/future UI surfacing, including retry state, retained dead letters, and manual `skipped_locked` outcomes when another digest run already holds the lease. The current admin panel shows the enqueue result from the browser session; it does not yet render the persisted poll outcome.
 
 Unhandled pre-enqueue failures are wrapped by the shared error handler and return `500` with `{ "error": "Internal Server Error" }`.
 

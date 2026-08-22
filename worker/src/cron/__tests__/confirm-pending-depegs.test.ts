@@ -218,6 +218,27 @@ describe("confirmPendingDepegs", () => {
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
 
+  it("skips confirmation and emits a degraded warning when open-event hydration reaches its limit", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const openRows = Array.from({ length: 200 }, (_, index) => ({
+      stablecoin_id: `open-${index}`,
+    }));
+
+    try {
+      await confirmPendingDepegs(
+        makeDb({ pendingRows: [makePendingRow()], openRows }),
+        [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }), ...makeNeutralUsdAssets()],
+      );
+
+      expect(batchExecute).not.toHaveBeenCalled();
+      expect(warnSpy.mock.calls.map(([message]) => String(message))).toContainEqual(
+        expect.stringContaining('"event":"depeg_open_event_limit_reached"'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("returns early when there are no pending rows", async () => {
     await confirmPendingDepegs(makeDb({ pendingRows: [] }), []);
 

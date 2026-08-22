@@ -207,15 +207,15 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 | `GET /api/digest-archive` | All digests, newest first (up to 365), including compact PSI/mcap/risk summaries plus stored `riskTape`, `nextTriggers`, and forward-look outcomes parsed from input data |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a daily digest date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
-| `POST /api/trigger-digest` *(admin)* | **Deferred**: writes a `digest:force-run-request` flag into the D1 `cache` table and returns 202. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min) and persists outcome to `digest:last-trigger-result`. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
+| `POST /api/trigger-digest` *(admin)* | **Deferred**: writes a bounded pending intent (`requestId`, timestamps, attempt count, retry state, and last error) into the D1 `cache` table and returns 202. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min), retries transient failures with bounded backoff, retains exhausted/permanent failures as dead letters, and persists outcome to `digest:last-trigger-result`. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
 
-An idle `digestTriggerPoll` with no force-run request is a neutral conditional poll, not an omitted daily-digest execution. Stale-slot reconciliation therefore creates no synthetic `daily-digest` failure when no durable child progress exists. If a forced digest did start and left durable progress before losing ownership, the sweeper still records the real abandoned attempt using its original progress timestamps.
+An idle `digestTriggerPoll` with no pending force-run intent is a neutral conditional poll, not an omitted daily-digest execution. Stale-slot reconciliation therefore creates no synthetic `daily-digest` failure when no durable child progress exists. If a forced digest did start and left durable progress before losing ownership, the sweeper still records the real abandoned attempt using its original progress timestamps.
 
 ---
 
 ## Distribution
 
-After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. Before either channel send, the worker reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old enables the attachment; every unavailable or stale state omits it and records degraded ops telemetry without blocking the digest. Twitter/X retains its same-day marker contract; Telegram first persists the exact rendered edition in `telegram_digest_outbox`, then sends only that stored payload.
+After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. Before either channel send, the worker reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old enables the attachment; every unavailable or stale state omits it and records degraded ops telemetry without blocking the digest. Twitter/X persists a same-day delivery ledger in the D1 `cache` table; Telegram first persists the exact rendered edition in `telegram_digest_outbox`, then sends only that stored payload.
 
 ### Web archive and sitemap policy
 
@@ -238,7 +238,7 @@ After the digest is stored in D1, it is posted to configured Twitter/X and Teleg
 | `TWITTER_ACCESS_TOKEN` | OAuth access token |
 | `TWITTER_ACCESS_TOKEN_SECRET` | OAuth access token secret |
 
-If any of the four are absent, Twitter posting is skipped silently. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically claims `daily-digest:twitter-sent:YYYY-MM-DD` before posting, skips later same-day retries as `already-sent`, and deletes the marker only when the post attempt itself fails. If the marker claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention. A map download or media-upload failure is handled before tweet creation and falls back to the text-only post; the map can never turn a publishable digest into a failed Twitter delivery.
+If any of the four are absent, Twitter posting is skipped silently. Twitter/X delivery is replay-safe per UTC date: `daily-digest.ts` atomically advances `daily-digest:twitter-sent:YYYY-MM-DD` through `queued` → `sending` → `sent`, `execution_unknown`, or `failed`. Success records the tweet id. A clear Twitter 4xx rejection enters `failed` and may retry up to three total attempts; timeout, network, ambiguous 5xx, lost sending ownership, or accepted-post persistence ambiguity enters or is treated as `execution_unknown`, retains the ledger marker, disables automatic retry, and emits a structured warning with the manual reconciliation step. Legacy markers and terminal `sent` rows remain duplicate-safe. If the ledger claim fails, Twitter/X delivery is not attempted, avoiding duplicate force-run posts during cache/D1 contention. A map download or media-upload failure is handled before tweet creation and falls back to the text-only post; the map can never turn a publishable digest into a failed Twitter delivery.
 
 ### Telegram
 
@@ -294,7 +294,7 @@ If either is absent, Telegram posting is skipped silently.
 
 ### Distribution status logging
 
-Daily and weekly channel outcomes are returned in scheduled-run cron metadata. `POST /api/trigger-digest` does not run delivery inline anymore; it enqueues a force-run request and returns `202` with `{ ok, accepted, requestId, message }`, then the 5-minute digest-trigger poll writes the eventual result to cron history and the `digest:last-trigger-result` cache entry.
+Daily and weekly channel outcomes are returned in scheduled-run cron metadata. `POST /api/trigger-digest` does not run delivery inline anymore; it enqueues a retryable force-run intent and returns `202` with `{ ok, accepted, requestId, message }`, then the 5-minute digest-trigger poll writes each eventual result to cron history and the `digest:last-trigger-result` cache entry. Transient failures remain pending with bounded backoff for up to three attempts; permanent or exhausted failures remain as a retained `dead_letter` intent, while a successful run clears the intent.
 
 ```json
 { "metadata": "243 chars, tweet: ok, telegram: ok" }

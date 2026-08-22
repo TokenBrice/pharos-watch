@@ -96,6 +96,7 @@ vi.mock("../../lib/db-cache", () => mockDbCache());
 // Stub chain-registry
 vi.mock("../../lib/chain-registry", () => ({
   getChainRpc: vi.fn(() => null),
+  getAlchemyAuthHeaders: vi.fn(() => undefined),
 }));
 
 // Stub yield-helpers — keep matchAllDlPools real (pure function, no I/O)

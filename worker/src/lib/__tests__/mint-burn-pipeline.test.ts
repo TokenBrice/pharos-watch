@@ -408,7 +408,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
       },
-      "https://eth-mainnet.g.alchemy.com/v2/test-key",
+      "https://eth-mainnet.g.alchemy.com/v2/",
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -471,7 +471,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
       },
-      "https://eth-mainnet.g.alchemy.com/v2/test-key",
+      "https://eth-mainnet.g.alchemy.com/v2/",
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -517,7 +517,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
       },
-      "https://eth-mainnet.g.alchemy.com/v2/test-key",
+      "https://eth-mainnet.g.alchemy.com/v2/",
       { count: 0, limit: 200 },
       new Map(),
     );

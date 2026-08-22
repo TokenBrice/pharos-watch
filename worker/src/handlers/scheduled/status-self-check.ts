@@ -2,6 +2,7 @@ import { runCronSlotSweeper } from "../../cron/cron-slot-sweeper";
 import { runCronStalenessWatchdog } from "../../cron/cron-staleness-watchdog";
 import { runDataInvariantCanary } from "../../cron/data-invariant-canary";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
+import { buildTelegramCreds } from "../../lib/runtime-credentials";
 import { resolveCloudflareD1StatusConfig } from "../../lib/env";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
@@ -49,7 +50,10 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
         {
           job: "cron-staleness-watchdog",
           errorMessage: "[cron] cron-staleness-watchdog failed in isolated slot:",
-          run: (signal) => runCronStalenessWatchdog(runtime.db, signal),
+          run: (signal) =>
+            runCronStalenessWatchdog(runtime.db, signal, {
+              telegramCreds: buildTelegramCreds(runtime.env),
+            }),
         },
       ],
     },

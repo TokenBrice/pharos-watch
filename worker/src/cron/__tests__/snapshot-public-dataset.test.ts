@@ -362,6 +362,27 @@ describe("snapshotPublicDataset", () => {
     expect(new TextEncoder().encode(decompressed).byteLength).toBe(byteSize);
   });
 
+  it("sanitizes compression failures before returning metadata or recording the cron failure", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("CompressionStream", class {
+      constructor() {
+        throw new Error("gzip failed for https://eth-mainnet.g.alchemy.com/v2/super-secret-key");
+      }
+    });
+
+    try {
+      const result = await snapshotPublicDataset(buildDb());
+      const metadata = JSON.parse(String(result.metadata)) as Record<string, string>;
+      const logged = errorSpy.mock.calls.flat().join(" ");
+
+      expect(metadata).toEqual({ reason: "compress_failed", error: "Error: gzip failed for [url]" });
+      expect(logged).toContain('"stage":"compress_failed"');
+      expect(logged).not.toContain("super-secret-key");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("produces a stable content hash for the same input", async () => {
     const db1 = buildDb();
     const db2 = buildDb();
