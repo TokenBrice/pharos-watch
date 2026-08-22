@@ -120,6 +120,19 @@ describe("cron staleness watchdog", () => {
       }));
   });
 
+  it("excludes producers whose staleness threshold exceeds cron_runs retention", () => {
+    // A monthly cadence (3x interval = 90d) can never be proven fresh from
+    // week-retained cron_runs rows; monitoring it would alert forever.
+    const monthly = {
+      ...CRON_JOB_DEFINITIONS[0],
+      job: "yield-coverage-audit-like",
+      intervalSec: 30 * 24 * 3600,
+    };
+    const producers = deriveCronFreshnessProducers([...CRON_JOB_DEFINITIONS, monthly]);
+    expect(producers.map((producer) => producer.producerJob)).not.toContain("yield-coverage-audit-like");
+    expect(producers.map((producer) => producer.producerJob)).not.toContain("yield-coverage-audit");
+  });
+
   it("flags watched freshness lanes beyond twice their producer interval", () => {
     expect(evaluateCronStaleness({
       stablecoins: { ageSeconds: 1_801 }, "fx-rates": { ageSeconds: 1_799 }, "dex-liquidity": { ageSeconds: 14_401 }, "yield-data": { ageSeconds: 3_600 }, dews: { ageSeconds: 1_000 },
