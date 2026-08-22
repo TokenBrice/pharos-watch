@@ -58,7 +58,7 @@ export default function HomePage() {
         }}
       />
       <HomeBlogBanner />
-      <HomeAltHero snapshot={heroSnapshot} />
+      <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={Date.now()} />
       <HomeAltClient />
       <HomeMediaStrip />
     </div>

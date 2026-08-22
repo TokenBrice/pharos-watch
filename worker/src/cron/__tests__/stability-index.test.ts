@@ -552,6 +552,77 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsStressBreadth).toBeGreaterThan(0);
   });
 
+  it("excludes current market cap without observed prev-week supply from the trend ratio", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: {
+        peggedAssets: [
+          {
+            id: "usdt-tether",
+            name: "Tether USD",
+            symbol: "USDT",
+            geckoId: "tether",
+            pegType: "peggedUSD",
+            pegMechanism: "fiat-backed",
+            price: 1,
+            priceSource: "defillama",
+            priceConfidence: "high",
+            priceUpdatedAt: nowSec,
+            priceObservedAt: nowSec,
+            priceObservedAtMode: "upstream",
+            priceSyncedAt: nowSec,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "defillama",
+            circulating: { peggedUSD: 100_000_000 },
+            circulatingPrevDay: { peggedUSD: 99_000_000 },
+            circulatingPrevWeek: { peggedUSD: 98_000_000 },
+            circulatingPrevMonth: { peggedUSD: 97_000_000 },
+            chainCirculating: {},
+            chains: [],
+          },
+          {
+            id: "xaut-tether",
+            name: "Tether Gold",
+            symbol: "XAUT",
+            geckoId: "tether-gold",
+            pegType: "peggedGOLD",
+            pegMechanism: "commodity-backed",
+            price: 2_500,
+            priceSource: "coingecko",
+            priceConfidence: "single-source",
+            priceUpdatedAt: nowSec,
+            priceObservedAt: nowSec,
+            priceObservedAtMode: "upstream",
+            priceSyncedAt: nowSec,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "coingecko",
+            circulating: { peggedGOLD: 50_000_000 },
+            circulatingPrevDay: {},
+            circulatingPrevWeek: {},
+            circulatingPrevMonth: {},
+            chainCirculating: {},
+            chains: [],
+          },
+        ],
+      },
+      updatedAt: nowSec,
+    });
+
+    const db = makeDb({ dewsUnavailable: false });
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db);
+
+    expect(result.status).toBeUndefined();
+    expect(snapshot.totalMcapUsd).toBe(150_000_000);
+    expect(snapshot.mcap7dChangePct).toBeCloseTo(
+      ((100_000_000 - 98_000_000) / 98_000_000) * 100,
+    );
+    expect(snapshot.mcap7dChangePct).toBeLessThan(3);
+  });
+
   it("falls back to recent replay-safe cached prices for open depegs missing current snapshot prices", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({

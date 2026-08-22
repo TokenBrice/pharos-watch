@@ -7,7 +7,7 @@ import {
   DEX_FRESHNESS_SEC,
   POOL_CHALLENGE_MIN_TVL,
 } from "../lib/constants";
-import { batchExecute } from "../lib/db";
+import { executeAtomicBatch } from "../lib/db";
 import {
   loadDexPoolChallengers,
   loadDexPriceRows,
@@ -131,7 +131,14 @@ export async function confirmPendingDepegs(
 
   const coingeckoAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.COINGECKO_CONFIRM);
 
-  const stmts: D1PreparedStatement[] = [];
+  let executedMutationCount = 0;
+
+  const executeCandidateMutations = async (statements: D1PreparedStatement[]): Promise<void> => {
+    if (statements.length === 0) return;
+    throwIfAborted(signal);
+    await executeAtomicBatch(db, statements, { signal });
+    executedMutationCount += statements.length;
+  };
 
   for (const row of rows) {
     throwIfAborted(signal);
@@ -151,7 +158,7 @@ export async function confirmPendingDepegs(
     });
 
     if (plan.kind === "mutate") {
-      stmts.push(...plan.statements);
+      await executeCandidateMutations(plan.statements);
       continue;
     }
     if (plan.kind === "wait") {
@@ -172,20 +179,16 @@ export async function confirmPendingDepegs(
       now,
     });
 
-    stmts.push(
-      ...evaluatePromotionDecision({
-        db,
-        plan,
-        evidence,
-        now,
-      }),
-    );
+    await executeCandidateMutations(evaluatePromotionDecision({
+      db,
+      plan,
+      evidence,
+      now,
+    }));
   }
 
-  if (stmts.length > 0) {
-    throwIfAborted(signal);
-    await batchExecute(db, stmts, { signal });
-    logWorkerEventArgs("handler", "info", `[depeg-confirm] Executed ${stmts.length} pending depeg mutations`);
+  if (executedMutationCount > 0) {
+    logWorkerEventArgs("handler", "info", `[depeg-confirm] Executed ${executedMutationCount} pending depeg mutations`);
   }
 
   return { providerDiagnostics };

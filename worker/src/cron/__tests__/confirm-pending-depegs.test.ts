@@ -3,7 +3,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
 vi.mock("../../lib/db", () => ({
-  batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
+  executeAtomicBatch: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
   isMissingTableError: (error: unknown) => String(error).toLowerCase().includes("no such table"),
   isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
 }));
@@ -47,7 +47,7 @@ vi.mock("../../lib/native-peg-quotes", () => ({
   }),
 }));
 
-import { batchExecute } from "../../lib/db";
+import { executeAtomicBatch as batchExecute } from "../../lib/db";
 import { fetchBinancePricesDetailed } from "../../lib/cex-tickers";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -202,8 +202,7 @@ function makeDb(config: {
 
 function lastBatchStatements(): PreparedStatementWithMeta[] {
   const calls = vi.mocked(batchExecute).mock.calls;
-  const lastCall = calls[calls.length - 1];
-  return (lastCall?.[1] ?? []) as PreparedStatementWithMeta[];
+  return calls.flatMap(([, statements]) => statements as PreparedStatementWithMeta[]);
 }
 
 function pendingOutcomeInserts(statements = lastBatchStatements()): PreparedStatementWithMeta[] {
@@ -337,9 +336,9 @@ describe("confirmPendingDepegs", () => {
     );
 
     expect(fetchWithRetry).toHaveBeenCalledTimes(1);
-    expect(batchExecute).toHaveBeenCalledTimes(1);
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const deletes = (statements as PreparedStatementWithMeta[])
+    expect(batchExecute).toHaveBeenCalledTimes(4);
+    const statements = lastBatchStatements();
+    const deletes = statements
       .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
       .map((stmt) => stmt.boundValues[0]);
     expect(deletes).toEqual([1, 2, 3, 5]);
@@ -675,10 +674,9 @@ describe("confirmPendingDepegs", () => {
 
     expect(fetchWithRetry).toHaveBeenCalledTimes(4);
     expect(fetchBinancePricesDetailed).toHaveBeenCalledTimes(1);
-    expect(batchExecute).toHaveBeenCalledTimes(1);
+    expect(batchExecute).toHaveBeenCalledTimes(4);
 
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const prepared = statements as PreparedStatementWithMeta[];
+    const prepared = lastBatchStatements();
     const inserts = prepared.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
     const deletes = prepared
       .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))

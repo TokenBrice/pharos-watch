@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.61",
+    title: "Paired 7-day trend inputs",
+    date: "2026-08-22",
+    effectiveAt: 1787356800,
+    summary:
+      "PSI now excludes assets without observed previous-week supply from both sides of the 7-day market-cap trend ratio instead of treating them as zero.",
+    impact: [
+      "The live 7-day trend term pairs current and previous-week market caps only for assets with observed previous-week supply",
+      "Assets without observed previous-week supply no longer contribute zero to the denominator while contributing current market cap to the numerator",
+      "Published current market-cap totals and the historical replay path are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.6",
     title: "Core-market aggregate universe",
     date: "2026-07-15",
