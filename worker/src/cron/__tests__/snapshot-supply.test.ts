@@ -313,7 +313,7 @@ describe("snapshotSupply", () => {
     expect(inserts.flatMap((entry) => entry.binds)).not.toContain("usdt-tether");
   });
 
-  it("blocks restored-only required assets and lists them in guard metadata", async () => {
+  it("writes observed rows and reports restored-only required assets as skipped", async () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const cacheValue = JSON.stringify({
       peggedAssets: [
@@ -332,12 +332,13 @@ describe("snapshotSupply", () => {
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
-      reason: "partial_snapshot_blocked",
-      missingActiveIds: ["usdt-tether"],
-      invalidSupplyIds: ["usdt-tether"],
+      reason: "snapshot_written_restored_skipped",
       restoredOnlyIds: ["usdt-tether"],
+      writtenRows: 1,
     });
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    const insertedSql = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    expect(insertedSql.length).toBeGreaterThan(0);
+    expect(db.getHistory().some((entry) => entry.binds.includes("usdt-tether") && entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
   });
 
   it("skips assets with zero circulating supply", async () => {

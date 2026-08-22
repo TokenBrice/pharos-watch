@@ -157,8 +157,13 @@ export async function snapshotSupply(
     .filter((id) => requiredActiveIdSet.has(id) && !nonRestoredSnapshotIds.has(id))
     .sort();
 
+  // Restored rows are never written (a carried-forward value is not that
+  // day's observation), but they are deliberate exclusions, not coverage
+  // gaps: counting them as missing would let a handful of restored coins
+  // veto every genuinely observed row for the whole UTC day.
+  const coverageAccountedIds = new Set([...validSnapshotIds, ...restoredSnapshotIds]);
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
-    validSnapshotIds,
+    coverageAccountedIds,
     nowSec,
     publicationWaivers,
     requiredActiveIds,
@@ -212,10 +217,19 @@ export async function snapshotSupply(
     logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
   }
 
+  // A same-day rerun normally short-circuits, but a required id that was
+  // restored at write time and has since produced a fresh observation must
+  // re-write the day so its row stops missing (atomic date replacement).
+  const recoveredSinceLastWrite = lastWrite?.snapshotDate === snapshotDate
+    ? [...validSnapshotIds].filter(
+      (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
+    )
+    : [];
   if (
     publicationCoverage.complete
     && lastWrite?.snapshotDate === snapshotDate
     && lastWrite.exactCoverageVerified
+    && recoveredSinceLastWrite.length === 0
   ) {
     try {
       const repairedPriceRows = await repairSameDayMissingPrices(db, snapshotDate, snapshotRows, signal);
@@ -237,17 +251,14 @@ export async function snapshotSupply(
       };
     }
   }
-  if (!publicationCoverage.complete || restoredOnlyIds.length > 0) {
+  if (!publicationCoverage.complete) {
     const cacheCoverage = evaluateStablecoinPublicationCoverage(
       cachedIds,
       nowSec,
       publicationWaivers,
       requiredActiveIds,
     );
-    const guardMissingActiveIds = [...new Set([
-      ...publicationCoverage.missingActiveIds,
-      ...restoredOnlyIds,
-    ])].sort();
+    const guardMissingActiveIds = [...publicationCoverage.missingActiveIds].sort();
     const invalidSupplyIds = guardMissingActiveIds.filter(
       (id) => cachedIds.has(id),
     );
@@ -321,5 +332,16 @@ export async function snapshotSupply(
   }
 
   logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
+  if (restoredOnlyIds.length > 0) {
+    return {
+      status: "degraded",
+      itemCount: snapshotRows.length,
+      metadata: JSON.stringify({
+        reason: "snapshot_written_restored_skipped",
+        writtenRows: snapshotRows.length,
+        restoredOnlyIds,
+      }),
+    };
+  }
   return { itemCount: snapshotRows.length };
 }
