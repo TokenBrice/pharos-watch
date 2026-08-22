@@ -410,6 +410,17 @@ export interface DigestInputData {
     currentTvl: number;
     previousTvl: number;
     mcapUsd: number;
+    /** Fractional raw-TVL change over the compared day, e.g. -0.42. */
+    tvlChangePct: number | null;
+    /**
+     * Composite move the TVL change alone implies under the current
+     * methodology's log-scale TVL Depth component. Present so coverage cannot
+     * read log compression as the score ignoring a real liquidity move.
+     */
+    expectedScoreDeltaFromTvl: number | null;
+    /** Coverage provenance of the newer row (`primary` or `mixed`; others are inadmissible). */
+    coverageClass: string;
+    coverageConfidence: number;
   }[];
   crossDayTrends?: {
     psiTrajectory: { date: string; score: number; band: string }[];
@@ -719,6 +730,11 @@ const DigestSnapshotInputDataSchema = z
             previousScore: z.number(),
             scoreDelta: z.number(),
             currentTvl: z.number(),
+            // Added with the #179 liquidity admission gate; archived rows predate them.
+            tvlChangePct: z.number().nullable().optional(),
+            expectedScoreDeltaFromTvl: z.number().nullable().optional(),
+            coverageClass: z.string().optional(),
+            coverageConfidence: z.number().optional(),
           })
           .passthrough(),
       )
