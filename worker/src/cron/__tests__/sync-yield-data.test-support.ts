@@ -96,6 +96,7 @@ vi.mock("../../lib/db-cache", () => mockDbCache());
 // Stub chain-registry
 vi.mock("../../lib/chain-registry", () => ({
   getChainRpc: vi.fn(() => null),
+  getAlchemyAuthHeaders: vi.fn(() => undefined),
 }));
 
 // Stub yield-helpers — keep matchAllDlPools real (pure function, no I/O)
@@ -114,7 +115,7 @@ vi.mock("../yield-helpers", async (importOriginal) => {
 });
 
 // Stub yield-config
-vi.mock("../yield-config", () => ({
+vi.mock("../../lib/yield-config/yield-config", () => ({
   YIELD_VARIANT_MAP: {},
   YIELD_POOL_MAP: {},
   YIELD_WEIGHTED_POOL_GROUPS: {},
@@ -133,16 +134,6 @@ vi.mock("../yield-config", () => ({
   },
   AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(["u-united-stables"]),
   isAutoLendingCollisionBlockedForStablecoin: () => false,
-}));
-
-// Stub report-cards (used for safety score computation)
-vi.mock("@shared/lib/report-cards", () => ({
-  computeOverallGrade: vi.fn(() => ({ score: 80, grade: "B+" })),
-  scoreDecentralization: vi.fn(() => ({ score: 80, grade: "B+" })),
-  scoreDependencyRisk: vi.fn(() => ({ score: 90, grade: "A-" })),
-  scoreLiquidity: vi.fn(() => ({ score: 70, grade: "B" })),
-  scorePegStability: vi.fn(() => ({ score: 85, grade: "A-" })),
-  scoreResilience: vi.fn(() => ({ score: 75, grade: "B" })),
 }));
 
 // Stub peg-score
@@ -195,7 +186,7 @@ import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
 import * as safetyScoresModule from "../../lib/safety-scores";
-import * as yieldConfigModule from "../yield-config";
+import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import * as yieldHelpersModule from "../yield-helpers";
 import * as publicationModule from "../yield-sync/publication";
 import * as evmRpcModule from "../../lib/evm-rpc";

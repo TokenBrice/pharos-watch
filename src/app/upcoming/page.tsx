@@ -10,6 +10,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { UpcomingClient } from "@/components/upcoming-client";
+import { logosById } from "@/lib/logos";
 import aiSummaries from "@data/ai-summaries.json";
 
 // Server-side teaser selection: only the dozen pre-launch texts reach the
@@ -20,6 +21,26 @@ const PRE_LAUNCH_TEASERS = Object.fromEntries(
     const text = typedSummaries[coin.id]?.text;
     return text ? [[coin.id, text]] : [];
   }),
+);
+
+const PRE_LAUNCH_CLIENT_COINS = PRE_LAUNCH_STABLECOINS.map((coin) => ({
+  id: coin.id,
+  name: coin.name,
+  symbol: coin.symbol,
+  flags: {
+    pegCurrency: coin.flags.pegCurrency,
+    backing: coin.flags.backing,
+    governance: coin.flags.governance,
+  },
+  launchPhase: coin.launchPhase,
+  expectedLaunchDate: coin.expectedLaunchDate,
+  announcedDate: coin.announcedDate,
+  dateHistory: coin.dateHistory,
+  milestones: coin.milestones,
+}));
+
+const PRE_LAUNCH_LOGOS = Object.fromEntries(
+  PRE_LAUNCH_STABLECOINS.map((coin) => [coin.id, logosById[coin.id]]),
 );
 
 export const metadata: Metadata = buildPageMetadata({
@@ -91,7 +112,11 @@ export default function UpcomingPage() {
         , or open any upcoming coin page for a copy-ready exact command tied to that asset.
       </CalloutBanner>
 
-      <UpcomingClient teasers={PRE_LAUNCH_TEASERS} />
+      <UpcomingClient
+        coins={PRE_LAUNCH_CLIENT_COINS}
+        logos={PRE_LAUNCH_LOGOS}
+        teasers={PRE_LAUNCH_TEASERS}
+      />
 
       {/* Server-rendered links for SEO crawlability */}
       <nav aria-label="Upcoming stablecoins index" className="sr-only">

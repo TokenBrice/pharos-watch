@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   fixtureIsReasonablePrice,
   fixtureHasMissingPrice,
-  fixturePRICE_BOUNDS,
+  fixturePEG_HARDCODED_PRICE_BOUNDS,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
 
-describe("PRICE_BOUNDS", () => {
+describe("PEG_HARDCODED_PRICE_BOUNDS", () => {
   it("has entries for all major peg types", () => {
     const expected = [
       "USD",
@@ -33,9 +33,9 @@ describe("PRICE_BOUNDS", () => {
       "SILVER",
     ];
     for (const key of expected) {
-      expect(fixturePRICE_BOUNDS[key]).toBeDefined();
-      expect(fixturePRICE_BOUNDS[key]).toHaveLength(2);
-      expect(fixturePRICE_BOUNDS[key][0]).toBeLessThan(fixturePRICE_BOUNDS[key][1]);
+      expect(fixturePEG_HARDCODED_PRICE_BOUNDS[key]).toBeDefined();
+      expect(fixturePEG_HARDCODED_PRICE_BOUNDS[key]).toHaveLength(2);
+      expect(fixturePEG_HARDCODED_PRICE_BOUNDS[key][0]).toBeLessThan(fixturePEG_HARDCODED_PRICE_BOUNDS[key][1]);
     }
   });
 });

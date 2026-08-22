@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -7,7 +8,14 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 
 describe("homepage server-rendered links", () => {
   it("keeps a useful profile directory in the no-JavaScript document", () => {
-    const html = renderToStaticMarkup(<HomePage />);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <HomePage />
+      </QueryClientProvider>,
+    );
     const anchorCount = (html.match(/<a\b/g) ?? []).length;
 
     expect(anchorCount).toBeGreaterThanOrEqual(20);

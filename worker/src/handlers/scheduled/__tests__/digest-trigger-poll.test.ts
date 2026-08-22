@@ -25,10 +25,38 @@ import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { buildTelegramCreds, buildTwitterCreds } from "../../../lib/runtime-credentials";
 import { drainTelegramDigestOutbox } from "../../../lib/telegram-digest-outbox";
-import { runDigestTriggerPollSlot, DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY } from "../digest-trigger-poll";
+import {
+  DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
+  DIGEST_TRIGGER_POLL_INTERVAL_SECONDS,
+  MAX_ATTEMPTS,
+  runDigestTriggerPollSlot,
+} from "../digest-trigger-poll";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../../api/admin-actions";
 
 type CronResult = { status?: string; metadata?: string; itemCount?: number };
+type DigestForceRunIntent = {
+  requestedAt: number;
+  requestId: string;
+  attempts: number;
+  nextAttemptAt: number;
+  state: "pending" | "running" | "succeeded" | "failed_transient" | "dead_letter";
+  lastError: string | null;
+};
+
+function buildIntent(
+  requestId: string,
+  overrides: Partial<DigestForceRunIntent> = {},
+): DigestForceRunIntent {
+  return {
+    requestedAt: 1_700_000_000,
+    requestId,
+    attempts: 0,
+    nextAttemptAt: 1_700_000_000,
+    state: "pending",
+    lastError: null,
+    ...overrides,
+  };
+}
 
 describe("runDigestTriggerPollSlot", () => {
   let runLeasedCron: ReturnType<typeof vi.fn>;
@@ -57,9 +85,16 @@ describe("runDigestTriggerPollSlot", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     errorSpy.mockRestore();
     warnSpy.mockRestore();
   });
+
+  function latestIntentWrite(): DigestForceRunIntent | null {
+    const calls = vi.mocked(setCache).mock.calls.filter(([, key]) => key === DIGEST_FORCE_RUN_CACHE_KEY);
+    const value = calls[calls.length - 1]?.[2];
+    return value ? JSON.parse(value) as DigestForceRunIntent : null;
+  }
 
   function buildRuntime(): ScheduledRuntimeContext {
     return {
@@ -185,25 +220,31 @@ describe("runDigestTriggerPollSlot", () => {
     );
   });
 
-  it("clears a malformed payload without running the digest", async () => {
+  it("dead-letters a malformed payload without running the digest", async () => {
     vi.mocked(getCache).mockResolvedValueOnce({ value: "not-json", updatedAt: 0 });
 
     const summary = await runDigestTriggerPollSlot(buildRuntime());
 
     expect(runLeasedCron).not.toHaveBeenCalled();
-    expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY);
+    expect(deleteCache).not.toHaveBeenCalled();
+    expect(latestIntentWrite()).toMatchObject({
+      state: "dead_letter",
+      attempts: 0,
+      lastError: "malformed-payload",
+    });
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "digest-trigger-poll",
       dueCount: 1,
       processedCount: 1,
       outcome: "error",
       error: "malformed-payload",
+      metadata: expect.objectContaining({ deadLettered: true }),
     }));
     expect(summary.jobsSkipped).toBe(1);
     expect(summary.jobsNeutralSkipped).toBe(0);
   });
 
-  it("runs daily-digest with force=true and clears the flag on success", async () => {
+  it("runs daily-digest with force=true and clears the intent on success", async () => {
     vi.mocked(buildTwitterCreds).mockReturnValueOnce({
       apiKey: "tw-key",
       apiSecret: "tw-secret",
@@ -211,7 +252,7 @@ describe("runDigestTriggerPollSlot", () => {
       accessTokenSecret: "tw-token-secret",
     });
     vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({ requestedAt: 1_700_000_000, requestId: "manual-digest-abc" }),
+      value: JSON.stringify(buildIntent("manual-digest-abc")),
       updatedAt: 1_700_000_000,
     });
     runLeasedCron.mockImplementationOnce(async (_job, fn) => {
@@ -235,6 +276,12 @@ describe("runDigestTriggerPollSlot", () => {
     expect(digestArgs[3]).toBe(true);
 
     expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY);
+    expect(latestIntentWrite()).toMatchObject({
+      requestId: "manual-digest-abc",
+      state: "succeeded",
+      attempts: 0,
+      lastError: null,
+    });
     expect(setCache).toHaveBeenCalledWith(
       expect.anything(),
       DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
@@ -257,14 +304,14 @@ describe("runDigestTriggerPollSlot", () => {
       outcome: "ok",
       metadata: expect.objectContaining({
         requestId: "manual-digest-abc",
-        flagCleared: true,
+        intentCleared: true,
       }),
     }));
   });
 
-  it("preserves the flag when the daily-digest lease is skipped_locked", async () => {
+  it("preserves the intent when the daily-digest lease is skipped_locked", async () => {
     vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({ requestedAt: 1_700_000_000, requestId: "manual-digest-locked" }),
+      value: JSON.stringify(buildIntent("manual-digest-locked")),
       updatedAt: 1_700_000_000,
     });
     runLeasedCron.mockResolvedValueOnce({ status: "skipped_locked", metadata: "" } as CronResult);
@@ -273,6 +320,7 @@ describe("runDigestTriggerPollSlot", () => {
 
     expect(runLeasedCron).toHaveBeenCalledTimes(1);
     expect(deleteCache).not.toHaveBeenCalled();
+    expect(latestIntentWrite()).toBeNull();
 
     const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
       key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
@@ -289,45 +337,100 @@ describe("runDigestTriggerPollSlot", () => {
     }));
   });
 
-  it("records the error outcome and still clears the flag when the digest throws", async () => {
+  it("retries transient failures with backoff then dead-letters after MAX_ATTEMPTS", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(1_800_000_000 * 1000));
+    const firstIntent = buildIntent("manual-digest-transient");
     vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({ requestedAt: 1_700_000_000, requestId: "manual-digest-err" }),
-      updatedAt: 1_700_000_000,
+      value: JSON.stringify(firstIntent),
+      updatedAt: firstIntent.requestedAt,
     });
-    runLeasedCron.mockRejectedValueOnce(new Error("upstream blew up"));
+    runLeasedCron.mockRejectedValueOnce(new Error("network timeout"));
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY);
-    const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
-      key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
+    const retryOne = latestIntentWrite();
+    expect(retryOne).toMatchObject({
+      requestId: firstIntent.requestId,
+      attempts: 1,
+      state: "failed_transient",
+      lastError: "network timeout",
+    });
+    expect(retryOne?.nextAttemptAt).toBe(
+      1_800_000_000 + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS,
     );
-    expect(lastResultCall).toBeTruthy();
-    const lastResult = JSON.parse(lastResultCall?.[2] as string) as {
-      outcome: string;
-      error: string | null;
-    };
-    expect(lastResult.outcome).toBe("error");
-    expect(lastResult.error).toContain("upstream blew up");
-    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      surface: "digest-trigger-poll",
-      dueCount: 1,
-      processedCount: 1,
-      outcome: "error",
-      error: "upstream blew up",
-    }));
+    expect(deleteCache).not.toHaveBeenCalled();
+
+    vi.setSystemTime(new Date((retryOne?.nextAttemptAt ?? 0) * 1000));
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify(retryOne),
+      updatedAt: retryOne?.nextAttemptAt ?? 0,
+    });
+    runLeasedCron.mockRejectedValueOnce(new Error("D1 unavailable"));
+
+    await runDigestTriggerPollSlot(buildRuntime());
+
+    const retryTwo = latestIntentWrite();
+    expect(retryTwo).toMatchObject({
+      attempts: 2,
+      state: "failed_transient",
+      lastError: "D1 unavailable",
+    });
+    expect(retryTwo?.nextAttemptAt).toBe(
+      1_800_000_000 + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS * 3,
+    );
+
+    vi.setSystemTime(new Date((retryTwo?.nextAttemptAt ?? 0) * 1000));
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify(retryTwo),
+      updatedAt: retryTwo?.nextAttemptAt ?? 0,
+    });
+    runLeasedCron.mockRejectedValueOnce(new Error("Anthropic 503"));
+
+    await runDigestTriggerPollSlot(buildRuntime());
+
+    expect(latestIntentWrite()).toMatchObject({
+      attempts: MAX_ATTEMPTS,
+      state: "dead_letter",
+      lastError: "Anthropic 503",
+    });
+    expect(deleteCache).not.toHaveBeenCalled();
+  });
+
+  it("dead-letters a permanent failure immediately", async () => {
+    const intent = buildIntent("manual-digest-permanent");
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify(intent),
+      updatedAt: intent.requestedAt,
+    });
+    runLeasedCron.mockRejectedValueOnce(new Error("validation failed: invalid prompt"));
+
+    await runDigestTriggerPollSlot(buildRuntime());
+
+    expect(latestIntentWrite()).toMatchObject({
+      requestId: intent.requestId,
+      attempts: 1,
+      state: "dead_letter",
+      lastError: "validation failed: invalid prompt",
+    });
+    expect(deleteCache).not.toHaveBeenCalled();
   });
 
   it("reports degraded outcome when digest returned status=degraded", async () => {
     vi.mocked(getCache).mockResolvedValueOnce({
-      value: JSON.stringify({ requestedAt: 1_700_000_000, requestId: "manual-digest-deg" }),
+      value: JSON.stringify(buildIntent("manual-digest-deg")),
       updatedAt: 1_700_000_000,
     });
     runLeasedCron.mockResolvedValueOnce({ status: "degraded", itemCount: 1, metadata: "" } as CronResult);
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    expect(deleteCache).toHaveBeenCalled();
+    expect(deleteCache).not.toHaveBeenCalled();
+    expect(latestIntentWrite()).toMatchObject({
+      state: "failed_transient",
+      attempts: 1,
+      lastError: "daily-digest returned status degraded",
+    });
     const lastResultCall = vi.mocked(setCache).mock.calls.find(([, key]) =>
       key === DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY
     );

@@ -462,4 +462,23 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     expect(susds.circulating).toEqual({ peggedUSD: 4_600_000_000 });
     expect(susds.supplySource).toBe("coingecko-fallback");
   });
+
+  it("does not par-value a missing NAV price for the curated aggregate overlay", async () => {
+    const susds = makeAsset({
+      id: "susds-sky",
+      symbol: "sUSDS",
+      geckoId: "susds",
+      price: null,
+      supplySource: "coingecko-fallback",
+      circulating: { peggedUSD: 4_600_000_000 },
+      chainCirculating: {},
+      chains: [],
+    });
+
+    await overlayFallbackCuratedAggregateSupply([susds]);
+
+    expect(onchainSupplyMocks.fetchCuratedAggregateOnChainMcap).not.toHaveBeenCalled();
+    expect(susds.circulating).toEqual({ peggedUSD: 4_600_000_000 });
+    expect(susds.chainCirculating).toEqual({});
+  });
 });

@@ -3,7 +3,7 @@ import { fetchEvmUint256AtBlock } from "../lib/evm-rpc";
 import { encodeUint256 } from "../lib/evm-selectors";
 import { buildOnChainSourceKey } from "../lib/yield-utils";
 import { resolveRpcUrls } from "./yield-sync/sources-helpers";
-import { QUARANTINED_DETERMINISTIC_PROBE_CONFIGS } from "./yield-config-rate-sources";
+import { QUARANTINED_DETERMINISTIC_PROBE_CONFIGS } from "../lib/yield-config/yield-config-rate-sources";
 
 const QUARANTINE_PROBE_RATE_ENVELOPE_MAX = 3;
 const QUARANTINE_PROBE_REQUEST_TIMEOUT_MS = 6_000;

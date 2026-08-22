@@ -10,7 +10,6 @@ import { compareText } from "./safety-score-v9-fact-primitives";
 import { V9_GRADE_THRESHOLDS } from "./safety-score-v9-grade";
 
 // Canonical ordering is a determinism-digest input; it has one definition.
-export { compareText };
 export { BaseInputGenerationIdSchema, Sha256Schema } from "./safety-schema-primitives";
 export const ScoreSchema = z.number().finite().min(0).max(100);
 export const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);

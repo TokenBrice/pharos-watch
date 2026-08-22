@@ -71,9 +71,20 @@ describe("trigger-digest route", () => {
     expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
     const setCacheArgs = dbCacheMocks.setCache.mock.calls[0] as unknown[];
     expect(setCacheArgs[1]).toBe("digest:force-run-request");
-    const persistedValue = JSON.parse(setCacheArgs[2] as string) as { requestId: string; requestedAt: number };
+    const persistedValue = JSON.parse(setCacheArgs[2] as string) as {
+      requestId: string;
+      requestedAt: number;
+      attempts: number;
+      nextAttemptAt: number;
+      state: string;
+      lastError: string | null;
+    };
     expect(persistedValue.requestId).toBe(body.requestId);
     expect(typeof persistedValue.requestedAt).toBe("number");
+    expect(persistedValue.attempts).toBe(0);
+    expect(persistedValue.nextAttemptAt).toBe(persistedValue.requestedAt);
+    expect(persistedValue.state).toBe("pending");
+    expect(persistedValue.lastError).toBeNull();
 
     // waitUntil is not used for digest execution anymore.
     expect(ctx.waitUntil).not.toHaveBeenCalled();

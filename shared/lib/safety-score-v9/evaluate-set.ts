@@ -13,6 +13,7 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import { resolveChainId } from "../chains";
+import { clampShare } from "../math";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { isV9MaterialShare } from "./backing";
@@ -222,10 +223,6 @@ export function resolveV9MintControlGroupSeverity(group: V9MintControlGroupIssue
 }
 
 const SHARE_RECONCILIATION_TOLERANCE = 0.000001;
-
-function clampShare(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
 
 function boundedPooledChainShare(supply: V9AssetFactsBase["supply"]): number {
   return supply.selectedBridgeRoutes.reduce(

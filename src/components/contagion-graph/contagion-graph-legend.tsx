@@ -4,7 +4,7 @@ import {
   TYPE_COLORS,
   TYPE_DASH,
 } from "@/components/contagion-graph-model";
-import { GRADE_RADAR_COLORS } from "@shared/lib/report-cards";
+import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 
 const GRADE_LEGEND_ITEMS = [
   { label: "Grade A", color: GRADE_RADAR_COLORS.A },

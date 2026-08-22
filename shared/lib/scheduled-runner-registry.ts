@@ -97,14 +97,14 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   daily0300Utc: {
     jobChains: [[
+      "mint-burn-growth-watchdog",
+      "cron-duration-watchdog",
       "prune-status-probe-runs",
       "prune-cron-history",
       "worker-repair-runner",
       "prune-detail-cache",
       "telegram-inactive-cleanup",
       "telegram-retention-cleanup",
-      "mint-burn-growth-watchdog",
-      "cron-duration-watchdog",
     ]],
   },
   daily0800Utc: {

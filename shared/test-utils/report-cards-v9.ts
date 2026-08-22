@@ -3,7 +3,7 @@ import {
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
-import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
+import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
 type V9PillarKey = keyof SafetyScoreV9CurrentCard["pillars"];
@@ -143,7 +143,7 @@ export function makeReportCardsV9Card(
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
 ): SafetyScoreV9CurrentCard {
   const score = overrides.score === undefined ? DEFAULT_SCORE : overrides.score;
-  const grade = overrides.grade ?? scoreToV9Grade(score);
+  const grade = overrides.grade ?? scoreToGrade(score);
   const reviewedPillarScores = overrides.pillars === undefined
     ? []
     : Object.values(overrides.pillars)

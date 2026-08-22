@@ -8,7 +8,6 @@ import type {
   ClassificationWarning,
   CanaryStatus,
   CoinGeckoPriceDiff,
-  D1UsageSummary,
   LiquidityHealth,
   MintBurnReconciliationSummary,
   PublicationHealth,
@@ -36,7 +35,11 @@ import {
   loadStablecoinsCache,
   type StablecoinsCacheLoadResult,
 } from "../lib/stablecoins-cache";
-import { getCacheBlobSizes, getD1UsageSummary } from "../lib/status/d1-usage";
+import {
+  getCacheBlobSizes,
+  getD1UsageSummary,
+  type D1UsageSummaryWithTableGrowth,
+} from "../lib/status/d1-usage";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 import { loadSourceDepthDistribution } from "../lib/status/price-source-depth";
 import { loadYieldHealthSummary } from "../lib/status/yield-health";
@@ -92,7 +95,7 @@ export interface StatusSupplements {
   priceProviderDiagnostics: Array<Record<string, unknown>> | null;
   gtProbe: Record<string, unknown> | null;
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
-  d1Usage: D1UsageSummary | null;
+  d1Usage: D1UsageSummaryWithTableGrowth | null;
   cacheBlobSizes?: Record<string, number>;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveDrift?: ReserveDriftEntry[];
@@ -445,7 +448,7 @@ export async function loadStatusSupplements(
     }
   }
 
-  let d1Usage: D1UsageSummary | null = null;
+  let d1Usage: D1UsageSummaryWithTableGrowth | null = null;
   try {
     const d1StatusConfig = cloudflareD1StatusBindings
       ? resolveCloudflareD1StatusConfig(cloudflareD1StatusBindings)

@@ -18,6 +18,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
+import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 import { PEG_FILTER_OPTIONS, PEG_METADATA } from "@shared/lib/classification";
@@ -46,6 +47,7 @@ import type {
 } from "@shared/types";
 import {
   COMPLIANCE_REGIME_FILTER_OPTIONS,
+  COMPLIANCE_REGIME_VALUES,
   GENIUS_STATUS_DISPLAY_ORDER,
   GENIUS_STATUS_FILTER_OPTIONS,
   MICA_STATUS_DISPLAY_ORDER,
@@ -66,6 +68,61 @@ import {
 } from "@/lib/compliance-model";
 
 const COMPLIANCE_TEXT_CELL_CLASS = "whitespace-normal break-words align-top leading-snug";
+
+interface ComplianceUrlState {
+  regime: ComplianceRegimeFilter;
+  status: ComplianceStatusFilter;
+  type: MicaTokenType | "all";
+  tokenType: MicaTokenType | "all";
+  peg: PegCurrency | "all";
+  pegCurrency: PegCurrency | "all";
+}
+
+const COMPLIANCE_STATUS_VALUES: readonly ComplianceStatusFilter[] = [
+  "all",
+  ...MICA_STATUS_FILTER_OPTIONS.map((option) => option.value),
+  ...GENIUS_STATUS_FILTER_OPTIONS.map((option) => option.value),
+];
+const COMPLIANCE_TOKEN_TYPE_VALUES: readonly (MicaTokenType | "all")[] = MICA_TOKEN_TYPE_FILTER_OPTIONS.map(
+  (option) => option.value,
+);
+const COMPLIANCE_PEG_VALUES: readonly (PegCurrency | "all")[] = [
+  "all",
+  ...(Object.keys(PEG_METADATA) as PegCurrency[]),
+];
+
+const COMPLIANCE_URL_SCHEMA: UrlStateSchema<ComplianceUrlState> = {
+  regime: {
+    kind: "enum",
+    defaultValue: "all",
+    allowedValues: COMPLIANCE_REGIME_VALUES,
+  },
+  status: {
+    kind: "enum",
+    defaultValue: "all",
+    allowedValues: COMPLIANCE_STATUS_VALUES,
+  },
+  type: {
+    kind: "enum",
+    defaultValue: "all",
+    allowedValues: COMPLIANCE_TOKEN_TYPE_VALUES,
+  },
+  tokenType: {
+    kind: "enum",
+    defaultValue: "all",
+    allowedValues: COMPLIANCE_TOKEN_TYPE_VALUES,
+  },
+  peg: {
+    kind: "enum",
+    defaultValue: "all",
+    allowedValues: COMPLIANCE_PEG_VALUES,
+  },
+  pegCurrency: {
+    kind: "enum",
+    defaultValue: "all",
+    allowedValues: COMPLIANCE_PEG_VALUES,
+  },
+};
 
 function CompliancePillGroup<T extends string>({
   value,
@@ -138,10 +195,6 @@ function ComplianceViewTabs({
   );
 }
 
-function normalizePegFilter(value: string): PegCurrency | "all" {
-  return value === "all" || value in PEG_METADATA ? (value as PegCurrency | "all") : "all";
-}
-
 function inferRegimeFromLegacyParams({
   rawRegime,
   rawStatus,
@@ -160,62 +213,79 @@ function inferRegimeFromLegacyParams({
 
 export function ComplianceClient() {
   const { data: logos } = useLogos();
-  const { getParam, setParam, setParams } = useUrlFilters();
+  const { searchParams, replaceParams } = useUrlFilters();
+  const urlState = useMemo(
+    () => decodeState(searchParams, COMPLIANCE_URL_SCHEMA),
+    [searchParams],
+  );
 
-  const rawRegime = getParam("regime", "");
-  const rawStatus = getParam("status", "all");
+  const rawRegime = searchParams.get("regime") ?? "";
+  const rawStatus = urlState.status;
   // Legacy alias `tokenType` is read as a fallback for the canonical `type`
   // param to keep old `/compliance` deep links working. Deprecated since the
   // regime split; remove once analytics show no `tokenType=` traffic for a
   // full release window (canonical writers below only ever emit `type`).
-  const rawTokenType = getParam("type", getParam("tokenType", "all"));
+  const rawTokenType = searchParams.has("type") ? urlState.type : urlState.tokenType;
   const regimeFilter = inferRegimeFromLegacyParams({ rawRegime, rawStatus, rawTokenType });
   const statusFilter = normalizeComplianceStatusFilter(rawStatus, regimeFilter);
   const tokenTypeFilter = regimeFilter === "genius" ? "all" : normalizeMicaTokenTypeFilter(rawTokenType);
   // Legacy alias `pegCurrency` -> canonical `peg`; same deprecation/removal plan
   // as `tokenType` above.
-  const pegFilter = normalizePegFilter(getParam("peg", getParam("pegCurrency", "all")));
+  const rawPeg = searchParams.has("peg") ? urlState.peg : urlState.pegCurrency;
+  const pegFilter = rawPeg;
+
+  const writeUrlState = useCallback(
+    (updates: Partial<ComplianceUrlState>) => {
+      const nextState = { ...urlState, ...updates };
+      const encoded = encodeState(nextState, COMPLIANCE_URL_SCHEMA);
+      replaceParams((params) => {
+        for (const key of Object.keys(COMPLIANCE_URL_SCHEMA)) params.delete(key);
+        for (const [key, value] of new URLSearchParams(encoded)) params.set(key, value);
+      });
+    },
+    [replaceParams, urlState],
+  );
 
   const setRegimeFilter = useCallback(
     (v: ComplianceRegimeFilter) => {
       trackEvent("filter_applied", { page: "compliance", filter_type: "regime", filter_value: v });
       trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: v });
-      setParams({ regime: v, status: "all", type: "all", tokenType: "all" });
+      writeUrlState({ regime: v, status: "all", type: "all", tokenType: "all" });
     },
-    [setParams],
+    [writeUrlState],
   );
 
   const setStatusFilter = useCallback(
     (v: ComplianceStatusFilter) => {
       trackEvent("filter_applied", { page: "compliance", filter_type: "status", filter_value: v });
-      setParam("status", v);
+      writeUrlState({ status: v });
     },
-    [setParam],
+    [writeUrlState],
   );
 
   const setTokenTypeFilter = useCallback(
     (v: MicaTokenType | "all") => {
       trackEvent("filter_applied", { page: "compliance", filter_type: "type", filter_value: v });
-      setParam("type", v);
+      writeUrlState({ type: v, tokenType: "all" });
     },
-    [setParam],
+    [writeUrlState],
   );
 
   const setPegFilter = useCallback(
     (v: PegCurrency | "all") => {
       trackEvent("filter_applied", { page: "compliance", filter_type: "peg", filter_value: v });
-      setParam("peg", v);
+      writeUrlState({ peg: v, pegCurrency: "all" });
     },
-    [setParam],
+    [writeUrlState],
   );
 
   const openOverviewStatus = useCallback(
     (regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => {
       trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: regime });
       trackEvent("filter_applied", { page: "compliance", filter_type: "status", filter_value: status });
-      setParams({ regime, status, type: "all", tokenType: "all" });
+      writeUrlState({ regime, status, type: "all", tokenType: "all" });
     },
-    [setParams],
+    [writeUrlState],
   );
 
   const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync("compliance");

@@ -1,5 +1,7 @@
 import { logTelegramEvent } from "./telegram-log";
 
+export { isValidIanaTimezone } from "@shared/lib/iana-local-time";
+
 const QUIET_HOURS_TZ_FALLBACK_LOG_WINDOW_MS = 60 * 60 * 1000;
 
 // Intentional per-isolate cache to avoid logging the same broken timezone on
@@ -94,18 +96,4 @@ export function isQuietHoursActive(
     return hourLocal >= quietHoursStartUtc && hourLocal < quietHoursEndUtc;
   }
   return hourLocal >= quietHoursStartUtc || hourLocal < quietHoursEndUtc;
-}
-
-/**
- * Returns `true` when `zone` is accepted by the runtime as an IANA timezone.
- * Used by the `/timezone` command to reject obvious typos before persisting.
- */
-export function isValidIanaTimezone(zone: string): boolean {
-  if (!zone || zone.length > 64) return false;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: zone });
-    return true;
-  } catch {
-    return false;
-  }
 }

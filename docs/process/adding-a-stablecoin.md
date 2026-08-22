@@ -116,7 +116,7 @@ Record one accepted path in the research packet:
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | DefiLlama stablecoins       | `llamaId` resolves to the intended asset and the list/detail data exposes a price                                                                    | DefiLlama list `circulating` is present; do not multiply list values by price                                                              |
 | CoinGecko supplemental fiat | `detailProvider: "coingecko"` plus verified `geckoId` returns a positive price through DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price` | CoinGecko `usd_market_cap` is positive, or exactly one supported `contracts[]` deployment can support on-chain total-supply fallback       |
-| Commodity supplemental      | verified `geckoId` returns the commodity token price, with `commodityOunces` set when fractionalized                                                 | CoinGecko market cap is positive, or gold/protocol-backed assets have a `protocolSlug` whose DefiLlama protocol data exposes usable `mcap` |
+| Commodity supplemental      | verified `geckoId` returns the commodity token price, with `commodityOunces` set when fractionalized                                                 | CoinGecko market cap is positive, or a gold asset uses the dedicated `tether-gold` or `paxos-gold` protocol slug whose DefiLlama data exposes usable `mcap` |
 | Explicit runtime exception  | documented source-specific path such as Zephyr Scanner or a maintained low-volume allowlist                                                          | same source exposes usable circulating supply or market-cap data                                                                           |
 
 Do not treat a filled JSON profile, a static route, or `canonical-order.json` inclusion as sufficient. If the active asset cannot satisfy both columns, do not add it as active; track it as pre-launch/watchlist material or document the missing upstream path before continuing.
@@ -558,7 +558,7 @@ If no live source exists:
 
 If `flags.yieldBearing` is `true`, add `yieldConfig`.
 
-Then evaluate whether runtime config is also needed. `worker/src/cron/yield-config.ts` is the aggregator; the actual tables live in per-concern files beside it:
+Then evaluate whether runtime config is also needed. `worker/src/lib/yield-config/yield-config.ts` is the aggregator; the actual tables live in per-concern files beside it:
 
 - `YIELD_POOL_MAP` (`yield-config-pools.ts`): explicit DeFiLlama pool mapping.
 - `YIELD_VARIANT_MAP` (`yield-config-variants.ts`): separate wrapper/savings token that Pharos does not track directly.

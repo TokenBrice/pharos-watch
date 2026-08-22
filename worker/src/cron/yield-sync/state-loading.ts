@@ -6,7 +6,7 @@ import {
   type PublishedSafetyScoresResultMap,
 } from "../../lib/safety-scores";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
+import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config";
 import {
   getDefaultDeterministicOnChainHealthState,
   parseDeterministicOnChainHealthState,

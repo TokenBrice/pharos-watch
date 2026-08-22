@@ -122,7 +122,10 @@ export async function snapshotSupply(
   const snapshotEligibleIds = new Set(
     options.snapshotEligibleIds ?? PSI_ELIGIBLE_STABLECOINS.map((stablecoin) => stablecoin.id),
   );
+  const requiredActiveIdSet = new Set(requiredActiveIds);
   const cachedIds = new Set(stablecoinsCache.payload.peggedAssets.map((asset) => asset.id));
+  const restoredSnapshotIds = new Set<string>();
+  const nonRestoredSnapshotIds = new Set<string>();
   const validSnapshotIds = new Set<string>();
   const snapshotRows: Array<readonly [string, number, number, number | null]> = [];
 
@@ -134,6 +137,11 @@ export async function snapshotSupply(
 
   for (const asset of stablecoinsCache.payload.peggedAssets) {
     if (!snapshotEligibleIds.has(asset.id)) continue;
+    if (asset.supplyRestored === true) {
+      restoredSnapshotIds.add(asset.id);
+      continue;
+    }
+    nonRestoredSnapshotIds.add(asset.id);
 
     const circ = asset.circulating;
     if (!circ) continue;
@@ -144,6 +152,10 @@ export async function snapshotSupply(
     const price = typeof asset.price === "number" && asset.price > 0 ? asset.price : null;
     snapshotRows.push([asset.id, snapshotDate, circulatingUsd, price]);
   }
+
+  const restoredOnlyIds = [...restoredSnapshotIds]
+    .filter((id) => requiredActiveIdSet.has(id) && !nonRestoredSnapshotIds.has(id))
+    .sort();
 
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     validSnapshotIds,
@@ -225,20 +237,24 @@ export async function snapshotSupply(
       };
     }
   }
-  if (!publicationCoverage.complete) {
+  if (!publicationCoverage.complete || restoredOnlyIds.length > 0) {
     const cacheCoverage = evaluateStablecoinPublicationCoverage(
       cachedIds,
       nowSec,
       publicationWaivers,
       requiredActiveIds,
     );
-    const invalidSupplyIds = publicationCoverage.missingActiveIds.filter(
+    const guardMissingActiveIds = [...new Set([
+      ...publicationCoverage.missingActiveIds,
+      ...restoredOnlyIds,
+    ])].sort();
+    const invalidSupplyIds = guardMissingActiveIds.filter(
       (id) => cachedIds.has(id),
     );
     logWorkerEventArgs("handler", "warn",
       `[snapshot-supply] Exact active coverage failed: ` +
       `${publicationCoverage.presentActiveCount}/${publicationCoverage.expectedActiveCount}; ` +
-      `missing=${publicationCoverage.missingActiveIds.slice(0, 20).join(",")}`,
+      `missing=${guardMissingActiveIds.slice(0, 20).join(",")}`,
     );
     return {
       status: "degraded",
@@ -247,9 +263,10 @@ export async function snapshotSupply(
         reason: "partial_snapshot_blocked",
         validRows: publicationCoverage.presentActiveCount,
         expectedCount: publicationCoverage.expectedActiveCount,
-        missingActiveIds: publicationCoverage.missingActiveIds,
+        missingActiveIds: guardMissingActiveIds,
         missingCacheActiveIds: cacheCoverage.missingActiveIds,
         invalidSupplyIds,
+        restoredOnlyIds,
         waivedActiveIds: publicationCoverage.waivedActiveIds,
       }),
     };

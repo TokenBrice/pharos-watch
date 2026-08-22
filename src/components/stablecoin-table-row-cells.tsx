@@ -19,7 +19,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
 } from "@shared/lib/classification";
 import { formatCurrency, formatPegDeviation, formatPercentChange, getNetColor } from "@shared/lib/format";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 
 interface RowCellsProps {
   row: StablecoinTableRowCellProps;

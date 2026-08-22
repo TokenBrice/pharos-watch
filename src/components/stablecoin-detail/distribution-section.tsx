@@ -18,7 +18,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useDexLiquidity } from "@/hooks/api-hooks";
 import { hasMeaningfulDexData } from "@/components/dex-liquidity-card";
-import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
+import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";

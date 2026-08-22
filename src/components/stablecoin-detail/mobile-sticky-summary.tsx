@@ -11,7 +11,7 @@ import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 interface MobileStickySummaryProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
-  pegRef: number;
+  pegRef: number | null;
   logoSrc?: string;
   reportCard: V9ConsumerCard | null;
   observeTarget: RefObject<HTMLElement | null>;

@@ -39,6 +39,24 @@ export const ALCHEMY_CHAINS: Record<string, string> = {
   bsc: "bnb-mainnet",
 };
 
+// Keep auth separate from the URL so request/log metadata never contains the API key.
+const ALCHEMY_AUTHORIZATION_BY_URL = new Map<string, string>();
+
+export function buildAlchemyRpcUrl(slug: string, apiKey?: string): string {
+  const url = `https://${slug}.g.alchemy.com/v2/`;
+  if (apiKey) {
+    ALCHEMY_AUTHORIZATION_BY_URL.set(url, `Bearer ${apiKey}`);
+  } else {
+    ALCHEMY_AUTHORIZATION_BY_URL.delete(url);
+  }
+  return url;
+}
+
+export function getAlchemyAuthHeaders(url: string): Record<string, string> | undefined {
+  const authorization = ALCHEMY_AUTHORIZATION_BY_URL.get(url);
+  return authorization ? { Authorization: authorization } : undefined;
+}
+
 /** dRPC chain slugs */
 const DRPC_CHAINS: Record<string, string> = {
   gnosis: "gnosis",
@@ -59,7 +77,7 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
         chainId,
         chainName: CHAIN_META[chainId]!.name,
         type: "evm",
-        rpcUrl: `https://${slug}.g.alchemy.com/v2/${alchemyApiKey}`,
+        rpcUrl: buildAlchemyRpcUrl(slug, alchemyApiKey),
         fallbackRpcUrl: publicRpc,
         alchemyPrimary: true,
         explorerUrl: CHAIN_META[chainId]!.explorerUrl,
@@ -120,7 +138,7 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
       chainId: "tron",
       chainName: CHAIN_META.tron.name,
       type: "tron",
-      rpcUrl: `https://tron-mainnet.g.alchemy.com/v2/${alchemyApiKey}`,
+      rpcUrl: buildAlchemyRpcUrl("tron-mainnet", alchemyApiKey),
       fallbackRpcUrl: getPublicRpcUrl("tron"),
       explorerUrl: CHAIN_META.tron.explorerUrl,
     });

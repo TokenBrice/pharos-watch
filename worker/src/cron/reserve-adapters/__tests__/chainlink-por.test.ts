@@ -423,6 +423,38 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.warnings?.some((w) => w.code === "partial-supply-read-failure")).not.toBe(true);
   });
 
+  it("skips a contract supply probe when catalog decimals are missing", async () => {
+    const coin: StablecoinMeta = {
+      id: "tusd-test",
+      name: "TUSD Test",
+      symbol: "TUSDT",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      contracts: [
+        { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376" } as unknown as NonNullable<StablecoinMeta["contracts"]>[number],
+        { chain: "base", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
+      ],
+    };
+
+    const now = 1_700_000_000;
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(300_00000000n, now - 60));
+    vi.mocked(fetchErc20TotalSupply).mockResolvedValueOnce(150_000000000000000000n);
+
+    const result = await fetchChainlinkPorReserves(coin, config, signal, { nowSec: now });
+
+    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fetchErc20TotalSupply).mock.calls[0]?.[0]).toMatchObject({ chain: "base" });
+    expect(result.metadata?.supplyUsd).toBe(150);
+    expect(result.warnings?.find((warning) => warning.code === "partial-supply-read-failure")?.message).toContain("ethereum");
+  });
+
   it("throws when all EVM chain supply reads return null", async () => {
     const coin: StablecoinMeta = {
       id: "tusd-test",

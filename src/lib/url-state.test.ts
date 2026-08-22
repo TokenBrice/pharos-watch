@@ -9,6 +9,11 @@ interface SampleState {
   pegs: readonly ("usd" | "eur" | "gbp")[];
 }
 
+interface NormalizedState {
+  window: "7d" | "all";
+  query: string;
+}
+
 const schema: UrlStateSchema<SampleState> = {
   view: { kind: "enum", defaultValue: "table", allowedValues: ["table", "grid"] },
   page: { kind: "boundedNumber", defaultValue: 1, min: 1, max: 100, integer: true },
@@ -91,6 +96,26 @@ describe("decodeState", () => {
       },
     };
     expect(decodeState("pegs=usd,eur,gbp", cappedSchema).pegs).toEqual(["usd", "eur"]);
+  });
+
+  it("normalizes enum aliases and preserves untrimmed string fields when configured", () => {
+    const normalizedSchema: UrlStateSchema<NormalizedState> = {
+      window: {
+        kind: "enum",
+        defaultValue: "7d",
+        allowedValues: ["7d", "all"],
+        normalize: (value) => value === "alltime" ? "all" : value,
+        encode: (value) => value === "all" ? "alltime" : value,
+      },
+      query: { kind: "string", defaultValue: "", trim: false },
+    };
+
+    expect(decodeState("window=alltime&query=%20hello%20", normalizedSchema)).toEqual({
+      window: "all",
+      query: " hello ",
+    });
+    const encoded: NormalizedState = { window: "all", query: "" };
+    expect(encodeState(encoded, normalizedSchema)).toBe("window=alltime");
   });
 });
 

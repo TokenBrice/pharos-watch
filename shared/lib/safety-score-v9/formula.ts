@@ -29,7 +29,7 @@ import {
   type V9ScopedRiskAdjustment,
   type V9ScopedRiskSignal,
 } from "./scoped-risk";
-import { clampScore } from "./primitives";
+import { clampScore } from "../math";
 
 export type { V9AggregationStrategy } from "./aggregation";
 

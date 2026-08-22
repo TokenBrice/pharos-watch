@@ -131,6 +131,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       tokens: [
         {
           circulating: { peggedUSD: 100 },
+          totalCirculatingUSD: { peggedUSD: 100 },
         },
       ],
     });
@@ -160,6 +161,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       tokens: [
         {
           circulating: { peggedUSD: 100 },
+          totalCirculatingUSD: { peggedUSD: 100 },
         },
       ],
     });
@@ -184,6 +186,34 @@ describe("normalizeDefiLlamaDetailBody", () => {
           totalCirculatingUSD: { peggedUSD: 100 },
           totalCirculating: { peggedUSD: 100 },
           circulating: { peggedUSD: 100 },
+        },
+      ],
+    });
+  });
+
+  it("converts gold native history to USD using the detail price", () => {
+    const body = JSON.stringify({
+      price: 2_300,
+      tokens: [
+        {
+          circulating: { peggedGOLD: 1_000 },
+        },
+      ],
+    });
+
+    expect(
+      JSON.parse(
+        normalizeDefiLlamaDetailBody(body, {
+          flags: { pegCurrency: "GOLD" },
+        }),
+      ),
+    ).toEqual({
+      price: 2_300,
+      tokens: [
+        {
+          totalCirculating: { peggedGOLD: 1_000 },
+          totalCirculatingUSD: { peggedGOLD: 2_300_000 },
+          circulating: { peggedGOLD: 1_000 },
         },
       ],
     });

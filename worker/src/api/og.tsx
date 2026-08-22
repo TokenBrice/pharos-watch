@@ -10,7 +10,7 @@ import { DepegCard, type DepegCardData } from "../lib/og-templates/depeg-card";
 import { StabilityIndexCard, type StabilityIndexCardData } from "../lib/og-templates/stability-index-card";
 import { ChainCard, type ChainCardData } from "../lib/og-templates/chain-card";
 import { isActiveChainAggregateAsset } from "./chains";
-import { aggregateChains } from "@shared/lib/chain-aggregator";
+import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { ratioToPercentage } from "@shared/lib/stats";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/lib/chains";

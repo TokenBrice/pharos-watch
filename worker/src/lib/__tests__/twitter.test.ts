@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildTweetText, postDigestTweet } from "../twitter";
+import { buildTweetText, postDigestTweet, TwitterPostError } from "../twitter";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 const creds = {
@@ -55,7 +55,9 @@ describe("twitter helpers", () => {
     const response = new Response(JSON.stringify({ data: { id: "1" } }), { status: 201 });
     const fetchSpy = mockFetch([{ match: () => true, respond: () => response }]);
 
-    await postDigestTweet("Daily Digest", "Daily Digest: USDT outpaced USDC.", creds);
+    await expect(postDigestTweet("Daily Digest", "Daily Digest: USDT outpaced USDC.", creds)).resolves.toMatchObject({
+      tweetId: "1",
+    });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0]! as [string, RequestInit];
@@ -98,7 +100,7 @@ describe("twitter helpers", () => {
       creds,
       42,
       "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
-    )).resolves.toEqual({ mediaAttached: true, mediaError: null });
+    )).resolves.toEqual({ tweetId: "1", mediaAttached: true, mediaError: null });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
@@ -123,6 +125,7 @@ describe("twitter helpers", () => {
     );
     expect(result.mediaAttached).toBe(false);
     expect(result.mediaError).toContain("HTTP 404");
+    expect(result.tweetId).toBe("1");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     warn.mockRestore();
   });
@@ -133,5 +136,25 @@ describe("twitter helpers", () => {
 
     await expect(postDigestTweet("", "USDT stumbled against USDC.", creds)).rejects.toThrow("Twitter API 403: denied");
     expect(response.bodyUsed).toBe(true);
+  });
+
+  it("classifies a clear 4xx rejection as definitively retryable", async () => {
+    mockFetch([{ match: () => true, respond: () => new Response('{"detail":"denied"}', { status: 403 }) }]);
+
+    const error = await postDigestTweet("", "USDT stumbled.", creds).catch((caught) => caught);
+    expect(error).toBeInstanceOf(TwitterPostError);
+    expect(error).toMatchObject({ twitterDeliveryFailureKind: "definitive_failure", statusCode: 403 });
+  });
+
+  it("classifies network and ambiguous 5xx failures as execution unknown", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new TypeError("connection reset");
+    }));
+    const networkError = await postDigestTweet("", "USDT stumbled.", creds).catch((caught) => caught);
+    expect(networkError).toMatchObject({ twitterDeliveryFailureKind: "execution_unknown", statusCode: null });
+
+    mockFetch([{ match: () => true, respond: () => new Response("upstream timeout", { status: 503 }) }]);
+    const serverError = await postDigestTweet("", "USDT stumbled.", creds).catch((caught) => caught);
+    expect(serverError).toMatchObject({ twitterDeliveryFailureKind: "execution_unknown", statusCode: 503 });
   });
 });

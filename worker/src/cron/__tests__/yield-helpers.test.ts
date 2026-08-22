@@ -25,7 +25,7 @@ import {
 } from "../yield-helpers";
 import { computeTvlWeightedMedianApy } from "../yield-sync/rankings";
 import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
-import { LENDING_PROTOCOL_ALLOWLIST } from "../yield-config";
+import { LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config";
 
 // computeTvlWeightedMedianApy is internal to sync-yield-data.ts - tested via integration
 describe("STALE_THRESHOLD_MS", () => {

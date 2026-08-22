@@ -142,4 +142,22 @@ describe("ComparisonTable", () => {
     expect(html).not.toContain("text-green-600");
     expect(html).not.toContain("BEST_CLASS");
   });
+
+  it("keeps basis-point values rounded to whole numbers", () => {
+    const base = makeCoin("usdt", "USDT");
+    const coin = {
+      ...base,
+      pegDetails: {
+        ...base.pegDetails!,
+        currentDeviationBps: 2.4,
+        worstDeviationBps: -42.6,
+      },
+    };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+
+    expect(html).toContain("+2 bps");
+    expect(html).toContain("-43 bps");
+    expect(html).not.toContain("+2.4 bps");
+    expect(html).not.toContain("-42.6 bps");
+  });
 });

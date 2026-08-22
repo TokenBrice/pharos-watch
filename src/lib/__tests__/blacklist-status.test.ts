@@ -7,7 +7,7 @@ vi.mock("@shared/lib/stablecoins/client-registry", () => ({
   ]),
 }));
 
-vi.mock("@shared/lib/report-cards", () => ({
+vi.mock("@shared/lib/report-card-blacklist-matchers", () => ({
   getBlacklistStatusLabel: (status: boolean | "possible" | "inherited") => {
     if (status === true) return "Yes";
     if (status === "possible") return "Possible";

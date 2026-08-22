@@ -17,7 +17,11 @@ import {
   fetchCurrentNativePegQuotes,
   type NativePegQuoteSession,
 } from "../../lib/native-peg-quotes";
+import { logWorkerEvent } from "../../lib/structured-log";
 import type { HydratedDepegDetection } from "./types";
+
+/** Bound open-event hydration so one detection pass cannot materialize an unbounded set. */
+export const MAX_OPEN_DEPEG_EVENTS = 200;
 
 export async function hydrateDepegDetection(
   db: D1Database,
@@ -26,7 +30,7 @@ export async function hydrateDepegDetection(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   nativePegSession?: NativePegQuoteSession,
-): Promise<HydratedDepegDetection> {
+): Promise<HydratedDepegDetection & { openRowsLimitReached: boolean }> {
   const {
     rates: pegRates,
     sources: pegRateSources,
@@ -59,8 +63,21 @@ export async function hydrateDepegDetection(
 
   throwIfAborted(signal);
   const openResult = await db
-    .prepare(`SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events WHERE ended_at IS NULL`)
+    .prepare(`SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events WHERE ended_at IS NULL LIMIT ?`)
+    .bind(MAX_OPEN_DEPEG_EVENTS)
     .all<DepegRow>();
+  const openRows = openResult.results ?? [];
+  const openRowsLimitReached = openRows.length >= MAX_OPEN_DEPEG_EVENTS;
+  if (openRowsLimitReached) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "warn",
+      event: "depeg_open_event_limit_reached",
+      message: "Skipped depeg detection because the open-event query reached its limit",
+      status: "degraded",
+      metadata: { pass: "detection", maxOpenDepegEvents: MAX_OPEN_DEPEG_EVENTS },
+    });
+  }
 
   return {
     now,
@@ -72,6 +89,7 @@ export async function hydrateDepegDetection(
     dexPriceSources,
     dexPoolChallengers,
     nativePegQuotes,
-    openRows: openResult.results ?? [],
+    openRows: openRowsLimitReached ? [] : openRows,
+    openRowsLimitReached,
   };
 }

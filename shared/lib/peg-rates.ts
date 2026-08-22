@@ -1,7 +1,7 @@
 import type { PegAssetBase, StablecoinMeta } from "../types";
 import { normalizeLegacyPegType } from "./peg-price-bounds";
 import { PEG_TAXONOMY } from "./peg-taxonomy";
-import { medianOf } from "./peg-utils";
+import { median } from "./stats";
 import { getCirculatingRaw } from "./supply";
 
 /**
@@ -106,9 +106,9 @@ export function derivePegRates(
   const counts: Record<string, number> = Object.create(null) as Record<string, number>;
   for (const [peg, prices] of groups.entries()) {
     // Keep the scoring reference unrounded; display medians round at the API edge.
-    // medianOf() returns null for empty groups, so no separate empty-array guard is needed.
-    const median = medianOf(prices);
-    if (median == null) continue;
+    // median() returns null for empty groups, so no separate empty-array guard is needed.
+    const medianValue = median(prices);
+    if (medianValue == null) continue;
 
     // A live FX rate is authoritative for fiat pegs regardless of peer count.
     // Peer medians remain a fallback only when an FX rate is unavailable.
@@ -128,7 +128,7 @@ export function derivePegRates(
       continue;
     }
 
-    rates[peg] = median;
+    rates[peg] = medianValue;
     sources[peg] = "median";
     counts[peg] = prices.length;
   }
@@ -152,6 +152,7 @@ export function derivePegRates(
 
 /**
  * Get the expected USD price for a coin given its pegType and the derived rates.
+ * Returns null when a non-USD reference is unavailable; USD remains fixed at 1.
  * For gold-pegged tokens, adjusts the per-ounce reference by commodityOunces
  * so that gram-denominated tokens get the correct per-gram reference.
  */
@@ -159,10 +160,13 @@ export function getPegReference(
   pegType: string | undefined,
   rates: Record<string, number>,
   commodityOunces?: number
-): number {
-  if (!pegType) return 1;
+): number | null {
+  if (!pegType) return null;
   const peg = normalizePegType(pegType);
-  const rate = peg ? rates[peg] ?? 1 : 1;
+  if (!peg) return null;
+  if (peg === "peggedUSD") return 1;
+  const rate = rates[peg];
+  if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
   // For gold/silver tokens, scale the per-ounce rate by the token's weight
   if ((peg === "peggedGOLD" || peg === "peggedSILVER") && commodityOunces && commodityOunces > 0) {
     return rate * commodityOunces;

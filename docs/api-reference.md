@@ -13,7 +13,7 @@ Unless noted otherwise, responses are `Content-Type: application/json`. Exceptio
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
-- `https://site-api.pharos.watch` is the website-internal Worker host. It accepts only allowlisted `GET` reads plus `X-Pharos-Site-Proxy-Secret`.
+- `https://site-api.pharos.watch` is the website-internal Worker host. It accepts allowlisted `GET` reads and the internal `POST /api/telegram-adoption` mutation with `X-Pharos-Site-Proxy-Secret`.
 - `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev`.
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
@@ -261,7 +261,7 @@ Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloud
 
 Mutating admin calls also require `X-Pharos-Admin: 1` after Cloudflare Access authentication. Browser proxy calls forward that header from the operator UI and additionally require same-origin `Origin`; direct `ops-api` automation must send the header along with the Access service-token credentials.
 
-The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. All Pages hosts — production and preview — must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` (or a Worker preview URL that accepts the site-data secret); the Pages proxy fails closed with `500` when that binding is missing. The `/_site-data/*` lane additionally accepts requests only when the browser `Origin` header (or `Referer` as a fallback) matches `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Public browser traffic must not call `site-api.pharos.watch` directly.
+The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts allowlisted `GET` public-read paths plus the internal `POST /api/telegram-adoption` mutation and requires `X-Pharos-Site-Proxy-Secret`, which Pages proxies inject server-to-server from `SITE_API_SHARED_SECRET`. All Pages hosts — production and preview — must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` (or a Worker preview URL that accepts the site-data secret); the Pages proxies fail closed with `500` when that binding is missing. The `/_site-data/*` lane additionally accepts requests only when the browser `Origin` header (or `Referer` as a fallback) matches `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Public browser traffic must not call `site-api.pharos.watch` directly.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
@@ -1805,7 +1805,7 @@ Lists immutable public daily dataset snapshots written by the `snapshot-public-d
 
 ### `GET /api/snapshots/:date.json`
 
-Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, and returns the original JSON envelope.
+Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, validates the versioned envelope, and returns the original JSON. Current rows carry `version: 2`; versionless legacy rows remain readable through the explicit v1 compatibility parser.
 
 The writer fails closed for required cache/table reads and marks the cron run `degraded` without inserting a snapshot when the canonical V9 Safety Score, DEWS, or DEX liquidity section is unavailable. V9 must be complete, current, and no older than two 30-minute producer cadences. Its identity is embedded in the row metadata, envelope, and report-card payload. Immediately before insert, the writer reloads and fences the exact canonical publication identity so a publication change cannot seal a mixed-generation immutable row.
 
@@ -1823,6 +1823,7 @@ DEWS rows must match the exact timestamp, row count, and stablecoin-ID digest in
 
 ```text
 PublicSnapshotEnvelope {
+  version: 2,
   snapshotDate,
   generatedAt,
   methodologyVersions,
@@ -3584,7 +3585,7 @@ Pages Function inventory:
 | `/api/admin/*`                                           | `functions/api/admin/[[path]].ts`                                | Same-origin operator proxy from `ops.pharos.watch` to `ops-api.pharos.watch`.      |
 | `GET /admin/*`, `GET /admin-api/*`                       | `functions/admin/[[path]].ts`, `functions/admin-api/[[path]].ts` | Operator-host asset gates for Access-protected admin surfaces.                     |
 | `GET /stablecoin/:legacy-id`                             | `functions/stablecoin/[[path]].ts`                               | Redirect shim for legacy numeric stablecoin URLs.                                  |
-| `POST /pharoswatchbot-adoption`                          | `functions/pharoswatchbot-adoption.ts`                           | Aggregate-only same-origin PharosWatchBot CTA telemetry.                           |
+| `POST /pharoswatchbot-adoption`                          | `functions/pharoswatchbot-adoption.ts` -> Worker `/api/telegram-adoption` | Aggregate-only same-origin PharosWatchBot CTA telemetry.                    |
 | `GET /selector-snapshot/:sid`, `POST /selector-snapshot` | `functions/selector-snapshot/[[path]].ts`                        | Stablecoin Picker frozen snapshot read and canonical server-recomputation surface. |
 
 The `/api/admin/*` proxy forwards browser `Idempotency-Key` request headers and reflects upstream `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty` response headers. Request bodies are capped incrementally at 128 KiB; an oversized body returns `413`. Upstream responses are fully buffered with a 16 MiB cap before being returned; an oversized or unreadable upstream response returns `502`.
@@ -3663,9 +3664,9 @@ New values carry both `provenance: "pharos-verified"` / `snapshotSchemaVersion: 
 
 ### `POST /pharoswatchbot-adoption`
 
-Same-origin Pages Function used by allowlisted `/pharoswatchbot/` CTA links. It accepts a strict JSON body containing `campaign="landing"` and one canonical placement (`hero`, `setup`, `miniapp_setup`, `miniapp_home`, or `miniapp_watchlist`). The request body is capped at 512 bytes and must carry a permitted Pharos Pages `Origin` or `Referer`.
+Same-origin Pages forwarding shim used by allowlisted `/pharoswatchbot/` CTA links. It forwards to the Worker’s internal `/api/telegram-adoption` route. The Worker accepts a strict JSON body containing `campaign="landing"` and one canonical placement (`hero`, `setup`, `miniapp_setup`, `miniapp_home`, or `miniapp_watchlist`). The request body is capped at 512 bytes and must carry a permitted Pharos Pages `Origin` or `Referer`.
 
-The function writes one aggregate `cta_click` count through the Pages project's primary `DB` D1 binding. It stores no raw IP address, User-Agent, referrer, cookie, request ID, chat ID, or user ID. A dedicated-pepper HMAC of `CF-Connecting-IP` is used only in the minute-quota table, where a per-client quota admits at most 10 requests per minute before the identifier-free global quota admits at most 3,000 requests per UTC minute; exhausted quota returns `429` with `Retry-After: 60`. Success returns `204 No Content`. Invalid method/origin/schema, missing binding, and D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
+The Worker writes one aggregate `cta_click` count and owns both D1 minute-quota reservations. It stores no raw IP address, User-Agent, referrer, cookie, request ID, chat ID, or user ID. Pages computes a dedicated-pepper HMAC of `CF-Connecting-IP` only to forward the per-client quota key; the Worker admits at most 10 requests per minute before the identifier-free global quota admits at most 3,000 requests per UTC minute. Exhausted quota returns `429` with `Retry-After: 60`; success returns `204 No Content`. Invalid method/origin/schema, missing proxy configuration or client-IP secret, and Worker/D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
 
 ### `POST /selector-snapshot`
 
@@ -4743,7 +4744,7 @@ Mutating delete/repair runs and false-positive deletes stage any required PSI st
 
 ### `POST /api/trigger-digest`
 
-Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup check. The HTTP handler writes a `digest:force-run-request` flag into the D1 `cache` table and returns `202`; the dedicated `*/5 * * * *` digest-trigger poll slot runs the digest on the next tick under the scheduled-event wall-clock and the existing `daily-digest` lease.
+Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup check. The HTTP handler writes a bounded retryable intent into the `digest:force-run-request` D1 cache row and returns `202`; the dedicated `*/5 * * * *` digest-trigger poll slot runs due intents under the scheduled-event wall-clock and the existing `daily-digest` lease. Transient failures retry with bounded backoff for up to three attempts, while permanent or exhausted failures remain as retained `dead_letter` state.
 
 **Response**
 
@@ -4758,7 +4759,7 @@ Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup c
 
 **Status:** `202 Accepted`
 
-The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the request in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs the eventual run against the `daily-digest` cron history and persists a compact `digest:last-trigger-result` cache entry for D1 inspection/future UI surfacing, including manual `skipped_locked` outcomes when another digest run already holds the lease. The current admin panel shows the enqueue result from the browser session; it does not yet render the persisted poll outcome.
+The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the intent in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs each run against the `daily-digest` cron history and persists a compact `digest:last-trigger-result` cache entry for D1 inspection/future UI surfacing, including retry state, retained dead letters, and manual `skipped_locked` outcomes when another digest run already holds the lease. The current admin panel shows the enqueue result from the browser session; it does not yet render the persisted poll outcome.
 
 Unhandled pre-enqueue failures are wrapped by the shared error handler and return `500` with `{ "error": "Internal Server Error" }`.
 

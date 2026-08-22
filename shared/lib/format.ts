@@ -74,11 +74,10 @@ export function formatCurrency(value: number, decimals = 2): string {
 export function abbreviateNumberParts(value: number): { short: number; suffix: string } {
   if (!Number.isFinite(value)) return { short: 0, suffix: "" };
   const abs = Math.abs(value);
-  if (abs >= 1e12) return { short: value / 1e12, suffix: "T" };
-  if (abs >= 1e9) return { short: value / 1e9, suffix: "B" };
-  if (abs >= 1e6) return { short: value / 1e6, suffix: "M" };
-  if (abs >= 1e3) return { short: value / 1e3, suffix: "K" };
-  return { short: value, suffix: "" };
+  const selected = COMPACT_USD_TIERS.find(({ divisor }) => abs >= divisor);
+  return selected
+    ? { short: value / selected.divisor, suffix: selected.suffix }
+    : { short: value, suffix: "" };
 }
 
 export function formatCompactUsd(value: number): string {
@@ -131,10 +130,20 @@ export function formatPrice(price: number | null | undefined, symbol = "$", deci
   return `${symbol}${price.toFixed(decimals)}`;
 }
 
+/**
+ * Format a USD price in the peg's native unit (e.g. gold ounces for XAUT).
+ *
+ * Null/unusable `pegRef` contract: fall back to the observed USD price with an
+ * explicit "$" symbol — real data, clearly USD-labeled, never a fabricated
+ * native-unit figure. Reference-derived surfaces (deviation, depeg signals,
+ * peg scores) must fail closed at their own call sites instead; callers whose
+ * cell IS the native conversion render "—" themselves (see
+ * stablecoin-table-row-model.ts priceCell).
+ */
 export function formatNativePrice(
   usdPrice: number | null | undefined,
   pegCurrency: string,
-  pegRef: number,
+  pegRef: number | null,
   decimals = 4,
 ): string {
   if (!isFiniteNumber(usdPrice)) return "N/A";
@@ -143,7 +152,7 @@ export function formatNativePrice(
   if (taxonomy?.nativePriceUsesUsdSymbol === true) {
     return formatPrice(usdPrice, "$", decimals);
   }
-  if (!Number.isFinite(pegRef) || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
+  if (pegRef == null || !Number.isFinite(pegRef) || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
   return formatPrice(usdPrice / pegRef, symbol, decimals);
 }
 
@@ -159,9 +168,9 @@ export function formatBps(bps: number): string {
  * `pegValue` should be the USD price of one unit of the peg currency
  * (e.g. ~1.19 for EUR, ~1.30 for CHF, ~3200 for gold oz, 1 for USD).
  */
-export function formatPegDeviation(price: number | null | undefined, pegValue = 1): string {
+export function formatPegDeviation(price: number | null | undefined, pegValue: number | null = 1): string {
   if (!isFiniteNumber(price)) return "N/A";
-  if (!Number.isFinite(pegValue) || pegValue === 0) return "N/A";
+  if (pegValue == null || !Number.isFinite(pegValue) || pegValue === 0) return "N/A";
   // Deviation as basis points relative to peg: ((price / pegValue) - 1) * BPS_PER_UNIT
   const ratio = price / pegValue;
   const bps = Math.round((ratio - 1) * BPS_PER_UNIT);
@@ -331,7 +340,10 @@ export function formatDeathDate(d: string): string {
   return formatYearMonthWithStyle(d, "short") ?? d;
 }
 
-/** Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d". */
+/**
+ * Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d".
+ * This intentionally keeps composite units; use formatRelativeAgeSeconds for single-unit relative ages.
+ */
 export function formatElapsedSeconds(seconds: number): string {
   if (!Number.isFinite(seconds)) return "N/A";
   if (seconds < SECONDS_PER_MINUTE) return `${Math.floor(seconds)}s`;

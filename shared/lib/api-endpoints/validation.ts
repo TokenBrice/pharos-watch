@@ -3,14 +3,13 @@ import type {
   EndpointDefinition,
   EndpointMethod,
   EndpointMethodValidationError,
-  EndpointProbeGroup,
   EndpointPublicApiAccess,
   EndpointSiteDataAccess,
 } from "./definitions";
 import { findDynamicEndpointDescriptor } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
 import { API_PATHS } from "./paths";
-import { getEndpointProbePaths } from "./selectors";
+export { getProbePaths } from "./selectors";
 
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
@@ -191,8 +190,4 @@ export function validateAllowedEndpointMethods(
 export function validateEndpointMethod(url: URL, method: string): EndpointMethodValidationError | null {
   const allowedMethods = getAllowedEndpointMethods(url);
   return validateAllowedEndpointMethods(method, allowedMethods ?? GET_ONLY_METHODS);
-}
-
-export function getProbePaths(group: EndpointProbeGroup): string[] {
-  return getEndpointProbePaths(group);
 }

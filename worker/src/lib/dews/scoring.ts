@@ -134,7 +134,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
         pegRateSource,
         pegRateContributorCount,
       });
-    const pegRef = pegReferenceTrusted ? getPegReference(pegType, pegRates, meta.commodityOunces) : 0;
+    const pegRef = pegReferenceTrusted ? getPegReference(pegType, pegRates, meta.commodityOunces) ?? 0 : 0;
     const pegReferenceUnavailableReason = !hasPegReference
       ? "peg-reference-missing"
       : pegReferenceTrusted

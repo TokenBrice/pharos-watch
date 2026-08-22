@@ -22,15 +22,15 @@ import {
   YIELD_ADAPTER_MANIFEST,
   YIELD_POOL_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
-} from "./yield-config";
+} from "../lib/yield-config/yield-config";
 import {
   explainDeterministicAutoLendingEligibility,
   type AutoLendingEligibilityReasonCode,
 } from "./yield-sync/resolve-helpers";
 import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-scores";
 import { buildStablecoinSupplyMapFromCacheValue } from "./yield-sync/supply-map";
-import type { YieldAdapterLifecycleEntry } from "./yield-config-registry";
-import { YIELD_ADAPTER_LIFECYCLE } from "./yield-config-rate-sources";
+import type { YieldAdapterLifecycleEntry } from "../lib/yield-config/yield-config-registry";
+import { YIELD_ADAPTER_LIFECYCLE } from "../lib/yield-config/yield-config-rate-sources";
 import {
   probeQuarantinedDeterministicAdapters,
   type QuarantineRestoreCandidate,
@@ -296,7 +296,7 @@ export interface ProtocolRecommendationSourceLink {
 }
 
 export interface ProtocolRecommendationSuggestedConfig {
-  targetFile: "worker/src/cron/yield-config-lending-protocols.ts";
+  targetFile: "worker/src/lib/yield-config/yield-config-lending-protocols.ts";
   exportName: "LENDING_PROTOCOLS";
   anchor: typeof ALLOWLIST_AUDIT_QUEUE_ANCHOR;
   snippet: string;
@@ -407,7 +407,7 @@ function inferProtocolLabel(project: string): string {
 
 function buildSuggestedLendingAllowlistConfig(project: string): ProtocolRecommendationSuggestedConfig {
   return {
-    targetFile: "worker/src/cron/yield-config-lending-protocols.ts",
+    targetFile: "worker/src/lib/yield-config/yield-config-lending-protocols.ts",
     exportName: "LENDING_PROTOCOLS",
     anchor: ALLOWLIST_AUDIT_QUEUE_ANCHOR,
     snippet: `  ${JSON.stringify(project)}: { label: ${JSON.stringify(inferProtocolLabel(project))} },`,

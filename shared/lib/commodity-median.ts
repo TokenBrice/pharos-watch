@@ -1,5 +1,5 @@
 import { bucketTimestampToUtcDay, type TimestampedRatePoint } from "./rate-series";
-import { medianOf } from "./peg-utils";
+import { median } from "./stats";
 
 export type CommodityPeg = "GOLD" | "SILVER";
 
@@ -73,9 +73,9 @@ function buildCrossCoinMedianSeries(
     }
     if (values.length === 0) continue;
 
-    const median = medianOf(values);
-    if (median == null) continue;
-    series.push({ timestamp: day, rate: median });
+    const medianValue = median(values);
+    if (medianValue == null) continue;
+    series.push({ timestamp: day, rate: medianValue });
   }
 
   series.sort((a, b) => a.timestamp - b.timestamp);

@@ -31,7 +31,9 @@ const STABLECOINS_CACHE_PAYLOAD = {
       name: "USD Coin",
       price: 1.0,
       pegType: "peggedUSD",
+      pegMechanism: "fiat-backed",
       circulating: { peggedUSD: 50_000_000_000 },
+      chains: ["Ethereum"],
     },
     {
       id: "usdt-tether",
@@ -39,7 +41,9 @@ const STABLECOINS_CACHE_PAYLOAD = {
       name: "Tether",
       price: 1.0,
       pegType: "peggedUSD",
+      pegMechanism: "fiat-backed",
       circulating: { peggedUSD: 110_000_000_000 },
+      chains: ["Ethereum"],
     },
   ],
 };
@@ -335,6 +339,7 @@ describe("snapshotPublicDataset", () => {
 
     const decompressed = await gunzipToText(payloadGz);
     const envelope = JSON.parse(decompressed) as {
+      version: number;
       snapshotDate: string;
       generatedAt: number;
       methodologyVersions: Record<string, string>;
@@ -345,6 +350,7 @@ describe("snapshotPublicDataset", () => {
       liquidity: { stablecoinId: string }[];
     };
 
+    expect(envelope.version).toBe(2);
     expect(envelope.snapshotDate).toBe(ISO_DATE);
     expect(envelope.generatedAt).toBe(NOW_SEC);
     expect(envelope.stablecoins).toHaveLength(2);
@@ -360,6 +366,27 @@ describe("snapshotPublicDataset", () => {
     expect(envelope.liquidity[0]?.stablecoinId).toBe("usdc-circle");
 
     expect(new TextEncoder().encode(decompressed).byteLength).toBe(byteSize);
+  });
+
+  it("sanitizes compression failures before returning metadata or recording the cron failure", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("CompressionStream", class {
+      constructor() {
+        throw new Error("gzip failed for https://eth-mainnet.g.alchemy.com/v2/super-secret-key");
+      }
+    });
+
+    try {
+      const result = await snapshotPublicDataset(buildDb());
+      const metadata = JSON.parse(String(result.metadata)) as Record<string, string>;
+      const logged = errorSpy.mock.calls.flat().join(" ");
+
+      expect(metadata).toEqual({ reason: "compress_failed", error: "Error: gzip failed for [url]" });
+      expect(logged).toContain('"stage":"compress_failed"');
+      expect(logged).not.toContain("super-secret-key");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("produces a stable content hash for the same input", async () => {

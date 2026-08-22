@@ -3,9 +3,11 @@ import type {
   CollateralQuality,
   CustodyModel,
   GovernanceType,
+  ReserveSlice,
   ReserveRisk,
 } from "../types";
 import type { StablecoinClientMeta } from "../types/stablecoin-client-meta";
+import { roundScore } from "./math";
 
 type ResilienceDefaults = {
   collateralQuality: CollateralQuality;
@@ -51,13 +53,20 @@ const DEFAULT_RESILIENCE_FACTORS: Record<`${BackingType}:${GovernanceType}`, Res
   },
 };
 
-export const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
+const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
   "very-low": 100,
   low: 75,
   medium: 50,
   high: 25,
   "very-high": 5,
 };
+
+export function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): number {
+  const totalPct = reserves.reduce((sum, reserve) => sum + reserve.pct, 0);
+  if (totalPct === 0) return 0;
+  const weighted = reserves.reduce((sum, reserve) => sum + reserve.pct * (RESERVE_QUALITY_SCORE[reserve.risk] ?? 0), 0);
+  return roundScore(weighted / totalPct);
+}
 
 export function inferResilienceDefaults(backing: BackingType, governance: GovernanceType): ResilienceDefaults {
   return DEFAULT_RESILIENCE_FACTORS[`${backing}:${governance}`];

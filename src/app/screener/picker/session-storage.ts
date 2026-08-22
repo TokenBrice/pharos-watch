@@ -11,7 +11,7 @@ import {
   type SelectorStep,
   type SelectorWizardState,
 } from "@/lib/selector-state";
-import { venueFromInput } from "./handoff";
+import { venueFromInput } from "@/lib/selector-handoff";
 
 const SESSION_RESULT_STORAGE_KEY = "pharos.selector.sessionResult.v1";
 

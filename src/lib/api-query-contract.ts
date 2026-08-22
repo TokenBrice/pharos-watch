@@ -1,4 +1,4 @@
-import type { SchemaLikeSource } from "@/lib/schema-like";
+import type { SchemaLikeSource } from "@shared/lib/schema-like";
 
 export interface FrontendApiQueryBaseDescriptor {
   queryKey: readonly unknown[];

@@ -9,8 +9,8 @@ import {
   resolveExitScoringRequest,
   resolveExitThresholdBandMultiplier,
 } from "../exit-route-scoring";
+import { clampScore } from "../math";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
-import { clampScore } from "./primitives";
 
 export type V9ExitAccess = "permissionless-onchain" | "whitelisted-onchain" | "issuer-api" | "manual";
 export type V9ExitSettlement = "atomic" | "immediate" | "same-day" | "days" | "queued";

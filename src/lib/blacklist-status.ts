@@ -1,7 +1,7 @@
 import {
   getBlacklistStatusLabel,
   type BlacklistStatus,
-} from "@shared/lib/report-cards";
+} from "@shared/lib/report-card-blacklist-matchers";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 function isResolvedBlacklistStatus(value: unknown): value is BlacklistStatus {

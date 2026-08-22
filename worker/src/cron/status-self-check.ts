@@ -22,6 +22,7 @@ import { hasDivergence } from "../lib/status-discrepancy-view";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import type { CloudflareD1StatusConfig } from "../lib/env";
 import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
+import { refreshD1TableGrowthSnapshot } from "../lib/status/d1-usage";
 
 interface ProbeResult {
   path: string;
@@ -647,6 +648,23 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const d1CapacityMonitoring = options.d1StatusConfig
     ? await refreshD1CapacityMonitoring(db, options.d1StatusConfig, now)
     : null;
+  let d1TableGrowthMonitoring: Record<string, unknown> | null = null;
+  try {
+    const snapshot = await refreshD1TableGrowthSnapshot(db, now);
+    d1TableGrowthMonitoring = snapshot
+      ? {
+          checkedAt: snapshot.checkedAt,
+          previousCheckedAt: snapshot.previousCheckedAt,
+          tableCount: snapshot.tables.length,
+          topGrowers: snapshot.topGrowers,
+        }
+      : null;
+  } catch (error) {
+    d1TableGrowthMonitoring = {
+      checkedAt: null,
+      error: toErrorMessage(error),
+    };
+  }
   const {
     probeBaseUrl,
     probeMode,
@@ -745,6 +763,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       probeFailureStreak: discrepancyState.consecutiveProbeFailures,
       freshnessDiagnostics: raw.freshnessDiagnostics,
       d1CapacityMonitoring,
+      d1TableGrowthMonitoring,
     }),
   };
 }

@@ -3,7 +3,7 @@ import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import { CHAIN_META } from "@shared/lib/chains";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
+import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { formatIsoDate } from "@shared/lib/format";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";

@@ -10,6 +10,7 @@ export const { getChainRpcMock, fetchWithRetryMock } = rpcMocks;
 
 vi.mock("../../../../lib/chain-registry", () => ({
   getChainRpc: getChainRpcMock,
+  getAlchemyAuthHeaders: () => undefined,
 }));
 
 vi.mock("../../../../lib/fetch-retry", () => ({

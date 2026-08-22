@@ -46,7 +46,9 @@ import {
   buildTimelineFeedController,
   buildTimelineFilterSignature,
   buildTimelineResetParams,
+  TIMELINE_URL_SCHEMA,
 } from "@/app/timeline/client";
+import { decodeState } from "@/lib/url-state";
 
 afterEach(() => {
   cleanup();
@@ -440,6 +442,13 @@ describe("TimelineClient", () => {
 });
 
 describe("timeline feed controller", () => {
+  it("decodes the legacy all-time token through the URL schema", () => {
+    expect(decodeState("window=alltime&severity=bogus", TIMELINE_URL_SCHEMA)).toMatchObject({
+      window: "all",
+      severity: "notice",
+    });
+  });
+
   it("builds a new pagination reset signature when filters change", () => {
     const base = {
       typeRaw: "",

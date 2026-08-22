@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ReportCardGradeSchema, type ReportCardGrade } from "./report-card-grade";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
 
@@ -8,8 +9,8 @@ export type V9QualityPillar = z.infer<typeof V9QualityPillarSchema>;
 export const V9EvidenceLevelSchema = z.enum(["strong", "adequate", "limited", "insufficient"]);
 export type V9EvidenceLevel = z.infer<typeof V9EvidenceLevelSchema>;
 
-export const V9GradeSchema = z.enum(["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"]);
-export type V9Grade = z.infer<typeof V9GradeSchema>;
+export const V9GradeSchema = ReportCardGradeSchema;
+export type V9Grade = ReportCardGrade;
 
 export const V9_REASON_CODES = [
   "bounded-mechanism-review",

@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import type { BackingType, FilterTag, GovernanceType, StablecoinMeta } from "@shared/types";
 import {
   BACKING_SLUGS,
@@ -37,31 +38,27 @@ export interface StablecoinTaxonomyHubRouteConfig {
 const GOVERNANCE_CONTENT: Record<
   GovernanceType,
   {
-    title: string;
-    shortLabel: string;
+    hubTitle: string;
     intro: string;
     description: (count: number) => string;
   }
 > = {
   centralized: {
-    title: "CeFi Stablecoins",
-    shortLabel: "CeFi",
+    hubTitle: "CeFi Stablecoins",
     intro:
       "CeFi stablecoins are issued by centralized companies or trusts that hold reserves off-chain and usually retain direct issuer controls. This directory groups the biggest fiat-reserve models in one place so you can compare peg behavior, liquidity, reserve proof quality, and blacklist exposure before treating scale as safety.",
     description: (count) =>
       `${count} centralized stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare peg stability, liquidity, supply trends, and risk profiles for CeFi issuers.`,
   },
   "centralized-dependent": {
-    title: "CeFi-Dependent Stablecoins",
-    shortLabel: "CeFi-Dependent",
+    hubTitle: "CeFi-Dependent Stablecoins",
     intro:
       "CeFi-dependent stablecoins borrow decentralization branding, but still depend on centralized collateral, custodians, redemption rails, or upgrade paths. This page isolates that middle ground so dependency tradeoffs, wrapper exposure, and redemption assumptions are visible before you compare yields or safety grades.",
     description: (count) =>
       `${count} CeFi-dependent stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare collateral design, peg stability, liquidity, and dependency risk in one static hub.`,
   },
   decentralized: {
-    title: "DeFi Stablecoins",
-    shortLabel: "DeFi",
+    hubTitle: "DeFi Stablecoins",
     intro:
       "DeFi stablecoins rely more heavily on on-chain collateral, immutable code, or DAO governance than direct issuer discretion. This directory helps compare censorship resistance, collateral models, liquidation design, and peg resilience across the decentralized cohort.",
     description: (count) =>
@@ -72,31 +69,27 @@ const GOVERNANCE_CONTENT: Record<
 const BACKING_CONTENT: Record<
   BackingType,
   {
-    title: string;
-    shortLabel: string;
+    hubTitle: string;
     intro: string;
     description: (count: number) => string;
   }
 > = {
   "rwa-backed": {
-    title: "RWA-Backed Stablecoins",
-    shortLabel: "RWA-Backed",
+    hubTitle: "RWA-Backed Stablecoins",
     intro:
       "RWA-backed stablecoins hold cash, Treasury bills, gold, fund shares, or other off-chain assets. They are often easiest to explain, but they introduce custody, legal, redemption, and issuer-control risk that does not exist in purely on-chain systems.",
     description: (count) =>
       `${count} real-world-asset-backed stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare reserve style, peg stability, liquidity, and issuer risk.`,
   },
   "crypto-backed": {
-    title: "Crypto-Backed Stablecoins",
-    shortLabel: "Crypto-Backed",
+    hubTitle: "Crypto-Backed Stablecoins",
     intro:
       "Crypto-backed stablecoins rely on on-chain collateral, overcollateralized vaults, wrappers, or delta-hedged structures instead of direct fiat reserves. Their resilience depends on collateral quality, liquidation design, oracle quality, and governance discipline.",
     description: (count) =>
       `${count} crypto-backed stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare collateral structure, peg stability, liquidity, and downside risk.`,
   },
   algorithmic: {
-    title: "Algorithmic Stablecoins",
-    shortLabel: "Algorithmic",
+    hubTitle: "Algorithmic Stablecoins",
     intro:
       "Algorithmic stablecoins lean on supply controls, endogenous collateral, or reflexive market incentives instead of full reserve backing. This category is small, but it remains important because it is where stablecoin design breaks most visibly under stress and where small peg deviations can compound quickly.",
     description: (count) =>
@@ -124,8 +117,8 @@ export const GOVERNANCE_TAXONOMY_PAGES = (Object.entries(GOVERNANCE_SLUGS) as [G
       slug,
       value,
       href: `/stablecoins/governance/${slug}/`,
-      title: buildCohortTitle(content.title, coins.length),
-      shortLabel: content.shortLabel,
+      title: buildCohortTitle(content.hubTitle, coins.length),
+      shortLabel: GOVERNANCE_LABELS_SHORT[value],
       description: content.description(coins.length),
       intro: content.intro,
       filterTag: value,
@@ -143,8 +136,8 @@ export const BACKING_TAXONOMY_PAGES = (Object.entries(BACKING_SLUGS) as [Backing
       slug,
       value,
       href: `/stablecoins/backing/${slug}/`,
-      title: buildCohortTitle(content.title, coins.length),
-      shortLabel: content.shortLabel,
+      title: buildCohortTitle(content.hubTitle, coins.length),
+      shortLabel: BACKING_LABELS_SHORT[value],
       description: content.description(coins.length),
       intro: content.intro,
       filterTag: value,

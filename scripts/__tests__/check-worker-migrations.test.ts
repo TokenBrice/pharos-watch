@@ -4,6 +4,7 @@ import {
   REQUIRED_ROLLOUT_SAFETY_MODE,
   ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
   UNSAFE_ROLLOUT_ADD_COLUMN_LABEL,
+  DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE,
   createSchemaFingerprint,
   parseManifestMigrationRows,
   parseRolloutSafetyPolicy,
@@ -262,6 +263,24 @@ describe("validateRolloutSafetyAnnotation", () => {
         "-- rollout-safety: backward-compatible\nDROP TABLE old_table;\nALTER TABLE new_table RENAME TO old_table;\n",
       ),
     ).toThrow("can break the still-live worker");
+  });
+
+  it("rejects DROP INDEX in new migrations with the coordinated cleanup path", () => {
+    expect(() =>
+      validateRolloutSafetyAnnotation(
+        "0231_drop_index.sql",
+        `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}\nDROP INDEX IF EXISTS idx_old_path;`,
+      ),
+    ).toThrow("separate rollout path and coordinated cleanup process");
+  });
+
+  it("grandfathers DROP INDEX through the migration that introduced the gate", () => {
+    expect(() =>
+      validateRolloutSafetyAnnotation(
+        `${String(DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE).padStart(4, "0")}_existing_drop_index.sql`,
+        `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}\nDROP INDEX IF EXISTS idx_old_path;`,
+      ),
+    ).not.toThrow();
   });
 
   it("rejects new NOT NULL columns that would break still-live writes without a default", () => {

@@ -45,39 +45,15 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/data/coverage-dispositions/oracle-risk-branch-dispositions.ts::ORACLE_RISK_BRANCH_DISPOSITION_REASON_CODES":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/api-endpoints/index.ts::buildQueryPath":
-    "Unreferenced here: consumers import the same name from '@shared/lib/api-endpoints/paths' instead.",
   "shared/lib/api-endpoints/index.ts::EndpointPublicApiAccess":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/api-endpoints/index.ts::EndpointSiteDataAccess":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/api-endpoints/index.ts::getEndpointProbePaths":
-    "Unreferenced here: consumers import the same name from './selectors' instead.",
-  "shared/lib/chains/index.ts::CHAIN_RESILIENCE_TIER":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/chains/l2beat-audit.ts::findL2BeatAliasIntegrityIssues":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_SCORES":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_SENTIMENT_SCORES":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_WEIGHT":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_WEIGHT":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/cron-jobs.ts::VALID_CRON_JOB_IDS":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it; only prose mentions the name (src/data/changelogs/2026-06-21.ts).",
-  "shared/lib/data-surface-descriptors.ts::surfaceFreshnessLaneFields":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/mint-burn-signals.ts::PRESSURE_SHIFT_STABLE_BAND_MAX":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/redemption-backstop-configs/shared.ts::cloneRedemptionDocSource":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/report-cards.ts::inferResilienceDefaults":
-    "Unreferenced here: consumers import the same name from '../report-card-policy' instead.",
-  "shared/lib/stablecoin-id-registry.ts::ALL_LIVE_COINS":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/stablecoins/schema.ts::StablecoinReservesSidecarSchema":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
@@ -85,12 +61,8 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetArraySchema":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/tracked-stablecoin-utils.ts::findTrackedContract":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/types/safety-score-v9-facts.ts::V9FactSourceFingerprintsV2Schema":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/types/safety-score-v9-public-facts.ts::compareText":
-    "Unreferenced here: consumers import the same name from './safety-score-v9-fact-primitives' instead.",
   "shared/types/stablecoin-meta-schemas.ts::OracleRiskBranchSchema":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/types/stablecoin-meta-schemas.ts::BridgeRouteProtocolEvidenceSchema":
@@ -169,7 +141,7 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced here: consumers import the same name from '@shared/lib/csv' instead.",
   "src/lib/exports/csv.ts::buildCsv":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "src/lib/homepage-bootstrap-shared.ts::descriptorMaxAgeMs":
+  "shared/lib/homepage-bootstrap-shared.ts::descriptorMaxAgeMs":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "src/lib/mint-authority-display.ts::MINT_AUTHORITY_STATUS_VALUES":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",

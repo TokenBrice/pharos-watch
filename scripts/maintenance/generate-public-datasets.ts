@@ -20,7 +20,7 @@
  *   PUBLIC_DATASETS_API_URL   — base API URL, e.g. `https://api.pharos.watch`
  *   SMOKE_API_BASE / API_BASE_URL — fallback bases (mirrors sync-digests)
  *   PUBLIC_DATASETS_API_KEY   — optional `X-API-Key` header
- *   PUBLIC_DATASETS_DATE      — optional ISO date to fetch (default: today UTC)
+ *   PUBLIC_DATASETS_DATE      — optional ISO date to fetch (default: today UTC); historical dates require the matching snapshot
  *   PUBLIC_DATASETS_REQUIRE_API=1 — fail if no API base is configured
  *   PUBLIC_DATASETS_ALLOW_EXISTING_ON_FETCH_FAILURE=1 — preserve valid mirrors if live fetch fails
  *
@@ -43,6 +43,12 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/safety-score";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
+import {
+  PublicSnapshotEnvelopeSchema,
+  type PublicSnapshotEnvelope,
+  type PublicSnapshotEnvelopeV2,
+} from "@shared/types/public-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { type CsvColumn, escapeCsvField } from "@shared/lib/csv";
 import {
@@ -77,20 +83,8 @@ const CHECK_ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
 };
 const FRESHNESS_CONTRACT = "point-in-time sample; not guaranteed to track production freshness";
 
-interface SnapshotEnvelope {
-  snapshotDate: string;
-  generatedAt: number;
-  methodologyVersions: Record<string, string>;
-  stablecoins: Array<{
-    id: string;
-    name: string;
-    symbol: string;
-    pegType: string;
-    pegMechanism: string;
-    price: number | null;
-    circulating: Record<string, number>;
-    chains: string[];
-  }>;
+type SnapshotEnvelope = Pick<PublicSnapshotEnvelopeV2, "snapshotDate" | "generatedAt" | "stablecoins"> & {
+  methodologyVersions?: Record<string, string>;
   reportCards: {
     scores?: Record<string, ReportCardScore>;
     cards?: Array<{
@@ -101,7 +95,7 @@ interface SnapshotEnvelope {
   } | null;
   dews: Array<{ stablecoinId: string; score: number; band: string }>;
   liquidity: Array<{ stablecoinId: string; liquidityScore: number | null; coverageClass: string | null }>;
-}
+};
 
 /**
  * Normalized view of a safety-score entry. The aliases remain only so dated
@@ -147,6 +141,10 @@ function isoDateUtc(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
 
+function isHistoricalSnapshotDate(snapshotDate: string): boolean {
+  return snapshotDate !== isoDateUtc(new Date());
+}
+
 function resolveSnapshotDate(): string {
   return process.env.PUBLIC_DATASETS_DATE?.trim() || isoDateUtc(new Date());
 }
@@ -166,7 +164,42 @@ async function safeFetchJson<T>(url: string): Promise<T | null> {
 }
 
 async function fetchSnapshot(apiBase: string, date: string): Promise<SnapshotEnvelope | null> {
-  return safeFetchJson<SnapshotEnvelope>(resolveApiPathUrl(apiBase, `/api/snapshots/${date}.json`));
+  const url = resolveApiPathUrl(apiBase, `/api/snapshots/${date}.json`);
+  const payload = await safeFetchJson<unknown>(url);
+  if (payload == null) return null;
+
+  const parsed = PublicSnapshotEnvelopeSchema.safeParse(payload);
+  if (!parsed.success || !isProjectionEnvelope(parsed.data)) {
+    console.warn(`[generate-public-datasets] ${url} returned an invalid public snapshot envelope`);
+    return null;
+  }
+  return parsed.data;
+}
+
+function isProjectionEnvelope(envelope: PublicSnapshotEnvelope): envelope is PublicSnapshotEnvelope & SnapshotEnvelope {
+  return (
+    typeof envelope.snapshotDate === "string"
+    && typeof envelope.generatedAt === "number"
+    && Array.isArray(envelope.stablecoins)
+    && envelope.stablecoins.every((coin) => (
+      typeof coin.name === "string"
+      && typeof coin.symbol === "string"
+      && typeof coin.pegType === "string"
+      && typeof coin.pegMechanism === "string"
+      && (typeof coin.price === "number" || coin.price === null)
+      && typeof coin.circulating === "object"
+      && coin.circulating !== null
+      && Array.isArray(coin.chains)
+    ))
+    && (envelope.reportCards === null || (typeof envelope.reportCards === "object" && envelope.reportCards !== null))
+    && Array.isArray(envelope.dews)
+    && envelope.dews.every((row) => typeof row.score === "number" && typeof row.band === "string")
+    && Array.isArray(envelope.liquidity)
+    && envelope.liquidity.every((row) => (
+      (typeof row.liquidityScore === "number" || row.liquidityScore === null)
+      && (typeof row.coverageClass === "string" || row.coverageClass === null)
+    ))
+  );
 }
 
 async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
@@ -259,10 +292,15 @@ interface Preamble {
   asOfISO: string;
   sourceUrl: string;
   methodologyLabel: string;
+  metadataStatus?: "approximated";
+  metadataNote?: string;
 }
 
 function preambleLine(p: Preamble): string {
-  return `Pharos pharos.watch | Endpoint: ${p.endpoint} | As of: ${p.asOfISO} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel} | Freshness: ${FRESHNESS_CONTRACT}`;
+  const metadata = p.metadataStatus
+    ? ` | Metadata: ${p.metadataStatus}${p.metadataNote ? ` (${p.metadataNote})` : ""}`
+    : "";
+  return `Pharos pharos.watch | Endpoint: ${p.endpoint} | As of: ${p.asOfISO} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel} | Freshness: ${FRESHNESS_CONTRACT}${metadata}`;
 }
 
 function buildCsv<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
@@ -289,6 +327,9 @@ function buildJson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): s
           sourceUrl: preamble.sourceUrl,
           methodologyLabel: preamble.methodologyLabel,
           freshnessContract: FRESHNESS_CONTRACT,
+          ...(preamble.metadataStatus
+            ? { metadataStatus: preamble.metadataStatus, metadataNote: preamble.metadataNote }
+            : {}),
           rowCount: rows.length,
         },
         rows: objects,
@@ -307,6 +348,9 @@ function buildNdjson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble):
       sourceUrl: preamble.sourceUrl,
       methodologyLabel: preamble.methodologyLabel,
       freshnessContract: FRESHNESS_CONTRACT,
+      ...(preamble.metadataStatus
+        ? { metadataStatus: preamble.metadataStatus, metadataNote: preamble.metadataNote }
+        : {}),
     },
   });
   const body = rows.map((row, rowIndex) => {
@@ -396,8 +440,9 @@ const DEPEG_HISTORY_COLUMNS: CsvColumn<DepegHistoryRow>[] = [
 
 function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegHistoryRow[] {
   const cutoffSec = cutoffSecForSnapshotDate(snapshotDate);
+  const snapshotEndSec = snapshotEndSecForDate(snapshotDate);
   return events
-    .filter((event) => event.startedAt >= cutoffSec)
+    .filter((event) => event.startedAt >= cutoffSec && event.startedAt <= snapshotEndSec)
     .map((event) => ({
       id: event.id,
       stablecoinId: event.stablecoinId,
@@ -494,9 +539,21 @@ const PEG_MECHANISM_COLUMNS: CsvColumn<PegMechanismDistributionRow>[] = [
   { header: "coinCount", accessor: (r) => r.coinCount },
 ];
 
-function projectPegMechanismDistribution(): PegMechanismDistributionRow[] {
+interface PegCatalogFields {
+  mechanismArchetype?: string | null;
+  pegReferenceId?: string | null;
+  jurisdiction?: { country?: string | null } | null;
+}
+
+interface PegMechanismProjection {
+  rows: PegMechanismDistributionRow[];
+  metadataStatus?: "approximated";
+  metadataNote?: string;
+}
+
+function projectPegMechanismRows(coins: readonly PegCatalogFields[]): PegMechanismDistributionRow[] {
   const counts = new Map<string, PegMechanismDistributionRow>();
-  for (const coin of TRACKED_STABLECOINS) {
+  for (const coin of coins) {
     const archetype = coin.mechanismArchetype ?? "unknown";
     const pegReferenceId = coin.pegReferenceId ?? "unknown";
     const jurisdiction = coin.jurisdiction?.country ?? "unknown";
@@ -505,9 +562,14 @@ function projectPegMechanismDistribution(): PegMechanismDistributionRow[] {
     if (existing) {
       existing.coinCount += 1;
     } else {
+      const knownArchetype = MECHANISM_ARCHETYPE_VALUES.includes(
+        archetype as (typeof MECHANISM_ARCHETYPE_VALUES)[number],
+      );
       counts.set(key, {
         mechanismArchetype: archetype,
-        mechanismLabel: archetype === "unknown" ? "Unknown" : getMechanismArchetypeLabel(coin.mechanismArchetype!),
+        mechanismLabel: knownArchetype
+          ? getMechanismArchetypeLabel(archetype as (typeof MECHANISM_ARCHETYPE_VALUES)[number])
+          : "Unknown",
         pegReferenceId,
         jurisdiction,
         coinCount: 1,
@@ -515,6 +577,59 @@ function projectPegMechanismDistribution(): PegMechanismDistributionRow[] {
     }
   }
   return Array.from(counts.values()).sort((a, b) => b.coinCount - a.coinCount);
+}
+
+function hasSnapshotCatalogFields(coin: SnapshotEnvelope["stablecoins"][number]): boolean {
+  return (
+    Object.prototype.hasOwnProperty.call(coin, "mechanismArchetype")
+    && Object.prototype.hasOwnProperty.call(coin, "pegReferenceId")
+    && Object.prototype.hasOwnProperty.call(coin, "jurisdiction")
+  );
+}
+
+function projectPegMechanismDistribution(
+  envelope: SnapshotEnvelope | null,
+  historical = false,
+): PegMechanismProjection {
+  if (!envelope) {
+    return { rows: projectPegMechanismRows(TRACKED_STABLECOINS) };
+  }
+
+  if (envelope.stablecoins.length > 0 && envelope.stablecoins.every(hasSnapshotCatalogFields)) {
+    return { rows: projectPegMechanismRows(envelope.stablecoins) };
+  }
+
+  const metadataNote =
+    `legacy snapshot ${envelope.snapshotDate} omitted mechanismArchetype, pegReferenceId, or jurisdiction; `
+    + "using current catalog metadata as an approximation";
+  console.warn(`[generate-public-datasets] ${metadataNote}.`);
+
+  // Pre-catalog snapshots cannot provide an exact historical classification. Keep
+  // the legacy latest output intact, and restrict historical approximation to
+  // stablecoin IDs present in the snapshot envelope.
+  if (!historical) {
+    return {
+      rows: projectPegMechanismRows(TRACKED_STABLECOINS),
+      metadataStatus: "approximated",
+      metadataNote,
+    };
+  }
+
+  const currentById = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin]));
+  const projectedCoins = envelope.stablecoins.map((coin) => {
+    const current = currentById.get(coin.id);
+    return {
+      mechanismArchetype: coin.mechanismArchetype ?? current?.mechanismArchetype,
+      pegReferenceId: coin.pegReferenceId ?? current?.pegReferenceId,
+      jurisdiction: coin.jurisdiction ?? current?.jurisdiction,
+    };
+  });
+
+  return {
+    rows: projectPegMechanismRows(projectedCoins),
+    metadataStatus: "approximated",
+    metadataNote,
+  };
 }
 
 // --- Per-topic metadata + write loop ----------------------------------------
@@ -525,6 +640,8 @@ interface TopicSpec<T> {
   columns: CsvColumn<T>[];
   /** Methodology label for the preamble. */
   methodologyLabel: string;
+  metadataStatus?: "approximated";
+  metadataNote?: string;
 }
 
 function topicPreamble(
@@ -532,12 +649,14 @@ function topicPreamble(
   methodologyLabel: string,
   asOfISO: string,
   variant: "csv" | "json" | "ndjson",
+  metadata?: Pick<TopicSpec<unknown>, "metadataStatus" | "metadataNote">,
 ): Preamble {
   return {
     endpoint: topic,
     asOfISO,
     sourceUrl: `${SITE_ORIGIN}/datasets/${topic}/latest.${variant}`,
     methodologyLabel,
+    ...metadata,
   };
 }
 
@@ -577,12 +696,20 @@ function writeTopic<T>(
   asOfISO: string,
 ): { dated: string[]; written: number } {
   const topicDir = join(DATASETS_DIR, spec.topic);
-  const csv = buildCsv(spec.rows, spec.columns, topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "csv"));
-  const json = buildJson(spec.rows, spec.columns, topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "json"));
+  const csv = buildCsv(
+    spec.rows,
+    spec.columns,
+    topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "csv", spec),
+  );
+  const json = buildJson(
+    spec.rows,
+    spec.columns,
+    topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "json", spec),
+  );
   const ndjson = buildNdjson(
     spec.rows,
     spec.columns,
-    topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "ndjson"),
+    topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "ndjson", spec),
   );
 
   const targets = [
@@ -690,6 +817,10 @@ function cutoffSecForSnapshotDate(snapshotDate: string): number {
   return Math.floor(new Date(`${snapshotDate}T00:00:00Z`).getTime() / 1000) - RETENTION_DAYS * 86_400;
 }
 
+function snapshotEndSecForDate(snapshotDate: string): number {
+  return Math.floor(new Date(`${snapshotDate}T00:00:00Z`).getTime() / 1000) + 86_400 - 1;
+}
+
 function validateDepegHistoryCoverage(events: readonly DepegEvent[], snapshotDate: string): void {
   const cutoffSec = cutoffSecForSnapshotDate(snapshotDate);
   const oldestStartedAt = events.reduce((oldest, event) => Math.min(oldest, event.startedAt), Number.POSITIVE_INFINITY);
@@ -702,7 +833,7 @@ function validateDepegHistoryCoverage(events: readonly DepegEvent[], snapshotDat
 }
 
 function asOfIsoFromEnvelope(envelope: SnapshotEnvelope, snapshotDate: string): string {
-  if (envelope.methodologyVersions.source === "live-endpoint-fallback") {
+  if (envelope.methodologyVersions?.source === "live-endpoint-fallback") {
     return new Date(Math.max(Date.now(), envelope.generatedAt * 1000)).toISOString();
   }
   return envelope.generatedAt > 0
@@ -721,9 +852,15 @@ export async function loadPublicDatasetLiveInputs(
   apiBase: string,
   requestedSnapshotDate: string,
 ): Promise<PublicDatasetLiveInputs> {
+  const historical = isHistoricalSnapshotDate(requestedSnapshotDate);
   let effectiveSnapshotDate = requestedSnapshotDate;
   let envelope = await fetchSnapshot(apiBase, requestedSnapshotDate);
   if (!envelope) {
+    if (historical) {
+      throw new Error(
+        `Unable to fetch historical public snapshot for ${requestedSnapshotDate}; refusing live-endpoint fallback.`,
+      );
+    }
     const latestDate = await fetchLatestSnapshotDate(apiBase);
     if (latestDate && latestDate !== requestedSnapshotDate) {
       effectiveSnapshotDate = latestDate;
@@ -755,31 +892,57 @@ function buildTopicSpecs(
   envelope: SnapshotEnvelope | null,
   depegEvents: DepegEvent[],
   snapshotDate: string,
+  options: { historical?: boolean } = {},
 ): TopicSpec<unknown>[] {
+  const historical = options.historical ?? isHistoricalSnapshotDate(snapshotDate);
+  const envelopeSnapshotDate = envelope?.snapshotDate || snapshotDate;
+  const pegMechanismProjection = projectPegMechanismDistribution(envelope, historical);
+  const methodologyVersion = (
+    keys: readonly string[],
+    fallback: string,
+  ): string => {
+    const version = keys
+      .map((key) => envelope?.methodologyVersions?.[key])
+      .find((value): value is string => typeof value === "string" && value.length > 0);
+    if (version) return version.startsWith("v") ? version : `v${version}`;
+    return historical ? "unavailable (legacy snapshot methodology not recorded)" : fallback;
+  };
+
   return [
     {
       topic: "top-stablecoins",
       rows: projectTopStablecoins(envelope),
       columns: TOP_STABLECOINS_COLUMNS,
-      methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
+      methodologyLabel:
+        `safety-score ${methodologyVersion(["reportCard", "pegScore"], SAFETY_SCORE_METHODOLOGY_VERSION_LABEL)}`,
     } as TopicSpec<TopStablecoinRow> as TopicSpec<unknown>,
     {
       topic: "depeg-history",
-      rows: projectDepegHistory(depegEvents, snapshotDate),
+      rows: projectDepegHistory(depegEvents, envelopeSnapshotDate),
       columns: DEPEG_HISTORY_COLUMNS,
-      methodologyLabel: `depeg-dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`,
+      methodologyLabel: `depeg-dews ${methodologyVersion(["dews"], DEPEG_DEWS_METHODOLOGY_VERSION_LABEL)}`,
     } as TopicSpec<DepegHistoryRow> as TopicSpec<unknown>,
     {
       topic: "scores-latest",
       rows: projectScoresLatest(envelope),
       columns: SCORES_LATEST_COLUMNS,
-      methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL} | dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL} | liquidity ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}`,
+      methodologyLabel:
+        `safety-score ${methodologyVersion(["reportCard", "pegScore"], SAFETY_SCORE_METHODOLOGY_VERSION_LABEL)} `
+        + `| dews ${methodologyVersion(["dews"], DEPEG_DEWS_METHODOLOGY_VERSION_LABEL)} `
+        + `| liquidity ${methodologyVersion(["liquidityScore"], LIQUIDITY_METHODOLOGY_VERSION_LABEL)}`,
     } as TopicSpec<ScoreLatestRow> as TopicSpec<unknown>,
     {
       topic: "peg-mechanism-distribution",
-      rows: projectPegMechanismDistribution(),
+      rows: pegMechanismProjection.rows,
       columns: PEG_MECHANISM_COLUMNS,
-      methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
+      methodologyLabel:
+        `safety-score ${methodologyVersion(["reportCard", "pegScore"], SAFETY_SCORE_METHODOLOGY_VERSION_LABEL)}`,
+      ...(pegMechanismProjection.metadataStatus
+        ? {
+            metadataStatus: pegMechanismProjection.metadataStatus,
+            metadataNote: pegMechanismProjection.metadataNote,
+          }
+        : {}),
     } as TopicSpec<PegMechanismDistributionRow> as TopicSpec<unknown>,
   ];
 }
@@ -788,7 +951,10 @@ export const testExports = {
   buildTopicSpecs,
   checkTopic,
   cutoffSecForSnapshotDate,
+  isHistoricalSnapshotDate,
   projectDepegHistory,
+  projectPegMechanismDistribution,
+  snapshotEndSecForDate,
   validateDepegHistoryCoverage,
   validateTopicRowFloor,
 };
@@ -890,7 +1056,9 @@ async function main(): Promise<void> {
     );
   }
 
-  const specs = buildTopicSpecs(envelope, depegEvents, snapshotDate);
+  const specs = buildTopicSpecs(envelope, depegEvents, snapshotDate, {
+    historical: isHistoricalSnapshotDate(requestedSnapshotDate),
+  });
   if (apiBase) {
     for (const spec of specs) {
       validateTopicRowFloor(spec.topic, spec.rows);

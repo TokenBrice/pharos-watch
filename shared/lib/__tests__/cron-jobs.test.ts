@@ -22,6 +22,12 @@ describe("cron job schedule metadata", () => {
     ]);
   });
 
+  it("declares the bounded nested Curve discovery fan-out", () => {
+    expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-dex-discovery")).toMatchObject({
+      maxConnections: 2,
+    });
+  });
+
   // Cloudflare caps Cron expressions with an interval below one hour at 30
   // seconds of CPU time, and 15 minutes at hourly or longer. These three lanes
   // carry CPU-heavy legs (full DefiLlama parse plus price enrichment, the V9

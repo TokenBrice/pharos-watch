@@ -6,7 +6,7 @@ import {
   RATE_DERIVED_CONFIGS,
   YIELD_POOL_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
-} from "../../cron/yield-config";
+} from "../../lib/yield-config/yield-config";
 import {
   YIELD_ADAPTER_MANIFEST_FAMILY_VALUES,
   YieldAdapterManifestResponseSchema,

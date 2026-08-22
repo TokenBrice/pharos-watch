@@ -4,7 +4,7 @@ import { mockCircuitBreaker } from "../../test-helpers/cron";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { scoreToGrade } from "@shared/lib/report-cards";
+import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 

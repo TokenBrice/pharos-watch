@@ -9,6 +9,7 @@ import {
 import { MECHANISM_ARCHETYPE_SHORT_LABELS } from "@shared/lib/classification/mechanism-archetypes";
 import {
   formatCurrency,
+  formatBps,
   formatNativePrice,
   formatPercent,
   formatPercentFromRatio,
@@ -72,10 +73,12 @@ function humanize(value: string | null | undefined): ReactNode {
   return value ? humanizeSafetyScoreV9Value(value.replaceAll("_", "-")) : NULL_VALUE;
 }
 
-function formatBps(value: number | null | undefined): ReactNode {
+function formatComparisonBps(value: number | null | undefined): ReactNode {
   if (value == null || !Number.isFinite(value)) return NULL_VALUE;
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(0)} bps`;
+  const rounded = Math.round(value);
+  return rounded === 0
+    ? `${value > 0 ? "+" : ""}${value.toFixed(0)} bps`
+    : formatBps(rounded);
 }
 
 function formatScore100(value: number | null | undefined): ReactNode {
@@ -156,7 +159,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
             return formatNativePrice(coin.data.price, coin.meta.flags.pegCurrency, ref);
           },
         },
-        { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatBps(coin.pegDetails?.currentDeviationBps) },
+        { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatComparisonBps(coin.pegDetails?.currentDeviationBps) },
         { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.pegScore) },
         { key: "market-cap", label: "Market cap", numeric: true, render: (coin) => formatCurrency(getCirculatingRaw(coin.data)) },
         { key: "supply-24h", label: "Supply change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
@@ -181,7 +184,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "active-depeg", label: "Current state", render: (coin) => coin.pegDetails ? (coin.pegDetails.activeDepeg ? "Active depeg" : "At peg") : NULL_VALUE },
         { key: "peg-90d", label: "At peg · 90d", numeric: true, render: (coin) => coin.pegDetails?.recent90d ? formatPercent(coin.pegDetails.recent90d.pegPct) : NULL_VALUE },
         { key: "incidents-90d", label: "Incidents · 90d", numeric: true, render: (coin) => coin.pegDetails?.recent90d ? formatCount(coin.pegDetails.recent90d.incidentCount, "incident") : NULL_VALUE },
-        { key: "worst-deviation", label: "Worst deviation", numeric: true, render: (coin) => formatBps(coin.pegDetails?.worstDeviationBps) },
+        { key: "worst-deviation", label: "Worst deviation", numeric: true, render: (coin) => formatComparisonBps(coin.pegDetails?.worstDeviationBps) },
         { key: "event-count", label: "Recorded incidents", numeric: true, render: (coin) => coin.pegDetails ? formatCount(coin.pegDetails.eventCount, "incident") : NULL_VALUE },
         { key: "tracking-span", label: "Tracking span", numeric: true, render: (coin) => formatDays(coin.pegDetails?.trackingSpanDays) },
         { key: "price-confidence", label: "Price confidence", render: (coin) => humanize(coin.pegDetails?.priceConfidence) },

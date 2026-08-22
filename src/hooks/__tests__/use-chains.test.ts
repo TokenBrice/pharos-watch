@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findCanonicalChainData } from "@shared/lib/chain-circulating";
+import { findCanonicalChainData } from "@shared/lib/chains/circulating";
 
 type ChainCirculating = Record<
   string,

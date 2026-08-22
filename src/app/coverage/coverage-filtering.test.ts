@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CoverageRow, CoverageStatus } from "@/lib/coverage";
 import type { CoverageFeatureKey } from "@/lib/coverage";
 import type { CoverageFilterKey } from "@/lib/coverage-page-config";
-import { filterCoverageRows, hasCoverageFilters, matchesCoverageFilter, sortCoverageRows } from "./coverage-filtering";
+import { filterCoverageRows, hasCoverageFilters, matchesCoverageFilter, sortCoverageRows } from "@/lib/coverage-filtering";
 
 function status(kind: string, available: boolean, sortRank = available ? 1 : 0): CoverageStatus {
   return {

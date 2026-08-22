@@ -7,7 +7,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
-import { YIELD_VARIANT_MAP } from "../yield-config-variants";
+import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { OPTIONAL_PROTOCOL_API_BUDGET_MS, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
 import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
 import type { ResolvedYieldCandidate } from "./types";

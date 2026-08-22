@@ -63,13 +63,13 @@ describe("stablecoin detail derivations", () => {
       expect(result.pegRateSource).toBe("fx");
     });
 
-    it("falls back to 1 when peg type is missing", () => {
+    it("returns no reference when the peg type has no rate", () => {
       const result = derivePegReferenceContext({
         assets: [],
-        pegType: undefined,
+        pegType: "peggedGOLD",
       });
 
-      expect(result.pegReference).toBe(1);
+      expect(result.pegReference).toBeNull();
       expect(result.pegRateSource).toBeUndefined();
     });
   });
@@ -113,6 +113,7 @@ describe("deriveDeviationBps", () => {
   it("returns null for invalid peg reference", () => {
     expect(deriveDeviationBps(1.0, 0)).toBeNull();
     expect(deriveDeviationBps(1.0, NaN)).toBeNull();
+    expect(deriveDeviationBps(3_000, null)).toBeNull();
   });
 
   it("distinguishes an exact-peg zero from absent and invalid prices", () => {

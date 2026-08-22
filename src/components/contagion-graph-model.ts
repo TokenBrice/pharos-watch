@@ -1,5 +1,5 @@
-import { GRADE_RADAR_COLORS } from "@shared/lib/report-cards";
-import { v9GradeRange } from "@shared/types/safety-score-v9-grade";
+import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
+import { gradeRange } from "@shared/lib/report-card-core";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import type { ContagionEdgeRelationship } from "@/lib/contagion-layout";
 
@@ -76,7 +76,7 @@ const DEPENDENCY_TYPE_RANK = new Map<ContagionEdgeRelationship, number>(
 // ---------------------------------------------------------------------------
 
 export function gradeColor(grade: V9Grade): string {
-  return GRADE_RADAR_COLORS[v9GradeRange(grade)] ?? GRADE_RADAR_COLORS.NR;
+  return GRADE_RADAR_COLORS[gradeRange(grade)] ?? GRADE_RADAR_COLORS.NR;
 }
 
 export function compareDependencyTypes(a: ContagionEdgeRelationship, b: ContagionEdgeRelationship): number {

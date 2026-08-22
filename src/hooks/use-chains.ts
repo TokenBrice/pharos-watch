@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
+import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chains/circulating";
 import { type ChainsResponse } from "@shared/types/chains";
 import { useRegisteredApiQuery } from "./api-hooks";
 import { useStablecoins } from "./use-stablecoins";

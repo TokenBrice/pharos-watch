@@ -31,7 +31,7 @@ import {
 import { probeQuarantinedDeterministicAdapters } from "../yield-coverage-audit-quarantine";
 import { loadDlStablecoinPools } from "../yield-sync/sources";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
-import type { YieldAdapterLifecycleEntry } from "../yield-config-registry";
+import type { YieldAdapterLifecycleEntry } from "../../lib/yield-config/yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
 import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-review-dispositions";
 
@@ -581,7 +581,7 @@ describe("identifyCoverageGaps", () => {
           expect.objectContaining({ url: "https://yields.llama.fi/chart/new-usdc" }),
         ]),
         suggestedConfig: expect.objectContaining({
-          targetFile: "worker/src/cron/yield-config-lending-protocols.ts",
+          targetFile: "worker/src/lib/yield-config/yield-config-lending-protocols.ts",
           exportName: "LENDING_PROTOCOLS",
           anchor: "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR",
           snippet: expect.stringContaining('"new-lender": { label: "New Lender" }'),

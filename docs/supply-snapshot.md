@@ -1,10 +1,10 @@
 # Supply Snapshot Pipeline
 
-Daily market cap snapshot pipeline. Captures cached `peggedAssets` whose IDs are PSI-eligible, stores their circulating supply (in USD) in D1, and uses that history for charting and replay.
+Daily market cap snapshot pipeline. Captures non-restored cached `peggedAssets` whose IDs are PSI-eligible, stores their circulating supply (in USD) in D1, and uses that history for charting and replay.
 
-Shadow assets are part of PSI eligibility, but this cron only reads rows present in the cached `stablecoins` payload. Shadow-asset history therefore requires separate historical/backfill coverage unless a shadow asset is present in that cache.
+Shadow assets are part of PSI eligibility, but this cron only reads non-restored rows present in the cached `stablecoins` payload. Shadow-asset history therefore requires separate historical/backfill coverage unless a non-restored shadow asset is present in that cache.
 
-The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains the primary source for regular assets, but the cached payload can include CoinGecko gap-fill rows, DefiLlama history gap-fill rows, commodity/CoinGecko supplemental rows, on-chain-total-supply supplemental rows, and configured on-chain-circulating-supply rows assembled by the 15-minute `syncStablecoins()` cron.
+The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains the primary source for regular assets, but the cached payload can include CoinGecko missing-chain remainder attributions, DefiLlama history gap-fill rows, commodity/CoinGecko supplemental rows, on-chain-total-supply supplemental rows, and configured on-chain-circulating-supply rows assembled by the 15-minute `syncStablecoins()` cron.
 
 When DefiLlama publishes a tracked zero-supply row for an asset that also has positive supplemental coverage, `syncStablecoins()` keeps the positive supplemental row. This prevents a zero-valued primary duplicate from suppressing current CoinGecko or commodity supply before the exact snapshot-coverage check runs.
 
@@ -37,14 +37,15 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
 6. Build the exact completion identity and check the once-per-UTC-date guard:
    - read cache key `snapshot-supply:last-write`
    - coverage-version 2 markers bind the UTC date to a SHA-256 digest of the sorted required active IDs plus the exact applied waiver IDs, owners, and expiries; count-only version 1 markers remain readable but cannot authorize a writer skip
-   - when the marker date and digest match the current complete coverage evaluation, conditionally repair only same-day rows whose stored `price` is still `null` and whose current cache row now has a positive price; otherwise skip with `reason: "already_written_today"`
+   - when the marker date and digest match the current complete coverage evaluation, conditionally repair only same-day rows whose stored `price` is still `null` and whose current non-restored cache row now has a positive price; otherwise skip with `reason: "already_written_today"`
    - same-day repair never overwrites a non-null historical price, circulating supply, or rows outside cron ownership
 7. For each PSI-eligible cached asset:
+   - Skip rows marked `supplyRestored === true`; carried-forward supply is not a fresh daily observation
    - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
    - Skip if sum <= 0
    - Extract price (must be a number > 0, else `null`)
    - Build `INSERT OR REPLACE` statement
-8. Exact-set data quality check: require every active registry ID to have positive cached supply or an owned, reasoned, unexpired publication waiver. Shadow rows are written when present but do not block active-universe completion. Missing cache IDs and present rows with invalid supply are named separately in `partial_snapshot_blocked` metadata.
+8. Exact-set data quality check: require every active registry ID to have positive non-restored cached supply or an owned, reasoned, unexpired publication waiver. An active ID present only as restored still blocks the snapshot even if a waiver exists. Non-restored shadow rows are written when present but do not block active-universe completion. Missing cache IDs, present rows with invalid supply, and active IDs present only as restored are named in `partial_snapshot_blocked` metadata (`missingActiveIds`, `invalidSupplyIds`, and `restoredOnlyIds`).
 9. Atomically replace the cron-owned rows for the UTC date and write the completion marker in one bounded D1 batch. Multi-row inserts stay below the 100-bind limit. Supply-row deletion is restricted to the union of current PSI-eligible IDs and the prior version 2 marker's sorted `ownedRowIds`, so same-day admin-backfill rows outside snapshot ownership are preserved.
 10. If zero rows were prepared after passing the exact-set guard, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`; this is not normally reachable because the non-empty active set would fail the exact-set guard first
 11. The same transaction updates cache key `snapshot-supply:last-write`; any statement failure rolls back the row replacement and marker together
@@ -125,16 +126,16 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 
 **Primary source:** DefiLlama list API (`stablecoins.llama.fi/stablecoins`), cached every 15 minutes by `syncStablecoins()`.
 
-**Tracked gap-fill exceptions:** `syncStablecoins()` now has two history-repair lanes for tracked DefiLlama-backed assets:
+**Tracked gap-fill exceptions:** `syncStablecoins()` now has two supply-reconciliation lanes for tracked DefiLlama-backed assets:
 
-- If one or more known metadata deployments are missing from DefiLlama's `chainCirculating`, and CoinGecko reports a materially higher total market cap, the worker repairs the current plus 1d/7d/30d total supply buckets from recent CoinGecko market-cap history and tags the asset `supplySource = "coingecko-gap-fill"`. This fixes undercounted multichain totals such as issuer-backed coins whose XRPL / Stellar supply lags or is absent in DefiLlama coverage.
+- If exactly one known metadata deployment is missing from DefiLlama's `chainCirculating`, CoinGecko reports a materially higher total market cap, and the current CoinGecko history point is fresh, the worker attributes the positive remainder (`CoinGecko total - DefiLlama list total`, floored at zero) to that chain's `chainCirculating` buckets. It preserves the DefiLlama list totals and `supplySource = "defillama"`; stale current points and multiple missing deployments fail closed without attribution.
 - If the DefiLlama live list collapses a tracked asset to zero supply but recent DefiLlama chart history still has a fresh non-zero total, the worker repairs the current plus 1d/7d/30d total supply buckets from that chart history and tags the asset `supplySource = "defillama-history-gap-fill"`. This covers list-endpoint regressions such as TRYB where the per-chain live row zeroes out while DefiLlama history remains populated.
 
-The snapshot cron records those repaired USD totals as-is.
+The snapshot cron records the canonical DefiLlama list totals as-is; only the single-chain CoinGecko remainder is retained in the cached per-chain map.
 
 **Supplemental on-chain exceptions:** `syncStablecoins()` can admit `detailProvider === "coingecko"` assets through a single-deployment on-chain supply fallback. The default label is `supplySource = "onchain-total-supply"`. For narrow protocol-inventory cases, the worker can subtract configured live holder balances from that same total-supply read and publish `supplySource = "onchain-circulating-supply"`; if any configured balance read fails, the fallback is skipped for that run. The snapshot cron records the cached USD total and does not repeat those RPC reads.
 
-Configured protocol-inventory exclusions also participate in admin historical repair. `POST /api/backfill-supply-history` can rebuild their daily `supply_history` rows from EVM `totalSupply()` minus the same holder `balanceOf()` exclusions at the closest block before each UTC day close. Tangent USG uses this path for PegKeeper balances; rows are written with `price = null` when no replay-safe historical market price exists.
+Configured protocol-inventory exclusions also participate in admin historical repair. `POST /api/backfill-supply-history` can rebuild their daily `supply_history` rows from EVM `totalSupply()` minus the same holder `balanceOf()` exclusions at the closest block before each UTC day close. Every repaired row requires a replay-safe historical market price; the only explicit par-policy exception is the code-owned Base Dollar allowlist entry, which records price `1`. Tangent USG uses this path for PegKeeper balances and skips days without a historical price.
 
 **Key gotcha:** The list endpoint returns `circulating` values already in USD for all peg types. Do **not** multiply by price --- that double-converts. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs, but the list endpoint is already converted.
 
@@ -202,11 +203,11 @@ Admin endpoint (requires Access service-token headers). Backfills `supply_histor
 
 - **Commodity tokens:** CoinGecko `market_chart` market caps; when those caps are missing, historical EVM `totalSupply()` at each UTC day close for single-deployment assets; protocol TVL fallback only after those sources fail
 - **CoinGecko-only and commodity detail providers:** CoinGecko `market_chart`
-- **Reviewed single-contract USD supplemental assets:** historical EVM `totalSupply()` at each UTC day close without inventing a market-price series; the code-owned allowlist includes assets such as BD whose live cache already uses the same single-deployment supply path
+- **Reviewed single-contract USD supplemental assets:** historical EVM `totalSupply()` at each UTC day close, requiring a historical USD price unless the asset is in the explicit code-owned par-policy allowlist (currently BD, whose documented direct redemption supports price `1`)
 - **Configured protocol-inventory on-chain assets:** historical EVM `totalSupply()` minus configured holder balances
 - **DefiLlama-backed regular coins:** DefiLlama detail API
 
-When a historical market-price series is available for a coin, the backfill also persists daily `supply_history.price` on restored rows, including regular USD stablecoins. Historical PSI replay relies on that field to prefer day-level deviation over blunt `peak_deviation_bps` fallback.
+On-chain `totalSupply()` and configured inventory-exclusion backfills persist a historical `supply_history.price` on every written row and skip days without one, except for the explicit Base Dollar par-policy price of `1`. Historical PSI replay relies on that field to prefer day-level deviation over blunt `peak_deviation_bps` fallback.
 
 The handler explicitly supports `detailProvider === "coingecko"` and `detailProvider === "commodity"` in addition to DefiLlama-backed assets. Non-USD regular coins fetch historical prices for native-to-USD conversion. Commodity and CoinGecko-only total-supply fallback reads replay historical blocks instead of projecting a current `totalSupply()` across the window, and it fails closed for multi-deployment assets that cannot be represented by exactly one supported EVM contract. Batch processing uses `stablecoin`, `batch`, and `batchSize`; optional `startDay` / `endDay` bounds limit the UTC daily rows written, with future `endDay` values clamped to the last completed UTC day.
 
@@ -252,7 +253,7 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 | Today's UTC snapshot has a version 2 marker matching the current exact ID/waiver digest | Skip write (`reason: "already_written_today"`) |
 | 0 prepared rows with a non-empty active set | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) via the exact-set guard |
 | 0 prepared rows after passing the exact-set guard | Return degraded (`reason: "all_coins_zero_supply"`); not normally reachable while the active set is non-empty |
-| Any active ID lacks valid supply and no owned unexpired waiver applies | Return degraded with named `missingActiveIds`, `missingCacheActiveIds`, and `invalidSupplyIds`; do not write the completion marker |
+| Any active ID lacks valid non-restored supply without an owned unexpired waiver, or is present only as restored | Return degraded with named `missingActiveIds`, `missingCacheActiveIds`, `invalidSupplyIds`, and `restoredOnlyIds`; do not write the completion marker |
 | Atomic date-replacement exception (non-abort) | Roll back rows and marker together, `recordCronFailure()`, then return degraded (`reason: "db_write_failed"`); abort errors are re-thrown via `rethrowIfAborted` |
 
 All cron runs are logged to the `cron_runs` table (7-day retention).

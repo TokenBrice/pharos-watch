@@ -1,4 +1,4 @@
-import { isRecord } from "@shared/lib/type-guards";
+import { isRecord } from "./type-guards";
 
 // Shared primitives for the homepage bootstrap payload, used by both the
 // build-time module (homepage-bootstrap.ts, Zod-validating) and the

@@ -2,7 +2,7 @@
 
 Use this runbook to review the privacy-preserving PharosWatchBot acquisition and onboarding funnel.
 
-`GET /api/admin-telegram-adoption-report` was retired on 2026-08-09. It was a pure read aggregation with no UI consumer; nothing about the data changed. The producer `worker/src/lib/telegram-adoption-analytics.ts` is still live and still writes `telegram_adoption_daily` and `telegram_adoption_retention_daily` from the Telegram pulse, the Mini App, and the webhook `/start` and follow paths. The queries below reproduce what the endpoint returned.
+`GET /api/admin-telegram-adoption-report` was retired on 2026-08-09. It was a pure read aggregation with no UI consumer; nothing about the data changed. The Worker producer (`/api/telegram-adoption` behind the Pages `/pharoswatchbot-adoption` shim plus `worker/src/lib/telegram-adoption-analytics.ts`) is still live and still writes `telegram_adoption_daily` and `telegram_adoption_retention_daily` from CTA clicks, the Telegram pulse, the Mini App, and the webhook `/start` and follow paths. The queries below reproduce what the endpoint returned.
 
 ## Read The Report
 
@@ -59,7 +59,7 @@ The recommended-setup CTA retains its preloaded Telegram subscription behavior a
 ## Triage
 
 1. Confirm `stablecoin-db` contains `telegram_adoption_daily` and `telegram_adoption_retention_daily`, and that the deployed Worker includes the live adoption producer. Historical migration 0192 is squashed into the active baseline; use the manifest only for lineage.
-2. Confirm the Pages project has its required primary `DB` D1 binding and `TELEGRAM_ADOPTION_IP_HASH_SECRET` pepper.
+2. Confirm the Pages project has `SITE_API_ORIGIN`, `SITE_API_SHARED_SECRET`, and the `TELEGRAM_ADOPTION_IP_HASH_SECRET` pepper for the forwarding shim; the CTA quota and aggregate writes run on the Worker’s primary `DB` binding.
 3. Check `telegram-retention-cleanup` metadata for adoption table/cache pruning and caps.
 4. Check the Telegram pulse run for `[telegram-adoption] retention refresh failed` warnings.
 5. Verify a catalog link contains a `pw1_*` token no longer than 64 characters; arbitrary tokens are intentionally classified as organic/unknown or rejected.

@@ -8,7 +8,7 @@ import {
   normalizeComplianceRegimeFilter,
   normalizeComplianceStatusFilter,
   normalizeMicaTokenTypeFilter,
-} from "./model";
+} from "@/lib/compliance-model";
 
 describe("Compliance model", () => {
   it("builds current compliance rows without frozen or pre-launch assets in the main table", () => {

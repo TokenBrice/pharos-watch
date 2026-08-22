@@ -135,11 +135,6 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason ?? new Error("repair-task executor aborted");
 }
 
-export function isDdrRepairTaskRunnerEnabled(value: unknown): boolean {
-  if (typeof value !== "string") return true;
-  return !["0", "false", "no", "off", "disabled"].includes(value.trim().toLowerCase());
-}
-
 export function buildDdrRepairTaskId(subjectId: string): string {
   return `repair:${DDR_REPAIR_TASK_KIND}:${subjectId}`;
 }

@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { CoverageMatrixCard, CoverageMobileResults, CoverageSafetyScoreDataCard } from "./coverage-page-sections";
+import { CoverageMatrixCard, CoverageMobileResults, CoverageSafetyScoreDataCard } from "@/components/coverage/coverage-page-sections";
 import { buildCoverageRow } from "@/lib/coverage";
 import { logosById } from "@/lib/logos";
 import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";

@@ -235,7 +235,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 ### Concurrency and Rollback Scope
 
 - Production-changing workflows share the global `production-deploy` concurrency group and queue instead of canceling one another.
-- New D1 migrations must remain backward-compatible because migrations apply before the new Worker is live. Destructive cleanup requires a separate coordinated rollout.
+- New D1 migrations must remain backward-compatible because migrations apply before the new Worker is live. Destructive cleanup, including `DROP INDEX`, requires a separate coordinated rollout.
 - The default workflow never automatically rolls back from a broad or non-causal signal.
 - Worker rollback is an operator decision using Cloudflare deployment history or `wrangler rollback [VERSION-ID] --yes`. It does not reverse D1 migrations, KV/R2/D1 data, secrets, bindings, or other resources.
 - Pages rollback is an operator decision in Cloudflare Pages deployment history. Use the failed run's commit, deployment URL, marker response, and Wrangler output to identify the target.

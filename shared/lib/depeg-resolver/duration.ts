@@ -12,6 +12,7 @@ import type { DdrDuration, DdrHorizon, DdrHorizonCell } from "../../types/depeg-
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { groupDurationLabelIncidents, type DdrIncident } from "./incident-groups";
 import { candidateStrata, depthBucket, stratumLabel, stratumMatches, type DdrStratumCandidate, type DdrStratumKey } from "./strata";
+import { percentileLinear } from "../stats";
 
 export const HORIZON_SECONDS: Record<DdrHorizon, number> = {
   "6h": 6 * 3600,
@@ -32,15 +33,6 @@ const BENCHMARKED_MIN_WEIGHTED_CLOSURES = 5;
 const BENCHMARKED_MIN_WEIGHTED_NON_CLOSURES = 5;
 const THIN_SUPPORT_MIN_EFFECTIVE_N = 5;
 const THIN_SUPPORT_MIN_WEIGHTED_CLOSURES = 1;
-
-function percentile(sortedAsc: number[], p: number): number {
-  if (sortedAsc.length === 0) return 0;
-  const idx = Math.min(sortedAsc.length - 1, Math.max(0, (sortedAsc.length - 1) * p));
-  const lower = Math.floor(idx);
-  const upper = Math.ceil(idx);
-  if (lower === upper) return sortedAsc[lower];
-  return sortedAsc[lower] + (sortedAsc[upper] - sortedAsc[lower]) * (idx - lower);
-}
 
 function wilson(k: number, n: number): { lower: number; upper: number } {
   if (n === 0) return { lower: 0, upper: 1 };
@@ -99,7 +91,7 @@ function coinMedianRemainingDurations(comparable: DdrIncident[], ageSec: number)
     byCoin.set(incident.stablecoinId, durations);
   }
   return [...byCoin.values()]
-    .map((durations) => percentile(durations.sort((a, b) => a - b), 0.5))
+    .map((durations) => percentileLinear(durations, 50) ?? 0)
     .sort((a, b) => a - b);
 }
 
@@ -176,8 +168,8 @@ export function computeDuration(
 
   // Age status uses the full matched-stratum duration distribution, not only
   // incidents still comparable at the current landmark age.
-  const p90 = percentile(durationsAll, 0.9);
-  const p99 = percentile(durationsAll, 0.99);
+  const p90 = percentileLinear(durationsAll, 90) ?? 0;
+  const p99 = percentileLinear(durationsAll, 99) ?? 0;
   let ageStatus: DdrDuration["ageStatus"] = durationsAll.length === 0 ? "data_issue" : "ordinary";
   if (durationsAll.length > 0) {
     if (ageSec > p99) ageStatus = "chronic_tail";
@@ -239,8 +231,10 @@ export function computeDuration(
     suppressed: !hasSupport,
     suppressedReason: hasSupport ? null : "insufficient_support",
     stratum: label,
-    medianSec: hasSupport ? percentile(coinMedianRemainingDur, 0.5) : null,
-    iqrSec: hasSupport ? [percentile(coinMedianRemainingDur, 0.15), percentile(coinMedianRemainingDur, 0.85)] : null,
+    medianSec: hasSupport ? percentileLinear(coinMedianRemainingDur, 50) ?? 0 : null,
+    iqrSec: hasSupport
+      ? [percentileLinear(coinMedianRemainingDur, 15) ?? 0, percentileLinear(coinMedianRemainingDur, 85) ?? 0]
+      : null,
     ageStatus,
     horizons,
   };

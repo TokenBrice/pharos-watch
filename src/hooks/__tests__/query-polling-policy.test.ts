@@ -21,7 +21,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 });
 
 import { createApiPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
-import { CRON_1MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
+import { CRON_1MIN, CRON_STABILITY_INDEX, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { useHealth } from "../api-hooks";
 import { useRequestSourceStats } from "../use-request-source-stats";
@@ -230,8 +230,8 @@ describe("query polling policy", () => {
     };
 
     expect(options.queryKey).toEqual(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex.queryKey);
-    expect(options.staleTime).toBe(CRON_30MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_30MIN);
+    expect(options.staleTime).toBe(CRON_STABILITY_INDEX);
+    expect(options.refetchInterval).toBe(2 * CRON_STABILITY_INDEX);
     expect(options.retry).toBe(2);
   });
 

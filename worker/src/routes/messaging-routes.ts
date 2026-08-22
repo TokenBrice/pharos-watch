@@ -1,4 +1,21 @@
-import { defineLazyStaticRoute, type StaticRouteDefinition } from "./shared";
+import { TELEGRAM_ADOPTION_API_PATH } from "../lib/telegram-adoption-analytics";
+import {
+  defineLazyStaticRoute,
+  type FullRouteContext,
+  type RouteMatch,
+  type StaticRouteDefinition,
+} from "./shared";
+
+export const TELEGRAM_ADOPTION_ROUTE = {
+  dependencies: [] as const,
+  methods: ["POST"] as const,
+  handle: async (routeCtx: FullRouteContext) => {
+    const { handleTelegramAdoption } = await import("../api/telegram-adoption");
+    return handleTelegramAdoption(routeCtx);
+  },
+} satisfies Omit<RouteMatch, "endpoint">;
+
+export { TELEGRAM_ADOPTION_API_PATH };
 
 export const MESSAGING_STATIC_ROUTES = [
   defineLazyStaticRoute("feedback", () =>

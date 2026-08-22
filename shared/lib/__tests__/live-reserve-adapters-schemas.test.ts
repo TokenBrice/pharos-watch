@@ -12,7 +12,7 @@ import {
 } from "../live-reserve-adapters";
 import { getReserveDisplayBadgeKindForAdapter } from "../live-reserve-display";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "../../types/live-reserves";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../live-reserve-adapters-definitions";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../live-reserve-adapter-descriptors";
 import { ReserveEvidenceSourceOriginClassSchema } from "../report-card-evidence-journal";
 import {
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,

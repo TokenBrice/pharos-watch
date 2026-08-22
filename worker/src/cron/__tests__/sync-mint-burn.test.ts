@@ -123,7 +123,7 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 }));
 
 vi.mock("../../lib/alchemy-logs", () => ({
-  buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/test-key"),
+  buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/"),
   getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
   getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>
     new Map(txHashes.map((txHash) => [txHash, {
@@ -381,7 +381,7 @@ describe("syncMintBurn", () => {
       fromBlock: 21_900_000,
       scanTo: 21_949_999,
       chainHead: 22_000_000,
-      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/alchemy-key",
+      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
       configBudgetLimit: 200,
       runTimestamp: 1_718_650_752,
       priceContext: { prices: new Map([["usdt-tether", 1]]), priceHistory: new Map() },
@@ -426,7 +426,7 @@ describe("syncMintBurn", () => {
       fromBlock: 21_955_001,
       scanTo: 21_960_000,
       chainHead: 22_000_000,
-      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/alchemy-key",
+      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
       configBudgetLimit: 200,
       runTimestamp: 1_718_650_752,
       priceContext: { prices: new Map([["usdt-tether", 1]]), priceHistory: new Map() },

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
-import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import {
   BACKING_LABELS_SHORT,
   GOVERNANCE_LABELS_SHORT,
@@ -21,23 +20,22 @@ import {
   formatFuzzyDate,
 } from "@/lib/pre-launch";
 import { stripTermMarkup } from "@/lib/term-markup";
-import type { LaunchPhase } from "@shared/types";
-import { logosById } from "@/lib/logos";
+import type { LaunchPhase, StablecoinMeta } from "@shared/types";
+import { decodeState, encodeState, type UrlStateSchema } from "@/lib/url-state";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 
-const PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter((coin) => coin.status === "pre-launch");
-const typedLogos = logosById;
-
-// Soonest-expected launch with a known date — surfaced in the hero sub-metrics.
-const NEAREST_LAUNCH =
-  PRE_LAUNCH_STABLECOINS.filter((c) => c.expectedLaunchDate).sort(
-    (a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate),
-  )[0] ?? null;
+export type UpcomingCoin = Pick<
+  StablecoinMeta,
+  "id" | "name" | "symbol" | "launchPhase" | "expectedLaunchDate" | "announcedDate" | "dateHistory" | "milestones"
+> & {
+  flags: Pick<StablecoinMeta["flags"], "pegCurrency" | "backing" | "governance">;
+};
 
 // ---------------------------------------------------------------------------
 // Filter types
 // ---------------------------------------------------------------------------
 
-type SortKey = "expected" | "announced" | "alphabetical";
+export type SortKey = "expected" | "announced" | "alphabetical";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "expected", label: "Expected Launch" },
@@ -47,9 +45,39 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 
 const ALL_PHASES: LaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
 
-// Derive filter options from actual data
-const ALL_PEGS = [...new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.flags.pegCurrency))];
-const ALL_BACKINGS = [...new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.flags.backing))];
+export interface UpcomingUrlState {
+  phase: readonly LaunchPhase[];
+  peg: readonly string[];
+  backing: readonly string[];
+  sort: SortKey;
+}
+
+export function createUpcomingUrlSchema(coins: readonly UpcomingCoin[]): UrlStateSchema<UpcomingUrlState> {
+  const pegs = [...new Set(coins.map((coin) => coin.flags.pegCurrency))];
+  const backings = [...new Set(coins.map((coin) => coin.flags.backing))];
+  return {
+    phase: {
+      kind: "enumList",
+      defaultValue: [],
+      allowedValues: ALL_PHASES,
+    },
+    peg: {
+      kind: "enumList",
+      defaultValue: [],
+      allowedValues: pegs,
+    },
+    backing: {
+      kind: "enumList",
+      defaultValue: [],
+      allowedValues: backings,
+    },
+    sort: {
+      kind: "enum",
+      defaultValue: "expected",
+      allowedValues: SORT_OPTIONS.map((option) => option.key),
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,42 +101,98 @@ function neutralToggleClass(active: boolean): string {
 // Component
 // ---------------------------------------------------------------------------
 
-// Teasers are selected server-side in src/app/upcoming/page.tsx — importing
-// the full ai-summaries.json here would ship the whole 495 KB corpus to the
-// client for a dozen strings.
-export function UpcomingClient({ teasers }: { teasers: Record<string, string> }) {
-  const [phaseFilter, setPhaseFilter] = useState<Set<LaunchPhase>>(new Set());
-  const [pegFilter, setPegFilter] = useState<Set<string>>(new Set());
-  const [backingFilter, setBackingFilter] = useState<Set<string>>(new Set());
-  const [sortKey, setSortKey] = useState<SortKey>("expected");
+// Teasers and the pre-launch projection are selected server-side in
+// src/app/upcoming/page.tsx — the client receives only the fields rendered
+// here instead of importing the full registry and logo map.
+export function UpcomingClient({
+  coins,
+  logos,
+  teasers,
+}: {
+  coins: readonly UpcomingCoin[];
+  logos: Readonly<Record<string, string | undefined>>;
+  teasers: Record<string, string>;
+}) {
+  const { searchParams, replaceParams } = useUrlFilters();
+  const schema = useMemo(() => createUpcomingUrlSchema(coins), [coins]);
+  const filters = useMemo(() => decodeState(searchParams, schema), [schema, searchParams]);
+  const phaseFilter = useMemo(() => new Set(filters.phase), [filters.phase]);
+  const pegFilter = useMemo(() => new Set(filters.peg), [filters.peg]);
+  const backingFilter = useMemo(() => new Set(filters.backing), [filters.backing]);
+
+  const writeFilters = useCallback(
+    (next: UpcomingUrlState) => {
+      const encoded = encodeState(next, schema);
+      replaceParams((params) => {
+        for (const key of Object.keys(schema)) params.delete(key);
+        for (const [key, value] of new URLSearchParams(encoded)) params.set(key, value);
+      });
+    },
+    [replaceParams, schema],
+  );
+
+  const togglePhase = useCallback(
+    (phase: LaunchPhase) => {
+      writeFilters({ ...filters, phase: Array.from(toggleSet(phaseFilter, phase)) });
+    },
+    [filters, phaseFilter, writeFilters],
+  );
+
+  const togglePeg = useCallback(
+    (peg: string) => {
+      writeFilters({ ...filters, peg: Array.from(toggleSet(pegFilter, peg)) });
+    },
+    [filters, pegFilter, writeFilters],
+  );
+
+  const toggleBacking = useCallback(
+    (backing: string) => {
+      writeFilters({ ...filters, backing: Array.from(toggleSet(backingFilter, backing)) });
+    },
+    [backingFilter, filters, writeFilters],
+  );
+
+  const clearFilters = useCallback(() => {
+    writeFilters({ ...filters, phase: [], peg: [], backing: [] });
+  }, [filters, writeFilters]);
+
+  const allPegs = useMemo(() => [...new Set(coins.map((coin) => coin.flags.pegCurrency))], [coins]);
+  const allBackings = useMemo(() => [...new Set(coins.map((coin) => coin.flags.backing))], [coins]);
+  const nearestLaunch = useMemo(
+    () => coins
+      .filter((coin) => coin.expectedLaunchDate)
+      .sort((a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate))[0] ?? null,
+    [coins],
+  );
+  const sortKey = filters.sort;
 
   const filtered = useMemo(() => {
-    let coins = [...PRE_LAUNCH_STABLECOINS];
+    let filteredCoins = [...coins];
 
     if (phaseFilter.size > 0) {
-      coins = coins.filter((c) => c.launchPhase && phaseFilter.has(c.launchPhase));
+      filteredCoins = filteredCoins.filter((coin) => coin.launchPhase && phaseFilter.has(coin.launchPhase));
     }
     if (pegFilter.size > 0) {
-      coins = coins.filter((c) => pegFilter.has(c.flags.pegCurrency));
+      filteredCoins = filteredCoins.filter((coin) => pegFilter.has(coin.flags.pegCurrency));
     }
     if (backingFilter.size > 0) {
-      coins = coins.filter((c) => backingFilter.has(c.flags.backing));
+      filteredCoins = filteredCoins.filter((coin) => backingFilter.has(coin.flags.backing));
     }
 
     switch (sortKey) {
       case "expected":
-        coins.sort((a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate));
+        filteredCoins.sort((a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate));
         break;
       case "announced":
-        coins.sort((a, b) => dateScore(a.announcedDate) - dateScore(b.announcedDate));
+        filteredCoins.sort((a, b) => dateScore(a.announcedDate) - dateScore(b.announcedDate));
         break;
       case "alphabetical":
-        coins.sort((a, b) => a.name.localeCompare(b.name));
+        filteredCoins.sort((a, b) => a.name.localeCompare(b.name));
         break;
     }
 
-    return coins;
-  }, [phaseFilter, pegFilter, backingFilter, sortKey]);
+    return filteredCoins;
+  }, [backingFilter, coins, pegFilter, phaseFilter, sortKey]);
 
   const hasActiveFilters = phaseFilter.size > 0 || pegFilter.size > 0 || backingFilter.size > 0;
 
@@ -123,19 +207,19 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
           <div className="space-y-1.5">
             <p className="text-sm font-medium text-muted-foreground">Tracked Launches</p>
             <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
-              {PRE_LAUNCH_STABLECOINS.length}
+              {coins.length}
             </p>
           </div>
-          {NEAREST_LAUNCH?.expectedLaunchDate ? (
+          {nearestLaunch?.expectedLaunchDate ? (
             <div className="flex items-baseline gap-2 font-mono text-xs">
               <span className="text-muted-foreground">Soonest</span>
               <Link
-                href={buildStablecoinUrl(NEAREST_LAUNCH.id)}
+                href={buildStablecoinUrl(nearestLaunch.id)}
                 className="pharos-focus-ring flex min-w-0 items-baseline gap-1.5 text-foreground hover:text-foreground/80"
               >
-                <span className="truncate">{NEAREST_LAUNCH.name}</span>
+                <span className="truncate">{nearestLaunch.name}</span>
                 <span aria-hidden="true" className="text-muted-foreground/50">·</span>
-                <span className="pharos-numeric shrink-0">{formatFuzzyDate(NEAREST_LAUNCH.expectedLaunchDate)}</span>
+                <span className="pharos-numeric shrink-0">{formatFuzzyDate(nearestLaunch.expectedLaunchDate)}</span>
               </Link>
             </div>
           ) : null}
@@ -153,9 +237,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
           {hasActiveFilters ? (
             <button type="button"
               onClick={() => {
-                setPhaseFilter(new Set());
-                setPegFilter(new Set());
-                setBackingFilter(new Set());
+                clearFilters();
               }}
               className="pharos-focus-ring min-h-11 self-start rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground sm:min-h-8 sm:self-auto"
             >
@@ -173,7 +255,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
                   <button type="button"
                     key={phase}
                     aria-pressed={phaseFilter.has(phase)}
-                    onClick={() => setPhaseFilter(toggleSet(phaseFilter, phase))}
+                    onClick={() => togglePhase(phase)}
                     className={neutralToggleClass(phaseFilter.has(phase))}
                   >
                     {LAUNCH_PHASE_LABELS[phase]}
@@ -182,15 +264,15 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
               </div>
             </div>
 
-            {ALL_BACKINGS.length > 1 && (
+            {allBackings.length > 1 && (
               <div className="space-y-2">
                 <p className="pharos-kicker">Backing</p>
                 <div className="flex flex-wrap gap-2">
-                  {ALL_BACKINGS.map((backing) => (
+                  {allBackings.map((backing) => (
                     <button type="button"
                       key={backing}
                       aria-pressed={backingFilter.has(backing)}
-                      onClick={() => setBackingFilter(toggleSet(backingFilter, backing))}
+                      onClick={() => toggleBacking(backing)}
                       className={neutralToggleClass(backingFilter.has(backing))}
                     >
                       {BACKING_LABELS_SHORT[backing] ?? backing}
@@ -201,15 +283,15 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
             )}
           </div>
 
-          {ALL_PEGS.length > 1 && (
+          {allPegs.length > 1 && (
             <div className="min-w-0 space-y-2 xl:px-5">
               <p className="pharos-kicker">Peg</p>
               <div className="flex flex-wrap gap-2">
-                {ALL_PEGS.map((peg) => (
+                {allPegs.map((peg) => (
                   <button type="button"
                     key={peg}
                     aria-pressed={pegFilter.has(peg)}
-                    onClick={() => setPegFilter(toggleSet(pegFilter, peg))}
+                    onClick={() => togglePeg(peg)}
                     className={neutralToggleClass(pegFilter.has(peg))}
                   >
                     {PEG_LABELS_SHORT[peg] ?? peg}
@@ -226,7 +308,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
                 <button type="button"
                   key={opt.key}
                   aria-pressed={sortKey === opt.key}
-                  onClick={() => setSortKey(opt.key)}
+                  onClick={() => writeFilters({ ...filters, sort: opt.key })}
                   className={neutralToggleClass(sortKey === opt.key)}
                 >
                   {opt.label}
@@ -243,9 +325,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
           <p>No pre-launch coins match. Drop a filter or two.</p>
           <button type="button"
             onClick={() => {
-              setPhaseFilter(new Set());
-              setPegFilter(new Set());
-              setBackingFilter(new Set());
+              clearFilters();
             }}
             className="pharos-focus-ring rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
           >
@@ -267,7 +347,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
               >
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <StablecoinLogo src={typedLogos[coin.id]} name={coin.name} size={36} />
+                  <StablecoinLogo src={logos[coin.id]} name={coin.name} size={36} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground group-hover:text-foreground/80">
                       {coin.name}

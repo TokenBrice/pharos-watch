@@ -8,7 +8,7 @@ The tracker is informational and source-backed, not legal advice. Missing regime
 
 - Route shell and metadata: `src/app/compliance/page.tsx`
 - Client filter/search/table behavior: `src/app/compliance/client.tsx`
-- Row projection, sorting, regime state, and summary: `src/app/compliance/model.ts`
+- Row projection, sorting, regime state, and summary: `src/lib/compliance-model.ts`
 - MiCA labels/presentation: `shared/lib/mica.ts`
 - GENIUS labels/presentation: `shared/lib/genius.ts`
 - Effective-state owner: `shared/lib/compliance-regime-state.ts`
@@ -24,7 +24,7 @@ The page has three URL-backed views:
 - **MiCA** groups the full-detail MiCA rows into ordered status bands.
 - **GENIUS** groups rows into ordered status bands while preserving the model-owned main-table versus Implementation Watch split and effective-state empty state.
 
-`src/app/compliance/model.ts` is the authority for view projection, band order, default-collapsed statuses, and which GENIUS rows appear in the main table versus Implementation Watch. Default-collapsed bands render as one disclosure row until expanded. Search results and specific status-filter results automatically expose matching rows in those bands.
+`src/lib/compliance-model.ts` is the authority for view projection, band order, default-collapsed statuses, and which GENIUS rows appear in the main table versus Implementation Watch. Default-collapsed bands render as one disclosure row until expanded. Search results and specific status-filter results automatically expose matching rows in those bands.
 
 Regime tables keep the scan surface to Coin, Status, Pathway / Type, Authority, and Issuer Entity. Rows with source or review detail expose a button-controlled full-width fold. The fold owns source links and, for GENIUS, review evidence and reserve-disclosure details. The Overview directory has no row folds and does not require horizontal scrolling.
 
@@ -45,7 +45,7 @@ Do not restate regime eligibility or legal classification logic in this route do
 - `peg=<PegCurrency>`
 - `q=<search>`
 
-Absent `regime` selects Overview unless a legacy deep link can infer a regime from a MiCA-only status/type value or GENIUS-only status value. The client accepts legacy `tokenType` and `pegCurrency` aliases and writes canonical `type` and `peg` parameters. Changing views clears regime-specific status and token-type state; status badges and hero segments write the destination regime and status together. Search state stays synchronized with browser Back/Forward navigation.
+Absent `regime` selects Overview unless a legacy deep link can infer a regime from a MiCA-only status/type value or GENIUS-only status value. `COMPLIANCE_URL_SCHEMA` decodes the canonical keys plus the legacy `tokenType` and `pegCurrency` aliases; writers emit canonical `type` and `peg` parameters. Changing views clears regime-specific status and token-type state; status badges and hero segments write the destination regime and status together. Search state stays synchronized with browser Back/Forward navigation.
 
 ## Data Projection
 

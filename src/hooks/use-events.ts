@@ -6,8 +6,8 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { TAPE_EVENT_SEVERITY_VALUES, type TapeEventSeverity } from "@shared/types/tape-event-constants";
 import type { TapeEvent, TapeEventsResponse } from "@shared/types/tape-event";
 import { apiFetchWithMeta } from "@/lib/api";
-import { CRON_15MIN } from "@/lib/cron-intervals";
-import { createLazySchema } from "@/lib/schema-like";
+import { CRON_TAPE } from "@/lib/cron-intervals";
+import { createLazySchema } from "@shared/lib/schema-like";
 import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";
 import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
@@ -88,7 +88,7 @@ function buildEventsPath(filter: UseEventsFilter, options: BuildEventsPathOption
 function eventsInfiniteQueryOptions(filter: UseEventsFilter = {}) {
   // Infinite event feeds keep a custom descriptor because each page carries a
   // cursor and the first page alone requests the expensive total count.
-  const { staleTime, refetchInterval } = getPollingWindow(CRON_15MIN);
+  const { staleTime, refetchInterval } = getPollingWindow(CRON_TAPE);
   return infiniteQueryOptions({
     queryKey: ["events", "infinite", eventsQueryKeyFilters(filter)] as const,
     initialPageParam: null as string | null,
@@ -199,7 +199,7 @@ export function useLatestEvents(options: UseLatestEventsOptions = {}) {
       },
     ],
     path,
-    CRON_15MIN,
+    CRON_TAPE,
     { enabled, schema: loadTapeEventsResponseBodySchema },
   );
   return result;

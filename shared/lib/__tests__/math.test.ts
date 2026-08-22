@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bandFromThresholds, clamp, clampScore, round1, round4, roundScore, roundTo } from "../math";
+import { bandFromThresholds, clamp, clampScore, clampShare, round1, round4, roundScore, roundTo } from "../math";
 
 describe("clamp", () => {
   it("returns value when within range", () => {
@@ -30,6 +30,20 @@ describe("clampScore", () => {
     expect(clampScore(-1)).toBe(0);
     expect(clampScore(42)).toBe(42);
     expect(clampScore(101)).toBe(100);
+  });
+});
+
+describe("clampShare", () => {
+  it("clamps to the share range", () => {
+    expect(clampShare(-1)).toBe(0);
+    expect(clampShare(0.42)).toBe(0.42);
+    expect(clampShare(2)).toBe(1);
+  });
+
+  it("hardens non-finite share input", () => {
+    expect(clampShare(NaN)).toBe(0);
+    expect(clampShare(Infinity)).toBe(1);
+    expect(clampShare(-Infinity)).toBe(0);
   });
 });
 

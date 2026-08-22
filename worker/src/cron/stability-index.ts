@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRaw, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stability-index";
@@ -36,19 +36,26 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => CORE_PSI_ELIGIBLE_IDS.has(coin.id));
 
   let totalMcapUsd = 0;
-  let totalPrevWeek = 0;
+  let pairedMcapUsd = 0;
+  let pairedPrevWeek = 0;
   const mcapById = new Map<string, number>();
   const symbolById = new Map<string, string>();
 
   for (const coin of tracked) {
     const mcap = getCirculatingRaw(coin);
     totalMcapUsd += mcap;
-    totalPrevWeek += getPrevWeekRaw(coin);
+    const prevWeek = getPrevWeekRawOrNull(coin);
+    if (prevWeek != null) {
+      pairedMcapUsd += mcap;
+      pairedPrevWeek += prevWeek;
+    }
     mcapById.set(coin.id, mcap);
     symbolById.set(coin.id, coin.symbol);
   }
 
-  const mcap7dChangePct = totalPrevWeek > 0 ? ((totalMcapUsd - totalPrevWeek) / totalPrevWeek) * 100 : 0;
+  const mcap7dChangePct = pairedPrevWeek > 0
+    ? ((pairedMcapUsd - pairedPrevWeek) / pairedPrevWeek) * 100
+    : 0;
 
   throwIfAborted(signal);
 

@@ -116,7 +116,7 @@ export type SurfaceFreshnessLaneFields<K extends CacheFreshnessLaneKey> = Omit<
   "endpointBudgetReason" | "availabilityBudgetReason"
 >;
 
-export function surfaceFreshnessLaneFields<K extends CacheFreshnessLaneKey>(
+function surfaceFreshnessLaneFields<K extends CacheFreshnessLaneKey>(
   laneKey: K,
 ): SurfaceFreshnessLaneFields<K> {
   const { endpointBudgetReason: _endpointBudgetReason, availabilityBudgetReason: _availabilityBudgetReason, ...fields } =

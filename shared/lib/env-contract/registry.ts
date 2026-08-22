@@ -633,6 +633,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "DDR_REPAIR_TASK_RUNNER_ENABLED",
+    valueType: "string",
+    description: "DDR repair-task runner control: `1`, `true`, `yes`, `on`, or `enabled` enables execution; `0`, `false`, `no`, `off`, or `disabled` disables it; unset or empty defaults to enabled; invalid non-empty values fail closed by disabling the runner and emitting a structured warning.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
     key: "WORKER_RESERVE_RECOVERY_MODE",
     valueType: "string",
     description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts.",

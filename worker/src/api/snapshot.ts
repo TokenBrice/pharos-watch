@@ -26,6 +26,10 @@ import {
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
 import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import {
+  PublicSnapshotEnvelopeSchema,
+  type PublicSnapshotEnvelope,
+} from "@shared/types/public-snapshot";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
 
@@ -73,18 +77,6 @@ function safeParseSafetyScoreIdentity(value: string): SafetyScorePublicationIden
 
 function parseSafetyScoreIdentity(value: unknown): SafetyScorePublicationIdentity | null {
   return SafetyScorePublicationIdentitySchema.safeParse(value).data ?? null;
-}
-
-interface StoredSnapshotEnvelope {
-  snapshotDate?: string;
-  generatedAt?: number;
-  methodologyVersions?: Record<string, string>;
-  safetyScoreIdentity?: unknown;
-  stablecoins?: { id: string }[];
-  reportCards?: unknown;
-  psi?: unknown;
-  dews?: { stablecoinId: string }[];
-  liquidity?: { stablecoinId: string }[];
 }
 
 type StoredSafetyValidation =
@@ -211,7 +203,7 @@ function isTransitionalIdentityDate(date: string): boolean {
 
 function validateStoredSafetyPublication(
   row: PublicSnapshotRow,
-  envelope: StoredSnapshotEnvelope,
+  envelope: PublicSnapshotEnvelope,
   date: string,
 ): StoredSafetyValidation {
   const metadata = tryParseJson(row.methodology_versions, { onFailure: () => undefined });
@@ -308,16 +300,13 @@ function validateStoredSafetyPublication(
 async function parseStoredSnapshot(
   row: PublicSnapshotRow,
   date: string,
-): Promise<{ payload: string; envelope: StoredSnapshotEnvelope; identity: SafetyScorePublicationIdentity | null } | Response> {
+): Promise<{ payload: string; envelope: PublicSnapshotEnvelope; identity: SafetyScorePublicationIdentity | null } | Response> {
   let payload: string;
-  let envelope: StoredSnapshotEnvelope;
+  let envelope: PublicSnapshotEnvelope;
   try {
     payload = await gunzipToString(toUint8Array(row.payload_gz)!);
     const parsed = tryParseJson(payload, { onFailure: () => undefined });
-    if (!isRecord(parsed)) {
-      throw new Error("Snapshot envelope is not an object");
-    }
-    envelope = parsed as StoredSnapshotEnvelope;
+    envelope = PublicSnapshotEnvelopeSchema.parse(parsed);
   } catch (err) {
     logWorkerEventArgs("api", "error", `[snapshot] decompress/parse failed for ${date}:`, err);
     return errorResponse(500, "Snapshot payload corrupted");

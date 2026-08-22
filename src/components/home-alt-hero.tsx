@@ -1,14 +1,53 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import type { HomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
 import { CHART_ORANGE, CHART_PALETTE, CHART_SLATE_STRONG, USDT_GREEN, USDC_BLUE } from "@/lib/chart-colors";
 import { HomeAltHeroChartGate } from "@/components/home-alt-hero-chart-gate";
 import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
-import { formatCurrency } from "@shared/lib/format";
+import { useStablecoins } from "@/hooks/use-stablecoins";
+import {
+  buildLiveHomepageHeroSnapshot,
+  selectHomepageHeroSnapshot,
+} from "@/lib/homepage-hero-snapshot";
+import { formatCurrency, formatLongDate } from "@shared/lib/format";
 
 // OTHERS cohort dot — violet pulled from the shared chart palette.
 const OTHERS_PURPLE = CHART_PALETTE[1];
 
-export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): React.JSX.Element {
-  const latest = snapshot.cohort;
+export function HomeAltHero({
+  snapshot,
+  fallbackSelectedAtMs,
+}: {
+  snapshot: HomepageHeroSnapshot;
+  fallbackSelectedAtMs: number;
+}): React.JSX.Element {
+  const stablecoinsQuery = useStablecoins();
+  const liveSnapshot = useMemo(
+    () => stablecoinsQuery.data
+      ? buildLiveHomepageHeroSnapshot(stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt)
+      : null,
+    [stablecoinsQuery.data, stablecoinsQuery.meta?.updatedAt],
+  );
+  // Hydration-stable first render: the build-time clock keeps server and
+  // client output identical, then a deferred tick re-evaluates fallback
+  // expiry with the viewer's clock (setState inside a timer callback, never
+  // synchronously in the effect body).
+  const [nowMs, setNowMs] = useState(fallbackSelectedAtMs);
+  useEffect(() => {
+    const timer = setTimeout(() => setNowMs(Date.now()), 0);
+    return () => clearTimeout(timer);
+  }, []);
+  const selection = useMemo(
+    () => selectHomepageHeroSnapshot({ liveSnapshot, fallbackSnapshot: snapshot, nowMs }),
+    [liveSnapshot, snapshot, nowMs],
+  );
+
+  const visibleSnapshot = selection.snapshot;
+  const latest = visibleSnapshot?.cohort ?? null;
+  const selectedDate = visibleSnapshot?.asOfISO
+    ? formatLongDate(new Date(visibleSnapshot.asOfISO), { utc: true })
+    : null;
 
   return (
     <section aria-labelledby="market-pulse-title" className="space-y-4">
@@ -41,7 +80,16 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
               <CardExpandButton href="/screener/" expandLabel="Open Screener" className="-mr-2" />
             </div>
             <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
-              {formatCurrency(snapshot.totalUsd, 1)}
+              {visibleSnapshot ? formatCurrency(visibleSnapshot.totalUsd, 1) : "—"}
+            </p>
+            <p className="min-h-4 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {selection.source === "fallback" && selectedDate
+                ? `Fallback · as of ${selectedDate}`
+                : selection.source === "live"
+                  ? selectedDate
+                    ? `Live · as of ${selectedDate}`
+                    : "Live stablecoin data"
+                  : "Live market data unavailable"}
             </p>
           </div>
         </div>
@@ -54,7 +102,7 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
             reads as one continuous story instead of headline-then-gap-then-list. */}
         <div className="space-y-2 p-5 sm:p-6 lg:col-start-1 lg:border-r lg:border-t lg:border-border/50 lg:p-7">
           <p className="pharos-kicker">Market Cohorts</p>
-          <ul className="flex flex-col gap-1.5 text-xs">
+          <ul className="flex min-h-[6.5rem] flex-col gap-1.5 text-xs">
             {latest ? (
               <>
                 <CohortRow color={USDT_GREEN} label="USDT" value={latest.usdt} total={latest.total} />
@@ -69,11 +117,11 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
                     <span className="uppercase tracking-tight">Non-USD share</span>
                   </span>
                   <span className="flex items-baseline gap-1.5 pharos-numeric text-muted-foreground">
-                    {snapshot.nonUsdShare !== null ? (
+                    {visibleSnapshot && visibleSnapshot.nonUsdShare !== null ? (
                       <>
-                        <span className="text-foreground">{formatCurrency(snapshot.nonUsdUsd, 1)}</span>
+                        <span className="text-foreground">{formatCurrency(visibleSnapshot.nonUsdUsd, 1)}</span>
                         <span aria-hidden="true">·</span>
-                        <span>{(snapshot.nonUsdShare * 100).toFixed(1)}%</span>
+                        <span>{(visibleSnapshot.nonUsdShare * 100).toFixed(1)}%</span>
                       </>
                     ) : (
                       "—"
@@ -82,7 +130,9 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
                 </li>
               </>
             ) : (
-              <li className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Loading cohorts…</li>
+              <li className="flex flex-1 items-center font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                Market data unavailable
+              </li>
             )}
           </ul>
         </div>

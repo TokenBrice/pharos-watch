@@ -2093,12 +2093,12 @@ describe("syncStablecoins", () => {
     const eurcv = payload?.peggedAssets.find((asset) => asset.id === "eurcv-societe-generale-forge");
 
     expect(eurcv).toBeDefined();
-    expect(eurcv?.supplySource).toBe("coingecko-gap-fill");
-    expect(eurcv?.circulating).toEqual({ peggedEUR: 106_720_303.28574413 });
-    expect(eurcv?.circulatingPrevDay).toEqual({ peggedEUR: 106_300_000 });
-    expect(eurcv?.circulatingPrevWeek).toEqual({ peggedEUR: 105_500_000 });
-    expect(eurcv?.circulatingPrevMonth).toEqual({ peggedEUR: 101_100_000 });
-    expect(eurcv?.chains).toEqual(["Ethereum", "Solana", "XRP Ledger", "Stellar"]);
+    expect(eurcv?.supplySource).toBe("defillama");
+    expect(eurcv?.circulating).toEqual({ peggedEUR: 76_959_279.2855894 });
+    expect(eurcv?.circulatingPrevDay).toEqual({ peggedEUR: 76_452_843.42798373 });
+    expect(eurcv?.circulatingPrevWeek).toEqual({ peggedEUR: 77_730_394.74632101 });
+    expect(eurcv?.circulatingPrevMonth).toEqual({ peggedEUR: 64_940_946.17329877 });
+    expect(eurcv?.chains).toEqual(["Ethereum", "Solana"]);
     expect(Object.keys((eurcv?.chainCirculating as Record<string, unknown>) ?? {})).toEqual(["Ethereum", "Solana"]);
   });
 
@@ -2706,7 +2706,7 @@ describe("syncStablecoins", () => {
     expect(priceCacheIds).not.toContain("usdt-tether");
   });
 
-  it("restores last-known-good supplemental supply when CoinGecko market-cap fetch is unavailable", async () => {
+  it("restores the full last-known-good supplemental row when current gold market cap is unavailable", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const previousStablecoinsPayload = {
       peggedAssets: [
@@ -2782,8 +2782,8 @@ describe("syncStablecoins", () => {
     const dgld = payload?.peggedAssets.find((asset) => asset.id === "dgld-gold-token-sa");
 
     expect(dgld).toBeDefined();
-    expect(dgld?.price).toBe(10_700);
-    expect(dgld?.priceSource).toBe("coingecko-mirror");
+    expect(dgld?.price).toBe(10_500);
+    expect(dgld?.priceSource).toBe("coingecko");
     expect(dgld?.supplySource).toBe("coingecko-fallback");
     expect(dgld?.supplyObservedAt).toBe(nowSec - 300);
     expect(dgld?.supplyRestored).toBe(true);

@@ -2,8 +2,13 @@ import type { CostCategory, CostLineItem, Donation } from "./types";
 
 const CATEGORY_ORDER: readonly CostCategory[] = ["team", "infra"];
 
+function requireFinite(value: number, field: string): number {
+  if (!Number.isFinite(value)) throw new RangeError(`Funding ${field} must be finite`);
+  return value;
+}
+
 export function computeCostsTotal(items: readonly CostLineItem[]): number {
-  return items.reduce((sum, item) => sum + item.usd_per_month, 0);
+  return items.reduce((sum, item) => sum + requireFinite(item.usd_per_month, "cost"), 0);
 }
 
 export interface CostCategoryGroup {
@@ -23,6 +28,7 @@ export function groupCostsByCategory(items: readonly CostLineItem[]): CostCatego
 
 /** YYYY-MM in UTC. */
 export function monthKey(timestampSec: number): string {
+  requireFinite(timestampSec, "timestamp");
   const d = new Date(timestampSec * 1000);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
@@ -54,6 +60,8 @@ export function computeMonthlyHistory(
   const currentMonth = monthKey(nowSec);
   const totals = new Map<string, number>();
   for (const d of donations) {
+    requireFinite(d.block_timestamp, "timestamp");
+    requireFinite(d.usd_at_receipt, "donation amount");
     if (d.kind === "founder") continue;
     const key = monthKey(d.block_timestamp);
     if (key === currentMonth) continue;
@@ -98,6 +106,8 @@ export function summarizeDonations(
   const communitySenders = new Set<string>();
 
   for (const d of donations) {
+    requireFinite(d.block_timestamp, "timestamp");
+    requireFinite(d.usd_at_receipt, "donation amount");
     const isFounder = d.kind === "founder";
     if (isFounder) {
       lifetimeFounderUsd += d.usd_at_receipt;

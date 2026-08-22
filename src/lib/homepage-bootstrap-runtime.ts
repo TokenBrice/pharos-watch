@@ -10,7 +10,7 @@ import {
   type BootstrapPayload,
   type BootstrapQuery,
   type HomepageBootstrapQueryId,
-} from "@/lib/homepage-bootstrap-shared";
+} from "@shared/lib/homepage-bootstrap-shared";
 
 export const HOMEPAGE_BOOTSTRAP_SCRIPT_ID = "pharos-homepage-bootstrap";
 

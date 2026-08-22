@@ -22,7 +22,7 @@ import { CONTRACT_CONFIGS } from "../../worker/src/lib/blacklist-contracts";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 // Raw pool map — `yield-config.ts` re-exports this with no frozen filter,
 // so the raw module is the source of truth for "is this id present?".
-import { YIELD_POOL_MAP } from "../../worker/src/cron/yield-config-pools";
+import { YIELD_POOL_MAP } from "../../worker/src/lib/yield-config/yield-config-pools";
 import { STATIC_COMPARE_PAIRS } from "../../src/lib/compare-pages";
 
 const failures: string[] = [];
@@ -80,7 +80,7 @@ for (const id of Object.keys(BLUECHIP_SLUG_MAP)) {
 }
 for (const id of Object.keys(YIELD_POOL_MAP)) {
   if (FROZEN_IDS.has(id)) {
-    failures.push(`${id}: still in YIELD_POOL_MAP (worker/src/cron/yield-config-pools.ts) — remove per freeze runbook`);
+    failures.push(`${id}: still in YIELD_POOL_MAP (worker/src/lib/yield-config/yield-config-pools.ts) — remove per freeze runbook`);
   }
 }
 for (const [leftId, rightId] of STATIC_COMPARE_PAIRS) {

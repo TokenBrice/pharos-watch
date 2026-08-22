@@ -5,7 +5,7 @@ import { registerUnauthorizedEndpointContract } from "../../test-helpers/__share
 stubCryptoForAuth();
 
 vi.mock("../../lib/alchemy-logs", () => ({
-  buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/test-key"),
+  buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/"),
   getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
   getAlchemyTransactionContextBatchMany: vi.fn(async () => new Map()),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })),

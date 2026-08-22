@@ -74,7 +74,7 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 // Return distinct Alchemy URLs per chain so we can assert each chain was
 // queried via its own endpoint (proves chain-context.ts builds per-chain URLs).
 vi.mock("../../lib/alchemy-logs", () => ({
-  buildAlchemyUrl: vi.fn((chainId: string) => `https://${chainId}.g.alchemy.example/v2/test-key`),
+  buildAlchemyUrl: vi.fn((chainId: string) => `https://${chainId}.g.alchemy.example/v2/`),
   getAlchemyBlockNumber: vi.fn(async (url: string) =>
     url.includes("ethereum") ? 22_000_000 : 250_000_000,
   ),

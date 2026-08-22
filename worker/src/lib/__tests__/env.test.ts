@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  resolveDdrRepairTaskRunnerConfig,
   resolveVaultsFyiConfig,
   validateWorkerEnvContract,
   WORKER_ACTIVE_ENV_KEYS,
@@ -7,6 +8,40 @@ import {
   WORKER_REQUIRED_ENV_KEYS,
   WORKER_RESERVED_ENV_KEYS,
 } from "../env";
+
+describe("resolveDdrRepairTaskRunnerConfig", () => {
+  it.each(["1", "true", "yes", "on", "enabled", " TRUE "])('%s enables the repair runner', (value) => {
+    expect(resolveDdrRepairTaskRunnerConfig({ DDR_REPAIR_TASK_RUNNER_ENABLED: value })).toEqual({
+      enabled: true,
+      warning: null,
+    });
+  });
+
+  it.each(["0", "false", "no", "off", "disabled", " OFF "])('%s disables the repair runner', (value) => {
+    expect(resolveDdrRepairTaskRunnerConfig({ DDR_REPAIR_TASK_RUNNER_ENABLED: value })).toEqual({
+      enabled: false,
+      warning: null,
+    });
+  });
+
+  it.each([undefined, "", "   "])('defaults absent/empty value %j to enabled', (value) => {
+    expect(resolveDdrRepairTaskRunnerConfig({ DDR_REPAIR_TASK_RUNNER_ENABLED: value })).toEqual({
+      enabled: true,
+      warning: null,
+    });
+  });
+
+  it("fails closed with a structured warning for an invalid non-empty value", () => {
+    expect(resolveDdrRepairTaskRunnerConfig({ DDR_REPAIR_TASK_RUNNER_ENABLED: "maybe" })).toEqual({
+      enabled: false,
+      warning: {
+        code: "invalid-ddr-repair-task-runner-enabled",
+        message:
+          "DDR_REPAIR_TASK_RUNNER_ENABLED must use an accepted on/off value; the DDR repair runner is disabled for this run.",
+      },
+    });
+  });
+});
 
 describe("validateWorkerEnvContract", () => {
   it("flags partial Access config", () => {

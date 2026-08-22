@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
+import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config";
 import type { EvaluatedYieldSource } from "./evaluation";
 import {
   buildNextDeterministicOnChainHealthState,

@@ -7,13 +7,10 @@ import { stableJsonStringifyV1 } from "../stable-json";
 
 // Canonical ordering is a determinism-digest input; it has one definition.
 export { compareText };
+export { clampScore } from "../math";
 
 export function uniqueSorted<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)].sort(compareText);
-}
-
-export function clampScore(value: number): number {
-  return Math.max(0, Math.min(100, value));
 }
 
 export function domainKey(domain: V9FailureDomainRef): string {

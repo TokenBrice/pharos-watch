@@ -10,7 +10,7 @@ import { useYieldRankings } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatPercent, formatScore } from "@shared/lib/format";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import type { ReportCardGrade, YieldRanking } from "@shared/types";
 
 const LEADERBOARD_SIZE = 5;

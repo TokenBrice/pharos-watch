@@ -2,6 +2,7 @@
 
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
+import { NOTICE_TONE_COLORS } from "@shared/lib/classification";
 import type { QueryViewState } from "@/lib/query-view-state";
 
 interface QueryStateNoticeProps {
@@ -24,12 +25,13 @@ export function QueryStateNotice({
   const message = isStale
     ? `${label} refresh failed; showing the last available data${age ? ` from ${age}` : ""}.`
     : `${label} is temporarily unavailable. No status claim is being made.`;
+  const tone = NOTICE_TONE_COLORS[isStale ? "stale" : "unavailable"];
 
   return (
     <div
       role={isStale ? "status" : "alert"}
       aria-live="polite"
-      className={`flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/[0.08] text-amber-800 dark:text-amber-300 ${
+      className={`flex items-start gap-2 rounded-md ${tone.tone} ${
         compact ? "px-2.5 py-2 text-xs" : "px-3 py-2.5 text-sm"
       }`}
     >

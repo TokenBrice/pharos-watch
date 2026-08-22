@@ -65,9 +65,9 @@ function makeDbForTimestampCache(
 
 describe("buildAlchemyUrl", () => {
   it("builds correct URL for known chains", () => {
-    expect(buildAlchemyUrl("ethereum", "test-key")).toBe("https://eth-mainnet.g.alchemy.com/v2/test-key");
-    expect(buildAlchemyUrl("base", "test-key")).toBe("https://base-mainnet.g.alchemy.com/v2/test-key");
-    expect(buildAlchemyUrl("avalanche", "test-key")).toBe("https://avax-mainnet.g.alchemy.com/v2/test-key");
+    expect(buildAlchemyUrl("ethereum", "test-key")).toBe("https://eth-mainnet.g.alchemy.com/v2/");
+    expect(buildAlchemyUrl("base", "test-key")).toBe("https://base-mainnet.g.alchemy.com/v2/");
+    expect(buildAlchemyUrl("avalanche", "test-key")).toBe("https://avax-mainnet.g.alchemy.com/v2/");
   });
 
   it("returns null for unknown chains", () => {
@@ -93,6 +93,26 @@ describe("getAlchemyBlockNumber", () => {
 
     expect(result).toBe(0x176f12d);
     expect(budget.count).toBe(1);
+  });
+
+  it("attaches the Alchemy bearer token without putting it in the URL", async () => {
+    fetchMock = mockFetch([
+      {
+        match: "https://eth-mainnet.g.alchemy.com/v2/",
+        matchHeaders: { Authorization: "Bearer test-key" },
+        body: { jsonrpc: "2.0", id: 1, result: "0x176f12d" },
+      },
+    ], { requireMatch: true, strictUrl: true });
+
+    const alchemyUrl = buildAlchemyUrl("ethereum", "test-key");
+    expect(alchemyUrl).toBe("https://eth-mainnet.g.alchemy.com/v2/");
+    const result = await getAlchemyBlockNumber(alchemyUrl!, createBudget(100));
+
+    expect(result).toBe(0x176f12d);
+    expect(fetchMock.getHistory()[0]).toMatchObject({
+      url: "https://eth-mainnet.g.alchemy.com/v2/",
+      headers: { authorization: "Bearer test-key" },
+    });
   });
 
   it("returns null on 5xx HTTP error", async () => {

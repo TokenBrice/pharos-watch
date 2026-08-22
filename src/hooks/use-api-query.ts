@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { mergeAbortSignals } from "@shared/lib/abort-signals";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
-import { resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
+import { resolveSchemaLike, type SchemaLikeSource } from "@shared/lib/schema-like";
 import { getPollingWindow } from "@/lib/api-query-polling";
 
 export { getPollingWindow } from "@/lib/api-query-polling";

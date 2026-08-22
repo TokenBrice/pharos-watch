@@ -124,6 +124,22 @@ function useSingleDeploymentSparkSupplyFixture(): string {
   return fixtureId;
 }
 
+function useMissingDecimalsHistoricalSupplyFixture(): string {
+  const source = psiEligibleMocks.defaultMetaEntries.find(([id]) => id === "autousd-auto-finance")?.[1];
+  if (!source) throw new Error("Missing autoUSD source metadata for decimals fixture");
+
+  const fixtureId = source.id;
+  const contracts = source.contracts?.filter((contract) => contract.chain === "ethereum") ?? [];
+  const fixture = {
+    ...source,
+    contracts: contracts.map(({ chain, address }) => ({ chain, address })),
+  } as unknown as PsiEligibleCoin;
+  psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, fixture);
+  psiEligibleMocks.metaById.clear();
+  psiEligibleMocks.metaById.set(fixtureId, fixture);
+  return fixtureId;
+}
+
 describe("handleBackfillSupplyHistory", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -713,7 +729,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it("backfills eEARN from historical Ethereum totalSupply", async () => {
+  it("skips eEARN days when historical totalSupply has no USD price", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
     const day1 = Math.floor(Date.UTC(2026, 5, 9) / 1000);
     const day2 = Math.floor(Date.UTC(2026, 5, 10) / 1000);
@@ -784,33 +800,21 @@ describe("handleBackfillSupplyHistory", () => {
       rowsInserted: number;
       errors?: string[];
       skipped?: string[];
+      skippedDays?: number;
     };
     expect(body.coinsProcessed).toBe(1);
-    expect(body.rowsInserted).toBe(2);
-    expect(body.errors).toBeUndefined();
-    expect(body.skipped).toBeUndefined();
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors?.[0]).toContain("historical totalSupply backfill wrote 0 rows");
+    expect(body.skippedDays).toBe(2);
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
     const inserts = capturedStatements.filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
-    expect(inserts).toHaveLength(2);
-    expect(inserts[0].args).toEqual([
-      "eearn-ember",
-      day1,
-      4_000_000,
-      null,
-    ]);
-    expect(inserts[1].args).toEqual([
-      "eearn-ember",
-      day2,
-      4_100_000,
-      null,
-    ]);
+    expect(inserts).toHaveLength(0);
   });
 
-  it("backfills autoUSD from historical Ethereum totalSupply without a CoinGecko ID", async () => {
+  it("skips autoUSD days without a CoinGecko ID or historical price", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
-    const day1 = Math.floor(Date.UTC(2026, 5, 9) / 1000);
-    const day2 = Math.floor(Date.UTC(2026, 5, 10) / 1000);
     const blockNumber = 22_500_000;
     const totalSupplyRaw = 6_700_000n * 10n ** 18n;
 
@@ -855,29 +859,37 @@ describe("handleBackfillSupplyHistory", () => {
       rowsInserted: number;
       errors?: string[];
       skipped?: string[];
+      skippedDays?: number;
     };
     expect(body.coinsProcessed).toBe(1);
-    expect(body.rowsInserted).toBe(2);
-    expect(body.errors).toBeUndefined();
-    expect(body.skipped).toBeUndefined();
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors?.[0]).toContain("historical totalSupply backfill wrote 0 rows");
+    expect(body.skippedDays).toBe(2);
+    expect(fetchSpy).not.toHaveBeenCalled();
 
     const inserts = capturedStatements.filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
-    expect(inserts).toHaveLength(2);
-    expect(inserts[0].args).toEqual([
-      "autousd-auto-finance",
-      day1,
-      6_700_000,
-      null,
-    ]);
-    expect(inserts[1].args).toEqual([
-      "autousd-auto-finance",
-      day2,
-      6_700_000,
-      null,
-    ]);
+    expect(inserts).toHaveLength(0);
+  });
+
+  it("skips historical totalSupply when contract decimals are missing", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const fixtureId = useMissingDecimalsHistoricalSupplyFixture();
+    const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-06-09&endDay=2026-06-09`;
+
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db: makeDb(capturedStatements),
+      url: makeApiUrl(path),
+      request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { rowsInserted: number; errors?: string[] };
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors?.[0]).toContain("requires contract decimals");
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
+    expect(capturedStatements).toHaveLength(0);
   });
 
   it("backfills USD-valued Base Dollar supply from historical totalSupply without a CoinGecko ID", async () => {
@@ -948,13 +960,13 @@ describe("handleBackfillSupplyHistory", () => {
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
     expect(inserts.map((stmt) => stmt.args)).toEqual([
-      ["bd-basedollar", day1, 2_500, null],
-      ["bd-basedollar", day2, 2_750, null],
+      ["bd-basedollar", day1, 2_500, 1],
+      ["bd-basedollar", day2, 2_750, 1],
     ]);
     expect(fetchMarketBackfillPriceSeries).not.toHaveBeenCalled();
   });
 
-  it("shares same-chain block search cache across historical totalSupply coins in one page", async () => {
+  it("skips unpriced historical totalSupply days across a batch", async () => {
     const historicalTotalSupplyCoins = psiEligibleMocks.defaultStablecoins.filter((coin) =>
       ["autousd-auto-finance", "eearn-ember"].includes(coin.id),
     );
@@ -1037,26 +1049,22 @@ describe("handleBackfillSupplyHistory", () => {
       rowsInserted: number;
       errors?: string[];
       skipped?: string[];
+      skippedDays?: number;
     };
     expect(body.coinsProcessed).toBe(2);
-    expect(body.rowsInserted).toBe(2);
-    expect(body.errors).toBeUndefined();
-    expect(body.skipped).toBeUndefined();
-    expect(blockSearchCaches).toHaveLength(2);
-    expect(blockSearchCaches[0]).toBe(blockSearchCaches[1]);
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors).toHaveLength(2);
+    expect(body.skippedDays).toBe(2);
+    expect(blockSearchCaches).toHaveLength(0);
 
     const inserts = capturedStatements.filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
-    expect(inserts.map((stmt) => stmt.args[0])).toEqual([
-      "autousd-auto-finance",
-      "eearn-ember",
-    ]);
+    expect(inserts).toHaveLength(0);
   });
 
   it("backfills USG historical supply after subtracting PegKeeper balances", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
-    const snapshotDate = Math.floor(Date.UTC(2026, 4, 9) / 1000);
     const blockNumber = 24_500_000;
     const totalSupplyRaw = 40_020_000n * 10n ** 18n;
     const keeperOneRaw = 19_686_793n * 10n ** 18n;
@@ -1120,29 +1128,19 @@ describe("handleBackfillSupplyHistory", () => {
       rowsInserted: number;
       errors?: string[];
       skipped?: string[];
+      skippedDays?: number;
     };
     expect(body.coinsProcessed).toBe(1);
-    expect(body.rowsInserted).toBe(1);
-    expect(body.errors).toBeUndefined();
-    expect(body.skipped).toBeUndefined();
-
-    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).toHaveBeenCalledWith(
-      "ethereum",
-      snapshotDate + 86_400 - 1,
-      expect.any(Object),
-      expect.objectContaining({ chainRpcs }),
-    );
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors?.[0]).toContain("historical on-chain supply backfill wrote 0 rows");
+    expect(body.skippedDays).toBe(1);
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
 
     const insert = capturedStatements.find((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
-    expect(insert?.args).toEqual([
-      "usg-tangent",
-      snapshotDate,
-      552_617,
-      null,
-    ]);
+    expect(insert).toBeUndefined();
   });
 
   it("returns a clear error when CG market caps are all zero and on-chain fallback is unavailable", async () => {

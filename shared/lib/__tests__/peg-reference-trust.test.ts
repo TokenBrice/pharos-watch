@@ -22,9 +22,14 @@ describe("peg reference trust", () => {
       expected: true,
     },
     {
-      label: "commodity pegs stay trusted without peer-count gating",
+      label: "commodity pegs stay trusted when their rate is present",
       input: { pegCurrency: "GOLD", pegType: "peggedGOLD", pegRateSource: "median", pegRateContributorCount: 1 },
       expected: true,
+    },
+    {
+      label: "commodity pegs are not trusted without a rate",
+      input: { pegCurrency: "GOLD", pegType: "peggedGOLD" },
+      expected: false,
     },
     {
       label: "variable pegs stay trusted without peer-count gating",

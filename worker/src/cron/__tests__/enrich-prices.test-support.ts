@@ -12,12 +12,12 @@ vi.mock("../../lib/abort", async (importOriginal) => {
 import {
   isReasonablePrice,
   hasMissingPrice,
-  PRICE_BOUNDS,
   enrichMissingPrices,
   fetchPrimaryPrices,
   applyResolvedPrice,
   applyPoolChallenge,
 } from "../sync-stablecoins/enrich-prices";
+import { PEG_HARDCODED_PRICE_BOUNDS } from "@shared/lib/peg-taxonomy";
 import { applyListAggregatorDowngrade } from "../sync-stablecoins/enrich-prices-primary";
 import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../sync-stablecoins/enrich-prices";
 import {
@@ -73,7 +73,7 @@ function cleanupEnrichMissingPricesTest() {
 
 const fixtureIsReasonablePrice = isReasonablePrice;
 const fixtureHasMissingPrice = hasMissingPrice;
-const fixturePRICE_BOUNDS = PRICE_BOUNDS;
+const fixturePEG_HARDCODED_PRICE_BOUNDS = PEG_HARDCODED_PRICE_BOUNDS;
 const fixtureEnrichMissingPrices = enrichMissingPrices;
 const fixtureFetchPrimaryPrices = fetchPrimaryPrices;
 const fixtureApplyResolvedPrice = applyResolvedPrice;
@@ -105,7 +105,7 @@ export {
   type PriceValidationReferences,
   fixtureIsReasonablePrice,
   fixtureHasMissingPrice,
-  fixturePRICE_BOUNDS,
+  fixturePEG_HARDCODED_PRICE_BOUNDS,
   fixtureEnrichMissingPrices,
   fixtureFetchPrimaryPrices,
   fixtureApplyResolvedPrice,

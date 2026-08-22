@@ -48,7 +48,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   });
 });
 
-vi.mock("../yield-config", () => ({
+vi.mock("../../lib/yield-config/yield-config", () => ({
   YIELD_VARIANT_MAP: {},
   YIELD_POOL_MAP: {
     "susde-ethena": "pool-susde-native",

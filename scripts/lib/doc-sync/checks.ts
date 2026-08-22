@@ -19,7 +19,7 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
 } from "@shared/lib/dews-config";
-import { HEALTH_METHODOLOGY_VERSION } from "@shared/lib/chain-health";
+import { HEALTH_METHODOLOGY_VERSION } from "@shared/lib/chains/health";
 import {
   DURABILITY_COMPONENT_WEIGHTS,
   LIQUIDITY_SCORE_WEIGHTS,

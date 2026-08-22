@@ -36,7 +36,6 @@ import { STABILITY_INDEX_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stabil
 import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-detail";
 import {
   CRON_15MIN,
-  CRON_30MIN,
   CRON_BLACKLIST,
   CRON_BLUECHIP,
   CRON_CHARTS,
@@ -48,7 +47,7 @@ import {
   CRON_TELEGRAM_PULSE,
   CRON_USDS_STATUS,
 } from "@/lib/cron-intervals";
-import { createLazySchema } from "@/lib/schema-like";
+import { createLazySchema } from "@shared/lib/schema-like";
 import type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
 
 export type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
@@ -436,7 +435,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     (stablecoinId: string, days: number = 30) => ({
       queryKey: ["stress-signals", stablecoinId, days] as const,
       path: API_PATHS.stressSignals(stablecoinId, days),
-      producerIntervalMs: CRON_30MIN,
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.stressSignals,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
     }),
   ),

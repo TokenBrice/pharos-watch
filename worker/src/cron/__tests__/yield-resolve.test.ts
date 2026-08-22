@@ -200,7 +200,7 @@ vi.mock("../yield-helpers", async (importOriginal) => {
   };
 });
 
-vi.mock("../yield-config", () => ({
+vi.mock("../../lib/yield-config/yield-config", () => ({
   YIELD_VARIANT_MAP: {
     "usde-ethena": { variantSymbol: "sUSDe" },
   },
@@ -221,15 +221,6 @@ vi.mock("../yield-config", () => ({
   AUTO_LENDING_POOL_MAP: { "u-united-stables": "pool-u-venus" },
   AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(["u-united-stables"]),
   isAutoLendingCollisionBlockedForStablecoin: () => false,
-}));
-
-vi.mock("@shared/lib/report-cards", () => ({
-  computeOverallGrade: vi.fn(() => ({ score: 80, grade: "B+" })),
-  scoreDecentralization: vi.fn(() => ({ score: 80, grade: "B+" })),
-  scoreDependencyRisk: vi.fn(() => ({ score: 90, grade: "A-" })),
-  scoreLiquidity: vi.fn(() => ({ score: 70, grade: "B" })),
-  scorePegStability: vi.fn(() => ({ score: 85, grade: "A-" })),
-  scoreResilience: vi.fn(() => ({ score: 75, grade: "B" })),
 }));
 
 vi.mock("@shared/lib/peg-score", () => ({
@@ -274,7 +265,7 @@ import { getCache, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
-import * as yieldConfigModule from "../yield-config";
+import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import * as yieldSourcesModule from "../yield-sync/sources";
 import {
   appendOptionalYieldCandidate,

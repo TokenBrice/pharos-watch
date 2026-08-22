@@ -74,6 +74,7 @@ export interface Env {
   MAINTENANCE_MODE?: string;
   REQUEST_SOURCE_ATTRIBUTION_DISABLED?: string;
   API_KEY_REQUEST_ATTRIBUTION_DISABLED?: string;
+  DDR_REPAIR_TASK_RUNNER_ENABLED?: string;
   WORKER_RESERVE_RECOVERY_MODE?: string;
   WORKER_CANARY_MODE?: string;
 }
@@ -154,6 +155,40 @@ function parsePositiveIntegerEnv(value: string | undefined): number | null {
   const parsed = Number(trimmed);
   if (!Number.isInteger(parsed) || parsed <= 0) return null;
   return parsed;
+}
+
+export interface DdrRepairTaskRunnerWarning {
+  code: "invalid-ddr-repair-task-runner-enabled";
+  message: string;
+}
+
+export interface DdrRepairTaskRunnerConfig {
+  enabled: boolean;
+  warning: DdrRepairTaskRunnerWarning | null;
+}
+
+export function resolveDdrRepairTaskRunnerConfig(
+  env: Pick<Env, "DDR_REPAIR_TASK_RUNNER_ENABLED">,
+): DdrRepairTaskRunnerConfig {
+  const value = env.DDR_REPAIR_TASK_RUNNER_ENABLED;
+  const normalized = value?.trim();
+  if (!normalized) {
+    return { enabled: true, warning: null };
+  }
+
+  const enabled = parseBooleanEnv(value);
+  if (enabled != null) {
+    return { enabled, warning: null };
+  }
+
+  return {
+    enabled: false,
+    warning: {
+      code: "invalid-ddr-repair-task-runner-enabled",
+      message:
+        "DDR_REPAIR_TASK_RUNNER_ENABLED must use an accepted on/off value; the DDR repair runner is disabled for this run.",
+    },
+  };
 }
 
 export function resolveVaultsFyiConfig(

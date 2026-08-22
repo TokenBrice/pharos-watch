@@ -8,7 +8,7 @@ import {
 } from "../../lib/evm-rpc";
 import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { createOptionalSourceBudget, resolveRpcUrls } from "./sources-helpers";
-import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
+import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config";
 import type { ResolvedYield } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveYieldSourceUrl } from "../yield-source-links";
-import { LENDING_PROTOCOL_ALLOWLIST, LENDING_PROTOCOL_LABELS } from "../../cron/yield-config";
+import { LENDING_PROTOCOL_ALLOWLIST, LENDING_PROTOCOL_LABELS } from "../yield-config/yield-config";
 
 describe("resolveYieldSourceUrl", () => {
   it("prefers curated protocol links for discovered lending sources", () => {

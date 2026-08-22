@@ -6,9 +6,8 @@ import type { TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { deleteCache, setCache } from "../lib/db-cache";
+import { setCache } from "../lib/db-cache";
 import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../lib/depeg-lifecycle";
-import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
 import {
   deliverTelegramDigestEdition,
@@ -36,6 +35,10 @@ import {
   findUnboundDigestSafetyClaimMarkers,
 } from "../lib/digest-safety-context";
 import { resolveDigestSafetyMap, type DigestSafetyMapResolution } from "../lib/digest-safety-map";
+import {
+  deliverTwitterDigestWithLedger,
+  TwitterDigestLedgerPersistenceError,
+} from "../lib/twitter-digest-ledger";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -63,24 +66,6 @@ function telegramTransportErrorClass(value: string | null): TelegramTransportErr
 
 function getTwitterSentMarkerKey(date: string): string {
   return `${TWITTER_SENT_MARKER_PREFIX}${date}`;
-}
-
-async function claimDigestSentMarker(
-  db: D1Database,
-  key: string,
-  value: string,
-  nowSec: number,
-  signal?: AbortSignal,
-): Promise<boolean> {
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare("INSERT OR IGNORE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .bind(key, value, nowSec)
-      .run(),
-    3,
-    signal,
-  );
-  return Number(result.meta.changes ?? 0) > 0;
 }
 
 export async function generateDailyDigest(
@@ -387,37 +372,28 @@ export async function generateDailyDigest(
       }
       const markerKey = getTwitterSentMarkerKey(digestDate);
       try {
-        const markerClaimed = await claimDigestSentMarker(
+        const delivery = await deliverTwitterDigestWithLedger(
           db,
           markerKey,
-          JSON.stringify({ sentAt: now, editionNumber }),
+          editionNumber,
           now,
+          () => postDigestTweet(
+            digestCopy.digestTitle,
+            digestCopy.digestText,
+            creds,
+            editionNumber,
+            safetyMapImageUrl,
+          ),
           signal,
         );
-        if (!markerClaimed) return "skipped: already-sent";
-      } catch (err) {
-        degradedReasons.push("twitter-send-marker-write");
-        recordCronFailure("daily-digest", err, { metadata: { stage: "twitter-send-marker-write" } });
-        throw err;
-      }
-
-      try {
-        const posted = await postDigestTweet(
-          digestCopy.digestTitle,
-          digestCopy.digestText,
-          creds,
-          editionNumber,
-          safetyMapImageUrl,
-        );
-        if (safetyMapImageUrl && !posted.mediaAttached) {
+        if (delivery.status === "skipped") return `skipped: ${delivery.reason}`;
+        if (safetyMapImageUrl && !delivery.post.mediaAttached) {
           degradedReasons.push("safety-map-twitter-attachment");
         }
       } catch (err) {
-        try {
-          await deleteCache(db, markerKey);
-        } catch (rollbackErr) {
-          degradedReasons.push("twitter-send-marker-rollback");
-          logWorkerEventArgs("handler", "error", "[daily-digest] Failed to roll back Twitter send marker after delivery failure:", rollbackErr);
+        if (err instanceof TwitterDigestLedgerPersistenceError) {
+          degradedReasons.push("twitter-send-marker-write");
+          recordCronFailure("daily-digest", err, { metadata: { stage: "twitter-send-marker-write" } });
         }
         throw err;
       }

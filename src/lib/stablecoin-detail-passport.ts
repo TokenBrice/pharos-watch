@@ -1,7 +1,7 @@
 import { formatLongDate } from "@shared/lib/format";
 import type { MechanismArchetype, RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
-import type { BlacklistStatus } from "@shared/lib/report-cards";
+import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import {
   BACKING_BADGE_STYLES,
   MECHANISM_ARCHETYPE_SHORT_LABELS,

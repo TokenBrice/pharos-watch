@@ -2,10 +2,11 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useInfiniteQueryMock, apiFetchWithMetaMock, useApiQueryWithMetaMock } = vi.hoisted(() => ({
+const { useInfiniteQueryMock, apiFetchWithMetaMock, useApiQueryWithMetaMock, getPollingWindowMock } = vi.hoisted(() => ({
   useInfiniteQueryMock: vi.fn(),
   apiFetchWithMetaMock: vi.fn(),
   useApiQueryWithMetaMock: vi.fn(),
+  getPollingWindowMock: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -18,10 +19,11 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("../use-api-query", () => ({
-  getPollingWindow: () => ({ staleTime: 900_000, refetchInterval: 1_800_000 }),
+  getPollingWindow: getPollingWindowMock,
   useApiQueryWithMeta: useApiQueryWithMetaMock,
 }));
 
+import { CRON_TAPE } from "@/lib/cron-intervals";
 import { useEvents, useLatestEvents } from "../use-events";
 
 describe("useEvents", () => {
@@ -29,6 +31,8 @@ describe("useEvents", () => {
     useInfiniteQueryMock.mockReset();
     apiFetchWithMetaMock.mockReset();
     useApiQueryWithMetaMock.mockReset();
+    getPollingWindowMock.mockReset();
+    getPollingWindowMock.mockReturnValue({ staleTime: 900_000, refetchInterval: 1_800_000 });
   });
 
   it("flattens paged results and auto-loads remaining pages when requested", async () => {
@@ -88,6 +92,8 @@ describe("useEvents", () => {
 
     renderHook(() => useEvents({ coin: "usdc-circle", type: ["peg.alert", "depeg.confirmed"] }));
 
+    expect(getPollingWindowMock).toHaveBeenCalledWith(CRON_TAPE);
+
     const options = useInfiniteQueryMock.mock.calls[0][0] as {
       queryKey: unknown[];
       queryFn: ({ pageParam, signal }: { pageParam: string | null; signal?: AbortSignal }) => Promise<unknown>;
@@ -129,7 +135,7 @@ describe("useEvents", () => {
     expect(useApiQueryWithMetaMock).toHaveBeenCalledWith(
       expect.any(Array),
       "/api/events?coin=usdc-circle&limit=10",
-      expect.any(Number),
+      CRON_TAPE,
       expect.objectContaining({ enabled: true, schema: expect.any(Function) }),
     );
     const schema = await useApiQueryWithMetaMock.mock.calls[0]?.[3]?.schema();

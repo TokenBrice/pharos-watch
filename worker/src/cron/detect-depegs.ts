@@ -1,10 +1,10 @@
-import { logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
 import { throwIfAborted } from "../lib/abort";
 import type { NativePegQuoteSession } from "../lib/native-peg-quotes";
 import { decideDepegAsset, emitDepegDiagnostics } from "./depeg-detection/decision-engine";
-import { hydrateDepegDetection } from "./depeg-detection/hydration";
+import { hydrateDepegDetection, MAX_OPEN_DEPEG_EVENTS } from "./depeg-detection/hydration";
 import { persistDepegCommands } from "./depeg-detection/persistence";
 import {
   buildDuplicateOpenEventRepair,
@@ -34,6 +34,7 @@ export async function detectDepegEvents(
     coingeckoApiKey,
     nativePegSession,
   );
+  if (hydrated.openRowsLimitReached) return;
 
   const duplicateRepair = buildDuplicateOpenEventRepair(hydrated.openRows);
   if (duplicateRepair.commands.length > 0) {
@@ -87,11 +88,24 @@ export async function detectDepegEvents(
   // or skipped by detection logic due to missing price/low supply).
   throwIfAborted(signal);
   const orphanResult = await db
-    .prepare("SELECT id, stablecoin_id, started_at FROM depeg_events WHERE ended_at IS NULL")
+    .prepare("SELECT id, stablecoin_id, started_at FROM depeg_events WHERE ended_at IS NULL LIMIT ?")
+    .bind(MAX_OPEN_DEPEG_EVENTS)
     .all<OrphanDepegRow>();
+  const orphanRows = orphanResult.results ?? [];
+  if (orphanRows.length >= MAX_OPEN_DEPEG_EVENTS) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "warn",
+      event: "depeg_open_event_limit_reached",
+      message: "Skipped depeg orphan cleanup because the open-event query reached its limit",
+      status: "degraded",
+      metadata: { pass: "orphan-cleanup", maxOpenDepegEvents: MAX_OPEN_DEPEG_EVENTS },
+    });
+    return;
+  }
 
   const orphanRepair = buildOrphanCloseRepair({
-    rows: orphanResult.results ?? [],
+    rows: orphanRows,
     seenEventIds: seen,
     syncStart: hydrated.syncStart,
     trackedCoinIds,

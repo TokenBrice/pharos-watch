@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aggregateChains, type ChainAggregatorInput } from "../chain-aggregator";
+import { aggregateChains, type ChainAggregatorInput } from "../chains/aggregator";
 
 function makeInput(overrides: Partial<ChainAggregatorInput> = {}): ChainAggregatorInput {
   return {
@@ -40,6 +40,37 @@ describe("aggregateChains", () => {
     expect(eth!.totalUsd).toBe(550); // 300 + 250
     expect(eth!.stablecoinCount).toBe(2);
     expect(eth!.change24h).toBeCloseTo(7); // (300-295) + (250-248) = 5+2
+  });
+
+  it("pairs 30d deltas only across assets with a previous-month value", () => {
+    const result = aggregateChains(makeInput({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 100 },
+          circulatingPrevMonth: null,
+          chainCirculating: { ethereum: { current: 100 } },
+        },
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 50 },
+          circulatingPrevMonth: { peggedUSD: 40 },
+          chainCirculating: { ethereum: { current: 50, circulatingPrevMonth: 40 } },
+        },
+      ],
+    }));
+    const ethereum = result.chains.find((chain) => chain.id === "ethereum")!;
+
+    expect(result.globalTotalUsd).toBe(150);
+    expect(result.globalChange30dPct).toBeCloseTo(0.25);
+    expect(ethereum.change30d).toBe(10);
+    expect(ethereum.change30dPct).toBeCloseTo(0.25);
   });
 
   it("sorts by totalUsd descending", () => {

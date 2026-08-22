@@ -19,7 +19,7 @@ import { useSafetyScoreHistory } from "@/hooks/api-hooks";
 import { CRON_24H } from "@/lib/cron-intervals";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { formatChartDate, formatDuration, formatTrackingSpanDays } from "@shared/lib/format";
-import { getReportCardGradeRank } from "@shared/lib/report-cards";
+import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 

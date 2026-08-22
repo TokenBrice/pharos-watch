@@ -3,6 +3,7 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
@@ -264,6 +265,12 @@ export async function fetchChainlinkPorReserves(
 
   const supplyReads = await Promise.all(
     readableContracts.map(async (contract) => {
+      if (contract.decimals == null) {
+        logWorkerEventArgs("handler", "warn",
+          `[chainlink-por] ${contract.chain} supply probe skipped for ${coin.symbol}: contract decimals are missing`,
+        );
+        return { contract, raw: null };
+      }
       const raw = isTronContract(contract)
         ? await fetchTronErc20TotalSupply(contract.address, signal, ctx)
         : await fetchErc20TotalSupply(
@@ -292,7 +299,7 @@ export async function fetchChainlinkPorReserves(
       chain: entry.contract.chain,
       tokenAddress: entry.contract.address,
       raw: entry.raw,
-      decimals: entry.contract.decimals ?? 18,
+      decimals: entry.contract.decimals,
     })),
     omittedNonEvmChains,
     omittedReadFailureChains: failed.map((entry) => entry.contract.chain),

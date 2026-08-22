@@ -47,8 +47,9 @@ import { parseArgs } from "node:util";
 import { firefox } from "playwright";
 import sharp from "sharp";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { GRADE_POSTER_TEXT_COLORS, GRADE_RADAR_COLORS } from "@shared/lib/classification";
+import { GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { V9_GRADE_THRESHOLDS } from "@shared/types/safety-score-v9-grade";
 import { escapeXml } from "../lib/og-svg.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { buildMaintenanceApiRequest, DEFAULT_MAINTENANCE_API_BASE_URL } from "../lib/maintenance-api";
@@ -93,25 +94,11 @@ const HAIRLINE = "#e4e7eb";
 const RULE = "#d9dce1";
 const FROST_BLUE = "#4bc4de";
 
-// Letter-tier hex tokens mirror GRADE_RADAR_COLORS in shared/lib/report-card-core.ts.
+// Letter-tier hex tokens come from the shared classification palette.
 const TIER_ORDER = ["A", "B", "C", "D", "F"] as const;
 type Tier = (typeof TIER_ORDER)[number];
-const TIER_COLORS: Record<Tier, string> = {
-  A: "#10b981",
-  B: "#3b82f6",
-  C: "#f59e0b",
-  D: "#f97316",
-  F: "#ef4444",
-};
-// Text twins: darker per-tier hues for letters, grades, and scores on the light
-// shell (mirrors the site's light-mode amber darkening for WCAG contrast).
-const TIER_TEXT_COLORS: Record<Tier, string> = {
-  A: "#047857",
-  B: "#2563eb",
-  C: "#b45309",
-  D: "#c2410c",
-  F: "#dc2626",
-};
+const TIER_COLORS = GRADE_RADAR_COLORS;
+const TIER_TEXT_COLORS = GRADE_POSTER_TEXT_COLORS;
 
 // Bubble sizing: area tracks circulating supply, floored for presence. The
 // largest coin anchors the scale; the fit loop shrinks it until the strata
@@ -211,9 +198,9 @@ function mapLabel(text: string): string {
 
 // Grade-band score range projected from the methodology policy thresholds.
 function tierRange(tier: Tier): string {
-  const mins = V9_GRADE_THRESHOLDS.filter((t) => t.grade.charAt(0) === tier).map((t) => t.min);
+  const mins = GRADE_THRESHOLDS.filter((t) => t.grade.charAt(0) === tier).map((t) => t.min);
   const min = Math.min(...mins);
-  const higher = V9_GRADE_THRESHOLDS.filter((t) => t.grade.charAt(0) !== tier && t.min > min).map((t) => t.min);
+  const higher = GRADE_THRESHOLDS.filter((t) => t.grade.charAt(0) !== tier && t.min > min).map((t) => t.min);
   const max = higher.length > 0 ? Math.min(...higher) - 1 : 100;
   return `${min}–${max}`;
 }

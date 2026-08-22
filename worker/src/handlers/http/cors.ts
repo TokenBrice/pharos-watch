@@ -25,6 +25,10 @@ export function resolveCorsOrigin(request: Request, configured: string): string 
 function corsHeaders(origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    // X-Pharos-Admin is a routing marker sent by the site's admin panel
+    // (src/lib/admin-access.ts) from both allowed origins; it is NEVER an
+    // authentication credential — admin trust comes from the CF Access JWT
+    // (handlers/http/auth.ts trustedAdmin). Do not treat it as a secret.
     "Access-Control-Allow-Headers": "Content-Type, Idempotency-Key, X-API-Key, X-Pharos-Admin",
     "Access-Control-Expose-Headers": "X-Data-Age, Warning, Retry-After",
     "Access-Control-Max-Age": "86400",

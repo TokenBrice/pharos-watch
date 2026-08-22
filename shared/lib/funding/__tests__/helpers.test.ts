@@ -35,6 +35,10 @@ describe("computeCostsTotal", () => {
   it("sums usd_per_month to two decimal places", () => {
     expect(computeCostsTotal(COSTS)).toBeCloseTo(1676.85, 2);
   });
+
+  it("rejects non-finite cost values before summing", () => {
+    expect(() => computeCostsTotal([{ label: "bad", category: "team", usd_per_month: Number.NaN }])).toThrow();
+  });
 });
 
 describe("groupCostsByCategory", () => {
@@ -88,6 +92,10 @@ describe("summarizeDonations", () => {
     expect(s.lifetimeCommunityDonorCount).toBe(0);
     expect(s.currentMonthCommunityUsd).toBe(0);
     expect(s.currentMonthFounderUsd).toBe(0);
+  });
+
+  it("rejects non-finite donation amounts before summing", () => {
+    expect(() => summarizeDonations([D(apr, "community", Number.NaN)], apr)).toThrow();
   });
 });
 

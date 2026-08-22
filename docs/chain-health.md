@@ -3,7 +3,7 @@
 Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`, and `/chains/[chain]/` to summarize the quality and concentration of stablecoin supply on each supported chain.
 
 - **Current methodology version:** `v1.5`
-- **Runtime source:** `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`)
+- **Runtime source:** `shared/lib/chains/health.ts`
 - **Version source:** `shared/lib/methodology-versions/chain-health.ts` (shared constants: `shared/lib/methodology-versions/constants.ts`)
 - **API source:** `worker/src/api/chains.ts`
 - **Route contract:** [chains-page.md](./chains-page.md)
@@ -41,7 +41,7 @@ The score is `null` when `quality` is `null`; otherwise the weighted total is ro
 | `quality`          |    30% | report-card cache                                                        | Supply-weighted Safety Score average over rated supply only. Not-rated supply is excluded from both the numerator and the denominator; the factor returns `null` when rated supply is below 50% of chain supply.                                                        |
 | `chainEnvironment` |    20% | L2BEAT snapshot first, then `shared/lib/chains/index.ts` resilience tier | Matched L2BEAT scaling projects use `40%` stage score plus `60%` average risk sentiment across Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure. Unmatched chains fall back to tier `1 -> 100`, tier `2 -> 60`, tier `3 -> 20`. |
 | `concentration`    |    20% | chain supply shares                                                      | `100 * (1 - HHI)`. A single dominant coin scores `0`; an even N-way split approaches `100 * (1 - 1/N)`.                                                                                                                                                                  |
-| `pegStability`     |    20% | cached prices + peg rates                                                | Supply-weighted peg proximity. Deviation comes from the shared `deriveDepegSignal(...)` primitive (`shared/lib/depeg-signals.ts`), the same derivation the depeg pipeline uses. Missing or unusable prices contribute neutral `50`.                                       |
+| `pegStability`     |    20% | cached prices + peg rates                                                | Supply-weighted peg proximity. Deviation comes from the shared `deriveDepegSignal(...)` primitive (`shared/lib/depeg-signals.ts`), the same derivation the depeg pipeline uses. Missing or unusable prices contribute neutral `50`; coins without a peg reference are excluded from the weighted factor.                                       |
 | `backingDiversity` |    10% | active stablecoin backing flags                                          | Normalized Shannon entropy across the two active backing cohorts: `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded.                                                                                                                         |
 
 ## Not-Rated Policy
@@ -82,7 +82,7 @@ Maintenance commands:
 
 When Chain Health behavior changes, update these files together:
 
-1. `shared/lib/chains/health.ts`, `shared/lib/chains/l2beat-risk.ts`, `shared/lib/depeg-signals.ts` (shared peg-deviation primitive), and the `shared/lib/chain-health.ts` facade if exports change
+1. `shared/lib/chains/health.ts`, `shared/lib/chains/l2beat-risk.ts`, and `shared/lib/depeg-signals.ts` (shared peg-deviation primitive) if exports change
 2. `shared/lib/methodology-versions/chain-health.ts` and `shared/lib/methodology-versions/constants.ts` if exports change
 3. `docs/chain-health.md`
 4. `shared/data/methodology-changelogs/chain-health/`

@@ -43,8 +43,6 @@ export function worstDeviation(events: DepegEvent[]): number | null {
   return worst;
 }
 
-export { median as medianOf } from "./stats";
-
 export function medianOfRounded(values: readonly number[]): number {
   const result = median(values);
   return result == null ? 0 : Math.round(result);

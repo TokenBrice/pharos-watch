@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types";
-import type { ComplianceStatusDistribution } from "./model";
+import type { ComplianceStatusDistribution } from "@/lib/compliance-model";
 
 interface DistributionSegment {
   key: string;

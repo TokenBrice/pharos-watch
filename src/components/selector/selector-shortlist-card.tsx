@@ -8,7 +8,8 @@ import { TableSourceLink } from "@/components/table/client";
 import { RowSparkline } from "@/components/row-sparkline";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { cn } from "@/lib/utils";
-import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
+import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
+import { gradeRange } from "@shared/lib/report-card-core";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { SelectorComponent, SelectorProfile, SelectorRecommendation } from "@shared/lib/selector";
 import {

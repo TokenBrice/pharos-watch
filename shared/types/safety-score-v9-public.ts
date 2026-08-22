@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { scoreToV9Grade } from "./safety-score-v9-grade";
+import { scoreToGrade } from "./safety-score-v9-grade";
 import { V9DependencyEconomicRoleSchema } from "./dependency-types";
 import {
   V9AssetPremiumKindSchema,
@@ -39,10 +39,15 @@ import {
   V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET,
   V9PolicyVersionSchema,
 } from "./safety-score-v9-public-facts";
-import {
-  attributedSerialParent,
-  refineCard,
-} from "./safety-score-v9-public-internal";
+import { refineCard } from "./safety-score-v9-public-internal";
+import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
+
+export {
+  findSafetyScoreV9ParentAttributionIssues,
+} from "./safety-score-v9-public-attribution";
+export type {
+  SafetyScoreV9ParentAttributionIssue,
+} from "./safety-score-v9-public-attribution";
 
 export {
   SafetyScoreV9AccessPostureSchema,
@@ -1347,7 +1352,7 @@ function refineCardBase(
   if ((card.score === null) !== (card.grade === "NR")) {
     ctx.addIssue({ code: "custom", path: ["grade"], message: "NR grade and null score must agree" });
   }
-  if (card.score !== null && card.grade !== scoreToV9Grade(card.score)) {
+  if (card.score !== null && card.grade !== scoreToGrade(card.score)) {
     ctx.addIssue({
       code: "custom",
       path: ["grade"],
@@ -1428,61 +1433,6 @@ export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSc
 
 export const SafetyScoreV9CardSchema = SafetyScoreV9CurrentCardSchema;
 export type SafetyScoreV9Card = SafetyScoreV9CurrentCard;
-
-export interface SafetyScoreV9ParentAttributionIssue {
-  cardId: string;
-  message: string;
-}
-
-export function findSafetyScoreV9ParentAttributionIssues(
-  cards: readonly SafetyScoreV9CurrentCard[],
-): SafetyScoreV9ParentAttributionIssue[] {
-  const cardsById = new Map(cards.map((card) => [card.id, card]));
-  const issues: SafetyScoreV9ParentAttributionIssue[] = [];
-  for (const card of cards) {
-    for (const item of card.scoreTrace.adverseAttribution.items) {
-      if (item.source !== "parent-score") continue;
-      const parent = attributedSerialParent(card, item.path, item.message);
-      if (parent === null) continue;
-      const pathPrefix = `parent:${parent.upstreamAssetId}:`;
-      const messagePrefix = `Required parent ${parent.upstreamAssetId}: `;
-      const upstream = cardsById.get(parent.upstreamAssetId);
-      const matches = upstream?.scoreTrace.adverseAttribution.items.some(
-        (candidate) =>
-          candidate.path === item.path.slice(pathPrefix.length) &&
-          candidate.message === item.message.slice(messagePrefix.length),
-      );
-      if (!matches) {
-        issues.push({
-          cardId: card.id,
-          message: `Parent adverse attribution does not reconcile to ${parent.upstreamAssetId}`,
-        });
-      }
-    }
-    for (const item of card.scoreTrace.boundedUncertaintyAttribution.items) {
-      if (item.source !== "parent-score") continue;
-      const parent = attributedSerialParent(card, item.path, item.message);
-      if (parent === null) continue;
-      const pathPrefix = `parent:${parent.upstreamAssetId}:`;
-      const messagePrefix = `Required parent ${parent.upstreamAssetId}: `;
-      const upstream = cardsById.get(parent.upstreamAssetId);
-      const matches = upstream?.scoreTrace.boundedUncertaintyAttribution.items.some(
-        (candidate) =>
-          candidate.code === item.code &&
-          candidate.path === item.path.slice(pathPrefix.length) &&
-          candidate.message === item.message.slice(messagePrefix.length) &&
-          candidate.responsibility === item.responsibility,
-      );
-      if (!matches) {
-        issues.push({
-          cardId: card.id,
-          message: `Parent bounded attribution does not reconcile to ${parent.upstreamAssetId}`,
-        });
-      }
-    }
-  }
-  return issues;
-}
 
 export const SafetyScoreV9CompletenessSchema = z
   .object({

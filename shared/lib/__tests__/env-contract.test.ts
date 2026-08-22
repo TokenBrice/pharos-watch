@@ -59,6 +59,7 @@ describe("env contract manifest", () => {
     expect(workerBlock).toContain("| `TELEGRAM_BOT_TOKEN_PREVIOUS` | `string` | optional | - | - |");
     expect(workerBlock).toContain("| `VAULTS_FYI_API_KEY` | `string` | optional | - | - |");
     expect(workerBlock).toContain("| `VAULTS_FYI_ENABLED` | `string` | optional | - | - |");
+    expect(workerBlock).toContain("| `DDR_REPAIR_TASK_RUNNER_ENABLED` | `string` | optional | - | - |");
     expect(workerBlock).toContain("| `OPS_UI_ORIGIN` | `string` | reserved | optional | optional |");
     expect(operatorBlock).toContain("| `SITE_API_SHARED_SECRET` | optional | - | required |");
     expect(operatorBlock).toContain("| `SITE_API_ORIGIN` | - | - | required |");

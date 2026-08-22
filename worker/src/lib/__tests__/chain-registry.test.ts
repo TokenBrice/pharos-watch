@@ -14,4 +14,10 @@ describe("buildChainRpcs", () => {
     });
     expect(tempo?.alchemyPrimary).toBeUndefined();
   });
+
+  it("keeps Alchemy API keys out of RPC URLs", () => {
+    const ethereum = buildChainRpcs("test-key").get("ethereum");
+
+    expect(ethereum?.rpcUrl).toBe("https://eth-mainnet.g.alchemy.com/v2/");
+  });
 });

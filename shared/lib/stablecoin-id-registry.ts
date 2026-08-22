@@ -5,7 +5,7 @@ import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./
 import type { StablecoinMeta } from "../types";
 
 /** Cross-provider metadata seed: every tracked lifecycle plus PSI-only shadow assets. Excludes dead assets. */
-export const ALL_LIVE_COINS: readonly StablecoinMeta[] = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS];
+const ALL_LIVE_COINS: readonly StablecoinMeta[] = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS];
 
 /** Lookup of every live coin (tracked + shadow) by canonical id. Includes shadow assets that are NOT in the public readback. */
 const registryById = new Map<string, StablecoinMeta>();

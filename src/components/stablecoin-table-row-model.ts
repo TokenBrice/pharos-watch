@@ -37,7 +37,7 @@ export function buildStablecoinTableRowModel({
   const pegScore = pegScores?.get(coin.id)?.pegScore ?? null;
   const liquidityScore = dexLiquidity?.[coin.id]?.liquidityScore ?? null;
   const pegRef = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
-  const depegSignal = coin.price == null ? null : deriveDepegSignal(coin.price, pegRef);
+  const depegSignal = coin.price == null || pegRef == null ? null : deriveDepegSignal(coin.price, pegRef);
   const absPegDeviationBps = depegSignal?.absBps ?? null;
   const riskLevel = getStablecoinTableRowRiskLevel(coin, pegScores, reportCards);
   const isOverview = variant === "figmaOverview";
@@ -71,7 +71,7 @@ export function buildStablecoinTableRowModel({
             : "",
     pegRef,
     absPegDeviationBps,
-    priceCell: formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef),
+    priceCell: pegRef == null ? "—" : formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef),
     pegDeviationColorClass: depegSignal === null
       ? "text-muted-foreground"
       : deviationColorClass(depegSignal.absRawBps ?? depegSignal.absBps),

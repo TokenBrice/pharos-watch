@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { CHART_PALETTE, CHART_SLATE, CHART_SLATE_STRONG } from "@/lib/chart-colors";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import { formatCompactUsd, formatSignedPercent, getNetColor } from "@shared/lib/format";
-import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
+import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
 import type { StablecoinData } from "@shared/types";

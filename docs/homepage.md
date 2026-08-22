@@ -28,12 +28,12 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 ## Top-Fold Contract
 
-`src/app/page.tsx` reads the tracked and core-aggregate stablecoin counts for metadata and JSON-LD, then reads `getHomepageHeroSnapshot()` for the server-rendered hero market summary. The hero snapshot and market-cap KPI exclude tracked variants and stable-value investments.
+`src/app/page.tsx` reads the tracked and core-aggregate stablecoin counts for metadata and JSON-LD, then reads `getHomepageHeroSnapshot()` for the server-rendered hero market-summary fallback. The hero snapshot and market-cap KPI exclude tracked variants and stable-value investments.
 
 The visible top fold is split across three independently composed surfaces:
 
 - `CoreTopRail`, rendered directly under the global header chrome, contains the recent-events tape while the grouped top nav owns wayfinding. On desktop the tape renders on every standard page and sticks below the fixed top nav (`top: 3.5rem` on `/`, `calc(3px + 3.5rem)` elsewhere). On mobile it renders only on the homepage so interior pages keep their first viewport focused on local content.
-- `HomeAltHero`, which owns the page `h1`; its text/summary shell is server-rendered from the static public dataset snapshot while the live historical chart mounts through a viewport gate
+- `HomeAltHero`, which owns the page `h1`; its text/summary shell is server-rendered from a maximum-72-hour static public dataset fallback, then reconciles from the homepage's existing live stablecoins query after hydration, while the live historical chart mounts through a viewport gate
 - `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
 
 `HomeAltHero` owns the visible `h1` and keeps one raw heading across breakpoints because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
@@ -46,7 +46,7 @@ The homepage is intentionally decomposed into several cache-sharing clients inst
 
 ### `HomeAltClient`
 
-The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset. The historical chart remains live but does not compete with LCP: `HomeAltHeroChartGate` keeps the lightweight skeleton through first paint, then mounts `HomeAltHeroLiveChart` from an idle callback after the chart surface reaches the viewport. The chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The desktop Daily Digest promo inside `HomeAltMiniCardGrid` reads `useDailyDigest()` for the current issue title and short text, falling back to static non-placeholder archive copy only while live data is unavailable. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
+The hero's first-paint text summary is server-rendered from `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts`, which reads the checked-in public top-stablecoins dataset as a fallback only. After hydration, `HomeAltHero` derives the same totals and cohorts from the cache-sharing `useStablecoins()` path. A static fallback at most 72 hours old remains visible with its as-of date; an older or undated fallback becomes unavailable when no live data exists. The historical chart remains live but does not compete with LCP: `HomeAltHeroChartGate` keeps the lightweight skeleton through first paint, then mounts `HomeAltHeroLiveChart` from an idle callback after the chart surface reaches the viewport. The chart client reads the stablecoin chart and four supply-history endpoints. The mini-card clients also mount behind the shared `LazySection` boundary. The desktop Daily Digest promo inside `HomeAltMiniCardGrid` reads `useDailyDigest()` for the current issue title and short text, falling back to static non-placeholder archive copy only while live data is unavailable. The full rankings table query set is intentionally isolated in `HomeAltRankingsSection`, which is dynamically imported below the fold.
 
 `HomeAltRankingsSection` query inputs:
 
@@ -85,7 +85,7 @@ Saved shortcuts are also browser-local:
 
 ### `HomeAltHero`
 
-`HomeAltHero` is a server component fed by `getHomepageHeroSnapshot()` in `src/app/page.tsx`. It renders the `Market Pulse` page heading, the total market-cap snapshot, cohort rows, and the viewport-gated live chart.
+`HomeAltHero` receives the server fallback from `getHomepageHeroSnapshot()` in `src/app/page.tsx`, preserves that exact selection through hydration, and then reconciles the headline and cohort rows from `useStablecoins()`. It renders the `Market Pulse` page heading, the total market-cap summary, cohort rows, and the viewport-gated live chart.
 
 ### `HomepageTape`
 

@@ -14,6 +14,7 @@ vi.mock("../fetch-retry", () => ({
 
 vi.mock("../chain-registry", () => ({
   getChainRpc: () => null,
+  getAlchemyAuthHeaders: () => undefined,
 }));
 
 const {
@@ -89,7 +90,7 @@ describe("evm-rpc helpers", () => {
 
   it("falls back to a later RPC URL when the first one fails", async () => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "Not found" }), { status: 404 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0xc8" }), { status: 200 }));
 
     const result = await fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
@@ -98,6 +99,7 @@ describe("evm-rpc helpers", () => {
 
     expect(result).toBe(200n);
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+    expect(fetchWithRetryMock.mock.calls[0]?.[3]).toEqual(expect.objectContaining({ retryMode: "network-only" }));
   });
 
   it("caps each fallback request to the remaining absolute deadline", async () => {
@@ -210,7 +212,7 @@ describe("evm-rpc helpers", () => {
       "https://rpc.example",
       expect.objectContaining({ method: "POST", signal: controller.signal }),
       0,
-      { timeoutMs: 1_234 },
+      { timeoutMs: 1_234, retryMode: "network-only" },
     );
     const body = JSON.parse(String(fetchWithRetryMock.mock.calls[0]?.[1]?.body));
     expect(body).toEqual([
@@ -363,7 +365,7 @@ describe("evm-rpc helpers", () => {
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
     expect(fetchWithRetryMock.mock.calls[0][0]).toBe("https://rpc.example");
     expect(fetchWithRetryMock.mock.calls[0][1]?.signal).toBe(controller.signal);
-    expect(fetchWithRetryMock.mock.calls[0][3]).toEqual({ timeoutMs: 1234 });
+    expect(fetchWithRetryMock.mock.calls[0][3]).toEqual({ timeoutMs: 1234, retryMode: "network-only" });
 
     const body = JSON.parse(fetchWithRetryMock.mock.calls[0][1]?.body) as {
       method: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReportCardGradeRange } from "@shared/lib/report-cards";
+import type { ReportCardGradeRange } from "@shared/types/report-card-grade";
 import { cn } from "@/lib/utils";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 

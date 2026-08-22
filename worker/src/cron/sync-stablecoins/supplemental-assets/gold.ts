@@ -15,6 +15,12 @@ import {
 } from "./shared";
 
 const GOLD_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
+// Only these DefiLlama protocol slugs represent one gold token; issuer or
+// protocol umbrella slugs can report an aggregate mcap for multiple products.
+const DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS = new Set([
+  "tether-gold",
+  "paxos-gold",
+]);
 
 export async function fetchGoldTokens(
   cgData: CoinGeckoMcapData,
@@ -28,7 +34,9 @@ export async function fetchGoldTokens(
 
     const mcapMap: Record<string, number> = {};
     const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
-    const tokensWithProtocol = GOLD_METAS.filter((token) => token.protocolSlug);
+    const tokensWithProtocol = GOLD_METAS.filter((token) =>
+      token.protocolSlug && DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS.has(token.protocolSlug),
+    );
     const PROTOCOL_BATCH = 3;
     const protocolsAllowed = tokensWithProtocol.length > 0 && db
       ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS)
@@ -91,8 +99,9 @@ export async function fetchGoldTokens(
     for (const meta of GOLD_METAS) {
       const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
       const mcap = aggregate?.mcap ?? mcapMap[meta.id] ?? 0;
-      if (!mcap) {
-        logWorkerEventArgs("handler", "warn", `[gold] No mcap for ${meta.symbol}, including with mcap=0`);
+      if (!Number.isFinite(mcap) || mcap <= 0) {
+        logWorkerEventArgs("handler", "warn", `[gold] No positive mcap for ${meta.symbol}, skipping`);
+        continue;
       }
 
       const token = buildPricedSupplementalAsset(meta, priceData, cgData, {

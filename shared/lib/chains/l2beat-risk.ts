@@ -11,7 +11,7 @@ import {
 
 export * from "./l2beat-risk-snapshot";
 
-export const L2BEAT_STAGE_SCORES: Record<L2BeatStage, number> = {
+const L2BEAT_STAGE_SCORES: Record<L2BeatStage, number> = {
   "Stage 2": 100,
   "Stage 1": 80,
   "Stage 0": 55,
@@ -20,7 +20,7 @@ export const L2BEAT_STAGE_SCORES: Record<L2BeatStage, number> = {
   "Under review": 50,
 };
 
-export const L2BEAT_RISK_SENTIMENT_SCORES: Record<L2BeatRiskSentiment, number> = {
+const L2BEAT_RISK_SENTIMENT_SCORES: Record<L2BeatRiskSentiment, number> = {
   good: 100,
   warning: 60,
   bad: 20,
@@ -29,8 +29,8 @@ export const L2BEAT_RISK_SENTIMENT_SCORES: Record<L2BeatRiskSentiment, number> =
   neutral: 50,
 };
 
-export const L2BEAT_STAGE_WEIGHT = 0.4;
-export const L2BEAT_RISK_WEIGHT = 0.6;
+const L2BEAT_STAGE_WEIGHT = 0.4;
+const L2BEAT_RISK_WEIGHT = 0.6;
 
 export interface L2BeatChainEnvironmentAssessment {
   source: "l2beat";

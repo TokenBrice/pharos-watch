@@ -63,8 +63,12 @@ interface WorkerMigrationResult {
 
 export const ROLLOUT_SAFETY_ENFORCEMENT_PREFIX = "0071";
 export const REQUIRED_ROLLOUT_SAFETY_MODE = "backward-compatible";
+// Migration 0230 was already shipped before DROP INDEX entered the normal-path gate.
+// Keep replay of that existing migration valid; newer migrations must use coordinated cleanup.
+export const DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE = 230;
 export const UNSAFE_ROLLOUT_SAFETY_PATTERNS = Object.freeze([
   { label: "DROP TABLE", pattern: /\bDROP\s+TABLE\b/i },
+  { label: "DROP INDEX", pattern: /\bDROP\s+INDEX\b/i },
   { label: "ALTER TABLE ... RENAME TO", pattern: /\bALTER\s+TABLE\b[\s\S]*?\bRENAME\s+TO\b/i },
   { label: "ALTER TABLE ... RENAME COLUMN", pattern: /\bALTER\s+TABLE\b[\s\S]*?\bRENAME\s+COLUMN\b/i },
   { label: "ALTER TABLE ... DROP COLUMN", pattern: /\bALTER\s+TABLE\b[\s\S]*?\bDROP\s+COLUMN\b/i },
@@ -339,8 +343,16 @@ export function validateRolloutSafetyAnnotation(
     );
   }
 
-  const unsafeStatements = findUnsafeRolloutStatements(sql);
+  const unsafeStatements = findUnsafeRolloutStatements(sql).filter(
+    (statement) =>
+      statement !== "DROP INDEX" || getMigrationSequenceNumber(file) > DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE,
+  );
   if (unsafeStatements.length > 0) {
+    if (unsafeStatements.includes("DROP INDEX")) {
+      throw new Error(
+        `${file} is marked rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE} but contains DROP INDEX, which requires the separate rollout path and coordinated cleanup process.`,
+      );
+    }
     throw new Error(
       `${file} is marked rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE} but contains statements that can break the still-live worker: ${unsafeStatements.join(", ")}`,
     );

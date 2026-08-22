@@ -2,7 +2,7 @@ import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safet
 import type { CronResult } from "../../lib/cron-logger";
 import { loadActiveSafetyScoreIdentity } from "../../lib/safety-score-active-source";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
+import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config";
 import {
   buildComparisonAnchorFreshnessMeta,
   buildYieldSyncMetadata,

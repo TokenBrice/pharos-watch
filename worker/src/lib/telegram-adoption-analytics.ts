@@ -10,6 +10,7 @@ import {
 import { parseJsonObject } from "./json-parse";
 
 const MINI_APP_SESSION_CACHE_PREFIX = "telegram:adoption-mini-app-session:";
+export const TELEGRAM_ADOPTION_API_PATH = "/api/telegram-adoption";
 export const TELEGRAM_ADOPTION_SESSION_TTL_SEC = 30 * 60;
 const TELEGRAM_ADOPTION_RETENTION_CATCHUP_DAYS = 7;
 const RETENTION_WINDOWS = [7, 30] as const;
@@ -19,6 +20,7 @@ const RETENTION_FEATURES = ["any", "direct", "preset", "global"] as const;
 const ADOPTION_COHORT_START_DAY = "2026-07-11";
 
 type AdoptionStage =
+  | "cta_click"
   | "bot_start"
   | "setup_complete"
   | "first_follow"
@@ -116,9 +118,13 @@ function prepareAdoptionUpsert(db: D1Database, event: AdoptionEvent): D1Prepared
   );
 }
 
+export async function writeTelegramAdoptionEvent(db: D1Database, event: AdoptionEvent): Promise<void> {
+  await prepareAdoptionUpsert(db, event).run();
+}
+
 export async function recordTelegramAdoptionEvent(db: D1Database, event: AdoptionEvent): Promise<void> {
   try {
-    await prepareAdoptionUpsert(db, event).run();
+    await writeTelegramAdoptionEvent(db, event);
   } catch {
     // Adoption telemetry must not block the product action.
   }

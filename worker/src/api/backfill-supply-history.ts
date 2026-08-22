@@ -47,6 +47,13 @@ const HISTORICAL_ONCHAIN_TOTAL_SUPPLY_IDS = new Set([
   "bd-basedollar",
   "eearn-ember",
 ]);
+// Base Dollar documents direct $1 redemption, so its native supply may use the
+// explicit par policy when no replay-safe historical market price exists.
+const PAR_REDEEMABLE_USD_ASSET_IDS = new Set(["bd-basedollar"]);
+
+function getParPolicyPrice(meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number]): number | null {
+  return meta.flags.pegCurrency === "USD" && PAR_REDEEMABLE_USD_ASSET_IDS.has(meta.id) ? 1 : null;
+}
 
 function pushSupplyUpsert(
   statements: D1PreparedStatement[],
@@ -353,10 +360,12 @@ async function backfillHistoricalOnChainSupply(
   options: {
     chainRpcs?: Map<string, ChainRpcConfig>;
     blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
+    priceSeries?: TimestampedRatePoint[];
+    parPrice?: number | null;
     window?: SupplyBackfillWindow;
     signal?: AbortSignal;
   },
-): Promise<{ rows: number; error?: string } | null> {
+): Promise<{ rows: number; error?: string; skippedDays?: number } | null> {
   const exclusionConfig = getOnChainSupplyExclusionConfig(meta.id);
   if (!exclusionConfig?.historicalBackfillStartDay) return null;
   if (meta.flags.pegCurrency !== "USD") {
@@ -374,14 +383,43 @@ async function backfillHistoricalOnChainSupply(
     return { rows: 0, error: "no completed UTC days in historical on-chain supply backfill window" };
   }
 
+  const decimals = contract.decimals;
+  if (decimals == null) {
+    logWorkerEventArgs("api", "warn",
+      `[backfill-supply] ${meta.symbol}: skipping historical on-chain supply backfill because contract decimals are missing`,
+    );
+    return { rows: 0, error: "historical on-chain supply backfill requires contract decimals" };
+  }
+
+  const priceSeries = options.priceSeries ?? [];
+  const firstPrice = priceSeries[0];
+  const lastPrice = priceSeries[priceSeries.length - 1];
+
+  function findHistoricalPrice(snapshotDate: number): number | null {
+    if (!firstPrice || !lastPrice || snapshotDate < firstPrice.timestamp || snapshotDate > lastPrice.timestamp) {
+      return null;
+    }
+    const exact = priceSeries.find((point) => point.timestamp === snapshotDate);
+    if (exact) return exact.rate;
+    const interpolated = interpolateRateAtTimestamp(priceSeries, snapshotDate);
+    return interpolated && interpolated > 0 ? interpolated : null;
+  }
+
   const blockSearchCache = getBlockSearchCacheForChain(options.blockSearchCachesByChain, contract.chain);
   const stmts: D1PreparedStatement[] = [];
   let blockMisses = 0;
   let supplyMisses = 0;
+  let priceMisses = 0;
 
   for (let snapshotDate = startDay; snapshotDate <= endDay; snapshotDate += DAY_SECONDS) {
     throwIfAborted(options.signal);
     if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
+
+    const price = findHistoricalPrice(snapshotDate) ?? options.parPrice ?? null;
+    if (price == null) {
+      priceMisses += 1;
+      continue;
+    }
 
     const targetTimestamp = snapshotDate + DAY_SECONDS - 1;
     const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(
@@ -412,29 +450,41 @@ async function backfillHistoricalOnChainSupply(
       continue;
     }
 
-    const supply = rawTokenAmountToNumber(adjustedRaw, contract.decimals ?? 18);
+    const supply = rawTokenAmountToNumber(adjustedRaw, decimals);
     if (supply == null) {
       supplyMisses += 1;
       continue;
     }
 
-    pushSupplyUpsert(stmts, db, meta.id, snapshotDate, supply, null);
+    const circulatingUsd = supply * price;
+    if (!Number.isFinite(circulatingUsd) || circulatingUsd <= 0) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    pushSupplyUpsert(stmts, db, meta.id, snapshotDate, circulatingUsd, price);
   }
 
   if (stmts.length === 0) {
+    if (priceMisses > 0) {
+      logWorkerEventArgs("api", "warn",
+        `[backfill-supply] ${meta.symbol}: historical on-chain supply skipped ${priceMisses} day(s) without a historical price`,
+      );
+    }
     return {
       rows: 0,
-      error: `historical on-chain supply backfill wrote 0 rows (blockMisses=${blockMisses}, supplyMisses=${supplyMisses})`,
+      error: `historical on-chain supply backfill wrote 0 rows (blockMisses=${blockMisses}, supplyMisses=${supplyMisses}, priceMisses=${priceMisses})`,
+      skippedDays: priceMisses,
     };
   }
 
   await batchExecute(db, stmts);
-  if (blockMisses > 0 || supplyMisses > 0) {
+  if (blockMisses > 0 || supplyMisses > 0 || priceMisses > 0) {
     logWorkerEventArgs("api", "warn",
-      `[backfill-supply] ${meta.symbol}: historical on-chain supply skipped ${blockMisses} block lookup(s) and ${supplyMisses} supply read(s)`,
+      `[backfill-supply] ${meta.symbol}: historical on-chain supply skipped ${blockMisses} block lookup(s), ${supplyMisses} supply read(s), and ${priceMisses} price day(s)`,
     );
   }
-  return { rows: stmts.length };
+  return { rows: stmts.length, skippedDays: priceMisses };
 }
 
 async function backfillHistoricalTotalSupply(
@@ -445,11 +495,12 @@ async function backfillHistoricalTotalSupply(
     blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
     priceSeries?: TimestampedRatePoint[];
     requirePrice: boolean;
+    parPrice?: number | null;
     skipSnapshotDates?: ReadonlySet<number>;
     window?: SupplyBackfillWindow;
     signal?: AbortSignal;
   },
-): Promise<{ rows: number; error?: string }> {
+): Promise<{ rows: number; error?: string; skippedDays?: number }> {
   if (meta.flags.pegCurrency !== "USD" && !options.requirePrice) {
     return { rows: 0, error: "historical totalSupply backfill for non-USD assets requires historical prices" };
   }
@@ -459,10 +510,15 @@ async function backfillHistoricalTotalSupply(
     return { rows: 0, error: "historical totalSupply backfill requires exactly one supported EVM contract" };
   }
 
-  const priceSeries = options.priceSeries ?? [];
-  if (options.requirePrice && priceSeries.length === 0) {
-    return { rows: 0, error: "historical totalSupply backfill requires CoinGecko price history" };
+  const decimals = contract.decimals;
+  if (decimals == null) {
+    logWorkerEventArgs("api", "warn",
+      `[backfill-supply] ${meta.symbol}: skipping historical totalSupply backfill because contract decimals are missing`,
+    );
+    return { rows: 0, error: "historical totalSupply backfill requires contract decimals" };
   }
+
+  const priceSeries = options.priceSeries ?? [];
 
   const lastCompletedDay = getLastCompletedUtcDay();
   const firstPriceDay = priceSeries[0]?.timestamp ?? null;
@@ -503,8 +559,8 @@ async function backfillHistoricalTotalSupply(
     if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
     if (options.skipSnapshotDates?.has(snapshotDate)) continue;
 
-    const price = findHistoricalPrice(snapshotDate);
-    if (options.requirePrice && price == null) {
+    const price = findHistoricalPrice(snapshotDate) ?? options.parPrice ?? null;
+    if (price == null) {
       priceMisses += 1;
       continue;
     }
@@ -533,13 +589,13 @@ async function backfillHistoricalTotalSupply(
       continue;
     }
 
-    const supply = rawTokenAmountToNumber(raw, contract.decimals ?? 18);
+    const supply = rawTokenAmountToNumber(raw, decimals);
     if (supply == null) {
       supplyMisses += 1;
       continue;
     }
 
-    const circulatingUsd = price != null ? supply * price : supply;
+    const circulatingUsd = supply * price;
     if (!Number.isFinite(circulatingUsd) || circulatingUsd <= 0) {
       supplyMisses += 1;
       continue;
@@ -549,9 +605,15 @@ async function backfillHistoricalTotalSupply(
   }
 
   if (stmts.length === 0) {
+    if (priceMisses > 0) {
+      logWorkerEventArgs("api", "warn",
+        `[backfill-supply] ${meta.symbol}: historical totalSupply skipped ${priceMisses} day(s) without a historical price`,
+      );
+    }
     return {
       rows: 0,
       error: `historical totalSupply backfill wrote 0 rows (blockMisses=${blockMisses}, supplyMisses=${supplyMisses}, priceMisses=${priceMisses})`,
+      skippedDays: priceMisses,
     };
   }
 
@@ -569,7 +631,7 @@ async function backfillHistoricalTotalSupply(
       }),
     );
   }
-  return { rows: stmts.length };
+  return { rows: stmts.length, skippedDays: priceMisses };
 }
 
 async function backfillCommodity(
@@ -584,7 +646,7 @@ async function backfillCommodity(
     window?: SupplyBackfillWindow;
     signal?: AbortSignal;
   },
-): Promise<{ rows: number; error?: string }> {
+): Promise<{ rows: number; error?: string; skippedDays?: number }> {
   const id = meta.id;
   const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
     apiKey: config.cgApiKey ?? null,
@@ -642,7 +704,10 @@ async function backfillCommodity(
           signal: config.signal,
         });
         if (!historicalTotalSupply.error) {
-          return { rows: stmts.length + historicalTotalSupply.rows };
+          return {
+            rows: stmts.length + historicalTotalSupply.rows,
+            skippedDays: historicalTotalSupply.skippedDays,
+          };
         }
         logWorkerEventArgs("api", "warn",
           `[backfill-commodity] ${id}: skipped ${missingMarketCapDays} day(s) without CoinGecko market caps; historical totalSupply fallback failed (${historicalTotalSupply.error})`,
@@ -783,22 +848,36 @@ async function executeBackfillSupplyHistory(
   }
 
   let totalRows = 0;
+  let skippedDays = 0;
   const errors: string[] = [];
   const skipped: string[] = [];
   const blockSearchCachesByChain: EvmBlockSearchCacheByChain = new Map();
 
   const runCoinGeckoMarketChartBackfill = async (meta: (typeof coins)[number], failureLabel: string): Promise<void> => {
+    const exclusionPriceSeries = getOnChainSupplyExclusionConfig(meta.id) && meta.geckoId
+      ? await fetchMarketBackfillPriceSeries(meta, meta.geckoId, {
+          granularity: "daily",
+          coingeckoApiKey: cgApiKey ?? null,
+          range: supplyBackfillWindow ? backfillWindowToFetchRange(supplyBackfillWindow) : undefined,
+          signal,
+        })
+      : null;
     const historicalOnChainResult = await backfillHistoricalOnChainSupply(db, meta, {
       chainRpcs,
       blockSearchCachesByChain,
+      priceSeries: exclusionPriceSeries?.prices
+        ?.map((point) => ({ timestamp: bucketUnixSecondsToUtcDay(point.timestamp), rate: point.price })) ?? [],
+      parPrice: getParPolicyPrice(meta),
       window: supplyBackfillWindow,
       signal,
     });
     if (historicalOnChainResult) {
       if (historicalOnChainResult.error) {
         errors.push(`${meta.symbol}: ${historicalOnChainResult.error}`);
+        skippedDays += historicalOnChainResult.skippedDays ?? 0;
       } else {
         totalRows += historicalOnChainResult.rows;
+        skippedDays += historicalOnChainResult.skippedDays ?? 0;
       }
       return;
     }
@@ -827,14 +906,17 @@ async function executeBackfillSupplyHistory(
           chainRpcs,
           blockSearchCachesByChain,
           priceSeries: marketHistory ? normalizeCoinGeckoDailyPrices(marketHistory.prices) : [],
-          requirePrice: Boolean(meta.geckoId),
+          requirePrice: true,
+          parPrice: getParPolicyPrice(meta),
           window: supplyBackfillWindow,
           signal,
         });
         if (result.error) {
           errors.push(`${meta.symbol}: ${result.error}`);
+          skippedDays += result.skippedDays ?? 0;
         } else {
           totalRows += result.rows;
+          skippedDays += result.skippedDays ?? 0;
         }
       } catch (err) {
         rethrowIfAborted(err, signal);
@@ -860,6 +942,7 @@ async function executeBackfillSupplyHistory(
       });
       if (result.error) {
         errors.push(`${meta.symbol}: ${result.error}`);
+        skippedDays += result.skippedDays ?? 0;
       } else {
         totalRows += result.rows;
       }
@@ -1026,6 +1109,7 @@ async function executeBackfillSupplyHistory(
     buildAdminJobSummary({
       coinsProcessed: coins.length,
       rowsInserted: totalRows,
+      ...(skippedDays > 0 ? { skippedDays } : {}),
       skipped,
       errors,
       window: {

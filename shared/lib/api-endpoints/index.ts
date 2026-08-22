@@ -1,4 +1,4 @@
-export { API_PATHS, buildQueryPath } from "./paths";
+export { API_PATHS } from "./paths";
 export {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
   findDynamicEndpointDescriptor,
@@ -48,7 +48,6 @@ export {
   STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   STATIC_ENDPOINT_ROUTE_DEFINITIONS,
   getEndpointProbeDescriptors,
-  getEndpointProbePaths,
   getStaticEndpointDependenciesByKey,
   isStaticEndpointPath,
 } from "./selectors";

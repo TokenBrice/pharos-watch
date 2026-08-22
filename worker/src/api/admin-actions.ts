@@ -14,7 +14,8 @@ interface TriggerDigestRouteContext extends AdminRouteContext {
 
 /**
  * Cache key used by `digest-trigger-poll` to decide whether to run the digest
- * out-of-band on its next scheduled tick. Plain JSON value, no TTL.
+ * out-of-band on its next scheduled tick. The JSON value is a bounded retry
+ * intent, with no TTL so dead letters remain visible for operator inspection.
  */
 export const DIGEST_FORCE_RUN_CACHE_KEY = "digest:force-run-request";
 
@@ -23,12 +24,17 @@ export const handleTriggerDigest = makeAdminRoute(
   async ({ db, request }: TriggerDigestRouteContext) =>
     runIdempotentAdminAction(db, "trigger-digest", request, async () => {
       const requestId = `manual-digest-${crypto.randomUUID()}`;
+      const requestedAt = Math.floor(Date.now() / 1000);
       await setCache(
         db,
         DIGEST_FORCE_RUN_CACHE_KEY,
         JSON.stringify({
-          requestedAt: Math.floor(Date.now() / 1000),
+          requestedAt,
           requestId,
+          attempts: 0,
+          nextAttemptAt: requestedAt,
+          state: "pending",
+          lastError: null,
         }),
       );
       return jsonResponse(

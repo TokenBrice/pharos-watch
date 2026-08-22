@@ -350,7 +350,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
       : false;
   const refreshedPegRef =
     asset && meta && refreshedPegReferenceIsAuthoritative
-      ? getPegReference(pegType, pegRates, meta.commodityOunces)
+      ? getPegReference(pegType, pegRates, meta.commodityOunces) ?? Number.NaN
       : Number.NaN;
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
   const pegReference =

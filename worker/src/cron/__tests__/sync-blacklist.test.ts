@@ -138,6 +138,7 @@ vi.mock("../../lib/evm-logs", () => ({
 }));
 
 vi.mock("../../lib/chain-registry", () => ({
+  getAlchemyAuthHeaders: () => undefined,
   getChainRpc: vi.fn((_chainRpcs: Map<string, unknown>, chainId: string) =>
     chainId === "base"
       ? {

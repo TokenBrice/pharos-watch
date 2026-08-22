@@ -1,5 +1,5 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import { formatSchemaLikeIssues, resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
+import { formatSchemaLikeIssues, resolveSchemaLike, type SchemaLikeSource } from "@shared/lib/schema-like";
 import { normalizeRequestTimeoutMs, resolveRequestSignal } from "@/lib/request-lifecycle";
 
 export type RequestFailureKind = "http" | "network" | "timeout" | "aborted" | "superseded" | "parse" | "schema";

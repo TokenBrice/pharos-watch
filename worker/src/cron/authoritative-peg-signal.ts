@@ -57,12 +57,13 @@ export function deriveAuthoritativePegSignal(input: {
     pegType,
     pegRateSource: evidence.source,
     pegRateContributorCount: evidence.contributorCount,
+    pegRateAvailable: pegType != null && Object.prototype.hasOwnProperty.call(input.pegRates, pegType),
   })) {
     return { kind: "rejected", reason: "non-authoritative-reference", evidence };
   }
 
   const pegReference = getPegReference(pegType, input.pegRates, input.commodityOunces);
-  if (!Number.isFinite(pegReference) || pegReference <= 0) {
+  if (pegReference == null || !Number.isFinite(pegReference) || pegReference <= 0) {
     return { kind: "rejected", reason: "invalid-reference", evidence };
   }
 

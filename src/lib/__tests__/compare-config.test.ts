@@ -5,7 +5,13 @@ import {
   FROZEN_IDS,
   QUARANTINED_IDS,
 } from "@shared/lib/stablecoins/registry";
-import { COMPARE_COIN_OPTIONS, COMPARISON_PRESETS, resolveCompareSelectedIds } from "../compare-config";
+import { COMPARE_COIN_OPTIONS, COMPARISON_PRESETS, parseIdList, resolveCompareSelectedIds } from "../compare-config";
+
+describe("parseIdList", () => {
+  it("trims, deduplicates, and caps generic id lists", () => {
+    expect(parseIdList(" a, a, , b, c ", { max: 2 })).toEqual(["a", "b"]);
+  });
+});
 
 describe("resolveCompareSelectedIds", () => {
   it("keeps canonical ids only", () => {

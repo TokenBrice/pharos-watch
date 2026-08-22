@@ -10,7 +10,7 @@ interface PegReferenceInputs {
 }
 
 interface PegReferenceContext {
-  pegReference: number;
+  pegReference: number | null;
   pegRates: Record<string, number>;
   pegRateSources: Record<string, PegRateSource>;
   pegRateSource: PegRateSource | undefined;
@@ -27,9 +27,9 @@ export function deriveSupplyFromMarketCap(
 
 export function deriveDeviationBps(
   priceUsd: number | null | undefined,
-  pegReference: number,
+  pegReference: number | null,
 ): number | null {
-  if (priceUsd == null) return null;
+  if (priceUsd == null || pegReference == null) return null;
   return deriveDepegSignal(priceUsd, pegReference)?.bps ?? null;
 }
 

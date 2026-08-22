@@ -4,7 +4,7 @@ import {
   type RateDerivedConfig,
   type YieldAdapterLifecycleEntry,
 } from "./yield-config-registry";
-import { buildOnChainSourceKey } from "../lib/yield-utils";
+import { buildOnChainSourceKey } from "../yield-utils";
 
 /**
  * Tier 1: On-chain exchange rate sources.
