@@ -4,8 +4,8 @@ import type { PegCurrency } from "@shared/types";
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
 export const TRACKED_STABLECOIN_COUNT = 405;
 export const ACTIVE_STABLECOIN_COUNT = 337;
-export const CORE_AGGREGATE_STABLECOIN_COUNT = 258;
-export const ACTIVE_VARIANT_STABLECOIN_COUNT = 50;
+export const CORE_AGGREGATE_STABLECOIN_COUNT = 255;
+export const ACTIVE_VARIANT_STABLECOIN_COUNT = 53;
 export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = 29;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 29;
 export const DEAD_STABLECOIN_COUNT = 89;
