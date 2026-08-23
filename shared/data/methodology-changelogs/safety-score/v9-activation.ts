@@ -2,15 +2,17 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9_CAP_REASON_PRECEDENCE: MethodologyChangelogEntry = {
   version: "9.35",
-  title: "Equal-limit caps publish the more specific reason",
+  title: "Deterministic cap reasons and locale-independent canonical ordering",
   date: "2026-08-23",
   effectiveAt: 1787500014,
   summary:
-    "When two cap candidates share a limit, Safety Score V9 now publishes the specific observed or withheld fact ahead of the generic absence reason instead of letting alphabetical ordering decide. Cap limits and score arithmetic are unchanged; only the published explanation moves.",
+    "Safety Score V9 removes two ways the host environment could influence a published result. When two cap candidates share a limit, the specific observed or withheld fact is now published ahead of the generic absence reason instead of letting alphabetical ordering decide. Separately, every canonical ordering and digest input across compilation and publication now uses a locale-independent code-unit comparator rather than host-locale collation. Cap limits and score arithmetic are unchanged.",
   impact: [
     "A specific observed or withheld fact outranks a generic absence reason at equal source and limit. Remaining ties fall through to source priority, then locale-independent code-unit ordering of kind and then reason, so the selection stays total and replay-stable",
     "The candidate dedupe and binding-selection comparators were unified into one ordering function. They previously differed: only the dedupe path applied the final `reason` tie-break, so the two stages could rank identical candidates differently",
     "On the frozen capture replay (clock 1787500014, 337 cards) no score, grade, or cap limit moves. Exactly one binding reason changes: usdaf-asymmetry publishes `peg-supply-floor-withheld` instead of `missing-applicable-peg`, both 60-point evidence ceilings. The diagnostic `caps[]` ordering also changes on 12 cards — bd-basedollar, deuro-deuro, kau-kinesis, krwq-iq, nect-beraborrow, pht-pht, scusd-rings, usdaf-asymmetry, usdu-usdu-finance, usdxl-last, weusd-picwe and xnk-kinka — where a specific peg reason now precedes `missing-applicable-peg`. Every candidate set is identical before and after; only the order moves, and two consecutive replays are byte-identical",
+    "Canonical V9 ordering no longer depends on the runtime locale. 44 `localeCompare()` call sites across the dependency, exit, scoped-risk and archetype evaluators and the extension-transfer, publication-assessment and supply-attribution publishers now use the existing locale-independent `compareText()` comparator. Two were demonstrably load-bearing: Exit resolved an equal-score route tie before primary and diversification route identity and the ordered route traces were emitted, and the reviewed-transfer sequence feeding `sha256Hex` made a published digest input locale-dependent. A probe with two equal-scoring Unicode route keys selected different primary and secondary routes under `en_US.UTF-8` than under `sv_SE.UTF-8`",
+    "Replaying identical facts can no longer select a different equal-scoring route, reorder a dependency path, or hash a different reviewed-transfer sequence because the host locale changed. Numeric scores and grades are unaffected — this is ordering, not arithmetic — but route and path identity, ordered traces, and their digests can rotate where a previously published non-ASCII or case-sensitive key collated differently from code-unit order. The evaluation-build manifest digest rotates accordingly",
   ],
   commits: [],
   reconstructed: false,
