@@ -16,7 +16,8 @@ import { parseYieldRankingsPublishedCutoff } from "../lib/yield-rankings-cache";
 import { isSuppressedYieldHistoryRow } from "../lib/yield-history-ownership-handoffs";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isRecord } from "@shared/lib/type-guards";
-import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
+import { YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import {
   normalizeYieldSourceRisk,
   YieldPysInputsAtPublishSchema,
@@ -159,12 +160,7 @@ function normalizeHistorySourceKey(stablecoinId: string, row: YieldHistoryRow, m
  * - `sourceKey=<key>` returns source-specific history for that key
  */
 export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Response> => {
-    const parsed = parseStablecoinHistoryQuery(url, {
-      defaultDays: 90,
-      minDays: 1,
-      maxDays: YIELD_HISTORY_MAX_DAYS,
-      rangePolicy: "reject",
-    });
+    const parsed = parseStablecoinHistoryQuery(url, STABLECOIN_HISTORY_QUERY_CONTRACTS.yield);
     if (parsed instanceof Response) {
       return parsed;
     }

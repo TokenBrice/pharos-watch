@@ -4,15 +4,13 @@ import {
   } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 
 interface SupplyHistoryRow {
   snapshot_date: number;
   circulating_usd: number;
   price: number | null;
 }
-
-const DEFAULT_SUPPLY_HISTORY_DAYS = 365;
-const MAX_SUPPLY_HISTORY_DAYS = 5000;
 
 export const handleSupplyHistory = async (
   db: D1Database,
@@ -25,12 +23,7 @@ export const handleSupplyHistory = async (
   };
 
   return handleStablecoinHistoryRequest(db, url, {
-    query: {
-      defaultDays: DEFAULT_SUPPLY_HISTORY_DAYS,
-      minDays: 1,
-      maxDays: MAX_SUPPLY_HISTORY_DAYS,
-      rangePolicy: "reject",
-    },
+    query: STABLECOIN_HISTORY_QUERY_CONTRACTS.supply,
     cacheControl: CACHE_PROFILES.slow,
     fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
       const completedSnapshot = await loadCompletedSnapshot();
