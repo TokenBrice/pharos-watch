@@ -27,9 +27,18 @@
         }
       ],
       "sources": [
-        { "label": "Verified sBOLD contract", "url": "https://eth.blockscout.com/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11?tab=contract" },
-        { "label": "K3 sBOLD technical details", "url": "https://k3-capital.gitbook.io/sbold/technical-details" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Verified sBOLD contract",
+          "url": "https://eth.blockscout.com/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11?tab=contract"
+        },
+        {
+          "label": "K3 sBOLD technical details",
+          "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
@@ -58,9 +67,18 @@
         }
       ],
       "sources": [
-        { "label": "Yearn V3 Vault source", "url": "https://github.com/yearn/yearn-vaults-v3/blob/master/contracts/VaultV3.vy" },
-        { "label": "Yearn yBOLD documentation", "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Yearn V3 Vault source",
+          "url": "https://github.com/yearn/yearn-vaults-v3/blob/master/contracts/VaultV3.vy"
+        },
+        {
+          "label": "Yearn yBOLD documentation",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
@@ -96,9 +114,18 @@
         }
       ],
       "sources": [
-        { "label": "Morpho MetaMorpho allocation contract", "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol" },
-        { "label": "Gauntlet USDC Prime vault", "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Morpho MetaMorpho allocation contract",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        },
+        {
+          "label": "Gauntlet USDC Prime vault",
+          "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
@@ -127,9 +154,18 @@
         }
       ],
       "sources": [
-        { "label": "dTRINITY sdUSD documentation", "url": "https://docs.dtrinity.org/protocol-components/sdusd" },
-        { "label": "Verified dSTAKE collateral vault", "url": "https://eth.blockscout.com/address/0x4acbcfa29fb085097c5f31783403ef7a7930f6fe?tab=contract" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "dTRINITY sdUSD documentation",
+          "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+        },
+        {
+          "label": "Verified dSTAKE collateral vault",
+          "url": "https://eth.blockscout.com/address/0x4acbcfa29fb085097c5f31783403ef7a7930f6fe?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
@@ -158,9 +194,18 @@
         }
       ],
       "sources": [
-        { "label": "Morpho MetaMorpho allocation contract", "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol" },
-        { "label": "Gauntlet USDC Prime vault", "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Morpho MetaMorpho allocation contract",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        },
+        {
+          "label": "Gauntlet USDC Prime vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
@@ -189,15 +234,24 @@
         }
       ],
       "sources": [
-        { "label": "Morpho MetaMorpho allocation contract", "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol" },
-        { "label": "Smokehouse USDC vault", "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Morpho MetaMorpho allocation contract",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        },
+        {
+          "label": "Smokehouse USDC vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
       "assetId": "zys-zephyr-protocol",
       "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
+      "expiresAt": "2026-11-21",
       "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
@@ -213,15 +267,24 @@
         }
       ],
       "sources": [
-        { "label": "Zephyr Scanner API documentation", "url": "https://zephyrprotocol.com/documentation/scanner-api" },
-        { "label": "Zephyr v2.3.0 source", "url": "https://github.com/ZephyrProtocol/zephyr/tree/v2.3.0" },
-        { "label": "Zephyr yield design", "url": "https://zephyrprotocol.com/yield" }
+        {
+          "label": "Zephyr Scanner API documentation",
+          "url": "https://zephyrprotocol.com/documentation/scanner-api"
+        },
+        {
+          "label": "Zephyr v2.3.0 source",
+          "url": "https://github.com/ZephyrProtocol/zephyr/tree/v2.3.0"
+        },
+        {
+          "label": "Zephyr yield design",
+          "url": "https://zephyrprotocol.com/yield"
+        }
       ]
     },
     {
       "assetId": "cusdo-openeden",
       "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
+      "expiresAt": "2026-11-21",
       "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
@@ -237,15 +300,24 @@
         }
       ],
       "sources": [
-        { "label": "Verified cUSDO implementation", "url": "https://eth.blockscout.com/address/0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0?tab=contract" },
-        { "label": "OpenEden cUSDO documentation", "url": "https://docs.openeden.com/usdo/cusdo-token" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Verified cUSDO implementation",
+          "url": "https://eth.blockscout.com/address/0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0?tab=contract"
+        },
+        {
+          "label": "OpenEden cUSDO documentation",
+          "url": "https://docs.openeden.com/usdo/cusdo-token"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
       "assetId": "stcusd-cap",
       "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
+      "expiresAt": "2026-11-21",
       "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
@@ -261,15 +333,24 @@
         }
       ],
       "sources": [
-        { "label": "Verified stcUSD deployment", "url": "https://eth.blockscout.com/address/0x88887be419578051ff9f4eb6c858a951921d8888?tab=contract" },
-        { "label": "Cap protocol documentation", "url": "https://docs.cap.app" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Verified stcUSD deployment",
+          "url": "https://eth.blockscout.com/address/0x88887be419578051ff9f4eb6c858a951921d8888?tab=contract"
+        },
+        {
+          "label": "Cap protocol documentation",
+          "url": "https://docs.cap.app"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
       "assetId": "said-gaib",
       "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
+      "expiresAt": "2026-11-21",
       "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
@@ -285,15 +366,24 @@
         }
       ],
       "sources": [
-        { "label": "Verified sAID deployment", "url": "https://eth.blockscout.com/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8?tab=contract" },
-        { "label": "GAIB documentation", "url": "https://docs.gaib.ai" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Verified sAID deployment",
+          "url": "https://eth.blockscout.com/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8?tab=contract"
+        },
+        {
+          "label": "GAIB documentation",
+          "url": "https://docs.gaib.ai"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
       "assetId": "savusd-avant",
       "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
+      "expiresAt": "2026-11-21",
       "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
@@ -309,8 +399,14 @@
         }
       ],
       "sources": [
-        { "label": "Avant contract addresses", "url": "https://docs.avantprotocol.com/security/contract-addresses" },
-        { "label": "Avalanche C-Chain PublicNode RPC", "url": "https://avalanche-c-chain-rpc.publicnode.com" }
+        {
+          "label": "Avant contract addresses",
+          "url": "https://docs.avantprotocol.com/security/contract-addresses"
+        },
+        {
+          "label": "Avalanche C-Chain PublicNode RPC",
+          "url": "https://avalanche-c-chain-rpc.publicnode.com"
+        }
       ]
     },
     {
@@ -339,9 +435,18 @@
         }
       ],
       "sources": [
-        { "label": "Yearn V3 Vault source", "url": "https://github.com/yearn/yearn-vaults-v3/blob/master/contracts/VaultV3.vy" },
-        { "label": "Yearn v3 USDC vault", "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Yearn V3 Vault source",
+          "url": "https://github.com/yearn/yearn-vaults-v3/blob/master/contracts/VaultV3.vy"
+        },
+        {
+          "label": "Yearn v3 USDC vault",
+          "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     },
     {
@@ -370,9 +475,18 @@
         }
       ],
       "sources": [
-        { "label": "Sky stUSDS implementation", "url": "https://github.com/sky-ecosystem/stusds/blob/master/src/StUsds.sol" },
-        { "label": "Sky stUSDS documentation", "url": "https://developers.skyeco.com/protocol/tokens/stusds/" },
-        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+        {
+          "label": "Sky stUSDS implementation",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/master/src/StUsds.sol"
+        },
+        {
+          "label": "Sky stUSDS documentation",
+          "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
       ]
     }
   ]
