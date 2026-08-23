@@ -49,20 +49,19 @@ describe("buildStablecoinDatasetJsonLd", () => {
       publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
     });
     expect(jsonLd).not.toHaveProperty("isPartOf");
-    expect(jsonLd.distribution).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          "@type": "DataDownload",
-          encodingFormat: "application/json",
-          contentUrl: "https://api.pharos.watch/api/stablecoin/usdt-tether",
-        }),
-        expect.objectContaining({
-          "@type": "DataDownload",
-          encodingFormat: "text/markdown",
-          contentUrl: "https://pharos.watch/stablecoin/usdt-tether/index.md",
-        }),
-      ]),
-    );
+    expect(jsonLd.distribution).toEqual([
+      expect.objectContaining({
+        "@type": "DataDownload",
+        encodingFormat: "text/markdown",
+        contentUrl: "https://pharos.watch/stablecoin/usdt-tether/index.md",
+      }),
+    ]);
+    // Dataset distributions must be publicly crawlable; the Worker API requires
+    // X-API-Key and returned 401 to anonymous crawlers.
+    expect(JSON.stringify(jsonLd.distribution)).not.toContain("api.pharos.watch");
+    // sameAs on a Dataset means "an equivalent copy of this dataset". Third-party
+    // coin identity links belong on the nested `about` Thing, not here.
+    expect(jsonLd).not.toHaveProperty("sameAs");
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
 

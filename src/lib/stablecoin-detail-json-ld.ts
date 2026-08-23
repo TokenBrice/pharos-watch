@@ -1,6 +1,5 @@
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { API_ORIGIN, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { StablecoinMeta } from "@shared/types";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
@@ -92,7 +91,6 @@ export function buildStablecoinDatasetJsonLd(
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const datasetSameAs = buildStablecoinSameAs(coin);
-  const datasetIdentityUrls = datasetSameAs.length > 0 ? datasetSameAs : [detailUrl];
   const organization = buildPharosOrganizationNode();
   const contractIdentifiers = (coin.contracts ?? []).slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT).map((contract) => ({
     "@type": "PropertyValue",
@@ -161,7 +159,6 @@ export function buildStablecoinDatasetJsonLd(
     mainEntityOfPage: detailUrl,
     about: stablecoinThing,
     ...(image ? { image } : {}),
-    sameAs: datasetIdentityUrls,
     creator: organization,
     ...(coin.proofOfReserves?.url ? { citation: [coin.proofOfReserves.url] } : {}),
     publisher: organization,
@@ -184,12 +181,6 @@ export function buildStablecoinDatasetJsonLd(
     ],
     variableMeasured: statusCopy.variableMeasured,
     distribution: [
-      {
-        "@type": "DataDownload",
-        name: `${coin.name} (${coin.symbol}) API response`,
-        encodingFormat: "application/json",
-        contentUrl: `${API_ORIGIN}${API_PATHS.stablecoinDetail(coin.id)}`,
-      },
       {
         "@type": "DataDownload",
         name: `${coin.name} (${coin.symbol}) markdown profile`,
