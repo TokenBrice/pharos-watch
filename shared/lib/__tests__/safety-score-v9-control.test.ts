@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { V9DeploymentControlFactV2, V9FactStatusV2, V9FailureDomainRef } from "../../types/safety-score-v9-facts";
+import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9EconomicControl,
   evaluateV9EconomicControlAssetFacts,
@@ -14,6 +14,13 @@ import {
 } from "../safety-score-v9/control";
 import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "../safety-score-v9/score-bearing-gates-policy";
+import {
+  boundedUnknown,
+  makeDeploymentControl as control,
+  notApplicable,
+  requiredKnown,
+  stale,
+} from "./safety-score-v9-fixtures.test-support";
 
 const CONTROL_POLICY = V9_CANDIDATE_POLICY_V1.policy.semantic.control;
 const MERGED_MINT_SIGNALS = CONTROL_POLICY.mintMergedSignals;
@@ -24,103 +31,6 @@ const TIMELOCKED_TWO_OF_THREE_QUALITY =
   MERGED_MINT_SIGNALS.multisigQuorumAdjustment.twoSigner +
   MERGED_MINT_SIGNALS.multisigQuorumAdjustment.majorityThresholdCredit +
   MERGED_MINT_SIGNALS.multisigQuorumAdjustment.timelockCredit;
-
-function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState: "known",
-    evidenceRefIds: [`evidence:${rule}`],
-    gapIds: [],
-  };
-}
-
-function notApplicable(rule = "fixture.not-applicable"): V9FactStatusV2 {
-  return {
-    applicability: {
-      state: "not-applicable",
-      policyRuleId: rule,
-      rationale: "Reviewed as not applicable.",
-      gapId: null,
-    },
-    observationState: "known",
-    evidenceRefIds: [],
-    gapIds: [],
-  };
-}
-
-function stale(rule = "fixture.stale"): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState: "stale",
-    evidenceRefIds: [`evidence:${rule}`],
-    gapIds: [`gap:${rule}`],
-  };
-}
-
-function boundedUnknown(rule = "fixture.bounded-unknown"): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState: "bounded-unknown",
-    evidenceRefIds: [`evidence:${rule}`],
-    gapIds: [`gap:${rule}`],
-  };
-}
-
-function failureDomain(kind: V9FailureDomainRef["kind"], key: string): V9FailureDomainRef {
-  return { kind, key };
-}
-
-function control(
-  controlKey: string,
-  controlKind: V9DeploymentControlFactV2["controlKind"],
-  overrides: Partial<V9DeploymentControlFactV2> = {},
-): V9DeploymentControlFactV2 {
-  const domainKind = {
-    mint: "mint-control",
-    upgrade: "upgrade-control",
-    custody: "reserve-custodian",
-    oracle: "oracle-feed",
-    bridge: "bridge-route",
-    freeze: "upgrade-control",
-    governance: "upgrade-control",
-  } as const;
-  const capability = {
-    mint: "mint",
-    upgrade: "upgrade",
-    custody: "custody-transfer",
-    oracle: "oracle-update",
-    bridge: "bridge-mint",
-    freeze: "freeze",
-    governance: "parameter-change",
-  } as const;
-  return {
-    controlKey,
-    deploymentKey: `deployment:${controlKey}`,
-    sourceGenerationId: "research:fixture",
-    controlKind,
-    scope: "global",
-    status: requiredKnown(`control.${controlKey}`),
-    capabilities: [capability[controlKind]],
-    capSemantics:
-      controlKind === "freeze"
-        ? { kind: "not-applicable", bound: null }
-        : { kind: "bounded", bound: { amount: 0.1, unit: "supply-fraction" } },
-    claimImpairment: controlKind === "freeze" ? "none" : "bounded",
-    economicLossScope: controlKind === "freeze" ? "access-only" : "global-claim",
-    authority: {
-      authorityKey: `authority:${controlKey}`,
-      model: "multisig",
-      threshold: { required: 2, total: 3 },
-    },
-    delaySec: 86_400,
-    materialSupplyShare: null,
-    keyCustody: "unknown",
-    modulesOrGuards: "unknown",
-    incidentState: "none",
-    failureDomains: [failureDomain(domainKind[controlKind], controlKey)],
-    ...overrides,
-  };
-}
 
 function facts(controls: readonly V9DeploymentControlFactV2[] = []): V9EconomicControlAssetFacts {
   return {
@@ -176,6 +86,127 @@ function args(overrides: Partial<EvaluateV9EconomicControlArgs> = {}): EvaluateV
     ...overrides,
   };
 }
+
+type NullShareDeploymentScenario = {
+  controlKey: string;
+  deploymentKey: string;
+  status: V9DeploymentControlFactV2["status"];
+  gapShare: number | null;
+  includeGapRow: boolean;
+  reviewedBridge: boolean;
+};
+
+function nullShareDeploymentScenario(scenario: NullShareDeploymentScenario) {
+  const { controlKey, deploymentKey, gapShare, includeGapRow, reviewedBridge, status } = scenario;
+  const nullShareBridge = control(controlKey, "bridge", {
+    deploymentKey,
+    scope: "deployment",
+    economicLossScope: "deployment",
+    materialSupplyShare: null,
+    status,
+  });
+  const reviewedShare = gapShare === null ? null : 1 - gapShare;
+  const gapShareValue = gapShare ?? 0;
+  const selectedBridgeRoutes =
+    reviewedShare === null
+      ? []
+      : [
+          {
+            deploymentRouteKey: "ethereum:0xcanonical",
+            supplyUsd: reviewedShare * 100,
+            supplyShare: reviewedShare,
+            reviewState: "selected-reviewed" as const,
+            reviewedRouteKind: "native" as const,
+          },
+          ...(includeGapRow
+            ? [
+                {
+                  deploymentRouteKey: deploymentKey,
+                  supplyUsd: gapShareValue * 100,
+                  supplyShare: gapShareValue,
+                  reviewState: "unmatched" as const,
+                },
+              ]
+            : []),
+        ];
+  return {
+    nullShareBridge,
+    result: evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([nullShareBridge]),
+          controlStatus: requiredKnown("controls"),
+          supply: {
+            status: requiredKnown("supply"),
+            selectedBridgeRoutes,
+            selectedRouteSupplyShare: reviewedShare,
+            unknownRouteSupplyShare: gapShare,
+            unreviewedRouteSupplyShare: gapShare === null ? null : 0,
+          },
+        },
+        ...(reviewedBridge
+          ? {
+              bridge: {
+                status: requiredKnown("bridge"),
+                routes: [{ controlKey: nullShareBridge.controlKey, tier: "issuer-native-burn-mint" as const }],
+              },
+            }
+          : {}),
+      }),
+    ),
+  };
+}
+
+const NULL_SHARE_DEPLOYMENT_SCENARIOS = {
+  subthreshold: {
+    controlKey: "bridge:null-share-subthreshold",
+    deploymentKey: "solana:gapdeployment",
+    status: boundedUnknown("control.null-share-subthreshold"),
+    gapShare: V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100 - 0.001,
+    includeGapRow: true,
+    reviewedBridge: false,
+  },
+  absent: {
+    controlKey: "bridge:null-share-absent-row",
+    deploymentKey: "solana:absentdeployment",
+    status: boundedUnknown("control.null-share-absent-row"),
+    gapShare: 0,
+    includeGapRow: false,
+    reviewedBridge: false,
+  },
+  material: {
+    controlKey: "bridge:null-share-material",
+    deploymentKey: "solana:materialdeployment",
+    status: boundedUnknown("control.null-share-material"),
+    gapShare: V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100 + 0.05,
+    includeGapRow: true,
+    reviewedBridge: false,
+  },
+  noPartition: {
+    controlKey: "bridge:null-share-no-partition",
+    deploymentKey: "solana:unpartitioned",
+    status: boundedUnknown("control.null-share-no-partition"),
+    gapShare: null,
+    includeGapRow: false,
+    reviewedBridge: false,
+  },
+  inventorySubthreshold: {
+    controlKey: "bridge:inventory-null-share",
+    deploymentKey: "solana:inventorygap",
+    status: boundedUnknown("control.inventory-null-share"),
+    gapShare: V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100 - 0.001,
+    includeGapRow: true,
+    reviewedBridge: true,
+  },
+  inventoryKnownSubthreshold: {
+    controlKey: "bridge:inventory-known-null-share",
+    deploymentKey: "solana:knowninventorygap",
+    status: requiredKnown("control.inventory-known-null-share"),
+    gapShare: V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100 - 0.001,
+    includeGapRow: true,
+    reviewedBridge: true,
+  },
+} satisfies Record<string, NullShareDeploymentScenario>;
 
 type ChainLabelPoolOptions = {
   withPoolControl?: boolean;
@@ -1189,124 +1220,21 @@ describe("Safety Score v9 economic control", () => {
   });
 
   it("releases a null-share deployment control whose complete partition proves its deployment subthreshold", () => {
-    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
-    const gapShare = threshold - 0.001;
-    const nullShareBridge = control("bridge:null-share-subthreshold", "bridge", {
-      deploymentKey: "solana:gapdeployment",
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: null,
-      status: boundedUnknown("control.null-share-subthreshold"),
-    });
-    const result = evaluateV9EconomicControl(
-      args({
-        facts: {
-          ...facts([nullShareBridge]),
-          controlStatus: requiredKnown("controls"),
-          supply: {
-            status: requiredKnown("supply"),
-            selectedBridgeRoutes: [
-              {
-                deploymentRouteKey: "ethereum:0xcanonical",
-                supplyUsd: (1 - gapShare) * 100,
-                supplyShare: 1 - gapShare,
-                reviewState: "selected-reviewed",
-                reviewedRouteKind: "native",
-              },
-              {
-                deploymentRouteKey: "solana:gapdeployment",
-                supplyUsd: gapShare * 100,
-                supplyShare: gapShare,
-                reviewState: "unmatched",
-              },
-            ],
-            selectedRouteSupplyShare: 1 - gapShare,
-            unknownRouteSupplyShare: gapShare,
-            unreviewedRouteSupplyShare: 0,
-          },
-        },
-      }),
-    );
+    const { result } = nullShareDeploymentScenario(NULL_SHARE_DEPLOYMENT_SCENARIOS.subthreshold);
 
     expect(result.reasons).toEqual([]);
     expect(result).toMatchObject({ score: 95, state: "rated" });
   });
 
   it("treats a deployment absent from a complete partition as zero share for a null-share control", () => {
-    const nullShareBridge = control("bridge:null-share-absent-row", "bridge", {
-      deploymentKey: "solana:absentdeployment",
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: null,
-      status: boundedUnknown("control.null-share-absent-row"),
-    });
-    const result = evaluateV9EconomicControl(
-      args({
-        facts: {
-          ...facts([nullShareBridge]),
-          controlStatus: requiredKnown("controls"),
-          supply: {
-            status: requiredKnown("supply"),
-            selectedBridgeRoutes: [
-              {
-                deploymentRouteKey: "ethereum:0xcanonical",
-                supplyUsd: 100,
-                supplyShare: 1,
-                reviewState: "selected-reviewed",
-                reviewedRouteKind: "native",
-              },
-            ],
-            selectedRouteSupplyShare: 1,
-            unknownRouteSupplyShare: 0,
-            unreviewedRouteSupplyShare: 0,
-          },
-        },
-      }),
-    );
+    const { result } = nullShareDeploymentScenario(NULL_SHARE_DEPLOYMENT_SCENARIOS.absent);
 
     expect(result.reasons).toEqual([]);
     expect(result).toMatchObject({ score: 95, state: "rated" });
   });
 
   it("keeps a null-share deployment control binding when its partition row is material", () => {
-    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
-    const gapShare = threshold + 0.05;
-    const nullShareBridge = control("bridge:null-share-material", "bridge", {
-      deploymentKey: "solana:materialdeployment",
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: null,
-      status: boundedUnknown("control.null-share-material"),
-    });
-    const result = evaluateV9EconomicControl(
-      args({
-        facts: {
-          ...facts([nullShareBridge]),
-          controlStatus: requiredKnown("controls"),
-          supply: {
-            status: requiredKnown("supply"),
-            selectedBridgeRoutes: [
-              {
-                deploymentRouteKey: "ethereum:0xcanonical",
-                supplyUsd: (1 - gapShare) * 100,
-                supplyShare: 1 - gapShare,
-                reviewState: "selected-reviewed",
-                reviewedRouteKind: "native",
-              },
-              {
-                deploymentRouteKey: "solana:materialdeployment",
-                supplyUsd: gapShare * 100,
-                supplyShare: gapShare,
-                reviewState: "unmatched",
-              },
-            ],
-            selectedRouteSupplyShare: 1 - gapShare,
-            unknownRouteSupplyShare: gapShare,
-            unreviewedRouteSupplyShare: 0,
-          },
-        },
-      }),
-    );
+    const { result, nullShareBridge } = nullShareDeploymentScenario(NULL_SHARE_DEPLOYMENT_SCENARIOS.material);
 
     expect(result.reasons).toEqual([
       expect.objectContaining({ code: "selected-bridge-route-unresolved", controlKey: nullShareBridge.controlKey }),
@@ -1314,28 +1242,7 @@ describe("Safety Score v9 economic control", () => {
   });
 
   it("keeps a null-share deployment control binding when no supply partition exists", () => {
-    const nullShareBridge = control("bridge:null-share-no-partition", "bridge", {
-      deploymentKey: "solana:unpartitioned",
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: null,
-      status: boundedUnknown("control.null-share-no-partition"),
-    });
-    const result = evaluateV9EconomicControl(
-      args({
-        facts: {
-          ...facts([nullShareBridge]),
-          controlStatus: requiredKnown("controls"),
-          supply: {
-            status: requiredKnown("supply"),
-            selectedBridgeRoutes: [],
-            selectedRouteSupplyShare: null,
-            unknownRouteSupplyShare: null,
-            unreviewedRouteSupplyShare: null,
-          },
-        },
-      }),
-    );
+    const { result, nullShareBridge } = nullShareDeploymentScenario(NULL_SHARE_DEPLOYMENT_SCENARIOS.noPartition);
 
     expect(result.reasons).toEqual([
       expect.objectContaining({ code: "selected-bridge-route-unresolved", controlKey: nullShareBridge.controlKey }),
@@ -1343,47 +1250,8 @@ describe("Safety Score v9 economic control", () => {
   });
 
   it("releases an unresolved reviewed bridge route whose null-share deployment is proven subthreshold", () => {
-    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
-    const gapShare = threshold - 0.001;
-    const routeControl = control("bridge:inventory-null-share", "bridge", {
-      deploymentKey: "solana:inventorygap",
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: null,
-      status: boundedUnknown("control.inventory-null-share"),
-    });
-    const result = evaluateV9EconomicControl(
-      args({
-        facts: {
-          ...facts([routeControl]),
-          controlStatus: requiredKnown("controls"),
-          supply: {
-            status: requiredKnown("supply"),
-            selectedBridgeRoutes: [
-              {
-                deploymentRouteKey: "ethereum:0xcanonical",
-                supplyUsd: (1 - gapShare) * 100,
-                supplyShare: 1 - gapShare,
-                reviewState: "selected-reviewed",
-                reviewedRouteKind: "native",
-              },
-              {
-                deploymentRouteKey: "solana:inventorygap",
-                supplyUsd: gapShare * 100,
-                supplyShare: gapShare,
-                reviewState: "unmatched",
-              },
-            ],
-            selectedRouteSupplyShare: 1 - gapShare,
-            unknownRouteSupplyShare: gapShare,
-            unreviewedRouteSupplyShare: 0,
-          },
-        },
-        bridge: {
-          status: requiredKnown("bridge"),
-          routes: [{ controlKey: routeControl.controlKey, tier: "issuer-native-burn-mint" }],
-        },
-      }),
+    const { result } = nullShareDeploymentScenario(
+      NULL_SHARE_DEPLOYMENT_SCENARIOS.inventorySubthreshold,
     );
 
     expect(result.reasons).toEqual([]);
@@ -1391,48 +1259,7 @@ describe("Safety Score v9 economic control", () => {
   });
 
   it("releases the known null-share bridge route materiality reason when the partition proves it subthreshold", () => {
-    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
-    const gapShare = threshold - 0.001;
-    const routeControl = control("bridge:inventory-known-null-share", "bridge", {
-      deploymentKey: "solana:knowninventorygap",
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: null,
-      status: requiredKnown("control.inventory-known-null-share"),
-    });
-    const result = evaluateV9EconomicControl(
-      args({
-        facts: {
-          ...facts([routeControl]),
-          controlStatus: requiredKnown("controls"),
-          supply: {
-            status: requiredKnown("supply"),
-            selectedBridgeRoutes: [
-              {
-                deploymentRouteKey: "ethereum:0xcanonical",
-                supplyUsd: (1 - gapShare) * 100,
-                supplyShare: 1 - gapShare,
-                reviewState: "selected-reviewed",
-                reviewedRouteKind: "native",
-              },
-              {
-                deploymentRouteKey: "solana:knowninventorygap",
-                supplyUsd: gapShare * 100,
-                supplyShare: gapShare,
-                reviewState: "unmatched",
-              },
-            ],
-            selectedRouteSupplyShare: 1 - gapShare,
-            unknownRouteSupplyShare: gapShare,
-            unreviewedRouteSupplyShare: 0,
-          },
-        },
-        bridge: {
-          status: requiredKnown("bridge"),
-          routes: [{ controlKey: routeControl.controlKey, tier: "issuer-native-burn-mint" }],
-        },
-      }),
-    );
+    const { result } = nullShareDeploymentScenario(NULL_SHARE_DEPLOYMENT_SCENARIOS.inventoryKnownSubthreshold);
 
     expect(
       result.reasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable"),

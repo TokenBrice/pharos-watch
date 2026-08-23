@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import * as controlModule from "../safety-score-v9/control";
 import {
   evaluateV9EconomicControl,
@@ -13,6 +13,7 @@ import {
   type V9OracleControlReview,
 } from "../safety-score-v9/control";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { makeDeploymentControl, notApplicable, requiredKnown } from "./safety-score-v9-fixtures.test-support";
 
 const UNATTESTED_EOA_PENALTY =
   V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintMergedSignals.unattestedEoaPenalty;
@@ -63,50 +64,15 @@ interface MintControlPostureFacts {
 const gradeV9MintControlPosture = (controlModule as unknown as Record<string, unknown>).gradeV9MintControlPosture as
   ((posture: V9MintPosture, facts: MintControlPostureFacts) => number) | undefined;
 
-function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState: "known",
-    evidenceRefIds: [`evidence:${rule}`],
-    gapIds: [],
-  };
-}
-
-function notApplicable(rule = "fixture.not-applicable"): V9FactStatusV2 {
-  return {
-    applicability: {
-      state: "not-applicable",
-      policyRuleId: rule,
-      rationale: "Reviewed as not applicable.",
-      gapId: null,
-    },
-    observationState: "known",
-    evidenceRefIds: [],
-    gapIds: [],
-  };
-}
-
 function mintControl(overrides: Partial<V9DeploymentControlFactV2> = {}): V9DeploymentControlFactV2 {
-  return {
-    controlKey: "mint:issuer-eoa",
-    deploymentKey: "deployment:mint:issuer-eoa",
-    sourceGenerationId: "research:fixture",
-    controlKind: "mint",
-    scope: "global",
-    status: requiredKnown("control.mint:issuer-eoa"),
-    capabilities: ["mint"],
+  return makeDeploymentControl("mint:issuer-eoa", "mint", {
     capSemantics: { kind: "unbounded", bound: null },
     claimImpairment: "unbounded",
     economicLossScope: "global-claim",
     authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
-    delaySec: 86_400,
-    materialSupplyShare: null,
-    keyCustody: "unknown",
-    modulesOrGuards: "unknown",
-    incidentState: "none",
     failureDomains: [{ kind: "mint-control", key: "mint:issuer-eoa" }],
     ...overrides,
-  };
+  });
 }
 
 function facts(controls: readonly V9DeploymentControlFactV2[]): V9EconomicControlAssetFacts {

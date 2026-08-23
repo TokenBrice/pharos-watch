@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9Severity } from "../../types/safety-score-v9";
 import {
   evaluateV9EconomicControl,
@@ -12,6 +12,7 @@ import {
 } from "../safety-score-v9/control";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { makeDeploymentControl, notApplicable, requiredKnown } from "./safety-score-v9-fixtures.test-support";
 
 /**
  * STAGE A pin for owner ruling R3 (2026-07-17, provisional pending the V8
@@ -37,50 +38,13 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
  * high and prudential => moderate).
  */
 
-function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState: "known",
-    evidenceRefIds: [`evidence:${rule}`],
-    gapIds: [],
-  };
-}
-
-function notApplicable(rule = "fixture.not-applicable"): V9FactStatusV2 {
-  return {
-    applicability: {
-      state: "not-applicable",
-      policyRuleId: rule,
-      rationale: "Reviewed as not applicable.",
-      gapId: null,
-    },
-    observationState: "known",
-    evidenceRefIds: [],
-    gapIds: [],
-  };
-}
-
 /** An economically unbounded issuer mint path (hot-wallet class). */
 function unboundedMintControl(controlKey = "mint:issuer-eoa"): V9DeploymentControlFactV2 {
-  return {
-    controlKey,
-    deploymentKey: `deployment:${controlKey}`,
-    sourceGenerationId: "research:fixture",
-    controlKind: "mint",
-    scope: "global",
-    status: requiredKnown(`control.${controlKey}`),
-    capabilities: ["mint"],
+  return makeDeploymentControl(controlKey, "mint", {
     capSemantics: { kind: "unbounded", bound: null },
     claimImpairment: "unbounded",
-    economicLossScope: "global-claim",
     authority: { authorityKey: `authority:${controlKey}`, model: "eoa", threshold: null },
-    delaySec: 86_400,
-    materialSupplyShare: null,
-    keyCustody: "unknown",
-    modulesOrGuards: "unknown",
-    incidentState: "none",
-    failureDomains: [{ kind: "mint-control", key: controlKey }],
-  };
+  });
 }
 
 function facts(controls: readonly V9DeploymentControlFactV2[]): V9EconomicControlAssetFacts {
