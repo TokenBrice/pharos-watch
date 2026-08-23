@@ -9,6 +9,9 @@
     "yieldBearing": true,
     "rwa": true
   },
+  "variantOf": "m-m0",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "m-m0",
   "infrastructures": [
     "m0"
   ],
