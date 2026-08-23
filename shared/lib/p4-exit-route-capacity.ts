@@ -31,12 +31,7 @@ import {
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
 
-// The stress-request shape is owned by the one exit scoring engine
-// (`exit-route-scoring.ts`); these are named views of it, not a second copy.
-export const DEFAULT_NOTIONALS_USD: readonly number[] = EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd;
 const REFERENCE_NOTIONAL_USD = EXIT_ROUTE_SCORING_TABLES.request.referenceNotionalUsd;
-export const REFERENCE_COST_BPS = EXIT_ROUTE_SCORING_TABLES.request.maxCostBps;
-export const IMMEDIATE_SETTLEMENT_HORIZON_SEC = EXIT_ROUTE_SCORING_TABLES.request.settlementHorizonSec;
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
 const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
 const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v2";
@@ -667,16 +662,24 @@ function observationHistoryForProfile(
   return "observationHistory" in profile ? profile.observationHistory : undefined;
 }
 
+const MEASURED_EXECUTION_CAPABILITY_BY_PROFILE_ID: Readonly<Record<string, string>> = {
+  "uniswap-v3-quoter-v2": "quoter-v2-measured-exact",
+  "pancakeswap-v3-quoter-v2": "quoter-v2-measured-exact",
+  "aerodrome-slipstream-quoter-v2": "quoter-v2-measured-exact",
+  [UNISWAP_V4_ADAPTER_PROFILE_ID]: "uniswap-v4-hook-free-measured-exact",
+  "curve-cryptoswap-get-dy-v1": "curve-cryptoswap-measured-exact",
+  [CURVE_STABLESWAP_ADAPTER_PROFILE_ID]: "curve-stableswap-main-registry-measured-exact",
+  [CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID]: "curve-stableswap-ng-factory-measured-exact",
+};
+
 function isQuoterV2MeasuredExecutionAdapter(adapterProfileId: string): boolean {
-  return (
-    adapterProfileId === "uniswap-v3-quoter-v2" ||
-    adapterProfileId === "pancakeswap-v3-quoter-v2" ||
-    adapterProfileId === "aerodrome-slipstream-quoter-v2"
-  );
+  return MEASURED_EXECUTION_CAPABILITY_BY_PROFILE_ID[adapterProfileId] ===
+    "quoter-v2-measured-exact";
 }
 
 function isUniswapV4MeasuredExecutionAdapter(adapterProfileId: string): boolean {
-  return adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID;
+  return MEASURED_EXECUTION_CAPABILITY_BY_PROFILE_ID[adapterProfileId] ===
+    "uniswap-v4-hook-free-measured-exact";
 }
 
 function capabilityForPool(
@@ -688,17 +691,8 @@ function capabilityForPool(
     : measuredExecutionProfilesForPool(pool)[0];
   if (measuredProfile) {
     return capabilityById(
-      isQuoterV2MeasuredExecutionAdapter(measuredProfile.adapterProfileId)
-        ? "quoter-v2-measured-exact"
-        : isUniswapV4MeasuredExecutionAdapter(measuredProfile.adapterProfileId)
-          ? "uniswap-v4-hook-free-measured-exact"
-        : measuredProfile.adapterProfileId === "curve-cryptoswap-get-dy-v1"
-          ? "curve-cryptoswap-measured-exact"
-        : measuredProfile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
-          ? "curve-stableswap-main-registry-measured-exact"
-        : measuredProfile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
-          ? "curve-stableswap-ng-factory-measured-exact"
-        : "measured-adapter-shadow",
+      MEASURED_EXECUTION_CAPABILITY_BY_PROFILE_ID[measuredProfile.adapterProfileId] ??
+        "measured-adapter-shadow",
     );
   }
   if (
@@ -767,7 +761,9 @@ function buildCapacityCurve(
 ): ExitRouteCapacityPoint[] | null {
   if (capability.model === "direct-orderbook") {
     const capacityUsd = pool.extra?.orderbookDepthUsd ?? 0;
-    return DEFAULT_NOTIONALS_USD.map((notional) => buildCapacityPoint(notional, REFERENCE_COST_BPS, capacityUsd));
+    return EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd.map((notional) =>
+      buildCapacityPoint(notional, EXIT_ROUTE_SCORING_TABLES.request.maxCostBps, capacityUsd),
+    );
   }
   return null;
 }
@@ -1163,11 +1159,11 @@ function realizedAmmExecutionCostBps(
 }
 
 function buildAmmCapacityCurve(model: DexAmmExecutionModel, outputTokenIndex: number): ExitRouteCapacityPoint[] {
-  return DEFAULT_NOTIONALS_USD.map((notional) => {
+  return EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd.map((notional) => {
     const point = buildCapacityPoint(
       notional,
-      REFERENCE_COST_BPS,
-      executableAmmInputUsd(model, outputTokenIndex, notional, REFERENCE_COST_BPS),
+      EXIT_ROUTE_SCORING_TABLES.request.maxCostBps,
+      executableAmmInputUsd(model, outputTokenIndex, notional, EXIT_ROUTE_SCORING_TABLES.request.maxCostBps),
     );
     const executionCostBps = realizedAmmExecutionCostBps(
       model,
@@ -1380,7 +1376,7 @@ export function buildP4DexExitRouteObservations(params: {
         const referencePoint = capacityCurve.find(
           (point) =>
             point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD &&
-            point.maxCostBps === REFERENCE_COST_BPS,
+            point.maxCostBps === EXIT_ROUTE_SCORING_TABLES.request.maxCostBps,
         );
         return { profile, capacityCurve, referencePoint };
       });
@@ -1464,7 +1460,7 @@ export function buildP4DexExitRouteObservations(params: {
               protocol: pool.project,
             },
             requestedNotionalUsd: referencePoint!.requestedNotionalUsd,
-            settlementHorizonSec: IMMEDIATE_SETTLEMENT_HORIZON_SEC,
+            settlementHorizonSec: EXIT_ROUTE_SCORING_TABLES.request.settlementHorizonSec,
             maxCostBps: referencePoint!.maxCostBps,
             executableUsd: referencePoint!.executableUsd,
             completionRatio: referencePoint!.completionRatio,
@@ -1508,7 +1504,8 @@ export function buildP4DexExitRouteObservations(params: {
         const curve = buildAmmCapacityCurve(ammModel, outputTokenIndex);
         if (validateExitRouteCapacityCurve(curve).length > 0) continue;
         const referencePoint = curve.find(
-          (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD && point.maxCostBps === REFERENCE_COST_BPS,
+          (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD &&
+            point.maxCostBps === EXIT_ROUTE_SCORING_TABLES.request.maxCostBps,
         );
         if (!referencePoint) continue;
 
@@ -1529,7 +1526,7 @@ export function buildP4DexExitRouteObservations(params: {
             protocol: pool.project,
           },
           requestedNotionalUsd: referencePoint.requestedNotionalUsd,
-          settlementHorizonSec: IMMEDIATE_SETTLEMENT_HORIZON_SEC,
+            settlementHorizonSec: EXIT_ROUTE_SCORING_TABLES.request.settlementHorizonSec,
           maxCostBps: referencePoint.maxCostBps,
           executableUsd: referencePoint.executableUsd,
           completionRatio: referencePoint.completionRatio,
@@ -1568,7 +1565,8 @@ export function buildP4DexExitRouteObservations(params: {
       continue;
     }
     const referencePoint = curve.find(
-      (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD && point.maxCostBps === REFERENCE_COST_BPS,
+          (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD &&
+            point.maxCostBps === EXIT_ROUTE_SCORING_TABLES.request.maxCostBps,
     );
     if (!referencePoint) {
       unsupportedPoolCount++;
@@ -1593,7 +1591,7 @@ export function buildP4DexExitRouteObservations(params: {
             protocol: pool.project,
           },
       requestedNotionalUsd: referencePoint.requestedNotionalUsd,
-      settlementHorizonSec: IMMEDIATE_SETTLEMENT_HORIZON_SEC,
+            settlementHorizonSec: EXIT_ROUTE_SCORING_TABLES.request.settlementHorizonSec,
       maxCostBps: referencePoint.maxCostBps,
       executableUsd: referencePoint.executableUsd,
       completionRatio: referencePoint.completionRatio,

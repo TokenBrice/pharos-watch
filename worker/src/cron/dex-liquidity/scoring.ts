@@ -160,10 +160,6 @@ function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): s
   return observation.scoreEligible ? routeObservationPhysicalPoolKey(observation) : null;
 }
 
-// Named views of the one exit scoring engine's stress request, not a
-// third copy of the same numbers.
-export const V9_DEX_STRESS_NOTIONAL_USD = EXIT_ROUTE_SCORING_TABLES.request.capUsd;
-export const V9_DEX_STRESS_MAX_COST_BPS = EXIT_ROUTE_SCORING_TABLES.request.maxCostBps;
 // Concentration bounds on the published payload, scaled with
 // MAX_DEX_EXIT_ROUTE_OBSERVATIONS so widening the payload actually widens the
 // evidence basis. Measured on the live surface at the previous 10/6/3/3 setting,
@@ -184,8 +180,8 @@ const MAX_ROUTES_PER_ADAPTER = 7;
 function executableCapacityAtV9Stress(observation: ExitRouteObservation): number {
   const point = observation.capacityCurve?.find(
     (candidate) =>
-      candidate.requestedNotionalUsd === V9_DEX_STRESS_NOTIONAL_USD &&
-      candidate.maxCostBps === V9_DEX_STRESS_MAX_COST_BPS,
+      candidate.requestedNotionalUsd === EXIT_ROUTE_SCORING_TABLES.request.capUsd &&
+      candidate.maxCostBps === EXIT_ROUTE_SCORING_TABLES.request.maxCostBps,
   );
   return point?.executableUsd ?? 0;
 }

@@ -53,6 +53,7 @@ import {
   createDexMeasuredExecutionRpcBudget,
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
   type DexMeasuredRawQuotePoint,
+  type DexMeasuredExecutionRpcBudget,
 } from "./profiles";
 import { quoteQuoterV2Requests, resolveQuoterV2PoolBindings, validateQuoterV2ProfileProof } from "./quoter-v2";
 import {
@@ -893,6 +894,162 @@ function applyQuoteOutcome(
   }
 }
 
+interface MeasuredQuoteAdapterRequest {
+  state: TargetQuoteState;
+  inputUsd: number;
+}
+
+interface MeasuredQuoteAdapterContext {
+  requests: readonly MeasuredQuoteAdapterRequest[];
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget: DexMeasuredExecutionRpcBudget;
+}
+
+type MeasuredQuoteAdapterRunner = (input: MeasuredQuoteAdapterContext) => Promise<void>;
+
+function applyQuoteOutcomes(
+  requests: readonly MeasuredQuoteAdapterRequest[],
+  outcomes: readonly { point?: DexMeasuredRawQuotePoint; failureReason?: string }[],
+): void {
+  outcomes.forEach((outcome, index) => applyQuoteOutcome(requests[index]!.state, outcome));
+}
+
+/**
+ * The closed measured-execution adapter set. Each entry owns only its
+ * request/proof shape; the stage keeps chain lanes and adapter groups
+ * serialized exactly as before.
+ */
+const MEASURED_QUOTE_ADAPTER_REGISTRY: Readonly<
+  Record<
+    TargetDeployment["kind"],
+    {
+      profileIds: readonly string[];
+      quote: MeasuredQuoteAdapterRunner;
+      validate: (profile: Parameters<typeof validateQuoterV2ProfileProof>[0]) => string[];
+    }
+  >
+> = {
+  "quoter-v2": {
+    profileIds: ["uniswap-v3-quoter-v2", "pancakeswap-v3-quoter-v2", "aerodrome-slipstream-quoter-v2"],
+    validate: validateQuoterV2ProfileProof,
+    quote: async (input) => {
+      const outcomes = await quoteQuoterV2Requests({
+        requests: input.requests.map(({ state, inputUsd }) => ({
+          target: state.target,
+          inputUsd,
+          endpointAddress: state.deployment!.config.endpointAddress,
+        })),
+        blockNumber: input.requests[0]!.state.blockNumber!,
+        chainRpcs: input.chainRpcs,
+        signal: input.signal,
+        rpcBudget: input.rpcBudget,
+      });
+      applyQuoteOutcomes(input.requests, outcomes);
+    },
+  },
+  "uniswap-v4": {
+    profileIds: [UNISWAP_V4_ADAPTER_PROFILE_ID],
+    validate: validateUniswapV4ProfileProof,
+    quote: async (input) => {
+      const outcomes = await quoteUniswapV4Requests({
+        requests: input.requests.map(({ state, inputUsd }) => ({
+          target: state.target,
+          inputUsd,
+          endpointAddress: state.deployment!.config.endpointAddress,
+        })),
+        blockNumber: input.requests[0]!.state.blockNumber!,
+        chainRpcs: input.chainRpcs,
+        signal: input.signal,
+        rpcBudget: input.rpcBudget,
+      });
+      applyQuoteOutcomes(input.requests, outcomes);
+    },
+  },
+  "curve-cryptoswap": {
+    profileIds: [CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID],
+    validate: validateCurveCryptoSwapProfileProof,
+    quote: async (input) => {
+      const outcomes = await quoteCurveCryptoSwapRequests({
+        requests: input.requests.map(({ state, inputUsd }) => ({
+          target: state.target,
+          inputUsd,
+          blockNumber: state.blockNumber!,
+          endpointAddress: state.deployment!.config.endpointAddress,
+          runtimeEvidence: state.curveRuntimeEvidence ?? undefined,
+        })),
+        chainRpcs: input.chainRpcs,
+        signal: input.signal,
+        rpcBudget: input.rpcBudget,
+      });
+      applyQuoteOutcomes(input.requests, outcomes);
+    },
+  },
+  "curve-stableswap": {
+    profileIds: [CURVE_STABLESWAP_ADAPTER_PROFILE_ID],
+    validate: validateCurveStableSwapProfileProof,
+    quote: async (input) => {
+      const outcomes = await quoteCurveStableSwapRequests({
+        requests: input.requests.map(({ state, inputUsd }) => ({
+          target: state.target,
+          inputUsd,
+          blockNumber: state.blockNumber!,
+          blockObservedAt: state.blockObservedAt!,
+          endpointAddress: state.deployment!.config.endpointAddress,
+          runtimeEvidence: state.curveStableSwapRuntimeEvidence ?? undefined,
+        })),
+        chainRpcs: input.chainRpcs,
+        signal: input.signal,
+        rpcBudget: input.rpcBudget,
+      });
+      applyQuoteOutcomes(input.requests, outcomes);
+    },
+  },
+  "curve-stableswap-ng": {
+    profileIds: [CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID],
+    validate: validateCurveStableSwapNgProfileProof,
+    quote: async (input) => {
+      const outcomes = await quoteCurveStableSwapNgRequests({
+        requests: input.requests.map(({ state, inputUsd }) => ({
+          target: state.target,
+          inputUsd,
+          blockNumber: state.blockNumber!,
+          blockObservedAt: state.blockObservedAt!,
+          endpointAddress: state.deployment!.config.endpointAddress,
+          runtimeEvidence: state.curveStableSwapNgRuntimeEvidence ?? undefined,
+        })),
+        chainRpcs: input.chainRpcs,
+        signal: input.signal,
+        rpcBudget: input.rpcBudget,
+      });
+      applyQuoteOutcomes(input.requests, outcomes);
+    },
+  },
+  "curve-composite": {
+    profileIds: [
+      "curve-stableswap-ng-rate-bearing-get-dy-v1",
+      "curve-stableswap-ng-metapool-underlying-v1",
+    ],
+    validate: validateCurveCompositeProfileProof,
+    quote: async (input) => {
+      const outcomes = await quoteCurveCompositeRequests({
+        requests: input.requests.map(({ state, inputUsd }) => ({
+          target: state.target,
+          inputUsd,
+          blockNumber: state.blockNumber!,
+          blockObservedAt: state.blockObservedAt!,
+          endpointAddress: state.deployment!.config.endpointAddress,
+          runtimeEvidence: state.curveCompositeRuntimeEvidence ?? undefined,
+        })),
+        chainRpcs: input.chainRpcs,
+        signal: input.signal,
+        rpcBudget: input.rpcBudget,
+      });
+      applyQuoteOutcomes(input.requests, outcomes);
+    },
+  },
+};
+
 async function syncDexMeasuredExecutionLane(
   db: D1Database,
   chainRpcs: Map<string, ChainRpcConfig>,
@@ -1304,104 +1461,12 @@ async function syncDexMeasuredExecutionLane(
       }
       for (const [kind, adapterRequests] of byAdapter) {
         throwIfAborted(signal);
-        if (kind === "quoter-v2") {
-          const outcomes = await quoteQuoterV2Requests({
-            requests: adapterRequests.map(({ state, inputUsd }) => ({
-              target: state.target,
-              inputUsd,
-              endpointAddress: state.deployment!.config.endpointAddress,
-            })),
-            blockNumber: adapterRequests[0]!.state.blockNumber!,
-            chainRpcs,
-            signal,
-            rpcBudget,
-          });
-          outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
-          );
-        } else if (kind === "uniswap-v4") {
-          const outcomes = await quoteUniswapV4Requests({
-            requests: adapterRequests.map(({ state, inputUsd }) => ({
-              target: state.target,
-              inputUsd,
-              endpointAddress: state.deployment!.config.endpointAddress,
-            })),
-            blockNumber: adapterRequests[0]!.state.blockNumber!,
-            chainRpcs,
-            signal,
-            rpcBudget,
-          });
-          outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
-          );
-        } else if (kind === "curve-cryptoswap") {
-          const outcomes = await quoteCurveCryptoSwapRequests({
-            requests: adapterRequests.map(({ state, inputUsd }) => ({
-              target: state.target,
-              inputUsd,
-              blockNumber: state.blockNumber!,
-              endpointAddress: state.deployment!.config.endpointAddress,
-              runtimeEvidence: state.curveRuntimeEvidence ?? undefined,
-            })),
-            chainRpcs,
-            signal,
-            rpcBudget,
-          });
-          outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
-          );
-        } else if (kind === "curve-stableswap") {
-          const outcomes = await quoteCurveStableSwapRequests({
-            requests: adapterRequests.map(({ state, inputUsd }) => ({
-              target: state.target,
-              inputUsd,
-              blockNumber: state.blockNumber!,
-              blockObservedAt: state.blockObservedAt!,
-              endpointAddress: state.deployment!.config.endpointAddress,
-              runtimeEvidence: state.curveStableSwapRuntimeEvidence ?? undefined,
-            })),
-            chainRpcs,
-            signal,
-            rpcBudget,
-          });
-          outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
-          );
-        } else if (kind === "curve-stableswap-ng") {
-          const outcomes = await quoteCurveStableSwapNgRequests({
-            requests: adapterRequests.map(({ state, inputUsd }) => ({
-              target: state.target,
-              inputUsd,
-              blockNumber: state.blockNumber!,
-              blockObservedAt: state.blockObservedAt!,
-              endpointAddress: state.deployment!.config.endpointAddress,
-              runtimeEvidence: state.curveStableSwapNgRuntimeEvidence ?? undefined,
-            })),
-            chainRpcs,
-            signal,
-            rpcBudget,
-          });
-          outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
-          );
-        } else {
-          const outcomes = await quoteCurveCompositeRequests({
-            requests: adapterRequests.map(({ state, inputUsd }) => ({
-              target: state.target,
-              inputUsd,
-              blockNumber: state.blockNumber!,
-              blockObservedAt: state.blockObservedAt!,
-              endpointAddress: state.deployment!.config.endpointAddress,
-              runtimeEvidence: state.curveCompositeRuntimeEvidence ?? undefined,
-            })),
-            chainRpcs,
-            signal,
-            rpcBudget,
-          });
-          outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
-          );
-        }
+        await MEASURED_QUOTE_ADAPTER_REGISTRY[kind].quote({
+          requests: adapterRequests,
+          chainRpcs,
+          signal,
+          rpcBudget,
+        });
         if (rpcBudget.isChainCircuitOpen(adapterRequests[0]!.state.target.chain)) {
           for (const { state } of adapterRequests) state.failedReason = "chain-circuit-open";
         }
@@ -1494,18 +1559,7 @@ async function syncDexMeasuredExecutionLane(
         expectedQuoteGenerationId: quoteGenerationId,
         nowSec: publishedAt,
       });
-      const adapterIssues =
-        state.deployment.kind === "quoter-v2"
-          ? validateQuoterV2ProfileProof(profile)
-          : state.deployment.kind === "uniswap-v4"
-            ? validateUniswapV4ProfileProof(profile)
-            : state.deployment.kind === "curve-cryptoswap"
-              ? validateCurveCryptoSwapProfileProof(profile)
-              : state.deployment.kind === "curve-stableswap"
-                ? validateCurveStableSwapProfileProof(profile)
-                : state.deployment.kind === "curve-stableswap-ng"
-                  ? validateCurveStableSwapNgProfileProof(profile)
-                  : validateCurveCompositeProfileProof(profile);
+      const adapterIssues = MEASURED_QUOTE_ADAPTER_REGISTRY[state.deployment.kind].validate(profile);
       if (genericIssues.length > 0 || adapterIssues.length > 0) {
         throw new Error([...genericIssues, ...adapterIssues].join(","));
       }

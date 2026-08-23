@@ -21,7 +21,12 @@ import {
 } from "./profiles";
 import { usdToRawAmount } from "./fixed-point";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
-import { executeEvmQuotePlan } from "./evm-quote-plan";
+import { canonicalEvmAddress, canonicalEvmHash } from "./evm-codecs";
+import {
+  createCurveGetDyQuoteAdapter,
+  makeCurveGetDyPlan,
+  type CurveGetDyPlan,
+} from "./curve-get-dy-quote-engine";
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
 const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
@@ -33,8 +38,6 @@ const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
 ]);
 const CURVE_MULTICALL_BATCH_SIZE = 8;
 const CURVE_MULTICALL_GAS = "0x1c9c380";
-const EVM_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/;
-const CODE_HASH_PATTERN = /^0x[0-9a-f]{64}$/;
 
 export const CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID = "curve-cryptoswap-get-dy-v1" as const;
 
@@ -277,7 +280,7 @@ export type CurveCryptoSwapEligibilityFailure =
 export type CurveCryptoSwapEligibility = { ok: true } | { ok: false; reason: CurveCryptoSwapEligibilityFailure };
 
 export function getCurveCryptoSwapShadowPolicy(chain: string, poolAddress: string): CurveCryptoSwapPoolPolicy | null {
-  const address = canonicalAddress(poolAddress);
+  const address = canonicalEvmAddress(poolAddress);
   const normalizedChain = chain.trim().toLowerCase();
   if (address == null) return null;
   return (
@@ -287,11 +290,11 @@ export function getCurveCryptoSwapShadowPolicy(chain: string, poolAddress: strin
 }
 
 function matchesAddress(actual: unknown, expected: `0x${string}`): boolean {
-  return canonicalAddress(actual) === expected;
+  return canonicalEvmAddress(actual) === expected;
 }
 
 function matchesCodeHash(actual: unknown, expected: `0x${string}`): boolean {
-  return canonicalCodeHash(actual) === expected;
+  return canonicalEvmHash(actual) === expected;
 }
 
 /** Fail-closed score eligibility independent of quote transport. */
@@ -301,7 +304,7 @@ export function evaluateCurveCryptoSwapEligibility(input: {
   policy?: CurveCryptoSwapPoolPolicy | null;
   evidence?: CurveCryptoSwapRuntimeEvidence;
 }): CurveCryptoSwapEligibility {
-  const endpointAddress = canonicalAddress(input.endpointAddress);
+  const endpointAddress = canonicalEvmAddress(input.endpointAddress);
   const policy = input.policy ?? getCurveCryptoSwapShadowPolicy(input.chain, input.endpointAddress);
   if (policy == null) return { ok: false, reason: "pool-not-in-shadow-cohort" };
   if (endpointAddress !== policy.poolAddress || input.chain.trim().toLowerCase() !== policy.chain) {
@@ -320,17 +323,17 @@ export function evaluateCurveCryptoSwapEligibility(input: {
   if (policy.identityAnchor === "reviewed-deployment-family") {
     const family = getCurveCryptoSwapReviewedDeploymentFamily(policy.chain, policy.generation);
     if (family == null) return { ok: false, reason: "runtime-allowlist-incomplete" };
-    if (canonicalCodeHash(evidence.poolCodeHash) == null) return { ok: false, reason: "runtime-code-unavailable" };
-    const factoryAddress = canonicalAddress(evidence.factoryAddress);
-    const viewsAddress = canonicalAddress(evidence.viewsAddress);
-    const mathAddress = canonicalAddress(evidence.mathAddress);
+    if (canonicalEvmHash(evidence.poolCodeHash) == null) return { ok: false, reason: "runtime-code-unavailable" };
+    const factoryAddress = canonicalEvmAddress(evidence.factoryAddress);
+    const viewsAddress = canonicalEvmAddress(evidence.viewsAddress);
+    const mathAddress = canonicalEvmAddress(evidence.mathAddress);
     if (
       factoryAddress == null ||
-      canonicalCodeHash(evidence.factoryCodeHash) == null ||
+      canonicalEvmHash(evidence.factoryCodeHash) == null ||
       viewsAddress == null ||
-      canonicalCodeHash(evidence.viewsCodeHash) == null ||
+      canonicalEvmHash(evidence.viewsCodeHash) == null ||
       mathAddress == null ||
-      canonicalCodeHash(evidence.mathCodeHash) == null
+      canonicalEvmHash(evidence.mathCodeHash) == null
     )
       return { ok: false, reason: "dependency-code-unavailable" };
     const mathDeployment = family.mathDeployments.find((entry) => entry.address === mathAddress);
@@ -362,17 +365,17 @@ export function evaluateCurveCryptoSwapEligibility(input: {
   if (expectedHashes.some((value) => value == null) || expectedAddresses.some((value) => value == null)) {
     return { ok: false, reason: "runtime-allowlist-incomplete" };
   }
-  if (canonicalCodeHash(evidence.poolCodeHash) == null) return { ok: false, reason: "runtime-code-unavailable" };
+  if (canonicalEvmHash(evidence.poolCodeHash) == null) return { ok: false, reason: "runtime-code-unavailable" };
   if (!matchesCodeHash(evidence.poolCodeHash, policy.expectedPoolCodeHash!)) {
     return { ok: false, reason: "runtime-code-hash-mismatch" };
   }
   if (
-    canonicalAddress(evidence.factoryAddress) == null ||
-    canonicalCodeHash(evidence.factoryCodeHash) == null ||
-    canonicalAddress(evidence.viewsAddress) == null ||
-    canonicalCodeHash(evidence.viewsCodeHash) == null ||
-    canonicalAddress(evidence.mathAddress) == null ||
-    canonicalCodeHash(evidence.mathCodeHash) == null
+    canonicalEvmAddress(evidence.factoryAddress) == null ||
+    canonicalEvmHash(evidence.factoryCodeHash) == null ||
+    canonicalEvmAddress(evidence.viewsAddress) == null ||
+    canonicalEvmHash(evidence.viewsCodeHash) == null ||
+    canonicalEvmAddress(evidence.mathAddress) == null ||
+    canonicalEvmHash(evidence.mathCodeHash) == null
   )
     return { ok: false, reason: "dependency-code-unavailable" };
   if (
@@ -435,7 +438,7 @@ export async function verifyCurveCryptoSwapDeployment(input: {
     rpcBudget?.recordChainResult(policy.chain, raw != null);
     if (raw == null) return null;
     try {
-      return canonicalAddress(decodeFunctionResult({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName, data: raw }));
+      return canonicalEvmAddress(decodeFunctionResult({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName, data: raw }));
     } catch {
       return null;
     }
@@ -453,7 +456,7 @@ export async function verifyCurveCryptoSwapDeployment(input: {
     rpcBudget?.recordChainResult(policy.chain, raw != null);
     if (raw == null) return null;
     try {
-      return canonicalAddress(
+      return canonicalEvmAddress(
         decodeFunctionResult({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName: "coins", data: raw }),
       );
     } catch {
@@ -559,18 +562,6 @@ interface CurveCryptoSwapQuoteDependencies {
   }): Promise<EvmMulticall3Result[] | null>;
 }
 
-function canonicalAddress(value: unknown): `0x${string}` | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return EVM_ADDRESS_PATTERN.test(normalized) ? (normalized as `0x${string}`) : null;
-}
-
-function canonicalCodeHash(value: unknown): `0x${string}` | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return CODE_HASH_PATTERN.test(normalized) ? (normalized as `0x${string}`) : null;
-}
-
 export function resolveCurveCryptoSwapTokenIndices(
   target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
 ): { ok: true; inputIndex: number; outputIndex: number } | { ok: false; reason: CurveCryptoSwapQuoteFailure } {
@@ -583,12 +574,12 @@ export function resolveCurveCryptoSwapTokenIndices(
   if (target.poolTokenAddresses.length < 2 || target.poolTokenAddresses.length > 8) {
     return { ok: false, reason: "invalid-pool-token-order" };
   }
-  const orderedTokens = target.poolTokenAddresses.map(canonicalAddress);
+  const orderedTokens = target.poolTokenAddresses.map(canonicalEvmAddress);
   if (orderedTokens.some((address) => address == null)) {
     return { ok: false, reason: "invalid-pool-token-order" };
   }
-  const tokenIn = canonicalAddress(target.tokenIn.address);
-  const tokenOut = canonicalAddress(target.tokenOut.address);
+  const tokenIn = canonicalEvmAddress(target.tokenIn.address);
+  const tokenOut = canonicalEvmAddress(target.tokenOut.address);
   if (tokenIn == null || tokenOut == null || tokenIn === tokenOut) {
     return { ok: false, reason: "invalid-curve-cryptoswap-target" };
   }
@@ -647,7 +638,7 @@ function prepareRequest(
   failureReason?: CurveCryptoSwapQuoteFailure;
   eligibility: CurveCryptoSwapEligibility;
 } {
-  const endpointAddress = canonicalAddress(request.endpointAddress);
+  const endpointAddress = canonicalEvmAddress(request.endpointAddress);
   const policy = endpointAddress == null ? null : getCurveCryptoSwapShadowPolicy(request.target.chain, endpointAddress);
   const eligibility = evaluateCurveCryptoSwapEligibility({
     chain: request.target.chain,
@@ -678,8 +669,8 @@ function prepareRequest(
     return { failureReason: "invalid-curve-cryptoswap-target", eligibility };
   }
   if (eligibility.ok) {
-    const onChainPoolTokenAddresses = request.runtimeEvidence?.onChainPoolTokenAddresses?.map(canonicalAddress) ?? [];
-    const targetPoolTokenAddresses = request.target.poolTokenAddresses?.map(canonicalAddress) ?? [];
+    const onChainPoolTokenAddresses = request.runtimeEvidence?.onChainPoolTokenAddresses?.map(canonicalEvmAddress) ?? [];
+    const targetPoolTokenAddresses = request.target.poolTokenAddresses?.map(canonicalEvmAddress) ?? [];
     if (
       onChainPoolTokenAddresses.length < targetPoolTokenAddresses.length ||
       targetPoolTokenAddresses.some(
@@ -745,60 +736,53 @@ export function decodeCurveCryptoSwapQuotePoint(
 }
 
 export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwapQuoteDependencies) {
-  return async function quoteCurveCryptoSwapRequests(input: {
-    requests: readonly CurveCryptoSwapRequest[];
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<CurveCryptoSwapBatchOutcome[]> {
-    const prepared = input.requests.map(prepareRequest);
-    const outcomes: CurveCryptoSwapBatchOutcome[] = input.requests.map((request, index) => ({
+  return createCurveGetDyQuoteAdapter<
+    CurveCryptoSwapRequest,
+    CurveGetDyPlan<EncodedCurveCryptoSwapRequest>,
+    CurveCryptoSwapEligibility,
+    CurveCryptoSwapBatchOutcome,
+    CurveCryptoSwapQuoteFailure
+  >({
+    batchSize: CURVE_MULTICALL_BATCH_SIZE,
+    prepare: (request, index) => {
+      const prepared = prepareRequest(request, index);
+      return {
+        eligibility: prepared.eligibility,
+        ...(prepared.failureReason ? { failureReason: prepared.failureReason } : {}),
+        ...(prepared.encoded
+          ? {
+              plan: makeCurveGetDyPlan(prepared.encoded),
+            }
+          : {}),
+      };
+    },
+    makeOutcome: (request, eligibility, failureReason) => ({
       targetId: request.target.targetId,
       inputUsd: request.inputUsd,
       blockNumber: request.blockNumber,
-      eligibility: prepared[index]!.eligibility,
-      ...(prepared[index]!.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
-    }));
-    const plans = prepared.flatMap((entry) => entry.encoded ? [{
-      ...entry.encoded,
-      chain: entry.encoded.policy.chain,
-      call: {
-            label: entry.encoded.label,
-            target: entry.encoded.endpointAddress,
-            callData: entry.encoded.callData,
-            allowFailure: true,
-      },
-    }] : []);
-    return executeEvmQuotePlan({
-      plans,
-      outcomes,
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      rpcBudget: input.rpcBudget,
-      spec: {
-        batchSize: CURVE_MULTICALL_BATCH_SIZE,
-        executeMulticall: dependencies.executeMulticall,
-        adaptive: {
-          failedAttemptAccounting: "all",
-          unattemptedResult: "omit",
-        },
-        resolveResult: (request, result) => ({
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          blockNumber: request.blockNumber,
-          eligibility: request.eligibility,
-          ...decodeCurveCryptoSwapQuotePoint(request, result),
-        }),
-        materializeTransportFailure: (request, reason) => ({
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          blockNumber: request.blockNumber,
-          eligibility: request.eligibility,
-          failureReason: reason ?? "pool-revert",
-        }),
-      },
-    });
-  };
+      eligibility,
+      ...(failureReason ? { failureReason } : {}),
+    }),
+    executeMulticall: dependencies.executeMulticall,
+    adaptive: {
+      failedAttemptAccounting: "all",
+      unattemptedResult: "omit",
+    },
+    resolveResult: (request, result) => ({
+      targetId: request.target.targetId,
+      inputUsd: request.inputUsd,
+      blockNumber: request.blockNumber,
+      eligibility: request.eligibility,
+      ...decodeCurveCryptoSwapQuotePoint(request, result),
+    }),
+    materializeTransportFailure: (request, reason) => ({
+      targetId: request.target.targetId,
+      inputUsd: request.inputUsd,
+      blockNumber: request.blockNumber,
+      eligibility: request.eligibility,
+      failureReason: reason ?? "pool-revert",
+    }),
+  });
 }
 
 export const quoteCurveCryptoSwapRequests = createCurveCryptoSwapQuoteExecutor({
@@ -828,7 +812,7 @@ export const quoteCurveCryptoSwapRequests = createCurveCryptoSwapQuoteExecutor({
 export function validateCurveCryptoSwapProfileProof(profile: DexMeasuredExecutionProfile): string[] {
   const issues = new Set<string>();
   if (profile.adapterProfileId !== CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) issues.add("wrong-adapter-profile");
-  const endpointAddress = canonicalAddress(profile.executionEndpoint.address);
+  const endpointAddress = canonicalEvmAddress(profile.executionEndpoint.address);
   const policy = endpointAddress == null ? null : getCurveCryptoSwapShadowPolicy(profile.chain, endpointAddress);
   if (policy == null) issues.add("execution-pool-not-in-cohort");
   // A pinned policy binds the exact pool bytecode. A family-anchored policy has
@@ -838,7 +822,7 @@ export function validateCurveCryptoSwapProfileProof(profile: DexMeasuredExecutio
   else if (
     policy.identityAnchor === "pinned-pool-code"
       ? profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash
-      : canonicalCodeHash(profile.executionEndpoint.codeHash) == null
+      : canonicalEvmHash(profile.executionEndpoint.codeHash) == null
   ) {
     issues.add("endpoint-code-hash-mismatch");
   }
