@@ -45,10 +45,10 @@ publication — per-cohort eligible/rejected/published counts and the target gen
 Record B (08:10 shadow quote sync — per-cohort measured/failed/budget-deferred counts plus
 ladder monotonicity and cost-bound-consistency violations computed at emission). Records are
 written on productive and zero-output runs alike, survive the outer handler merges, and are joined
-at retrieval (`shared/lib/measured-execution-ledger.ts`,
-`worker/src/lib/measured-execution-ledger-query.ts`) to derive the third state,
-`target-produced-no-quote`. The 3-hour target/quote tables remain a rolling window; activation
-evidence is evaluated from this ledger, never from those tables.
+at retrieval (`shared/lib/measured-execution-ledger.ts`) to derive the third state,
+`target-produced-no-quote`. The 3-hour target/quote tables remain a rolling
+window; activation evidence is evaluated from this ledger,
+never from those tables.
 
 Current-row publication is generation-gated and active-set scoped. The cron may keep historical rows for inactive tracked assets, but the public `dex_liquidity` current table is rewritten from the current active tracked universe plus the `__global__` aggregate only. Candidate rows are written to `dex_liquidity_run_rows`, the expected active row count is validated, and only then is the candidate generation mirrored into the public table and marked `dex_liquidity_publication_generations.state = 'published'`. Rows without a publication generation id remain readable for schema compatibility, while generation-tagged rows are consumed only when their generation is published. The separate pre-v5.9 API fallback that reconstructed `methodology_version` from `updated_at` was removed in v6.0; readers pass the stored version through unchanged.
 
