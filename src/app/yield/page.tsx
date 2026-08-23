@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
-import { YieldLoadingState } from "@/app/yield/loading";
+import { YieldContentLoadingState } from "@/app/yield/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -73,7 +73,7 @@ const YIELD_PICKER_NOTE = (
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.YieldClient })),
-  loading: <YieldLoadingState />,
+  loading: <YieldContentLoadingState />,
   shell: {
     breadcrumbName: "Yield Intelligence",
     path: "/yield/",

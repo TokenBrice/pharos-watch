@@ -10,11 +10,9 @@ import {
 // Analytics tier: filter strip + DEX depth chart placeholder + cohort table.
 const LIQUIDITY_SKELETON_ROW_COUNT = 10;
 
-export function LiquidityLoadingState() {
+export function LiquidityContentLoadingState() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader sectionWidth="w-24" titleWidth="w-64 sm:w-80" />
-
+    <>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="pharos-card-shell space-y-2 p-4">
           <Skeleton className="h-3 w-32 rounded-sm" />
@@ -44,10 +42,15 @@ export function LiquidityLoadingState() {
         primaryWidth="w-32"
         metricWidths={["w-16", "w-16", "w-12"]}
       />
-    </PageLoadingShell>
+    </>
   );
 }
 
 export default function Loading() {
-  return <LiquidityLoadingState />;
+  return (
+    <PageLoadingShell>
+      <PageLoadingHeader sectionWidth="w-24" titleWidth="w-64 sm:w-80" />
+      <LiquidityContentLoadingState />
+    </PageLoadingShell>
+  );
 }

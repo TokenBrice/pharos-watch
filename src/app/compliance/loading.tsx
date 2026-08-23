@@ -7,11 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const COMPLIANCE_SKELETON_ROW_COUNT = 10;
 
-export function ComplianceLoadingState() {
+export function ComplianceContentLoadingState() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader sectionWidth="w-24" titleWidth="w-64 sm:w-80" />
-
+    <>
       <div className="pharos-card-shell overflow-hidden">
         <div className="flex gap-2 border-b border-border/60 px-3 pt-2">
           <Skeleton className="h-10 w-24 rounded-sm" />
@@ -35,10 +33,15 @@ export function ComplianceLoadingState() {
         secondaryWidth="w-36"
         metricWidths={["w-10", "w-16", "w-16"]}
       />
-    </PageLoadingShell>
+    </>
   );
 }
 
 export default function Loading() {
-  return <ComplianceLoadingState />;
+  return (
+    <PageLoadingShell>
+      <PageLoadingHeader sectionWidth="w-24" titleWidth="w-64 sm:w-80" />
+      <ComplianceContentLoadingState />
+    </PageLoadingShell>
+  );
 }

@@ -10,15 +10,9 @@ import {
 // toolbar + sticky-header + 14 tight rows.
 const SCREENER_SKELETON_ROW_COUNT = 14;
 
-export function ScreenerLoadingState() {
+export function ScreenerContentLoadingState() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader
-        sectionWidth="w-24"
-        titleWidth="w-72 sm:w-96"
-        includeEyebrow={false}
-      />
-
+    <>
       <div className="pharos-card-shell space-y-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Skeleton className="h-4 w-40 rounded-sm" />
@@ -45,10 +39,19 @@ export function ScreenerLoadingState() {
         headerClassName="flex items-center justify-between border-b border-border/60 px-4 py-3"
         rowClassName="px-4 py-2"
       />
-    </PageLoadingShell>
+    </>
   );
 }
 
 export default function Loading() {
-  return <ScreenerLoadingState />;
+  return (
+    <PageLoadingShell>
+      <PageLoadingHeader
+        sectionWidth="w-24"
+        titleWidth="w-72 sm:w-96"
+        includeEyebrow={false}
+      />
+      <ScreenerContentLoadingState />
+    </PageLoadingShell>
+  );
 }

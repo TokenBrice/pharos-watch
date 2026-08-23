@@ -9,10 +9,9 @@ import {
 // Analytics tier: KPI strip, heatmap placeholder, then recent depeg rows.
 const DEPEG_SKELETON_ROW_COUNT = 8;
 
-export function DepegLoadingState() {
+export function DepegContentLoadingState() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader sectionWidth="w-28" titleWidth="w-64 sm:w-80" />
+    <>
       <PageLoadingStatGrid
         count={4}
         className="grid grid-cols-2 gap-3 sm:grid-cols-4"
@@ -29,10 +28,15 @@ export function DepegLoadingState() {
         secondaryWidth="w-20"
         metricWidths={["w-14", "w-14", "w-14"]}
       />
-    </PageLoadingShell>
+    </>
   );
 }
 
 export default function Loading() {
-  return <DepegLoadingState />;
+  return (
+    <PageLoadingShell>
+      <PageLoadingHeader sectionWidth="w-28" titleWidth="w-64 sm:w-80" />
+      <DepegContentLoadingState />
+    </PageLoadingShell>
+  );
 }

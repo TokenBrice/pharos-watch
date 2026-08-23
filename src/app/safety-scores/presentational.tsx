@@ -2,35 +2,8 @@
 
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { SafetyGradeDistributionBar } from "./grade-distribution-bar";
 import type { GradeFilter, PegFilter } from "./v9-view-model";
-
-export function SafetyScoresLoadingState() {
-  return (
-    <div className="space-y-6">
-      <Card className="pharos-card-shell">
-        <CardContent className="pt-6 pb-6 space-y-4">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-10 w-full rounded-xl" />
-          <Skeleton className="h-4 w-full" />
-        </CardContent>
-      </Card>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {Array.from({ length: 24 }, (_, index) => (
-          <Card key={index} className="pharos-card-shell">
-            <CardContent className="py-4 space-y-2">
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-6 w-12" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function HeroMetricRow({
   label,

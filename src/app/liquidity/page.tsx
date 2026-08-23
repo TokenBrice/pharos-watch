@@ -1,4 +1,4 @@
-import { LiquidityLoadingState } from "@/app/liquidity/loading";
+import { LiquidityContentLoadingState } from "@/app/liquidity/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -18,7 +18,7 @@ export const metadata = buildPageMetadata({
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.LiquidityClient })),
-  loading: <LiquidityLoadingState />,
+  loading: <LiquidityContentLoadingState />,
   shell: {
     breadcrumbName: "DEX Liquidity",
     path: "/liquidity/",

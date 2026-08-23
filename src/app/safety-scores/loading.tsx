@@ -8,11 +8,9 @@ import {
 // Analytics tier: headline stats strip, distribution band, then ~12 graded rows.
 const SAFETY_SKELETON_ROW_COUNT = 12;
 
-export function SafetyScoresLoadingState() {
+export function SafetyScoresContentLoadingState() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader sectionWidth="w-28" titleWidth="w-64 sm:w-80" />
-
+    <>
       <PageLoadingStatGrid
         count={4}
         className="grid grid-cols-2 gap-3 sm:grid-cols-4"
@@ -45,10 +43,15 @@ export function SafetyScoresLoadingState() {
           </div>
         ))}
       </div>
-    </PageLoadingShell>
+    </>
   );
 }
 
 export default function Loading() {
-  return <SafetyScoresLoadingState />;
+  return (
+    <PageLoadingShell>
+      <PageLoadingHeader sectionWidth="w-28" titleWidth="w-64 sm:w-80" />
+      <SafetyScoresContentLoadingState />
+    </PageLoadingShell>
+  );
 }

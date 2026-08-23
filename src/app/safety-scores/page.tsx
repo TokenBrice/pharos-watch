@@ -4,7 +4,7 @@ import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
-import { SafetyScoresLoadingState } from "@/app/safety-scores/loading";
+import { SafetyScoresContentLoadingState } from "@/app/safety-scores/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -55,7 +55,7 @@ const FAQ_ITEMS = [
 
 export default createClientFeaturePage({
   loadClient: () => import("./v9-client").then((m) => ({ default: m.ReportCardsV9Client })),
-  loading: <SafetyScoresLoadingState />,
+  loading: <SafetyScoresContentLoadingState />,
   shell: {
     breadcrumbName: "Safety Scores",
     path: "/safety-scores/",
