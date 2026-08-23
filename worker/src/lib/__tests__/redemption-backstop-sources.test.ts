@@ -865,7 +865,6 @@ describe("buildRedemptionBackstopEntry", () => {
       }),
       50_000_000,
       55,
-      now,
       { reserveSnapshotMetadata: null },
     );
 

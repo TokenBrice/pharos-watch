@@ -2,6 +2,7 @@ import type { CompiledV9AssetInput } from "@shared/types/safety-score-v9";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type {
   V9PillarEvaluation,
+  V9ProductionScoreIdentity,
   V9ProductionScoreInput,
 } from "../safety-score-v9/score";
 
@@ -20,7 +21,7 @@ export function makeV9Pillar(
 export function makeV9ProductionScoreInput(
   overrides: Partial<V9ProductionScoreInput> = {},
 ): V9ProductionScoreInput {
-  const identity = {
+  const identity: V9ProductionScoreIdentity = {
     factSetDigest: DIGEST,
     baseInputGenerationId: BASE_ID,
     evaluationBuildDigest: BUILD_DIGEST,
@@ -30,7 +31,6 @@ export function makeV9ProductionScoreInput(
   };
   return {
     assetId: "asset",
-    identity,
     pillars: { backing: makeV9Pillar(95), exit: makeV9Pillar(95), control: makeV9Pillar(95) },
     peg: { applicable: true, score: 100, activeDepegBps: null, reasons: [] },
     trackRecordMonths: 48,

@@ -20,9 +20,11 @@ const BUILD_DIGEST = "b".repeat(64);
 const BASE_ID = `report-cards-input:v1:${"c".repeat(64)}`;
 
 function input(overrides: Partial<V9ProductionScoreInput> = {}): V9ProductionScoreInput {
+  const identity = makeV9ProductionScoreInput().identity;
   return makeV9ProductionScoreInput({
     ...overrides,
     identity: {
+      ...identity,
       sourceGenerations: { peg: "peg:1", dex: "dex:1" },
       ...overrides.identity,
     },

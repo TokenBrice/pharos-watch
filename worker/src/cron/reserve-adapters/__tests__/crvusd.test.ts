@@ -21,6 +21,7 @@ import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
 import { adaptCrvUsd, adaptCrvUsdOnchain, fetchCrvUsdReserves } from "../crvusd";
 
 type FetchOnchainMulticall3Options = Parameters<typeof fetchOnchainMulticall3>[0];
+type TestHexAddress = `0x${string}`;
 
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
@@ -58,7 +59,7 @@ type EvmRpcCallHandler = (...args: EvmRpcCallArgs) => ReturnType<typeof fetchEvm
 
 type LlammaRpcScenarioOverrides = {
   marketCount?: number | bigint;
-  collateralByIndex?: Readonly<Record<number, string>>;
+  collateralByIndex?: Readonly<Record<number, TestHexAddress>>;
   bandRange?: { min?: number; max?: number };
   deferCollateral?: (marketId: number, result: `0x${string}`) => Promise<`0x${string}`> | undefined;
   onUnhandledCall?: EvmRpcCallHandler;
@@ -66,7 +67,7 @@ type LlammaRpcScenarioOverrides = {
 
 type YieldBasisRpcScenarioOverrides = {
   marketCount?: number | bigint;
-  marketByIndex?: Readonly<Record<number, { assetAddress: string; ltAddress: string }>>;
+  marketByIndex?: Readonly<Record<number, { assetAddress: TestHexAddress; ltAddress: TestHexAddress }>>;
   tokenDecimals?: number | ((assetAddress: string) => number);
   ltWithdrawResult?:
     | readonly [bigint, bigint]
@@ -167,7 +168,7 @@ function makeLlammaRpcScenario(overrides: LlammaRpcScenarioOverrides = {}): EvmR
 function makeYieldBasisRpcScenario(overrides: YieldBasisRpcScenarioOverrides = {}): EvmRpcCallHandler {
   const marketCount = BigInt(overrides.marketCount ?? 0);
 
-  function marketForIndex(marketId: number): { assetAddress: string; ltAddress: string } {
+  function marketForIndex(marketId: number): { assetAddress: TestHexAddress; ltAddress: TestHexAddress } {
     return (
       overrides.marketByIndex?.[marketId] ??
       (marketId === 0

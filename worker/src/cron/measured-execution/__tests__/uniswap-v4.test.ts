@@ -93,7 +93,15 @@ async function runV4ProofScenario({
 }: {
   amountOutRaw: bigint;
   quoteSuccess?: boolean;
-}) {
+}): Promise<{
+  target: ReturnType<typeof target>;
+  quotes: readonly [
+    Awaited<ReturnType<typeof quoteUniswapV4Requests>>[number] & {
+      point: NonNullable<Awaited<ReturnType<typeof quoteUniswapV4Requests>>[number]["point"]>;
+    },
+  ];
+  profile: ReturnType<typeof buildDexMeasuredExecutionProfile>;
+}> {
   const measuredTarget = target();
   const deployment = getUniswapV4Deployment("ethereum");
   if (!deployment) throw new Error("missing V4 deployment");
@@ -162,9 +170,12 @@ async function runV4ProofScenario({
     blockNumber: BLOCK,
     chainRpcs: new Map(),
   });
-  if (!bindings[0]?.proof || !quotes[0]?.point) {
+  const binding = bindings[0];
+  const quote = quotes[0];
+  if (!binding?.proof || !quote?.point) {
     throw new Error("missing V4 proof fixture");
   }
+  const point = quote.point;
   const profile = buildDexMeasuredExecutionProfile({
     target: measuredTarget,
     targetGenerationId: "targets",
@@ -173,10 +184,10 @@ async function runV4ProofScenario({
     blockNumber: BLOCK,
     endpointAddress: deployment.endpointAddress,
     endpointCodeHash: deployment.expectedCodeHash,
-    uniswapV4PoolProof: bindings[0].proof,
-    points: [quotes[0].point],
+    uniswapV4PoolProof: binding.proof,
+    points: [point],
   });
-  return { target: measuredTarget, quotes, profile };
+  return { target: measuredTarget, quotes: [{ ...quote, point }], profile };
 }
 
 describe("hook-free Uniswap V4 measured execution", () => {

@@ -14,6 +14,7 @@ const CLOCK_SEC = createSafetyScoreV9FullRegistryInput().clockSec;
 
 type FullInput = ReturnType<typeof createSafetyScoreV9FullRegistryInput>;
 type TestMeta = V9ExtensionRegistryMeta & { pegReferenceId?: string };
+type TestMetaOverrides = Partial<Pick<TestMeta, "variantOf" | "pegReferenceId">>;
 
 function pick<T>(record: Readonly<Record<string, T>>, ids: readonly string[]): Record<string, T> {
   return Object.fromEntries(
@@ -56,13 +57,13 @@ function twoAssetInput(overrides: Partial<Parameters<typeof createReportCardsFix
     evidenceJournalById: pick(full.evidenceJournalById, ids),
     supplyAttributionJournalById: pick(full.supplyAttributionJournalById, ids),
     pegProvenanceById: pick(full.pegProvenanceById, ids),
-    collateralDriftCoins: full.collateralDriftCoins.filter((coin) => ids.includes(coin.id)),
-    liveToFallbackCoins: full.liveToFallbackCoins.filter((id) => ids.includes(id)),
+    collateralDriftCoins: full.collateralDriftCoins.filter((coin) => ids.some((id) => id === coin.id)),
+    liveToFallbackCoins: full.liveToFallbackCoins.filter((id) => ids.some((candidate) => candidate === id)),
     ...overrides,
   });
 }
 
-function metadata(overrides: Partial<Record<string, TestMeta>> = {}) {
+function metadata(overrides: Partial<Record<string, TestMetaOverrides>> = {}) {
   return new Map<string, V9ExtensionRegistryMeta>([
     [CHILD_ID, { ...ACTIVE_META_BY_ID.get(CHILD_ID)!, ...overrides[CHILD_ID] }],
     [PARENT_ID, { ...ACTIVE_META_BY_ID.get(PARENT_ID)!, ...overrides[PARENT_ID] }],
@@ -149,7 +150,11 @@ describe("Safety Score V9 peg-reference inheritance", () => {
     expect(child.peg.status.applicability.state).toBe("not-applicable");
     expect(child.peg.pegScore).toBeNull();
     expect(child.peg.activeDepegBps).toBeNull();
-    expect(child.wrapperLocalFacts?.facts.shareAccountingNavOracle).toMatchObject({
+    const wrapperLocalFacts = child.wrapperLocalFacts;
+    if (wrapperLocalFacts?.applicability !== "wrapper") {
+      throw new Error("Expected wrapper-local facts for an inactive NAV wrapper");
+    }
+    expect(wrapperLocalFacts.facts.shareAccountingNavOracle).toMatchObject({
       disposition: "reviewed",
       assessment: "moderate",
     });
