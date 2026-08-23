@@ -110,6 +110,51 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     });
   });
 
+  it("preserves a reviewed high rehypothecation finding when allocation review is available", () => {
+    const fixed = fixedInputWithTrackedParent();
+    const extension = wrapperExtension(fixed, "savings-passthrough");
+    const asset = extension.assets.find((candidate) => candidate.assetId === "alpha")!;
+    asset.wrapperCustodyReview = {
+      providers: [{ providerKey: "reviewed-provider", role: "other", shareFraction: 1 }],
+      segregation: "segregated",
+      bankruptcyRemoteness: "structured",
+      rehypothecation: "permitted",
+      knownUnknownExposureShare: 0,
+    };
+    asset.wrapperAllocationReview = {
+      assetId: "alpha",
+      reviewedAt: "2026-08-23",
+      expiresAt: "2026-09-23",
+      reviewer: "test-fixture",
+      custody: "fully-onchain-no-offchain-custodian",
+      localLeverage: "no-borrowing-surface",
+      capitalReuse: "none",
+      rationale: "Fixture allocation would resolve an unavailable fact to none.",
+      observations: [
+        {
+          chain: "ethereum",
+          address: "0x0000000000000000000000000000000000000001",
+          function: "fixture()",
+          value: "none",
+          block: 1,
+        },
+      ],
+      sources: [{ label: "Fixture", url: "https://example.com/allocation" }],
+    };
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const compiledAsset = compiled.assets.find((candidate) => candidate.assetId === "alpha")!;
+    if (compiledAsset.wrapperLocalFacts?.applicability !== "wrapper") {
+      throw new Error("Expected wrapper-local facts");
+    }
+
+    expect(compiledAsset.wrapperLocalFacts.facts.rehypothecationCorrelation).toMatchObject({
+      disposition: "reviewed",
+      assessment: "high",
+      signals: ["wrapper-custody-provider-count:1", "wrapper-rehypothecation:permitted"],
+    });
+  });
+
   it("fails closed to issuer-undisclosed when the tracked parent edge is absent", () => {
     // Without a serial parent edge we cannot prove the wrapper is a direct
     // pass-through, so the conservative dispositions must survive. Compilation

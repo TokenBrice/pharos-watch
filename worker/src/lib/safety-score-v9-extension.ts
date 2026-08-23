@@ -46,6 +46,7 @@ import {
   getSafetyScoreV9OperationalResilienceOverlay,
   SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
 } from "./safety-score-v9-extension-operational-resilience";
+import { getSafetyScoreV9WrapperAllocationReview } from "./safety-score-v9-extension-wrapper-allocation";
 import {
   computeSafetyScoreV9ReviewedTransferFactsDigest,
   resolveSafetyScoreV9ReviewedTransferFact,
@@ -653,6 +654,28 @@ function addWrapperCustodyEvidence(meta: V9ExtensionRegistryMeta, evidence: Revi
     confidence: confidenceForResearch(review.confidence),
     sources: review.sources,
     payload: review,
+  });
+}
+
+function addWrapperAllocationEvidence(
+  review: ReturnType<typeof getSafetyScoreV9WrapperAllocationReview>,
+  evidence: ReviewEvidenceBuilder,
+): void {
+  if (!review) return;
+  evidence.add({
+    componentKeys: [
+      "wrapper-local:custodyEscrow",
+      "wrapper-local:leverage",
+      "wrapper-local:rehypothecationCorrelation",
+    ],
+    sourceId: "safety-score-v9.wrapper-allocation-review",
+    reviewedAt: review.reviewedAt,
+    confidence: "verified",
+    sources: review.sources,
+    payload: review,
+    maxAgeSec:
+      Math.floor(Date.parse(`${review.expiresAt}T00:00:00.000Z`) / 1_000) -
+      Math.floor(Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1_000),
   });
 }
 
@@ -1425,6 +1448,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           : null;
       const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+      const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
       const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
       const mechanismReviewGapDisposition =
         getSafetyScoreV9MechanismReviewGapDisposition(assetId, archetype, clockSec);
@@ -1445,6 +1469,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence);
       addDependencyEvidence(meta, reviewEvidence);
       addWrapperCustodyEvidence(meta, reviewEvidence);
+      addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence);
       const supplyReview = buildSafetyScoreV9SupplyReview(
         fixedInput,
         assetId,
@@ -1540,6 +1565,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         pegReference: buildPegReference(meta, metaById),
         supplyReview,
         operationalResilience: getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec),
+        wrapperAllocationReview,
         wrapperCustodyReview:
           (meta.variantKind === "savings-passthrough" ||
             meta.variantKind === "risk-absorption" ||

@@ -26,6 +26,7 @@ import {
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
+import { SafetyScoreV9WrapperAllocationReviewSchema } from "./safety-score-v9-extension-wrapper-allocation";
 import { canonicalArrayBy } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   CanonicalFailureDomainsSchema,
@@ -471,6 +472,7 @@ const AssetExtensionSchema = z
     // Optional only for retained extension-v2 compatibility. The current
     // baseline producer emits the reviewed registry projection when available.
     wrapperCustodyReview: WrapperCustodyReviewSchema.nullable().optional(),
+    wrapperAllocationReview: SafetyScoreV9WrapperAllocationReviewSchema.nullable().optional(),
     researchEvidence: canonicalArrayBy(ResearchEvidenceSchema, (evidence) => evidence.evidenceKey).default([]),
     componentEvidence: canonicalArrayBy(ComponentEvidenceBindingSchema, (binding) => binding.componentKey).default([]),
   })

@@ -1,0 +1,379 @@
+{
+  "schemaVersion": 1,
+  "reviews": [
+    {
+      "assetId": "sbold-k3-capital",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "liquidation-loss-absorption",
+      "rationale": "The vault itself has no borrowing surface, but all BOLD is deployed across three Liquity Stability Pools where it absorbs liquidated debt. That is explicit, correlated capital reuse rather than undisclosed custody.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+          "function": "sps(uint256)[0..2]",
+          "value": "[(0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf,3000,WETH),(0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b,6000,wstETH),(0xd442e41019b7f5c4dd78f50dc03726c446148695,1000,rETH)]",
+          "block": 25819441
+        },
+        {
+          "chain": "ethereum",
+          "address": "Liquity Stability Pools returned by sps(uint256)",
+          "function": "getCompoundedBoldDeposit(0x50bd66d59911f5e086ec87ae43c811e0d059dd11)",
+          "value": "[1684140407932215062881794,3368280815864430125763589,561380135977405020960598]",
+          "block": 25819441
+        }
+      ],
+      "sources": [
+        { "label": "Verified sBOLD contract", "url": "https://eth.blockscout.com/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11?tab=contract" },
+        { "label": "K3 sBOLD technical details", "url": "https://k3-capital.gitbook.io/sbold/technical-details" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "ybold-yearn",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "liquidation-loss-absorption",
+      "rationale": "Yearn records no local vault borrowing, while its entire BOLD debt allocation is split among the WETH, wstETH, and rETH Liquity Stability Pool strategies. The capital is directly exposed to liquidation absorption.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+          "function": "get_default_queue()",
+          "value": "[0xc5e7d3f76a03006540f17668a0267c668ffb5b75,0x3589b93cadb464b6e1974cc9fc0c9be698ee49a5,0x6ed566b76838a08d04cbd6323231b08a2ec69005]",
+          "block": 25819441
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+          "function": "strategies(address).current_debt for get_default_queue()",
+          "value": "[625592053080262599195236,4355606628781192743266276,713460009028459110786042]; totalDebt()=5694658690889914453247554; totalIdle()=0",
+          "block": 25819441
+        }
+      ],
+      "sources": [
+        { "label": "Yearn V3 Vault source", "url": "https://github.com/yearn/yearn-vaults-v3/blob/master/contracts/VaultV3.vy" },
+        { "label": "Yearn yBOLD documentation", "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "gtusdcp-gauntlet",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "bluechip-overcollateralized-lending",
+      "rationale": "The three vault deployments only supply USDC and do not borrow. Funded Morpho markets are collateralized by BTC, ETH/LSTs, and a small sUSDS market; the allocation is explicit and isolated rather than long-tail credit.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xdf62f57ea333a842db200d4892c90f98204fa22f",
+          "function": "marketIdsLength()/marketIds(uint256)/supplyShares(bytes32) plus Morpho.idToMarketParams(bytes32)",
+          "value": "7 funded USDC markets: cbBTC, WBTC, wstETH, WETH collateral; each LLTV=86%",
+          "block": 25819441
+        },
+        {
+          "chain": "base",
+          "address": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+          "function": "withdrawQueue()/Morpho.idToMarketParams(bytes32)/position(bytes32,address)",
+          "value": "7 funded USDC markets: cbBTC,wstETH,WETH,cbETH collateral; LLTV=77% or 86%; totalAssets=433293545452806",
+          "block": 50359473
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+          "function": "withdrawQueue()/Morpho.idToMarketParams(bytes32)/position(bytes32,address)",
+          "value": "4 funded USDC markets: wstETH,WETH,WBTC at 86% LLTV and sUSDS at 94.5% LLTV; totalAssets=650170515089",
+          "block": 497627380
+        }
+      ],
+      "sources": [
+        { "label": "Morpho MetaMorpho allocation contract", "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol" },
+        { "label": "Gauntlet USDC Prime vault", "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "sdusd-dtrinity",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "mixed-overcollateralized-lending",
+      "rationale": "sdUSD holds idle dUSD and a static dLEND dUSD lender share, not a debt position. dLEND reuses the supplied dUSD against a disclosed mixed collateral set spanning ETH LSTs, yield stablecoins, BTC wrappers, and PAXG.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x4acbcfa29fb085097c5f31783403ef7a7930f6fe",
+          "function": "getSupportedStrategyShares()/balanceOf(collateralVault)",
+          "value": "idle-dUSD 0x78a4dad0ac32c80da6ef60a366b1c035145380bc balance=987624293955182365; stkdLEND-dUSD 0x576dd487bacfa6e7afd1e3ea03da0763f732d4c9 balance=455447148402663709535743",
+          "block": 25819539
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6598dad18bda89a0e58a1f427c8cebc0de90f153",
+          "function": "getReservesList()/getConfiguration(address)",
+          "value": "dUSD borrow market; collateral-enabled WETH,wstETH,sfrxETH,rETH,sUSDe,sUSDS,syrupUSDC,syrupUSDT,sfrxUSD,LBTC,WBTC,cbBTC,PAXG with LTV 70%-80.5%",
+          "block": 25819539
+        }
+      ],
+      "sources": [
+        { "label": "dTRINITY sdUSD documentation", "url": "https://docs.dtrinity.org/protocol-components/sdusd" },
+        { "label": "Verified dSTAKE collateral vault", "url": "https://eth.blockscout.com/address/0x4acbcfa29fb085097c5f31783403ef7a7930f6fe?tab=contract" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "gtusdc-gauntlet",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "bluechip-overcollateralized-lending",
+      "rationale": "The MetaMorpho vault is a lender only. Its funded markets are isolated USDC loans against cbBTC, WBTC, WETH, and wstETH, all at 86% LLTV, with no long-tail collateral in the funded position set.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xdd0f28e19c1780eb6396170735d45153d261490d",
+          "function": "supplyQueueLength()/supplyQueue(uint256)",
+          "value": "2 markets: cbBTC/USDC 86% LLTV and idle USDC market",
+          "block": 25819441
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+          "function": "idToMarketParams(bytes32)/position(bytes32,0xdd0f28e19c1780eb6396170735d45153d261490d)",
+          "value": "funded collateral set cbBTC,WBTC,WETH,wstETH; each non-idle market LLTV=86%; every vault position borrowShares=0",
+          "block": 25819441
+        }
+      ],
+      "sources": [
+        { "label": "Morpho MetaMorpho allocation contract", "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol" },
+        { "label": "Gauntlet USDC Prime vault", "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "bbqusdc-steakhouse",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "long-tail-overcollateralized-lending",
+      "rationale": "The vault does not borrow, but its funded Morpho inventory materially extends beyond blue-chip collateral into PT-reUSD, FalconX AA credit, mF-ONE, USCC, tokenized TSLA, and FLHYon markets. Reuse is therefore high-risk and correlated with long-tail collateral.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+          "function": "supplyQueueLength()/withdrawQueueLength()",
+          "value": "supplyQueueLength=20; withdrawQueueLength=23",
+          "block": 25819441
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+          "function": "idToMarketParams(bytes32)/position(bytes32,0xbeefff209270748ddd194831b3fa287a5386f5bc)",
+          "value": "15 funded markets; collateral includes cbBTC,LBTC,WBTC,WETH,wstETH,weETH,PT-reUSD-10DEC2026,AA_FalconXUSDC,mF-ONE,USCC,TSLAon,FLHYon; LLTV range 62.5%-91.5%; every vault position borrowShares=0",
+          "block": 25819441
+        }
+      ],
+      "sources": [
+        { "label": "Morpho MetaMorpho allocation contract", "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol" },
+        { "label": "Smokehouse USDC vault", "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "zys-zephyr-protocol",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "ZYS is a native share of the protocol's ZSD yield reserve. The reserve snapshot identifies the complete in-protocol ZSD balance; it is not lent onward and no off-chain custodian or local borrowing surface exists.",
+      "observations": [
+        {
+          "chain": "zephyr",
+          "address": "native:yield-reserve",
+          "function": "GET /api/v1/reservesnapshots?limit=1&order=desc -> on_chain",
+          "value": "zsd_yield_reserve_atoms=342801125432851556; zys_circ_atoms=174813996085551830; hf_version=11",
+          "block": 847924
+        }
+      ],
+      "sources": [
+        { "label": "Zephyr Scanner API documentation", "url": "https://zephyrprotocol.com/documentation/scanner-api" },
+        { "label": "Zephyr v2.3.0 source", "url": "https://github.com/ZephyrProtocol/zephyr/tree/v2.3.0" },
+        { "label": "Zephyr yield design", "url": "https://zephyrprotocol.com/yield" }
+      ]
+    },
+    {
+      "assetId": "cusdo-openeden",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The Ethereum cUSDO wrapper holds only USDO, with its USDO balance exactly equal to totalAssets. Any off-chain custody belongs to the serial USDO parent claim, not to a wrapper-local custodian or reuse layer.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+          "function": "asset()/totalAssets()/USDO.balanceOf(wrapper)",
+          "value": "asset=0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe; totalAssets=15413456252877263126236702; balance=15413456252877263126236702",
+          "block": 25819547
+        }
+      ],
+      "sources": [
+        { "label": "Verified cUSDO implementation", "url": "https://eth.blockscout.com/address/0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0?tab=contract" },
+        { "label": "OpenEden cUSDO documentation", "url": "https://docs.openeden.com/usdo/cusdo-token" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "stcusd-cap",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The stcUSD contract is a one-asset cUSD share wrapper. Its cUSD balance reconciles to totalAssets and the wrapper exposes no borrower or strategy allocation of its own; Cap operator lending remains in the serial parent.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
+          "function": "asset()/totalAssets()/cUSD.balanceOf(wrapper)",
+          "value": "asset=0xcccc62962d17b8914c62d74ffb843d73b2a3cccc; totalAssets=84335421917462384766745503; balance=84348181457993718002677527",
+          "block": 25819547
+        }
+      ],
+      "sources": [
+        { "label": "Verified stcUSD deployment", "url": "https://eth.blockscout.com/address/0x88887be419578051ff9f4eb6c858a951921d8888?tab=contract" },
+        { "label": "Cap protocol documentation", "url": "https://docs.cap.app" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "said-gaib",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "sAID holds the AID parent token directly and exposes cooldown/accounting controls, not a wrapper-local borrow or strategy book. The AID balance exceeds reported totalAssets, so no local rehypothecation is inferred.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8",
+          "function": "asset()/totalAssets()/AID.balanceOf(wrapper)",
+          "value": "asset=0x18f52b3fb465118731d9e0d276d4eb3599d57596; totalAssets=18563056655516499907031994; balance=19983344236755349679683632",
+          "block": 25819547
+        }
+      ],
+      "sources": [
+        { "label": "Verified sAID deployment", "url": "https://eth.blockscout.com/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8?tab=contract" },
+        { "label": "GAIB documentation", "url": "https://docs.gaib.ai" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "savusd-avant",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The native Avalanche savUSD vault holds only avUSD, and its avUSD balance exactly equals totalAssets. Delta-neutral strategy and venue reuse belong to the avUSD parent rather than a second wrapper-local allocation.",
+      "observations": [
+        {
+          "chain": "avalanche",
+          "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
+          "function": "asset()/totalAssets()/avUSD.balanceOf(wrapper)",
+          "value": "asset=0x24de8771bc5ddb3362db529fc3358f2df3a0e346; totalAssets=109427283164348258673525295; balance=109427283164348258673525295",
+          "block": 93514520
+        }
+      ],
+      "sources": [
+        { "label": "Avant contract addresses", "url": "https://docs.avantprotocol.com/security/contract-addresses" },
+        { "label": "Avalanche C-Chain PublicNode RPC", "url": "https://avalanche-c-chain-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "yvusdc-yearn",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "multi-strategy-reuse",
+      "rationale": "Yearn has no vault-side borrowing, but all USDC is deployed across three funded strategies: USDS conversion, sUSDS lending, and a nested MetaMorpho vault. This is explicit multi-strategy reuse and retains a high assessment.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+          "function": "get_default_queue()",
+          "value": "[0x39c0aec5738ed939876245224afc7e09c8480a52,0x7130570bcefcedbe9d15b5b11a33006156460f8f,0x68aea7b82df6ccdf76235d46445ed83f85f845a3,0x654a7c4ae5ac3c853a99f8dbead2bc85090f753a]",
+          "block": 25819441
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+          "function": "strategies(address).current_debt for get_default_queue()",
+          "value": "[3169144291466,5717036475474,8205217150346,0]; totalDebt()=23268313457286; totalIdle()=0",
+          "block": 25819441
+        }
+      ],
+      "sources": [
+        { "label": "Yearn V3 Vault source", "url": "https://github.com/yearn/yearn-vaults-v3/blob/master/contracts/VaultV3.vy" },
+        { "label": "Yearn v3 USDC vault", "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    },
+    {
+      "assetId": "stusds-sky",
+      "reviewedAt": "2026-08-23",
+      "expiresAt": "2026-09-23",
+      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "single-borrower-risk-capital",
+      "rationale": "stUSDS does not borrow, but its capital backs one SKY-collateralized Lockstake debt branch and absorbs auction shortfall through cut(). The single correlated borrower branch is high reuse risk; its emergency-control integration remains a separate unresolved fact.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+          "function": "line()/cap()/ilk()/vat()/clip()",
+          "value": "line=189000000000000000000000000000000000000000000000000000; cap=213000000000000000000000000; ilk=LSEV2-SKY-A; vat=0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b; clip=0x836f56750517b1528b5078cba4ac4b94fbe4a399",
+          "block": 25819547
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+          "function": "ilks(bytes32 LSEV2-SKY-A)",
+          "value": "Art=135215821179892010625922545; rate=1165747510585314018304438768; line=189000000000000000000000000000000000000000000000000000; clip.stopped()=3",
+          "block": 25819547
+        }
+      ],
+      "sources": [
+        { "label": "Sky stUSDS implementation", "url": "https://github.com/sky-ecosystem/stusds/blob/master/src/StUsds.sol" },
+        { "label": "Sky stUSDS documentation", "url": "https://developers.skyeco.com/protocol/tokens/stusds/" },
+        { "label": "Ethereum PublicNode RPC", "url": "https://ethereum-rpc.publicnode.com" }
+      ]
+    }
+  ]
+}
