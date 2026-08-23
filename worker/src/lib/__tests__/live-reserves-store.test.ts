@@ -97,6 +97,53 @@ describe("live-reserves-store", () => {
         stale: false,
       },
     });
+
+    const staleSourceWarning = {
+      code: "stale-source-data",
+      message: "Upstream reserve source timestamp is older than the accepted maximum",
+      severity: "warning",
+      effect: "degraded",
+    };
+    const staleSourceDb = makeReservesDb({
+      composition: {
+        fetched_at: 1_100,
+        metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: 700 }),
+      },
+      syncState: {
+        last_attempted_at: 1_100,
+        last_success_at: 1_100,
+        last_status: "degraded",
+        warning_count: 1,
+        warnings: JSON.stringify([staleSourceWarning]),
+      },
+    });
+    const staleSourceResult = await resolveReserveResult(staleSourceDb, "iusd-infinifi", 1_200, 300);
+    expect(staleSourceResult).toMatchObject({
+      mode: "curated-fallback",
+      sync: {
+        status: "degraded",
+        stale: true,
+        warnings: [staleSourceWarning.message],
+      },
+    });
+    expect(staleSourceResult?.reserves).not.toEqual(LIVE_SLICES);
+
+    const staleObservationWithOkStatus = makeReservesDb({
+      composition: {
+        fetched_at: 1_100,
+        metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: 700 }),
+      },
+      syncState: { last_attempted_at: 1_100, last_success_at: 1_100 },
+    });
+    await expect(
+      resolveReserveResult(staleObservationWithOkStatus, "iusd-infinifi", 1_200, 300),
+    ).resolves.toMatchObject({ mode: "curated-fallback", sync: { stale: true } });
+
+    const degradedFreshDb = makeReservesDb({ syncState: { last_status: "degraded" } });
+    await expect(resolveReserveResult(degradedFreshDb, "iusd-infinifi", 1_200)).resolves.toMatchObject({
+      mode: "curated-fallback",
+      sync: { status: "degraded", stale: false },
+    });
   });
 
   it("does not mark unverified snapshots without explicit scoring exceptions as scoring eligible", async () => {
@@ -375,15 +422,15 @@ describe("live-reserves-store", () => {
 
   it("includes lastError in sync view when sync state has an error", async () => {
     const db = makeReservesDb({
-      composition: null,
       syncState: {
-        last_success_at: null,
         last_status: "error",
         last_error: "HTTP 503 for https://api.example.com",
       },
     });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
+    expect(result?.mode).toBe("curated-fallback");
+    expect(result?.reserves).not.toEqual(LIVE_SLICES);
     expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
   });
 

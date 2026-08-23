@@ -267,6 +267,7 @@ export function buildReserveSyncNotice(
   if (sync.failureCategory) rows.push(`Failure category: ${sync.failureCategory}`);
   if (sync.lastError) rows.push(`Last error: ${sync.lastError}`);
   if (sync.uncertainWrite) rows.push("Latest write state uncertain");
+  rows.push(...(sync.warnings ?? []));
 
   return {
     title: sync.status === "error" ? "Live reserve sync error" : "Live reserve sync degraded",

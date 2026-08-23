@@ -330,8 +330,15 @@ describe("buildReserveSyncNotice", () => {
   });
 
   it("degraded status → amber degraded notice", () => {
-    const notice = buildReserveSyncNotice(makeReserves({ mode: "live", sync: makeSync({ status: "degraded" }) }));
+    const notice = buildReserveSyncNotice(makeReserves({
+      mode: "curated-fallback",
+      sync: makeSync({
+        status: "degraded",
+        warnings: ["Upstream reserve source timestamp exceeds the accepted age"],
+      }),
+    }));
     expect(notice?.title).toBe("Live reserve sync degraded");
+    expect(notice?.rows).toContain("Upstream reserve source timestamp exceeds the accepted age");
     expect(notice?.toneClass).toBe(AMBER);
   });
 });
