@@ -1,4 +1,5 @@
 import { stripSensitive } from "./safe-error-message";
+import { sanitizeBoundedMetadata } from "./sensitive-metadata";
 
 export type WorkerLogLevel = "debug" | "info" | "warn" | "error";
 export type WorkerLogScope = "http" | "api" | "status" | "admin" | "lib" | "handler";
@@ -73,50 +74,16 @@ function classifyError(error: unknown): ErrorLogFields | null {
   };
 }
 
-function boundMetadataValue(value: unknown, depth: number): unknown {
-  if (value == null || typeof value === "number" || typeof value === "boolean") {
-    return value;
-  }
-  if (typeof value === "string") {
-    const sanitized = stripSensitive(value);
-    return sanitized.length <= MAX_STRING_CHARS
-      ? sanitized
-      : `${sanitized.slice(0, MAX_STRING_CHARS)}...`;
-  }
-  if (value instanceof Error) {
-    return {
-      name: value.name || "Error",
-      message: stripSensitive(value.message).slice(0, MAX_STRING_CHARS),
-      ...(value.stack ? { stack: stripSensitive(value.stack).slice(0, MAX_STACK_CHARS) } : {}),
-    };
-  }
-  if (depth >= MAX_METADATA_DEPTH) {
-    return "[truncated-depth]";
-  }
-  if (Array.isArray(value)) {
-    const items = value.slice(0, MAX_ARRAY_ITEMS).map((item) => boundMetadataValue(item, depth + 1));
-    if (value.length > MAX_ARRAY_ITEMS) {
-      items.push(`[${value.length - MAX_ARRAY_ITEMS} more]`);
-    }
-    return items;
-  }
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    const bounded: Record<string, unknown> = {};
-    for (const [key, entryValue] of entries.slice(0, MAX_METADATA_KEYS)) {
-      bounded[key] = boundMetadataValue(entryValue, depth + 1);
-    }
-    if (entries.length > MAX_METADATA_KEYS) {
-      bounded.truncatedKeys = entries.length - MAX_METADATA_KEYS;
-    }
-    return bounded;
-  }
-  return stripSensitive(String(value)).slice(0, MAX_STRING_CHARS);
-}
-
 function boundMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!metadata || Object.keys(metadata).length === 0) return undefined;
-  return boundMetadataValue(metadata, 0) as Record<string, unknown>;
+  return sanitizeBoundedMetadata(metadata, {
+    maxStringChars: MAX_STRING_CHARS,
+    maxStackChars: MAX_STACK_CHARS,
+    maxKeys: MAX_METADATA_KEYS,
+    maxArrayItems: MAX_ARRAY_ITEMS,
+    maxDepth: MAX_METADATA_DEPTH,
+    emptyErrorNameFallback: "Error",
+  }) as Record<string, unknown>;
 }
 
 export function buildWorkerLogRecord(event: WorkerStructuredLogEvent): WorkerStructuredLogRecord {

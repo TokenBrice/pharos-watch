@@ -1,5 +1,7 @@
 import { abortReason } from "./abort";
+import { rethrowIfAborted } from "./abort";
 import { parseJson } from "./json-parse";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 
 export async function drainResponseBody(response: Response): Promise<void> {
   if (response.bodyUsed || !response.body) {
@@ -251,4 +253,43 @@ export async function readResponseTextBoundedWithSignal(
   signal?: AbortSignal,
 ): Promise<string> {
   return await readResponseTextStreamWithSignal(response, maxBytes, signal, "truncate");
+}
+
+export async function readResponseTextWithTimeout(
+  response: Response,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<string> {
+  const timeout = createTimeoutSignal({
+    timeoutMs,
+    timeoutReason: new DOMException(`response body timed out after ${timeoutMs}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return await readResponseTextWithSignal(response, timeout.signal);
+  } finally {
+    timeout.dispose();
+  }
+}
+
+export async function readResponseSnippetWithTimeout(
+  response: Response,
+  options: { timeoutMs: number; maxBytes: number; maxChars: number },
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const timeout = createTimeoutSignal({
+    timeoutMs: options.timeoutMs,
+    timeoutReason: new DOMException(`response body timed out after ${options.timeoutMs}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    const value = await readResponseTextBoundedWithSignal(response, options.maxBytes, timeout.signal);
+    const snippet = value.replace(/\s+/g, " ").trim().slice(0, options.maxChars);
+    return snippet.length > 0 ? snippet : undefined;
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return undefined;
+  } finally {
+    timeout.dispose();
+  }
 }

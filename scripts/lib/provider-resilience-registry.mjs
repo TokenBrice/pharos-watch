@@ -93,7 +93,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/lib/authoritative-price-sources/erc4626-nav.ts",
       "worker/src/lib/authoritative-price-sources/idle-cdo-tranche.ts",
       "worker/src/lib/authoritative-price-sources/infinifi-iusd.ts",
-      "worker/src/lib/authoritative-price-sources/preview-redeem.ts",
+      "worker/src/lib/authoritative-price-sources/protocol-redeem-provider.ts",
     ],
     tests: ["worker/src/lib/__tests__/authoritative-price-sources.test.ts"],
     allowBareFetch: false,

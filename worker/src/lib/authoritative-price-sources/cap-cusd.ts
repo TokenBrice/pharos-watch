@@ -1,26 +1,19 @@
 import { logWorkerEventArgs } from "../structured-log";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
-import { CIRCUIT_SOURCE } from "../constants";
 import {
-  collectHistoricalBlockPrices,
   decodeUint256WordBigInt,
   encodeAddress,
   encodeUint256,
   ETHEREUM_CHAIN,
   findNearestSupply,
   getUsdcQuotedRedeemConfig,
-  PROTOCOL_REDEEM_SOURCE,
   ratioToNumber,
-  type CurrentPriceOverride,
   type HistoricalPriceContext,
-  type HistoricalPricePoint,
-  type LivePriceContext,
-  type PriceSourceProvider,
 } from "./helpers";
+import { createProtocolRedeemProvider } from "./protocol-redeem-provider";
 
 const CAP_CUSD_ID = "cusd-cap";
 const CAP_GET_BURN_AMOUNT_SELECTOR = "0xb7c4a6bf"; // getBurnAmount(address,uint256)
@@ -68,36 +61,19 @@ async function fetchCapRedeemQuote(
   return Number.isFinite(price) && price > 0 ? price : null;
 }
 
-export const capCusdProvider: PriceSourceProvider = {
-  source: PROTOCOL_REDEEM_SOURCE,
-  liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
-  recordNullLiveResultAsCircuitFailure: true,
-  matches(stablecoinId: string): boolean {
-    return stablecoinId === CAP_CUSD_ID;
-  },
-  async fetchLivePrice(
-    asset: PeggedAsset,
-    _context: LivePriceContext,
-    signal?: AbortSignal,
-  ): Promise<CurrentPriceOverride | null> {
+export const capCusdProvider = createProtocolRedeemProvider({
+  stablecoinId: CAP_CUSD_ID,
+  async fetchLiveQuote(asset: PeggedAsset, signal?: AbortSignal): Promise<number | null> {
     const sampleNotionalUsd = clampSampleNotionalUsd(getCirculatingRaw(asset));
-    const price = await fetchCapRedeemQuote(sampleNotionalUsd, "latest", signal);
-    if (price == null) return null;
-
-    return {
-      price,
-      source: PROTOCOL_REDEEM_SOURCE,
-      confidence: "high",
-    };
+    return fetchCapRedeemQuote(sampleNotionalUsd, "latest", signal);
   },
-  async fetchHistoricalPrices(
-    _meta: StablecoinMeta,
+  async fetchHistoricalQuote(
     context: HistoricalPriceContext,
-  ): Promise<HistoricalPricePoint[] | null> {
-    return collectHistoricalBlockPrices(context, async (blockNumber, timestamp, signal) => {
-      const supplyUsd = findNearestSupply(context.supplySnapshots, timestamp);
-      const sampleNotionalUsd = clampSampleNotionalUsd(supplyUsd);
-      return fetchCapRedeemQuote(sampleNotionalUsd, blockNumber, signal);
-    });
+    blockNumber: number,
+    timestamp: number,
+    signal?: AbortSignal,
+  ): Promise<number | null> {
+    const supplyUsd = findNearestSupply(context.supplySnapshots, timestamp);
+    return fetchCapRedeemQuote(clampSampleNotionalUsd(supplyUsd), blockNumber, signal);
   },
-};
+});

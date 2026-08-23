@@ -28,14 +28,13 @@ import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../db";
 import { reconcileDewsPublishedGenerationLedger } from "../dews-publication-pointer";
 import {
   getProjectorWatermark,
-  insertTapeEvents,
-  setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 import {
   DEFAULT_BATCH_LIMIT,
   fetchRowsWithTieExpansion,
+  finalizeProjectorBatch,
   resolveProjectorOptions,
   type ProjectorOptions,
   type ProjectorResult,
@@ -225,7 +224,7 @@ async function projectDewsByVariant(
   if (options?.dryRun !== true) {
     await reconcileDewsPublishedGenerationLedger(db, Math.floor(Date.now() / 1000));
   }
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchSamplesSince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
@@ -248,15 +247,7 @@ async function projectDewsByVariant(
     if (row.computed_at > maxCursor) maxCursor = row.computed_at;
   }
 
-  if (!dryRun) {
-    if (events.length > 0) await insertTapeEvents(db, events);
-    // Advance the watermark even when nothing transitioned, so we do not
-    // re-scan the same snapshot rows next run.
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
 }
 
 export function projectDewsEscalated(
@@ -298,7 +289,6 @@ export async function projectDewsBandTransitions(
   const since = options?.since ?? Math.min(escWatermark, deescWatermark);
   const until = options?.until ?? null;
   const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
-  const dryRun = options?.dryRun === true;
 
   const rows = await fetchSamplesSince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
@@ -319,12 +309,13 @@ export async function projectDewsBandTransitions(
     if (row.computed_at > maxCursor) maxCursor = row.computed_at;
   }
 
-  if (!dryRun) {
-    if (events.length > 0) await insertTapeEvents(db, events);
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, "dews.escalated", Math.max(escWatermark, maxCursor));
-      await setProjectorWatermark(db, "dews.deescalated", Math.max(deescWatermark, maxCursor));
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, {
+    events,
+    maxCursor,
+    options,
+    cursorUpdates: [
+      { key: "dews.escalated", value: Math.max(escWatermark, maxCursor) },
+      { key: "dews.deescalated", value: Math.max(deescWatermark, maxCursor) },
+    ],
+  });
 }

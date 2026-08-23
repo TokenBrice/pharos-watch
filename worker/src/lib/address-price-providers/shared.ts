@@ -1,6 +1,4 @@
 export { isRecord } from "@shared/lib/type-guards";
-import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import { rethrowIfAborted } from "../abort";
 import { chunkArray } from "../collections";
 import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
@@ -14,6 +12,7 @@ import {
 } from "../pricing-provider-diagnostics";
 import {
   applyJsonParseFailureDiagnostic,
+  buildCapSkipDiagnostic,
   buildPricingProviderDiagnostic,
 } from "../pricing-provider-lifecycle";
 import type {
@@ -22,7 +21,7 @@ import type {
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
-import { readResponseTextBoundedWithSignal, readResponseTextWithSignal } from "../response-body";
+import { readResponseSnippetWithTimeout, readResponseTextWithTimeout } from "../response-body";
 
 export const ADDRESS_PROVIDER_MIN_LIQUIDITY_USD = 50_000;
 export const ADDRESS_PROVIDER_RUN_BUDGET_MS = 90_000;
@@ -43,39 +42,15 @@ function parseRetryAfterSec(response: Response, nowMs = Date.now()): number | un
 }
 
 async function readProviderResponseText(response: Response, signal?: AbortSignal): Promise<string> {
-  const timeout = createTimeoutSignal({
-    timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
-    timeoutReason: new DOMException(`response body timed out after ${ADDRESS_PROVIDER_TIMEOUT_MS}ms`, "TimeoutError"),
-    parentSignal: signal,
-  });
-  try {
-    return await readResponseTextWithSignal(response, timeout.signal);
-  } finally {
-    timeout.dispose();
-  }
-}
-
-function sanitizeProviderSnippet(value: string): string | undefined {
-  const snippet = value.replace(/\s+/g, " ").trim().slice(0, 240);
-  return snippet.length > 0 ? snippet : undefined;
+  return readResponseTextWithTimeout(response, ADDRESS_PROVIDER_TIMEOUT_MS, signal);
 }
 
 async function readProviderResponseSnippet(response: Response, signal?: AbortSignal): Promise<string | undefined> {
-  const timeout = createTimeoutSignal({
+  return readResponseSnippetWithTimeout(response, {
     timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
-    timeoutReason: new DOMException(`response body timed out after ${ADDRESS_PROVIDER_TIMEOUT_MS}ms`, "TimeoutError"),
-    parentSignal: signal,
-  });
-  try {
-    return sanitizeProviderSnippet(
-      await readResponseTextBoundedWithSignal(response, ADDRESS_PROVIDER_ERROR_BODY_MAX_BYTES, timeout.signal),
-    );
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    return undefined;
-  } finally {
-    timeout.dispose();
-  }
+    maxBytes: ADDRESS_PROVIDER_ERROR_BODY_MAX_BYTES,
+    maxChars: 240,
+  }, signal);
 }
 
 export function hasValue(value: string | null | undefined): value is string {
@@ -270,7 +245,7 @@ export function emptyProviderResult(
   };
 }
 
-export function finalizeAddressPriceDiagnosticAttempts(
+function finalizeAddressPriceDiagnosticAttempts(
   diagnostic: PricingProviderAttemptDiagnostic,
   quotes: readonly AddressPriceQuote[],
 ): PricingProviderAttemptDiagnostic {
@@ -331,19 +306,78 @@ export function buildSkippedAddressPriceAttempts(
   }));
 }
 
-/** Initialize the mutable accumulators shared by every address-price provider run function. */
-export function createProviderRunState(): {
-  diagnostics: AddressPriceProviderRunResult["diagnostics"];
-  quotes: AddressPriceQuote[];
-  rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"];
-  successfulRequests: number;
-  attemptedRequests: number;
-} {
+export function createAddressProviderRunner(input: {
+  provider: AddressPriceProviderKey;
+  label: string;
+  targets: readonly AddressPriceTarget[];
+  deadlineMs: number;
+  maxRequests: number;
+  includeProcessedTargets?: boolean;
+}) {
+  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
+  const quotes: AddressPriceQuote[] = [];
+  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
+  const processedTargets = new Set<AddressPriceTarget>();
+  let successfulRequests = 0;
+  let attemptedRequests = 0;
+
   return {
-    diagnostics: [],
-    quotes: [],
-    rejectedTargets: {},
-    successfulRequests: 0,
-    attemptedRequests: 0,
+    diagnostics,
+    quotes,
+    rejectedTargets,
+    get attemptedRequests() {
+      return attemptedRequests;
+    },
+    canStartRequest(): boolean {
+      return attemptedRequests < input.maxRequests && Date.now() < input.deadlineMs;
+    },
+    beginRequest(): void {
+      attemptedRequests += 1;
+    },
+    recordSuccess(count = 1): void {
+      successfulRequests += count;
+    },
+    markProcessed(targets: readonly AddressPriceTarget[]): void {
+      for (const target of targets) processedTargets.add(target);
+    },
+    recordDiagnostic(diagnostic: PricingProviderAttemptDiagnostic): void {
+      diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
+    },
+    finish(options?: {
+      eligibleTargets?: readonly AddressPriceTarget[];
+      skipPolicy?: (deadlineReached: boolean) => {
+        skipReason: "budget" | "deadline" | "request-cap";
+        rejectionClass: string;
+      };
+    }): AddressPriceProviderRunResult {
+      const eligibleTargets = options?.eligibleTargets ?? input.targets;
+      const skippedTargets = eligibleTargets.filter((target) => !processedTargets.has(target));
+      if (skippedTargets.length > 0) {
+        const diagnostic = buildCapSkipDiagnostic(
+          { source: input.provider, label: input.label },
+          skippedTargets.length,
+        );
+        const deadlineReached = Date.now() >= input.deadlineMs;
+        const policy = options?.skipPolicy?.(deadlineReached) ?? {
+          skipReason: deadlineReached ? "deadline" : "request-cap",
+          rejectionClass: deadlineReached ? "timeout" : "cap",
+        };
+        diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
+          input.provider,
+          skippedTargets,
+          policy.skipReason,
+          policy.rejectionClass,
+        );
+        diagnostics.push(diagnostic);
+      }
+      return {
+        quotes,
+        diagnostics,
+        rejectedTargets,
+        successfulRequests,
+        attemptedRequests,
+        ...(input.includeProcessedTargets ? { processedTargets: [...processedTargets] } : {}),
+      };
+    },
   };
 }

@@ -17,7 +17,7 @@ export function shouldSuppressAsMirrorZero(
   return stablecoin === "EURC" && (eventType === "blacklist" || eventType === "unblacklist") && amountNative === 0;
 }
 
-export interface BlacklistRow {
+export interface BlacklistPersistedRow {
   id: string;
   stablecoin: BlacklistStablecoin;
   chain_id: string;
@@ -44,6 +44,8 @@ export interface BlacklistRow {
   explorer_tx_url: string;
   explorer_address_url: string;
 }
+
+export type BlacklistRow = BlacklistPersistedRow;
 
 export interface BlacklistScanResult {
   rows: BlacklistRow[];

@@ -92,7 +92,7 @@
     "worker/src/lib/authoritative-price-sources/inherited-tracked.ts": 96.7,
     "worker/src/lib/authoritative-price-sources/jusd-stablecoin-bridge.ts": 96,
     "worker/src/lib/authoritative-price-sources/kava-pricefeed.ts": 94.8,
-    "worker/src/lib/authoritative-price-sources/preview-redeem.ts": 94.1,
+    "worker/src/lib/authoritative-price-sources/protocol-redeem-provider.ts": 94.1,
     "worker/src/lib/authoritative-price-sources/protocol-par.ts": 87.1,
     "worker/src/lib/authoritative-price-sources/rate-cache.ts": 100,
     "worker/src/lib/live-reserves-store-overview.ts": 80.7,

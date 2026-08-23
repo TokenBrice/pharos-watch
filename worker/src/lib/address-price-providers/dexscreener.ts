@@ -1,14 +1,12 @@
 import { getDsTrackedTokenPriceUsd, type DsPair } from "../dexscreener";
 import { throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import { median } from "@shared/lib/stats";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
-  buildSkippedAddressPriceAttempts,
   chunk,
-  createProviderRunState,
+  createAddressProviderRunner,
   fetchProviderJson,
-  finalizeAddressPriceDiagnosticAttempts,
   groupTargetsByProviderChain,
   incrementReason,
   isRecord,
@@ -95,19 +93,22 @@ export async function runDexScreenerAddressProvider(
   nowSec: number,
   deadlineMs: number,
 ): Promise<AddressPriceProviderRunResult> {
-  const state = createProviderRunState();
-  const { diagnostics, quotes, rejectedTargets } = state;
-  let { successfulRequests, attemptedRequests } = state;
-  let processedCount = 0;
-  const processedTargets = new Set<AddressPriceTarget>();
+  const runner = createAddressProviderRunner({
+    provider: "dexscreener-address",
+    label: "DexScreener",
+    targets,
+    deadlineMs,
+    maxRequests: DEXSCREENER_ADDRESS_MAX_REQUESTS,
+  });
+  const { quotes, rejectedTargets } = runner;
 
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {
     throwIfAborted(signal);
     for (const batch of chunk(chainTargets, 30)) {
       throwIfAborted(signal);
-      if (attemptedRequests >= DEXSCREENER_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
-      attemptedRequests += 1;
+      if (!runner.canStartRequest()) break;
+      runner.beginRequest();
       const url = `https://api.dexscreener.com/tokens/v1/${providerChainId}/${batch.map((target) => target.address).join(",")}`;
       const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
         provider: "dexscreener-address",
@@ -127,39 +128,17 @@ export async function runDexScreenerAddressProvider(
         diagnostic.resolvedCount = batchQuotes.length;
         diagnostic.rejectionReasonCounts = Object.keys(batchRejectedTargets).length ? { ...batchRejectedTargets } : undefined;
         diagnostic.success = true;
-        successfulRequests += 1;
+        runner.recordSuccess();
       } else if (json != null) {
         diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected DexScreener token-address response array");
       }
-      processedCount += batch.length;
-      for (const target of batch) processedTargets.add(target);
-      diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
+      runner.markProcessed(batch);
+      runner.recordDiagnostic(diagnostic);
       if (!diagnostic.success) {
         break;
       }
     }
-    if (attemptedRequests >= DEXSCREENER_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
+    if (!runner.canStartRequest()) break;
   }
-
-  const cappedTargets = Math.max(0, targets.length - processedCount);
-  if (cappedTargets > 0) {
-    const skippedTargets = targets.filter((target) => !processedTargets.has(target));
-    const diagnostic = buildCapSkipDiagnostic({ source: "dexscreener-address", label: "DexScreener" }, cappedTargets);
-    const deadlineReached = Date.now() >= deadlineMs;
-    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
-      "dexscreener-address",
-      skippedTargets,
-      deadlineReached ? "deadline" : "request-cap",
-      deadlineReached ? "timeout" : "cap",
-    );
-    diagnostics.push(diagnostic);
-  }
-
-  return {
-    quotes,
-    diagnostics,
-    rejectedTargets,
-    successfulRequests,
-    attemptedRequests,
-  };
+  return runner.finish();
 }

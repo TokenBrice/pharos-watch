@@ -19,12 +19,9 @@ import type { TapeEventSeverity } from "@shared/types/tape-event";
 const MINT_BURN_VERSION = MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL.replace(/^v/, "");
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
-import {
-  insertTapeEvents,
-  setProjectorWatermark,
-} from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
+  finalizeProjectorBatch,
   fetchRowsWithTieExpansion,
   resolveProjectorOptions,
   type ProjectorOptions,
@@ -144,7 +141,7 @@ async function projectLargeFlows(
   db: D1Database,
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, CURSOR_KEY, options);
+  const { since, until, limit } = await resolveProjectorOptions(db, CURSOR_KEY, options);
 
   const rows = await fetchLargeFlows(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
@@ -157,13 +154,7 @@ async function projectLargeFlows(
     if (event) events.push(event);
   }
 
-  if (!dryRun) {
-    if (events.length > 0) await insertTapeEvents(db, events);
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, CURSOR_KEY, maxCursor);
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey: CURSOR_KEY, options });
 }
 
 export function projectMintBurnLargeFlows(

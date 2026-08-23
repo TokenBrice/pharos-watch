@@ -4,14 +4,12 @@ import type {
   AddressPriceTarget,
 } from "./types";
 import { throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import {
   chunk,
-  buildSkippedAddressPriceAttempts,
-  createProviderRunState,
+  createAddressProviderRunner,
   emptyProviderResult,
   fetchProviderJson,
-  finalizeAddressPriceDiagnosticAttempts,
   groupTargetsByProviderChain,
   incrementReason,
   isRecord,
@@ -38,17 +36,21 @@ export async function runAlchemyAddressProvider(
 ): Promise<AddressPriceProviderRunResult> {
   const apiKey = config.alchemyApiKey?.trim();
   if (!apiKey) return emptyProviderResult("alchemy-address", targets, "missing-provider");
-  const state = createProviderRunState();
-  const { diagnostics, quotes, rejectedTargets } = state;
-  let { successfulRequests, attemptedRequests } = state;
+  const runner = createAddressProviderRunner({
+    provider: "alchemy-address",
+    label: "Alchemy",
+    targets,
+    deadlineMs,
+    maxRequests: ALCHEMY_ADDRESS_MAX_REQUESTS,
+  });
+  const { quotes, rejectedTargets } = runner;
   const batches = buildAlchemyBatches(targets);
   const requestBatches = batches.slice(0, ALCHEMY_ADDRESS_MAX_REQUESTS);
-  const processedTargets = new Set<AddressPriceTarget>();
 
   for (const batch of requestBatches) {
     throwIfAborted(signal);
-    if (Date.now() >= deadlineMs) break;
-    attemptedRequests += 1;
+    if (!runner.canStartRequest()) break;
+    runner.beginRequest();
     const url = `https://api.g.alchemy.com/prices/v1/${encodeURIComponent(apiKey)}/tokens/by-address`;
     const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
       provider: "alchemy-address",
@@ -101,32 +103,12 @@ export async function runAlchemyAddressProvider(
       diagnostic.responseRowCount = rows.length;
       diagnostic.matchedCount = quotes.length - matchedCountBefore;
       diagnostic.success = true;
-      successfulRequests += 1;
+      runner.recordSuccess();
     } else if (json != null) {
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Alchemy prices data array");
     }
-    for (const target of batch) processedTargets.add(target);
-    diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
+    runner.markProcessed(batch);
+    runner.recordDiagnostic(diagnostic);
   }
-
-  const skippedTargets = targets.filter((target) => !processedTargets.has(target));
-  if (skippedTargets.length > 0) {
-    const diagnostic = buildCapSkipDiagnostic({ source: "alchemy-address", label: "Alchemy" }, skippedTargets.length);
-    const deadlineReached = Date.now() >= deadlineMs;
-    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
-      "alchemy-address",
-      skippedTargets,
-      deadlineReached ? "deadline" : "request-cap",
-      deadlineReached ? "timeout" : "cap",
-    );
-    diagnostics.push(diagnostic);
-  }
-
-  return {
-    quotes,
-    diagnostics,
-    rejectedTargets,
-    successfulRequests,
-    attemptedRequests,
-  };
+  return runner.finish();
 }

@@ -1,15 +1,13 @@
 import { cgUrl, cgHeaders } from "../coingecko";
 import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal, throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import type { AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
-  buildSkippedAddressPriceAttempts,
   chunk,
-  createProviderRunState,
+  createAddressProviderRunner,
   fetchProviderJson,
-  finalizeAddressPriceDiagnosticAttempts,
   groupTargetsByProviderChain,
   incrementReason,
   isRecord,
@@ -50,19 +48,23 @@ export async function runCoingeckoOnchainAddressProvider(
   nowSec: number,
   deadlineMs: number,
 ): Promise<AddressPriceProviderRunResult> {
-  const state = createProviderRunState();
-  const { diagnostics, quotes, rejectedTargets } = state;
-  let { successfulRequests, attemptedRequests } = state;
-  let processedCount = 0;
-  const processedTargets = new Set<AddressPriceTarget>();
+  const runner = createAddressProviderRunner({
+    provider: "coingecko-onchain-address",
+    label: "CoinGecko onchain",
+    targets,
+    deadlineMs,
+    maxRequests: CG_ONCHAIN_ADDRESS_MAX_REQUESTS,
+    includeProcessedTargets: true,
+  });
+  const { quotes, rejectedTargets } = runner;
 
   for (const { providerChainId, targets: batch } of buildRoundRobinNetworkBatches(targets)) {
     throwIfAborted(signal);
-    if (attemptedRequests >= CG_ONCHAIN_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
-    if (attemptedRequests > 0) {
+    if (!runner.canStartRequest()) break;
+    if (runner.attemptedRequests > 0) {
       await sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);
     }
-    attemptedRequests += 1;
+    runner.beginRequest();
     const url = cgUrl(
       `/onchain/networks/${providerChainId}/tokens/multi/${batch.map((target) => target.address).join(",")}`,
       apiKey,
@@ -119,35 +121,12 @@ export async function runCoingeckoOnchainAddressProvider(
       diagnostic.responseRowCount = data.length;
       diagnostic.matchedCount = quotes.length - matchedCountBefore;
       diagnostic.success = true;
-      successfulRequests += 1;
+      runner.recordSuccess();
     } else if (json != null) {
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected CoinGecko onchain tokens/multi payload");
     }
-    processedCount += batch.length;
-    for (const target of batch) processedTargets.add(target);
-    diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
+    runner.markProcessed(batch);
+    runner.recordDiagnostic(diagnostic);
   }
-
-  const cappedTargets = Math.max(0, targets.length - processedCount);
-  if (cappedTargets > 0) {
-    const skippedTargets = targets.filter((target) => !processedTargets.has(target));
-    const diagnostic = buildCapSkipDiagnostic({ source: "coingecko-onchain-address", label: "CoinGecko onchain" }, cappedTargets);
-    const deadlineReached = Date.now() >= deadlineMs;
-    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
-      "coingecko-onchain-address",
-      skippedTargets,
-      deadlineReached ? "deadline" : "request-cap",
-      deadlineReached ? "timeout" : "cap",
-    );
-    diagnostics.push(diagnostic);
-  }
-
-  return {
-    quotes,
-    diagnostics,
-    rejectedTargets,
-    successfulRequests,
-    attemptedRequests,
-    processedTargets: [...processedTargets],
-  };
+  return runner.finish();
 }
