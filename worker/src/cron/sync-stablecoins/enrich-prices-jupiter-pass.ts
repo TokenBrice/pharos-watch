@@ -28,11 +28,11 @@ import {
   applyResolvedPrice,
   type PeggedAsset,
 } from "./enrich-prices-shared";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   collectMissingPriceCandidates,
   type EnrichPassResult,
   SOLANA_MINT_BY_ID,
-  sumCirculatingValue,
 } from "./enrich-prices-pass-common";
 
 const JUPITER_PRICE_API = "https://api.jup.ag/price/v3";
@@ -84,7 +84,7 @@ export async function runJupiterPass(
   }).map((candidate) => ({
     ...candidate,
     mode: "fallback" as const,
-    priorityUsd: sumCirculatingValue(candidate.asset),
+    priorityUsd: getCirculatingRaw(candidate.asset),
   }));
   const primaryCandidates = collectPrimaryAugmentationCandidates(assets);
   const candidates = [...fallbackCandidates, ...primaryCandidates];
@@ -217,7 +217,7 @@ function collectPrimaryAugmentationCandidates(assets: PeggedAsset[]): JupiterCan
         index,
         mint,
         mode: "primary",
-        priorityUsd: sumCirculatingValue(asset),
+        priorityUsd: getCirculatingRaw(asset),
       };
     })
     .filter((entry): entry is JupiterCandidate => entry != null)

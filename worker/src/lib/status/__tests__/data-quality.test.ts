@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import type { BlacklistGapMetrics } from "../../blacklist-gaps";
 import { getDataQuality } from "../data-quality";
@@ -27,7 +28,19 @@ function stablecoinsPayload(): string {
         id: "usdt-tether",
         symbol: "USDT",
         price: 1,
-        circulating: { peggedUSD: 100_000_000 },
+        circulating: { peggedUSD: 100_000_000, peggedEUR: 100_000_000 },
+      },
+      {
+        id: "null-bucket",
+        symbol: "NULL",
+        price: 1,
+        circulating: { peggedUSD: null },
+      },
+      {
+        id: "zero-bucket",
+        symbol: "ZERO",
+        price: 1,
+        circulating: { peggedUSD: 0 },
       },
     ],
   });
@@ -80,7 +93,20 @@ describe("getDataQuality repair debt", () => {
       {
         match: "MAX(updated_at) as latest",
         rows: [],
-        first: { latest: null, tracked: 0 },
+        first: { latest: NOW - 60, tracked: 3 },
+      },
+      {
+        match: "HAVING latest_update < ?",
+        rows: [],
+        first: { cnt: 0 },
+      },
+      {
+        match: "SELECT stablecoin_id, SUM(supply) as total_supply",
+        rows: [
+          { stablecoin_id: "usdt-tether", total_supply: 100_000_000 },
+          { stablecoin_id: "null-bucket", total_supply: 100 },
+          { stablecoin_id: "zero-bucket", total_supply: 100 },
+        ],
       },
       {
         match: "blacklist-reconciliation-status-latest",
@@ -136,5 +162,17 @@ describe("getDataQuality repair debt", () => {
       tronAtSafeHead: true,
       arbitrumAtSafeHead: true,
     });
+    expect(quality.onchainSupplyDivergences).toBe(1);
+    expect(quality.onchainDivergenceRatio).toBe(1 / 3);
+
+    const circulatingFixtures = [
+      [{ peggedUSD: 100, peggedEUR: 25 }, 125],
+      [{ peggedUSD: null as unknown as number }, 0],
+      [{ peggedUSD: Number.NaN }, 0],
+      [{ peggedUSD: 0 }, 0],
+    ] as const;
+    for (const [circulating, expected] of circulatingFixtures) {
+      expect(getCirculatingRaw({ circulating })).toBe(expected);
+    }
   });
 });

@@ -49,14 +49,6 @@ export function collectMissingPriceCandidates<T extends object = Record<never, n
   return candidates;
 }
 
-export function sumCirculatingValue(asset: PeggedAsset): number {
-  if (!asset.circulating || typeof asset.circulating !== "object") return 0;
-  return Object.values(asset.circulating).reduce(
-    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
-    0,
-  );
-}
-
 export function isFreshFallbackObservedAt(
   observedAtSec: number | null | undefined,
   maxAgeSec: number,
