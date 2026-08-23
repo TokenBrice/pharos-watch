@@ -110,7 +110,13 @@ function templateKey(coin: ReserveTemplateCoinMeta): string | null {
 // ── Public API ──────────────────────────────────────────────────────────
 
 /** Minimal coin shape needed for reserve resolution; satisfied by both the fat and client registries. */
-export type ReserveTemplateCoinMeta = Pick<StablecoinMeta, "reserves" | "flags" | "collateralQuality">;
+export type ReserveTemplateCoinMeta = Pick<StablecoinMeta, "reserves" | "flags" | "collateralQuality">
+  & Partial<Pick<StablecoinMeta, "id">>;
+
+const TEMPLATE_SUPPRESSED_IDS = new Set([
+  // Pareto discloses a FalconX private-credit facility, not a percentage reserve composition.
+  "aa-falconx-mev-capital",
+]);
 
 /**
  * Returns reserve composition for a coin.
@@ -122,6 +128,8 @@ export function getReserves(coin: ReserveTemplateCoinMeta): ReserveResult | null
   if (coin.reserves && coin.reserves.length > 0) {
     return { reserves: coin.reserves, estimated: false, mode: "curated-fallback" };
   }
+
+  if (coin.id && TEMPLATE_SUPPRESSED_IDS.has(coin.id)) return null;
 
   // Fall back to template
   const key = templateKey(coin);
