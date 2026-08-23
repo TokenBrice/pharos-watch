@@ -7,10 +7,7 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import {
   assertAllD1MatchesUsed,
-  mockD1,
   mockD1Strict,
-  type MockD1Database,
-  type MockTableConfig,
 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
@@ -24,101 +21,18 @@ import {
 } from "../redemption-backstops-store";
 import { pruneRedemptionBackstopRunRetention } from "../redemption-backstops-store-write";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import {
+  completedRunRow,
+  completedRunsQuery,
+  completedRunsTable,
+  makeRealisticRedemptionRow,
+  makeRedemptionWriteRecord,
+  mockRedemptionD1,
+  runRowsQuery,
+  runRowsTable,
+} from "./redemption-backstops-store.test-support";
 
-const REDEMPTION_WRITE_TABLES: MockTableConfig[] = [
-  { match: "INSERT INTO redemption_backstop_runs", rows: [] },
-  { match: "INSERT INTO redemption_backstop_run_rows", rows: [] },
-  { match: "INSERT OR REPLACE INTO redemption_backstop_history", rows: [] },
-  { match: "UPDATE redemption_backstop_runs", rows: [], runMeta: { changes: 1 } },
-  { match: "DELETE FROM redemption_backstop_run_rows", rows: [], runMeta: { changes: 0 } },
-  { match: "DELETE FROM redemption_backstop_runs", rows: [], runMeta: { changes: 0 } },
-  { match: "DELETE FROM redemption_backstop_history", rows: [], runMeta: { changes: 0 } },
-];
-
-function mockRedemptionD1(tables: MockTableConfig[] = []): MockD1Database {
-  return mockD1([...tables, ...REDEMPTION_WRITE_TABLES]);
-}
-
-/** Realistic mock row matching an actual offchain-issuer config (EURC). */
-function makeRealisticRow(overrides: Record<string, unknown> = {}) {
-  return {
-    stablecoin_id: "eurc-circle",
-    score: 65,
-    dex_liquidity_score: 44,
-    access_score: 40,
-    settlement_score: 65,
-    execution_certainty_score: 60,
-    capacity_score: 100,
-    output_asset_quality_score: 100,
-    cost_score: 40,
-    route_family: "offchain-issuer",
-    access_model: "issuer-api",
-    settlement_model: "same-day",
-    execution_model: "rules-based-nav",
-    output_asset_type: "stable-single",
-    provider: "supply-full-model",
-    source_mode: "estimated",
-    immediate_capacity_usd: null,
-    immediate_capacity_ratio: null,
-    fee_bps: null,
-    queue_enabled: 0,
-    updated_at: 1_700_000_000,
-    methodology_version: "1.1",
-    details_json: JSON.stringify({
-      resolutionState: "resolved",
-      capacityConfidence: "heuristic",
-      capacitySemantics: "eventual-only",
-      feeConfidence: "undisclosed-reviewed",
-      feeModelKind: "undisclosed-reviewed",
-      modelConfidence: "low",
-      routeStatus: "open",
-      routeStatusSource: "static-config",
-      holderEligibility: "verified-customer",
-      capacityProfile: {
-        immediateUsd: 10_000_000,
-        dailyLimitUsd: 5_000_000,
-        queuedUsd: 12_000_000,
-        eventualUsd: null,
-        scoringUsd: 5_000_000,
-        scoringHorizon: "daily",
-        capacityProfileConfidence: "heuristic",
-        modeledExitSizeUsd: 1_000_000,
-      },
-      capacityKind: "live-proxy-validated",
-      freshnessKind: "verified-source-timestamp",
-      sourceTimestamp: 1_699_999_900,
-      sourceUrls: ["https://example.com/redemption.json"],
-      settlementDelaySec: 3600,
-      queueDepthUsd: 12_000_000,
-      dailyLimitUsd: 5_000_000,
-      minRedeemUsd: 100_000,
-      liveHolderEligibility: "whitelisted-primary",
-      eventualRedeemabilityScore: 72,
-      confidenceDetails: {
-        capacityEvidenceQuality: 40,
-        feeEvidenceQuality: 50,
-        routeStatusFreshness: 60,
-        holderCohortBreadth: 70,
-        sourceQuality: 80,
-        reviewedDocAgeDays: 30,
-        reasons: ["heuristic capacity"],
-      },
-      costScenarioScores: {
-        retail: 30,
-        activeUser: 40,
-        institutional: null,
-      },
-      routeExitCorrelation: "independent-issuer-rail",
-      capsApplied: ["offchain-route-cap"],
-      feeDescription: "EEA burn fee is 0 bps; other Circle redemption fees may vary",
-      docs: { label: "Reserve feed", url: "https://example.com/reserves", provenance: "proof-of-reserves" },
-      notes: ["Some note"],
-    }),
-    ...overrides,
-  };
-}
-
-const LEGACY_V3997_REDEMPTION_BACKSTOP_ROW = makeRealisticRow({
+const LEGACY_V3997_REDEMPTION_BACKSTOP_ROW = makeRealisticRedemptionRow({
   stablecoin_id: "usdc-circle",
   methodology_version: "3.997",
   details_json: JSON.stringify({
@@ -163,72 +77,11 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
   }),
 };
 
-const COMPLETED_RUNS_SQL =
-  "SELECT run_id, completed_at, expected_count, written_count, min_updated_at, max_updated_at, methodology_version, status, metadata_json FROM redemption_backstop_runs WHERE status = 'completed' ORDER BY completed_at DESC LIMIT ?";
-const RUN_ROWS_BY_RUN_ID_SQL =
-  "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
-
-function makeWriteRecord(overrides: Partial<RedemptionBackstopEntry> = {}): RedemptionBackstopEntry {
-  return {
-    stablecoinId: "eurc-circle",
-    score: 65,
-    dexLiquidityScore: 44,
-    accessScore: 40,
-    settlementScore: 65,
-    executionCertaintyScore: 60,
-    capacityScore: 100,
-    outputAssetQualityScore: 100,
-    costScore: 40,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "same-day",
-    executionModel: "rules-based-nav",
-    outputAssetType: "stable-single",
-    provider: "supply-full-model",
-    sourceMode: "estimated",
-    resolutionState: "resolved",
-    routeStatus: "open",
-    routeStatusSource: "static-config",
-    holderEligibility: "verified-customer",
-    capacityConfidence: "heuristic",
-    capacitySemantics: "eventual-only",
-    feeConfidence: "undisclosed-reviewed",
-    feeModelKind: "undisclosed-reviewed",
-    modelConfidence: "low",
-    immediateCapacityUsd: null,
-    immediateCapacityRatio: null,
-    feeBps: null,
-    queueEnabled: false,
-    methodologyVersion: "1.1",
-    updatedAt: 1_700_000_000,
-    capsApplied: ["offchain-route-cap"],
-    ...overrides,
-  };
-}
-
 describe("loadRedemptionBackstopSnapshot", () => {
   it("prefers the latest completed run when loading a snapshot", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          {
-            run_id: "run-new",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-new"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-new" })],
-      },
+      completedRunsQuery([completedRunRow({ run_id: "run-new", methodology_version: "1.1" })]),
+      runRowsQuery("run-new", [makeRealisticRedemptionRow({ snapshot_run_id: "run-new" })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -243,40 +96,12 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("does not use legacy current rows when immutable run rows are present but all malformed", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          {
-            run_id: "run-corrupt",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "1.1",
-          },
-          {
-            run_id: "run-valid",
-            completed_at: 1_700_000_000,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_699_999_990,
-            max_updated_at: 1_699_999_990,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-corrupt"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-corrupt", score: 101 })],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-valid"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })],
-      },
+      completedRunsQuery([
+        completedRunRow({ run_id: "run-corrupt", methodology_version: "1.1" }),
+        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
+      ]),
+      runRowsQuery("run-corrupt", [makeRealisticRedemptionRow({ snapshot_run_id: "run-corrupt", score: 101 })]),
+      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -289,26 +114,8 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("rejects a completed manifest when its immutable run rows are missing", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          {
-            run_id: "run-mirror",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-mirror"],
-        rows: [],
-      },
+      completedRunsQuery([completedRunRow({ run_id: "run-mirror", methodology_version: "1.1" })]),
+      runRowsQuery("run-mirror", []),
     ]);
 
     await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
@@ -319,34 +126,11 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("falls back to an earlier completed run when the newest completed manifest is not complete", async () => {
     const db = mockRedemptionD1([
-      {
-        match: "FROM redemption_backstop_runs",
-        rows: [
-          {
-            run_id: "run-incomplete",
-            completed_at: 1_700_000_010,
-            expected_count: 2,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "1.1",
-          },
-          {
-            run_id: "run-valid",
-            completed_at: 1_700_000_000,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_699_999_990,
-            max_updated_at: 1_699_999_990,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: "WHERE snapshot_run_id = ?",
-        matchBinds: ["run-valid"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })],
-      },
+      completedRunsTable([
+        completedRunRow({ run_id: "run-incomplete", completed_at: 1_700_000_010, expected_count: 2 }),
+        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
+      ]),
+      runRowsTable("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -357,41 +141,16 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("falls back to an earlier completed run when a row in the newest run fails schema validation", async () => {
     const db = mockRedemptionD1([
-      {
-        match: "FROM redemption_backstop_runs",
-        rows: [
-          {
-            run_id: "run-bad-row",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "1.1",
-          },
-          {
-            run_id: "run-valid",
-            completed_at: 1_700_000_000,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_699_999_990,
-            max_updated_at: 1_699_999_990,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: "WHERE snapshot_run_id = ?",
-        matchBinds: ["run-bad-row"],
+      completedRunsTable([
+        completedRunRow({ run_id: "run-bad-row", completed_at: 1_700_000_010 }),
+        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
+      ]),
+      runRowsTable("run-bad-row", [
         // Malformed row is skipped during decode, so the run's row count (0)
         // falls short of written_count (1) and the run is rejected.
-        rows: [makeRealisticRow({ snapshot_run_id: "run-bad-row", score: 101 })],
-      },
-      {
-        match: "WHERE snapshot_run_id = ?",
-        matchBinds: ["run-valid"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })],
-      },
+        makeRealisticRedemptionRow({ snapshot_run_id: "run-bad-row", score: 101 }),
+      ]),
+      runRowsTable("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -402,35 +161,11 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("falls back to an earlier completed run when the newest completed manifest has no max timestamp", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          {
-            run_id: "run-missing-max",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: null,
-            methodology_version: "1.1",
-          },
-          {
-            run_id: "run-valid",
-            completed_at: 1_700_000_000,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_699_999_990,
-            max_updated_at: 1_699_999_990,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-valid"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })],
-      },
+      completedRunsQuery([
+        completedRunRow({ run_id: "run-missing-max", max_updated_at: null, methodology_version: "1.1" }),
+        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990, methodology_version: "1.1" }),
+      ]),
+      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -442,26 +177,8 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("serves immutable rows from the latest completed run when the current mirror was overwritten by a failed run", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          {
-            run_id: "run-old-completed",
-            completed_at: 1_700_000_000,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_699_999_990,
-            max_updated_at: 1_699_999_990,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-old-completed"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-old-completed", updated_at: 1_699_999_990 })],
-      },
+      completedRunsQuery([completedRunRow({ run_id: "run-old-completed", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 })]),
+      runRowsQuery("run-old-completed", [makeRealisticRedemptionRow({ snapshot_run_id: "run-old-completed", updated_at: 1_699_999_990 })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -474,26 +191,8 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("rejects completed run manifests when every recent candidate is invalid", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          {
-            run_id: "run-missing-row",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-missing-row"],
-        rows: [],
-      },
+      completedRunsQuery([completedRunRow({ run_id: "run-missing-row", methodology_version: "1.1" })]),
+      runRowsQuery("run-missing-row", []),
     ]);
 
     await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
@@ -504,40 +203,12 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("falls back when the newest completed run has unreadable rows", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          {
-            run_id: "run-bad",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "1.1",
-          },
-          {
-            run_id: "run-valid",
-            completed_at: 1_700_000_000,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_699_999_990,
-            max_updated_at: 1_699_999_990,
-            methodology_version: "1.1",
-          },
-        ],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-bad"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-bad", route_family: "bad-family" })],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-valid"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })],
-      },
+      completedRunsQuery([
+        completedRunRow({ run_id: "run-bad", methodology_version: "1.1" }),
+        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
+      ]),
+      runRowsQuery("run-bad", [makeRealisticRedemptionRow({ snapshot_run_id: "run-bad", route_family: "bad-family" })]),
+      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -551,11 +222,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
     // failed first manifested run: partial manifested current rows are never
     // treated as authoritative, so the only mocked query is the manifest read.
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [],
-      },
+      completedRunsQuery([]),
     ]);
 
     await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
@@ -566,26 +233,8 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("uses the completed run manifest methodology version for snapshot attribution", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          {
-            run_id: "run-v404",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "4.04",
-          },
-        ],
-      },
-      {
-        match: RUN_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-v404"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-v404", methodology_version: "4.03" })],
-      },
+      completedRunsQuery([completedRunRow({ run_id: "run-v404", methodology_version: "4.04" })]),
+      runRowsQuery("run-v404", [makeRealisticRedemptionRow({ snapshot_run_id: "run-v404", methodology_version: "4.03" })]),
     ]);
 
     const result = await buildRedemptionBackstopsSnapshot(db);
@@ -600,25 +249,12 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
   it("drops invalid enum and collection values from details JSON before applying fallbacks", async () => {
     const db = mockRedemptionD1([
-      {
-        match: "FROM redemption_backstop_runs",
-        rows: [
-          {
-            run_id: "run-invalid-details",
-            completed_at: 1_700_000_010,
-            expected_count: 1,
-            written_count: 1,
-            min_updated_at: 1_700_000_000,
-            max_updated_at: 1_700_000_000,
-            methodology_version: "1.1",
-          },
-        ],
-      },
+      completedRunsTable([completedRunRow({ run_id: "run-invalid-details", completed_at: 1_700_000_010 })]),
       {
         match: "FROM redemption_backstop_run_rows",
         matchBinds: ["run-invalid-details"],
         rows: [
-          makeRealisticRow({
+          makeRealisticRedemptionRow({
             stablecoin_id: "bad-details",
             snapshot_run_id: "run-invalid-details",
             score: 65,
@@ -694,15 +330,8 @@ describe("loadRedemptionBackstopSnapshot", () => {
     expect(LEGACY_V3997_REDEMPTION_BACKSTOP_HISTORY_ROW.snapshot_date).toBe(1_746_748_800);
 
     const db = mockRedemptionD1([
-      {
-        match: "FROM redemption_backstop_runs",
-        rows: [LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW],
-      },
-      {
-        match: "WHERE snapshot_run_id = ?",
-        matchBinds: ["legacy-run"],
-        rows: [LEGACY_V3997_REDEMPTION_BACKSTOP_ROW],
-      },
+      completedRunsTable([LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW]),
+      runRowsTable("legacy-run", [LEGACY_V3997_REDEMPTION_BACKSTOP_ROW]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -768,40 +397,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
         first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
       },
     ]);
-    const record: RedemptionBackstopEntry = {
-      stablecoinId: "eurc-circle",
-      score: 65,
-      dexLiquidityScore: 44,
-      accessScore: 40,
-      settlementScore: 65,
-      executionCertaintyScore: 60,
-      capacityScore: 100,
-      outputAssetQualityScore: 100,
-      costScore: 40,
-      routeFamily: "offchain-issuer",
-      accessModel: "issuer-api",
-      settlementModel: "same-day",
-      executionModel: "rules-based-nav",
-      outputAssetType: "stable-single",
-      provider: "supply-full-model",
-      sourceMode: "estimated",
-      resolutionState: "resolved",
-      routeStatus: "open",
-      routeStatusSource: "static-config",
-      holderEligibility: "verified-customer",
-      capacityConfidence: "heuristic",
-      capacitySemantics: "eventual-only",
-      feeConfidence: "undisclosed-reviewed",
-      feeModelKind: "undisclosed-reviewed",
-      modelConfidence: "low",
-      immediateCapacityUsd: null,
-      immediateCapacityRatio: null,
-      feeBps: null,
-      queueEnabled: false,
-      methodologyVersion: "1.1",
-      updatedAt: 1_700_000_000,
-      capsApplied: ["offchain-route-cap"],
-    };
+    const record = makeRedemptionWriteRecord({ stablecoinId: "eurc-circle" });
 
     const result = await upsertRedemptionBackstopSnapshots(db, [record], {
       runId: "run-test",
@@ -867,40 +463,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
         throwError: new Error("history write failed"),
       },
     ]);
-    const record: RedemptionBackstopEntry = {
-      stablecoinId: "eurc-circle",
-      score: 65,
-      dexLiquidityScore: 44,
-      accessScore: 40,
-      settlementScore: 65,
-      executionCertaintyScore: 60,
-      capacityScore: 100,
-      outputAssetQualityScore: 100,
-      costScore: 40,
-      routeFamily: "offchain-issuer",
-      accessModel: "issuer-api",
-      settlementModel: "same-day",
-      executionModel: "rules-based-nav",
-      outputAssetType: "stable-single",
-      provider: "supply-full-model",
-      sourceMode: "estimated",
-      resolutionState: "resolved",
-      routeStatus: "open",
-      routeStatusSource: "static-config",
-      holderEligibility: "verified-customer",
-      capacityConfidence: "heuristic",
-      capacitySemantics: "eventual-only",
-      feeConfidence: "undisclosed-reviewed",
-      feeModelKind: "undisclosed-reviewed",
-      modelConfidence: "low",
-      immediateCapacityUsd: null,
-      immediateCapacityRatio: null,
-      feeBps: null,
-      queueEnabled: false,
-      methodologyVersion: "1.1",
-      updatedAt: 1_700_000_000,
-      capsApplied: ["offchain-route-cap"],
-    };
+    const record = makeRedemptionWriteRecord({ stablecoinId: "eurc-circle" });
 
     await expect(
       upsertRedemptionBackstopSnapshots(db, [record], {
@@ -934,8 +497,8 @@ describe("loadRedemptionBackstopSnapshot", () => {
       },
     ]);
     const records = [
-      makeWriteRecord({ stablecoinId: "eurc-circle" }),
-      makeWriteRecord({ stablecoinId: "usdc-circle" }),
+      makeRedemptionWriteRecord({ stablecoinId: "eurc-circle" }),
+      makeRedemptionWriteRecord({ stablecoinId: "usdc-circle" }),
     ];
 
     await expect(
@@ -1052,7 +615,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
       },
     ]);
 
-    const result = await upsertRedemptionBackstopSnapshots(db, [makeWriteRecord()], {
+    const result = await upsertRedemptionBackstopSnapshots(db, [makeRedemptionWriteRecord()], {
       runId: "run-retention-warning",
       expectedCount: 1,
       retentionSec: 1_000,
@@ -1131,22 +694,9 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
   const LIVE_SIGNAL_ROWS_SQL =
     "SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at FROM redemption_backstop_run_rows WHERE snapshot_run_id = ? AND stablecoin_id IN (?)";
 
-  function makeRunManifestRow(overrides: Record<string, unknown> = {}) {
-    return {
-      run_id: "run-live",
-      completed_at: 1_700_000_010,
-      expected_count: 1,
-      written_count: 1,
-      min_updated_at: 1_700_000_000,
-      max_updated_at: 1_700_000_000,
-      methodology_version: "4.07",
-      ...overrides,
-    };
-  }
-
   it("serves narrow live-signal rows from the latest valid completed run", async () => {
     const db = mockD1Strict([
-      { match: COMPLETED_RUNS_SQL, matchBinds: [5], rows: [makeRunManifestRow()] },
+      completedRunsQuery([completedRunRow()]),
       {
         match: LIVE_SIGNAL_ROWS_SQL,
         matchBinds: ["run-live", "eurc-circle"],
@@ -1176,15 +726,11 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
 
   it("skips invalid newer completed manifests when selecting the live-signal run", async () => {
     const db = mockD1Strict([
-      {
-        match: COMPLETED_RUNS_SQL,
-        matchBinds: [5],
-        rows: [
-          makeRunManifestRow({ run_id: "run-incomplete", completed_at: 1_700_000_030, expected_count: 2 }),
-          makeRunManifestRow({ run_id: "run-missing-max", completed_at: 1_700_000_020, max_updated_at: null }),
-          makeRunManifestRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
-        ],
-      },
+      completedRunsQuery([
+        completedRunRow({ run_id: "run-incomplete", completed_at: 1_700_000_030, expected_count: 2 }),
+        completedRunRow({ run_id: "run-missing-max", completed_at: 1_700_000_020, max_updated_at: null }),
+        completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
+      ]),
       {
         match: LIVE_SIGNAL_ROWS_SQL,
         matchBinds: ["run-valid", "eurc-circle"],
@@ -1207,7 +753,7 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
   });
 
   it("fails closed with the typed error when no completed run exists", async () => {
-    const db = mockD1Strict([{ match: COMPLETED_RUNS_SQL, matchBinds: [5], rows: [] }]);
+    const db = mockD1Strict([completedRunsQuery([])]);
 
     await expect(loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"])).rejects.toBeInstanceOf(
       RedemptionBackstopSnapshotUnavailableError,

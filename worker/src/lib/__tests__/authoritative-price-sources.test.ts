@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { mockRegistry } from "../../test-helpers/cron";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
@@ -77,7 +76,6 @@ import {
   type AuthoritativeLivePriceCandidate,
   createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeHistoricalPriceSeries,
-  fetchAuthoritativeLivePriceOverrides,
   prioritizeAuthoritativeLivePriceCandidates,
 } from "../authoritative-price-sources";
 import { CIRCUIT_SOURCE } from "../constants";
@@ -89,6 +87,7 @@ import {
   type Erc4626NavVaultConfig,
   type PriceSourceProvider,
 } from "../authoritative-price-sources/helpers";
+import { asset, fetchLiveOverrides, freshParent, unpricedChild } from "./authoritative-price-sources.test-support";
 
 const QUOTE_HEX =
   "0x000000000000000000000000000000000000000000000000000000e8d435370b0000000000000000000000000000000000000000000000000000000000000000";
@@ -118,11 +117,10 @@ function makePriorityCandidate(
 ): AuthoritativeLivePriceCandidate {
   const hasPositivePrice = typeof price === "number" && Number.isFinite(price) && price > 0;
   return {
-    asset: {
-      id,
+    asset: asset(id, {
       price,
       ...(hasPositivePrice ? { priceSource: "coingecko", priceObservedAt: 1_800_000_000 } : {}),
-    } as PeggedAsset,
+    }),
     provider: makePriorityProvider(livePriority),
     originalIndex,
     previousMissingGenerations: 0,
@@ -143,17 +141,8 @@ describe("authoritative-price-sources", () => {
   it("does not enqueue a missing-only AZND fallback over a usable incumbent price", async () => {
     const nowSec = Math.floor(Date.now() / 1_000);
     const stats = createAuthoritativeLivePriceOverrideStats();
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
-      [{
-        id: "aznd-mu-digital",
-        price: 0.31,
-        priceSource: "coingecko",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      } as PeggedAsset],
-      undefined,
-      undefined,
+    const overrides = await fetchLiveOverrides(
+      [freshParent("aznd-mu-digital", 0.31, "coingecko", { nowSec })],
       { stats },
     );
 
@@ -184,20 +173,11 @@ describe("authoritative-price-sources", () => {
       .mockResolvedValueOnce(uintWord(99n * 10n ** 6n))
       .mockResolvedValueOnce(uintWord(220_000n))
       .mockResolvedValueOnce(uintWord(2_180_000n));
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        { id: "aznd-mu-digital", price: 0.31 } as PeggedAsset,
-        {
-          id: "usdc-circle",
-          price: 1,
-          priceSource: "coingecko",
-          priceConfidence: "high",
-          priceObservedAt: nowSec - 60,
-          priceObservedAtMode: "upstream",
-        } as PeggedAsset,
+        asset("aznd-mu-digital", { price: 0.31 }),
+        freshParent("usdc-circle", 1, "coingecko", { nowSec }),
       ],
-      undefined,
-      undefined,
       { db, stats },
     );
 
@@ -234,20 +214,11 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        { id: "aznd-mu-digital" } as PeggedAsset,
-        {
-          id: "usdc-circle",
-          price: 1,
-          priceSource: "coingecko",
-          priceConfidence: "high",
-          priceObservedAt: nowSec - 60,
-          priceObservedAtMode: "upstream",
-        } as PeggedAsset,
+        unpricedChild("aznd-mu-digital"),
+        freshParent("usdc-circle", 1, "coingecko", { nowSec }),
       ],
-      undefined,
-      undefined,
       { db, stats },
     );
 
@@ -266,23 +237,11 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "usx-dforce",
-          name: "dForce USD",
-          symbol: "USX",
-          circulating: { peggedUSD: 1_000_000 },
-        },
-        {
-          id: "cusd-cap",
-          name: "Cap cUSD",
-          symbol: "CUSD",
-          circulating: { peggedUSD: 114_000_000 },
-        },
+        asset("usx-dforce", { circulating: { peggedUSD: 1_000_000 } }),
+        asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
       ],
-      undefined,
-      undefined,
       { stats },
     );
 
@@ -381,23 +340,11 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "cusd-cap",
-          name: "Cap cUSD",
-          symbol: "CUSD",
-          circulating: { peggedUSD: 114_000_000 },
-        },
-        {
-          id: "usdt-tether",
-          name: "Tether",
-          symbol: "USDT",
-          circulating: { peggedUSD: 100_000_000_000 },
-        },
+        asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
+        asset("usdt-tether", { circulating: { peggedUSD: 100_000_000_000 } }),
       ],
-      undefined,
-      undefined,
       { stats },
     );
 
@@ -454,17 +401,8 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
-      [
-        {
-          id: "cusd-cap",
-          name: "Cap cUSD",
-          symbol: "CUSD",
-          circulating: { peggedUSD: 114_000_000 },
-        },
-      ],
-      undefined,
-      undefined,
+    const overrides = await fetchLiveOverrides(
+      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } })],
       { db, stats },
     );
 
@@ -508,23 +446,11 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "cusd-cap",
-          name: "Cap cUSD",
-          symbol: "CUSD",
-          circulating: { peggedUSD: 114_000_000 },
-        },
-        {
-          id: "iusd-infinifi",
-          name: "infiniFi USD",
-          symbol: "IUSD",
-          circulating: { peggedUSD: 180_000_000 },
-        },
+        asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
+        asset("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
       ],
-      undefined,
-      undefined,
       { db, stats },
     );
 
@@ -557,17 +483,8 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
-      [
-        {
-          id: "cusd-cap",
-          name: "Cap cUSD",
-          symbol: "CUSD",
-          circulating: { peggedUSD: 114_000_000 },
-        },
-      ],
-      undefined,
-      undefined,
+    const overrides = await fetchLiveOverrides(
+      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } })],
       { db, stats },
     );
 
@@ -602,17 +519,8 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
-      [
-        {
-          id: "cusd-cap",
-          name: "Cap cUSD",
-          symbol: "CUSD",
-          circulating: { peggedUSD: 114_000_000 },
-        },
-      ],
-      undefined,
-      undefined,
+    const overrides = await fetchLiveOverrides(
+      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } })],
       { db, stats },
     );
 
@@ -648,27 +556,15 @@ describe("authoritative-price-sources", () => {
     const stats = createAuthoritativeLivePriceOverrideStats();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "susdc-spark",
-          name: "Spark USDC Vault",
-          symbol: "sUSDC",
-          circulating: { peggedUSD: 100_000_000 },
-        },
-        {
-          id: "usdc-circle",
-          name: "USD Coin",
-          symbol: "USDC",
-          price: 1,
-          priceSource: "protocol-redeem",
+        asset("susdc-spark", { circulating: { peggedUSD: 100_000_000 } }),
+        freshParent("usdc-circle", 1, "protocol-redeem", {
+          nowSec,
           priceConfidence: "single-source",
-          priceObservedAt: nowSec - 60,
           priceObservedAtMode: "local_fetch",
-        },
+        }),
       ],
-      undefined,
-      undefined,
       { db, stats },
     );
 
@@ -717,7 +613,7 @@ describe("authoritative-price-sources", () => {
     const prioritized = prioritizeAuthoritativeLivePriceCandidates([
       makePriorityCandidate("priced-refresh", 1, 1, 0),
       makePriorityCandidate("numeric-without-source", 1, 1, 1, {
-        asset: { id: "numeric-without-source", price: 1 } as PeggedAsset,
+        asset: asset("numeric-without-source", { price: 1 }),
       }),
     ]);
 
@@ -732,14 +628,14 @@ describe("authoritative-price-sources", () => {
     const secondProvider = makePriorityProvider(10);
     const candidates: AuthoritativeLivePriceCandidate[] = [
       ...[0, 1, 2].map((originalIndex) => ({
-        asset: { id: `first-${originalIndex}`, price: null } as PeggedAsset,
+        asset: unpricedChild(`first-${originalIndex}`),
         provider: firstProvider,
         originalIndex,
         previousMissingGenerations: 0,
         alertEligibleMissing: false,
       })),
       {
-        asset: { id: "second-0", price: null } as PeggedAsset,
+        asset: unpricedChild("second-0"),
         provider: secondProvider,
         originalIndex: 3,
         previousMissingGenerations: 0,
@@ -760,14 +656,14 @@ describe("authoritative-price-sources", () => {
     const secondProvider = makePriorityProvider(1);
     const candidates: AuthoritativeLivePriceCandidate[] = [
       ...[0, 1, 2].map((originalIndex) => ({
-        asset: { id: `first-${originalIndex}`, price: null } as PeggedAsset,
+        asset: unpricedChild(`first-${originalIndex}`),
         provider: firstProvider,
         originalIndex,
         previousMissingGenerations: 0,
         alertEligibleMissing: false,
       })),
       {
-        asset: { id: "second-0", price: null } as PeggedAsset,
+        asset: unpricedChild("second-0"),
         provider: secondProvider,
         originalIndex: 3,
         previousMissingGenerations: 0,
@@ -788,26 +684,21 @@ describe("authoritative-price-sources", () => {
     const circuitProvider = makePriorityProvider(10, "fixture-circuit");
     const candidates: AuthoritativeLivePriceCandidate[] = [
       {
-        asset: { id: "ordinary-missing", price: null } as PeggedAsset,
+        asset: unpricedChild("ordinary-missing"),
         provider: ordinaryProvider,
         originalIndex: 0,
         previousMissingGenerations: 0,
         alertEligibleMissing: false,
       },
       {
-        asset: { id: "circuit-missing", price: null } as PeggedAsset,
+        asset: unpricedChild("circuit-missing"),
         provider: circuitProvider,
         originalIndex: 1,
         previousMissingGenerations: 0,
         alertEligibleMissing: false,
       },
       {
-        asset: {
-          id: "circuit-priced",
-          price: 1,
-          priceSource: "coingecko",
-          priceObservedAt: 1_800_000_000,
-        } as PeggedAsset,
+        asset: freshParent("circuit-priced", 1, "coingecko", { observedAt: 1_800_000_000 }),
         provider: circuitProvider,
         originalIndex: 2,
         previousMissingGenerations: 0,
@@ -827,26 +718,21 @@ describe("authoritative-price-sources", () => {
     const circuitProvider = makePriorityProvider(10, "fixture-circuit");
     const candidates: AuthoritativeLivePriceCandidate[] = [
       {
-        asset: { id: "ordinary-alert-missing", price: null } as PeggedAsset,
+        asset: unpricedChild("ordinary-alert-missing"),
         provider: ordinaryProvider,
         originalIndex: 0,
         previousMissingGenerations: 1,
         alertEligibleMissing: true,
       },
       {
-        asset: { id: "circuit-missing", price: null } as PeggedAsset,
+        asset: unpricedChild("circuit-missing"),
         provider: circuitProvider,
         originalIndex: 1,
         previousMissingGenerations: 0,
         alertEligibleMissing: false,
       },
       {
-        asset: {
-          id: "circuit-priced",
-          price: 1,
-          priceSource: "coingecko",
-          priceObservedAt: 1_800_000_000,
-        } as PeggedAsset,
+        asset: freshParent("circuit-priced", 1, "coingecko", { observedAt: 1_800_000_000 }),
         provider: circuitProvider,
         originalIndex: 2,
         previousMissingGenerations: 0,
@@ -876,17 +762,8 @@ describe("authoritative-price-sources", () => {
     );
     const stats = createAuthoritativeLivePriceOverrideStats(1);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
-      [
-        {
-          id: "cusd-cap",
-          name: "Cap cUSD",
-          symbol: "CUSD",
-          circulating: { peggedUSD: 114_000_000 },
-        },
-      ],
-      undefined,
-      undefined,
+    const overrides = await fetchLiveOverrides(
+      [asset("cusd-cap", { circulating: { peggedUSD: 114_000_000 } })],
       { wallClockBudgetMs: 1, stats },
     );
 
@@ -925,19 +802,11 @@ describe("authoritative-price-sources", () => {
         .mockResolvedValueOnce(IUSD_QUOTE_HEX);
       const stats = createAuthoritativeLivePriceOverrideStats();
 
-      const runPromise = fetchAuthoritativeLivePriceOverrides(
+      const runPromise = fetchLiveOverrides(
         [
-          { id: "cusd-cap", name: "Cap cUSD", symbol: "cUSD", price: null, circulating: { peggedUSD: 114_000_000 } } as PeggedAsset,
-          {
-            id: "iusd-infinifi",
-            name: "infiniFi iUSD",
-            symbol: "iUSD",
-            price: null,
-            circulating: { peggedUSD: 180_000_000 },
-          } as PeggedAsset,
+          unpricedChild("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
+          unpricedChild("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
         ],
-        undefined,
-        undefined,
         { stats, wallClockBudgetMs: 10_000 },
       );
       await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS);
@@ -1007,10 +876,8 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats(5);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
-      [{ id: "cusd-cap", price: null } as PeggedAsset, { id: "iusd-infinifi", price: null } as PeggedAsset],
-      undefined,
-      undefined,
+    const overrides = await fetchLiveOverrides(
+      [unpricedChild("cusd-cap"), unpricedChild("iusd-infinifi")],
       { db, wallClockBudgetMs: 5, stats },
     );
 
@@ -1126,13 +993,8 @@ describe("authoritative-price-sources", () => {
   it("returns a live iUSD override from the infiniFi redeem quote", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "iusd-infinifi",
-        name: "infiniFi USD",
-        symbol: "IUSD",
-        circulating: { peggedUSD: 180_000_000 },
-      },
+    const overrides = await fetchLiveOverrides([
+      asset("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
@@ -1155,24 +1017,12 @@ describe("authoritative-price-sources", () => {
 
   it("returns a live USDAI override from tracked PYUSD pricing", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "usdai-usd-ai",
-        name: "USDai",
-        symbol: "USDai",
-        circulating: { peggedUSD: 27_000_000 },
-      },
-      {
-        id: "pyusd-paypal",
-        name: "PayPal USD",
-        symbol: "PYUSD",
-        price: 1.00006543,
-        priceSource: "coingecko+defillama-list+pyth",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
+    const overrides = await fetchLiveOverrides([
+      asset("usdai-usd-ai", { circulating: { peggedUSD: 27_000_000 } }),
+      freshParent("pyusd-paypal", 1.00006543, "coingecko+defillama-list+pyth", {
+        nowSec,
         circulating: { peggedUSD: 880_000_000 },
-      },
+      }),
     ]);
 
     expect(overrides.get("usdai-usd-ai")).toEqual({
@@ -1195,42 +1045,15 @@ describe("authoritative-price-sources", () => {
 
   it("returns live inherited overrides for M0 extension assets from tracked wM pricing", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "m-m0",
-        name: "M by M0",
-        symbol: "M",
-        circulating: { peggedUSD: 299_000_000 },
-      },
-      {
-        id: "usdk-kast",
-        name: "KAST Dollar",
-        symbol: "USDK",
-        circulating: { peggedUSD: 24_000_000 },
-      },
-      {
-        id: "xo-exodus",
-        name: "XO Cash",
-        symbol: "XO",
-        circulating: { peggedUSD: 1_600_000 },
-      },
-      {
-        id: "usdnr-nerona",
-        name: "Nerona USD",
-        symbol: "USDnr",
-        circulating: { peggedUSD: 50_000_000 },
-      },
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
-        price: 0.99981234,
-        priceSource: "coingecko+raydium-dex",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
+    const overrides = await fetchLiveOverrides([
+      asset("m-m0", { circulating: { peggedUSD: 299_000_000 } }),
+      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
+      asset("xo-exodus", { circulating: { peggedUSD: 1_600_000 } }),
+      asset("usdnr-nerona", { circulating: { peggedUSD: 50_000_000 } }),
+      freshParent("wm-m0", 0.99981234, "coingecko+raydium-dex", {
+        nowSec,
         circulating: { peggedUSD: 93_000_000 },
-      },
+      }),
     ]);
 
     expect(overrides.get("m-m0")).toMatchObject({
@@ -1277,47 +1100,18 @@ describe("authoritative-price-sources", () => {
 
   it("returns live inherited overrides for AUSD and USDC extension assets", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "iusd-initia",
-        name: "Initia iUSD",
-        symbol: "iUSD",
-        circulating: { peggedUSD: 54_000_000 },
-      },
-      {
-        id: "usdcx-movement",
-        name: "Movement USDCx",
-        symbol: "USDCx",
-        circulating: { peggedUSD: 6_000_000 },
-      },
-      {
-        id: "weusd-picwe",
-        name: "WEUSD",
-        symbol: "WEUSD",
-        circulating: { peggedUSD: 500_000 },
-      },
-      {
-        id: "ausd-agora",
-        name: "Agora AUSD",
-        symbol: "AUSD",
-        price: 1.000012,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
+    const overrides = await fetchLiveOverrides([
+      asset("iusd-initia", { circulating: { peggedUSD: 54_000_000 } }),
+      asset("usdcx-movement", { circulating: { peggedUSD: 6_000_000 } }),
+      asset("weusd-picwe", { circulating: { peggedUSD: 500_000 } }),
+      freshParent("ausd-agora", 1.000012, "coingecko+pyth", {
+        nowSec,
         circulating: { peggedUSD: 120_000_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.99998,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
+      }),
+      freshParent("usdc-circle", 0.99998, "coingecko+pyth", {
+        nowSec,
         circulating: { peggedUSD: 61_000_000_000 },
-      },
+      }),
     ]);
 
     expect(overrides.get("iusd-initia")).toMatchObject({
@@ -1350,56 +1144,16 @@ describe("authoritative-price-sources", () => {
   });
 
   it("returns protocol-par live overrides only for active direct-redeem fiat assets", async () => {
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "sofid-sofi",
-          name: "SoFiUSD",
-          symbol: "SOFID",
-          circulating: { peggedUSD: 100_000_000 },
-        },
-        {
-          id: "usbd-bima",
-          name: "Bima USBD",
-          symbol: "USBD",
-          circulating: { peggedUSD: 7_500_000 },
-        },
-        {
-          id: "usdq-quill",
-          name: "Quill USD",
-          symbol: "USDQ",
-          circulating: { peggedUSD: 130_000 },
-        },
-        {
-          id: "chfau-allunity",
-          name: "AllUnity CHF",
-          symbol: "CHFAU",
-          circulating: { peggedCHF: 6_300_000 },
-        },
-        {
-          id: "cadd-cad-digital",
-          name: "CAD Digital",
-          symbol: "CADD",
-          circulating: { peggedCAD: 390_000 },
-        },
-        {
-          id: "jpym-mento",
-          name: "Mento Japanese Yen",
-          symbol: "JPYm",
-          circulating: { peggedJPY: 104_000 },
-        },
-        {
-          id: "zarm-mento",
-          name: "Mento South African Rand",
-          symbol: "ZARm",
-          circulating: { peggedZAR: 8_600 },
-        },
-        {
-          id: "xofm-mento",
-          name: "Mento West African CFA Franc",
-          symbol: "XOFm",
-          circulating: { peggedXOF: 32_000 },
-        },
+        asset("sofid-sofi", { circulating: { peggedUSD: 100_000_000 } }),
+        asset("usbd-bima", { circulating: { peggedUSD: 7_500_000 } }),
+        asset("usdq-quill", { circulating: { peggedUSD: 130_000 } }),
+        asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
+        asset("cadd-cad-digital", { circulating: { peggedCAD: 390_000 } }),
+        asset("jpym-mento", { circulating: { peggedJPY: 104_000 } }),
+        asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
+        asset("xofm-mento", { circulating: { peggedXOF: 32_000 } }),
       ],
       undefined,
       {
@@ -1478,14 +1232,9 @@ describe("authoritative-price-sources", () => {
   });
 
   it("skips CHF protocol-par overrides when the FX reference is missing or stale", async () => {
-    const stale = await fetchAuthoritativeLivePriceOverrides(
+    const stale = await fetchLiveOverrides(
       [
-        {
-          id: "chfau-allunity",
-          name: "AllUnity CHF",
-          symbol: "CHFAU",
-          circulating: { peggedCHF: 6_300_000 },
-        },
+        asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
       ],
       undefined,
       {
@@ -1496,13 +1245,8 @@ describe("authoritative-price-sources", () => {
         typeByPeg: { peggedCHF: "stale" },
       },
     );
-    const missing = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "chfau-allunity",
-        name: "AllUnity CHF",
-        symbol: "CHFAU",
-        circulating: { peggedCHF: 6_300_000 },
-      },
+    const missing = await fetchLiveOverrides([
+      asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
     ]);
 
     expect(stale.has("chfau-allunity")).toBe(false);
@@ -1510,14 +1254,9 @@ describe("authoritative-price-sources", () => {
   });
 
   it("labels static CHF protocol-par overrides as local fetches", async () => {
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "chfau-allunity",
-          name: "AllUnity CHF",
-          symbol: "CHFAU",
-          circulating: { peggedCHF: 6_300_000 },
-        },
+        asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
       ],
       undefined,
       {
@@ -1891,13 +1630,8 @@ describe("authoritative-price-sources", () => {
   });
 
   it("skips inherited tracked-price overrides when the parent asset is unavailable", async () => {
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "usdk-kast",
-        name: "KAST Dollar",
-        symbol: "USDK",
-        circulating: { peggedUSD: 24_000_000 },
-      },
+    const overrides = await fetchLiveOverrides([
+      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
     ]);
 
     expect(overrides.has("usdk-kast")).toBe(false);
@@ -1906,55 +1640,20 @@ describe("authoritative-price-sources", () => {
   it("skips inherited tracked-price overrides when the parent price is low confidence, cached, stale, or missing provenance", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const child = {
-      id: "usdk-kast",
-      name: "KAST Dollar",
-      symbol: "USDK",
-      circulating: { peggedUSD: 24_000_000 },
-    };
+    const child = asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } });
 
     for (const parent of [
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
+      freshParent("wm-m0", 0.9998, "coingecko+pyth", { nowSec, priceConfidence: "low" }),
+      freshParent("wm-m0", 0.9998, "cached", { nowSec }),
+      freshParent("wm-m0", 0.9998, "coingecko+pyth", { nowSec, observedAt: nowSec - 1_000 }),
+      asset("wm-m0", {
         price: 0.9998,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "low" as const,
+        priceConfidence: "high",
         priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream" as const,
-      },
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
-        price: 0.9998,
-        priceSource: "cached",
-        priceConfidence: "high" as const,
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream" as const,
-      },
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
-        price: 0.9998,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "high" as const,
-        priceObservedAt: nowSec - 1_000,
-        priceObservedAtMode: "upstream" as const,
-      },
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
-        price: 0.9998,
-        priceConfidence: "high" as const,
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream" as const,
-      },
+        priceObservedAtMode: "upstream",
+      }),
     ]) {
-      const overrides = await fetchAuthoritativeLivePriceOverrides([child, parent]);
+      const overrides = await fetchLiveOverrides([child, parent]);
       expect(overrides.has("usdk-kast")).toBe(false);
     }
 
@@ -1963,23 +1662,13 @@ describe("authoritative-price-sources", () => {
 
   it("allows inherited tracked-price overrides from a fresh protocol-authoritative parent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "usdk-kast",
-        name: "KAST Dollar",
-        symbol: "USDK",
-        circulating: { peggedUSD: 24_000_000 },
-      },
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
-        price: 0.9998,
-        priceSource: "protocol-redeem",
+    const overrides = await fetchLiveOverrides([
+      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
+      freshParent("wm-m0", 0.9998, "protocol-redeem", {
+        nowSec,
         priceConfidence: "single-source",
-        priceObservedAt: nowSec - 60,
         priceObservedAtMode: "local_fetch",
-      },
+      }),
     ]);
 
     expect(overrides.get("usdk-kast")).toMatchObject({
@@ -1997,35 +1686,14 @@ describe("authoritative-price-sources", () => {
 
   it("allows scoped M0 wrappers to inherit a fresh high-confidence address-composite parent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "usdk-kast",
-        name: "KAST Dollar",
-        symbol: "USDK",
-        circulating: { peggedUSD: 24_000_000 },
-      },
-      {
-        id: "xo-exodus",
-        name: "XO Cash",
-        symbol: "XO",
-        circulating: { peggedUSD: 2_400_000 },
-      },
-      {
-        id: "m-m0",
-        name: "M",
-        symbol: "M",
-        circulating: { peggedUSD: 300_000_000 },
-      },
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
-        price: 0.9998,
-        priceSource: "alchemy-address+coingecko+coingecko-onchain-address+moralis-address",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
+    const overrides = await fetchLiveOverrides([
+      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
+      asset("xo-exodus", { circulating: { peggedUSD: 2_400_000 } }),
+      asset("m-m0", { circulating: { peggedUSD: 300_000_000 } }),
+      freshParent("wm-m0", 0.9998, "alchemy-address+coingecko+coingecko-onchain-address+moralis-address", {
+        nowSec,
         priceObservedAtMode: "local_fetch",
-      },
+      }),
     ]);
 
     expect(overrides.get("usdk-kast")).toMatchObject({
@@ -2051,29 +1719,13 @@ describe("authoritative-price-sources", () => {
 
   it("keeps scoped M0 wrapper overrides single-source when inheriting a fresh replay-safe single-source parent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "usdk-kast",
-        name: "KAST Dollar",
-        symbol: "USDK",
-        circulating: { peggedUSD: 24_000_000 },
-      },
-      {
-        id: "xo-exodus",
-        name: "XO Cash",
-        symbol: "XO",
-        circulating: { peggedUSD: 2_400_000 },
-      },
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
-        price: 0.999674,
-        priceSource: "coingecko",
+    const overrides = await fetchLiveOverrides([
+      asset("usdk-kast", { circulating: { peggedUSD: 24_000_000 } }),
+      asset("xo-exodus", { circulating: { peggedUSD: 2_400_000 } }),
+      freshParent("wm-m0", 0.999674, "coingecko", {
+        nowSec,
         priceConfidence: "single-source",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+      }),
     ]);
 
     expect(overrides.get("usdk-kast")).toMatchObject({
@@ -2102,23 +1754,12 @@ describe("authoritative-price-sources", () => {
 
   it("allows Noble USDN to inherit a fresh replay-safe M parent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "usdn-noble",
-        name: "Noble Dollar",
-        symbol: "USDN",
-        circulating: { peggedUSD: 4_000_000 },
-      },
-      {
-        id: "m-m0",
-        name: "M",
-        symbol: "M",
-        price: 0.999766,
-        priceSource: "defillama-contract",
+    const overrides = await fetchLiveOverrides([
+      asset("usdn-noble", { circulating: { peggedUSD: 4_000_000 } }),
+      freshParent("m-m0", 0.999766, "defillama-contract", {
+        nowSec,
         priceConfidence: "single-source",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+      }),
     ]);
 
     expect(overrides.get("usdn-noble")).toMatchObject({
@@ -2136,29 +1777,10 @@ describe("authoritative-price-sources", () => {
 
   it("resolves a same-run wM -> M -> Noble USDN dependency chain", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "m-m0",
-        name: "M",
-        symbol: "M",
-        price: null,
-      },
-      {
-        id: "usdn-noble",
-        name: "Noble Dollar",
-        symbol: "USDN",
-        price: null,
-      },
-      {
-        id: "wm-m0",
-        name: "Wrapped M",
-        symbol: "wM",
-        price: 0.999812,
-        priceSource: "coingecko+raydium-dex",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("m-m0"),
+      unpricedChild("usdn-noble"),
+      freshParent("wm-m0", 0.999812, "coingecko+raydium-dex", { nowSec }),
     ]);
 
     expect(overrides.get("m-m0")).toMatchObject({
@@ -2172,13 +1794,8 @@ describe("authoritative-price-sources", () => {
   });
 
   it("does not return a crvUSD override (demoted to regular consensus source)", async () => {
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "crvusd-curve",
-        name: "crvUSD",
-        symbol: "crvUSD",
-        circulating: { peggedUSD: 400_000_000 },
-      },
+    const overrides = await fetchLiveOverrides([
+      asset("crvusd-curve", { circulating: { peggedUSD: 400_000_000 } }),
     ]);
 
     expect(overrides.has("crvusd-curve")).toBe(false);
@@ -2191,23 +1808,9 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "gtusdc-gauntlet",
-        name: "Gauntlet USDC Core",
-        symbol: "gtUSDC",
-        circulating: { peggedUSD: 128_000_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.9999,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+    const overrides = await fetchLiveOverrides([
+      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
@@ -2238,24 +1841,13 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "gtusdc-gauntlet",
-        name: "Gauntlet USDC Core",
-        symbol: "gtUSDC",
-        circulating: { peggedUSD: 128_000_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.9999,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 900,
-        priceObservedAtMode: "upstream",
+    const overrides = await fetchLiveOverrides([
+      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
+        nowSec,
+        observedAt: nowSec - 900,
         priceSyncedAt: nowSec - 60,
-      },
+      }),
     ]);
 
     const override = overrides.get("gtusdc-gauntlet");
@@ -2380,23 +1972,9 @@ describe("authoritative-price-sources", () => {
     for (const testCase of cases) {
       fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${testCase.outputRaw.toString(16).padStart(64, "0")}`);
 
-      const overrides = await fetchAuthoritativeLivePriceOverrides([
-        {
-          id: testCase.id,
-          name: testCase.id,
-          symbol: testCase.id,
-          circulating: { peggedUSD: 1_000_000 },
-        },
-        {
-          id: testCase.parentId,
-          name: testCase.parentSymbol,
-          symbol: testCase.parentSymbol,
-          price: 1,
-          priceSource: "coingecko+pyth",
-          priceConfidence: "high",
-          priceObservedAt: nowSec - 60,
-          priceObservedAtMode: "upstream",
-        },
+      const overrides = await fetchLiveOverrides([
+        asset(testCase.id, { circulating: { peggedUSD: 1_000_000 } }),
+        freshParent(testCase.parentId, 1, "coingecko+pyth", { nowSec }),
       ]);
 
       expect(fetchEvmCallHexAtBlockMock).toHaveBeenLastCalledWith(
@@ -2422,39 +2000,17 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${outputRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "gtusdc-gauntlet",
-        name: "Gauntlet USDC Core",
-        symbol: "gtUSDC",
-        circulating: { peggedUSD: 128_000_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.9999,
-        priceSource: "alchemy-address+coingecko+moralis-address",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
+    const overrides = await fetchLiveOverrides([
+      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      freshParent("usdc-circle", 0.9999, "alchemy-address+coingecko+moralis-address", {
+        nowSec,
         priceObservedAtMode: "local_fetch",
-      },
-      {
-        id: "sbold-k3-capital",
-        name: "sBOLD by K3 Capital",
-        symbol: "sBOLD",
-        circulating: { peggedUSD: 8_000_000 },
-      },
-      {
-        id: "bold-liquity",
-        name: "Liquity BOLD",
-        symbol: "BOLD",
-        price: 1.0001,
-        priceSource: "alchemy-address+coingecko+moralis-address",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
+      }),
+      asset("sbold-k3-capital", { circulating: { peggedUSD: 8_000_000 } }),
+      freshParent("bold-liquity", 1.0001, "alchemy-address+coingecko+moralis-address", {
+        nowSec,
         priceObservedAtMode: "local_fetch",
-      },
+      }),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
@@ -2485,23 +2041,12 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "gtusdc-gauntlet",
-        name: "Gauntlet USDC Core",
-        symbol: "gtUSDC",
-        circulating: { peggedUSD: 128_000_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.9999,
-        priceSource: "bitstamp+coingecko+coingecko-onchain-address+kraken+pyth+redstone",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
+    const overrides = await fetchLiveOverrides([
+      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      freshParent("usdc-circle", 0.9999, "bitstamp+coingecko+coingecko-onchain-address+kraken+pyth+redstone", {
+        nowSec,
         priceObservedAtMode: "local_fetch",
-      },
+      }),
     ]);
 
     const override = overrides.get("gtusdc-gauntlet");
@@ -2529,23 +2074,9 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     for (const lane of softLanes) {
-      const overrides = await fetchAuthoritativeLivePriceOverrides([
-        {
-          id: "gtusdc-gauntlet",
-          name: "Gauntlet USDC Core",
-          symbol: "gtUSDC",
-          circulating: { peggedUSD: 128_000_000 },
-        },
-        {
-          id: "usdc-circle",
-          name: "USDC",
-          symbol: "USDC",
-          price: 0.9999,
-          priceSource: `coingecko+pyth+${lane}`,
-          priceConfidence: "high",
-          priceObservedAt: nowSec - 60,
-          priceObservedAtMode: "upstream",
-        },
+      const overrides = await fetchLiveOverrides([
+        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        freshParent("usdc-circle", 0.9999, `coingecko+pyth+${lane}`, { nowSec }),
       ]);
 
       expect(overrides.has("gtusdc-gauntlet"), lane).toBe(true);
@@ -2559,27 +2090,14 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "gtusdc-gauntlet",
-          name: "Gauntlet USDC Core",
-          symbol: "gtUSDC",
-          circulating: { peggedUSD: 128_000_000 },
-        },
-        {
-          id: "usdc-circle",
-          name: "USDC",
-          symbol: "USDC",
-          price: 0.9999,
-          priceSource: "coingecko+coingecko-onchain-address",
-          priceConfidence: "high",
-          priceObservedAt: nowSec - 60,
+        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        freshParent("usdc-circle", 0.9999, "coingecko+coingecko-onchain-address", {
+          nowSec,
           priceObservedAtMode: "local_fetch",
-        },
+        }),
       ],
-      undefined,
-      undefined,
       { stats },
     );
 
@@ -2600,23 +2118,12 @@ describe("authoritative-price-sources", () => {
     // poisoned-parent gate, so it is the cleanest inheritance regression.
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "weusd-picwe",
-        name: "PicWe WEUSD",
-        symbol: "WEUSD",
-        circulating: { peggedUSD: 500_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.9999,
-        priceSource: "bitstamp+coingecko+coingecko-onchain-address+kraken+pyth+redstone",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
+    const overrides = await fetchLiveOverrides([
+      asset("weusd-picwe", { circulating: { peggedUSD: 500_000 } }),
+      freshParent("usdc-circle", 0.9999, "bitstamp+coingecko+coingecko-onchain-address+kraken+pyth+redstone", {
+        nowSec,
         priceObservedAtMode: "local_fetch",
-      },
+      }),
     ]);
 
     expect(overrides.get("weusd-picwe")).toMatchObject({
@@ -2646,27 +2153,11 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "gtusdc-gauntlet",
-          name: "Gauntlet USDC Core",
-          symbol: "gtUSDC",
-          circulating: { peggedUSD: 128_000_000 },
-        },
-        {
-          id: "usdc-circle",
-          name: "USDC",
-          symbol: "USDC",
-          price: 0.9999,
-          priceSource: "coingecko+pyth",
-          priceConfidence: "high",
-          priceObservedAt: nowSec - 60,
-          priceObservedAtMode: "upstream",
-        },
+        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
       ],
-      undefined,
-      undefined,
       { db, stats },
     );
 
@@ -2709,27 +2200,11 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "gtusdc-gauntlet",
-          name: "Gauntlet USDC Core",
-          symbol: "gtUSDC",
-          circulating: { peggedUSD: 128_000_000 },
-        },
-        {
-          id: "usdc-circle",
-          name: "USDC",
-          symbol: "USDC",
-          price: 0.9999,
-          priceSource: "coingecko+pyth",
-          priceConfidence: "high",
-          priceObservedAt: nowSec - 60,
-          priceObservedAtMode: "upstream",
-        },
+        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
       ],
-      undefined,
-      undefined,
       { db, stats },
     );
 
@@ -2754,27 +2229,11 @@ describe("authoritative-price-sources", () => {
       },
     ]);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(
+    const overrides = await fetchLiveOverrides(
       [
-        {
-          id: "gtusdc-gauntlet",
-          name: "Gauntlet USDC Core",
-          symbol: "gtUSDC",
-          circulating: { peggedUSD: 128_000_000 },
-        },
-        {
-          id: "usdc-circle",
-          name: "USDC",
-          symbol: "USDC",
-          price: 0.9999,
-          priceSource: "coingecko+pyth",
-          priceConfidence: "high",
-          priceObservedAt: nowSec - 60,
-          priceObservedAtMode: "upstream",
-        },
+        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
       ],
-      undefined,
-      undefined,
       { db },
     );
 
@@ -2791,23 +2250,12 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "syusd-aegis",
-        name: "Aegis Staked YUSD",
-        symbol: "sYUSD",
-        price: null,
-      },
-      {
-        id: "yusd-aegis",
-        name: "Aegis YUSD",
-        symbol: "YUSD",
-        price: 0.99896,
-        priceSource: "coingecko",
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("syusd-aegis"),
+      freshParent("yusd-aegis", 0.99896, "coingecko", {
+        nowSec,
         priceConfidence: "single-source",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+      }),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
@@ -2835,23 +2283,9 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneGhoRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "sgho-aave",
-        name: "Aave Savings GHO",
-        symbol: "sGHO",
-        circulating: { peggedUSD: 4_000_000 },
-      },
-      {
-        id: "gho-aave",
-        name: "GHO",
-        symbol: "GHO",
-        price: 0.9997,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+    const overrides = await fetchLiveOverrides([
+      asset("sgho-aave", { circulating: { peggedUSD: 4_000_000 } }),
+      freshParent("gho-aave", 0.9997, "coingecko+pyth", { nowSec }),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
@@ -2874,23 +2308,9 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "said-gaib",
-        name: "GAIB sAID",
-        symbol: "sAID",
-        price: null,
-      },
-      {
-        id: "aid-gaib",
-        name: "GAIB AID",
-        symbol: "AID",
-        price: 1,
-        priceSource: "coingecko+defillama-list",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("said-gaib"),
+      freshParent("aid-gaib", 1, "coingecko+defillama-list", { nowSec }),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
@@ -2913,24 +2333,13 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "said-gaib",
-        name: "GAIB sAID",
-        symbol: "sAID",
-        price: null,
-      },
-      {
-        id: "aid-gaib",
-        name: "GAIB AID",
-        symbol: "AID",
-        price: 0.9998,
-        priceSource: "alchemy-address+coingecko+moralis-address",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("said-gaib"),
+      freshParent("aid-gaib", 0.9998, "alchemy-address+coingecko+moralis-address", {
+        nowSec,
         priceObservedAtMode: "local_fetch",
         priceSyncedAt: nowSec - 30,
-      },
+      }),
     ]);
 
     expect(overrides.get("said-gaib")).toMatchObject({
@@ -2950,24 +2359,13 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "said-gaib",
-        name: "GAIB sAID",
-        symbol: "sAID",
-        price: null,
-      },
-      {
-        id: "aid-gaib",
-        name: "GAIB AID",
-        symbol: "AID",
-        price: 0.998441,
-        priceSource: "coingecko",
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("said-gaib"),
+      freshParent("aid-gaib", 0.998441, "coingecko", {
+        nowSec,
         priceConfidence: "single-source",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
         priceSyncedAt: nowSec - 30,
-      },
+      }),
     ]);
 
     expect(overrides.get("said-gaib")).toMatchObject({
@@ -3010,21 +2408,9 @@ describe("authoritative-price-sources", () => {
     ];
 
     for (const parentCase of parentCases) {
-      const overrides = await fetchAuthoritativeLivePriceOverrides([
-        {
-          id: "said-gaib",
-          name: "GAIB sAID",
-          symbol: "sAID",
-          price: null,
-        },
-        {
-          id: "aid-gaib",
-          name: "GAIB AID",
-          symbol: "AID",
-          price: 0.9998,
-          priceObservedAtMode: "local_fetch",
-          ...parentCase,
-        },
+      const overrides = await fetchLiveOverrides([
+        unpricedChild("said-gaib"),
+        asset("aid-gaib", { price: 0.9998, priceObservedAtMode: "local_fetch", ...parentCase }),
       ]);
 
       expect(overrides.has("said-gaib")).toBe(false);
@@ -3036,23 +2422,9 @@ describe("authoritative-price-sources", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "gtusdc-gauntlet",
-        name: "Gauntlet USDC Core",
-        symbol: "gtUSDC",
-        circulating: { peggedUSD: 128_000_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.9999,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "low",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+    const overrides = await fetchLiveOverrides([
+      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec, priceConfidence: "low" }),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
@@ -3066,23 +2438,9 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${virtualPriceRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "aa-falconx-mev-capital",
-        name: "MEV Capital Falcon USDC Senior Tranche",
-        symbol: "AA_FalconXUSDC",
-        circulating: { peggedUSD: 117_450_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.9999,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+    const overrides = await fetchLiveOverrides([
+      asset("aa-falconx-mev-capital", { circulating: { peggedUSD: 117_450_000 } }),
+      freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
     ]);
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
@@ -3110,23 +2468,9 @@ describe("authoritative-price-sources", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "gtusdc-gauntlet",
-        name: "Gauntlet USDC Core",
-        symbol: "gtUSDC",
-        circulating: { peggedUSD: 128_000_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USDC",
-        symbol: "USDC",
-        price: 0.9999,
-        priceSource: "coingecko+pyth",
-        priceConfidence: "high",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "upstream",
-      },
+    const overrides = await fetchLiveOverrides([
+      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
     ]);
 
     expect(overrides.has("gtusdc-gauntlet")).toBe(false);

@@ -4,6 +4,7 @@ import {
   sweepStaleScheduledSlotExecutions,
 } from "../scheduled-slot-fence";
 import {
+  closeOpenLeaseDatabases,
   makeLeaseDb,
   setSlotUpdatedAt,
 } from "./cron-leases.test-support";
@@ -16,6 +17,7 @@ describe("runScheduledSlotWithFence", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    closeOpenLeaseDatabases();
   });
 
   it("preserves both the primary failure and a terminal slot-write failure", async () => {

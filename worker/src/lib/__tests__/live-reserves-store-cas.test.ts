@@ -1,78 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   beginReserveSyncAttempt,
-  finalizeReserveSyncSuccess,
   pruneLiveReserveHistory,
 } from "../live-reserves-store";
 import { buildReserveSyncRecordDeferredStatement } from "../live-reserves-store-statements";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-
-const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
-
-const RESERVE_DEFAULT_TABLES: MockTableConfig[] = [
-  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-  { match: "FROM reserve_sync_state", rows: [] },
-  { match: "FROM reserve_composition", rows: [] },
-  { match: "INSERT INTO reserve_sync_state", rows: [] },
-  { match: "INSERT INTO reserve_composition", rows: [] },
-  { match: "UPDATE reserve_sync_state", rows: [] },
-  { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
-  { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
-  {
-    match: "SELECT 1 AS finalized FROM reserve_composition c JOIN reserve_sync_state",
-    rows: [],
-    first: null,
-  },
-];
-
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...RESERVE_DEFAULT_TABLES]);
-}
-
-/**
- * mockD1 wired for the reserve_composition + reserve_sync_state pair every store
- * read issues. `null` models a missing row; an object is merged over the default
- * row so each case shows only the columns it actually varies.
- */
-
+import {
+  finalizeReserveSuccess,
+  mockReserveD1 as mockD1,
+  reserveSyncAttemptInput,
+} from "./live-reserves-store.test-support";
 
 describe("live-reserves-store", () => {
   it("fences the composition upsert so a late attempt cannot overwrite a newer row", async () => {
     const db = mockD1();
     const attemptId = "attempt-late";
 
-    await finalizeReserveSyncSuccess(
-      db,
-      {
-        stablecoinId: "iusd-infinifi",
-        slices: LIVE_SLICES,
-        fetchedAt: 1_000,
-        source: "infinifi",
-        attemptId,
-        metadata: {},
-        warningCount: 0,
-        warnings: [],
-        adapterSourceModel: "dynamic-mix",
-        adapterEvidenceClass: "independent",
-      },
-      {
-        stablecoinId: "iusd-infinifi",
-        adapterKey: "infinifi",
-        breakerKey: "live-reserves:infinifi",
-        lastAttemptedAt: 1_000,
-        lastSuccessAt: 1_000,
-        lastStatus: "ok",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
-        metadata: {},
-        lastAttemptId: attemptId,
-        pendingAttemptId: attemptId,
-        lastSuccessAttemptId: attemptId,
-      },
-      Date.now() + 30_000,
-    );
+    await finalizeReserveSuccess(db, attemptId);
 
     const upsert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO reserve_composition ("));
     expect(upsert).toBeDefined();
@@ -91,37 +35,7 @@ describe("live-reserves-store", () => {
     ]);
     const attemptId = "attempt-no-op";
 
-    const result = await finalizeReserveSyncSuccess(
-      db,
-      {
-        stablecoinId: "iusd-infinifi",
-        slices: LIVE_SLICES,
-        fetchedAt: 1_000,
-        source: "infinifi",
-        attemptId,
-        metadata: {},
-        warningCount: 0,
-        warnings: [],
-        adapterSourceModel: "dynamic-mix",
-        adapterEvidenceClass: "independent",
-      },
-      {
-        stablecoinId: "iusd-infinifi",
-        adapterKey: "infinifi",
-        breakerKey: "live-reserves:infinifi",
-        lastAttemptedAt: 1_000,
-        lastSuccessAt: 1_000,
-        lastStatus: "ok",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
-        metadata: {},
-        lastAttemptId: attemptId,
-        pendingAttemptId: attemptId,
-        lastSuccessAttemptId: attemptId,
-      },
-      Date.now() + 30_000,
-    );
+    const result = await finalizeReserveSuccess(db, attemptId);
 
     expect(result.finalized).toBe(false);
     expect(result.historyRecorded).toBe(false);
@@ -151,37 +65,7 @@ describe("live-reserves-store", () => {
     ]);
     const attemptId = "attempt-readback-no-op";
 
-    const result = await finalizeReserveSyncSuccess(
-      db,
-      {
-        stablecoinId: "iusd-infinifi",
-        slices: LIVE_SLICES,
-        fetchedAt: 1_000,
-        source: "infinifi",
-        attemptId,
-        metadata: {},
-        warningCount: 0,
-        warnings: [],
-        adapterSourceModel: "dynamic-mix",
-        adapterEvidenceClass: "independent",
-      },
-      {
-        stablecoinId: "iusd-infinifi",
-        adapterKey: "infinifi",
-        breakerKey: "live-reserves:infinifi",
-        lastAttemptedAt: 1_000,
-        lastSuccessAt: 1_000,
-        lastStatus: "ok",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
-        metadata: {},
-        lastAttemptId: attemptId,
-        pendingAttemptId: attemptId,
-        lastSuccessAttemptId: attemptId,
-      },
-      Date.now() + 30_000,
-    );
+    const result = await finalizeReserveSuccess(db, attemptId);
 
     expect(result.finalized).toBe(true);
     expect(result.historyRecorded).toBe(true);
@@ -207,37 +91,7 @@ describe("live-reserves-store", () => {
     ]);
     const attemptId = "attempt-readback-error";
 
-    const result = await finalizeReserveSyncSuccess(
-      db,
-      {
-        stablecoinId: "iusd-infinifi",
-        slices: LIVE_SLICES,
-        fetchedAt: 1_000,
-        source: "infinifi",
-        attemptId,
-        metadata: {},
-        warningCount: 0,
-        warnings: [],
-        adapterSourceModel: "dynamic-mix",
-        adapterEvidenceClass: "independent",
-      },
-      {
-        stablecoinId: "iusd-infinifi",
-        adapterKey: "infinifi",
-        breakerKey: "live-reserves:infinifi",
-        lastAttemptedAt: 1_000,
-        lastSuccessAt: 1_000,
-        lastStatus: "ok",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
-        metadata: {},
-        lastAttemptId: attemptId,
-        pendingAttemptId: attemptId,
-        lastSuccessAttemptId: attemptId,
-      },
-      Date.now() + 30_000,
-    );
+    const result = await finalizeReserveSuccess(db, attemptId);
 
     expect(result.finalized).toBe(true);
     expect(result.historyRecorded).toBe(true);
@@ -277,45 +131,9 @@ describe("live-reserves-store", () => {
     ]);
     const attemptId = "attempt-history-failure";
 
-    await beginReserveSyncAttempt(db, {
-      stablecoinId: "iusd-infinifi",
-      adapterKey: "infinifi",
-      breakerKey: "live-reserves:infinifi",
-      attemptedAt: 1_000,
-      attemptId,
-    });
+    await beginReserveSyncAttempt(db, reserveSyncAttemptInput(attemptId));
 
-    const result = await finalizeReserveSyncSuccess(
-      db,
-      {
-        stablecoinId: "iusd-infinifi",
-        slices: LIVE_SLICES,
-        fetchedAt: 1_000,
-        source: "infinifi",
-        attemptId,
-        metadata: {},
-        warningCount: 0,
-        warnings: [],
-        adapterSourceModel: "dynamic-mix",
-        adapterEvidenceClass: "independent",
-      },
-      {
-        stablecoinId: "iusd-infinifi",
-        adapterKey: "infinifi",
-        breakerKey: "live-reserves:infinifi",
-        lastAttemptedAt: 1_000,
-        lastSuccessAt: 1_000,
-        lastStatus: "ok",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
-        metadata: {},
-        lastAttemptId: attemptId,
-        pendingAttemptId: attemptId,
-        lastSuccessAttemptId: attemptId,
-      },
-      Date.now() + 30_000,
-    );
+    const result = await finalizeReserveSuccess(db, attemptId);
 
     expect(result.finalized).toBe(true);
     expect(result.historyRecorded).toBe(false);

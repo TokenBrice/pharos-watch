@@ -1,86 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import {
+  finalizeReserveSuccess,
+  mockReserveD1 as mockD1,
+  reserveSyncAttemptInput,
+} from "./live-reserves-store.test-support";
 import {
   beginReserveSyncAttempt,
-  finalizeReserveSyncSuccess,
   pruneLiveReserveHistory,
 } from "../live-reserves-store";
-
-
-
-const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
-
-const RESERVE_DEFAULT_TABLES: MockTableConfig[] = [
-  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-  { match: "FROM reserve_sync_state", rows: [] },
-  { match: "FROM reserve_composition", rows: [] },
-  { match: "INSERT INTO reserve_sync_state", rows: [] },
-  { match: "INSERT INTO reserve_composition", rows: [] },
-  { match: "UPDATE reserve_sync_state", rows: [] },
-  { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
-  { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
-  {
-    match: "SELECT 1 AS finalized FROM reserve_composition c JOIN reserve_sync_state",
-    rows: [],
-    first: null,
-  },
-];
-
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...RESERVE_DEFAULT_TABLES]);
-}
-
-/**
- * mockD1 wired for the reserve_composition + reserve_sync_state pair every store
- * read issues. `null` models a missing row; an object is merged over the default
- * row so each case shows only the columns it actually varies.
- */
-
 
 describe("live-reserves-store", () => {
   it("persists reserve composition and sync state together for successful snapshots", async () => {
     const db = mockD1();
     const attemptId = "attempt-1";
 
-    await beginReserveSyncAttempt(db, {
-      stablecoinId: "iusd-infinifi",
-      adapterKey: "infinifi",
-      breakerKey: "live-reserves:infinifi",
-      attemptedAt: 1_000,
-      attemptId,
-    });
+    await beginReserveSyncAttempt(db, reserveSyncAttemptInput(attemptId));
 
-    const { finalized, historyRecorded } = await finalizeReserveSyncSuccess(
-      db,
-      {
-        stablecoinId: "iusd-infinifi",
-        slices: LIVE_SLICES,
-        fetchedAt: 1_000,
-        source: "infinifi",
-        attemptId,
-        metadata: {},
-        warningCount: 0,
-        warnings: [],
-        adapterSourceModel: "dynamic-mix",
-        adapterEvidenceClass: "independent",
-      },
-      {
-        stablecoinId: "iusd-infinifi",
-        adapterKey: "infinifi",
-        breakerKey: "live-reserves:infinifi",
-        lastAttemptedAt: 1_000,
-        lastSuccessAt: 1_000,
-        lastStatus: "ok",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
-        metadata: {},
-        lastAttemptId: attemptId,
-        pendingAttemptId: attemptId,
-        lastSuccessAttemptId: attemptId,
-      },
-      Date.now() + 30_000,
-    );
+    const { finalized, historyRecorded } = await finalizeReserveSuccess(db, attemptId);
 
     expect(finalized).toBe(true);
     expect(historyRecorded).toBe(true);
@@ -95,37 +31,7 @@ describe("live-reserves-store", () => {
     const db = mockD1();
     const attemptId = "attempt-both";
 
-    const result = await finalizeReserveSyncSuccess(
-      db,
-      {
-        stablecoinId: "iusd-infinifi",
-        slices: LIVE_SLICES,
-        fetchedAt: 1_000,
-        source: "infinifi",
-        attemptId,
-        metadata: {},
-        warningCount: 0,
-        warnings: [],
-        adapterSourceModel: "dynamic-mix",
-        adapterEvidenceClass: "independent",
-      },
-      {
-        stablecoinId: "iusd-infinifi",
-        adapterKey: "infinifi",
-        breakerKey: "live-reserves:infinifi",
-        lastAttemptedAt: 1_000,
-        lastSuccessAt: 1_000,
-        lastStatus: "ok",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
-        metadata: {},
-        lastAttemptId: attemptId,
-        pendingAttemptId: attemptId,
-        lastSuccessAttemptId: attemptId,
-      },
-      Date.now() + 30_000,
-    );
+    const result = await finalizeReserveSuccess(db, attemptId);
 
     expect(result.finalized).toBe(true);
     expect(result.historyRecorded).toBe(true);
@@ -138,37 +44,7 @@ describe("live-reserves-store", () => {
     const db = mockD1();
     const attemptId = "attempt-idempotent-history";
 
-    await finalizeReserveSyncSuccess(
-      db,
-      {
-        stablecoinId: "iusd-infinifi",
-        slices: LIVE_SLICES,
-        fetchedAt: 1_000,
-        source: "infinifi",
-        attemptId,
-        metadata: {},
-        warningCount: 0,
-        warnings: [],
-        adapterSourceModel: "dynamic-mix",
-        adapterEvidenceClass: "independent",
-      },
-      {
-        stablecoinId: "iusd-infinifi",
-        adapterKey: "infinifi",
-        breakerKey: "live-reserves:infinifi",
-        lastAttemptedAt: 1_000,
-        lastSuccessAt: 1_000,
-        lastStatus: "ok",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
-        metadata: {},
-        lastAttemptId: attemptId,
-        pendingAttemptId: attemptId,
-        lastSuccessAttemptId: attemptId,
-      },
-      Date.now() + 30_000,
-    );
+    await finalizeReserveSuccess(db, attemptId);
 
     const history = db.getHistory();
     const compositionHistory = history.find((entry) =>

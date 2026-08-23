@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import {
+  LIVE_SLICES,
+  makeReservesDb,
+  mockReserveD1 as mockD1,
+  reserveCompositionRow,
+  reserveSyncRow,
+} from "./live-reserves-store.test-support";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../operational-cache-keys";
 import {
   computeReserveCompositionOverview,
@@ -10,74 +16,6 @@ import {
   resolveReserveResult,
 } from "../live-reserves-store";
 import { getConfiguredLiveReserveCoins } from "../live-reserves-store-shared";
-
-const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
-
-const RESERVE_DEFAULT_TABLES: MockTableConfig[] = [
-  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-  { match: "FROM reserve_sync_state", rows: [] },
-  { match: "FROM reserve_composition", rows: [] },
-  { match: "INSERT INTO reserve_sync_state", rows: [] },
-  { match: "INSERT INTO reserve_composition", rows: [] },
-  { match: "UPDATE reserve_sync_state", rows: [] },
-  { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
-  { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
-  {
-    match: "SELECT 1 AS finalized FROM reserve_composition c JOIN reserve_sync_state",
-    rows: [],
-    first: null,
-  },
-];
-
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...RESERVE_DEFAULT_TABLES]);
-}
-
-type MockRow = Record<string, unknown>;
-
-const COMPOSITION_ROW: MockRow = {
-  stablecoin_id: "iusd-infinifi",
-  slices: JSON.stringify(LIVE_SLICES),
-  fetched_at: 1_000,
-  source: "infinifi",
-};
-
-const SYNC_STATE_ROW: MockRow = {
-  stablecoin_id: "iusd-infinifi",
-  adapter_key: "infinifi",
-  breaker_key: "live-reserves:infinifi",
-  last_attempted_at: 1_000,
-  last_success_at: 1_000,
-  last_status: "ok",
-  warning_count: 0,
-  warnings: null,
-  last_error: null,
-  metadata: "{}",
-};
-
-/**
- * mockD1 wired for the reserve_composition + reserve_sync_state pair every store
- * read issues. `null` models a missing row; an object is merged over the default
- * row so each case shows only the columns it actually varies.
- */
-function makeReservesDb(
-  overrides: { composition?: MockRow | null; syncState?: MockRow | null } = {},
-) {
-  const composition = overrides.composition === undefined ? {} : overrides.composition;
-  const syncState = overrides.syncState === undefined ? {} : overrides.syncState;
-  return mockD1([
-    {
-      match: "reserve_composition",
-      rows: [],
-      first: composition && { ...COMPOSITION_ROW, ...composition },
-    },
-    {
-      match: "reserve_sync_state",
-      rows: [],
-      first: syncState && { ...SYNC_STATE_ROW, ...syncState },
-    },
-  ]);
-}
 
 describe("live-reserves-store", () => {
   it("computes max sync age from the oldest required reserve attempt", async () => {
@@ -96,18 +34,7 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "FROM reserve_sync_state",
-        rows: [{
-          stablecoin_id: "coin-a",
-          adapter_key: "test",
-          breaker_key: "test",
-          last_attempted_at: 950,
-          last_success_at: 950,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        }],
+        rows: [reserveSyncRow({ stablecoin_id: "coin-a", adapter_key: "test", breaker_key: "test", last_attempted_at: 950, last_success_at: 950 })],
       },
     ]);
 
@@ -119,17 +46,12 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "FROM reserve_sync_state",
-        rows: stablecoinIds.map((stablecoinId, index) => ({
+        rows: stablecoinIds.map((stablecoinId, index) => reserveSyncRow({
           stablecoin_id: stablecoinId,
           adapter_key: "test",
           breaker_key: "test",
           last_attempted_at: 900 + index,
           last_success_at: 900 + index,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
         })),
       },
     ]);
@@ -304,26 +226,12 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [{
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        }],
+        rows: [reserveSyncRow()],
       },
       {
         match: "reserve_composition",
         rows: [{
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(LIVE_SLICES),
-          fetched_at: 999,
-          source: "infinifi",
+          ...reserveCompositionRow({ fetched_at: 999 }),
         }],
       },
     ]);
@@ -414,31 +322,11 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: now,
-            last_status: "error",
-            warning_count: 0,
-            warnings: null,
-            last_error: "HTTP 503",
-            metadata: "{}",
-          },
-        ],
+        rows: [reserveSyncRow({ last_attempted_at: now, last_success_at: now, last_status: "error", last_error: "HTTP 503" })],
       },
       {
         match: "reserve_composition",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            slices: JSON.stringify([{ name: "Test Farm", pct: 100, risk: "low" }]),
-            fetched_at: now,
-            source: "infinifi",
-          },
-        ],
+        rows: [reserveCompositionRow({ fetched_at: now })],
       },
     ]);
 
@@ -454,20 +342,7 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: 2_000,
-            last_success_at: null,
-            last_status: "error",
-            warning_count: 0,
-            warnings: null,
-            last_error: "HTTP 503",
-            metadata: "{}",
-          },
-        ],
+        rows: [reserveSyncRow({ last_attempted_at: 2_000, last_success_at: null, last_status: "error", last_error: "HTTP 503" })],
       },
       {
         match: "reserve_composition",
@@ -485,31 +360,11 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: 1_000,
-            last_status: "error",
-            warning_count: 0,
-            warnings: null,
-            last_error: "HTTP 503",
-            metadata: "{}",
-          },
-        ],
+        rows: [reserveSyncRow({ last_attempted_at: now, last_success_at: 1_000, last_status: "error", last_error: "HTTP 503" })],
       },
       {
         match: "reserve_composition",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            slices: JSON.stringify(LIVE_SLICES),
-            fetched_at: 1_000,
-            source: "infinifi",
-          },
-        ],
+        rows: [reserveCompositionRow()],
       },
     ]);
 
@@ -611,60 +466,40 @@ describe("live-reserves-store", () => {
       {
         match: "reserve_sync_state",
         rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
+          reserveSyncRow({
             last_attempted_at: now,
             last_success_at: now,
             last_status: "degraded",
             warning_count: 1,
             warnings: JSON.stringify([{ code: "unknown-position", message: "warn", severity: "warning" }]),
-            last_error: null,
-            metadata: "{}",
-          },
-          {
+          }),
+          reserveSyncRow({
             stablecoin_id: "pyusd-paypal",
             adapter_key: "single-asset",
             breaker_key: "live-reserves:single-asset",
             last_attempted_at: now,
             last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-          {
+          }),
+          reserveSyncRow({
             stablecoin_id: "lusd-liquity",
             adapter_key: "liquity-v1",
             breaker_key: "live-reserves:lusd-liquity",
             last_attempted_at: now,
             last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
+          }),
         ],
       },
       {
         match: "reserve_composition",
         rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
-            fetched_at: now,
-            source: "infinifi",
-          },
-          {
+          reserveCompositionRow({ slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]), fetched_at: now }),
+          reserveCompositionRow({
             stablecoin_id: "pyusd-paypal",
             slices: JSON.stringify([{ name: "Issuer reserves", pct: 100, risk: "very-low" }]),
             fetched_at: now,
             source: "single-asset",
-          },
-          {
+          }),
+          reserveCompositionRow({
             stablecoin_id: "lusd-liquity",
             slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
             fetched_at: now,
@@ -672,7 +507,7 @@ describe("live-reserves-store", () => {
             metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
             adapter_source_model: "single-bucket",
             adapter_evidence_class: "independent",
-          },
+          }),
         ],
       },
     ]);
@@ -689,57 +524,34 @@ describe("live-reserves-store", () => {
       {
         match: "reserve_sync_state",
         rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-          {
+          reserveSyncRow({ last_attempted_at: now, last_success_at: now }),
+          reserveSyncRow({
             stablecoin_id: "gho-aave",
             adapter_key: "gho",
             breaker_key: "live-reserves:gho",
             last_attempted_at: now,
             last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-          {
+          }),
+          reserveSyncRow({
             stablecoin_id: "usds-sky",
             adapter_key: "sky-makercore",
             breaker_key: "live-reserves:sky-makercore",
             last_attempted_at: now,
             last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
+          }),
         ],
       },
       {
         match: "reserve_composition",
         rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
+          reserveCompositionRow({
             slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
             fetched_at: now,
-            source: "infinifi",
             metadata: JSON.stringify({ freshnessMode: "unverified", sourceTimestamp: now }),
             adapter_source_model: "dynamic-mix",
             adapter_evidence_class: "independent",
-          },
-          {
+          }),
+          reserveCompositionRow({
             stablecoin_id: "gho-aave",
             slices: JSON.stringify([{ name: "Tracked GSM", pct: 100, risk: "low" }]),
             fetched_at: now,
@@ -747,8 +559,8 @@ describe("live-reserves-store", () => {
             metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
             adapter_source_model: "dynamic-mix",
             adapter_evidence_class: "independent",
-          },
-          {
+          }),
+          reserveCompositionRow({
             stablecoin_id: "usds-sky",
             slices: JSON.stringify([{ name: "PSM USDC", pct: 100, risk: "low" }]),
             fetched_at: now,
@@ -756,7 +568,7 @@ describe("live-reserves-store", () => {
             metadata: JSON.stringify({ sourceTimestamp: now }),
             adapter_source_model: "dynamic-mix",
             adapter_evidence_class: "independent",
-          },
+          }),
         ],
       },
     ]);
@@ -894,72 +706,26 @@ describe("live-reserves-store", () => {
       {
         match: "reserve_sync_state",
         rows: [
-          {
-            stablecoin_id: "frax-frax",
-            adapter_key: "frax",
-            breaker_key: "live-reserves:frax",
-            last_attempted_at: now,
-            last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-          {
-            stablecoin_id: "gho-aave",
-            adapter_key: "gho",
-            breaker_key: "live-reserves:gho",
-            last_attempted_at: now,
-            last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-          {
-            stablecoin_id: "pyusd-paypal",
-            adapter_key: "single-asset",
-            breaker_key: "live-reserves:single-asset",
-            last_attempted_at: now,
-            last_success_at: now,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-          {
+          reserveSyncRow({ stablecoin_id: "frax-frax", adapter_key: "frax", breaker_key: "live-reserves:frax", last_attempted_at: now, last_success_at: now }),
+          reserveSyncRow({ last_attempted_at: now, last_success_at: now }),
+          reserveSyncRow({ stablecoin_id: "gho-aave", adapter_key: "gho", breaker_key: "live-reserves:gho", last_attempted_at: now, last_success_at: now }),
+          reserveSyncRow({ stablecoin_id: "pyusd-paypal", adapter_key: "single-asset", breaker_key: "live-reserves:single-asset", last_attempted_at: now, last_success_at: now }),
+          reserveSyncRow({
             stablecoin_id: "crvusd-curve",
             adapter_key: "crvusd",
             breaker_key: "live-reserves:crvusd",
             last_attempted_at: now,
             last_success_at: null,
             last_status: "error",
-            warning_count: 0,
-            warnings: null,
             last_error: "D1 write timeout for crvusd-curve",
             metadata: JSON.stringify({ uncertainWrite: true, reason: "storage-write-timeout" }),
-          },
+          }),
         ],
       },
       {
         match: "reserve_composition",
         rows: [
-          {
+          reserveCompositionRow({
             stablecoin_id: "frax-frax",
             slices: JSON.stringify([{ name: "Reviewed baseline", pct: 100, risk: "very-low" }]),
             fetched_at: now,
@@ -967,17 +733,15 @@ describe("live-reserves-store", () => {
             metadata: JSON.stringify({ freshnessMode: "unverified" }),
             adapter_source_model: "validated-static",
             adapter_evidence_class: "static-validated",
-          },
-          {
-            stablecoin_id: "iusd-infinifi",
+          }),
+          reserveCompositionRow({
             slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
             fetched_at: now,
-            source: "infinifi",
             metadata: JSON.stringify({ freshnessMode: "unverified" }),
             adapter_source_model: "dynamic-mix",
             adapter_evidence_class: "independent",
-          },
-          {
+          }),
+          reserveCompositionRow({
             stablecoin_id: "gho-aave",
             slices: JSON.stringify([{ name: "Tracked GSM", pct: 100, risk: "low" }]),
             fetched_at: now,
@@ -985,8 +749,8 @@ describe("live-reserves-store", () => {
             metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
             adapter_source_model: "dynamic-mix",
             adapter_evidence_class: "independent",
-          },
-          {
+          }),
+          reserveCompositionRow({
             stablecoin_id: "pyusd-paypal",
             slices: JSON.stringify([{ name: "Issuer reserves", pct: 100, risk: "very-low" }]),
             fetched_at: now,
@@ -994,7 +758,7 @@ describe("live-reserves-store", () => {
             metadata: JSON.stringify({}),
             adapter_source_model: "single-bucket",
             adapter_evidence_class: "weak-live-probe",
-          },
+          }),
         ],
       },
     ]);
@@ -1176,20 +940,12 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: now - FIFTEEN_DAYS,
-            last_status: "degraded",
-            warning_count: 1,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-        ],
+        rows: [reserveSyncRow({
+          last_attempted_at: now,
+          last_success_at: now - FIFTEEN_DAYS,
+          last_status: "degraded",
+          warning_count: 1,
+        })],
       },
       {
         match: "reserve_composition",
@@ -1212,20 +968,13 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: now - FIFTEEN_DAYS,
-            last_status: "skipped",
-            warning_count: 0,
-            warnings: null,
-            last_error: "Circuit open for live-reserves:infinifi",
-            metadata: JSON.stringify({ failureCategory: "circuit-open" }),
-          },
-        ],
+        rows: [reserveSyncRow({
+          last_attempted_at: now,
+          last_success_at: now - FIFTEEN_DAYS,
+          last_status: "skipped",
+          last_error: "Circuit open for live-reserves:infinifi",
+          metadata: JSON.stringify({ failureCategory: "circuit-open" }),
+        })],
       },
       {
         match: "reserve_composition",
@@ -1248,20 +997,13 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: now - FIFTEEN_DAYS,
-            last_status: "skipped",
-            warning_count: 0,
-            warnings: null,
-            last_error: "run-budget-exhausted",
-            metadata: JSON.stringify({ failureCategory: "run-budget-exhausted" }),
-          },
-        ],
+        rows: [reserveSyncRow({
+          last_attempted_at: now,
+          last_success_at: now - FIFTEEN_DAYS,
+          last_status: "skipped",
+          last_error: "run-budget-exhausted",
+          metadata: JSON.stringify({ failureCategory: "run-budget-exhausted" }),
+        })],
       },
       {
         match: "reserve_composition",
@@ -1284,20 +1026,12 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: now - THIRTEEN_DAYS,
-            last_status: "degraded",
-            warning_count: 1,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-        ],
+        rows: [reserveSyncRow({
+          last_attempted_at: now,
+          last_success_at: now - THIRTEEN_DAYS,
+          last_status: "degraded",
+          warning_count: 1,
+        })],
       },
       {
         match: "reserve_composition",
@@ -1320,20 +1054,10 @@ describe("live-reserves-store", () => {
     const db = mockD1([
       {
         match: "reserve_sync_state",
-        rows: [
-          {
-            stablecoin_id: "iusd-infinifi",
-            adapter_key: "infinifi",
-            breaker_key: "live-reserves:infinifi",
-            last_attempted_at: now,
-            last_success_at: now - TWENTY_DAYS,
-            last_status: "ok",
-            warning_count: 0,
-            warnings: null,
-            last_error: null,
-            metadata: "{}",
-          },
-        ],
+        rows: [reserveSyncRow({
+          last_attempted_at: now,
+          last_success_at: now - TWENTY_DAYS,
+        })],
       },
       {
         match: "reserve_composition",
