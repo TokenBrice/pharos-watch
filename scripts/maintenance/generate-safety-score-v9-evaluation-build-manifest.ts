@@ -91,6 +91,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
 export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
   "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
+  "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
   "shared/lib/classification/resolve-mechanism-archetype.ts",
   // Cadence numbers only (WS7.1). shared/lib/cron-jobs.ts stays the ADR-7
   // schedule authority but is deliberately NOT pinned: a cron-expression,
@@ -166,6 +167,7 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "worker/src/lib/safety-score-v9-extension-shock.ts",
   "worker/src/lib/safety-score-v9-extension-supply.ts",
   "worker/src/lib/safety-score-v9-extension-transfer.ts",
+  "worker/src/lib/safety-score-v9-extension-wrapper-allocation.ts",
   "worker/src/lib/safety-score-v9-fact-set.ts",
   "worker/src/lib/safety-score-v9-fact-set-backing.ts",
   "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
