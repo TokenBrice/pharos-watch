@@ -275,6 +275,7 @@ import {
 import { loadTier1PrevRateRows } from "../yield-sync/resolve-tracked-sources";
 import { loadOndoOracleAnchorRow } from "../yield-sync/tracked-optional-source-registry";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 // --- Helpers ---
 
@@ -323,6 +324,31 @@ function setupDefaultMocks() {
       ["u-united-stables", { score: 75, grade: "B" }],
     ]),
   } as never);
+}
+
+async function runYieldScenario(input: {
+  pools?: ReturnType<typeof makeDlYieldPool>[];
+  riskFreeRate?: number;
+  db?: MockD1Database;
+}) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const db = input.db ?? makeDb();
+  vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    if (key === "risk_free_rate" && input.riskFreeRate != null) {
+      return { value: String(input.riskFreeRate), updatedAt: nowSec };
+    }
+    if (key === "dl-stablecoin-pools") {
+      return {
+        value: JSON.stringify(input.pools ?? [makeDlYieldPool()]),
+        updatedAt: nowSec,
+      };
+    }
+    return null;
+  });
+  vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+  mockFetch([]);
+  const result = await syncYieldData(db);
+  return { result, rows: getWriteStatements(), nowSec };
 }
 
 function parseBulkRows<T>(sqlPattern: string): T[] {
@@ -425,20 +451,7 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 6.5,
-              apyBase: 6.5,
-              apyReward: null,
-              apyMean30d: 6.3,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
           ]),
           updatedAt: Math.floor(Date.now() / 1000),
         };
@@ -491,20 +504,7 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 4.5,
-              apyBase: 4.5,
-              apyReward: null,
-              apyMean30d: 4.5,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ apy: 4.5, apyBase: 4.5, apyMean30d: 4.5 }),
           ]),
           updatedAt: nowSec,
         };
@@ -611,20 +611,7 @@ describe("T-bill excess yield calculation", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 6.0,
-              apyBase: 6.0,
-              apyReward: null,
-              apyMean30d: 6.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ apy: 6.0, apyBase: 6.0, apyMean30d: 6.0 }),
           ]),
           updatedAt: nowSec,
         };
@@ -658,20 +645,7 @@ describe("T-bill excess yield calculation", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 3.0,
-              apyBase: 3.0,
-              apyReward: null,
-              apyMean30d: 3.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ apy: 3.0, apyBase: 3.0, apyMean30d: 3.0 }),
           ]),
           updatedAt: nowSec,
         };
@@ -701,20 +675,7 @@ describe("T-bill excess yield calculation", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 8.0,
-              apyBase: 8.0,
-              apyReward: null,
-              apyMean30d: 8.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ apy: 8.0, apyBase: 8.0, apyMean30d: 8.0 }),
           ]),
           updatedAt: nowSec,
         };
@@ -765,19 +726,7 @@ describe("rate-derived yield from T-bill rate", () => {
       label: "T-bill proxy (net of 0.50% fee)",
     });
 
-    const db = makeDb();
-    const nowSec = Math.floor(Date.now() / 1000);
-
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.25", updatedAt: nowSec };
-      }
-      return null;
-    });
-    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
-    mockFetch([]);
-
-    const result = await syncYieldData(db);
+    const { result } = await runYieldScenario({ riskFreeRate: 4.25 });
     expect(result.itemCount).toBeGreaterThanOrEqual(1);
 
     const stmts = getWriteStatements();
@@ -800,19 +749,7 @@ describe("rate-derived yield from T-bill rate", () => {
       label: "High-fee T-bill proxy",
     });
 
-    const db = makeDb();
-    const nowSec = Math.floor(Date.now() / 1000);
-
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
-    });
-    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
-    mockFetch([]);
-
-    const result = await syncYieldData(db);
+    const { result } = await runYieldScenario({ riskFreeRate: 4.0 });
     expect(result.itemCount).toBeGreaterThanOrEqual(1);
 
     const stmts = getWriteStatements();
@@ -883,20 +820,7 @@ describe("warning signal generation in yield sync", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 10.0,
-              apyBase: 10.0,
-              apyReward: null,
-              apyMean30d: 3.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ apy: 10.0, apyBase: 10.0, apyMean30d: 3.0 }),
           ]),
           updatedAt: nowSec,
         };
@@ -952,20 +876,7 @@ describe("warning signal generation in yield sync", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 1_000_000_000,
-              apy: 5.0,
-              apyBase: 5.0,
-              apyReward: null,
-              apyMean30d: 5.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ tvlUsd: 1_000_000_000 }),
           ]),
           updatedAt: nowSec,
         };
@@ -997,20 +908,7 @@ describe("warning signal generation in yield sync", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 5.0,
-              apyBase: 5.0,
-              apyReward: null,
-              apyMean30d: 5.0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool(),
           ]),
           updatedAt: nowSec,
         };
@@ -1097,20 +995,7 @@ describe("Pharos Yield Score (PYS) computation through sync", () => {
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
-            {
-              pool: "pool-sdai-native",
-              chain: "Ethereum",
-              project: "maker",
-              symbol: "sDAI",
-              tvlUsd: 2_000_000_000,
-              apy: 0,
-              apyBase: 0,
-              apyReward: null,
-              apyMean30d: 0,
-              stablecoin: true,
-              exposure: "single",
-              underlyingTokens: null,
-            },
+            makeDlYieldPool({ apy: 0, apyBase: 0, apyMean30d: 0 }),
           ]),
           updatedAt: nowSec,
         };
@@ -1789,30 +1674,39 @@ describe("appendOptionalYieldCandidate", () => {
     };
   }
 
-  it("returns appended when a candidate is accepted", () => {
-    const resolved: ResolvedYieldEntry[] = [];
-    const status = appendOptionalYieldCandidate({
-      resolved,
+  function makeCandidateInput(input: {
+    resolved?: ResolvedYieldEntry[];
+    stablecoinId?: string;
+    chain?: string;
+    yield?: Partial<ResolvedYieldCandidate["yield"]>;
+    meta?: { id: string; symbol: string; contracts: Array<{ chain: string }> } | null;
+    supply?: number | null;
+  } = {}): Parameters<typeof appendOptionalYieldCandidate>[0] {
+    const stablecoinId = input.stablecoinId ?? "usde-ethena";
+    return {
+      resolved: input.resolved ?? [],
       entry: makeEntry({
-        stablecoinId: "usde-ethena",
-        chain: "base",
+        stablecoinId,
+        ...(input.chain ? { chain: input.chain } : {}),
         yield: {
-          currentApy: 3.2,
-          apyBase: 3.2,
-          apyReward: null,
-          sourcePool: "pool-optional",
-          sourceTvlUsd: 10_000_000_000,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: "pool-optional",
-          yieldType: "lending-opportunity",
-          project: "proto",
-          yieldSource: "aave-v3",
+          ...makeEntry({ stablecoinId }).yield,
+          ...input.yield,
         },
       }),
-      meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
-      stablecoinSupplyById: new Map([["usde-ethena", 2_000_000]]),
-    });
+      meta: input.meta === undefined
+        ? { id: stablecoinId, symbol: "USDe", contracts: [{ chain: "ethereum" }] }
+        : input.meta,
+      stablecoinSupplyById: input.supply === undefined
+        ? new Map([[stablecoinId, 2_000_000]])
+        : input.supply === null
+          ? new Map()
+          : new Map([[stablecoinId, input.supply]]),
+    };
+  }
+
+  it("returns appended when a candidate is accepted", () => {
+    const resolved: ResolvedYieldEntry[] = [];
+    const status = appendOptionalYieldCandidate(makeCandidateInput({ resolved, chain: "base" }));
 
     expect(status).toBe("appended" as YieldCandidateAppendStatus);
     expect(resolved).toHaveLength(1);
@@ -1837,19 +1731,10 @@ describe("appendOptionalYieldCandidate", () => {
       },
     ];
 
-    const status = appendOptionalYieldCandidate({
+    const status = appendOptionalYieldCandidate(makeCandidateInput({
       resolved,
-      entry: makeEntry({
-        stablecoinId: "usde-ethena",
-        yield: {
-          ...makeEntry({ stablecoinId: "usde-ethena" }).yield,
-          sourceKey: "pool-optional",
-          sourceTvlUsd: 10_000_000_000,
-        },
-      }),
-      meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
-      stablecoinSupplyById: new Map([["usde-ethena", 2_000_000]]),
-    });
+      yield: { sourceKey: "pool-optional", sourceTvlUsd: 10_000_000_000 },
+    }));
 
     expect(status).toBe("duplicate" as YieldCandidateAppendStatus);
     expect(resolved).toHaveLength(1);
@@ -1857,18 +1742,10 @@ describe("appendOptionalYieldCandidate", () => {
 
   it("returns size-gated when lending opportunity TVL fails threshold", () => {
     const resolved: ResolvedYieldEntry[] = [];
-    const status = appendOptionalYieldCandidate({
+    const status = appendOptionalYieldCandidate(makeCandidateInput({
       resolved,
-      entry: makeEntry({
-        stablecoinId: "usde-ethena",
-        yield: {
-          ...makeEntry({ stablecoinId: "usde-ethena" }).yield,
-          sourceTvlUsd: 1,
-        },
-      }),
-      meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
-      stablecoinSupplyById: new Map([["usde-ethena", 2_000_000]]),
-    });
+      yield: { sourceTvlUsd: 1 },
+    }));
 
     expect(status).toBe("size-gated" as YieldCandidateAppendStatus);
     expect(resolved).toHaveLength(0);
@@ -1876,38 +1753,26 @@ describe("appendOptionalYieldCandidate", () => {
 
   it("returns size-gated when fixed-yield TVL fails the external opportunity threshold", () => {
     const resolved: ResolvedYieldEntry[] = [];
-    const status = appendOptionalYieldCandidate({
+    const status = appendOptionalYieldCandidate(makeCandidateInput({
       resolved,
-      entry: makeEntry({
-        stablecoinId: "usde-ethena",
-        yield: {
-          ...makeEntry({ stablecoinId: "usde-ethena" }).yield,
-          sourceKey: "protocol-api:pendle:ethereum:0xpool",
-          yieldSource: "Pendle fixed yield: USDe",
-          yieldType: "fixed-yield",
-          sourceTvlUsd: 1,
-        },
-      }),
-      meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
-      stablecoinSupplyById: new Map([["usde-ethena", 2_000_000]]),
-    });
+      yield: {
+        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+        yieldSource: "Pendle fixed yield: USDe",
+        yieldType: "fixed-yield",
+        sourceTvlUsd: 1,
+      },
+    }));
 
     expect(status).toBe("size-gated" as YieldCandidateAppendStatus);
     expect(resolved).toHaveLength(0);
   });
 
   it("returns missing-meta when no stablecoin metadata is available", () => {
-    const status = appendOptionalYieldCandidate({
-      resolved: [],
-      entry: makeEntry({
-        yield: {
-          ...makeEntry().yield,
-          sourceTvlUsd: 10_000_000_000,
-        },
-      }),
+    const status = appendOptionalYieldCandidate(makeCandidateInput({
+      yield: { sourceTvlUsd: 10_000_000_000 },
       meta: null,
-      stablecoinSupplyById: new Map(),
-    });
+      supply: null,
+    }));
 
     expect(status).toBe("missing-meta" as YieldCandidateAppendStatus);
   });

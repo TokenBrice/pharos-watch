@@ -25,6 +25,7 @@ import {
 } from "../curve-stableswap";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import type { EvmMulticall3Call } from "../../../lib/evm-rpc";
+import { makeMeasuredTarget } from "@shared/lib/__tests__/measured-execution.test-support";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -136,8 +137,7 @@ function target(inputIndex: number, outputIndex: number): DexMeasuredExecutionTa
     trackedAssetId: stablecoinIds[outputIndex],
   };
   const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
-  return {
-    schemaVersion: "dex-measured-target-v1",
+  return makeMeasuredTarget({
     targetId: buildDexMeasuredExecutionTargetId({
       adapterProfileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
       stablecoinId: stablecoinIds[inputIndex]!,
@@ -159,7 +159,7 @@ function target(inputIndex: number, outputIndex: number): DexMeasuredExecutionTa
     retainedTvlUsd: 160_047_206,
     retainedPoolPriceUsd: tokenIn.referencePriceUsd,
     capturedAt: BLOCK_TIMESTAMP - 60,
-  };
+  });
 }
 
 describe("Curve legacy StableSwap 3pool policy", () => {
