@@ -18,21 +18,21 @@ export const entry: ChangelogEntry = {
       tag: "feature",
       description:
         "V9 advanced from v9.23 to v9.33: the mint-authority and bridge-risk boundary closed its fail-open, Solana attribution anchors hardened, reserve-weight boundary drift was canonicalized, and curation entries now expire.",
-      href: "/methodology/scoring-changelog",
+      href: "/methodology/scoring-changelog/",
     },
     {
       label: "Liquidity Score v6",
       tag: "feature",
       description:
         "The v6.0 cutover corrected a Raydium double count that scored concentrated pools as plain AMMs, retired the native lane, and deleted the shadow inventory. v6.1 scopes native confirmation to covered pool families.",
-      href: "/methodology/liquidity-score-changelog",
+      href: "/methodology/liquidity-score-changelog/",
     },
     {
       label: "Yield availability",
       tag: "feature",
       description:
         "Yield rankings now fall back to the coherent publish-time safety snapshot instead of blanking scores after every scoring deploy, with an explicit stale label and a 24-hour window. Base Dollar yield joined at v8.41.",
-      href: "/methodology/yield-changelog",
+      href: "/methodology/yield-changelog/",
     },
     {
       label: "Scheduler reliability",
