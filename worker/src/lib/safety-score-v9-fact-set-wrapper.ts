@@ -156,8 +156,14 @@ function assertDirectSerialWrapperDependency(
 }
 
 function parseLeverageFactor(factor: string): number | null {
+  // Kept at star height 1 so the pattern is linear on curated risk-factor prose.
+  // Two shapes are deliberately avoided: overlapping `\s*` runs around an
+  // alternation that itself matches `\s`, which lets one whitespace run split
+  // many ways; and a nested numeric quantifier like `(?:\.\d+)?`. The digits are
+  // captured loosely as `[\d.]+` and validated by Number instead, so "1.2.3"
+  // parses to NaN and is rejected below rather than by the pattern.
   const match = factor.match(
-    /\bleverage(?:[-\s]?factor)?\s*(?::|=|\s)\s*(\d+(?:\.\d+)?)\s*x?\b/i,
+    /\bleverage[-\s]?(?:factor)?(?:\s*[:=]\s*|\s+)([\d.]+)\s?x?\b/i,
   );
   if (!match) return null;
   const value = Number(match[1]);
