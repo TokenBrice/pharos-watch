@@ -6,7 +6,7 @@
     "version": "1",
     "mode": "offline-byte-identical"
   },
-  "attestedAt": "2026-08-21",
+  "attestedAt": "2026-08-23",
   "attestations": [
     {
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json",
@@ -14,6 +14,14 @@
       "attestedAt": "2026-08-21",
       "exactReplayPassed": true,
       "callsConsumed": 224,
+      "codePinsConsumed": 92
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-23-block-50334110-shock-coverage.json",
+      "journalSha256": "87e42f596c6a28fe0755689a0614dc6adeecbc2e55bccfd75de6738367cddc6b",
+      "attestedAt": "2026-08-23",
+      "exactReplayPassed": true,
+      "callsConsumed": 230,
       "codePinsConsumed": 92
     },
     {
@@ -167,6 +175,14 @@
       "exactReplayPassed": true,
       "callsConsumed": 722,
       "codePinsConsumed": 54
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-08-23-block-25815355-shock-coverage.json",
+      "journalSha256": "3c19e3e57e738f8ea1a38da5f8f09eddcb4cdb2551cba6059a1663be7073c270",
+      "attestedAt": "2026-08-23",
+      "exactReplayPassed": true,
+      "callsConsumed": 743,
+      "codePinsConsumed": 56
     },
     {
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2021-05-19-block-12464949-shock-coverage.json",
@@ -340,6 +356,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-08-21-block-25801008-shock-coverage.json",
       "journalSha256": "9031351def76d58bd53fff24bd3db284af3bde4f8527df481b2629d687039de5",
       "attestedAt": "2026-08-21",
+      "exactReplayPassed": true,
+      "callsConsumed": 250,
+      "codePinsConsumed": 14
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-08-23-block-25815355-shock-coverage.json",
+      "journalSha256": "81f356d6e2c80551a3109f7c8061553840bcf70c1388c87de38f8304236fc260",
+      "attestedAt": "2026-08-23",
       "exactReplayPassed": true,
       "callsConsumed": 250,
       "codePinsConsumed": 14
