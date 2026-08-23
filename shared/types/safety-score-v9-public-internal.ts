@@ -430,6 +430,13 @@ export function refineCard(
         }
       }
     }
+    // An unrated card deliberately withholds the binding assertion: its score
+    // does not exist, so no ceiling can be said to have constrained it. Checks
+    // that reconcile attribution against `bindingCap` therefore fall back to the
+    // declared candidate list when the card is NR. The attribution still has to
+    // name a real ceiling — it just cannot be required to name a binding one.
+    const reconcilableCaps =
+      card.score === null ? card.caps : card.bindingCap === null ? [] : [card.bindingCap];
     for (const item of scoreTrace.boundedUncertaintyAttribution.items) {
       if (item.source === "reason") {
         const matchesPillarReason = Object.values(card.pillars).some((pillar) =>
@@ -442,11 +449,13 @@ export function refineCard(
               reason.message === item.message,
           ),
         );
-        const matchesBindingReasonCap =
-          card.bindingCap?.source === "evidence" &&
-          card.bindingCap.kind === `reason:${item.code}` &&
-          card.bindingCap.reason === item.message;
-        if (!matchesPillarReason && !matchesBindingReasonCap) {
+        const matchesReasonCap = reconcilableCaps.some(
+          (cap) =>
+            cap.source === "evidence" &&
+            cap.kind === `reason:${item.code}` &&
+            cap.reason === item.message,
+        );
+        if (!matchesPillarReason && !matchesReasonCap) {
           ctx.addIssue({
             code: "custom",
             path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
@@ -456,7 +465,7 @@ export function refineCard(
       } else if (item.source === "parent-score") {
         const parent = attributedSerialParent(card, item.path, item.message);
         if (
-          card.bindingCap?.source !== "parent" ||
+          !reconcilableCaps.some((cap) => cap.source === "parent") ||
           parent === null ||
           parent.blocked ||
           parent.score === null ||

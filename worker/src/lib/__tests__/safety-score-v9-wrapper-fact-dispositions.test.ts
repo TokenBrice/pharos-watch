@@ -110,20 +110,27 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     });
   });
 
-  it("fires the direct-serial-wrapper invariant when the tracked parent edge is absent", () => {
+  it("fails closed to issuer-undisclosed when the tracked parent edge is absent", () => {
+    // Without a serial parent edge we cannot prove the wrapper is a direct
+    // pass-through, so the conservative dispositions must survive. Compilation
+    // must also still succeed: a missing edge is a registry-completeness
+    // condition, and aborting here would take the asset's unrelated facts down
+    // with it. An earlier assertion did exactly that, and a wM fixture lost its
+    // whole supply observation, reporting missing-pillar-evidence instead of its
+    // real bridge-route gap.
     const fixed = fixedInputWithTrackedParent();
     const extension = wrapperExtension(fixed, "pure-wrapper", false);
-    const context = createAssetBuildContext(
-      fixed,
-      extension,
-      extension.assets.find((candidate) => candidate.assetId === "alpha")!,
-      "a".repeat(64),
-    );
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = compiled.assets[0]!;
 
-    expect(() =>
-      buildWrapperLocalFacts(context, {
-        dependencies: { edges: [] },
-      } as never),
-    ).toThrow(/pure-wrapper requires a tracked serial parent edge/);
+    expect(asset.wrapperLocalFacts?.applicability).toBe("wrapper");
+    if (asset.wrapperLocalFacts?.applicability !== "wrapper") return;
+    for (const factKey of ["custodyEscrow", "leverage", "rehypothecationCorrelation"] as const) {
+      expect(asset.wrapperLocalFacts.facts[factKey].disposition).not.toBe("not-applicable");
+    }
+
+    // The rest of the asset still compiled.
+    expect(asset.supply).toBeDefined();
+    expect(asset.assetId).toBe("alpha");
   });
 });

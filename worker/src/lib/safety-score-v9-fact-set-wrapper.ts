@@ -125,34 +125,24 @@ function notApplicableWrapperFact(signal: string, evidenceRefIds: readonly strin
   };
 }
 
-function isDirectSerialWrapperVariant(
-  variantKind: AssetBuildContext["asset"]["variantKind"],
-): boolean {
-  return variantKind === "pure-wrapper" || variantKind === "savings-passthrough";
-}
-
 function isDirectSerialWrapper(
   context: AssetBuildContext,
   form: V9ApplicableWrapperLocalFacts["form"],
   wrapperEdge: V9EffectiveDependenciesV3["edges"][number] | undefined,
 ): boolean {
+  // No tracked serial parent edge means we cannot prove the wrapper is a direct
+  // pass-through, so it is NOT treated as one and keeps the conservative
+  // `issuer-undisclosed` dispositions. This is the fail-closed path and it is
+  // deliberately not an assertion: a missing edge is a registry-completeness
+  // condition, and throwing here would abort the whole asset's compilation and
+  // take unrelated facts down with it — a wM fixture with no wrapper edge lost
+  // its entire supply observation and reported `missing-pillar-evidence` instead
+  // of its real bridge-route gap.
   if (wrapperEdge === undefined) return false;
   return (
     (form === "pure" && context.asset.variantKind === "pure-wrapper") ||
     (form === "native-staked" && context.asset.variantKind === "savings-passthrough")
   );
-}
-
-function assertDirectSerialWrapperDependency(
-  context: AssetBuildContext,
-  wrapperEdge: V9EffectiveDependenciesV3["edges"][number] | undefined,
-): void {
-  if (isDirectSerialWrapperVariant(context.asset.variantKind) && wrapperEdge === undefined) {
-    throw new Error(
-      `Safety Score v9 wrapper invariant violated for ${context.asset.assetId}: ` +
-        `${context.asset.variantKind} requires a tracked serial parent edge`,
-    );
-  }
 }
 
 function parseLeverageFactor(factor: string): number | null {
@@ -749,7 +739,6 @@ export function buildWrapperLocalFacts(
   const wrapperEdge = input.dependencies.edges.find(
     (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
   );
-  assertDirectSerialWrapperDependency(context, wrapperEdge);
   const form = resolveWrapperForm(context.asset, input.dependencies);
   const formEvidenceRefIds = uniqueEvidenceRefIds([
     ...input.implementation.status.evidenceRefIds,
