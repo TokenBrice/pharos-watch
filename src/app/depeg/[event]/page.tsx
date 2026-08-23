@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
@@ -378,6 +379,8 @@ export default async function DepegEventPage(
           </a>
         </section>
       ) : null}
+
+      <PreferredSourcePrompt />
 
       {newer || older ? (
         <nav

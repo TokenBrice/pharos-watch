@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
 import {
   getMechanismArchetypeLabel,
@@ -512,6 +513,7 @@ export function CaseStudyBody({ study }: { study: CaseStudy }) {
       <Sources study={study} kickerClass={kickerClass} />
       <CrossLinksFooter links={study.crossLinks} kickerClass={kickerClass} />
       <RelatedStudies study={study} kickerClass={kickerClass} />
+      <PreferredSourcePrompt />
       <PrevNextPager study={study} />
     </>
   );
