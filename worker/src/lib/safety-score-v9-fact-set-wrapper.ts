@@ -125,6 +125,79 @@ function notApplicableWrapperFact(signal: string, evidenceRefIds: readonly strin
   };
 }
 
+function isDirectSerialWrapperVariant(
+  variantKind: AssetBuildContext["asset"]["variantKind"],
+): boolean {
+  return variantKind === "pure-wrapper" || variantKind === "savings-passthrough";
+}
+
+function isDirectSerialWrapper(
+  context: AssetBuildContext,
+  form: V9ApplicableWrapperLocalFacts["form"],
+  wrapperEdge: V9EffectiveDependenciesV3["edges"][number] | undefined,
+): boolean {
+  if (wrapperEdge === undefined) return false;
+  return (
+    (form === "pure" && context.asset.variantKind === "pure-wrapper") ||
+    (form === "native-staked" && context.asset.variantKind === "savings-passthrough")
+  );
+}
+
+function assertDirectSerialWrapperDependency(
+  context: AssetBuildContext,
+  wrapperEdge: V9EffectiveDependenciesV3["edges"][number] | undefined,
+): void {
+  if (isDirectSerialWrapperVariant(context.asset.variantKind) && wrapperEdge === undefined) {
+    throw new Error(
+      `Safety Score v9 wrapper invariant violated for ${context.asset.assetId}: ` +
+        `${context.asset.variantKind} requires a tracked serial parent edge`,
+    );
+  }
+}
+
+function parseLeverageFactor(factor: string): number | null {
+  const match = factor.match(
+    /\bleverage(?:[-\s]?factor)?\s*(?::|=|\s)\s*(\d+(?:\.\d+)?)\s*x?\b/i,
+  );
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) ? value : null;
+}
+
+function leverageFactorAssessment(factor: number): V9WrapperRiskAssessment {
+  if (factor <= 1.000001) return "none";
+  if (factor <= 1.1) return "low";
+  if (factor <= 1.5) return "moderate";
+  if (factor <= 2) return "high";
+  return "critical";
+}
+
+function assertDirectSerialWrapperFactDispositionInvariant(
+  context: AssetBuildContext,
+  directSerialWrapper: boolean,
+  facts: Pick<
+    V9ApplicableWrapperLocalFacts["facts"],
+    "custodyEscrow" | "leverage" | "rehypothecationCorrelation"
+  >,
+): void {
+  if (!directSerialWrapper || context.asset.wrapperCustodyReview != null) return;
+  const issuerUndisclosedFacts = (
+    [
+      ["custodyEscrow", facts.custodyEscrow],
+      ["leverage", facts.leverage],
+      ["rehypothecationCorrelation", facts.rehypothecationCorrelation],
+    ] as const
+  )
+    .filter(([, fact]) => fact.disposition === "issuer-undisclosed")
+    .map(([factKey]) => factKey);
+  if (issuerUndisclosedFacts.length > 0) {
+    throw new Error(
+      `Safety Score v9 wrapper invariant violated for ${context.asset.assetId}: ` +
+        `profileless direct serial wrapper emitted issuer-undisclosed for ${issuerUndisclosedFacts.join(",")}`,
+    );
+  }
+}
+
 function wrapperControlRisk(
   control: V9DeploymentControlFactV2,
 ): { assessment: V9WrapperRiskAssessment; signals: string[] } {
@@ -191,6 +264,7 @@ function buildWrapperStructuralDimensions(
     controlEvidenceRefIds,
     reserveEvidenceRefIds,
   } = state;
+  const directSerialWrapper = isDirectSerialWrapper(context, form, wrapperEdge);
   let contractMutability: V9WrapperLocalDimensionFact;
   const upgrade = input.economicControlReview.mint.upgrade;
   if (input.economicControlReview.mint.status.observationState !== "known") {
@@ -270,9 +344,11 @@ function buildWrapperStructuralDimensions(
           ],
           custodyEvidence,
         );
-  } else if (form === "pure" && wrapperEdge !== undefined) {
+  } else if (directSerialWrapper) {
     custodyEscrow = notApplicableWrapperFact(
-      "pure-wrapper-custody-is-the-serial-parent-contract-claim",
+      form === "pure"
+        ? "pure-wrapper-custody-is-the-serial-parent-contract-claim"
+        : "savings-passthrough-has-no-local-custody-or-escrow",
       reviewedFormEvidence,
     );
   } else {
@@ -327,17 +403,36 @@ function buildWrapperStructuralDimensions(
   }
 
   let leverage: V9WrapperLocalDimensionFact;
-  if (form === "pure" && wrapperEdge !== undefined) {
+  if (directSerialWrapper) {
     leverage = notApplicableWrapperFact(
-      "pure-wrapper-has-no-local-strategy-leverage",
+      form === "pure"
+        ? "pure-wrapper-has-no-local-strategy-leverage"
+        : "savings-passthrough-has-no-local-borrowing-surface",
       reviewedFormEvidence,
     );
   } else if (input.reserveStatus.observationState === "known") {
+    const leverageFactorObservations = input.reserveExposures.flatMap((exposure) =>
+      exposure.riskFactors.flatMap((factor) => {
+        const value = parseLeverageFactor(factor);
+        return value === null ? [] : [{ factor, value }];
+      }),
+    );
     const leverageFactors = input.reserveExposures.flatMap((exposure) =>
-      exposure.riskFactors.filter((factor) => /\b(leverage|leveraged|borrowing|debt-financed)\b/i.test(factor)),
+      exposure.riskFactors.filter(
+        (factor) =>
+          parseLeverageFactor(factor) === null &&
+          /\b(leverage|leveraged|borrowing|debt-financed)\b/i.test(factor),
+      ),
     );
     leverage =
-      leverageFactors.length > 0
+      leverageFactorObservations.length > 0
+        ? reviewedWrapperFact(
+            context,
+            worstWrapperRisk(leverageFactorObservations.map(({ value }) => leverageFactorAssessment(value))),
+            leverageFactorObservations.map(({ factor }) => `wrapper-leverage-factor:${factor}`),
+            reserveEvidenceRefIds,
+          )
+        : leverageFactors.length > 0
         ? reviewedWrapperFact(
             context,
             "high",
@@ -380,9 +475,11 @@ function buildWrapperStructuralDimensions(
             ],
             custodyEvidence,
           );
-  } else if (form === "pure" && wrapperEdge !== undefined) {
+  } else if (directSerialWrapper) {
     rehypothecationCorrelation = notApplicableWrapperFact(
-      "pure-wrapper-parent-correlation-is-applied-by-serial-dependency",
+      form === "pure"
+        ? "pure-wrapper-parent-correlation-is-applied-by-serial-dependency"
+        : "savings-passthrough-holds-one-parent-and-reuses-nothing",
       reviewedFormEvidence,
     );
   } else {
@@ -646,6 +743,7 @@ export function buildWrapperLocalFacts(
   const wrapperEdge = input.dependencies.edges.find(
     (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
   );
+  assertDirectSerialWrapperDependency(context, wrapperEdge);
   const form = resolveWrapperForm(context.asset, input.dependencies);
   const formEvidenceRefIds = uniqueEvidenceRefIds([
     ...input.implementation.status.evidenceRefIds,
@@ -697,6 +795,11 @@ export function buildWrapperLocalFacts(
     rehypothecationCorrelation,
     shareAccountingNavOracle,
   } = buildWrapperStructuralDimensions(context, input, state);
+  assertDirectSerialWrapperFactDispositionInvariant(context, isDirectSerialWrapper(context, form, wrapperEdge), {
+    custodyEscrow,
+    leverage,
+    rehypothecationCorrelation,
+  });
   const { withdrawalTerms, measuredUnwind } = buildWrapperExitDimensions(
     context,
     input,
