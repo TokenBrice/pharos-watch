@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
+import { defaultSyncRoutes, getPublishedAsset } from "./sync-stablecoins.test-support";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 
@@ -166,107 +167,20 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
     },
     ...fallbackTrackedTokens,
   ];
-  const trackedMetaById = new Map<string, unknown>([
-    ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
-    ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
-    ["eurcv-societe-generale-forge", {
-      geckoId: "societe-generale-forge-eurcv",
+  const trackedMetaById = new Map<string, unknown>();
+  for (const coin of stablecoins.filter((candidate) => !candidate.id.startsWith("fb-"))) {
+    trackedMetaById.set(coin.id, {
+      ...coin,
       cmcSlug: undefined,
-      contracts: [
-        { chain: "ethereum", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
-        { chain: "xrpl", address: "EURCV.XRPL", decimals: 0 },
-        { chain: "stellar", address: "EURCV.STELLAR", decimals: 7 },
-        { chain: "solana", address: "EURCV.SOL", decimals: 2 },
-      ],
-      detailProvider: "defillama",
-      flags: { navToken: false, pegCurrency: "EUR", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
-    }],
-    ["tryb-bilira", {
-      geckoId: "bilira",
-      cmcSlug: undefined,
-      llamaId: "300",
-      contracts: [
-        { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
-        { chain: "bsc", address: "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594", decimals: 6 },
-      ],
-      detailProvider: "defillama",
-      flags: { navToken: false, pegCurrency: "TRY", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
-    }],
-    ["dgld-gold-token-sa", {
-      geckoId: "gold-token-sa-dgld-tokenized-gold",
-      cmcSlug: undefined,
-      commodityOunces: 1,
-      flags: { navToken: false },
-    }],
-    ["pgold-pleasing", {
-      geckoId: "pleasing-gold",
-      cmcSlug: undefined,
-      commodityOunces: 1,
-      flags: { navToken: false },
-    }],
-    ["chfau-allunity", {
-      geckoId: "allunity-chf",
-      cmcSlug: undefined,
-      detailProvider: "coingecko",
-      contracts: chfauContracts,
-      flags: { navToken: false, pegCurrency: "CHF", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
-    }],
-    ["cadd-cad-digital", {
-      geckoId: "cad-digital",
-      cmcSlug: undefined,
-      llamaId: "387",
-      detailProvider: "defillama",
-      contracts: [
-        { chain: "ethereum", address: "0x16f93ebc5320c89efc8701577efe49d14a276a06", decimals: 18 },
-        { chain: "base", address: "0x16f93ebc5320c89efc8701577efe49d14a276a06", decimals: 18 },
-      ],
-      flags: { navToken: false, pegCurrency: "CAD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
-    }],
-    ["jpym-mento", {
-      geckoId: "celo-japanese-yen",
-      cmcSlug: undefined,
-      llamaId: "363",
-      detailProvider: "defillama",
-      contracts: [{ chain: "celo", address: "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20", decimals: 18 }],
-      flags: { navToken: false, pegCurrency: "JPY", backing: "crypto-backed", yieldBearing: false, governance: "centralized-dependent" },
-    }],
-    ["zarm-mento", {
-      geckoId: "celo-south-african-rand",
-      cmcSlug: undefined,
-      llamaId: "368",
-      detailProvider: "defillama",
-      contracts: [{ chain: "celo", address: "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6", decimals: 18 }],
-      flags: { navToken: false, pegCurrency: "ZAR", backing: "crypto-backed", yieldBearing: false, governance: "centralized-dependent" },
-    }],
-    ["xofm-mento", {
-      geckoId: "celo-west-african-cfa-franc",
-      cmcSlug: undefined,
-      llamaId: "371",
-      detailProvider: "defillama",
-      contracts: [{ chain: "celo", address: "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08", decimals: 18 }],
-      flags: { navToken: false, pegCurrency: "XOF", backing: "crypto-backed", yieldBearing: false, governance: "centralized-dependent" },
-    }],
-    ["usdk-kast", {
-      geckoId: undefined,
-      cmcSlug: undefined,
-      detailProvider: "coingecko",
-      contracts: [{ chain: "solana", address: "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX", decimals: 6 }],
-      flags: { navToken: false, pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
-    }],
-    ["xo-exodus", {
-      geckoId: "xo-cash",
-      cmcSlug: undefined,
-      detailProvider: "coingecko",
-      contracts: [{ chain: "solana", address: "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y", decimals: 6 }],
-      flags: { navToken: false, pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
-    }],
-    ["ggbr-goldfish-gold", {
-      geckoId: "goldfish-gold",
-      cmcSlug: undefined,
-      commodityOunces: 0.001,
-      flags: { navToken: false },
-    }],
-  ]);
+      flags: { ...coin.flags, navToken: false },
+    });
+  }
+  trackedMetaById.set("ggbr-goldfish-gold", {
+    geckoId: "goldfish-gold",
+    cmcSlug: undefined,
+    commodityOunces: 0.001,
+    flags: { navToken: false },
+  });
   return mockRegistry({ stablecoins, trackedMetaById });
 });
 
@@ -485,14 +399,7 @@ describe("syncStablecoins", () => {
 
     const dlData = makeDlResponse(60);
 
-    mockFetchWithRetry([
-      // CoinGecko market data (commodity/fiat tokens — our mock has no commodities, so empty response is fine)
-      { match: "api.coingecko.com", body: {} },
-      // DefiLlama stablecoins API
-      { match: "stablecoins.llama.fi", body: dlData },
-      // DL coins API for primary pricing
-      { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
+    mockFetchWithRetry(defaultSyncRoutes(dlData));
 
     const result = await syncStablecoins(db);
 
@@ -557,11 +464,7 @@ describe("syncStablecoins", () => {
     ]);
     const dlData = makeDlResponse(60);
 
-    mockFetchWithRetry([
-      { match: "api.coingecko.com", body: {} },
-      { match: "stablecoins.llama.fi", body: dlData },
-      { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
+    mockFetchWithRetry(defaultSyncRoutes(dlData));
 
     const result = await syncStablecoins(db);
 
@@ -589,11 +492,7 @@ describe("syncStablecoins", () => {
         totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [],
       };
     });
-    mockFetchWithRetry([
-      { match: "api.coingecko.com", body: {} },
-      { match: "stablecoins.llama.fi", body: dlData },
-      { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
+    mockFetchWithRetry(defaultSyncRoutes(dlData));
 
     await syncStablecoins(db);
 
@@ -655,17 +554,14 @@ describe("syncStablecoins", () => {
     const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
     expect(stablecoinsWrite).toBeDefined();
 
-    const cached = JSON.parse(stablecoinsWrite!.value) as {
-      peggedAssets: Array<{
-        id: string;
-        price: number;
-        priceSource: string;
-        priceConfidence: string | null;
-        consensusSources: string[];
-        agreeSources: string[];
-      }>;
-    };
-    const cusd = cached.peggedAssets.find((asset) => asset.id === "cusd-cap");
+    const cusd = getPublishedAsset<{
+      id: string;
+      price: number;
+      priceSource: string;
+      priceConfidence: string | null;
+      consensusSources: string[];
+      agreeSources: string[];
+    }>(writes, "cusd-cap");
     expect(cusd).toMatchObject({
       id: "cusd-cap",
       priceSource: "protocol-redeem",
@@ -761,15 +657,12 @@ describe("syncStablecoins", () => {
     const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
     expect(stablecoinsWrite).toBeDefined();
 
-    const cached = JSON.parse(stablecoinsWrite!.value) as {
-      peggedAssets: Array<{
-        id: string;
-        price: number;
-        priceSource: string;
-        priceConfidence: string | null;
-      }>;
-    };
-    const cusd = cached.peggedAssets.find((asset) => asset.id === "cusd-cap");
+    const cusd = getPublishedAsset<{
+      id: string;
+      price: number;
+      priceSource: string;
+      priceConfidence: string | null;
+    }>(writes, "cusd-cap");
     expect(cusd).toMatchObject({
       id: "cusd-cap",
       priceSource: "protocol-redeem",
