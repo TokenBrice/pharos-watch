@@ -7,6 +7,10 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
+import {
+  insertPendingSqlite,
+  makeTelegramDeliveryResult,
+} from "./telegram-pending-queue.test-support";
 
 const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
   peggedAssets: [
@@ -71,16 +75,7 @@ const telegramDeliveryTranscript: TelegramDeliveryTranscriptEntry[] = [];
 let scriptedDeliveryResults: TelegramDeliveryResult[] = [];
 const scriptedDeliveryResultsByChat = new Map<string, TelegramDeliveryResult[]>();
 
-const DEFAULT_DELIVERY_RESULT: TelegramDeliveryResult = {
-  ok: true,
-  blocked: false,
-  retryable: false,
-  permanentFailure: false,
-  statusCode: 200,
-  errorClass: null,
-  delivery: "sent",
-  retryAfterSec: null,
-};
+const DEFAULT_DELIVERY_RESULT: TelegramDeliveryResult = makeTelegramDeliveryResult();
 
 function recordDisabledTelegramDelivery(
   chatId: string,
@@ -668,45 +663,10 @@ function seedSafety(sqlite: DatabaseSync, input: DispatchSafetySeed): void {
 }
 
 function seedPending(sqlite: DatabaseSync, input: DispatchPendingSeed): void {
-  const current = nowSec();
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_pending_alerts (
-       id, chat_id, message_html, disable_notification, created_at, attempts,
-       not_before_at, dedupe_key, chunk_index, priority, source_type, alert_type,
-       expires_at, updated_at, last_error_class, retry_after_sec, delivery_state,
-       delivery_owner, delivery_generation, delivery_started_at, delivery_completed_at,
-       delivery_claim_expires_at, source_event_id, alert_scope_json,
-       preference_generation, markup_policy_json
-     ) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      input.id ?? null,
-      input.chatId,
-      input.html,
-      input.createdAt ?? current,
-      input.attempts ?? 0,
-      input.notBeforeAt ?? null,
-      input.dedupeKey ?? null,
-      input.chunkIndex ?? null,
-      input.priority ?? 50,
-      input.sourceType ?? "risk_alert",
-      input.alertType ?? null,
-      input.expiresAt ?? null,
-      input.updatedAt ?? input.createdAt ?? current,
-      input.lastErrorClass ?? null,
-      input.retryAfterSec ?? null,
-      input.deliveryState ?? "pending",
-      input.deliveryOwner ?? null,
-      input.deliveryGeneration ?? 0,
-      input.deliveryStartedAt ?? null,
-      input.deliveryCompletedAt ?? null,
-      input.deliveryClaimExpiresAt ?? null,
-      input.sourceEventId ?? null,
-      input.alertScopeJson ?? null,
-      input.preferenceGeneration ?? null,
-      input.markupPolicyJson ?? null,
-    );
+  insertPendingSqlite(sqlite, {
+    ...input,
+    sourceType: input.sourceType ?? "risk_alert",
+  });
 }
 
 function seedSourceEvent(sqlite: DatabaseSync, input: DispatchSourceEventSeed): void {

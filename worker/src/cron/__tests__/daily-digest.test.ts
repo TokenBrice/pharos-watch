@@ -152,7 +152,6 @@ import type { DigestInputData } from "@shared/types/digest";
 
 import {
   loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
 } from "../../lib/safety-score-active-source";
 
 
@@ -162,36 +161,14 @@ import {
 
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
-  makeWorkerReportCardsV9Response,
-  makeWorkerV9Card,
-} from "../../test-helpers/report-cards-v9";
+  canonicalSafetySource,
+  makePublishedDewsTables,
+  PUBLISHED_GAUGE_SCORE,
+  publishedGaugeTable,
+  type TestDewsRow,
+} from "./daily-digest.test-support";
 
 const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
-
-function canonicalSafetySource(
-  cards: unknown[],
-): Extract<ActiveSafetyScoreSource, { kind: "v9" }> {
-  const snapshot = makeWorkerReportCardsV9Response({
-    cards: cards
-      .map((value) => value as {
-        id: string;
-        overallGrade: ReturnType<typeof makeWorkerV9Card>["grade"];
-        overallScore: number | null;
-      })
-      .sort((left, right) => left.id.localeCompare(right.id))
-      .map((card) =>
-        makeWorkerV9Card({
-          id: card.id,
-          grade: card.overallGrade,
-          score: card.overallScore,
-        }),
-      ),
-  });
-  return {
-    kind: "v9",
-    snapshot,
-  };
-}
 
 function makeParsedFixture(
   opts: {
@@ -224,32 +201,6 @@ const VALID_DAILY_EXTENDED = [
   "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. Next session will decide whether the USDT deviation widens; if it crosses 200 bps, the impact score moves the depeg from supporting context to lead.",
 ].join("\n\n");
 
-JSON.stringify({
-  title: "Calm Drift",
-  extended: VALID_DAILY_EXTENDED,
-  text: "USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.",
-  meta: {
-    leadSignalId: "depeg:usdt-tether:active",
-    lead: "depeg",
-    tone: "dry",
-    coins: ["USDT", "USDC"],
-    usedCandidateIds: ["depeg:usdt-tether:active"],
-  },
-});
-
-JSON.stringify({
-  title: "Drift",
-  extended: VALID_DAILY_EXTENDED,
-  text: "USDT's fixture depeg led the queue while PSI stayed at 91.2 BEDROCK.",
-  meta: {
-    leadSignalId: "depeg:usdt-tether:active",
-    lead: "depeg",
-    tone: "dry",
-    coins: ["USDT", "USDC"],
-    usedCandidateIds: ["depeg:usdt-tether:active"],
-  },
-});
-
 /**
  * Build a canonical Anthropic SSE streaming Response body for `text` as a
  * single text-delta. Matches what Anthropic actually emits when we set
@@ -258,106 +209,6 @@ JSON.stringify({
  * `accumulateAnthropicStream` on the response body rather than `response.json()`.
  */
 
-
-vi.fn(async () => undefined);
-
-interface TestDewsRow {
-  stablecoin_id: string;
-  score: number;
-  band: string;
-  signals_json: string;
-  computed_at: number;
-}
-
-function makePublishedDewsTables(dewsRows: TestDewsRow[]): MockTableConfig[] {
-  const computedAt = dewsRows[0]!.computed_at;
-  return [
-    {
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: ["dews:published-generation"],
-      rows: [],
-      first: {
-        value: JSON.stringify({
-          updatedAt: computedAt,
-          source: "compute-dews",
-          publishStatus: "published",
-          coverageVersion: 2,
-          expectedRowCount: dewsRows.length,
-          stablecoinIdsDigest: buildDewsStablecoinIdsDigest(dewsRows.map((row) => row.stablecoin_id)),
-        }),
-        updated_at: computedAt,
-      },
-    },
-    {
-      match: "pharos:stress-signals:published-exact",
-      rows: dewsRows.map((row) => ({ ...row })),
-    },
-  ];
-}
-
-const PUBLISHED_GAUGE_SCORE = 37.5;
-
-/**
- * The published aggregate mint/burn flow payload the digest re-bins. Its coin
- * universe is the API's tracked-pair universe (PAXG included), which is wider
- * than the digest's core aggregate id set on purpose.
- */
-function publishedGaugePayload(
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
-  return {
-    gauge: {
-      score: PUBLISHED_GAUGE_SCORE,
-      band: "HEALTHY",
-      flightToQuality: false,
-      flightIntensity: 0,
-      classificationSource: "safety-score-v9-publication",
-    },
-    coins: [
-      {
-        stablecoinId: "usdt-tether",
-        symbol: "USDT",
-        flowIntensity: 100,
-        pressureShiftScore: 100,
-        netFlow24hUsd: 200_000_000,
-      },
-      {
-        stablecoinId: "usdc-circle",
-        symbol: "USDC",
-        flowIntensity: -83.33,
-        pressureShiftScore: -83.33,
-        netFlow24hUsd: -50_000_000,
-      },
-      {
-        stablecoinId: "paxg-paxos",
-        symbol: "PAXG",
-        flowIntensity: null,
-        pressureShiftScore: null,
-        netFlow24hUsd: -3_000_000,
-      },
-    ],
-    chains: [
-      { chainId: "ethereum", netFlow24hUsd: 150_000_000 },
-      { chainId: "arbitrum", netFlow24hUsd: -3_000_000 },
-    ],
-    ...overrides,
-  };
-}
-
-function publishedGaugeTable(
-  options: { value?: string; ageSec?: number } = {},
-): MockTableConfig {
-  const nowSec = Math.floor(Date.now() / 1000);
-  return {
-    match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v3:aggregate:24"],
-    rows: [],
-    first: {
-      value: options.value ?? JSON.stringify(publishedGaugePayload()),
-      updated_at: nowSec - (options.ageSec ?? 300),
-    },
-  };
-}
 
 
 
