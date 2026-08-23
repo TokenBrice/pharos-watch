@@ -16,6 +16,17 @@ import {
 import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram-presets";
 import { loadTelegramChatHealthDiagnostics } from "../lib/telegram-usage-analytics";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
+import {
+  prepareTelegramPendingAlertCount,
+  prepareTelegramRecapState,
+  type TelegramPendingAlertCountRow,
+  type TelegramRecapStateRow,
+} from "./telegram-store/chat-state";
+import type {
+  PresetSubscriptionRow,
+  SubscriberRow,
+  SubscriptionRow,
+} from "./telegram-webhook-shared";
 
 interface LoadTelegramMiniAppStateOptions {
   nowSec: number;
@@ -23,61 +34,9 @@ interface LoadTelegramMiniAppStateOptions {
   recapRollout?: TelegramRecapRolloutPolicy;
 }
 
-interface SubscriberRow {
-  global_alert_dews: number | null;
-  global_alert_depeg: number | null;
-  global_alert_safety: number | null;
-  global_alert_launch: number | null;
-  global_alert_reserve: number | null;
-  global_alert_freeze: number | null;
-  global_depeg_worsening_bps_step: number | null;
-  quiet_hours_enabled: number | null;
-  quiet_hours_start_utc: number | null;
-  quiet_hours_end_utc: number | null;
-  timezone: string | null;
+type MiniAppSubscriptionRow = SubscriptionRow & {
   alert_snooze_until_ts: number | null;
-}
-
-interface SubscriptionRow {
-  stablecoin_id: string;
-  alert_dews: number | null;
-  alert_depeg: number | null;
-  alert_safety: number | null;
-  alert_launch: number | null;
-  alert_reserve: number | null;
-  alert_freeze: number | null;
-  alert_dews_override: number | null;
-  alert_depeg_override: number | null;
-  alert_safety_override: number | null;
-  alert_launch_override: number | null;
-  alert_reserve_override: number | null;
-  alert_freeze_override: number | null;
-  dews_min_band: string | null;
-  safety_mode: string | null;
-  depeg_worsening_bps_step: number | null;
-  alert_snooze_until_ts: number | null;
-}
-
-interface PresetSubscriptionRow {
-  preset_id: string;
-  alert_dews: number | null;
-  alert_depeg: number | null;
-  alert_safety: number | null;
-  depeg_worsening_bps_step: number | null;
-}
-
-interface PendingAlertCountRow {
-  queued_alerts: number | string | null;
-}
-
-interface RecapStateRow {
-  enabled: number | null;
-  delivery_hour_local: number | null;
-  next_due_at: number | null;
-  last_window_end_at: number | null;
-  last_delivered_local_date: string | null;
-  last_outcome: string | null;
-}
+};
 
 function boolFlag(value: number | null | undefined): boolean {
   return value === 1;
@@ -125,7 +84,7 @@ function alertOverrideTypes(
   return alertFlagsFrom(row, (alertType) => TELEGRAM_ALERT_PERSISTENCE[alertType].overrideColumn);
 }
 
-function shouldProjectSubscription(row: SubscriptionRow): boolean {
+function shouldProjectSubscription(row: MiniAppSubscriptionRow): boolean {
   const alerts = alertTypes(row);
   const overrides = alertOverrideTypes(row);
   return TELEGRAM_ALERT_TYPES.some((alertType) => alerts[alertType] || overrides[alertType])
@@ -183,25 +142,14 @@ export async function loadTelegramMiniAppState(
               WHERE chat_id = ?
               ORDER BY preset_id`,
           ).bind(chatId),
-          db.prepare("SELECT COUNT(*) AS queued_alerts FROM telegram_pending_alerts WHERE chat_id = ?")
-            .bind(chatId),
-          db.prepare(
-            `SELECT p.enabled, p.delivery_hour_local, p.next_due_at,
-                    p.last_window_end_at, p.last_delivered_local_date,
-                    (SELECT target.status
-                       FROM telegram_recap_targets target
-                      WHERE target.chat_id = p.chat_id
-                      ORDER BY target.created_at DESC, target.recap_key DESC
-                      LIMIT 1) AS last_outcome
-               FROM telegram_recap_preferences p
-              WHERE p.chat_id = ? AND p.chat_kind = 'private'`,
-          ).bind(chatId),
+          prepareTelegramPendingAlertCount(db, chatId, "queued_alerts"),
+          prepareTelegramRecapState(db, chatId),
         ]) as Promise<[
           D1Result<SubscriberRow>,
-          D1Result<SubscriptionRow>,
+          D1Result<MiniAppSubscriptionRow>,
           D1Result<PresetSubscriptionRow>,
-          D1Result<PendingAlertCountRow>,
-          D1Result<RecapStateRow>,
+          D1Result<TelegramPendingAlertCountRow>,
+          D1Result<TelegramRecapStateRow>,
         ]>,
         loadTelegramChatHealthDiagnostics(db, chatId),
       ]);
@@ -216,7 +164,7 @@ export async function loadTelegramMiniAppState(
     })()
     : [
       null,
-      { results: [] as SubscriptionRow[] },
+      { results: [] as MiniAppSubscriptionRow[] },
       { results: [] as PresetSubscriptionRow[] },
       null,
       null,
