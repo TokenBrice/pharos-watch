@@ -20,6 +20,12 @@ export function SafetyScoresOverview() {
         score and redemption route score describe their own modules; neither is the V9 Exit score.
       </p>
       <p>
+        Equal-score route ties and every other canonical V9 array use locale-independent JavaScript code-unit order.
+        The same facts therefore select the same primary and backup routes, dependency paths, ordered traces, and
+        digest inputs on every runtime host. This ordering can rotate identity or provenance where an older locale
+        collated a non-ASCII or case-sensitive key differently, but it does not change numeric score or grade math.
+      </p>
+      <p>
         V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing
         integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an
         unbounded required fact remains NR. F is reserved for causally attributed measured danger, while a D requires

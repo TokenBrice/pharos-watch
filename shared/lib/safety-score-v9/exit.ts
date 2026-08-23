@@ -1,6 +1,7 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9AssetFactsBase, V9ExitRouteFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import type { ExitRouteObservationHistory } from "../../types/exit-route";
+import { compareText } from "../../types/safety-score-v9-fact-primitives";
 import type {
   RedemptionAccessModel,
   RedemptionExecutionModel,
@@ -508,7 +509,7 @@ export function resolveV9DistinctExitCapacity(
         ];
   });
   const groups: { physicalResourceKeys: Set<string>; valuedExecutableUsd: number }[] = [];
-  for (const route of [...included].sort((left, right) => left.routeKey.localeCompare(right.routeKey))) {
+  for (const route of [...included].sort((left, right) => compareText(left.routeKey, right.routeKey))) {
     const overlapping = groups.filter((group) =>
       route.physicalResourceKeys.some((key) => group.physicalResourceKeys.has(key)),
     );
@@ -934,11 +935,11 @@ export function evaluateV9Exit(
       routes: [],
     };
   }
-  const routes = [...args.routes].sort((left, right) => left.routeKey.localeCompare(right.routeKey));
+  const routes = [...args.routes].sort((left, right) => compareText(left.routeKey, right.routeKey));
   const traces = routes.map((route) => evaluateRoute(route, stressRequest, envelope, args.preExitDangerHeld ?? false));
   const evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
-    .sort((left, right) => right.score - left.score || left.route.routeKey.localeCompare(right.route.routeKey));
+    .sort((left, right) => right.score - left.score || compareText(left.route.routeKey, right.route.routeKey));
   const diagnosticReasons = traces.flatMap((trace) => (trace.exclusionReason ? [trace.exclusionReason] : []));
   const horizons = Object.fromEntries(
     (["immediate", "near-term", "queued"] as const).map((horizon) => {
@@ -947,7 +948,7 @@ export function evaluateV9Exit(
         .sort(
           (left, right) =>
             (right.score ?? 0) - (left.score ?? 0) ||
-            left.routeKey.localeCompare(right.routeKey),
+            compareText(left.routeKey, right.routeKey),
         )[0];
       return [
         horizon,

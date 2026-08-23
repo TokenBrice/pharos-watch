@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.34`
+- **Current methodology version:** `v9.35`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus the versioned score-bearing gate projection in `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -55,6 +55,8 @@ Exit capacity is route-specific. A route below both the first positive 1% comple
 
 Exit selects the strongest eligible route as primary. An independent secondary route can add `min(10, 100 - primary score) × secondary score / 100` points. This is redundancy credit, not another route score: a weaker backup earns less credit, and backup credit alone cannot lift an imperfect primary route to 100.
 
+Canonical V9 ordering is locale-independent. Route ties, dependency paths and diagnostics, reviewed-transfer inputs, supply-attribution records, and bounded publication reasons use JavaScript code-unit order rather than host-locale collation. Numeric scores and grades do not depend on this ordering, but route/path identity, ordered traces, and their digests can rotate when a previously published non-ASCII or case-sensitive key collated differently on the runtime host.
+
 Serial dependencies remain binding because the child cannot diversify away the parent claim. Basket dependencies contribute at their live exposure weights. Wrapper-local risks are evaluated separately from the parent asset so a wrapper cannot inherit safety it does not possess. Parent-cap form follows the wrapper relationship rather than the product label: a reviewed third-party risk-absorption wrapper uses the existing strategy-vault treatment, while a wrapper operated by the parent protocol uses the existing native-staked treatment.
 
 Wrapper allocation reviews are fixed-block, expiry-bounded facts rather than live compilation reads. The curated row records the allocation calls and factual posture (fully on-chain custody, local leverage band, and capital-use class); the fact producer maps those fields onto the existing wrapper ladder. Fully on-chain allocators have no applicable off-chain custody/escrow fact, while their lending, strategy reuse, or loss-absorption exposure remains independently assessed. Direct serial wrappers keep parent custody and reuse in the parent dependency instead of duplicating it locally.
@@ -102,6 +104,8 @@ Canonical accepted state is stored in:
 - `report-cards:v9:publication-health`
 
 Both rows carry matching model, schema, methodology, policy, evaluation-build, base-input, and publication identities. The canonical writer accepts only newer publications and commits an accepted publication with its current health atomically.
+
+Canonical arrays and digest inputs use the same locale-independent code-unit comparator throughout compilation and publication assessment. Replaying identical facts therefore cannot select a different equal-scoring route, reorder a dependency path, or hash a different reviewed-transfer sequence solely because the runtime locale changed.
 
 Publication is fail-closed at the identity and system level. Missing, malformed, stale, or incompatible score-bearing inputs hold the last accepted ratings. Asset-local producer failures do not freeze unrelated ratings while at least 90% of active assets remain unaffected. A held attempt updates publication health only when the retained accepted identity can be verified; an unreadable accepted ledger records a separate failed attempt and leaves publication and health untouched. Post-9.19 writes require the per-fact disclosure paths, while the reader remains compatible with authenticated pre-9.19 snapshots.
 

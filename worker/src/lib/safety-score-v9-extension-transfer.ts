@@ -3,6 +3,7 @@ import { resolveChainId } from "@shared/lib/chains";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   SafetyScoreV9ReviewedTransferFileSchema,
   safetyScoreV9TransferDeploymentKey,
@@ -17,7 +18,7 @@ const REVIEWED_TRANSFER_FILE = SafetyScoreV9ReviewedTransferFileSchema.parse(tra
 export function computeSafetyScoreV9ReviewedTransferFactsDigest(
   reviews: Iterable<SafetyScoreV9ReviewedTransferFact>,
 ): string {
-  const canonicalReviews = [...reviews].sort((left, right) => left.assetId.localeCompare(right.assetId));
+  const canonicalReviews = [...reviews].sort((left, right) => compareText(left.assetId, right.assetId));
   return sha256Hex(
     stableJsonStringifyV1({
       domain: "safety-score-v9.reviewed-transfer-overlays.v1",

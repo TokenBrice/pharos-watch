@@ -1,4 +1,5 @@
 import type { V9SyntheticDeltaNeutralMechanismRiskReview } from "../../../types/safety-score-v9-backing";
+import { compareText } from "../../../types/safety-score-v9-fact-primitives";
 import {
   createV9BackingStructuralReason,
   evaluateV9ArchetypeBacking,
@@ -80,7 +81,7 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
       }),
     );
   }
-  for (const venue of [...review.venueShares].sort((left, right) => left.venueKey.localeCompare(right.venueKey))) {
+  for (const venue of [...review.venueShares].sort((left, right) => compareText(left.venueKey, right.venueKey))) {
     if (venue.share < backing.structural.commonModeShare) continue;
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.commonModeSignal, {
