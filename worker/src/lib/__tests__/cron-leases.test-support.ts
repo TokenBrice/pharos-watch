@@ -91,6 +91,7 @@ export function makeLeaseDb(seed?: {
   failSlotProgressReads?: number;
   beforeSlotTakeover?: (sqlite: DatabaseSync) => void;
   beforeSlotReconciliationClaim?: (sqlite: DatabaseSync) => void;
+  beforeOrphanedProgressDelete?: (sqlite: DatabaseSync) => void;
 }): TestLeaseDb {
   const { sqlite } = createLatestSchemaSqlite();
   openLeaseDatabases.push(sqlite);
@@ -100,6 +101,7 @@ export function makeLeaseDb(seed?: {
   let failSlotProgressReads = seed?.failSlotProgressReads ?? 0;
   const beforeSlotTakeover = seed?.beforeSlotTakeover;
   const beforeSlotReconciliationClaim = seed?.beforeSlotReconciliationClaim;
+  const beforeOrphanedProgressDelete = seed?.beforeOrphanedProgressDelete;
 
   for (const lease of seed?.leases ?? []) {
     sqlite
@@ -182,6 +184,9 @@ export function makeLeaseDb(seed?: {
         }
         if (isSlotUpdate && sql.includes("SET execution_owner = ?")) {
           beforeSlotTakeover?.(sqlite);
+        }
+        if (sql.includes("DELETE FROM cron_run_progress") && sql.includes("AND NOT EXISTS")) {
+          beforeOrphanedProgressDelete?.(sqlite);
         }
         return bound.run();
       },
