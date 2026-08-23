@@ -8,6 +8,7 @@ export {
 } from "./input-guards";
 export { accumulateBucketedExposure, classifyBucketedValues } from "./classification";
 export {
+  assertFiniteNonNegativeReserveRows,
   buildCoverageShortfallWarnings,
   buildUnknownExposureWarning,
   buildBucketSlices,
@@ -18,6 +19,7 @@ export {
   normalizeSlices,
   parseBoundedDecimals,
   parsePositiveNumericLike,
+  PCT_SUM_ERROR_TOLERANCE,
   slicesFromPercentages,
   slicesFromValues,
   valueUsdFromBigIntPrice,

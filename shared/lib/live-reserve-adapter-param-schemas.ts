@@ -46,7 +46,6 @@ const accountableParamsSchema = z
     depTypeMap: depTypeRecordSchema.optional(),
     totalReservesExcludeBuckets: z.array(z.string().min(1)).optional(),
     allowNegativeBuckets: z.array(z.string().min(1)).optional(),
-    skipTotalReservesValidation: z.boolean().optional(),
   })
   .strict();
 

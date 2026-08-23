@@ -730,10 +730,11 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
-  it("records signed Yuzu Accountable exposure buckets as degraded warnings instead of failing the adapter", async () => {
+  it("rejects the partial signed Yuzu exposure split when it does not reconcile to total reserves", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    expect(config.params).not.toHaveProperty("skipTotalReservesValidation");
 
-    const result = await runAccountablePayload(config, {
+    await expect(runAccountablePayload(config, {
       collateralization: 1.06701,
       ts: "1781945117382",
       reserves: {
@@ -761,46 +762,9 @@ describe("adaptAccountableDashboard", () => {
           "[Yuzu]_yzPRIME": { "": 3_016_917.24160501 },
         },
       },
-    });
-
-    expect(result.warnings?.map((warning) => warning.code).sort()).toEqual([
-      "signed-negative-bucket",
-      "total-reserves-unreconciled",
-    ]);
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        code: "total-reserves-unreconciled",
-        severity: "info",
-        effect: "info",
-      }),
-      expect.objectContaining({
-        code: "signed-negative-bucket",
-        severity: "warning",
-        effect: "degraded",
-      }),
-    ]));
-    expect(result.metadata).toMatchObject({
-      bucket: "exposure_split",
-      breakdownCount: 14,
-      mappedBucketCount: 13,
-      signedBucketNames: ["[Strata]_srUSDe_Pendle_PT_Loop"],
-      totalReservesValidationSkipped: true,
-    });
-    expect(result.metadata?.unknownBucketCount).toBeUndefined();
-    expect(result.metadata?.unknownExposurePct).toBeUndefined();
-    expect(result.slices).not.toContainEqual(expect.objectContaining({
-      name: "Strata srUSDe Pendle PT loop",
-    }));
-    expect(result.slices).toContainEqual(expect.objectContaining({
-      name: "PayPal PYUSD loop",
-      risk: "high",
-      coinId: "pyusd-paypal",
-      depType: "collateral",
-    }));
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 5, 20, 10) / 1000,
-    }).valid).toBe(true);
+    })).rejects.toThrow(
+      /Accountable exposure_split bucket total .* does not match total_reserves 44273802\.48/,
+    );
   });
 
   it("maps the current Neutrl Accountable type_split buckets including JLP and Protocol Owned Liquidity without unknown exposure warnings", async () => {

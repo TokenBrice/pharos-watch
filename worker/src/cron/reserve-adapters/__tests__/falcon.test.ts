@@ -48,6 +48,15 @@ describe("adaptFalconTransparency", () => {
     });
     // AVAX is a known altcoin — no warning emitted
     expect(result.warnings).toBeUndefined();
+    expect(() => adaptFalconTransparency({
+      ...payload,
+      usdf: {
+        ...payload.usdf!,
+        breakdown: {
+          assets: [{ label: "USDC", ceffu: "malformed", fireblocks: "100" }],
+        },
+      },
+    })).toThrow(/Falcon USDC venue values row 1 has invalid value: NaN/);
   });
 
   it("emits a warning for unknown assets above the value threshold", () => {

@@ -256,8 +256,7 @@
       },
       "allowNegativeBuckets": [
         "[Strata]_srUSDe_Pendle_PT_Loop"
-      ],
-      "skipTotalReservesValidation": true
+      ]
     }
   },
   "yieldConfig": {

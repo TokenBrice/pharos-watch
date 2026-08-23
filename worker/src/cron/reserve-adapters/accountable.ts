@@ -10,7 +10,6 @@ import {
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
-  reserveInfoWarning,
   slicesFromValues,
 } from "./helpers";
 import { buildBrowserHeaders } from "./request";
@@ -48,7 +47,6 @@ interface AccountableParams {
   depTypeMap?: Record<string, ReserveSlice["depType"]>;
   totalReservesExcludeBuckets?: string[];
   allowNegativeBuckets?: string[];
-  skipTotalReservesValidation?: boolean;
 }
 
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
@@ -286,7 +284,6 @@ function validateBucketTotalAgainstReserves(
   bucket: string,
   options?: {
     excludeBuckets?: ReadonlySet<string>;
-    skipValidation?: boolean;
   },
 ): void {
   if (totalReserves == null) return;
@@ -294,7 +291,6 @@ function validateBucketTotalAgainstReserves(
     .filter((entry) => !(options?.excludeBuckets?.has(entry.name)))
     .reduce((sum, entry) => sum + entry.value, 0);
   const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
-  if (options?.skipValidation) return;
   if (Math.abs(totalValue - totalReserves) > tolerance) {
     throw new Error(`Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves}`);
   }
@@ -311,24 +307,6 @@ function buildSignedBucketWarning(
     `Accountable signed exposure buckets are omitted from reserve slices: ${
       signedBuckets.map((entry) => entry.name).sort().join(", ")
     } (${exposurePct.toFixed(2)}% of positive reserve buckets)`,
-  );
-}
-
-function buildSkippedTotalValidationWarning(
-  breakdown: Array<{ name: string; value: number }>,
-  totalReserves: number | undefined,
-  bucket: string,
-) {
-  if (totalReserves == null) return null;
-  const totalValue = breakdown.reduce((sum, entry) => sum + entry.value, 0);
-  const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
-  if (Math.abs(totalValue - totalReserves) <= tolerance) return null;
-  // Opt-in skip keeps the snapshot scoring-eligible (`lastStatus: "ok"`). A
-  // degraded effect would force requireOkStatus scoring maps to drop the coin
-  // even though the operator already accepted the structural total gap.
-  return reserveInfoWarning(
-    "total-reserves-unreconciled",
-    `Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves} (validation skipped by config)`,
   );
 }
 
@@ -383,15 +361,14 @@ export function adaptAccountableDashboard(
   const protocolOwnedUsd = extractProtocolOwnedUsd(payload.data.reserves);
   validateBucketTotalAgainstReserves(breakdown, totalReserves, bucket, {
     excludeBuckets: totalReservesExcludeBuckets,
-    skipValidation: params.skipTotalReservesValidation,
   });
-  const totalValidationWarning = params.skipTotalReservesValidation
-    ? buildSkippedTotalValidationWarning(breakdown, totalReserves, bucket)
-    : null;
   const unknown = positiveBreakdown.filter(({ name }) => !(name in riskMap));
   const totalValue = positiveBreakdown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownValue = unknown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownExposurePct = computeUnknownExposurePct(unknownValue, totalValue);
+  const signedBucketWarning = signedBuckets.length > 0
+    ? buildSignedBucketWarning(signedBuckets, totalValue)
+    : null;
   const collateralizationRatio = toFiniteNumber(payload.data.collateralization);
   if (collateralizationRatio == null || collateralizationRatio < 0) {
     throw new Error(`Accountable dashboard returned invalid collateralization: ${String(payload.data.collateralization)}`);
@@ -454,8 +431,7 @@ export function adaptAccountableDashboard(
   return {
     slices,
     ...((unknownExposurePct > 0
-      || signedBuckets.length > 0
-      || totalValidationWarning
+      || signedBucketWarning
       || protocolOwnedWarning
       || reconciliationWarning
       || collateralizationWarnings.length > 0)
@@ -468,8 +444,7 @@ export function adaptAccountableDashboard(
                   unknownExposurePct,
                 })]
               : []),
-            ...(signedBuckets.length > 0 ? [buildSignedBucketWarning(signedBuckets, totalValue)] : []),
-            ...(totalValidationWarning ? [totalValidationWarning] : []),
+            ...(signedBucketWarning ? [signedBucketWarning] : []),
             ...(protocolOwnedWarning ? [protocolOwnedWarning] : []),
             ...(reconciliationWarning ? [reconciliationWarning] : []),
             ...collateralizationWarnings,
@@ -506,7 +481,6 @@ export function adaptAccountableDashboard(
       ...(totalReservesExcludeBuckets.size > 0
         ? { totalReservesExcludedBuckets: Array.from(totalReservesExcludeBuckets).sort() }
         : {}),
-      ...(params.skipTotalReservesValidation ? { totalReservesValidationSkipped: true } : {}),
       ...(signedBuckets.length > 0
         ? {
             signedBucketCount: signedBuckets.length,

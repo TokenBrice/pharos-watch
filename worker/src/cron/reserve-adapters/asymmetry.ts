@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  assertFiniteNonNegativeReserveRows,
   freshnessMetadataFromTimestamp,
   requireJsonInput,
   fetchJsonWithRetry,
@@ -47,12 +48,12 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   let unknownExposureUsd = 0;
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.timestamp);
-  const entries = Object.entries(branches)
-    .map(([name, stats]) => ({
-      name,
-      usd: Number(stats.coll_value ?? "0"),
-    }))
-    .filter((entry) => Number.isFinite(entry.usd) && entry.usd > 0);
+  const branchRows = Object.entries(branches).map(([name, stats]) => ({
+    name,
+    usd: Number(stats.coll_value ?? "0"),
+  }));
+  assertFiniteNonNegativeReserveRows(branchRows, (entry) => entry.usd, "Asymmetry branch collateral");
+  const entries = branchRows.filter((entry) => entry.usd > 0);
 
   const total = entries.reduce((acc, entry) => acc + entry.usd, 0);
   const supply = Number(payload.usdaf?.total_bold_supply ?? "0");

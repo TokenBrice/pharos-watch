@@ -26,6 +26,7 @@ import {
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
   probeTrackedTokenSupply,
+  slicesFromPercentages,
   slicesFromValues,
   unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
@@ -98,16 +99,19 @@ describe("normalizeSlices", () => {
     expect(result).toHaveLength(2);
   });
 
-  it("filters zero and negative slices", () => {
+  it("filters zero slices and rejects negative percentages", () => {
     const slices: ReserveSlice[] = [
       { name: "A", pct: 0, risk: "low" },
-      { name: "B", pct: -5, risk: "medium" },
       { name: "C", pct: 100, risk: "high" },
     ];
     const result = normalizeSlices(slices);
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("C");
     expect(result[0].pct).toBe(100);
+    expect(() => normalizeSlices([
+      { name: "B", pct: -5, risk: "medium" },
+      { name: "C", pct: 100, risk: "high" },
+    ])).toThrow(/reserve percentages row 1 has invalid value: -5/);
   });
 
   it("returns empty for empty input", () => {
@@ -124,22 +128,15 @@ describe("normalizeSlices", () => {
     expect(result.map((s) => s.name)).toEqual(["Large", "Mid", "Small"]);
   });
 
-  it("never produces negative pctUnits when upstream is grossly oversummed", () => {
-    // 3 slices summing to 300% — far beyond validation tolerance. The clamp
-    // prevents the largest slice's corrected value from going below zero;
-    // in the extreme-oversum case the largest slice is zeroed out and dropped,
-    // so the remaining slices pass through unchanged. This is acceptable as
-    // defense-in-depth — upstream validation fatally rejects >2% deviation.
+  it("rejects a grossly oversummed upstream before remainder correction", () => {
     const slices: ReserveSlice[] = [
       { name: "A", pct: 150, risk: "low" },
       { name: "B", pct: 100, risk: "medium" },
       { name: "C", pct: 50, risk: "high" },
     ];
-    const result = normalizeSlices(slices);
-    expect(result.every((slice) => slice.pct > 0)).toBe(true);
-    // Largest slice ("A") is dropped via the Math.max(0, ...) clamp.
-    expect(result.find((slice) => slice.name === "A")).toBeUndefined();
-    expect(result.map((slice) => slice.name).sort()).toEqual(["B", "C"]);
+    expect(() => normalizeSlices(slices)).toThrow(
+      /reserve percentages sum to 300\.0% \(expected 100% ± 2%\)/,
+    );
   });
 
   it("corrects normal downward rounding drift (e.g. 100.1% -> 100%)", () => {
@@ -229,15 +226,22 @@ describe("slicesFromValues", () => {
     expect(sum).toBe(100);
   });
 
-  it("filters zero and negative values", () => {
+  it("filters zero values and rejects negative absolute or percentage rows", () => {
     const result = slicesFromValues([
       { value: 0, name: "Zero", risk: "low" },
-      { value: -10, name: "Neg", risk: "medium" },
       { value: 100, name: "Valid", risk: "high" },
     ]);
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("Valid");
     expect(result[0].pct).toBe(100);
+    expect(() => slicesFromValues([
+      { value: -10, name: "Neg", risk: "medium" },
+      { value: 100, name: "Valid", risk: "high" },
+    ])).toThrow(/reserve values row 1 has invalid value: -10/);
+    expect(() => slicesFromPercentages([
+      { pct: -10, name: "Neg", risk: "medium" },
+      { pct: 110, name: "Valid", risk: "high" },
+    ], { context: "test percentages" })).toThrow(/test percentages row 1 has invalid value: -10/);
   });
 
   it("returns empty for all-zero input", () => {

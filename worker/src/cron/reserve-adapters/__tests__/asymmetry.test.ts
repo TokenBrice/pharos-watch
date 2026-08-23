@@ -76,18 +76,33 @@ describe("adaptAsymmetry", () => {
     });
   });
 
-  it("returns an empty slice list when all branches have zero collateral (parse-failure path)", () => {
+  it("keeps zero branches ignorable but rejects malformed or negative collateral rows", () => {
     const result = adaptAsymmetry({
       timestamp: 1776239429,
       usdaf: {
         total_bold_supply: "1000",
         branch: {
           ysyBOLD: { coll_value: "0" },
-          scrvUSD: { coll_value: "not-a-number" },
         },
       },
     });
     expect(result.slices).toEqual([]);
+    expect(() => adaptAsymmetry({
+      usdaf: {
+        branch: {
+          ysyBOLD: { coll_value: "not-a-number" },
+          scrvUSD: { coll_value: "100" },
+        },
+      },
+    })).toThrow(/Asymmetry branch collateral row 1 has invalid value: NaN/);
+    expect(() => adaptAsymmetry({
+      usdaf: {
+        branch: {
+          ysyBOLD: { coll_value: "-1" },
+          scrvUSD: { coll_value: "100" },
+        },
+      },
+    })).toThrow(/Asymmetry branch collateral row 1 has invalid value: -1/);
   });
 
   it("falls back to unverified freshness when timestamp is missing", () => {
