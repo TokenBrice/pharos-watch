@@ -13,9 +13,8 @@ import {
   DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1,
   ensureCanonicalIncidents,
   loadCanonicalIncidents,
-  recordLockDeferral,
-  recordLockOpportunity,
 } from "../depeg-resolver-incident-store";
+import { recordLockDeferral, recordLockOpportunity } from "../depeg-resolver-lock-opportunity-store";
 import {
   loadFirstPublicationMembership,
   loadLatestPublicationManifest,
