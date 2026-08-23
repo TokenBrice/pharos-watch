@@ -10,6 +10,7 @@ import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlit
 import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
   insertPendingSqlite,
+  resetTelegramPendingMocks,
 } from "./telegram-pending-queue.test-support";
 
 function mockD1(tables: MockTableConfig[] = []) {
@@ -201,21 +202,12 @@ const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegra
 await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
-  mockSendToChat.mockReset();
-  mockMigrateTelegramChatId.mockReset().mockResolvedValue(undefined);
-  transportMocks.claim.mockReset().mockResolvedValue({
-    allowed: true,
-    mode: "pending",
-    maxDistinctChats: SEND_BATCH_SIZE,
-    reason: "closed",
-    circuitGeneration: 0,
-    probeOwner: null,
-    probeGeneration: null,
-    pauseGeneration: null,
-    deferUntil: null,
+  resetTelegramPendingMocks({
+    sendToChat: mockSendToChat,
+    migrateTelegramChatId: mockMigrateTelegramChatId,
+    transport: transportMocks,
+    sendBatchSize: SEND_BATCH_SIZE,
   });
-  transportMocks.readPause.mockReset().mockResolvedValue(null);
-  transportMocks.record.mockReset().mockResolvedValue({ state: "closed", generation: 0 });
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
 });

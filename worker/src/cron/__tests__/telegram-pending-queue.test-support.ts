@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { Mock } from "vitest";
 import type { MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
@@ -111,4 +112,41 @@ export function makeTelegramDeliveryResult(
     retryAfterSec: null,
     ...overrides,
   };
+}
+
+type TelegramPendingMockSet = {
+  sendToChat: Mock;
+  migrateTelegramChatId: Mock;
+  transport: { claim: Mock; readPause: Mock; record: Mock };
+  sendBatchSize: number;
+};
+
+/**
+ * Reset the pending-queue mocks to their default allow-everything posture.
+ *
+ * The `vi.mock` factories and the mock identifiers themselves have to stay in
+ * each suite because vitest hoists them per file, so the mocks are passed in
+ * rather than owned here.
+ */
+export function resetTelegramPendingMocks({
+  sendToChat,
+  migrateTelegramChatId,
+  transport,
+  sendBatchSize,
+}: TelegramPendingMockSet): void {
+  sendToChat.mockReset();
+  migrateTelegramChatId.mockReset().mockResolvedValue(undefined);
+  transport.claim.mockReset().mockResolvedValue({
+    allowed: true,
+    mode: "pending",
+    maxDistinctChats: sendBatchSize,
+    reason: "closed",
+    circuitGeneration: 0,
+    probeOwner: null,
+    probeGeneration: null,
+    pauseGeneration: null,
+    deferUntil: null,
+  });
+  transport.readPause.mockReset().mockResolvedValue(null);
+  transport.record.mockReset().mockResolvedValue({ state: "closed", generation: 0 });
 }
