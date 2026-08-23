@@ -11,7 +11,7 @@ import { isSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { RouteProgressBar } from "@/components/route-progress-bar";
 
 // Create a context for toast functionality
-import { createContext, useContext } from "react";
+import { createContext } from "react";
 
 /**
  * Custom event broadcast when the user presses a numeric key (1-9) to sort
@@ -41,13 +41,7 @@ interface ToastContextType {
   addToast: (message: string, type?: "success" | "info" | "warning" | "error", duration?: number) => void;
 }
 
-export const ToastContext = createContext<ToastContextType | null>(null);
-
-export function useToastContext() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error("useToastContext must be used within ToastProvider");
-  return ctx;
-}
+const ToastContext = createContext<ToastContextType | null>(null);
 
 export function createPharosQueryClient(): QueryClient {
   return new QueryClient({

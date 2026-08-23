@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
@@ -192,11 +193,10 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/json");
     expect(res.headers.get("Cache-Control")).toMatch(/s-maxage/);
 
-    const body = (await res.json()) as { tokens: unknown[] };
+    const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body).toHaveProperty("tokens");
     expect(Array.isArray(body.tokens)).toBe(true);
   });
@@ -220,8 +220,7 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "reusd-resupply", ctx);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { address?: string };
+    const body = (await readJsonResponse(res, 200)) as { address?: string };
     expect(body.address).toBe("0x57ab1e0003f623289cd798b1824be09a793e4bec");
   });
 
@@ -250,9 +249,8 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "reusd-resupply", ctx);
 
-    expect(res.status).toBe(200);
     expect(fetchSpy).not.toHaveBeenCalled();
-    const body = (await res.json()) as { address?: string };
+    const body = (await readJsonResponse(res, 200)) as { address?: string };
     expect(body.address).toBe("0x57ab1e0003f623289cd798b1824be09a793e4bec");
   });
 
@@ -271,11 +269,10 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
-    expect(res.status).toBe(200);
     // Should NOT call fetch when cache is fresh
     expect(fetchSpy).not.toHaveBeenCalled();
 
-    const body = (await res.json()) as { tokens: unknown[] };
+    const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
   });
 
@@ -290,8 +287,7 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
-    expect(res.status).toBe(502);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 502)) as { error: string };
     expect(body).toHaveProperty("error");
   });
 
@@ -309,8 +305,7 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
+    const body = (await readJsonResponse(res, 200)) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
     expect(body.tokens).toHaveLength(1);
     expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(123_000_000);
     expect(ctx.waitUntil).toHaveBeenCalled();
@@ -338,10 +333,9 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Warning")).toContain("refresh scheduled");
-    const body = (await res.json()) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
+    const body = (await readJsonResponse(res, 200)) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
     expect(body.tokens).toHaveLength(1);
     expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(80_000_000);
     expect(ctx.waitUntil).toHaveBeenCalled();
@@ -366,8 +360,7 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { tokens: unknown[] };
+    const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
     await Promise.allSettled(ctx.waitUntilPromises);
   });
@@ -413,8 +406,7 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { tokens: unknown[] };
+    const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
     await Promise.allSettled(ctx.waitUntilPromises);
   });
@@ -506,10 +498,9 @@ describe("handleStablecoinDetail", () => {
     resolveFetch(new Response(freshUpstreamBody, { status: 200 }));
 
     const res = await syncResponse;
-    expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/json");
     expect(res.headers.get("Cache-Control")).toMatch(/s-maxage/);
-    const body = (await res.json()) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
+    const body = (await readJsonResponse(res, 200)) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
     expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(120_000_000);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(syncCtx.waitUntil).not.toHaveBeenCalled();
@@ -606,8 +597,7 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "eurc-circle", ctx);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       tokens: Array<{
         circulating?: Record<string, number>;
         totalCirculating?: Record<string, number>;
@@ -635,8 +625,7 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "xaut-tether", ctx);
 
-    expect(res.status).toBe(502);
-    expect(await res.json()).toEqual({ error: "Failed to fetch commodity token data" });
+    expect(await readJsonResponse(res, 502)).toEqual({ error: "Failed to fetch commodity token data" });
   });
 
   it("logs parse failure context during stale background refresh", async () => {
@@ -684,13 +673,12 @@ describe("handleStablecoinDetail", () => {
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, geckoOnlyId!, ctx);
-    expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining("/market_chart?vs_currency=usd&days=max"),
       expect.anything(),
     );
 
-    const body = (await res.json()) as { tokens: unknown[] };
+    const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
   });
 
@@ -718,8 +706,7 @@ describe("handleStablecoinDetail", () => {
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, geckoOnlyId!, ctx);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       tokens: Array<{ totalCirculatingUSD?: Record<string, number> }>;
     };
     expect(body.tokens).toHaveLength(1);

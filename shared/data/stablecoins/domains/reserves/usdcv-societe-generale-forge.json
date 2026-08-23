@@ -3,41 +3,57 @@
   "reserves": [
     {
       "name": "U.S. dollar cash deposits at BNY",
-      "pct": 100,
+      "pct": 89.63,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "The Bank of New York Mellon SA/NV",
       "riskFactors": ["counterparty", "custody", "legal", "concentration"],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "U.S. dollar cash deposits at Societe Generale",
+      "pct": 10.37,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Societe Generale",
+      "riskFactors": ["counterparty", "custody", "legal", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "OpenAI Codex V9 Tranche 2 reserve curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "SG-FORGE CoinVertible product and daily reserve disclosure",
+        "label": "SG-FORGE CoinVertible product and daily reserve disclosure (re-opened 2026-08-23)",
         "url": "https://www.sgforge.com/product/coinvertible/"
       },
       {
-        "label": "SG-FORGE USDCV MiCA white paper",
+        "label": "SG-FORGE USDCV MiCA white paper (re-opened 2026-08-23)",
         "url": "https://www.sgforge.com/wp-content/uploads/2025/09/USDCV-White-Paper_iXBRL_202508.html"
       }
     ],
-    "rationale": "SG-FORGE's current product disclosure states that CoinVertible reserves are 100% cash. The MiCA white paper identifies BNY's Belgian entity as the initial custodian and the account as segregated, while permitting future eligible securities; no such securities appear in the current issuer composition.",
-    "compositionBasis": "SG-FORGE current daily CoinVertible reserve-composition disclosure",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Re-opened 2026-08-23. SG-FORGE's product page states \"Your assets are 100% backed by cash, ensuring immediate liquidity\" and shows \"Last update 23/08/2026\" with \"BNY : 89.63% | Societe Generale : 10.37%\" for USD CoinVertible. The page also shows USD 11,000,000.00 and USD 1,272,441.00 against USD 12,272,441.00 in circulation; the percentages sum to 100.00%. The current white paper identifies BNY as The Bank of New York Mellon SA/NV and says the issuer may use additional segregated accounts, so the disclosed allocation is recorded as two bank-deposit slices. No maturity maximum is authored because neither source states one.",
+    "compositionBasis": "SG-FORGE's current daily USD CoinVertible reserve-composition disclosure, re-opened 2026-08-23",
+    "compositionAsOf": "2026-08-23",
     "scope": "full-composition",
-    "knownUnknownExposure": "The public page does not disclose the deposit account balance or any sub-account allocation beyond the current 100% cash classification.",
+    "knownUnknownExposure": "The daily page discloses the current two-bank allocation and 100% cash classification but not account-level legal terms, bank-account balances beyond the displayed amounts, or a hard maturity maximum.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "U.S. dollar cash deposits at BNY",
-        "pct": 100,
+        "pct": 89.63,
         "disposition": "untracked-exogenous-asset",
         "rationale": "USD cash at BNY is external reserve backing rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "U.S. dollar cash deposits at Societe Generale",
+        "pct": 10.37,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USD cash at Societe Generale is external reserve backing rather than a tracked stablecoin dependency."
       }
     ]
   },
@@ -46,21 +62,31 @@
       {
         "name": "The Bank of New York Mellon SA/NV",
         "role": "bank",
+        "sharePct": 89.63,
         "jurisdiction": "Belgium"
+      },
+      {
+        "name": "Societe Generale",
+        "role": "bank",
+        "sharePct": 10.37
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "OpenAI Codex V9 Tranche 2 reserve curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "SG-FORGE USDCV MiCA white paper",
+        "label": "SG-FORGE CoinVertible product and daily reserve disclosure (re-opened 2026-08-23)",
+        "url": "https://www.sgforge.com/product/coinvertible/"
+      },
+      {
+        "label": "SG-FORGE USDCV MiCA white paper (re-opened 2026-08-23)",
         "url": "https://www.sgforge.com/wp-content/uploads/2025/09/USDCV-White-Paper_iXBRL_202508.html"
       }
     ],
-    "uncertainty": "The white paper establishes statutory segregation and an exclusive pro-rata holder claim, but does not disclose account-level placement or rehypothecation terms. It also permits additional qualifying custodians in the future without naming any current provider beyond BNY."
+    "uncertainty": "The daily page gives the current BNY and Societe Generale allocation but not account-level placement or rehypothecation terms. The white paper establishes statutory segregation and an exclusive pro-rata holder claim, identifies BNY's Belgian entity as an initial custodian, and permits additional qualifying custodians."
   }
 }

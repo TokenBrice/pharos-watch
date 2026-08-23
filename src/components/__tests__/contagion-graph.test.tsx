@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
+import { installSvgCoordinateShim } from "./contagion-graph-test-support";
 
 vi.mock("@/lib/contagion-layout", async () => {
   const actual = await vi.importActual<typeof import("@/lib/contagion-layout")>("@/lib/contagion-layout");
@@ -63,32 +64,7 @@ const DEPENDENCY_EDGES: ReportCardsV9DependencyEdge[] = [
   },
 ];
 
-beforeAll(() => {
-  Object.defineProperty(SVGSVGElement.prototype, "createSVGPoint", {
-    configurable: true,
-    value() {
-      const point = {
-        x: 0,
-        y: 0,
-        matrixTransform() {
-          return { x: point.x, y: point.y };
-        },
-      };
-      return point;
-    },
-  });
-
-  Object.defineProperty(SVGSVGElement.prototype, "getScreenCTM", {
-    configurable: true,
-    value() {
-      return {
-        inverse() {
-          return null;
-        },
-      };
-    },
-  });
-});
+beforeAll(installSvgCoordinateShim);
 
 afterEach(() => {
   cleanup();

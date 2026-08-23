@@ -17,7 +17,9 @@ import type {
 export type DdrrAssessmentInput = DdrrAssessment;
 
 /** Canonical source-event outcome payload used to review one DDR assessment. */
-export type DdrrActualEventInput = DdrrActualEvent;
+export type DdrrActualEventInput = DdrrActualEvent & {
+  closeReason?: string | null;
+};
 
 /** Event-id keyed lookup accepted by batch review helpers. */
 export type DdrrActualEventLookup =

@@ -4,7 +4,7 @@ import { parse as parseLosslessJson } from "lossless-json";
 import { z } from "zod";
 
 import {
-  CANONICAL_DECIMAL_PATTERN,
+  CanonicalDecimalSchema,
   canonicalizeDecimal,
   EthenaCollateralizationStatusSchema,
   EthenaProofOfReservesSchema,
@@ -61,7 +61,6 @@ export const PROTOCOL_API_TARGETS = {
 
 export type ProtocolApiAssetId = keyof typeof PROTOCOL_API_TARGETS;
 
-const CanonicalDecimalSchema = z.string().regex(CANONICAL_DECIMAL_PATTERN);
 const HashSchema = z.string().regex(SHA256_PATTERN);
 const SourceIdsSchema = z
   .array(z.string().min(1))

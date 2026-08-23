@@ -1,3 +1,5 @@
+import { compareText } from "../../types/safety-score-v9-fact-primitives";
+
 export type V9EconomicLossScope = "access-only" | "deployment" | "reserve-claim" | "global-claim";
 
 export interface V9ScopedRiskSignal {
@@ -72,10 +74,10 @@ function applyV9AllocatedScopedRiskAdjustments(
 
 function compareSignal(left: V9ScopedRiskSignal, right: V9ScopedRiskSignal): number {
   return (
-    left.exposureKey.localeCompare(right.exposureKey) ||
-    left.riskEventKey.localeCompare(right.riskEventKey) ||
-    left.failureDomainKeys.join("+").localeCompare(right.failureDomainKeys.join("+")) ||
-    left.signalKey.localeCompare(right.signalKey)
+    compareText(left.exposureKey, right.exposureKey) ||
+    compareText(left.riskEventKey, right.riskEventKey) ||
+    compareText(left.failureDomainKeys.join("+"), right.failureDomainKeys.join("+")) ||
+    compareText(left.signalKey, right.signalKey)
   );
 }
 

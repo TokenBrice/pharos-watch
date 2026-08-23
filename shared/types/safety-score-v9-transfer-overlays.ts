@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { CanonicalTextSchema, StrictIsoDateSchema } from "./safety-schema-primitives";
 
-export const SafetyScoreV9TransferPostureSchema = z.enum([
+const SafetyScoreV9TransferPostureSchema = z.enum([
   "permissionless",
   "restrictable",
   "permissioned",
 ]);
 
-export const SafetyScoreV9TransferScopeSchema = z.enum([
+const SafetyScoreV9TransferScopeSchema = z.enum([
   "canonical",
   "material-bridge",
   "additional",
@@ -27,11 +27,11 @@ export function safetyScoreV9TransferDeploymentKey(
   return `${chainId}:${canonicalTokenId}`;
 }
 
-export const SafetyScoreV9TransferSourceSchema = z
+const SafetyScoreV9TransferSourceSchema = z
   .object({ label: CanonicalTextSchema, url: z.string().url() })
   .strict();
 
-export const SafetyScoreV9ReviewedTransferDeploymentSchema = z
+const SafetyScoreV9ReviewedTransferDeploymentSchema = z
   .object({
     chainId: CanonicalChainIdSchema,
     contractOrTokenId: CanonicalTextSchema,
@@ -42,7 +42,7 @@ export const SafetyScoreV9ReviewedTransferDeploymentSchema = z
   })
   .strict();
 
-export const SafetyScoreV9ReviewedTransferFactSchema = z
+const SafetyScoreV9ReviewedTransferFactSchema = z
   .object({
     assetId: CanonicalTextSchema,
     reviewedAt: StrictIsoDateSchema,

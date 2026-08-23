@@ -1,34 +1,25 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fixtureFetchPrimaryPrices,
-  fixtureMockFetch,
   fixtureApplyPoolChallenge,
   fixtureApplyListAggregatorDowngrade,
-  fixtureMockD1 as createFixtureMockD1,
-  type PeggedAsset,
-  type PrimaryPriceResult,
-  type PriceValidationStats,
+  installPrimaryPriceRoutes,
+  makePoolChallengeInputs,
+  makePeggedAsset,
+  makePrimaryPriceResult,
+  makePrimaryPriceResults,
+  makePriceConsensusResult,
+  makePriceValidationStats,
+  makePrimaryPricingDb,
   type PriceValidationContext,
   type PriceValidationReferences,
 } from "./enrich-prices.test-support";
 
-function installFetch(implementation: (url: string) => Response | Promise<Response>) {
-  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
-}
+const installFetch = installPrimaryPriceRoutes;
 import { selectDexPriceChallengerRowsFromPools } from "../dex-liquidity/challenger-publish";
 import type { PoolEntry } from "../dex-liquidity/types";
 
-function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
-  return createFixtureMockD1([
-    ...tables,
-    { match: "FROM dex_prices", rows: [] },
-    { match: "FROM dex_price_challenger_snapshots", rows: [] },
-    { match: "FROM dex_price_challengers", rows: [] },
-    { match: "FROM dex_liquidity", rows: [] },
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-  ]);
-}
+const fixtureMockD1 = makePrimaryPricingDb;
 
 describe("pool challenge — soft-only high confidence downgrade", () => {
   afterEach(() => {
@@ -47,23 +38,14 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
   it("replaces price when ≥2 protocols diverge from soft consensus", async () => {
     // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
     // Two protocols (curve and balancer) show diverging prices → replace with TVL-weighted mean
-    const assets: PeggedAsset[] = [
-      {
-        id: "dusd-dtrinity",
-        name: "dUSD",
-        symbol: "dUSD",
-        geckoId: "dtrinity-usd",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "dusd-dtrinity",
+      name: "dUSD",
+      symbol: "dUSD",
+      geckoId: "dtrinity-usd",
+    })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makePoolChallengeDb([
@@ -104,23 +86,14 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
   it("downgrades but preserves price when only single protocol diverges", async () => {
     // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
     // Only one protocol (curve) diverges → downgrade confidence but keep consensus price
-    const assets: PeggedAsset[] = [
-      {
-        id: "dusd-dtrinity",
-        name: "dUSD",
-        symbol: "dUSD",
-        geckoId: "dtrinity-usd",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "dusd-dtrinity",
+      name: "dUSD",
+      symbol: "dUSD",
+      geckoId: "dtrinity-usd",
+    })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makePoolChallengeDb([
@@ -155,29 +128,19 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
   it("does NOT downgrade when consensus includes a hard source", async () => {
     // CG + Pyth agree → hard source present → no pool challenge
     const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(JSON.stringify({ tether: { usd: 1.0001 } }), { status: 200 });
-        }
-        if (typeof url === "string" && url.includes("hermes.pyth.network")) {
-          return new Response(
-            JSON.stringify({
-              parsed: [
-                {
-                  id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
-                  price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({
+      coingecko: { body: { tether: { usd: 1.0001 } } },
+      "hermes.pyth.network": {
+        body: {
+          parsed: [{
+            id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+            price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
+          }],
+        },
+      },
+    });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makePoolChallengeDb([
@@ -197,23 +160,14 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
   });
 
   it("does NOT downgrade via pool challenge when pool divergence is <500bps", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "dusd-dtrinity",
-        name: "dUSD",
-        symbol: "dUSD",
-        geckoId: "dtrinity-usd",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "dusd-dtrinity",
+      name: "dUSD",
+      symbol: "dUSD",
+      geckoId: "dtrinity-usd",
+    })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makePoolChallengeDb([
@@ -245,10 +199,6 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
 });
 
 describe("applyPoolChallenge", () => {
-  function makeStats(): PriceValidationStats {
-    return { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
-  }
-
   it("replaces a bad soft price when a dominant and minority DEX protocol agree", () => {
     const makePool = (poolId: string, project: string, tvlUsd: number, price: number): PoolEntry => ({
       poolId,
@@ -273,10 +223,9 @@ describe("applyPoolChallenge", () => {
       ],
       100_000,
     );
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdm-mega",
-        {
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "usdm-mega",
+      result: {
           price: 0.94012,
           source: "coingecko",
           selectedSource: "coingecko",
@@ -288,26 +237,20 @@ describe("applyPoolChallenge", () => {
           agreeSources: ["coingecko"],
           disagreeSources: ["dex-promoted"],
           allPrices: { coingecko: 0.94012, "dex-promoted": 0.99911 },
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "usdm-mega",
-        selectedRows.map((row) => ({
-          price: row.priceUsd,
-          tvlUsd: row.tvlUsd,
-          protocol: row.protocol,
-          chain: row.chain,
-        })),
-      ],
-    ]);
-    const stats: PriceValidationStats = { attempted: 1, high: 0, singleSource: 0, cgOnly: 0, low: 1 };
+      },
+      pools: selectedRows.map((row) => ({
+        price: row.priceUsd,
+        tvlUsd: row.tvlUsd,
+        protocol: row.protocol,
+        chain: row.chain,
+      })),
+      stats: { high: 0, low: 1 },
+    });
 
     const downgrades = fixtureApplyPoolChallenge(
       results,
       pools,
-      new Map([["usdm-mega", "peggedUSD"]]),
+      pegTypes,
       stats,
     );
 
@@ -320,25 +263,17 @@ describe("applyPoolChallenge", () => {
   });
 
   it("fires for non-USD peg at 300 bps divergence (single protocol: downgrade only, no price replace)", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "jpyc-jpyc",
-        {
-          price: 0.00682,
-          source: "coingecko+defillama-list+dex-promoted",
-          confidence: "high",
-          dlPrice: 0.00682,
-          cgPrice: 0.00682,
-          candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
-          agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      ["jpyc-jpyc", [{ price: 0.00704, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }]],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["jpyc-jpyc", "peggedJPY"]]);
-    const stats = makeStats();
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "jpyc-jpyc",
+      pegType: "peggedJPY",
+      result: makePriceConsensusResult({
+        price: 0.00682,
+        source: "coingecko+defillama-list+dex-promoted",
+        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
+        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
+      }),
+      pools: [{ price: 0.00704, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }],
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -350,25 +285,15 @@ describe("applyPoolChallenge", () => {
   });
 
   it("does NOT fire for USD peg at 300 bps divergence", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdt-tether",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list+dex-promoted",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
-          agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      ["usdt-tether", [{ price: 0.97, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }]],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["usdt-tether", "peggedUSD"]]);
-    const stats = makeStats();
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "usdt-tether",
+      result: makePriceConsensusResult({
+        source: "coingecko+defillama-list+dex-promoted",
+        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
+        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
+      }),
+      pools: [{ price: 0.97, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }],
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -377,23 +302,11 @@ describe("applyPoolChallenge", () => {
   });
 
   it("downgrades but does NOT replace price when only one protocol diverges (500+ bps)", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const pools = new Map([["dusd-test", [{ price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]]]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [{ price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -405,31 +318,14 @@ describe("applyPoolChallenge", () => {
   });
 
   it("replaces price when ≥2 independent protocols diverge", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [
+        { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
       ],
-    ]);
-    const pools = new Map([
-      [
-        "dusd-test",
-        [
-          { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
-          { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
-        ],
-      ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -441,31 +337,14 @@ describe("applyPoolChallenge", () => {
   });
 
   it("does NOT replace price when multiple pools from SAME protocol diverge", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "xusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "xusd-test",
+      result: makePriceConsensusResult(),
+      pools: [
+        { price: 0.8, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
+        { price: 0.82, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
       ],
-    ]);
-    const pools = new Map([
-      [
-        "xusd-test",
-        [
-          { price: 0.8, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
-          { price: 0.82, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
-        ],
-      ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["xusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -477,10 +356,9 @@ describe("applyPoolChallenge", () => {
   });
 
   it("replaces recovered soft consensus when a high-TVL DEX protocol agrees with a hard depeg candidate", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "apxusd-apyx",
-        {
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "apxusd-apyx",
+      result: {
           price: 0.995975,
           source: "coingecko+defillama-list+uniswap-v4-dex",
           selectedSource: "coingecko",
@@ -498,13 +376,8 @@ describe("applyPoolChallenge", () => {
             "curve-dex": 0.9577061374623745,
             "uniswap-v4-dex": 1.0002443828,
           },
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "apxusd-apyx",
-        [
+      },
+      pools: [
           {
             price: 0.9577061374623745,
             tvlUsd: 50_206_292,
@@ -519,11 +392,8 @@ describe("applyPoolChallenge", () => {
             chain: "ethereum",
             observedAt: 1_780_641_624,
           },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["apxusd-apyx", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("apxusd-apyx")!;
@@ -537,10 +407,9 @@ describe("applyPoolChallenge", () => {
   });
 
   it("replaces depeg-sized soft consensus when a high-TVL DEX protocol agrees with a hard depeg candidate", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "apxusd-apyx",
-        {
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "apxusd-apyx",
+      result: {
           price: 0.9207390119709549,
           source: "alchemy-address+coingecko+curve-dex",
           selectedSource: "coingecko",
@@ -566,13 +435,8 @@ describe("applyPoolChallenge", () => {
             "curve-dex": 0.9207390119709549,
             "uniswap-v4-dex": 1.0001161257,
           },
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "apxusd-apyx",
-        [
+      },
+      pools: [
           {
             price: 0.9096446090435735,
             tvlUsd: 17_862_827,
@@ -587,11 +451,9 @@ describe("applyPoolChallenge", () => {
             chain: "ethereum",
             observedAt: 1_780_760_659,
           },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["apxusd-apyx", "peggedUSD"]]);
-    const stats: PriceValidationStats = { attempted: 1, high: 0, singleSource: 0, cgOnly: 0, low: 1 };
+      stats: { high: 0, low: 1 },
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("apxusd-apyx")!;
@@ -605,40 +467,28 @@ describe("applyPoolChallenge", () => {
   });
 
   it("replaces recovered soft consensus when multiple high-TVL DEX protocols directionally corroborate a depeg", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "apxusd-apyx",
-        {
-          price: 0.9996,
-          source: "coingecko+defillama-list",
-          selectedSource: "coingecko",
-          priceEstimator: "cluster_median",
-          confidence: "high",
-          dlPrice: 0.9995,
-          cgPrice: 0.9996,
-          candidateSources: ["coingecko", "defillama-list", "curve-dex", "uniswap-v4-dex"],
-          agreeSources: ["coingecko", "defillama-list"],
-          disagreeSources: ["curve-dex", "uniswap-v4-dex"],
-          allPrices: {
-            coingecko: 0.9996,
-            "defillama-list": 0.9995,
-            "curve-dex": 0.9344,
-            "uniswap-v4-dex": 0.9551,
-          },
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "apxusd-apyx",
+      result: makePriceConsensusResult({
+        price: 0.9996,
+        selectedSource: "coingecko",
+        priceEstimator: "cluster_median",
+        dlPrice: 0.9995,
+        cgPrice: 0.9996,
+        candidateSources: ["coingecko", "defillama-list", "curve-dex", "uniswap-v4-dex"],
+        disagreeSources: ["curve-dex", "uniswap-v4-dex"],
+        allPrices: {
+          coingecko: 0.9996,
+          "defillama-list": 0.9995,
+          "curve-dex": 0.9344,
+          "uniswap-v4-dex": 0.9551,
         },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "apxusd-apyx",
-        [
+      }),
+      pools: [
           { price: 0.9344, tvlUsd: 13_500_000, protocol: "curve", chain: "ethereum", observedAt: 1_780_700_000 },
           { price: 0.9551, tvlUsd: 7_500_000, protocol: "uniswap-v4", chain: "ethereum", observedAt: 1_780_700_020 },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["apxusd-apyx", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("apxusd-apyx")!;
@@ -652,42 +502,27 @@ describe("applyPoolChallenge", () => {
   });
 
   it("ignores incoherent high-TVL outliers when coherent DEX protocols directionally corroborate a depeg", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          selectedSource: "coingecko",
-          priceEstimator: "cluster_median",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list", "curve-dex", "uniswap-v4-dex", "balancer-dex"],
-          agreeSources: ["coingecko", "defillama-list"],
-          disagreeSources: ["curve-dex", "uniswap-v4-dex", "balancer-dex"],
-          allPrices: {
-            coingecko: 1.0,
-            "defillama-list": 1.0,
-            "curve-dex": 0.985,
-            "uniswap-v4-dex": 0.986,
-            "balancer-dex": 0.93,
-          },
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult({
+        selectedSource: "coingecko",
+        priceEstimator: "cluster_median",
+        candidateSources: ["coingecko", "defillama-list", "curve-dex", "uniswap-v4-dex", "balancer-dex"],
+        disagreeSources: ["curve-dex", "uniswap-v4-dex", "balancer-dex"],
+        allPrices: {
+          coingecko: 1.0,
+          "defillama-list": 1.0,
+          "curve-dex": 0.985,
+          "uniswap-v4-dex": 0.986,
+          "balancer-dex": 0.93,
         },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "dusd-test",
-        [
+      }),
+      pools: [
           { price: 0.985, tvlUsd: 6_000_000, protocol: "curve", chain: "ethereum", observedAt: 1_780_700_000 },
           { price: 0.986, tvlUsd: 6_000_000, protocol: "uniswap-v4", chain: "ethereum", observedAt: 1_780_700_020 },
           { price: 0.93, tvlUsd: 6_000_000, protocol: "balancer", chain: "ethereum", observedAt: 1_780_700_040 },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("dusd-test")!;
@@ -701,31 +536,14 @@ describe("applyPoolChallenge", () => {
   });
 
   it("does not replace with high-TVL DEX protocols that disagree directionally or incoherently", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "dusd-test",
-        [
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [
           { price: 0.8, tvlUsd: 7_000_000, protocol: "curve", chain: "ethereum" },
           { price: 0.955, tvlUsd: 7_000_000, protocol: "uniswap-v4", chain: "ethereum" },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("dusd-test")!;
@@ -737,31 +555,18 @@ describe("applyPoolChallenge", () => {
   });
 
   it("treats promoted DEX sources as pool-challenge eligible when no exempt hard source agrees", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "balancer-dex+coingecko",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "balancer-dex"],
-          agreeSources: ["coingecko", "balancer-dex"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "dusd-test",
-        [
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult({
+        source: "balancer-dex+coingecko",
+        candidateSources: ["coingecko", "balancer-dex"],
+        agreeSources: ["coingecko", "balancer-dex"],
+      }),
+      pools: [
           { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
           { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -771,32 +576,15 @@ describe("applyPoolChallenge", () => {
   });
 
   it("uses protocol-level medians before cross-protocol replacement", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "dusd-test",
-        [
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [
           { price: 0.79, tvlUsd: 200_000, protocol: "curve", chain: "ethereum" },
           { price: 0.81, tvlUsd: 600_000, protocol: "curve", chain: "ethereum" },
           { price: 0.84, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -806,31 +594,25 @@ describe("applyPoolChallenge", () => {
 
   it("ignores inverse commodity protocol medians before pool challenge replacement", () => {
     const assetId = "xaum-matrixdock";
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        assetId,
-        {
-          price: 4_170,
-          source: "coingecko",
-          confidence: "single-source",
-          dlPrice: null,
-          cgPrice: 4_170,
-          candidateSources: ["coingecko"],
-          agreeSources: ["coingecko"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        assetId,
-        [
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId,
+      pegType: "peggedGOLD",
+      result: makePrimaryPriceResult({
+        price: 4_170,
+        source: "coingecko",
+        confidence: "single-source",
+        dlPrice: null,
+        cgPrice: 4_170,
+        candidateSources: ["coingecko"],
+        agreeSources: ["coingecko"],
+      }),
+      pools: [
           { price: 1 / 4_229, tvlUsd: 800_000, protocol: "curve", chain: "ethereum" },
           { price: 1 / 4_180, tvlUsd: 600_000, protocol: "balancer", chain: "ethereum" },
           { price: 4_229, tvlUsd: 399_000, protocol: "uniswap-v3", chain: "ethereum" },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([[assetId, "peggedGOLD"]]);
+      stats: { high: 0, singleSource: 1, cgOnly: 1 },
+    });
     const references: PriceValidationReferences = {
       rates: { peggedGOLD: 4_220 },
       type: "fresh",
@@ -845,8 +627,6 @@ describe("applyPoolChallenge", () => {
       commodityOunces: 1,
       tracked: true,
     };
-    const stats: PriceValidationStats = { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 };
-
     const downgrades = fixtureApplyPoolChallenge(
       results,
       pools,
@@ -866,38 +646,28 @@ describe("applyPoolChallenge", () => {
   });
 
   it("preserves corroborated severe downside even when multiple DEX protocols diverge upward", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usr-resolv",
-        {
-          price: 0.1525,
-          source: "coingecko+defillama-list",
-          confidence: "single-source",
-          dlPrice: 0.1524,
-          cgPrice: 0.1525,
-          candidateSources: ["coingecko", "defillama-list", "pyth", "dex-promoted"],
-          agreeSources: ["coingecko", "defillama-list"],
-          allPrices: {
-            coingecko: 0.1525,
-            "defillama-list": 0.1524,
-            pyth: 0.151,
-            "dex-promoted": 1.0007,
-          },
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "usr-resolv",
+      result: makePriceConsensusResult({
+        price: 0.1525,
+        confidence: "single-source",
+        dlPrice: 0.1524,
+        cgPrice: 0.1525,
+        candidateSources: ["coingecko", "defillama-list", "pyth", "dex-promoted"],
+        allPrices: {
+          coingecko: 0.1525,
+          "defillama-list": 0.1524,
+          pyth: 0.151,
+          "dex-promoted": 1.0007,
         },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "usr-resolv",
-        [
+      }),
+      pools: [
           { price: 1.0007, tvlUsd: 1_460_000, protocol: "pancakeswap", chain: "bsc" },
           { price: 0.9942, tvlUsd: 46_000, protocol: "uniswap-v2", chain: "bsc" },
           { price: 0.3017, tvlUsd: 790_000, protocol: "uniswap-v4", chain: "ethereum" },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["usr-resolv", "peggedUSD"]]);
-    const stats: PriceValidationStats = { attempted: 1, high: 0, singleSource: 1, cgOnly: 0, low: 0 };
+      stats: { high: 0, singleSource: 1 },
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("usr-resolv")!;
@@ -912,34 +682,17 @@ describe("applyPoolChallenge", () => {
   });
 
   it("does NOT count a protocol as diverging when its protocol-level median still agrees", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usr-test",
-        {
-          price: 0.125,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 0.125,
-          cgPrice: 0.125,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "usr-test",
-        [
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "usr-test",
+      result: makePriceConsensusResult({ price: 0.125 }),
+      pools: [
           { price: 0.9993, tvlUsd: 1_451_774, protocol: "bunni", chain: "ethereum" },
           { price: 0.1273, tvlUsd: 373_555, protocol: "uniswap", chain: "ethereum" },
           { price: 0.1293, tvlUsd: 296_968, protocol: "uniswap", chain: "ethereum" },
           { price: 0.4233, tvlUsd: 142_247, protocol: "uniswap", chain: "ethereum" },
           { price: 0.1294, tvlUsd: 72_578, protocol: "curve", chain: "ethereum" },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["usr-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -950,23 +703,15 @@ describe("applyPoolChallenge", () => {
   });
 
   it("skips results with hard sources in agreeSources", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdt-tether",
-        {
-          price: 1.0,
-          source: "coingecko+binance",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "binance"],
-          agreeSources: ["coingecko", "binance"],
-        },
-      ],
-    ]);
-    const pools = new Map([["usdt-tether", [{ price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]]]);
-    const pegTypes = new Map<string, string | undefined>([["usdt-tether", "peggedUSD"]]);
-    const stats = makeStats();
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "usdt-tether",
+      result: makePriceConsensusResult({
+        source: "coingecko+binance",
+        candidateSources: ["coingecko", "binance"],
+        agreeSources: ["coingecko", "binance"],
+      }),
+      pools: [{ price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -975,39 +720,24 @@ describe("applyPoolChallenge", () => {
 
   it("updates allPrices to reflect pool-tvl-weighted replacement source", () => {
     const assetId = "usr-resolv";
-    const results = new Map<string, PrimaryPriceResult>();
-    results.set(assetId, {
-      price: 1.0, // near peg — will be replaced by depegged pools
-      source: "coingecko+defillama-list",
-      selectedSource: "coingecko",
-      priceEstimator: "selected_source",
-      confidence: "high",
-      dlPrice: 1.0,
-      cgPrice: 1.0,
-      candidateSources: ["coingecko", "defillama-list"],
-      agreeSources: ["coingecko", "defillama-list"],
-      disagreeSources: [],
-      allPrices: { coingecko: 1.0, "defillama-list": 1.0 },
-      observedAt: 1_000,
-      observedAtMode: "upstream",
-      observedAtBySource: { coingecko: 1_000, "defillama-list": 1_000 },
-      observedAtModeBySource: { coingecko: "upstream", "defillama-list": "upstream" },
-    });
-
-    const pools = new Map<
-      string,
-      Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>
-    >([
-      [
-        assetId,
-        [
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId,
+      // Near peg — will be replaced by depegged pools.
+      result: makePriceConsensusResult({
+        selectedSource: "coingecko",
+        priceEstimator: "selected_source",
+        disagreeSources: [],
+        allPrices: { coingecko: 1.0, "defillama-list": 1.0 },
+        observedAt: 1_000,
+        observedAtMode: "upstream",
+        observedAtBySource: { coingecko: 1_000, "defillama-list": 1_000 },
+        observedAtModeBySource: { coingecko: "upstream", "defillama-list": "upstream" },
+      }),
+      pools: [
           { price: 0.8, tvlUsd: 2_000_000, protocol: "curve", chain: "ethereum", observedAt: 900 },
           { price: 0.8, tvlUsd: 1_500_000, protocol: "uniswap", chain: "ethereum", observedAt: 950 },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([[assetId, "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -1021,26 +751,12 @@ describe("applyPoolChallenge", () => {
   });
 
   it("does NOT downgrade NAV tokens even when pool prices diverge", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "ousg-ondo-finance",
-        {
-          price: 110.15,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 110.15,
-          cgPrice: 110.15,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      ["ousg-ondo-finance", [{ price: 100.0, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["ousg-ondo-finance", undefined]]);
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "ousg-ondo-finance",
+      result: makePriceConsensusResult({ price: 110.15, dlPrice: 110.15, cgPrice: 110.15 }),
+      pools: [{ price: 100.0, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
+    });
     const navTokenAssetIds = new Set(["ousg-ondo-finance"]);
-    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats, undefined, navTokenAssetIds);
 
@@ -1055,23 +771,11 @@ describe("applyPoolChallenge", () => {
 
   it("fires at exactly the USD threshold (500 bps) — inclusive boundary", () => {
     // price 0.9512 vs consensus 1.0 → bps = 0.0488 / 0.9756 * 10_000 ≈ 500.205 bps (≥500 → triggers).
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const pools = new Map([["dusd-test", [{ price: 0.9512, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]]]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [{ price: 0.9512, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -1084,23 +788,11 @@ describe("applyPoolChallenge", () => {
 
   it("does NOT fire just below the USD threshold (~499 bps)", () => {
     // price 0.9513 vs consensus 1.0 → bps ≈ 499.15 bps (<500 → no downgrade).
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const pools = new Map([["dusd-test", [{ price: 0.9513, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]]]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [{ price: 0.9513, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -1111,25 +803,17 @@ describe("applyPoolChallenge", () => {
 
   it("fires at the non-USD peg-aware threshold (peggedJPY, 300 bps)", () => {
     // peggedJPY → min(2 * 150, 500) = 300 bps. consensus 0.00682 vs pool 0.006618 → ≈300.64 bps.
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "jpyc-jpyc",
-        {
-          price: 0.00682,
-          source: "coingecko+defillama-list+dex-promoted",
-          confidence: "high",
-          dlPrice: 0.00682,
-          cgPrice: 0.00682,
-          candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
-          agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      ["jpyc-jpyc", [{ price: 0.006618, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }]],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["jpyc-jpyc", "peggedJPY"]]);
-    const stats = makeStats();
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "jpyc-jpyc",
+      pegType: "peggedJPY",
+      result: makePriceConsensusResult({
+        price: 0.00682,
+        source: "coingecko+defillama-list+dex-promoted",
+        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
+        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
+      }),
+      pools: [{ price: 0.006618, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }],
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -1142,31 +826,14 @@ describe("applyPoolChallenge", () => {
 
   it("replaces price when exactly 2 independent protocols hit the boundary", () => {
     // Two protocols each at ~500 bps → divergingProtocolGroups.length >= 2 → TVL-weighted median.
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const pools = new Map([
-      [
-        "dusd-test",
-        [
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [
           { price: 0.9512, tvlUsd: 600_000, protocol: "curve", chain: "ethereum" },
           { price: 0.95, tvlUsd: 400_000, protocol: "uniswap", chain: "ethereum" },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -1178,36 +845,14 @@ describe("applyPoolChallenge", () => {
   });
 
   it("propagates result.observedAt = min(poolObservedAts) after replacement", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "dusd-test",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-          observedAt: 5_000,
-          observedAtMode: "upstream",
-        },
-      ],
-    ]);
-    const pools = new Map<
-      string,
-      Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>
-    >([
-      [
-        "dusd-test",
-        [
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult({ observedAt: 5_000, observedAtMode: "upstream" }),
+      pools: [
           { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum", observedAt: 1_200 },
           { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum", observedAt: 800 },
-        ],
       ],
-    ]);
-    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
-    const stats = makeStats();
+    });
 
     fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
 
@@ -1223,21 +868,14 @@ describe("applyPoolChallenge", () => {
 
 describe("applyListAggregatorDowngrade", () => {
   it("downgrades 2-source list-aggregator clusters (coingecko + defillama-list)", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdt-tether",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko", "defillama-list"],
-        },
-      ],
-    ]);
-    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    const results = makePrimaryPriceResults("usdt-tether", {
+      source: "coingecko+defillama-list",
+      dlPrice: 1.0,
+      cgPrice: 1.0,
+      candidateSources: ["coingecko", "defillama-list"],
+      agreeSources: ["coingecko", "defillama-list"],
+    });
+    const stats = makePriceValidationStats();
     fixtureApplyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("single-source");
     expect(stats.high).toBe(0);
@@ -1245,21 +883,14 @@ describe("applyListAggregatorDowngrade", () => {
   });
 
   it("downgrades 2-source list-aggregator clusters even when detail endpoint is the second voice", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdt-tether",
-        {
-          price: 1.0,
-          source: "coingecko+defillama",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama"],
-          agreeSources: ["coingecko", "defillama"],
-        },
-      ],
-    ]);
-    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    const results = makePrimaryPriceResults("usdt-tether", {
+      source: "coingecko+defillama",
+      dlPrice: 1.0,
+      cgPrice: 1.0,
+      candidateSources: ["coingecko", "defillama"],
+      agreeSources: ["coingecko", "defillama"],
+    });
+    const stats = makePriceValidationStats();
     fixtureApplyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("single-source");
     expect(stats.high).toBe(0);
@@ -1267,21 +898,14 @@ describe("applyListAggregatorDowngrade", () => {
   });
 
   it("downgrades CMC-style list aggregators when paired only with another list aggregator", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdt-tether",
-        {
-          price: 1.0,
-          source: "coingecko+coinmarketcap",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "coinmarketcap"],
-          agreeSources: ["coingecko", "coinmarketcap"],
-        },
-      ],
-    ]);
-    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    const results = makePrimaryPriceResults("usdt-tether", {
+      source: "coingecko+coinmarketcap",
+      dlPrice: 1.0,
+      cgPrice: 1.0,
+      candidateSources: ["coingecko", "coinmarketcap"],
+      agreeSources: ["coingecko", "coinmarketcap"],
+    });
+    const stats = makePriceValidationStats();
     fixtureApplyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("single-source");
     expect(stats.high).toBe(0);
@@ -1289,21 +913,14 @@ describe("applyListAggregatorDowngrade", () => {
   });
 
   it("normalizes composite agree source labels before applying list-aggregator downgrade", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdt-tether",
-        {
-          price: 1.0,
-          source: "coingecko+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama-list"],
-          agreeSources: ["coingecko+defillama-list"],
-        },
-      ],
-    ]);
-    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    const results = makePrimaryPriceResults("usdt-tether", {
+      source: "coingecko+defillama-list",
+      dlPrice: 1.0,
+      cgPrice: 1.0,
+      candidateSources: ["coingecko", "defillama-list"],
+      agreeSources: ["coingecko+defillama-list"],
+    });
+    const stats = makePriceValidationStats();
     fixtureApplyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("single-source");
     expect(stats.high).toBe(0);
@@ -1311,42 +928,28 @@ describe("applyListAggregatorDowngrade", () => {
   });
 
   it("does NOT downgrade when cluster includes a non-list-aggregator source (binance)", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdt-tether",
-        {
-          price: 1.0,
-          source: "binance+coingecko",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["binance", "coingecko"],
-          agreeSources: ["binance", "coingecko"],
-        },
-      ],
-    ]);
-    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    const results = makePrimaryPriceResults("usdt-tether", {
+      source: "binance+coingecko",
+      dlPrice: 1.0,
+      cgPrice: 1.0,
+      candidateSources: ["binance", "coingecko"],
+      agreeSources: ["binance", "coingecko"],
+    });
+    const stats = makePriceValidationStats();
     fixtureApplyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("high");
     expect(stats.high).toBe(1);
   });
 
   it("does NOT downgrade 3-source list-aggregator clusters", () => {
-    const results = new Map<string, PrimaryPriceResult>([
-      [
-        "usdt-tether",
-        {
-          price: 1.0,
-          source: "coingecko+defillama+defillama-list",
-          confidence: "high",
-          dlPrice: 1.0,
-          cgPrice: 1.0,
-          candidateSources: ["coingecko", "defillama", "defillama-list"],
-          agreeSources: ["coingecko", "defillama", "defillama-list"],
-        },
-      ],
-    ]);
-    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    const results = makePrimaryPriceResults("usdt-tether", {
+      source: "coingecko+defillama+defillama-list",
+      dlPrice: 1.0,
+      cgPrice: 1.0,
+      candidateSources: ["coingecko", "defillama", "defillama-list"],
+      agreeSources: ["coingecko", "defillama", "defillama-list"],
+    });
+    const stats = makePriceValidationStats();
     fixtureApplyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("high");
   });

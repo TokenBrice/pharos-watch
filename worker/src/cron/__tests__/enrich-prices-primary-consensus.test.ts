@@ -2,27 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fixtureFetchPrimaryPrices,
   fixtureApplyResolvedPrice,
-  fixtureMockFetch,
-  fixtureMockD1 as createFixtureMockD1,
+  installPrimaryPriceRoutes,
+  makePeggedAsset,
+  makePrimaryPricingDb,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
 
-function installFetch(implementation: (url: string) => Response | Promise<Response>) {
-  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
-}
-
-function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
-  return createFixtureMockD1([
-    ...tables,
-    { match: "FROM dex_prices", rows: [] },
-    { match: "FROM dex_price_challenger_snapshots", rows: [] },
-    { match: "FROM dex_price_challengers", rows: [] },
-    { match: "FROM dex_liquidity", rows: [] },
-    { match: "FROM reserve_composition c", rows: [] },
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-  ]);
-}
+const installFetch = installPrimaryPriceRoutes;
 
 // --- fetchPrimaryPrices tests ---
 
@@ -37,7 +23,7 @@ describe("fetchPrimaryPrices", () => {
   }
 
   function makeTestDb() {
-    return fixtureMockD1([{ match: "circuit", rows: [] }]);
+    return makePrimaryPricingDb();
   }
 
   function makeDexBridgeDb({
@@ -54,36 +40,18 @@ describe("fetchPrimaryPrices", () => {
     }>;
     poolSources?: Array<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>;
   }) {
-    return fixtureMockD1([
-      { match: "circuit", rows: [] },
-      { match: "dex_price_usd", rows: dexRows ?? [] },
-      { match: "price_sources_json", rows: poolSources ?? [] },
-    ]);
+    return makePrimaryPricingDb({ dexRows: dexRows ?? [], poolSources: poolSources ?? [] });
   }
 
   it("withholds dex-promoted aggregate when an uncorroborated protocol source is rejected", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usr-resolv",
-        name: "Resolv USD",
-        symbol: "USR",
-        geckoId: "resolv-usr",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "usr-resolv",
+      name: "Resolv USD",
+      symbol: "USR",
+      geckoId: "resolv-usr",
+    })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              "resolv-usr": { usd: 0.145 },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ "coingecko.com": { body: { "resolv-usr": { usd: 0.145 } } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -129,28 +97,14 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("suppresses promoted DEX protocol sources when only a soft aggregator corroborates and withholds aggregate DEX", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usdc-circle",
-        name: "USD Coin",
-        symbol: "USDC",
-        geckoId: "usd-coin",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "usdc-circle",
+      name: "USD Coin",
+      symbol: "USDC",
+      geckoId: "usd-coin",
+    })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              "usd-coin": { usd: 1.0001 },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ "coingecko.com": { body: { "usd-coin": { usd: 1.0001 } } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -185,27 +139,9 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("withholds dex-promoted aggregate when a corroborated Uniswap protocol lane is accepted", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usdt-tether",
-        name: "Tether",
-        symbol: "USDT",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("binance")) {
-          return new Response(
-            JSON.stringify([
-              { symbol: "USDTUSD", price: "1.0000" },
-            ]),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ binance: { body: [{ symbol: "USDTUSD", price: "1.0000" }] } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -245,21 +181,9 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              tether: { usd: 1.0001 },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { tether: { usd: 1.0001 } } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0002]]);
@@ -286,21 +210,9 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("returns single-source when CG is the only source (no DL list price)", async () => {
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              tether: { usd: 1.0001 },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { tether: { usd: 1.0001 } } } });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -315,30 +227,15 @@ describe("fetchPrimaryPrices", () => {
 
   it("drops stale CoinGecko simple-price rows when upstream last_updated_at is old", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const assets: PeggedAsset[] = [
-      {
-        id: "gyd-gyroscope",
-        name: "Gyroscope GYD",
-        symbol: "GYD",
-        geckoId: "gyroscope-gyd",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "gyd-gyroscope",
+      name: "Gyroscope GYD",
+      symbol: "GYD",
+      geckoId: "gyroscope-gyd",
+    })];
 
-    const fetchMock = installFetch(async (url: string) => {
-      if (typeof url === "string" && url.includes("coingecko.com")) {
-        return new Response(
-          JSON.stringify({
-            "gyroscope-gyd": {
-              usd: 0.992463,
-              last_updated_at: nowSec - 86_400,
-            },
-          }),
-          { status: 200 },
-        );
-      }
-      return new Response("Not found", { status: 404 });
+    const fetchMock = installFetch({
+      coingecko: { body: { "gyroscope-gyd": { usd: 0.992463, last_updated_at: nowSec - 86_400 } } },
     });
 
     const db = makeTestDb();
@@ -374,21 +271,9 @@ describe("fetchPrimaryPrices", () => {
   it("keeps fresh CoinGecko simple-price upstream observation timestamps", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const observedAt = nowSec - 60;
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              tether: { usd: 1.0001, last_updated_at: observedAt },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { tether: { usd: 1.0001, last_updated_at: observedAt } } } });
 
     const db = makeTestDb();
     const { results } = await fixtureFetchPrimaryPrices(assets, db);
@@ -402,31 +287,13 @@ describe("fetchPrimaryPrices", () => {
 
   it("includes Kraken and Bitstamp in the consensus cluster when they agree", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch(async (url: string) => {
-        if (url.includes("coingecko.com")) {
-          return new Response(JSON.stringify({ tether: { usd: 1.0001 } }), { status: 200 });
-        }
-        if (url.includes("api.kraken.com")) {
-          return new Response(
-            JSON.stringify({
-              error: [],
-              result: { USDTZUSD: { c: ["1.0000"] } },
-            }),
-            { status: 200 },
-          );
-        }
-        if (url.includes("bitstamp.net")) {
-          return new Response(
-            JSON.stringify([{ pair: "USDT/USD", market: "USDT/USD", last: "1.0002", timestamp: String(nowSec - 60) }]),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({
+      coingecko: { body: { tether: { usd: 1.0001 } } },
+      "api.kraken.com": { body: { error: [], result: { USDTZUSD: { c: ["1.0000"] } } } },
+      "bitstamp.net": { body: [{ pair: "USDT/USD", market: "USDT/USD", last: "1.0002", timestamp: String(nowSec - 60) }] },
+    });
 
     const db = makeTestDb();
     const { results } = await fixtureFetchPrimaryPrices(assets, db);
@@ -438,21 +305,9 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("returns low confidence when CG and DL list prices diverge beyond 50bps", async () => {
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              tether: { usd: 0.99 },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { tether: { usd: 0.99 } } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.05]]);
@@ -473,21 +328,15 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("chooses the peg-closer candidate for non-USD divergences when references are available", async () => {
-    const assets: PeggedAsset[] = [
-      { id: "eurc-circle", name: "EURC", symbol: "EURC", geckoId: "euro-coin", pegType: "peggedEUR", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({
+      id: "eurc-circle",
+      name: "EURC",
+      symbol: "EURC",
+      geckoId: "euro-coin",
+      pegType: "peggedEUR",
+    })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              "euro-coin": { usd: 1.08 },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { "euro-coin": { usd: 1.08 } } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["eurc-circle", 1.8]]);
@@ -511,29 +360,15 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("does not force closer-to-$1 selection for NAV tokens during divergence", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "ousg-ondo-finance",
-        name: "OUSG",
-        symbol: "OUSG",
-        geckoId: "ousg",
-        pegType: "peggedUSD",
-        navToken: true,
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "ousg-ondo-finance",
+      name: "OUSG",
+      symbol: "OUSG",
+      geckoId: "ousg",
+      navToken: true,
+    })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              ousg: { usd: 1.01 },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: { ousg: { usd: 1.01 } } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["ousg-ondo-finance", 110]]);
@@ -556,17 +391,9 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("returns single-source when DL list is the only source", async () => {
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          // CG returns empty — no price data
-          return new Response(JSON.stringify({}), { status: 200 });
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({ coingecko: { body: {} } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0]]);
@@ -588,9 +415,7 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("can still evaluate assets without geckoId when other primary-source metadata exists", async () => {
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "NoGecko", symbol: "NG", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "NoGecko", symbol: "NG" })];
 
     installFetch(async () => new Response(JSON.stringify({}), { status: 200 }));
 
@@ -602,16 +427,12 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("filters wrong geckoIds out of CoinGecko fetches while still allowing other primary sources", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usdt-tether",
-        name: "BadGecko",
-        symbol: "BG",
-        geckoId: "something-wrong",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "usdt-tether",
+      name: "BadGecko",
+      symbol: "BG",
+      geckoId: "something-wrong",
+    })];
 
     installFetch(async () => new Response(JSON.stringify({}), { status: 200 }));
 
@@ -623,22 +444,13 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("tracks cgOnly in stats for CG-only single-source assets", async () => {
-    const assets: PeggedAsset[] = [
-      { id: "a", name: "A", symbol: "A", geckoId: "a-id", pegType: "peggedUSD", circulating: {} },
-      { id: "b", name: "B", symbol: "B", geckoId: "b-id", pegType: "peggedUSD", circulating: {} },
+    const assets = [
+      makePeggedAsset({ id: "a", name: "A", symbol: "A", geckoId: "a-id" }),
+      makePeggedAsset({ id: "b", name: "B", symbol: "B", geckoId: "b-id" }),
     ];
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(
-            JSON.stringify({
-              "a-id": { usd: 1.0 },
-              "b-id": { usd: 1.0 },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({
+      coingecko: { body: { "a-id": { usd: 1.0 }, "b-id": { usd: 1.0 } } },
+    });
     const db = makeTestDb();
     const { stats } = await fixtureFetchPrimaryPrices(assets, db);
     expect(stats.cgOnly).toBe(2);
@@ -647,29 +459,19 @@ describe("fetchPrimaryPrices", () => {
 
   it("uses Pyth as a single source when Hermes returns an unprefixed feed id", async () => {
     const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(JSON.stringify({}), { status: 200 });
-        }
-        if (typeof url === "string" && url.includes("hermes.pyth.network")) {
-          return new Response(
-            JSON.stringify({
-              parsed: [
-                {
-                  id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
-                  price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({
+      coingecko: { body: {} },
+      "hermes.pyth.network": {
+        body: {
+          parsed: [{
+            id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+            price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
+          }],
+        },
+      },
+    });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -684,26 +486,19 @@ describe("fetchPrimaryPrices", () => {
 
   it("can price tracked assets without a geckoId when another primary source exists", async () => {
     const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
-    const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", circulating: {} },
-    ];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT" })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("hermes.pyth.network")) {
-          return new Response(
-            JSON.stringify({
-              parsed: [
-                {
-                  id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
-                  price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response(JSON.stringify({}), { status: 200 });
-      });
+    installFetch({
+      "hermes.pyth.network": {
+        body: {
+          parsed: [{
+            id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+            price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
+          }],
+        },
+      },
+      "": { body: {} },
+    });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -716,62 +511,34 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("uses exact-case RedStone symbols and recovers batch-dropped results with solo retry", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usde-ethena",
-        name: "Ethena USDe",
-        symbol: "USDe",
-        geckoId: "ethena-usde",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-      {
-        id: "fxusd-f-x-protocol",
-        name: "fxUSD",
-        symbol: "fxUSD",
-        geckoId: "fxusd",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
+    const assets = [
+      makePeggedAsset({ id: "usde-ethena", name: "Ethena USDe", symbol: "USDe", geckoId: "ethena-usde" }),
+      makePeggedAsset({ id: "fxusd-f-x-protocol", name: "fxUSD", symbol: "fxUSD", geckoId: "fxusd" }),
     ];
 
-    const fetchMock = installFetch(async (url: string) => {
-      if (typeof url === "string" && url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
-      }
-      if (typeof url === "string" && url.includes("coingecko.com")) {
-        return new Response(JSON.stringify({}), { status: 200 });
-      }
-      if (typeof url === "string" && url.includes("hermes.pyth.network")) {
-        return new Response(JSON.stringify({ parsed: [] }), { status: 200 });
-      }
-      if (typeof url === "string" && url.includes("api.redstone.finance")) {
-        if (url.includes("symbols=USDe%2CfxUSD")) {
-          return new Response(
-            JSON.stringify({
+    const fetchMock = installFetch({
+      "coins.llama.fi": { body: { coins: {} } },
+      coingecko: { body: {} },
+      "hermes.pyth.network": { body: { parsed: [] } },
+      "api.redstone.finance": (url) => url.includes("symbols=USDe%2CfxUSD")
+        ? {
+            body: {
               USDe: {
                 value: 1.0003,
                 source: { curve: 1.0003, uniswap: 1.0002 },
                 timestamp: Date.now(),
               },
-            }),
-            { status: 200 },
-          );
-        }
-        if (url.includes("symbols=fxUSD")) {
-          return new Response(
-            JSON.stringify({
+            },
+          }
+        : {
+            body: {
               fxUSD: {
                 value: 0.9997,
                 source: { curve: 0.9997, chainlink: 0.9998 },
                 timestamp: Date.now(),
               },
-            }),
-            { status: 200 },
-          );
-        }
-      }
-      return new Response("Not found", { status: 404 });
+            },
+          },
     });
 
     const db = makeTestDb();
@@ -786,38 +553,20 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("excludes single-venue RedStone prices from primary consensus", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usde-ethena",
-        name: "Ethena USDe",
-        symbol: "USDe",
-        geckoId: "ethena-usde",
-        pegType: "peggedUSD",
-        circulating: {},
-      },
-    ];
+    const assets = [makePeggedAsset({
+      id: "usde-ethena",
+      name: "Ethena USDe",
+      symbol: "USDe",
+      geckoId: "ethena-usde",
+    })];
 
-    installFetch(async (url: string) => {
-        if (typeof url === "string" && url.includes("coingecko.com")) {
-          return new Response(JSON.stringify({}), { status: 200 });
-        }
-        if (typeof url === "string" && url.includes("hermes.pyth.network")) {
-          return new Response(JSON.stringify({ parsed: [] }), { status: 200 });
-        }
-        if (typeof url === "string" && url.includes("api.redstone.finance")) {
-          return new Response(
-            JSON.stringify({
-              USDe: {
-                value: 1.0003,
-                source: { curve: 1.0003 },
-                timestamp: Date.now(),
-              },
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response("Not found", { status: 404 });
-      });
+    installFetch({
+      coingecko: { body: {} },
+      "hermes.pyth.network": { body: { parsed: [] } },
+      "api.redstone.finance": {
+        body: { USDe: { value: 1.0003, source: { curve: 1.0003 }, timestamp: Date.now() } },
+      },
+    });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);

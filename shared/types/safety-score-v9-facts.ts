@@ -1434,7 +1434,7 @@ const V9FactSourceIdentityV2Schema = z
   })
   .strict();
 
-export const V9FactSourceFingerprintsV2Schema = z
+const V9FactSourceFingerprintsV2Schema = z
   .object({
     registry: V9FactSourceIdentityV2Schema,
     dex: V9FactSourceIdentityV2Schema,

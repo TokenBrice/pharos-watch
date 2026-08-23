@@ -3,6 +3,7 @@ import {
   type DependencyType,
   type V9DependencyEconomicRole,
 } from "../../types/dependency-types";
+import { compareText } from "../../types/safety-score-v9-fact-primitives";
 import type { V9FailureDomainRef } from "../../types/safety-score-v9-facts";
 import { resolveChainId } from "../chains";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";
@@ -204,7 +205,7 @@ function canonicalPlanningDomains(domains: readonly V9FailureDomainRef[]): V9Fai
         return [domainKey(canonical), canonical];
       }),
     ).values(),
-  ].sort((left, right) => domainKey(left).localeCompare(domainKey(right)));
+  ].sort((left, right) => compareText(domainKey(left), domainKey(right)));
 }
 
 function pathSortKey(path: V9DependencyPathPlan): string {
@@ -212,7 +213,7 @@ function pathSortKey(path: V9DependencyPathPlan): string {
 }
 
 function comparePath(left: V9DependencyPathPlan, right: V9DependencyPathPlan): number {
-  return pathSortKey(left).localeCompare(pathSortKey(right));
+  return compareText(pathSortKey(left), pathSortKey(right));
 }
 
 const ROLE_ORDER = new Map<V9DependencyEconomicRole, number>(
@@ -224,19 +225,19 @@ function comparePlanningEdge(left: V9DependencyPlanningEdge, right: V9Dependency
     (ROLE_ORDER.get(left.economicRole) ?? Number.MAX_SAFE_INTEGER) -
       (ROLE_ORDER.get(right.economicRole) ?? Number.MAX_SAFE_INTEGER) ||
     right.weight - left.weight ||
-    left.dependencyType.localeCompare(right.dependencyType) ||
-    left.edgeKey.localeCompare(right.edgeKey)
+    compareText(left.dependencyType, right.dependencyType) ||
+    compareText(left.edgeKey, right.edgeKey)
   );
 }
 
 function compareSuppressedRole(left: V9SuppressedDependencyRole, right: V9SuppressedDependencyRole): number {
   return (
-    left.assetId.localeCompare(right.assetId) ||
-    left.upstreamAssetId.localeCompare(right.upstreamAssetId) ||
-    left.selectedRole.localeCompare(right.selectedRole) ||
-    left.selectedEdgeKey.localeCompare(right.selectedEdgeKey) ||
-    left.suppressedRole.localeCompare(right.suppressedRole) ||
-    left.suppressedEdgeKey.localeCompare(right.suppressedEdgeKey)
+    compareText(left.assetId, right.assetId) ||
+    compareText(left.upstreamAssetId, right.upstreamAssetId) ||
+    compareText(left.selectedRole, right.selectedRole) ||
+    compareText(left.selectedEdgeKey, right.selectedEdgeKey) ||
+    compareText(left.suppressedRole, right.suppressedRole) ||
+    compareText(left.suppressedEdgeKey, right.suppressedEdgeKey)
   );
 }
 
@@ -277,13 +278,13 @@ function selectDependencyRoles(assets: readonly V9DependencyPlanningAsset[]): {
 } {
   const paths: V9DependencyPathPlan[] = [];
   const suppressed: V9SuppressedDependencyRole[] = [];
-  for (const asset of [...assets].sort((left, right) => left.assetId.localeCompare(right.assetId))) {
+  for (const asset of [...assets].sort((left, right) => compareText(left.assetId, right.assetId))) {
     const byUpstream = new Map<string, V9DependencyPlanningEdge[]>();
     for (const edge of asset.dependencies.edges) {
       byUpstream.set(edge.upstreamAssetId, [...(byUpstream.get(edge.upstreamAssetId) ?? []), edge]);
     }
     for (const [upstreamAssetId, rawEdges] of [...byUpstream.entries()].sort(([left], [right]) =>
-      left.localeCompare(right),
+      compareText(left, right),
     )) {
       const edges = [...rawEdges].sort(comparePlanningEdge);
       const serialEdges = edges.filter((edge) => edge.economicRole === "serial-claim");
@@ -318,7 +319,7 @@ function selectDependencyRoles(assets: readonly V9DependencyPlanningAsset[]): {
       for (const role of V9_DEPENDENCY_ECONOMIC_ROLES.filter((candidate) => candidate !== "serial-claim")) {
         const edgeGroups = [...byRoleAndEdge.entries()]
           .filter(([key]) => key.startsWith(`${role}\u0000`))
-          .sort(([left], [right]) => left.localeCompare(right));
+          .sort(([left], [right]) => compareText(left, right));
         for (const [, roleEdges] of edgeGroups) {
           const path = coalescedPath(asset.assetId, upstreamAssetId, roleEdges);
           paths.push(path);
@@ -387,13 +388,13 @@ function collectCommonModes(
       failureDomain: group.failureDomain,
       members: [...group.members].sort(
         (left, right) =>
-          left.assetId.localeCompare(right.assetId) ||
-          left.owner.localeCompare(right.owner) ||
-          left.pathKey.localeCompare(right.pathKey),
+          compareText(left.assetId, right.assetId) ||
+          compareText(left.owner, right.owner) ||
+          compareText(left.pathKey, right.pathKey),
       ),
     }))
     .filter((group) => group.members.length >= 2)
-    .sort((left, right) => domainKey(left.failureDomain).localeCompare(domainKey(right.failureDomain)));
+    .sort((left, right) => compareText(domainKey(left.failureDomain), domainKey(right.failureDomain)));
 }
 
 function serialDescendantsOfCycles(
@@ -507,7 +508,7 @@ export function buildV9DependencyEvaluationPlan(args: {
       to: path.assetId,
       weight: Math.max(previous?.weight ?? 0, path.weight),
       type:
-        previous === undefined || path.dependencyType.localeCompare(previous.type) < 0
+        previous === undefined || compareText(path.dependencyType, previous.type) < 0
           ? path.dependencyType
           : previous.type,
     });
@@ -677,9 +678,9 @@ export function projectV9RoleDependencyPillarLimits(
     .filter((input) => roleTargetPillar(input.role) !== null)
     .sort(
       (left, right) =>
-        roleTargetPillar(left.role)!.localeCompare(roleTargetPillar(right.role)!) ||
-        left.edgeKey.localeCompare(right.edgeKey) ||
-        left.upstreamAssetId.localeCompare(right.upstreamAssetId),
+        compareText(roleTargetPillar(left.role)!, roleTargetPillar(right.role)!) ||
+        compareText(left.edgeKey, right.edgeKey) ||
+        compareText(left.upstreamAssetId, right.upstreamAssetId),
     );
   type EventGroup = {
     targetPillar: V9RoleDependencyTargetPillar;
@@ -713,22 +714,22 @@ export function projectV9RoleDependencyPillarLimits(
   const eventCandidates = [...eventGroups.values()]
     .map((group): UnallocatedEvent => {
       const groupInputs = [...group.inputs].sort(
-        (left, right) => left.edgeKey.localeCompare(right.edgeKey) || left.upstreamAssetId.localeCompare(right.upstreamAssetId),
+        (left, right) => compareText(left.edgeKey, right.edgeKey) || compareText(left.upstreamAssetId, right.upstreamAssetId),
       );
       const boundedUnknown = groupInputs.some((input) => input.boundedUnknown || input.score === null);
       const selected = boundedUnknown
         ? [...groupInputs].sort(
             (left, right) =>
               right.weight - left.weight ||
-              left.edgeKey.localeCompare(right.edgeKey) ||
-              left.upstreamAssetId.localeCompare(right.upstreamAssetId),
+              compareText(left.edgeKey, right.edgeKey) ||
+              compareText(left.upstreamAssetId, right.upstreamAssetId),
           )[0]!
         : [...groupInputs].sort(
             (left, right) =>
               right.weight * (100 - (right.score as number)) -
                 left.weight * (100 - (left.score as number)) ||
-              left.edgeKey.localeCompare(right.edgeKey) ||
-              left.upstreamAssetId.localeCompare(right.upstreamAssetId),
+              compareText(left.edgeKey, right.edgeKey) ||
+              compareText(left.upstreamAssetId, right.upstreamAssetId),
           )[0]!;
       const nominalExposureShare = selected.weight;
       const inheritedScore = boundedUnknown ? null : selected.score;
@@ -760,9 +761,9 @@ export function projectV9RoleDependencyPillarLimits(
     })
     .sort(
       (left, right) =>
-        left.targetPillar.localeCompare(right.targetPillar) ||
-        left.exposureKey.localeCompare(right.exposureKey) ||
-        left.riskEventKey.localeCompare(right.riskEventKey),
+        compareText(left.targetPillar, right.targetPillar) ||
+        compareText(left.exposureKey, right.exposureKey) ||
+        compareText(left.riskEventKey, right.riskEventKey),
     );
   const selectedEvents = [...new Map(
     (["exit", "control"] as const).flatMap((targetPillar) => {
@@ -776,7 +777,7 @@ export function projectV9RoleDependencyPillarLimits(
             (right.boundedUnknown ? right.nominalExposureShare * 100 : right.modeledLossPoints ?? 0) -
               (left.boundedUnknown ? left.nominalExposureShare * 100 : left.modeledLossPoints ?? 0) ||
             Number(right.boundedUnknown) - Number(left.boundedUnknown) ||
-            left.riskEventKey.localeCompare(right.riskEventKey),
+            compareText(left.riskEventKey, right.riskEventKey),
         )[0]!;
         return [`${targetPillar}\u0000${exposureKey}`, selected] as const;
       });
@@ -809,9 +810,9 @@ export function projectV9RoleDependencyPillarLimits(
     })
     .sort(
       (left, right) =>
-        left.targetPillar.localeCompare(right.targetPillar) ||
-        left.exposureKey.localeCompare(right.exposureKey) ||
-        left.riskEventKey.localeCompare(right.riskEventKey),
+        compareText(left.targetPillar, right.targetPillar) ||
+        compareText(left.exposureKey, right.exposureKey) ||
+        compareText(left.riskEventKey, right.riskEventKey),
     );
 
   const project = (targetPillar: V9RoleDependencyTargetPillar): V9RoleDependencyPillarProjection => {

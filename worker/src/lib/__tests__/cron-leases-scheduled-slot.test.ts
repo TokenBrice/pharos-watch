@@ -4,6 +4,7 @@ import {
   sweepStaleScheduledSlotExecutions,
 } from "../scheduled-slot-fence";
 import {
+  closeOpenLeaseDatabases,
   makeLeaseDb,
   setSlotUpdatedAt,
 } from "./cron-leases.test-support";
@@ -16,6 +17,7 @@ describe("runScheduledSlotWithFence", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    closeOpenLeaseDatabases();
   });
 
   it("preserves both the primary failure and a terminal slot-write failure", async () => {
@@ -867,10 +869,10 @@ describe("runScheduledSlotWithFence", () => {
     expect(db.getSlot("quarterHourly", staleSlotStartedAt)?.result_status).toBe("error");
   });
 
-  it("refuses to finish a stale slot whose own child progress survived reconciliation", async () => {
+  it("reconciles orphaned owner progress without deleting newer leases and remains fence-safe and idempotent", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
-    const db = makeLeaseDb({
+    const missingLeaseDb = makeLeaseDb({
       slots: [
         {
           slot_key: "hourlyYieldSync",
@@ -884,8 +886,6 @@ describe("runScheduledSlotWithFence", () => {
           metadata: null,
         },
       ],
-      // No cron_leases row for sync-yield-data: reconciliation cannot prove the child is dead,
-      // so it leaves the progress row in place and the terminal UPDATE must refuse to fire.
       progress: [
         {
           job: "sync-yield-data",
@@ -898,12 +898,140 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    await expect(sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 })).rejects.toThrow(
-      "scheduled slot ownership lost",
-    );
+    const missingLeaseSummary = await sweepStaleScheduledSlotExecutions(missingLeaseDb, {
+      nowSec: now,
+      staleAfterSec: 1200,
+    });
 
-    expect(db.getProgress("sync-yield-data")).toBeDefined();
-    expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({ state: "reconciling" });
+    expect(missingLeaseSummary).toMatchObject({
+      candidateSlots: 1,
+      slotsReconciled: 1,
+      syntheticCronRuns: 1,
+      progressRowsCleared: 1,
+      leasesCleared: 0,
+    });
+    expect(missingLeaseDb.getProgress("sync-yield-data")).toBeUndefined();
+    expect(missingLeaseDb.getRuns()).toEqual([
+      expect.objectContaining({
+        job: "sync-yield-data",
+        status: "error",
+        slot_started_at: staleSlotStartedAt,
+      }),
+    ]);
+    expect(JSON.parse(missingLeaseDb.getRuns()[0]?.metadata ?? "{}")).toMatchObject({
+      leaseOwner: "yield-owner-a",
+      leaseUntil: null,
+    });
+    expect(missingLeaseDb.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({
+      state: "finished",
+      result_status: "error",
+    });
+    await expect(
+      sweepStaleScheduledSlotExecutions(missingLeaseDb, { nowSec: now + 60, staleAfterSec: 1200 }),
+    ).resolves.toMatchObject({ candidateSlots: 0, slotsReconciled: 0, syntheticCronRuns: 0 });
+    expect(missingLeaseDb.getRuns()).toHaveLength(1);
+
+    const newerLeaseDb = makeLeaseDb({
+      slots: [
+        {
+          slot_key: "hourlyYieldSync",
+          slot_started_at: staleSlotStartedAt,
+          state: "running",
+          result_status: null,
+          execution_owner: "slot-owner-a",
+          started_at: staleSlotStartedAt,
+          finished_at: null,
+          updated_at: now - 1800,
+          metadata: null,
+        },
+      ],
+      leases: [
+        {
+          job: "sync-yield-data",
+          lease_owner: "yield-owner-new",
+          lease_until: now + 300,
+          heartbeat_at: now - 60,
+          updated_at: now - 60,
+        },
+      ],
+      progress: [
+        {
+          job: "sync-yield-data",
+          started_at: staleSlotStartedAt + 20,
+          updated_at: now - 1800,
+          stage: "publication",
+          lease_owner: "yield-owner-old",
+          slot_started_at: staleSlotStartedAt,
+        },
+      ],
+    });
+
+    const newerLeaseSummary = await sweepStaleScheduledSlotExecutions(newerLeaseDb, {
+      nowSec: now,
+      staleAfterSec: 1200,
+    });
+
+    expect(newerLeaseSummary).toMatchObject({
+      slotsReconciled: 1,
+      syntheticCronRuns: 1,
+      progressRowsCleared: 1,
+      leasesCleared: 0,
+    });
+    expect(newerLeaseDb.getProgress("sync-yield-data")).toBeUndefined();
+    expect(newerLeaseDb.getLease("sync-yield-data")).toMatchObject({
+      lease_owner: "yield-owner-new",
+      lease_until: now + 300,
+    });
+    expect(JSON.parse(newerLeaseDb.getRuns()[0]?.metadata ?? "{}")).toMatchObject({
+      leaseOwner: "yield-owner-old",
+      leaseUntil: null,
+    });
+
+    const fenceLostDb = makeLeaseDb({
+      slots: [
+        {
+          slot_key: "hourlyYieldSync",
+          slot_started_at: staleSlotStartedAt,
+          state: "running",
+          result_status: null,
+          execution_owner: "slot-owner-a",
+          started_at: staleSlotStartedAt,
+          finished_at: null,
+          updated_at: now - 1800,
+          metadata: null,
+        },
+      ],
+      progress: [
+        {
+          job: "sync-yield-data",
+          started_at: staleSlotStartedAt + 20,
+          updated_at: now - 1800,
+          stage: "publication",
+          lease_owner: "yield-owner-a",
+          slot_started_at: staleSlotStartedAt,
+        },
+      ],
+      beforeOrphanedProgressDelete: (sqlite) => {
+        sqlite
+          .prepare(
+            `UPDATE cron_slot_executions
+                SET execution_owner = 'racing-owner', execution_generation = execution_generation + 1
+              WHERE slot_key = 'hourlyYieldSync' AND slot_started_at = ?`,
+          )
+          .run(staleSlotStartedAt);
+      },
+    });
+
+    await expect(
+      sweepStaleScheduledSlotExecutions(fenceLostDb, { nowSec: now, staleAfterSec: 1200 }),
+    ).rejects.toThrow("scheduled slot ownership lost");
+    expect(fenceLostDb.getProgress("sync-yield-data")).toBeDefined();
+    expect(fenceLostDb.getRuns()).toEqual([]);
+    expect(fenceLostDb.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({
+      state: "reconciling",
+      execution_owner: "racing-owner",
+      execution_generation: 3,
+    });
   });
 
   it("does not synthesize a stale child cron run while the matching child lease is still active", async () => {

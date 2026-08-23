@@ -4,6 +4,7 @@ import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
+  assertFiniteNonNegativeReserveRows,
   buildBucketSlices,
   buildRedemptionSnapshotMetadata,
   fetchJsonAdapterInput,
@@ -104,19 +105,23 @@ function bucketForFalconAsset(label: string): FalconBucket {
 }
 
 function sumFalconAssetValue(asset: FalconBreakdownAsset): number {
-  let total = 0;
-  for (const [key, value] of Object.entries(asset)) {
-    if (key === "label") continue;
-    const numeric =
+  const venues = Object.entries(asset)
+    .filter(([key]) => key !== "label")
+    .map(([venue, value]) => ({
+      venue,
+      value:
       typeof value === "number"
         ? value
         : typeof value === "string" && value.trim()
           ? Number(value)
-          : NaN;
-    if (!Number.isFinite(numeric) || numeric <= 0) continue;
-    total += numeric;
-  }
-  return total;
+          : NaN,
+    }));
+  assertFiniteNonNegativeReserveRows(
+    venues,
+    (venue) => venue.value,
+    `Falcon ${asset.label} venue values`,
+  );
+  return venues.reduce((total, venue) => total + venue.value, 0);
 }
 
 export function adaptFalconTransparency(payload: FalconTransparencyResponse): AdapterResult {

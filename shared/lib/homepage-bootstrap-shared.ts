@@ -89,7 +89,7 @@ export function buildHomepageBootstrapDescriptors<TRegistry extends HomepageBoot
   return HOMEPAGE_BOOTSTRAP_QUERY_IDS.map((id) => ({ id, descriptor: registry[id] })) as readonly HomepageBootstrapDescriptorForRegistry<TRegistry>[];
 }
 
-export function descriptorMaxAgeMs(descriptor: SeedableDescriptor): number {
+function descriptorMaxAgeMs(descriptor: SeedableDescriptor): number {
   return (descriptor.metaMaxAgeSec ?? descriptor.producerIntervalMs / 1000) * 1000;
 }
 

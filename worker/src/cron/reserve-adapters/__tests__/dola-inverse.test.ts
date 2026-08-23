@@ -2,6 +2,7 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   const fetchOnchainRawCall = vi.fn();
   return {
@@ -9,10 +10,10 @@ vi.mock("../helpers", async (importOriginal) => {
     fetchJsonAdapterInput: vi.fn(),
     fetchOnchainUint256,
     fetchOnchainRawCall,
-    makeOnchainCallers: vi.fn(() => ({
-      uint256: (contract: string, data: string) => fetchOnchainUint256({ contract, data }),
-      raw: (contract: string, data: string) => fetchOnchainRawCall({ contract, data }),
-    })),
+    makeOnchainCallers: makeOnchainCallersMock({
+      uint256: fetchOnchainUint256,
+      raw: fetchOnchainRawCall,
+    }),
   };
 });
 

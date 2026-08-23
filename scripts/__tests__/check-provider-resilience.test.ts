@@ -1,26 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
   findBareFetchCalls,
   scanProviderResilience,
 } from "../ci/check-provider-resilience.ts";
-
-function withTempRepo(files: Record<string, string>, run: (dir: string) => void): void {
-  const dir = mkdtempSync(join(tmpdir(), "pharos-provider-resilience-"));
-  try {
-    for (const [relPath, content] of Object.entries(files)) {
-      const filePath = join(dir, relPath);
-      mkdirSync(dirname(filePath), { recursive: true });
-      writeFileSync(filePath, content);
-    }
-    run(dir);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
+import { withTempRepo } from "./helpers/test-state";
 
 const validDirectFetchRegistry = [
   {
@@ -54,7 +38,7 @@ describe("provider resilience checker", () => {
   });
 
   it("passes a registered direct provider with timeout, body, circuit, and test coverage", () => {
-    withTempRepo({
+    withTempRepo("pharos-provider-resilience", {
       "worker/src/provider.ts": `
         const marker = "CIRCUIT_SOURCE.DEMO";
         async function drainResponseBody(_res: Response) {}
@@ -77,7 +61,7 @@ describe("provider resilience checker", () => {
   });
 
   it("fails when a registered fetchWithRetry surface adds bare fetch", () => {
-    withTempRepo({
+    withTempRepo("pharos-provider-resilience", {
       "worker/src/provider.ts": `
         import { fetchWithRetry } from "./fetch-retry";
         export async function run() {
@@ -113,7 +97,7 @@ describe("provider resilience checker", () => {
   });
 
   it("fails when a new direct fetch file is not registered", () => {
-    withTempRepo({
+    withTempRepo("pharos-provider-resilience", {
       "worker/src/unregistered.ts": `
         export async function run() {
           return fetch("https://example.test", { signal: AbortSignal.timeout(1000) });

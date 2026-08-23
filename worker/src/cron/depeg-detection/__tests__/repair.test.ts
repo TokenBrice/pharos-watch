@@ -1,25 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { DepegRow } from "../../../lib/depeg-helpers";
+import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { buildDuplicateOpenEventRepair, buildOrphanCloseRepair } from "../repair";
 
-function makeOpenRow(overrides: Partial<DepegRow> = {}): DepegRow {
+function makeOpenRow(overrides: Parameters<typeof makeDepegRow>[0] = {}): DepegRow {
   return {
-    id: 1,
-    stablecoin_id: "usdt-tether",
-    symbol: "USDT",
-    peg_type: "peggedUSD",
-    direction: "below",
-    peak_deviation_bps: -150,
-    started_at: 100,
-    ended_at: null,
-    start_price: 0.985,
-    peak_price: 0.985,
-    recovery_price: null,
-    peg_reference: 1,
-    source: "live",
+    ...makeDepegRow(overrides),
     confirmation_sources: null,
     pending_reason: null,
-    ...overrides,
   };
 }
 

@@ -2,15 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildStabilityInputForDay,
   buildSupplySnapshotMap,
-  type PsiDepegEventRow,
   type PsiSupplyRow,
 } from "../psi-recompute";
 import {
   findNearestSupplySnapshot,
   type PsiUniverseCache,
 } from "../psi-history-universe";
-
-const DAY = 86_400;
+import { buildPsiDayInput, buildPsiStabilityInput, psiDepegRow, psiSupplyPair, DAY } from "./psi.test-support";
 
 describe("buildSupplySnapshotMap", () => {
   it("returns an empty map for empty input", () => {
@@ -100,13 +98,7 @@ describe("findNearestSupplySnapshot", () => {
 describe("buildStabilityInputForDay", () => {
   it("handles no active depegs", () => {
     const day = 30 * DAY;
-    const now = day + 2 * DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1000 },
-      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 900 },
-    ]);
-
-    const result = buildStabilityInputForDay(day, now, [], supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 1000, priorMcap: 900 }), [], day + 2 * DAY);
 
     expect(result.depegCount).toBe(0);
     expect(result.depegs).toEqual([]);
@@ -116,29 +108,10 @@ describe("buildStabilityInputForDay", () => {
 
   it("uses the worst absolute bps for active coin depegs", () => {
     const day = 40 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000 },
-      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 1_500_000 },
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2_000_000, priorMcap: 1_500_000 }), [
+      psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -4 * DAY, endedOffsetSec: null, peakDeviationBps: 120 }),
+      psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -2 * DAY, endedOffsetSec: null, peakDeviationBps: -250 }),
     ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "usdt-tether",
-        peak_deviation_bps: 120,
-        peg_reference: 1,
-        started_at: day - 4 * DAY,
-        ended_at: null,
-      },
-      {
-        stablecoin_id: "usdt-tether",
-        peak_deviation_bps: -250,
-        peg_reference: 1,
-        started_at: day - 2 * DAY,
-        ended_at: null,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
 
     expect(result.depegCount).toBe(1);
     expect(result.depegs).toEqual([
@@ -154,22 +127,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("replays day-level depeg severity from historical supply prices when available", () => {
     const day = 40 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000, price: 0.985 },
-      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 1_500_000, price: 1 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "usdt-tether",
-        peak_deviation_bps: -250,
-        peg_reference: 1,
-        started_at: day - 2 * DAY,
-        ended_at: null,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2_000_000, priorMcap: 1_500_000, currentPrice: 0.985, priorPrice: 1 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -2 * DAY, endedOffsetSec: null, peakDeviationBps: -250 })]);
 
     expect(result.depegs).toEqual([
       {
@@ -184,22 +142,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("caps replayed historical deviation at the recorded peak when stored peg reference is stale", () => {
     const day = 40 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "eurs-stasis", snapshot_date: day, circulating_usd: 39_000_000, price: 1.2353 },
-      { stablecoin_id: "eurs-stasis", snapshot_date: day - 7 * DAY, circulating_usd: 38_000_000, price: 1.22 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "eurs-stasis",
-        peak_deviation_bps: 189,
-        peg_reference: 1,
-        started_at: day - 2 * DAY,
-        ended_at: day + DAY,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "eurs-stasis", day, currentMcap: 39_000_000, priorMcap: 38_000_000, currentPrice: 1.2353, priorPrice: 1.22 }), [psiDepegRow({ stablecoinId: "eurs-stasis", day, startedOffsetSec: -2 * DAY, endedOffsetSec: DAY, peakDeviationBps: 189 })]);
 
     expect(result.depegs).toEqual([
       {
@@ -214,22 +157,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("includes resolved depegs that are still active on the target day", () => {
     const day = 20 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdc-circle", snapshot_date: day, circulating_usd: 500_000 },
-      { stablecoin_id: "usdc-circle", snapshot_date: day - 7 * DAY, circulating_usd: 500_000 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "usdc-circle",
-        peak_deviation_bps: 180,
-        peg_reference: 1,
-        started_at: day - DAY,
-        ended_at: day + 60,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdc-circle", day, currentMcap: 500_000, priorMcap: 500_000 }), [psiDepegRow({ stablecoinId: "usdc-circle", day, startedOffsetSec: -DAY, endedOffsetSec: DAY + 60, peakDeviationBps: 180 })]);
 
     expect(result.depegCount).toBe(1);
     expect(result.depegs[0]).toEqual({
@@ -243,22 +171,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("counts depegs that start later during the target UTC day", () => {
     const day = 20 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdc-circle", snapshot_date: day, circulating_usd: 500_000 },
-      { stablecoin_id: "usdc-circle", snapshot_date: day - 7 * DAY, circulating_usd: 500_000 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "usdc-circle",
-        peak_deviation_bps: -180,
-        peg_reference: 1,
-        started_at: day + 12 * 3600,
-        ended_at: day + 18 * 3600,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdc-circle", day, currentMcap: 500_000, priorMcap: 500_000 }), [psiDepegRow({ stablecoinId: "usdc-circle", day, startedOffsetSec: 12 * 3600, endedOffsetSec: 18 * 3600, peakDeviationBps: -180 })]);
 
     expect(result.depegCount).toBe(1);
     expect(result.depegs[0]).toEqual({
@@ -270,22 +183,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("maps legacy PSI depeg ids onto canonical shadow supply snapshots", () => {
     const day = 20 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "ust-terra", snapshot_date: day, circulating_usd: 18_000_000_000 },
-      { stablecoin_id: "ust-terra", snapshot_date: day - 7 * DAY, circulating_usd: 17_500_000_000 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "ust-terra-classic",
-        peak_deviation_bps: -9900,
-        peg_reference: 1,
-        started_at: day,
-        ended_at: null,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "ust-terra", day, currentMcap: 18_000_000_000, priorMcap: 17_500_000_000 }), [psiDepegRow({ stablecoinId: "ust-terra-classic", day, startedOffsetSec: 0, endedOffsetSec: null, peakDeviationBps: -9900 })]);
 
     expect(result.depegCount).toBe(1);
     expect(result.depegs).toEqual([
@@ -299,22 +197,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("uses peak deviation as a start-day floor when the daily snapshot misses an intraday shock", () => {
     const day = 40 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000, price: 0.9995 },
-      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 1_500_000, price: 1 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "usdt-tether",
-        peak_deviation_bps: -1200,
-        peg_reference: 1,
-        started_at: day + 6 * 3600,
-        ended_at: null,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2_000_000, priorMcap: 1_500_000, currentPrice: 0.9995, priorPrice: 1 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: 6 * 3600, endedOffsetSec: null, peakDeviationBps: -1200 })]);
 
     expect(result.depegs).toEqual([
       {
@@ -329,22 +212,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("drops start-day peaks that only bleed a few seconds past UTC close", () => {
     const day = 40 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 64_000_000, price: 1.0027 },
-      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 63_000_000, price: 1 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "usdt-tether",
-        peak_deviation_bps: 339,
-        peg_reference: 1,
-        started_at: day + 22 * 3600,
-        ended_at: day + DAY + 90,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 64_000_000, priorMcap: 63_000_000, currentPrice: 1.0027, priorPrice: 1 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: 22 * 3600, endedOffsetSec: DAY + 90, peakDeviationBps: 339 })]);
 
     expect(result.depegCount).toBe(0);
     expect(result.depegs).toEqual([]);
@@ -354,22 +222,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("uses the daily price when a same-day follow-on depeg is already materially captured", () => {
     const day = 40 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "lusd-liquity", snapshot_date: day, circulating_usd: 247_756_468, price: 1.0135 },
-      { stablecoin_id: "lusd-liquity", snapshot_date: day - 7 * DAY, circulating_usd: 241_941_590, price: 0.997 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "lusd-liquity",
-        peak_deviation_bps: 209,
-        peg_reference: 1,
-        started_at: day + 10 * 3600,
-        ended_at: day + DAY + 9 * 3600,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "lusd-liquity", day, currentMcap: 247_756_468, priorMcap: 241_941_590, currentPrice: 1.0135, priorPrice: 0.997 }), [psiDepegRow({ stablecoinId: "lusd-liquity", day, startedOffsetSec: 10 * 3600, endedOffsetSec: DAY + 9 * 3600, peakDeviationBps: 209 })]);
 
     expect(result.depegs).toEqual([
       {
@@ -384,22 +237,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("drops a same-day wick that fully recovers back inside threshold before UTC close", () => {
     const day = 40 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000, price: 0.9995 },
-      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 1_500_000, price: 1 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "usdt-tether",
-        peak_deviation_bps: -1200,
-        peg_reference: 1,
-        started_at: day + 6 * 3600,
-        ended_at: day + 18 * 3600,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2_000_000, priorMcap: 1_500_000, currentPrice: 0.9995, priorPrice: 1 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: 6 * 3600, endedOffsetSec: 18 * 3600, peakDeviationBps: -1200 })]);
 
     expect(result.depegCount).toBe(0);
     expect(result.depegs).toEqual([]);
@@ -409,22 +247,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("includes multi-day events with sub-threshold daily prices (matching live cron behavior)", () => {
     const day = 40 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000, price: 0.993 },
-      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 1_500_000, price: 1 },
-    ]);
-    const events: PsiDepegEventRow[] = [
-      {
-        stablecoin_id: "usdt-tether",
-        peak_deviation_bps: -1200,
-        peg_reference: 1,
-        started_at: day - 3 * DAY,
-        ended_at: null,
-      },
-    ];
-
-    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+    const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2_000_000, priorMcap: 1_500_000, currentPrice: 0.993, priorPrice: 1 }), [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -3 * DAY, endedOffsetSec: null, peakDeviationBps: -1200 })]);
 
     // Multi-day active events contribute with their daily price deviation
     // regardless of threshold, matching the live cron which includes all
@@ -443,25 +266,18 @@ describe("buildStabilityInputForDay", () => {
 
   it("returns 0 mcap7dChangePct when 7d-ago mcap is zero", () => {
     const day = 12 * DAY;
-    const now = day + DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1000 },
-    ]);
-
-    const result = buildStabilityInputForDay(day, now, [], supplyByCoin);
+    const result = buildPsiStabilityInput(day, [{ stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1000 }]);
     expect(result.totalMcapUsd).toBe(1000);
     expect(result.mcap7dChangePct).toBe(0);
   });
 
   it("reports PSI-universe coverage metadata", () => {
     const day = 1_746_384_000; // 2025-05-09T00:00:00Z
-    const supplyByCoin = buildSupplySnapshotMap([
+    const input = buildPsiStabilityInput(day, [
       { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000 },
       { stablecoin_id: "ust-terra", snapshot_date: day, circulating_usd: 5_000_000 },
       { stablecoin_id: "not-a-psi-coin", snapshot_date: day, circulating_usd: 999_000_000 },
-    ]);
-
-    const input = buildStabilityInputForDay(day, day, [], supplyByCoin);
+    ], [], day);
 
     expect(input.totalMcapUsd).toBe(105_000_000);
     expect(input.eligibleUniverseCount).toBeGreaterThan(input.coveredUniverseCount);
@@ -471,25 +287,10 @@ describe("buildStabilityInputForDay", () => {
 
   it("uses PSI-bounded market cap for depeg denominators", () => {
     const day = 1_746_384_000; // 2025-05-09T00:00:00Z
-    const supplyByCoin = buildSupplySnapshotMap([
+    const input = buildPsiStabilityInput(day, [
       { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000 },
       { stablecoin_id: "not-a-psi-coin", snapshot_date: day, circulating_usd: 900_000_000 },
-    ]);
-
-    const input = buildStabilityInputForDay(
-      day,
-      day,
-      [
-        {
-          stablecoin_id: "usdt-tether",
-          peak_deviation_bps: -120,
-          peg_reference: 1,
-          started_at: day - DAY,
-          ended_at: null,
-        },
-      ],
-      supplyByCoin,
-    );
+    ], [psiDepegRow({ stablecoinId: "usdt-tether", day, startedOffsetSec: -DAY, endedOffsetSec: null, peakDeviationBps: -120 })], day);
 
     expect(input.totalMcapUsd).toBe(100_000_000);
     expect(input.depegs).toEqual([
@@ -499,11 +300,7 @@ describe("buildStabilityInputForDay", () => {
 
   it("produces identical output with and without a universe cache and memoizes by day", () => {
     const day = 30 * DAY;
-    const now = day + 2 * DAY;
-    const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 1000 },
-      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 900 },
-    ]);
+    const { now, supplyByCoin } = buildPsiDayInput({ day, now: day + 2 * DAY, supplyRows: psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 1000, priorMcap: 900 }) });
 
     const uncached = buildStabilityInputForDay(day, now, [], supplyByCoin);
 

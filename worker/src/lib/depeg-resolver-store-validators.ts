@@ -31,7 +31,7 @@ export function lockStateInsertValuesSql(
 }
 
 export interface LockStateOnConflictOptions {
-  incrementDeferralCount: boolean;
+  incrementDeferralCount: boolean | "if-new-attempt";
   preserveDeferralReason: boolean;
   preserveMetadata: boolean;
   lastStateSql: "excluded.last_state" | "'lock_deferred'";
@@ -46,9 +46,14 @@ function lockMetadataAssignment(column: string, preserve: boolean): string {
 export function lockStateOnConflictUpdateSql(options: LockStateOnConflictOptions): string {
   const assignments = [
     "last_attempted_at = excluded.last_attempted_at",
-    ...(options.incrementDeferralCount
-      ? ["deferral_count = depeg_resolver_prediction_lock_state.deferral_count + 1"]
-      : []),
+    ...(options.incrementDeferralCount === "if-new-attempt"
+      ? [
+          "deferral_count = depeg_resolver_prediction_lock_state.deferral_count + " +
+            "CASE WHEN EXISTS (SELECT 1 FROM depeg_resolver_lock_opportunity_audit WHERE attempt_key = ?) THEN 0 ELSE 1 END",
+        ]
+      : options.incrementDeferralCount
+        ? ["deferral_count = depeg_resolver_prediction_lock_state.deferral_count + 1"]
+        : []),
     options.preserveDeferralReason
       ? "last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason"
       : "last_deferral_reason = excluded.last_deferral_reason",

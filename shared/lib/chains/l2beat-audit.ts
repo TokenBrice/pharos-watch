@@ -157,7 +157,7 @@ export function getL2BeatInfrastructureContext(chainId: string): L2BeatInfrastru
   };
 }
 
-export function findL2BeatAliasIntegrityIssues(
+function findL2BeatAliasIntegrityIssues(
   chainIds: readonly string[] = Object.keys(CHAIN_META),
 ): L2BeatAliasIntegrityIssue[] {
   const chainIdSet = new Set(chainIds);

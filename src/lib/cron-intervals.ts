@@ -9,7 +9,6 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
  * interval`, `refetchInterval = 2× cron interval`).
  */
 export const CRON_1MIN = 60_000;
-export const CRON_1H = 60 * 60 * 1000;
 export const CRON_24H = 24 * 60 * 60 * 1000;
 
 export const CRON_15MIN = CRON_INTERVALS["sync-stablecoins"] * 1000;

@@ -21,7 +21,7 @@ export const COMPARE_COIN_OPTIONS: CoinOption[] = CLIENT_COMPARABLE_STABLECOINS.
   frozenAt: c.frozenAt,
 }));
 
-export const ID_TO_COMPARE_COIN = new Map<string, CoinOption>(
+const ID_TO_COMPARE_COIN = new Map<string, CoinOption>(
   COMPARE_COIN_OPTIONS.map((option) => [option.id, option]),
 );
 

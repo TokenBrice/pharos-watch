@@ -62,6 +62,7 @@ export const CRITICAL_FILES = [
   "worker/src/cron/depeg-resolver/publication.ts",
   "worker/src/cron/depeg-resolver/utils.ts",
   "worker/src/lib/depeg-resolver-incident-store.ts",
+  "worker/src/lib/depeg-resolver-lock-opportunity-store.ts",
   "worker/src/lib/depeg-resolver-publication-store.ts",
   "worker/src/lib/depeg-resolver-review-response.ts",
   "worker/src/cron/sync-live-reserves.ts",
@@ -127,6 +128,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/safety-score-v9-extension-shock.ts",
   "worker/src/lib/safety-score-v9-extension-supply.ts",
   "worker/src/lib/safety-score-v9-extension-transfer.ts",
+  "worker/src/lib/safety-score-v9-extension-wrapper-allocation.ts",
   "worker/src/lib/safety-score-v9-fact-set-backing.ts",
   "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
   "worker/src/lib/safety-score-v9-fact-set-context.ts",
@@ -282,7 +284,6 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   // the owners are enrolled above, while the compatibility surfaces remain
   // covered by their direct import contracts.
   "worker/src/cron/compute-dews.ts": "2026-09-05",
-  "worker/src/cron/dews/source-state/hydration.ts": "2026-09-05",
   "worker/src/lib/safety-score-v9-transfer-materiality-observer.ts": "2026-09-05",
   "worker/src/lib/safety-score-v9-transfer-materiality.ts": "2026-09-05",
   "worker/src/cron/depeg-resolver/storage-adapters.ts": "2026-08-30",

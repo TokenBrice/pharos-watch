@@ -20,7 +20,6 @@ export {
 } from "./cache/normalization";
 
 export {
-  filterValidDlPools,
   buildDlStablecoinPoolsCache,
   parseDlStablecoinPoolsCache,
 } from "./cache/defillama-pool-cache";
@@ -30,5 +29,4 @@ export {
   getYieldSupplementalFamilyCacheKey,
   buildYieldSupplementalSourcesCache,
   parseYieldSupplementalSourcesCache,
-  type ParsedYieldSupplementalSourcesCache,
 } from "./cache/supplemental-cache-keys";

@@ -6,7 +6,6 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import type { CaseStudyDataWidget } from "@/lib/case-studies/types";
 
 const CASE_STUDY_CHART_DAYS = 1825;
-const CASE_STUDY_CHART_STALE_TIME_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Live Pharos peg-deviation chart embedded in a case study. Hydrates
@@ -15,10 +14,7 @@ const CASE_STUDY_CHART_STALE_TIME_MS = 30 * 24 * 60 * 60 * 1000;
  * real series exists; historical pre-collection events omit `dataWidgets`.
  */
 export function CaseStudyChart({ widget }: { widget: CaseStudyDataWidget }) {
-  const { data, error } = useSupplyHistory(widget.coinId, CASE_STUDY_CHART_DAYS, {
-    staleTime: CASE_STUDY_CHART_STALE_TIME_MS,
-    refetchInterval: false,
-  });
+  const { data, error } = useSupplyHistory(widget.coinId, CASE_STUDY_CHART_DAYS);
 
   return (
     <figure className="pharos-card-shell overflow-hidden">

@@ -7,6 +7,7 @@ import type {
 } from "@shared/types/safety-score-v9-public";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import type { V9Grade } from "@shared/types/safety-score-v9";
+import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
 import { z } from "zod";
 
 export interface V9PublicationCoverageFloor {
@@ -385,7 +386,7 @@ export function assessV9Publication(input: {
 
   const boundedReasons = reasons
     .sort((left, right) =>
-      JSON.stringify(left).localeCompare(JSON.stringify(right)),
+      compareText(JSON.stringify(left), JSON.stringify(right)),
     )
     .slice(0, 24);
   return boundedReasons.length === 0

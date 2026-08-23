@@ -55,6 +55,16 @@ export function parseSafetyScoreV9AnchorGateCards(input: unknown): V9AnchorGateC
   });
 }
 
+/**
+ * Publication clock the replayed cards were scored at. Time-boxed anchors are
+ * resolved against this rather than wall-clock `now`, so replaying an old
+ * capture judges it under the contract that was live at its own publication.
+ */
+export function parseSafetyScoreV9AnchorGateAsOfSec(input: unknown): number {
+  const artifact = ReplayArtifactInputSchema.parse(input);
+  return SafetyScoreV9ResponseSchema.parse(artifact.pipeline.candidate).publishedAtSec;
+}
+
 export interface SafetyScoreV9AnchorGateIo {
   readJson(path: string): unknown;
   stdout: { write(text: string): unknown };
@@ -79,11 +89,13 @@ export async function runSafetyScoreV9AnchorGateCli(
   if (writeCliHelpIfRequested(values, USAGE, io.stdout)) return null;
   assertCliUsage(typeof values.replay === "string", "--replay is required");
 
-  const cards = parseSafetyScoreV9AnchorGateCards(io.readJson(values.replay));
+  const artifact = io.readJson(values.replay);
+  const cards = parseSafetyScoreV9AnchorGateCards(artifact);
+  const asOfSec = parseSafetyScoreV9AnchorGateAsOfSec(artifact);
   const applyRulings = Array.isArray(values["apply-ruling"])
     ? (values["apply-ruling"] as string[])
     : [];
-  const report = evaluateSafetyScoreV9AnchorGate({ cards, applyRulings });
+  const report = evaluateSafetyScoreV9AnchorGate({ cards, applyRulings, asOfSec });
   io.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (report.decision !== "gate-passed") {
     const failed = report.verdicts.filter((verdict) => verdict.status === "fail").length;

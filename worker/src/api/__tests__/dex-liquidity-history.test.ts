@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeDexLiquidityHistoryRow } from "../../test-helpers/__shared/fixtures";
@@ -13,8 +14,7 @@ describe("handleDexLiquidityHistory", () => {
       db,
       new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
     );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{
+    const body = (await readJsonResponse(res, 200)) as Array<{
       tvl: number;
       volume24h: number;
       score: number | null;
@@ -88,8 +88,7 @@ describe("handleDexLiquidityHistory", () => {
       db,
       new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
     );
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await readJsonResponse(res, 200);
     expect(body).toEqual([]);
   });
 

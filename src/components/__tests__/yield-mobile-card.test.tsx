@@ -1,10 +1,8 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
-import { YieldMobileCard } from "@/components/yield-leaderboard";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { makeYieldViewModelRow, renderYieldMobileCard } from "./yield-test-support";
 
@@ -68,21 +66,7 @@ describe("YieldMobileCard", () => {
   });
 
   it("renders the Why this PYS strip when expanded with a non-null PYS", () => {
-    render(
-      <TooltipProvider>
-        <YieldMobileCard
-          row={row}
-          riskFreeRate={3.5}
-          medianApy={4}
-          expanded={true}
-          isCompared={false}
-          compareDisabled={false}
-          onToggleExpanded={vi.fn()}
-          onOpenSourceSheet={vi.fn()}
-          onToggleCompare={vi.fn()}
-        />
-      </TooltipProvider>,
-    );
+    renderYieldMobileCard(row, { expanded: true });
 
     const strip = screen.getByRole("group", { name: "Why this PYS" });
     expect(strip.textContent).toContain("Bench spread");
@@ -96,21 +80,7 @@ describe("YieldMobileCard", () => {
 
   it("hides the Why this PYS strip when expanded with a null PYS", () => {
     const noPysRow = { ...row, pharosYieldScore: null } as YieldViewModelRow;
-    render(
-      <TooltipProvider>
-        <YieldMobileCard
-          row={noPysRow}
-          riskFreeRate={3.5}
-          medianApy={4}
-          expanded={true}
-          isCompared={false}
-          compareDisabled={false}
-          onToggleExpanded={vi.fn()}
-          onOpenSourceSheet={vi.fn()}
-          onToggleCompare={vi.fn()}
-        />
-      </TooltipProvider>,
-    );
+    renderYieldMobileCard(noPysRow, { expanded: true });
 
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
   });
@@ -121,21 +91,7 @@ describe("YieldMobileCard", () => {
       cohortPercentile: { value: 64, cohortSize: 18, cohortKey: "USD:lending-vault" },
     } as YieldViewModelRow;
 
-    render(
-      <TooltipProvider>
-        <YieldMobileCard
-          row={cohortRow}
-          riskFreeRate={3.5}
-          medianApy={4}
-          expanded={false}
-          isCompared={false}
-          compareDisabled={false}
-          onToggleExpanded={vi.fn()}
-          onOpenSourceSheet={vi.fn()}
-          onToggleCompare={vi.fn()}
-        />
-      </TooltipProvider>,
-    );
+    renderYieldMobileCard(cohortRow);
 
     expect(screen.getByText("p64 of 18")).toBeTruthy();
   });
@@ -146,41 +102,13 @@ describe("YieldMobileCard", () => {
       cohortPercentile: { value: null, cohortSize: 4, cohortKey: "EUR:lending-vault" },
     } as YieldViewModelRow;
 
-    render(
-      <TooltipProvider>
-        <YieldMobileCard
-          row={cohortRow}
-          riskFreeRate={3.5}
-          medianApy={4}
-          expanded={false}
-          isCompared={false}
-          compareDisabled={false}
-          onToggleExpanded={vi.fn()}
-          onOpenSourceSheet={vi.fn()}
-          onToggleCompare={vi.fn()}
-        />
-      </TooltipProvider>,
-    );
+    renderYieldMobileCard(cohortRow);
 
     expect(screen.getByText("small peer set")).toBeTruthy();
   });
 
   it("renders nothing in place of the cohort chip when cohortPercentile is null", () => {
-    render(
-      <TooltipProvider>
-        <YieldMobileCard
-          row={row}
-          riskFreeRate={3.5}
-          medianApy={4}
-          expanded={false}
-          isCompared={false}
-          compareDisabled={false}
-          onToggleExpanded={vi.fn()}
-          onOpenSourceSheet={vi.fn()}
-          onToggleCompare={vi.fn()}
-        />
-      </TooltipProvider>,
-    );
+    renderYieldMobileCard(row);
 
     expect(screen.queryByText(/^p\d+ of \d+/)).toBeNull();
     expect(screen.queryByText("small peer set")).toBeNull();
@@ -188,21 +116,7 @@ describe("YieldMobileCard", () => {
 
   it("invokes onToggleCompare with the row id when the compare checkbox is clicked", () => {
     const onToggleCompare = vi.fn();
-    render(
-      <TooltipProvider>
-        <YieldMobileCard
-          row={row}
-          riskFreeRate={3.5}
-          medianApy={4}
-          expanded={false}
-          isCompared={false}
-          compareDisabled={false}
-          onToggleExpanded={vi.fn()}
-          onOpenSourceSheet={vi.fn()}
-          onToggleCompare={onToggleCompare}
-        />
-      </TooltipProvider>,
-    );
+    renderYieldMobileCard(row, { onToggleCompare });
 
     fireEvent.click(screen.getByLabelText("Add USDT to compare"));
 

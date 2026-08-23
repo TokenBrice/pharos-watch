@@ -9,6 +9,7 @@
       "issuerOrObligor": "Zephyr Protocol on-chain reserve (ZEPH base coin)",
       "riskFactors": [
         "market",
+        "smart-contract",
         "liquidity",
         "concentration"
       ],
@@ -16,28 +17,28 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "OpenAI Codex V9 Tranche 2 reserve curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Zephyr reserve snapshots API",
+        "label": "Zephyr reserve snapshots API (re-opened 2026-08-23)",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       },
       {
-        "label": "Zephyr Protocol whitepaper",
-        "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+        "label": "Zephyr Scanner API documentation (re-opened 2026-08-23)",
+        "url": "https://zephyrprotocol.com/documentation/scanner-api"
       },
       {
-        "label": "Zephyr Protocol documentation",
-        "url": "https://zephyrprotocol.com/documentation"
+        "label": "Zephyr Protocol whitepaper (re-opened 2026-08-23)",
+        "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
       }
     ],
-    "rationale": "Zephyr's Djed-inspired design holds a single-asset reserve: ZSD is minted and redeemed only against ZEPH, so the complete reserve composition is 100% ZEPH held by the protocol. The live reserve-snapshot API captured 2026-07-20T20:12Z reports 4,449,790.59 ZEPH in reserve against 422,015.37 ZSD in circulation (reserve ratio 447.5%). The slice is named to match the live zephyr-scanner reserve-adapter identity so the reviewed classification overlays the captured exposure.",
-    "compositionBasis": "Zephyr Protocol single-asset reserve design and live reserve-snapshot API",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Re-opened 2026-08-23. The latest Zephyr reserve snapshot returned captured_at 2026-08-23T16:14:22.910Z at reserve_height 847924, with on_chain.zeph_reserve_atoms 4032019919482318247 (=4,032,019.919482318 ZEPH), zsd_circ_atoms 417193378099064118 (=417,193.3780990641 ZSD), and reserve_ratio 3.861059 (386.1059%). The scanner API documentation describes /api/v1/reservesnapshots as daemon snapshots of raw on-chain state and documents the ZEPH reserve and ZSD liability fields. The protocol reserve is therefore authored as a single 100% ZEPH slice; ZEPH market depth and reserve-ratio health are not composition percentages. The slice is named to match the live zephyr-scanner reserve-adapter identity so the reviewed classification overlays the captured exposure.",
+    "compositionBasis": "Zephyr Protocol single-asset reserve design and latest raw on-chain reserve snapshot, captured 2026-08-23",
+    "compositionAsOf": "2026-08-23",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve is a single on-chain ZEPH position by protocol design; no other reserve asset exists. ZEPH market depth and the reserve-ratio health of the mechanism are tracked separately from composition.",
+    "knownUnknownExposure": "The current snapshot identifies the entire reserve as ZEPH and the ZSD liabilities; it does not establish a liquidation horizon or legal custody/insolvency protection, which remain outside composition.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -59,20 +60,24 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "OpenAI Codex V9 Tranche 2 reserve curation",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Zephyr reserve snapshots API",
+        "label": "Zephyr reserve snapshots API (re-opened 2026-08-23)",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       },
       {
-        "label": "Zephyr Protocol whitepaper",
+        "label": "Zephyr Scanner API documentation (re-opened 2026-08-23)",
+        "url": "https://zephyrprotocol.com/documentation/scanner-api"
+      },
+      {
+        "label": "Zephyr Protocol whitepaper (re-opened 2026-08-23)",
         "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
       }
     ],
-    "uncertainty": "The ZEPH reserve is locked in the protocol's on-chain reserve address under consensus rules rather than with a legal custodian; legal segregation, insolvency treatment, and reuse restrictions are not applicable constructs the reviewed sources establish. Reserve balances are publicly verifiable through the snapshot API.",
+    "uncertainty": "The ZEPH reserve is locked in the protocol's on-chain reserve address under consensus rules rather than with a legal custodian; legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources. The current reserve balance is publicly verifiable through the snapshot API, but no liquidation horizon is disclosed.",
     "knownUnknownExposurePct": 100
   }
 }

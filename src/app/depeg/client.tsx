@@ -3,7 +3,6 @@
 import { useMemo, useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary, useStressSignals } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
@@ -31,6 +30,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
+import { DepegContentLoadingState } from "./loading";
 
 interface DepegCoverageMetrics {
   dewsCoverageCount: number;
@@ -39,30 +39,6 @@ interface DepegCoverageMetrics {
   coverageLimitedCount: number;
   activeCount: number;
   pendingCount: number;
-}
-
-function DepegLoadingState() {
-  return (
-    <div className="space-y-6">
-      {/* Hero — beam header + DDR forecast timeline */}
-      <Skeleton className="h-[420px] rounded-xl" />
-      {/* Secondary band — DEWS radar + stats grid */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
-        <Skeleton className="h-[500px] rounded-xl" />
-        <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="pharos-card-shell rounded-xl px-4 py-3">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="mt-2 h-8 w-32" />
-              </div>
-            ))}
-          </div>
-          <Skeleton className="flex-1 min-h-[200px] rounded-xl" />
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function DepegCoverageBand({ reliability }: { reliability: DepegCoverageMetrics }) {
@@ -278,7 +254,7 @@ export function DepegClient() {
 
   // Loading state
   if (isPegLoading) {
-    return <DepegLoadingState />;
+    return <DepegContentLoadingState />;
   }
 
   return (

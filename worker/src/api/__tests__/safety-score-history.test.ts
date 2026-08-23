@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -29,8 +30,7 @@ describe("handleSafetyScoreHistory", () => {
       mockD1([]),
       new URL("https://x/api/safety-score-history?stablecoin=usdt-tether&days=99999"),
     );
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 3650" });
+    expect(await readJsonResponse(res, 400)).toEqual({ error: "Invalid days: must be between 1 and 3650" });
   });
 
   it("returns 200 with history rows mapped to camelCase", async () => {
@@ -51,8 +51,7 @@ describe("handleSafetyScoreHistory", () => {
       new URL("https://x/api/safety-score-history?stablecoin=usdt-tether&days=3650"),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<Record<string, unknown>>;
+    const body = (await readJsonResponse(res, 200)) as Array<Record<string, unknown>>;
     expect(body).toHaveLength(1);
     expect(body[0]).toEqual({
       date: body[0].date,
@@ -81,8 +80,7 @@ describe("handleSafetyScoreHistory", () => {
       new URL("https://x/api/safety-score-history?stablecoin=usdt-tether"),
     );
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([]);
+    expect(await readJsonResponse(res, 200)).toEqual([]);
   });
 
   it("includes X-Data-Age header", async () => {

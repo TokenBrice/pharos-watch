@@ -28,14 +28,18 @@ export interface HydratedDepegDetection {
   dexPriceSources: Map<string, DexPoolSource[]>;
   dexPoolChallengers: Map<string, DexPoolChallenger[]>;
   nativePegQuotes: Map<string, NativePegQuote>;
-  openRows: DepegRow[];
+  openRows: DepegDetectionRow[];
+}
+
+export interface DepegDetectionRow extends DepegRow {
+  recovery_last_seen_at?: number | null;
 }
 
 export interface DepegAssetDecisionInput {
   now: number;
   asset: PegAssetBase;
   meta?: StablecoinMeta;
-  existing?: DepegRow;
+  existing?: DepegDetectionRow;
   pegRates: Record<string, number>;
   pegRateSources: Record<string, PegRateSource>;
   pegRateCounts: Record<string, number>;
@@ -62,7 +66,8 @@ export type DepegPersistenceCommand =
       closeReason: DepegEventCloseReason;
     }
   | { type: "update-peak"; id: number; peakDeviationBps: number; peakPrice: number | null }
-  | { type: "begin-recovery"; id: number; firstSeenAt: number }
+  | { type: "begin-recovery"; id: number; firstSeenAt: number; lastSeenAt: number }
+  | { type: "continue-recovery"; id: number; lastSeenAt: number }
   | { type: "clear-recovery"; id: number }
   | { type: "delete-event"; id: number };
 

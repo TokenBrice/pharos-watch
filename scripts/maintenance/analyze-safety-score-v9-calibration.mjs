@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -6,7 +5,12 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { compileV9FactSetV2, compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile.ts";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set.ts";
+import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts.ts";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy.ts";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives.ts";
+import { sha256Hex as sha256 } from "@shared/lib/sha256.ts";
+import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity.ts";
+import { stableJsonStringifyV1 as stableStringify } from "@shared/lib/stable-json.ts";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -240,29 +244,6 @@ const UNRESOLVED_METHODOLOGY_REASON_CODES = new Set(
 const METHODOLOGY_BLOCKED_ARCHETYPES = new Set(["rwa-credit-fund", "synthetic-delta-neutral"]);
 const METHODOLOGY_BLOCKED_RESIDUAL_REASON = "bounded-mechanism-review";
 const GRADE_BANDS = { A: ["A+", "A", "A-"], B: ["B+", "B", "B-"], C: ["C+", "C", "C-"], D: ["D"], F: ["F"] };
-
-function stableStringify(value) {
-  if (value === null) return "null";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  if (value === undefined) return "";
-  if (typeof value !== "object") throw new Error(`Unsupported replay identity value: ${typeof value}`);
-  return `{${Object.keys(value)
-    .filter((key) => value[key] !== undefined)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
-    .join(",")}}`;
-}
-
-function sha256(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function domainDigest(domain, payload) {
-  return sha256(stableStringify({ domain, payload }));
-}
 
 function requireRecord(value, label) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -526,81 +507,14 @@ export function computeCalibrationBaseInputGenerationId(input) {
   requireDigest(fixedInput.registryFingerprint, "fixed input registry fingerprint");
   requireDigest(fixedInput.dexPayloadFingerprint, "fixed input DEX payload fingerprint");
   requireDigest(fixedInput.redemptionPayloadFingerprint, "fixed input redemption payload fingerprint");
-
-  const scoreBearingFactsSha256 = domainDigest("report-cards.base-input.score-bearing-facts.v1", {
-    pegDataById: fixedInput.pegDataById,
-    navPriceById: fixedInput.navPriceById ?? {},
-    activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
-    dexLiqMap: fixedInput.dexLiqMap,
-    redemptionBackstopMap: fixedInput.redemptionBackstopMap,
-    bluechipMap: fixedInput.bluechipMap,
-    resolvedBlacklistStatuses: fixedInput.resolvedBlacklistStatuses,
-    liveReserveMap: fixedInput.liveReserveMap,
-    chainCirculatingById: fixedInput.chainCirculatingById,
-    // Absent must project as an empty map, not as an absent key: the fixed-input
-    // schema parses this through Zod `.default({})`, so a capture predating the
-    // aggregate-supply fallback reaches the real path as `{}`. Omitting the key
-    // here instead would diverge from the TS projection unconditionally.
-    aggregateCirculatingById: fixedInput.aggregateCirculatingById ?? {},
-    dexDeploymentSupplyCoverageById: fixedInput.dexDeploymentSupplyCoverageById,
-  });
-  const scoreBearingFreshnessSha256 = domainDigest("report-cards.base-input.score-bearing-freshness.v1", {
-    liquidityStale: fixedInput.liquidityStale,
-    redemptionStale: fixedInput.redemptionStale,
-    inputFreshness: fixedInput.inputFreshness,
-    liveReserveProvenanceMap: fixedInput.liveReserveProvenanceMap,
-  });
-  const projection = {
-    schemaVersion: 1,
-    captureKind: fixedInput.captureKind,
-    publicationClockSec: fixedInput.clockSec,
-    sourceUpdatedAtSec: fixedInput.updatedAt,
-    registry: {
-      activeAssetIds: [...fixedInput.activeAssetIds],
-      fingerprintSha256: fixedInput.registryFingerprint,
-    },
-    producers: {
-      dex: { generationId: fixedInput.dexGenerationId, payloadSha256: fixedInput.dexPayloadFingerprint },
-      redemption: {
-        generationId: fixedInput.redemptionGenerationId,
-        payloadSha256: fixedInput.redemptionPayloadFingerprint,
-      },
-    },
-    producerMethodologyVersions: {
-      dexLiquidity: producerVersionsOrUnavailable(methodology.dexLiquidity, "DEX methodology versions"),
-      pegScore: producerVersionsOrUnavailable(methodology.pegScore, "peg methodology versions"),
-      redemptionBackstop: producerVersionsOrUnavailable(
-        methodology.redemptionBackstop,
-        "redemption methodology versions",
-      ),
-    },
-    normalizedSnapshotDigests: { scoreBearingFactsSha256, scoreBearingFreshnessSha256 },
-  };
-  return `report-cards-input:v1:${sha256(stableStringify(projection))}`;
+  producerVersionsOrUnavailable(methodology.dexLiquidity, "DEX methodology versions");
+  producerVersionsOrUnavailable(methodology.pegScore, "peg methodology versions");
+  producerVersionsOrUnavailable(methodology.redemptionBackstop, "redemption methodology versions");
+  return deriveReportCardsBaseInputGenerationId(fixedInput);
 }
 
 export function computeCalibrationFactSetDigest(compiledFacts) {
-  const facts = requireRecord(compiledFacts, "compiled facts");
-  const domain =
-    facts.schemaVersion === 2
-      ? "safety-score-v9.normalized-facts.v2"
-      : facts.schemaVersion === 3
-        ? "safety-score-v9.normalized-facts.v3"
-        : null;
-  if (domain === null) throw new Error("compiled facts has an unsupported schema version");
-  return sha256(
-    stableStringify({
-      domain,
-      factSet: {
-        schemaVersion: facts.schemaVersion,
-        baseInputGenerationId: facts.baseInputGenerationId,
-        asOfSec: facts.asOfSec,
-        sourceFingerprints: facts.sourceFingerprints,
-        activeAssetIds: facts.activeAssetIds,
-        assets: facts.assets,
-      },
-    }),
-  );
+  return computeV9FactSetDigest(requireRecord(compiledFacts, "compiled facts"));
 }
 
 function traceResultDigestVersion(trace) {

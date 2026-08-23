@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { handleEvents } from "../events";
@@ -71,8 +72,7 @@ describe("handleEvents", () => {
 
     const res = await handleEvents(db, new URL("https://x/api/events"));
 
-    expect(res.status).toBe(200);
-    const body = TapeEventsResponseSchema.parse(await res.json());
+    const body = TapeEventsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(ScoreTapeEventPayloadSchema.parse(body.events[0]!.payload).safetyScore).toEqual(payload.safetyScore);
   });
 
@@ -98,8 +98,7 @@ describe("handleEvents", () => {
 
     const res = await handleEvents(db, new URL("https://x/api/events"));
 
-    expect(res.status).toBe(200);
-    const body = TapeEventsResponseSchema.parse(await res.json());
+    const body = TapeEventsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(ScoreTapeEventPayloadSchema.parse(body.events[0]!.payload).safetyScore).toEqual({
       identityStatus: "legacy-v8-unidentified",
       identity: null,
@@ -149,8 +148,7 @@ describe("handleEvents", () => {
       { match: "cron_runs", rows: [], first: { started_at: SEC } },
     ]);
     const res = await handleEvents(db, new URL("https://x/api/events"));
-    expect(res.status).toBe(200);
-    const body = TapeEventsResponseSchema.parse(await res.json());
+    const body = TapeEventsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.events).toHaveLength(1);
     expect(body.events[0]!.type).toBe("depeg.opened");
     expect(body.events[0]!.severity).toBe("warning");

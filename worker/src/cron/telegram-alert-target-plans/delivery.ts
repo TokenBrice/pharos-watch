@@ -363,7 +363,7 @@ export async function openTelegramTargetPlanDelivery(
   return Number(result.meta?.changes ?? 0) === 1;
 }
 
-export function readyTargetMatchesPlan(
+function readyTargetMatchesPlan(
   row: ReadyTargetRow,
   plan: Awaited<ReturnType<typeof parseTelegramTargetPlan>>,
 ): boolean {

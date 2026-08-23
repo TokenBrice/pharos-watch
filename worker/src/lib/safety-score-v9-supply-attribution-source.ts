@@ -1,5 +1,6 @@
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
+import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
 import { z } from "zod";
 import { parseJson } from "./json-parse";
 import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
@@ -57,7 +58,7 @@ export type SafetyScoreV9SupplyAttributionInput = Pick<
 
 function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
   return Object.fromEntries(
-    Object.entries(record).sort(([left], [right]) => left.localeCompare(right)),
+    Object.entries(record).sort(([left], [right]) => compareText(left, right)),
   );
 }
 

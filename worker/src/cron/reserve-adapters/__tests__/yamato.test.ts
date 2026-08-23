@@ -5,22 +5,13 @@ import { encodeFunctionResult, parseAbi } from "viem/utils";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainRawCall = vi.fn();
   return {
     ...actual,
     fetchOnchainRawCall,
     fetchDefiLlamaPrices: vi.fn(),
-    makeOnchainCallers: vi.fn((input, options) => ({
-      uint256: vi.fn(),
-      raw: (contract: string, data: string) =>
-        fetchOnchainRawCall({
-          ...options,
-          contract,
-          data,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-        }),
-    })),
+    makeOnchainCallers: makeOnchainCallersMock({ raw: fetchOnchainRawCall }),
   };
 });
 

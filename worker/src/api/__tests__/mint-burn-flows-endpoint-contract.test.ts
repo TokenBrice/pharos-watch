@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -123,8 +124,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const url = new URL("https://x/api/mint-burn-flows");
     const res = await handleMintBurnFlows(db, url);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
 
     // Cross-validate against the same Zod schema the frontend uses
     const parsed = MintBurnFlowsResponseSchema.safeParse(body);
@@ -142,8 +142,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const url = new URL("https://x/api/mint-burn-flows?stablecoin=usdt-tether");
     const res = await handleMintBurnFlows(db, url);
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await readJsonResponse(res, 200);
 
     // Cross-validate against per-coin schema
     const parsed = MintBurnPerCoinResponseSchema.safeParse(body);

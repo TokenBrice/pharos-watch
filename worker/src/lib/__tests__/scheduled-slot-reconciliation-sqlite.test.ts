@@ -37,6 +37,19 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       );
     sqlite
       .prepare(
+        `INSERT INTO cron_run_progress (
+         job, started_at, updated_at, stage, lease_owner, slot_started_at
+       ) VALUES (?, ?, ?, 'completed', ?, ?)`,
+      )
+      .run(
+        "sync-dex-liquidity-stage",
+        slotStartedAt,
+        slotStartedAt + 1,
+        "released-owner",
+        slotStartedAt,
+      );
+    sqlite
+      .prepare(
         `INSERT INTO cron_runs (
          job, started_at, duration_ms, status, item_count, slot_started_at,
          idempotency_key, schedule_key, producer_path, producer_kind,
@@ -80,7 +93,10 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       slotsReconciled: 1,
       syntheticCronRuns: 0,
       notStartedCronRuns: 0,
+      progressRowsCleared: 1,
+      leasesCleared: 0,
     });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 0 });
     expect(
       sqlite
         .prepare(

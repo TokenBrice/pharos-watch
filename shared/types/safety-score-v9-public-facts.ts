@@ -99,7 +99,7 @@ export function roundAttributionValue(value: number, decimals: number): number {
   return Math.round(Number((value * factor).toPrecision(15))) / factor;
 }
 
-export const SafetyScoreV9PublicReasonSchema = z
+const SafetyScoreV9PublicReasonSchema = z
   .object({
     code: V9ReasonCodeSchema,
     message: z.string().min(1),

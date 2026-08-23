@@ -1,27 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop-live-metadata";
-import type { ReserveSnapshotMetadataRecord, ReserveSyncStateRecord } from "../live-reserves-store";
+import type { ReserveSyncStateRecord } from "../live-reserves-store";
 import { parseReserveCompositionRow } from "../live-reserves-store-row-decoding";
+import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 
 const now = 1_780_000_000;
 
-function snapshot(
+const snapshot = (
   stablecoinId: string,
   metadata: Record<string, unknown>,
-  evidenceClass: ReserveSnapshotMetadataRecord["evidenceClass"] = "independent",
-): ReserveSnapshotMetadataRecord {
-  return {
-    stablecoinId,
-    fetchedAt: now - 60,
-    source: "unit-test",
-    sourceModel: "single-bucket",
-    evidenceClass,
-    syncStatus: "ok",
-    warningCount: 0,
-    warnings: [],
-    metadata,
-  };
-}
+  evidenceClass: "independent" | "static-validated" | "weak-live-probe" = "independent",
+) => liveSnapshot(stablecoinId, metadata, {
+  fetchedAt: now - 60,
+  source: "unit-test",
+  sourceModel: "single-bucket",
+  evidenceClass,
+});
 
 function decodedRowMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
   const decoded = parseReserveCompositionRow(

@@ -104,7 +104,7 @@ export interface CurveCryptoSwapReviewedDeploymentFamily {
  * hash here is the same evidence the eight hand-pinned pools carry; nothing is
  * asserted for a family that has no pinned pool.
  */
-export const CURVE_CRYPTOSWAP_REVIEWED_FAMILIES: readonly CurveCryptoSwapReviewedDeploymentFamily[] = [
+const CURVE_CRYPTOSWAP_REVIEWED_FAMILIES: readonly CurveCryptoSwapReviewedDeploymentFamily[] = [
   {
     chain: "ethereum",
     generation: "twocrypto-ng",

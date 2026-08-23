@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -219,8 +220,7 @@ describe("handleBackfillStabilityIndex", () => {
   it("returns 404 when there are no depeg events", async () => {
     const res = await callBackfillStabilityIndex({ db: makeDb({ earliest: null }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { adminKey: "secret" }) });
 
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "No depeg events found" });
+    expect(await readJsonResponse(res, 404)).toEqual({ error: "No depeg events found" });
   });
 
   it("rebuilds daily PSI rows and reports days backfilled", async () => {
@@ -248,8 +248,7 @@ describe("handleBackfillStabilityIndex", () => {
         ],
       }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; daysBackfilled: number; endDay: number; daysEvaluated: number };
+    const body = (await readJsonResponse(res, 200)) as { ok: boolean; daysBackfilled: number; endDay: number; daysEvaluated: number };
     expect(body.ok).toBe(true);
     expect(body.daysBackfilled).toBeGreaterThanOrEqual(2);
     expect(body.daysEvaluated).toBeGreaterThanOrEqual(body.daysBackfilled);
@@ -316,8 +315,7 @@ describe("handleBackfillStabilityIndex", () => {
         earliest: todayMidnight + 60,
       }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
+    expect(await readJsonResponse(res, 200)).toEqual({
       ok: true,
       dryRun: false,
       daysBackfilled: 0,
@@ -358,8 +356,7 @@ describe("handleBackfillStabilityIndex", () => {
         adminKey: "secret",
       }) });
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
+    expect(await readJsonResponse(res, 200)).toMatchObject({
       ok: true,
       dryRun: true,
       daysBackfilled: 1,
@@ -725,8 +722,7 @@ describe("handleBackfillStabilityIndex", () => {
         adminKey: "secret",
       }) });
 
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({
+    expect(await readJsonResponse(res, 400)).toEqual({
       error: "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
     });
   });

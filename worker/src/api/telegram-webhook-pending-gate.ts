@@ -344,8 +344,6 @@ function canActOnPending(pending: PendingAction, actorUserId: string | null): bo
   return canActOnPendingOwner(pending.initiatorUserId, actorUserId);
 }
 
-export { canActOnPendingOwner };
-
 function looksLikeDisambiguationSelection(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;

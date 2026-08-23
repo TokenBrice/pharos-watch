@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { classifyDepegClosure } from "../../depeg-closure";
 import {
   buildDurationTrainingCorpus,
   computeDuration,
@@ -1042,6 +1043,46 @@ describe("incident grouping + quarantine", () => {
     const durationLabels = groupDurationLabelIncidents(incidents);
     expect(durationLabels.length).toBe(2);
     expect(durationLabels[0].durationSec).toBe(7200 + 13 * 3600);
+
+    const closureLabels = groupIncidents([
+      {
+        stablecoinId: "native-recovery",
+        direction: "below",
+        peakDeviationBps: -300,
+        startedAt: 0,
+        endedAt: 3600,
+        recoveryPrice: null,
+        closeReason: "recovered-native",
+      },
+      {
+        stablecoinId: "superseded",
+        direction: "below",
+        peakDeviationBps: -300,
+        startedAt: 0,
+        endedAt: 3600,
+        recoveryPrice: 1.02,
+        closeReason: "superseded-direction",
+      },
+      {
+        stablecoinId: "legacy-recovery",
+        direction: "below",
+        peakDeviationBps: -300,
+        startedAt: 0,
+        endedAt: 3600,
+        recoveryPrice: 1,
+        closeReason: null,
+      },
+    ], usd);
+    expect(closureLabels.map((incident) => [incident.stablecoinId, incident.recovered])).toEqual([
+      ["native-recovery", true],
+      ["superseded", false],
+      ["legacy-recovery", true],
+    ]);
+    expect([
+      classifyDepegClosure({ endedAt: 3600, closeReason: "coverage-lost-supply", recoveryPrice: 1 }),
+      classifyDepegClosure({ endedAt: 3600, closeReason: "orphan-tracking-removed", recoveryPrice: 1 }),
+      classifyDepegClosure({ endedAt: 3600, closeReason: "future-explicit-reason", recoveryPrice: 1 }),
+    ]).toEqual(["coverage_lost", "orphan", "unknown_closed"]);
   });
 
   it("quarantines the verified short-duration detector cohorts", () => {

@@ -8,7 +8,7 @@ export interface YieldDataSourceMeta {
   badge: string;
 }
 
-export const YIELD_DATA_SOURCE_META: Record<string, YieldDataSourceMeta> = {
+const YIELD_DATA_SOURCE_META: Record<string, YieldDataSourceMeta> = {
   onchain: {
     label: "On-chain",
     badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",

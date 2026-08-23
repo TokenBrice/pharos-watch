@@ -14,15 +14,15 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 
 | Flag                                         | Gates                                                                               | Default                      | `expiresAt`                 |
 | -------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------- | --------------------------- |
-| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        | off                          | 2026-09-01                  |
-| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            | off                          | 2026-09-01                  |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Idea 13b (recent blacklist banner, FE-only v1)                                      | off                          | 2026-09-01                  |
+| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        | off                          | 2026-12-01                  |
+| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            | off                          | 2026-12-01                  |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Idea 13b (recent blacklist banner, FE-only v1)                                      | off                          | 2026-12-01                  |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion)                       | on unless explicitly `false` | n/a (default-on, no expiry) |
-| `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      | off                          | 2026-09-01                  |
-| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | Depeg Duration Resolver module on `/depeg/` (emergency rollback)                    | on unless explicitly `false` | 2026-09-01                  |
-| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) | on unless explicitly `false` | 2026-09-01                  |
+| `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      | off                          | 2026-12-01                  |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | Depeg Duration Resolver module on `/depeg/` (emergency rollback)                    | on unless explicitly `false` | 2026-12-01                  |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) | on unless explicitly `false` | 2026-12-01                  |
 
-`expiresAt` is enforceable — each gated flag in code carries the same date in a comment, including the two default-on resolver flags (`DEPEG_RESOLVER` / `DEPEG_RESOLVER_REVIEWER`, both `2026-09-01`); only the default-on `HERO_VERDICT` has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. The stale-flag check (`scripts/ci/check-stale-flags.ts`) is enforced by `check:structural` for affected PR paths and every nightly/manual validation run; it fails when any flag's `expiresAt` is today or earlier and warns 30 days ahead.
+`expiresAt` is enforceable — each gated flag in code carries the same date in a comment, including the two default-on resolver flags (`DEPEG_RESOLVER` / `DEPEG_RESOLVER_REVIEWER`, both `2026-12-01`); only the default-on `HERO_VERDICT` has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. The stale-flag check (`scripts/ci/check-stale-flags.ts`) is enforced by `check:structural` for affected PR paths and every nightly/manual validation run; it fails when any flag's `expiresAt` is today or earlier and warns 30 days ahead.
 
 ## Flip readiness gates
 
@@ -113,3 +113,34 @@ inlining/stale-flag checks as applicable.
 ## Spec source
 
 The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/pages-release.yml` (the production deploy workflow calls it for Pages builds).
+
+## 2026-08-23 lifecycle review
+
+All six dated flags were moved from `2026-09-01` to `2026-12-01`. None was
+flipped and none was deleted, because in every case the documented blocker is
+work this review could not perform. `expiresAt` permits exactly two outcomes
+past the date — flip and inline the on-path, or record why the flag is retained
+— and this is the second.
+
+This is a dated deferral, not a resolution. The four default-off flags are still
+waiting on the same human and real-device validation recorded on 2026-07-29; no
+new evidence was gathered, so inlining any of them would have shipped an
+unreviewed on-path. `CHART_ANNOTATIONS` additionally still lacks a curation
+owner and cadence, which is a product decision rather than a QA task.
+
+The two default-on resolver flags are emergency rollback levers, and the case
+for keeping them strengthened rather than weakened: DDR methodology `4.3`
+(continuous observation windows and reason-authoritative recovery labels) ships
+in this release and changes how onset and recovery windows are confirmed.
+Removing the rollback path for `/depeg/` in the same release that changes its
+confirmation semantics would remove the mitigation exactly when it is most
+likely to be needed.
+
+| Flag | Reason retained 2026-08-23 | Next review |
+| --- | --- | --- |
+| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | Human visual review of USDC, USDe, and an active depeg still outstanding. | 2026-12-01 |
+| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | Real-device iOS Safari and Android Chrome scrollspy review still outstanding. | 2026-12-01 |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | Real-device iOS Safari sticky check on a coin with active freezes still outstanding. | 2026-12-01 |
+| `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` | No curation owner or cadence assigned; product decision, not a QA gap. | 2026-12-01 |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER` | Rollback lever for `/depeg/` retained through the DDR 4.3 continuity release. | 2026-12-01 |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Rollback lever for the DDRR module retained through the DDR 4.3 continuity release. | 2026-12-01 |

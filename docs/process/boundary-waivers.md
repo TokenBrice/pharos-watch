@@ -2,14 +2,12 @@
 
 Pharos enforces a strict layering rule: code under `worker/src/` must not import from `src/` or `@/`, and code under `src/`, `shared/`, `scripts/`, or `functions/` must not import from `worker/src/`.
 
-Enforcement is split across two mechanisms:
+Enforcement is part of the ESLint configuration and runs on every changed file:
 
 - **frontend→worker** — a `no-restricted-imports` block in `eslint.config.mjs`, so the rule runs on every changed file through `lint:changed` rather than only when a worker file also moves.
-- **worker→frontend** — `scripts/ci/check-worker-import-boundary.ts`, which bans *any* `@/` or `src/` specifier from `worker/src/` (broader than the enumerable `src/lib/*` shapes ESLint lists) and runs as part of the shared validation gate.
+- **worker→frontend** — the `pharos/worker-import-boundaries` custom rule in `eslint.config.mjs`, which bans frontend specifiers from `worker/src/`.
 
-Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule. Every exempt file MUST have an entry below explaining why retirement is not feasible today, and MUST also appear in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs` — the checker's `checkEslintWaiverSync()` fails when the two lists drift apart.
-
-`MAX_BOUNDARY_WAIVERS` caps the size of the waiver list. Growing the cap is an architectural decision that requires a documented review on this page.
+The sole reviewed frontend→worker waiver is listed in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs`. Every exempt file MUST have an entry below explaining why retirement is not feasible today.
 
 ## Active Waivers
 
@@ -24,8 +22,7 @@ Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule.
   - `YIELD_POOL_MAP` is a pure `Record<string,string>` but has 10+ worker-side consumers; moving it to `shared/` would touch every yield cron module without changing the boundary surface (the script would still need the mint-burn and blacklist worker imports).
   - In each case the refactor expands the change surface dramatically without removing the architectural exception.
 - **Mitigations:**
-  - The waiver list is capped at `MAX_BOUNDARY_WAIVERS = 1`. Adding a second waiver requires bumping the cap and adding an entry here.
-  - `scripts/__tests__/worker-boundary-waivers.test.ts` asserts the waiver list matches this document (waiver IDs, files, and cap stay in sync).
+  - The waiver list in `eslint.config.mjs` contains only this reviewed file; adding another requires a documented architectural review on this page.
   - The script header comment names the waiver and points to this document.
   - The script is build-time only (it never ships in any deployed bundle), so the cross-layer import has no runtime impact.
 - **Retirement plan:** None. The waiver is acceptable as long as it remains a single build-time validator and the registries remain worker-resident.
@@ -33,7 +30,6 @@ Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule.
 ## Adding a Waiver
 
 1. Confirm the cross-layer import cannot be replaced by promoting metadata into `shared/`.
-2. Append an entry to `BOUNDARY_WAIVERS` in `scripts/ci/check-worker-import-boundary.ts` with a one-line reason, and add the same path to `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs`.
-3. Bump `MAX_BOUNDARY_WAIVERS` and document the new cap.
-4. Add a section to this document explaining the file, reason, what was tried, mitigations, and retirement plan (or "permanent").
-5. Update `scripts/__tests__/worker-boundary-waivers.test.ts` to cover the new entry.
+2. Add the path to `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs` with a one-line reason in the rule configuration.
+3. Add a section to this document explaining the file, reason, what was tried, mitigations, and retirement plan (or "permanent").
+4. Update the focused ESLint boundary coverage when the rule behavior changes.

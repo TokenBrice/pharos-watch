@@ -5,7 +5,6 @@ export type {
   DexPriceChallengerPublicationPlan,
 } from "./challenger-publish";
 export {
-  selectDexPriceChallengerRowsFromPools,
   publishDexPriceChallengerSnapshots,
 } from "./challenger-publish";
 

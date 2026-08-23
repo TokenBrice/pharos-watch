@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop-capacity";
-import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
+import { liveSnapshot } from "./redemption-backstop-sources.test-support";
+
+const now = 1_780_000_000;
+const baseSnapshot = (metadata: Record<string, unknown>) => liveSnapshot("lusd-liquity", metadata, {
+  fetchedAt: now - 60,
+  source: "liquity-v1",
+  sourceModel: "single-bucket",
+});
 
 describe("resolveCapacityBasis", () => {
   describe("reserve-sync-metadata model", () => {
@@ -230,19 +237,6 @@ describe("resolveRedemptionCapacity — supply ratio capacity", () => {
 });
 
 describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", () => {
-  const now = 1_780_000_000;
-  const baseSnapshot = (metadata: Record<string, unknown>): ReserveSnapshotMetadataRecord => ({
-    stablecoinId: "lusd-liquity",
-    fetchedAt: now - 60,
-    source: "liquity-v1",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    syncStatus: "ok",
-    warningCount: 0,
-    warnings: [],
-    metadata,
-  });
-
   it("clamps immediateCapacityUsd to supplyUsd and adds a note when nested capacityUsd exceeds supply", async () => {
     const db = {} as D1Database;
     const supplyUsd = 1_000_000;
@@ -548,20 +542,7 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
 });
 
 describe("resolveRedemptionCapacity — reserve-sync live capacity confidence override", () => {
-  const now = 1_780_000_000;
-  const baseSnapshot = (metadata: Record<string, unknown>): ReserveSnapshotMetadataRecord => ({
-    stablecoinId: "lusd-liquity",
-    fetchedAt: now - 60,
-    source: "liquity-v1",
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    syncStatus: "ok",
-    warningCount: 0,
-    warnings: [],
-    metadata,
-  });
-
-  const liveRedemptionSnapshot = (): ReserveSnapshotMetadataRecord =>
+  const liveRedemptionSnapshot = () =>
     baseSnapshot({
       freshnessMode: "not-applicable",
       redemption: {

@@ -1,5 +1,5 @@
 /** Tics banned anywhere in the output. */
-export const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
+const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
   { pattern: /\bplumbing\b/i, label: "plumbing" },
   { pattern: /\bbeneath the (?:calm|bedrock|surface|placid)\b/i, label: "beneath the calm" },
   { pattern: /\brestless (?:depths|plumbing|surface|currents?)\b/i, label: "restless depths" },
@@ -27,7 +27,7 @@ export const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
  *  scopes the haystack to the last sentence of the last paragraph and the
  *  text-hook's last sentence, so re-anchoring here would miss phrases
  *  followed by a short tail like "into next week." */
-export const FORBIDDEN_TICS_CLOSER: { pattern: RegExp; label: string }[] = [
+const FORBIDDEN_TICS_CLOSER: { pattern: RegExp; label: string }[] = [
   { pattern: /\b(?:worth watching|worth monitoring|bears? watching)\b/i, label: "worth watching/monitoring (closer)" },
 ];
 

@@ -62,8 +62,8 @@ export interface DdrWindDownFingerprintContext {
 
 type DdrResolutionLiveContext = DdrLiveContext & DdrWindDownFingerprintContext;
 
-export const DDR_R5_GRADE_MAPPING_VERSION = "r5-grade-v1";
-export const DDR_R5_GRADE_MAPPING = {
+const DDR_R5_GRADE_MAPPING_VERSION = "r5-grade-v1";
+const DDR_R5_GRADE_MAPPING = {
   version: DDR_R5_GRADE_MAPPING_VERSION,
   strong: ["A+", "A", "A-"],
   weak: ["B+", "B", "B-"],
@@ -71,15 +71,15 @@ export const DDR_R5_GRADE_MAPPING = {
 const DDR_R5_STRONG_GRADES: ReadonlySet<string> = new Set(DDR_R5_GRADE_MAPPING.strong);
 const DDR_R5_WEAK_GRADES: ReadonlySet<string> = new Set(DDR_R5_GRADE_MAPPING.weak);
 
-export const DDR_K1_MAS_RISKY_BAND_MAPPING_VERSION = "mas-band-v1";
-export const DDR_K1_MAS_RISKY_BAND_MAPPING = {
+const DDR_K1_MAS_RISKY_BAND_MAPPING_VERSION = "mas-band-v1";
+const DDR_K1_MAS_RISKY_BAND_MAPPING = {
   version: DDR_K1_MAS_RISKY_BAND_MAPPING_VERSION,
   riskyBands: ["concentrated", "exposed"],
 } as const;
 const DDR_K1_RISKY_MAS_BANDS: ReadonlySet<string> = new Set(DDR_K1_MAS_RISKY_BAND_MAPPING.riskyBands);
 
-export const DDR_INSUFFICIENT_MINT_AUTHORITY_REASON = "No reviewed mint authority";
-export const DDR_INSUFFICIENT_SUPPLY_HISTORY_REASON = "No usable supply history for this coin";
+const DDR_INSUFFICIENT_MINT_AUTHORITY_REASON = "No reviewed mint authority";
+const DDR_INSUFFICIENT_SUPPLY_HISTORY_REASON = "No usable supply history for this coin";
 export const DDR_INSUFFICIENT_LIVE_PRICE_REASON = "No live price deviation for this event";
 
 function sumReserveRisk(coin: DdrCoinStructural, risks: string[]): number {

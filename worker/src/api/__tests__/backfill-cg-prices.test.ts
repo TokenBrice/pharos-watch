@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -65,16 +66,14 @@ describe("handleBackfillCgPrices", () => {
 
   it("returns no-op response for out-of-range batches", async () => {
     const res = await handleBackfillCgPricesTrusted({ db: makeDb(), url: makeApiUrl("/api/backfill-cg-prices?batch=999999&batchSize=100") });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ message: "No coins in this batch" });
+    expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("fills NULL prices for existing supply rows", async () => {
     const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
     const res = await handleBackfillCgPricesTrusted({ db: makeDb([{ snapshot_date: snapshotDate, price: null, circulating_usd: 100_000_000 }]), url: makeApiUrl("/api/backfill-cg-prices?stablecoin=usdt-tether") });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       totalPricesFilled: number;
       totalRowsInserted: number;
@@ -90,8 +89,7 @@ describe("handleBackfillCgPrices", () => {
     const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
     const res = await handleBackfillCgPricesTrusted({ db: makeDb([{ snapshot_date: snapshotDate, price: null, circulating_usd: 15_000_000_000 }]), url: makeApiUrl("/api/backfill-cg-prices?stablecoin=ust-terra") });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       totalPricesFilled: number;
       totalRowsInserted: number;

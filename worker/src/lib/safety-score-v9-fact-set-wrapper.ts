@@ -125,6 +125,136 @@ function notApplicableWrapperFact(signal: string, evidenceRefIds: readonly strin
   };
 }
 
+function isDirectSerialWrapper(
+  context: AssetBuildContext,
+  form: V9ApplicableWrapperLocalFacts["form"],
+  wrapperEdge: V9EffectiveDependenciesV3["edges"][number] | undefined,
+): boolean {
+  // No tracked serial parent edge means we cannot prove the wrapper is a direct
+  // pass-through, so it is NOT treated as one and keeps the conservative
+  // `issuer-undisclosed` dispositions. This is the fail-closed path and it is
+  // deliberately not an assertion: a missing edge is a registry-completeness
+  // condition, and throwing here would abort the whole asset's compilation and
+  // take unrelated facts down with it — a wM fixture with no wrapper edge lost
+  // its entire supply observation and reported `missing-pillar-evidence` instead
+  // of its real bridge-route gap.
+  if (wrapperEdge === undefined) return false;
+  return (
+    (form === "pure" && context.asset.variantKind === "pure-wrapper") ||
+    (form === "native-staked" && context.asset.variantKind === "savings-passthrough")
+  );
+}
+
+function parseLeverageFactor(factor: string): number | null {
+  // Kept at star height 1 so the pattern is linear on curated risk-factor prose.
+  // Two shapes are deliberately avoided: overlapping `\s*` runs around an
+  // alternation that itself matches `\s`, which lets one whitespace run split
+  // many ways; and a nested numeric quantifier like `(?:\.\d+)?`. The digits are
+  // captured loosely as `[\d.]+` and validated by Number instead, so "1.2.3"
+  // parses to NaN and is rejected below rather than by the pattern.
+  const match = factor.match(
+    /\bleverage[-\s]?(?:factor)?(?:\s*[:=]\s*|\s+)([\d.]+)\s?x?\b/i,
+  );
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) ? value : null;
+}
+
+function leverageFactorAssessment(factor: number): V9WrapperRiskAssessment {
+  if (factor <= 1.000001) return "none";
+  if (factor <= 1.1) return "low";
+  if (factor <= 1.5) return "moderate";
+  if (factor <= 2) return "high";
+  return "critical";
+}
+
+type WrapperAllocationReview = NonNullable<AssetBuildContext["asset"]["wrapperAllocationReview"]>;
+
+function wrapperAllocationLeverageAssessment(
+  leverage: WrapperAllocationReview["localLeverage"],
+): V9WrapperRiskAssessment {
+  switch (leverage) {
+    case "no-borrowing-surface":
+      return "none";
+    case "bounded-up-to-1.1x":
+      return "low";
+    case "bounded-up-to-1.5x":
+      return "moderate";
+    case "bounded-up-to-2x":
+      return "high";
+    case "unbounded-or-above-2x":
+      return "critical";
+  }
+}
+
+function wrapperAllocationReuseAssessment(
+  capitalReuse: WrapperAllocationReview["capitalReuse"],
+): V9WrapperRiskAssessment {
+  switch (capitalReuse) {
+    case "none":
+      return "none";
+    case "bluechip-overcollateralized-lending":
+      return "low";
+    case "mixed-overcollateralized-lending":
+      return "moderate";
+    case "long-tail-overcollateralized-lending":
+    case "multi-strategy-reuse":
+    case "liquidation-loss-absorption":
+    case "single-borrower-risk-capital":
+      return "high";
+  }
+}
+
+function allocationCanResolveWrapperFact(fact: V9WrapperLocalDimensionFact): boolean {
+  return (
+    fact.disposition === "issuer-undisclosed" ||
+    fact.disposition === "integration-missing" ||
+    fact.disposition === "producer-failed" ||
+    fact.disposition === "method-unsupported"
+  );
+}
+
+function resolveWrapperFactFromAllocation(
+  existing: V9WrapperLocalDimensionFact,
+  resolution: V9WrapperLocalDimensionFact,
+): V9WrapperLocalDimensionFact {
+  return allocationCanResolveWrapperFact(existing)
+    ? {
+        ...resolution,
+        evidenceRefIds: uniqueEvidenceRefIds([
+          ...existing.evidenceRefIds,
+          ...resolution.evidenceRefIds,
+        ]),
+      }
+    : existing;
+}
+
+function assertDirectSerialWrapperFactDispositionInvariant(
+  context: AssetBuildContext,
+  directSerialWrapper: boolean,
+  facts: Pick<
+    V9ApplicableWrapperLocalFacts["facts"],
+    "custodyEscrow" | "leverage" | "rehypothecationCorrelation"
+  >,
+): void {
+  if (!directSerialWrapper || context.asset.wrapperCustodyReview != null) return;
+  const issuerUndisclosedFacts = (
+    [
+      ["custodyEscrow", facts.custodyEscrow],
+      ["leverage", facts.leverage],
+      ["rehypothecationCorrelation", facts.rehypothecationCorrelation],
+    ] as const
+  )
+    .filter(([, fact]) => fact.disposition === "issuer-undisclosed")
+    .map(([factKey]) => factKey);
+  if (issuerUndisclosedFacts.length > 0) {
+    throw new Error(
+      `Safety Score v9 wrapper invariant violated for ${context.asset.assetId}: ` +
+        `profileless direct serial wrapper emitted issuer-undisclosed for ${issuerUndisclosedFacts.join(",")}`,
+    );
+  }
+}
+
 function wrapperControlRisk(
   control: V9DeploymentControlFactV2,
 ): { assessment: V9WrapperRiskAssessment; signals: string[] } {
@@ -169,6 +299,7 @@ interface WrapperLocalBuildState {
   reviewedFormEvidence: string[];
   controlEvidenceRefIds: string[];
   reserveEvidenceRefIds: string[];
+  allocationEvidenceRefIds: string[];
   routeEvidenceRefIds: string[];
 }
 
@@ -190,7 +321,10 @@ function buildWrapperStructuralDimensions(
     reviewedFormEvidence,
     controlEvidenceRefIds,
     reserveEvidenceRefIds,
+    allocationEvidenceRefIds,
   } = state;
+  const directSerialWrapper = isDirectSerialWrapper(context, form, wrapperEdge);
+  const allocation = context.asset.wrapperAllocationReview ?? null;
   let contractMutability: V9WrapperLocalDimensionFact;
   const upgrade = input.economicControlReview.mint.upgrade;
   if (input.economicControlReview.mint.status.observationState !== "known") {
@@ -270,16 +404,27 @@ function buildWrapperStructuralDimensions(
           ],
           custodyEvidence,
         );
-  } else if (form === "pure" && wrapperEdge !== undefined) {
+  } else if (directSerialWrapper) {
     custodyEscrow = notApplicableWrapperFact(
-      "pure-wrapper-custody-is-the-serial-parent-contract-claim",
-      reviewedFormEvidence,
+      form === "pure"
+        ? "pure-wrapper-custody-is-the-serial-parent-contract-claim"
+        : "savings-passthrough-has-no-local-custody-or-escrow",
+      uniqueEvidenceRefIds([...reviewedFormEvidence, ...allocationEvidenceRefIds]),
     );
   } else {
     custodyEscrow = unavailableWrapperFact(
       wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
       "wrapper-custody-or-escrow-review-unavailable",
       reserveEvidenceRefIds,
+    );
+  }
+  if (allocation !== null) {
+    custodyEscrow = resolveWrapperFactFromAllocation(
+      custodyEscrow,
+      notApplicableWrapperFact(
+        "reviewed-allocation-is-fully-onchain-with-no-offchain-custodian",
+        allocationEvidenceRefIds,
+      ),
     );
   }
 
@@ -327,17 +472,36 @@ function buildWrapperStructuralDimensions(
   }
 
   let leverage: V9WrapperLocalDimensionFact;
-  if (form === "pure" && wrapperEdge !== undefined) {
+  if (directSerialWrapper) {
     leverage = notApplicableWrapperFact(
-      "pure-wrapper-has-no-local-strategy-leverage",
+      form === "pure"
+        ? "pure-wrapper-has-no-local-strategy-leverage"
+        : "savings-passthrough-has-no-local-borrowing-surface",
       reviewedFormEvidence,
     );
   } else if (input.reserveStatus.observationState === "known") {
+    const leverageFactorObservations = input.reserveExposures.flatMap((exposure) =>
+      exposure.riskFactors.flatMap((factor) => {
+        const value = parseLeverageFactor(factor);
+        return value === null ? [] : [{ factor, value }];
+      }),
+    );
     const leverageFactors = input.reserveExposures.flatMap((exposure) =>
-      exposure.riskFactors.filter((factor) => /\b(leverage|leveraged|borrowing|debt-financed)\b/i.test(factor)),
+      exposure.riskFactors.filter(
+        (factor) =>
+          parseLeverageFactor(factor) === null &&
+          /\b(leverage|leveraged|borrowing|debt-financed)\b/i.test(factor),
+      ),
     );
     leverage =
-      leverageFactors.length > 0
+      leverageFactorObservations.length > 0
+        ? reviewedWrapperFact(
+            context,
+            worstWrapperRisk(leverageFactorObservations.map(({ value }) => leverageFactorAssessment(value))),
+            leverageFactorObservations.map(({ factor }) => `wrapper-leverage-factor:${factor}`),
+            reserveEvidenceRefIds,
+          )
+        : leverageFactors.length > 0
         ? reviewedWrapperFact(
             context,
             "high",
@@ -354,6 +518,20 @@ function buildWrapperStructuralDimensions(
       wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
       "wrapper-leverage-review-unavailable",
       reserveEvidenceRefIds,
+    );
+  }
+  if (allocation !== null) {
+    leverage = resolveWrapperFactFromAllocation(
+      leverage,
+      reviewedWrapperFact(
+        context,
+        wrapperAllocationLeverageAssessment(allocation.localLeverage),
+        [
+          `wrapper-allocation-local-leverage:${allocation.localLeverage}`,
+          `wrapper-allocation-observation-count:${allocation.observations.length}`,
+        ],
+        allocationEvidenceRefIds,
+      ),
     );
   }
 
@@ -380,16 +558,32 @@ function buildWrapperStructuralDimensions(
             ],
             custodyEvidence,
           );
-  } else if (form === "pure" && wrapperEdge !== undefined) {
+  } else if (directSerialWrapper) {
     rehypothecationCorrelation = notApplicableWrapperFact(
-      "pure-wrapper-parent-correlation-is-applied-by-serial-dependency",
-      reviewedFormEvidence,
+      form === "pure"
+        ? "pure-wrapper-parent-correlation-is-applied-by-serial-dependency"
+        : "savings-passthrough-holds-one-parent-and-reuses-nothing",
+      uniqueEvidenceRefIds([...reviewedFormEvidence, ...allocationEvidenceRefIds]),
     );
   } else {
     rehypothecationCorrelation = unavailableWrapperFact(
       wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
       "wrapper-rehypothecation-correlation-review-unavailable",
       reserveEvidenceRefIds,
+    );
+  }
+  if (allocation !== null) {
+    rehypothecationCorrelation = resolveWrapperFactFromAllocation(
+      rehypothecationCorrelation,
+      reviewedWrapperFact(
+        context,
+        wrapperAllocationReuseAssessment(allocation.capitalReuse),
+        [
+          `wrapper-allocation-capital-reuse:${allocation.capitalReuse}`,
+          `wrapper-allocation-observation-count:${allocation.observations.length}`,
+        ],
+        allocationEvidenceRefIds,
+      ),
     );
   }
 
@@ -672,6 +866,10 @@ export function buildWrapperLocalFacts(
     ...input.reserveExposures.flatMap((exposure) => exposure.status.evidenceRefIds),
     ...(wrapperEdge?.evidenceRefIds ?? []),
   ]);
+  const allocationEvidenceRefIds =
+    context.asset.wrapperAllocationReview === null || context.asset.wrapperAllocationReview === undefined
+      ? []
+      : componentResearchEvidence(context, "wrapper-local:leverage");
   const routeEvidenceRefIds = uniqueEvidenceRefIds([
     ...input.exitStatus.evidenceRefIds,
     ...input.exitRoutes.flatMap((route) => [
@@ -687,6 +885,7 @@ export function buildWrapperLocalFacts(
     reviewedFormEvidence,
     controlEvidenceRefIds,
     reserveEvidenceRefIds,
+    allocationEvidenceRefIds,
     routeEvidenceRefIds,
   };
   const {
@@ -697,6 +896,11 @@ export function buildWrapperLocalFacts(
     rehypothecationCorrelation,
     shareAccountingNavOracle,
   } = buildWrapperStructuralDimensions(context, input, state);
+  assertDirectSerialWrapperFactDispositionInvariant(context, isDirectSerialWrapper(context, form, wrapperEdge), {
+    custodyEscrow,
+    leverage,
+    rehypothecationCorrelation,
+  });
   const { withdrawalTerms, measuredUnwind } = buildWrapperExitDimensions(
     context,
     input,

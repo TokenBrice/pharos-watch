@@ -3,19 +3,15 @@ import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { executeAtomicBatch, runChunkedInRead } from "./db";
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "./depeg-resolver-repair-store";
 import {
-  DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
-  DDR_LOCK_STATE_INSERT_COLUMNS_SQL,
-  type DdrLockTrigger,
   assertHash,
-  assertLockMetadata,
   assertNonEmpty,
   assertPositiveInteger,
-  bindLockMetadata,
-  lockAuditInsertValuesSql,
-  lockStateOnConflictUpdateSql,
-  lockStateInsertValuesSql,
 } from "./depeg-resolver-store-validators";
+import type { DdrLockState, DdrLockTrigger } from "./depeg-resolver-lock-opportunity-store";
 import { sha256Hex } from "./hash";
+
+export { recordLockDeferral, recordLockOpportunity } from "./depeg-resolver-lock-opportunity-store";
+export type { DdrLockAuditAction, DdrLockHealthStatus, DdrLockState, DdrLockTrigger, RecordLockDeferralInput } from "./depeg-resolver-lock-opportunity-store";
 
 export type DdrIncidentDirection = "above" | "below";
 export type DdrIncidentRelation = "observed" | "superseded" | "merged" | "split_from" | "repair_replacement";
@@ -26,26 +22,6 @@ export type DdrPolicyUniverseReason =
   | "rollout_active_public_tracked"
   | "psi_shadow_excluded"
   | "not_public_tracked";
-export type DdrLockState =
-  | "pending_lock"
-  | "lock_deferred"
-  | "frozen"
-  | "no_call"
-  | "publication_retry_pending"
-  | "publication_failed"
-  | "published";
-export type DdrLockHealthStatus = "healthy" | "degraded" | "skipped";
-export type { DdrLockTrigger };
-export type DdrLockAuditAction =
-  | "pending"
-  | "deferred"
-  | "confirmed_seen"
-  | "locked_prediction"
-  | "locked_no_call"
-  | "publication_retry_pending"
-  | "publication_failed"
-  | "published";
-
 // Unix ts for 2100-01-01T00:00:00Z; far-future sentinel = effectively non-expiring.
 const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
 export const DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC = 6 * 3600;
@@ -187,27 +163,6 @@ export interface LoadCanonicalIncidentsFilters {
   limit?: number;
 }
 
-export interface RecordLockDeferralInput {
-  incidentKey: string;
-  eventId: number;
-  predictionPolicyVersion: string;
-  eligibleAt: number;
-  runAt: number;
-  createdAt?: number;
-  runId?: string | null;
-  reason?: string | null;
-  healthStatus?: DdrLockHealthStatus;
-  action?: DdrLockAuditAction;
-  confirmationAt?: number | null;
-  outcomeAt?: number | null;
-  lockTrigger?: DdrLockTrigger | null;
-  forecastReadinessScore?: number | null;
-  forecastReadinessVersion?: string | null;
-  readinessThreshold?: number | null;
-  backstopAt?: number | null;
-  backstopDelaySec?: number | null;
-}
-
 interface IncidentRow {
   incident_key: string;
   stablecoin_id: string;
@@ -305,7 +260,10 @@ export async function closeRecoveredPreLockIncidents(
            FROM depeg_events current_event
            WHERE current_event.id = incident.current_event_id
              AND current_event.ended_at IS NOT NULL
-             AND current_event.recovery_price IS NOT NULL
+             AND (
+               current_event.close_reason IN ('recovered-primary', 'recovered-dex', 'recovered-native')
+               OR (current_event.close_reason IS NULL AND current_event.recovery_price IS NOT NULL)
+             )
              AND current_event.ended_at + ? + ? <= ?
          )`,
     )
@@ -1329,137 +1287,4 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
 
   const conditions = scopedConditions();
   return readRows(conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "", scopedBinds(), optionLimit(filters));
-}
-
-function assertLockInput(input: RecordLockDeferralInput): void {
-  assertPositiveInteger(input.eventId, "eventId");
-  assertPositiveInteger(input.eligibleAt, "eligibleAt");
-  assertPositiveInteger(input.runAt, "runAt");
-  assertNonEmpty(input.incidentKey, "incidentKey");
-  assertNonEmpty(input.predictionPolicyVersion, "predictionPolicyVersion");
-  assertLockMetadata(input);
-}
-
-export async function recordLockDeferral(db: D1Database, input: RecordLockDeferralInput): Promise<void> {
-  assertLockInput(input);
-
-  const createdAt = input.createdAt ?? input.runAt;
-  const reason = input.reason ?? null;
-  await executeAtomicBatch(db, [
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_prediction_lock_state
-         (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
-         VALUES (${lockStateInsertValuesSql("1", "?", "'lock_deferred'")})
-         ${lockStateOnConflictUpdateSql({
-           incrementDeferralCount: true,
-           preserveDeferralReason: false,
-           preserveMetadata: false,
-           lastStateSql: "'lock_deferred'",
-         })}`,
-      )
-      .bind(
-        input.incidentKey,
-        input.eventId,
-        input.predictionPolicyVersion,
-        input.eligibleAt,
-        input.runAt,
-        input.runAt,
-        reason,
-        createdAt,
-        createdAt,
-        ...bindLockMetadata(input),
-      ),
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_lock_opportunity_audit
-         (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL})
-         VALUES (${lockAuditInsertValuesSql("NULL", "NULL", "?")})`,
-      )
-      .bind(
-        input.incidentKey,
-        input.eventId,
-        input.runId ?? null,
-        input.runAt,
-        input.eligibleAt,
-        input.healthStatus ?? "degraded",
-        input.action ?? "deferred",
-        reason,
-        createdAt,
-        ...bindLockMetadata(input),
-      ),
-  ]);
-}
-
-export async function recordLockOpportunity(
-  db: D1Database,
-  input: RecordLockDeferralInput & { action: DdrLockAuditAction },
-): Promise<void> {
-  if (input.action === "deferred") {
-    await recordLockDeferral(db, input);
-    return;
-  }
-
-  assertLockInput(input);
-
-  const createdAt = input.createdAt ?? input.runAt;
-  const stateAction =
-    input.action === "publication_retry_pending" ||
-    input.action === "publication_failed" ||
-    input.action === "published"
-      ? input.action
-      : null;
-  const statements: D1PreparedStatement[] = [];
-  if (stateAction) {
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO depeg_resolver_prediction_lock_state
-           (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
-           VALUES (${lockStateInsertValuesSql("0", "?", "?")})
-           ${lockStateOnConflictUpdateSql({
-             incrementDeferralCount: false,
-             preserveDeferralReason: true,
-             preserveMetadata: true,
-             lastStateSql: "excluded.last_state",
-           })}`,
-        )
-        .bind(
-          input.incidentKey,
-          input.eventId,
-          input.predictionPolicyVersion,
-          input.eligibleAt,
-          input.runAt,
-          input.runAt,
-          input.reason ?? null,
-          stateAction,
-          createdAt,
-          createdAt,
-          ...bindLockMetadata(input),
-        ),
-    );
-  }
-  statements.push(
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_lock_opportunity_audit
-         (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL})
-         VALUES (${lockAuditInsertValuesSql("?", "?", "?")})`,
-      )
-      .bind(
-        input.incidentKey,
-        input.eventId,
-        input.runId ?? null,
-        input.runAt,
-        input.eligibleAt,
-        input.healthStatus ?? "healthy",
-        input.action,
-        input.confirmationAt ?? null,
-        input.outcomeAt ?? null,
-        input.reason ?? null,
-        createdAt,
-        ...bindLockMetadata(input),
-      ),
-  );
-  await executeAtomicBatch(db, statements);
 }

@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Ethereum is the sole canonical syrupUSDC issuance route: the MaplePool ERC-4626 vault mints strategy-vault shares against USDC deposits. Base, Arbitrum, and Solana are Chainlink CCIP CCT burn/mint bridge representations, even where Maple describes them as natively available; their destination token roles, pools, timelocks, canonical-side MapleCCIPReceiver, and Solana mint/freeze authorities are assessed here under Bridge Risk.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Pharos bridge-route re-verification; mint-bridge-boundary migration",
+    "summary": "Ethereum is the sole canonical syrupUSDC issuance route: the MaplePool ERC-4626 vault mints strategy-vault shares against USDC deposits and its CCIP LockReleaseTokenPool escrows remote circulation. Base, Arbitrum, Solana, Ink, Monad, Robinhood Chain, and Tempo are Chainlink CCIP CCT burn/mint bridge representations, even where Maple describes them as natively available; the destination token identities and pools are confirmed by Chainlink's live directory, while the previously reviewed destination controls and canonical-side MapleCCIPReceiver remain assessed here under Bridge Risk.",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "Pharos bridge-route re-verification; 2026-08-23 Chainlink directory coverage refresh",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -217,6 +217,90 @@
             "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
           }
         ]
+      },
+      {
+        "id": "ink:0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-23",
+        "sources": [
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDC",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          }
+        ]
+      },
+      {
+        "id": "monad:0xab6e5a0c3799d020c790d34f7b2c02639e238af7",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xab6e5a0c3799d020c790d34f7b2c02639e238af7",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-23",
+        "sources": [
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDC",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          }
+        ]
+      },
+      {
+        "id": "robinhood:0xc6a4854eeb493224d5f9485e12dd3a81f22eee14",
+        "destinationChain": "robinhood",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc6a4854eeb493224d5f9485e12dd3a81f22eee14",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-23",
+        "sources": [
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDC",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c0000000000000000000008191667423f70e67",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c0000000000000000000008191667423f70e67",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-23",
+        "sources": [
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDC",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          }
+        ]
       }
     ],
     "controls": [
@@ -227,7 +311,11 @@
           "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
           "base:0x660975730059246a68521a3e2fbd4740173100f5",
           "arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
-          "solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj"
+          "solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+          "ink:0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9",
+          "monad:0xab6e5a0c3799d020c790d34f7b2c02639e238af7",
+          "robinhood:0xc6a4854eeb493224d5f9485e12dd3a81f22eee14",
+          "tempo:0x20c0000000000000000000008191667423f70e67"
         ],
         "capabilities": [
           "bridge-mint",

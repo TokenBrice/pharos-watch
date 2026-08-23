@@ -1,13 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { makePsiDailyDb, makePsiSnapshotDb, type MockD1Database } from "./snapshot-cron.test-support";
 import { snapshotPsiDaily } from "../snapshot-psi";
 
-function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
-  return createMockD1([
-    ...tables,
-    { match: "INSERT OR REPLACE INTO stability_index", rows: [] },
-  ]);
-}
+const mockD1 = makePsiSnapshotDb;
 
 function yesterdayMidnightFrom(nowMs: number): number {
   const now = Math.floor(nowMs / 1000);
@@ -40,24 +35,17 @@ describe("snapshotPsiDaily", () => {
   });
 
   it("computes yesterday average from 96 samples and inserts stability_index row", async () => {
-    const db = mockD1([
-      {
-        match: "AVG(score) as avg_score",
-        rows: [],
-        first: {
-          avg_score: 87.44,
-          avg_severity: 5.12,
-          avg_breadth: 2.34,
-          avg_stress_breadth: 1.11,
-          avg_trend: 0.56,
-          cnt: 96,
-        },
+    const db = makePsiDailyDb({
+      average: {
+        avg_score: 87.44,
+        avg_severity: 5.12,
+        avg_breadth: 2.34,
+        avg_stress_breadth: 1.11,
+        avg_trend: 0.56,
+        cnt: 96,
       },
-      {
-        match: "GROUP BY methodology_version",
-        rows: [{ methodology_version: "psi-v3", cnt: 96 }],
-      },
-    ]);
+      methodologyRows: [{ methodology_version: "psi-v3", cnt: 96 }],
+    });
 
     const result = await snapshotPsiDaily(db);
 
@@ -94,24 +82,17 @@ describe("snapshotPsiDaily", () => {
   });
 
   it("returns skipped metadata and does not insert when sample set is empty", async () => {
-    const db = mockD1([
-      {
-        match: "AVG(score) as avg_score",
-        rows: [],
-        first: {
-          avg_score: null,
-          avg_severity: null,
-          avg_breadth: null,
-          avg_stress_breadth: null,
-          avg_trend: null,
-          cnt: 0,
-        },
+    const db = makePsiDailyDb({
+      average: {
+        avg_score: null,
+        avg_severity: null,
+        avg_breadth: null,
+        avg_stress_breadth: null,
+        avg_trend: null,
+        cnt: 0,
       },
-      {
-        match: "GROUP BY methodology_version",
-        rows: [],
-      },
-    ]);
+      methodologyRows: [],
+    });
 
     const result = await snapshotPsiDaily(db);
 
@@ -124,27 +105,20 @@ describe("snapshotPsiDaily", () => {
   });
 
   it("uses the most common methodology version when multiple versions exist", async () => {
-    const db = mockD1([
-      {
-        match: "AVG(score) as avg_score",
-        rows: [],
-        first: {
-          avg_score: 92,
-          avg_severity: 2,
-          avg_breadth: 1,
-          avg_stress_breadth: 0.5,
-          avg_trend: 1.5,
-          cnt: 96,
-        },
+    const db = makePsiDailyDb({
+      average: {
+        avg_score: 92,
+        avg_severity: 2,
+        avg_breadth: 1,
+        avg_stress_breadth: 0.5,
+        avg_trend: 1.5,
+        cnt: 96,
       },
-      {
-        match: "GROUP BY methodology_version",
-        rows: [
-          { methodology_version: "psi-v4", cnt: 60 },
-          { methodology_version: "psi-v3", cnt: 36 },
-        ],
-      },
-    ]);
+      methodologyRows: [
+        { methodology_version: "psi-v4", cnt: 60 },
+        { methodology_version: "psi-v3", cnt: 36 },
+      ],
+    });
 
     await snapshotPsiDaily(db);
 

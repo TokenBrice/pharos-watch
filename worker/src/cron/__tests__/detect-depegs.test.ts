@@ -18,6 +18,7 @@ vi.mock("@shared/lib/psi-eligible", () => ({
     { id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false }, commodityOunces: undefined },
     { id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false }, commodityOunces: undefined },
     { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", geckoId: "brz", flags: { navToken: false, pegCurrency: "BRL" }, commodityOunces: undefined },
+    { id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", geckoId: "a7a5", flags: { navToken: false, pegCurrency: "RUB" }, commodityOunces: undefined },
     { id: "nav-token-test", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true }, commodityOunces: undefined },
   ],
   PSI_ELIGIBLE_META_BY_ID: new Map([
@@ -25,6 +26,7 @@ vi.mock("@shared/lib/psi-eligible", () => ({
     ["usdc-circle", { id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false, pegCurrency: "USD" }, commodityOunces: undefined }],
     ["eurc-circle", { id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false, pegCurrency: "EUR" }, commodityOunces: undefined }],
     ["brz-transfero", { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", geckoId: "brz", flags: { navToken: false, pegCurrency: "BRL" }, commodityOunces: undefined }],
+    ["a7a5-old-vector", { id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", geckoId: "a7a5", flags: { navToken: false, pegCurrency: "RUB" }, commodityOunces: undefined }],
     ["nav-token-test", { id: "nav-token-test", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true, pegCurrency: "USD" }, commodityOunces: undefined }],
   ]),
 }));
@@ -32,13 +34,19 @@ vi.mock("@shared/lib/psi-eligible", () => ({
 // Stub peg-rates
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: (_assets: unknown, _metaById: unknown, fxFallbackRates?: Record<string, number>) => ({
-    rates: { peggedUSD: 1, peggedEUR: 1.08, peggedREAL: fxFallbackRates?.peggedREAL ?? 0.18765951 },
+    rates: {
+      peggedUSD: 1,
+      peggedEUR: 1.08,
+      peggedREAL: fxFallbackRates?.peggedREAL ?? 0.18765951,
+      ...(fxFallbackRates?.peggedRUB ? { peggedRUB: fxFallbackRates.peggedRUB } : {}),
+    },
     sources: {
       peggedUSD: "median",
       peggedEUR: "median",
       peggedREAL: fxFallbackRates?.peggedREAL ? "fallback" : "median",
+      peggedRUB: fxFallbackRates?.peggedRUB ? "fallback" : "median",
     },
-    counts: { peggedUSD: 4, peggedEUR: 4, peggedREAL: 2 },
+    counts: { peggedUSD: 4, peggedEUR: 4, peggedREAL: 2, peggedRUB: 1 },
   }),
   getPegReference: (pegType: string, rates: Record<string, number>) => rates[pegType] ?? 1,
   normalizePegType: (pegType: string | undefined) => pegType,
@@ -62,7 +70,7 @@ import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 
 function isCloseEventUpdate(sql: string): boolean {
   return sql.includes(
-    "UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_first_seen_at = NULL WHERE id = ?",
+    "UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_first_seen_at = NULL, recovery_last_seen_at = NULL WHERE id = ?",
   );
 }
 
@@ -321,6 +329,7 @@ describe("detectDepegEvents", () => {
           start_price: 0.98, peak_price: 0.98, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
           recovery_first_seen_at: now - 900,
+          recovery_last_seen_at: now - 900,
         }],
       },
       { match: "dex_prices", rows: [] },
@@ -356,6 +365,7 @@ describe("detectDepegEvents", () => {
           start_price: 0.978, peak_price: 0.978, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
           recovery_first_seen_at: now - 900,
+          recovery_last_seen_at: now - 900,
         }],
       },
       { match: "dex_prices", rows: [] },
@@ -705,7 +715,7 @@ describe("detectDepegEvents", () => {
     expect(inserts.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("fails closed for thin fiat peg references that only have a peer median", async () => {
+  it("fails closed without a live or cached RUB reference and writes no A7A5 depeg", async () => {
     const preparedSqls: string[] = [];
     const db = mockD1([
       { match: "depeg_events", rows: [] },
@@ -719,10 +729,10 @@ describe("detectDepegEvents", () => {
 
     await detectDepegEvents(db, [
       makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        pegType: "peggedREAL",
-        price: 0.190587,
+        id: "a7a5-old-vector",
+        symbol: "A7A5",
+        pegType: "peggedRUB",
+        price: 0.02,
         priceSource: "pyth",
         priceConfidence: "single-source",
       }),
@@ -809,6 +819,7 @@ describe("detectDepegEvents", () => {
           ended_at: null,
           source: "live",
           recovery_first_seen_at: now - 900,
+          recovery_last_seen_at: now - 900,
         }],
       },
       { match: "dex_prices", rows: [] },
@@ -1225,6 +1236,7 @@ describe("detectDepegEvents", () => {
           start_price: 0.976, peak_price: 0.976, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
           recovery_first_seen_at: now - 900,
+          recovery_last_seen_at: now - 900,
         }],
       },
       {

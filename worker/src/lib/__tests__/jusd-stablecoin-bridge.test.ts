@@ -3,9 +3,16 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import fixture from "./fixtures/jusd-citrea-bridge.json";
 
 const fetchJsonWithRetryMock = vi.fn();
+const shouldAttemptFetchMock = vi.fn();
+const recordOutcomeSafeMock = vi.fn();
 
 vi.mock("../fetch-retry", () => ({
   fetchJsonWithRetry: (...args: unknown[]) => fetchJsonWithRetryMock(...args),
+}));
+
+vi.mock("../circuit-breaker", () => ({
+  shouldAttemptFetch: (...args: unknown[]) => shouldAttemptFetchMock(...args),
+  recordOutcomeSafe: (...args: unknown[]) => recordOutcomeSafeMock(...args),
 }));
 
 vi.mock("viem/utils", async (importOriginal) => {
@@ -38,8 +45,6 @@ interface FixtureOverrides {
   bridgeCode?: string;
   jusdDecimals?: string;
   jusdReserve?: string;
-  reserveBalance?: string;
-  reserveAllowance?: string;
   bridgeUsd?: string;
   bridgeJusd?: string;
   stopped?: string;
@@ -49,7 +54,8 @@ interface FixtureOverrides {
   isMinter?: string;
   quoteDecimals?: string;
   quoteBalance?: string;
-  burnSimulationGas?: string;
+  burnCapability?: string;
+  omitResultId?: string;
 }
 
 function abiWord(value: string): `0x${string}` {
@@ -73,8 +79,6 @@ function installRpcFixture(overrides: FixtureOverrides = {}): void {
       "bridge-code": overrides.bridgeCode ?? fixture.bridge.runtimeCode,
       "jusd-decimals": abiWord(overrides.jusdDecimals ?? fixture.jusd.decimals),
       "jusd-reserve": abiAddress(overrides.jusdReserve ?? fixture.jusd.reserve),
-      "reserve-balance": abiWord(overrides.reserveBalance ?? fixture.jusd.reserveBalance),
-      "reserve-allowance": abiWord(overrides.reserveAllowance ?? fixture.jusd.reserveAllowance),
       "bridge-usd": abiAddress(overrides.bridgeUsd ?? fixture.bridge.quoteToken),
       "bridge-jusd": abiAddress(overrides.bridgeJusd ?? fixture.jusd.address),
       "bridge-stopped": abiWord(overrides.stopped ?? fixture.bridge.stopped),
@@ -84,13 +88,16 @@ function installRpcFixture(overrides: FixtureOverrides = {}): void {
       "bridge-minter": abiWord(overrides.isMinter ?? fixture.bridge.isMinter),
       "quote-decimals": abiWord(overrides.quoteDecimals ?? fixture.bridge.quoteDecimals),
       "quote-balance": abiWord(overrides.quoteBalance ?? fixture.bridge.quoteBalance),
-      "burn-simulation": overrides.burnSimulationGas ?? fixture.bridge.burnSimulationGas,
+      "burn-capability": overrides.burnCapability ?? "0x",
     };
-    const body = [...calls].reverse().map((call) => ({
-      jsonrpc: "2.0",
-      id: call.id,
-      result: values[call.id],
-    }));
+    const body = [...calls]
+      .reverse()
+      .filter((call) => call.id !== overrides.omitResultId)
+      .map((call) => ({
+        jsonrpc: "2.0",
+        id: call.id,
+        result: values[call.id],
+      }));
     return { response: new Response(null, { status: 200 }), body };
   });
 }
@@ -123,6 +130,8 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(fixture.now));
     fetchJsonWithRetryMock.mockReset();
+    shouldAttemptFetchMock.mockReset().mockResolvedValue(true);
+    recordOutcomeSafeMock.mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -141,8 +150,8 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     expect(jusdStablecoinBridgeProvider).toMatchObject({
       source: "protocol-redeem",
       liveCircuitSource: CIRCUIT_SOURCE.JUSD_CITREA_BRIDGE,
-      recordNullLiveResultAsCircuitFailure: true,
     });
+    expect(jusdStablecoinBridgeProvider).not.toHaveProperty("recordNullLiveResultAsCircuitFailure");
     expect(override).toMatchObject({
       price: 0.9998,
       source: "protocol-redeem",
@@ -163,7 +172,7 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(2);
   });
 
-  it("pins every route read and the positive burn simulation to the fresh Citrea block", async () => {
+  it("pins every route read and the holder-independent burn capability call to the fresh Citrea block", async () => {
     installRpcFixture();
     const assets = makeAssets();
 
@@ -177,20 +186,22 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     for (const call of stateCalls) {
       expect(call.params[call.params.length - 1]).toBe(blockTag);
     }
-    const burnSimulation = routeRequest.find((call) => call.id === "burn-simulation");
-    expect(burnSimulation).toEqual({
+    const burnCapability = routeRequest.find((call) => call.id === "burn-capability");
+    expect(burnCapability).toEqual({
       jsonrpc: "2.0",
-      id: "burn-simulation",
-      method: "eth_estimateGas",
+      id: "burn-capability",
+      method: "eth_call",
       params: [
         {
-          from: fixture.jusd.reserve,
+          from: "0x0000000000000000000000000000000000000001",
           to: fixture.bridge.address,
-          data: `0x42966c68${(10n ** 18n).toString(16).padStart(64, "0")}`,
+          data: `0x42966c68${"0".repeat(64)}`,
         },
         blockTag,
       ],
     });
+    expect(routeRequest.map((call) => call.id)).not.toContain("reserve-balance");
+    expect(routeRequest.map((call) => call.id)).not.toContain("reserve-allowance");
     for (const [, init, retries, options] of fetchJsonWithRetryMock.mock.calls) {
       expect(init.method).toBe("POST");
       expect(retries).toBe(0);
@@ -198,19 +209,18 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     }
   });
 
-  it("is wired into the authoritative provider registry", async () => {
-    installRpcFixture();
+  it("keeps an all-zero-capacity route circuit-neutral but records provider failures", async () => {
+    const db = {} as D1Database;
+    installRpcFixture({ minted: "0x0" });
+    await expect(fetchAuthoritativeLivePriceOverrides(makeAssets(), undefined, undefined, { db })).resolves.toEqual(new Map());
+    expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides(makeAssets());
-
-    expect(overrides.get("jusd-juicedollar")).toMatchObject({
-      price: 0.9998,
-      source: "protocol-redeem",
-      confidence: "high",
-    });
+    fetchJsonWithRetryMock.mockReset().mockResolvedValueOnce(null);
+    await expect(fetchAuthoritativeLivePriceOverrides(makeAssets(), undefined, undefined, { db })).resolves.toEqual(new Map());
+    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.JUSD_CITREA_BRIDGE, false);
   });
 
-  it("fails closed on wrong bridge token identities or runtime bytecode", async () => {
+  it("throws provider failures on wrong bridge token identities or runtime bytecode", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     for (const overrides of [
       { bridgeUsd: "0x1111111111111111111111111111111111111111" },
@@ -226,7 +236,7 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
         jusdStablecoinBridgeProvider.fetchLivePrice?.(assets[0]!, {
           assetsById: new Map(assets.map((asset) => [asset.id, asset])),
         }),
-      ).resolves.toBeNull();
+      ).rejects.toThrow(/jusd-stablecoin-bridge/);
     }
   });
 
@@ -244,13 +254,14 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     }
   });
 
-  it("fails closed when the bridge is unapproved or malformed", async () => {
+  it("throws provider failures when bridge state has identity or schema drift", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     for (const overrides of [
       { isMinter: "0x0" },
       { quoteDecimals: "0x12" },
       { jusdDecimals: "0x6" },
       { limit: "0x1" },
+      { omitResultId: "bridge-minted" },
     ]) {
       fetchJsonWithRetryMock.mockReset();
       installRpcFixture(overrides);
@@ -259,18 +270,15 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
         jusdStablecoinBridgeProvider.fetchLivePrice?.(assets[0]!, {
           assetsById: new Map(assets.map((asset) => [asset.id, asset])),
         }),
-      ).resolves.toBeNull();
+      ).rejects.toThrow(/jusd-stablecoin-bridge/);
     }
   });
 
-  it("fails closed on underfunded, dust-capacity, or non-executable redemption state", async () => {
+  it("returns neutral unavailability for underfunded routes without sentinel-account preconditions", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     for (const overrides of [
       { quoteBalance: "0x1" },
       { minted: "0xde0b6b3a7640000", quoteBalance: "0xf4240" },
-      { reserveBalance: "0x0" },
-      { reserveAllowance: "0x0" },
-      { burnSimulationGas: "0x0" },
     ]) {
       fetchJsonWithRetryMock.mockReset();
       installRpcFixture(overrides);
@@ -283,7 +291,7 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
     }
   });
 
-  it("fails closed on stale Citrea state or RPC failure", async () => {
+  it("throws a provider failure for a stale Citrea head", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     installRpcFixture({ blockTimestamp: "0x6a588000" });
     const staleAssets = makeAssets();
@@ -291,21 +299,21 @@ describe("JuiceDollar Citrea StablecoinBridge price source", () => {
       jusdStablecoinBridgeProvider.fetchLivePrice?.(staleAssets[0]!, {
         assetsById: new Map(staleAssets.map((asset) => [asset.id, asset])),
       }),
-    ).resolves.toBeNull();
+    ).rejects.toThrow(/freshness validation failed/);
     expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(1);
+  });
 
-    fetchJsonWithRetryMock.mockReset();
+  it("throws a provider failure for RPC transport failure without probing an untrusted parent", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
     fetchJsonWithRetryMock.mockResolvedValueOnce(null);
     const failedAssets = makeAssets();
     await expect(
       jusdStablecoinBridgeProvider.fetchLivePrice?.(failedAssets[0]!, {
         assetsById: new Map(failedAssets.map((asset) => [asset.id, asset])),
       }),
-    ).resolves.toBeNull();
-  });
+    ).rejects.toThrow(/Citrea RPC returned no response/);
 
-  it("does not touch Citrea when the external stablecoin parent is stale or untrusted", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    fetchJsonWithRetryMock.mockReset();
     const staleObservedAt = Math.floor(Date.now() / 1_000) - 60 * 60;
     const assets = makeAssets({
       priceSource: "cached+coingecko",

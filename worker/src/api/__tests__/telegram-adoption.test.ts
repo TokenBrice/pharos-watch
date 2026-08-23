@@ -1,19 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeJsonRequest } from "./api-request-response.test-support";
 import { handleTelegramAdoption } from "../telegram-adoption";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import type { FullRouteContext } from "../../routes/shared";
 import { getRouteMatch } from "../../routes/registry";
 
 function request(body: unknown, headers: HeadersInit = {}): Request {
-  return new Request("https://site-api.pharos.watch/api/telegram-adoption", {
-    method: "POST",
+  return makeJsonRequest("https://site-api.pharos.watch/api/telegram-adoption", body, {
     headers: {
       Origin: "https://pharos.watch",
-      "Content-Type": "application/json",
       "X-Pharos-Telegram-Adoption-Client-Hash": "0123456789abcdef0123456789abcdef",
       ...headers,
     },
-    body: JSON.stringify(body),
   });
 }
 

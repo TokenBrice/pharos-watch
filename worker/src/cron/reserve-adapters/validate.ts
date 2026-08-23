@@ -9,7 +9,7 @@ import {
 } from "@shared/types/live-reserves";
 import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
 import type { ReserveAdapterDefinition } from "./types";
-import { isReserveRisk } from "./helpers";
+import { isReserveRisk, PCT_SUM_ERROR_TOLERANCE } from "./helpers";
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
 
 interface ValidationInput {
@@ -31,7 +31,6 @@ interface ValidationOptions {
 }
 
 const PCT_SUM_WARNING_TOLERANCE = 0.5;
-const PCT_SUM_ERROR_TOLERANCE = 2;
 export const MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
 const REVIEWED_AT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 

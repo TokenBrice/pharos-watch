@@ -1,9 +1,10 @@
 #!/usr/bin/env tsx
 
-import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { isRecord } from "@shared/lib/type-guards";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
@@ -86,23 +87,8 @@ interface CliOptions {
   generatedAt: string | null;
 }
 
-function stableStringify(value: unknown): string {
-  if (value === null) return "null";
-  if (typeof value === "string") return JSON.stringify(value);
-  if (typeof value === "number" || typeof value === "boolean") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
-  if (isRecord(value)) {
-    return `{${Object.entries(value)
-      .filter(([, entryValue]) => entryValue !== undefined)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(String(value));
-}
-
 function decisionHash(input: Omit<DdrLockPolicyDecision, "decisionHash">): string {
-  return createHash("sha256").update(stableStringify(input)).digest("hex");
+  return sha256Hex(stableJsonStringifyV1(input));
 }
 
 function validateRow(row: unknown, index: number): DdrLockPolicyBacktestRow {

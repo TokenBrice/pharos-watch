@@ -2,19 +2,14 @@ import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   scoreV9EvaluatedAsset,
-  type V9PillarEvaluation,
   type V9PillarReason,
-  type V9ProductionScoreInput,
 } from "../safety-score-v9/score";
 import {
   V9ScoringInputSchema,
   type V9StructuralSignal,
 } from "../../types/safety-score-v9";
 import type { V9PillarAdverseAttribution } from "../safety-score-v9/formula";
-
-const DIGEST = "a".repeat(64);
-const BUILD_DIGEST = "b".repeat(64);
-const BASE_ID = `report-cards-input:v1:${"c".repeat(64)}`;
+import { makeV9Pillar as pillar, makeV9ProductionScoreInput as input } from "./safety-score-v9-score.test-support";
 
 function reason(
   overrides: Partial<V9PillarReason> = {},
@@ -24,30 +19,6 @@ function reason(
     path: "exit:dex",
     message: "The latest route adapter failed.",
     responsibility: "producer-failed",
-    ...overrides,
-  };
-}
-
-function pillar(score: number | null, overrides: Partial<V9PillarEvaluation> = {}): V9PillarEvaluation {
-  return { score, evidenceLevel: "strong", reasons: [], structuralSignals: [], ...overrides };
-}
-
-function input(overrides: Partial<V9ProductionScoreInput> = {}): V9ProductionScoreInput {
-  return {
-    assetId: "asset",
-    identity: {
-      factSetDigest: DIGEST,
-      baseInputGenerationId: BASE_ID,
-      evaluationBuildDigest: BUILD_DIGEST,
-      asOfSec: 1_000,
-      sourceGenerations: {},
-    },
-    pillars: { backing: pillar(95), exit: pillar(95), control: pillar(95) },
-    peg: { applicable: true, score: 100, activeDepegBps: null, reasons: [] },
-    trackRecordMonths: 48,
-    parent: { required: false, score: null, propagatedReasons: [] },
-    dependencyReasons: [],
-    dependencyStructuralSignals: [],
     ...overrides,
   };
 }

@@ -218,7 +218,7 @@ export function buildPlainAlertUpsert(
 }
 
 /** The single `/set`-command → per-coin upsert dispatch. */
-export function buildSetCommandSubscriptionUpsert(
+function buildSetCommandSubscriptionUpsert(
   chatId: string,
   stablecoinId: string,
   command: ParsedSetCommand,

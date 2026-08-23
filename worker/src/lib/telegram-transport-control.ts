@@ -4,8 +4,7 @@ import {
   isTransientTelegramOutageFailure,
 } from "./telegram-transport-errors";
 
-export const TELEGRAM_DELIVERY_MODES = ["fresh", "pending", "admin"] as const;
-export type TelegramDeliveryMode = (typeof TELEGRAM_DELIVERY_MODES)[number];
+export type TelegramDeliveryMode = "fresh" | "pending" | "admin";
 export type TelegramTransportCircuitState = "closed" | "open" | "half_open";
 
 const FAILURE_WINDOW_SEC = 60;

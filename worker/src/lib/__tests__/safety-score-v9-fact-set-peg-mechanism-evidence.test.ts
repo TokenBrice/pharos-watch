@@ -927,10 +927,13 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       applicability: "wrapper",
       form: "native-staked",
       facts: {
-        custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
+        // A native savings pass-through over a tracked parent has no local
+        // custodian, no borrowing surface, and reuses nothing, so these three
+        // classes are not-applicable rather than undisclosed by the issuer.
+        custodyEscrow: { disposition: "not-applicable", assessment: null },
         strategyComplexity: { disposition: "reviewed", assessment: "low" },
-        leverage: { disposition: "issuer-undisclosed", assessment: null },
-        rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
+        leverage: { disposition: "not-applicable", assessment: null },
+        rehypothecationCorrelation: { disposition: "not-applicable", assessment: null },
         shareAccountingNavOracle: { disposition: "reviewed", assessment: "moderate" },
         measuredUnwind: {
           disposition: "reviewed",

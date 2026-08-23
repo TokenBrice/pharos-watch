@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeDigestRow } from "../../test-helpers/__shared/fixtures";
@@ -7,8 +8,7 @@ describe("handleDigestArchive", () => {
   it("returns 200 with empty digests when no data", async () => {
     const db = mockD1([{ match: "FROM daily_digest", rows: [] }]);
     const res = await handleDigestArchive(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { digests: unknown[] };
+    const body = (await readJsonResponse(res, 200)) as { digests: unknown[] };
     expect(body.digests).toEqual([]);
   });
 
@@ -35,8 +35,7 @@ describe("handleDigestArchive", () => {
     });
     const db = mockD1([{ match: "daily_digest", rows: [row] }]);
     const res = await handleDigestArchive(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       digests: Array<{
         digestText: string;
         digestTitle: string | null;

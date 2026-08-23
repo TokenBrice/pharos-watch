@@ -12,18 +12,21 @@ import {
   SCANNER_BLIND_SPOT_MODULES,
 } from "../lib/unused-code-allowlist.mts";
 
-type DependencyKind = "default" | "named" | "namespace" | "side-effect";
+type DependencyKind = "default" | "named" | "namespace" | "side-effect" | "re-export-named" | "re-export-all";
 type AllowlistSection = "SCANNER_BLIND_SPOTS" | "DEBT";
 
 interface Dependency {
   resolved: string;
   kind: DependencyKind;
   names: string[];
+  reExports?: Array<{ imported: string; exported: string }>;
 }
 
 interface ModuleInfo {
   exports: Set<string>;
   typeExports: Set<string>;
+  declaredExports: Set<string>;
+  declaredTypeExports: Set<string>;
   dependencies: Dependency[];
   hasWildcardExports: boolean;
   hasSideEffectsOnly: boolean;
@@ -60,6 +63,9 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".js", ".mjs"]);
 const REPORTABLE_DIR_PREFIXES = ["src/", "shared/", "worker/src/", "functions/"];
 const UNUSED_EXPORT_DIR_PREFIXES = ["src/", "shared/", "worker/src/", "functions/"];
 const VITEST_CONFIG = "vitest.config.ts";
+const VENDORED_UI_PREFIX = "src/components/ui/";
+const VENDORED_UI_EXEMPTION_REASON =
+  "vendored shadcn primitives retain their upstream export surface and are not unused-code debt";
 
 const ROOT_ENTRYPOINT_PATTERNS = [
   /^src\/app\//,
@@ -98,6 +104,7 @@ for (const [file, info] of moduleInfo.entries()) {
   for (const dependency of info.dependencies) {
     if (!runtimeInbound.has(dependency.resolved)) continue;
     runtimeInbound.get(dependency.resolved)?.add(file);
+    if (dependency.kind === "re-export-named" || dependency.kind === "re-export-all") continue;
     if (dependency.kind !== "named") {
       ambiguousUsage.add(dependency.resolved);
       continue;
@@ -110,16 +117,52 @@ for (const [file, info] of moduleInfo.entries()) {
   }
 }
 
+// Re-exports are routing edges, not genuine uses. Propagate actual consumer use
+// through barrels so the defining module gets credit only when something imports
+// the re-exported name. This also keeps `export *` from masking unused exports.
+let usageChanged = true;
+while (usageChanged) {
+  usageChanged = false;
+  for (const [file, info] of moduleInfo.entries()) {
+    const usedNames = namedExportUsage.get(file) ?? new Set<string>();
+    for (const dependency of info.dependencies) {
+      if (dependency.kind !== "re-export-named" && dependency.kind !== "re-export-all") continue;
+      const targetUsage = namedExportUsage.get(dependency.resolved);
+      if (!targetUsage) continue;
+
+      if (ambiguousUsage.has(file) && !ambiguousUsage.has(dependency.resolved)) {
+        ambiguousUsage.add(dependency.resolved);
+        usageChanged = true;
+      }
+
+      const propagatedNames =
+        dependency.kind === "re-export-all"
+          ? usedNames
+          : (dependency.reExports ?? [])
+              .filter(({ exported }) => usedNames.has(exported))
+              .map(({ imported }) => imported);
+      for (const name of propagatedNames) {
+        if (targetUsage.has(name)) continue;
+        targetUsage.add(name);
+        usageChanged = true;
+      }
+    }
+  }
+}
+
 const deadModules: DeadModule[] = [];
 const unusedExports: UnusedExport[] = [];
+const unusedModuleKeys = new Set<string>();
+const unusedExportKeys = new Set<string>();
 
 for (const file of files) {
   const rel = relative(ROOT, file).replaceAll("\\", "/");
   const info = moduleInfo.get(file);
   if (!info) throw new Error(`Missing module analysis for ${file}`);
-  if (!isReportableModule(rel) || isTestFile(rel) || isRootEntrypoint(rel)) continue;
+  if (!isReportableModule(rel) || isTestFile(rel) || isRootEntrypoint(rel) || isVendoredUiPrimitive(rel)) continue;
 
   if ((runtimeInbound.get(file)?.size ?? 0) === 0) {
+    unusedModuleKeys.add(rel);
     if (!MODULE_ALLOWLIST.has(rel)) {
       deadModules.push({
         file: rel,
@@ -139,7 +182,9 @@ for (const file of files) {
   const usedNames = namedExportUsage.get(file) ?? new Set();
   for (const name of info.exports) {
     const exportKey = `${rel}::${name}`;
-    if (usedNames.has(name) || EXPORT_ALLOWLIST.has(exportKey)) continue;
+    if (usedNames.has(name)) continue;
+    unusedExportKeys.add(exportKey);
+    if (EXPORT_ALLOWLIST.has(exportKey)) continue;
     unusedExports.push({ file: rel, name });
   }
 }
@@ -172,13 +217,27 @@ if (AUDIT_ALLOWLIST) {
       stale.push({ entry, reason: "file does not exist" });
       continue;
     }
-    // Beyond file existence, verify the allowlisted symbol is still exported.
-    // A renamed/deleted export would otherwise pass this audit silently and
-    // keep masking a now-nonexistent symbol. Wildcard re-exports (`export *`)
-    // can surface a symbol the static export set doesn't list, so skip those.
-    const info = analyzeModule(resolve(ROOT, file));
-    if (!info.hasWildcardExports && !info.exports.has(symbol) && !info.typeExports.has(symbol)) {
+    const absoluteFile = resolve(ROOT, file);
+    const info = moduleInfo.get(absoluteFile) ?? analyzeModule(absoluteFile);
+    const definition = findExportDefinition(absoluteFile, symbol);
+    if (!definition && !info.exports.has(symbol) && !info.typeExports.has(symbol)) {
       stale.push({ entry, reason: "symbol no longer exported from file" });
+      continue;
+    }
+    if (definition && definition !== absoluteFile) {
+      stale.push({
+        entry,
+        reason: `symbol is re-exported; declare the allowlist entry on ${relative(ROOT, definition).replaceAll("\\", "/")}`,
+      });
+      continue;
+    }
+    if (!unusedExportKeys.has(entry)) {
+      stale.push({
+        entry,
+        reason: isVendoredUiPrimitive(file)
+          ? `covered by structural exemption (${VENDORED_UI_EXEMPTION_REASON}); delete this allowlist entry`
+          : "no longer reported as unused; delete this allowlist entry",
+      });
     }
   }
   for (const [mod, meta] of MODULE_ALLOWLIST) {
@@ -190,6 +249,15 @@ if (AUDIT_ALLOWLIST) {
       statSync(mod);
     } catch {
       stale.push({ entry: mod, reason: "module does not exist" });
+      continue;
+    }
+    if (!unusedModuleKeys.has(mod)) {
+      stale.push({
+        entry: mod,
+        reason: isVendoredUiPrimitive(mod)
+          ? `covered by structural exemption (${VENDORED_UI_EXEMPTION_REASON}); delete this allowlist entry`
+          : "no longer reported as unused; delete this allowlist entry",
+      });
     }
   }
   if (stale.length > 0) {
@@ -233,6 +301,8 @@ function analyzeModule(file: string): ModuleInfo {
   // allowlist audit still needs to know they exist so it doesn't false-flag a valid
   // type-only allowlist entry as a stale symbol.
   const typeExports = new Set<string>();
+  const declaredExports = new Set<string>();
+  const declaredTypeExports = new Set<string>();
   const dependencies: Dependency[] = [];
   let hasWildcardExports = false;
   let hasSideEffectsOnly = true;
@@ -264,10 +334,14 @@ function analyzeModule(file: string): ModuleInfo {
             node.exportClause && ts.isNamedExports(node.exportClause)
               ? {
                   resolved,
-                  kind: "named",
-                  names: node.exportClause.elements.map((element) => element.propertyName?.text ?? element.name.text),
+                  kind: "re-export-named",
+                  names: [],
+                  reExports: node.exportClause.elements.map((element) => ({
+                    imported: element.propertyName?.text ?? element.name.text,
+                    exported: element.name.text,
+                  })),
                 }
-              : { resolved, kind: "namespace", names: [] },
+              : { resolved, kind: "re-export-all", names: [] },
           );
         }
       }
@@ -276,6 +350,7 @@ function analyzeModule(file: string): ModuleInfo {
         if (node.exportClause && ts.isNamedExports(node.exportClause)) {
           for (const element of node.exportClause.elements) {
             typeExports.add(element.name.text);
+            if (!node.moduleSpecifier) declaredTypeExports.add(element.name.text);
           }
         }
         return;
@@ -285,17 +360,28 @@ function analyzeModule(file: string): ModuleInfo {
         hasWildcardExports = true;
       } else if (ts.isNamedExports(node.exportClause)) {
         for (const element of node.exportClause.elements) {
+          // A mixed clause (`export { fn, type T }`) marks individual specifiers
+          // type-only. Those are never runtime-dead either, so they belong in
+          // `typeExports` exactly like a fully type-only declaration.
+          if (element.isTypeOnly) {
+            typeExports.add(element.name.text);
+            if (!node.moduleSpecifier) declaredTypeExports.add(element.name.text);
+            continue;
+          }
           exports.add(element.name.text);
+          if (!node.moduleSpecifier) declaredExports.add(element.name.text);
         }
       }
     }
 
     if (ts.isExportAssignment(node)) {
       exports.add("default");
+      declaredExports.add("default");
     }
 
     if (hasExportModifier(node)) {
       collectExportedNames(node, exports);
+      collectExportedNames(node, declaredExports);
     }
 
     if (
@@ -312,7 +398,38 @@ function analyzeModule(file: string): ModuleInfo {
   });
 
   exports.delete("default");
-  return { exports, typeExports, dependencies, hasWildcardExports, hasSideEffectsOnly };
+  declaredExports.delete("default");
+  return {
+    exports,
+    typeExports,
+    declaredExports,
+    declaredTypeExports,
+    dependencies,
+    hasWildcardExports,
+    hasSideEffectsOnly,
+  };
+}
+
+function findExportDefinition(file: string, symbol: string, visited = new Set<string>()): string | null {
+  if (visited.has(file)) return null;
+  visited.add(file);
+  const info = moduleInfo.get(file);
+  if (!info) return null;
+  if (info.declaredExports.has(symbol) || info.declaredTypeExports.has(symbol)) return file;
+
+  for (const dependency of info.dependencies) {
+    if (dependency.kind === "re-export-named") {
+      const match = dependency.reExports?.find(({ exported }) => exported === symbol);
+      if (!match) continue;
+      const definition = findExportDefinition(dependency.resolved, match.imported, visited);
+      if (definition) return definition;
+    }
+    if (dependency.kind === "re-export-all") {
+      const definition = findExportDefinition(dependency.resolved, symbol, visited);
+      if (definition) return definition;
+    }
+  }
+  return null;
 }
 
 function collectImportDependencies(node: ts.ImportDeclaration, resolved: string): Dependency[] {
@@ -487,6 +604,10 @@ function isReportableModule(relPath: string): boolean {
 
 function isUnusedExportReportable(relPath: string): boolean {
   return UNUSED_EXPORT_DIR_PREFIXES.some((prefix) => relPath.startsWith(prefix));
+}
+
+function isVendoredUiPrimitive(relPath: string): boolean {
+  return relPath.startsWith(VENDORED_UI_PREFIX);
 }
 
 function isRootEntrypoint(relPath: string): boolean {

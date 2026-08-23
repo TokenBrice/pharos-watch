@@ -143,7 +143,7 @@ function mapSourceToBucket(source: string) {
   return isPriceSourceHealthBucketKey(source) ? source : null;
 }
 
-export function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth {
+function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth {
   const sourceDistribution: PriceSourceHealth["sourceDistribution"] = createEmptyPriceSourceHealthDistribution();
   const confidenceDistribution: PriceSourceHealth["confidenceDistribution"] = {
     high: 0,

@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerStablecoinParameterContract, registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -72,8 +73,7 @@ describe("handleBackfillYieldHistory", () => {
   it("returns no-op response for out-of-range batches", async () => {
     const res = await handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history?batch=999999&batchSize=100"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ message: "No coins in this batch" });
+    expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("inserts Zephyr yield history row", async () => {
@@ -81,8 +81,7 @@ describe("handleBackfillYieldHistory", () => {
 
     const res = await handleBackfillYieldHistory({ db: makeDb(capturedStatements), url: makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol", { adminKey: "secret" }) });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       coinResults: Array<{ id: string; symbol: string; inserted: boolean }>;

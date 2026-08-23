@@ -2,12 +2,10 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   fetchSpy,
   handleCallbackQuery,
+  lastEditedMessageBody,
   mockD1,
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
-import {
-  telegramApiCallBody,
-} from "../../test-helpers/__shared/telegram";
 
 
 
@@ -24,10 +22,6 @@ import {
 
 
 
-
-function lastEditedMessageBody(): { text: string; reply_markup?: unknown } {
-  return telegramApiCallBody(fetchSpy, "editMessageText");
-}
 
 beforeEach(resetCallbackTest);
 

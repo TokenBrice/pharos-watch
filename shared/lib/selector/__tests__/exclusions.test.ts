@@ -11,59 +11,30 @@ import {
   yieldPegScoreFloor,
 } from "../exclusions";
 import type { MergedRow, SelectorInput } from "../types";
+import { makeMergedRow } from "./fixture";
 
 function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
-  return {
+  return makeMergedRow({
     id: "test-coin",
     symbol: "TEST",
     name: "Test Stable",
     protocolSlug: "test",
-    variantOf: null,
-    isYieldBearing: false,
-    pegCurrency: "USD",
-    lifecycle: "active",
-    governance: "decentralized",
-    canBeBlacklisted: false,
     mechanismArchetype: "cdp",
-    supplyUsd: 1_000_000_000,
     pegScore: 95,
-    activeDepeg: false,
-    currentDeviationBps: 10,
-    depegEventCount: 0,
-    lastEventAt: null,
     dewsScore: 25,
-    safetyGrade: "A",
     safetyScore: 90,
-    safetyProvenance: "safety-score-v9",
-    safetyResilienceScore: 80,
     safetyDecentralizationScore: 70,
     safetyLiquidityScore: 75,
-    custodyModel: "onchain",
-    bluechipGrade: "A",
-    liquidityScore: 80,
-    effectiveTvlUsd: 50_000_000,
     concentrationHhi: 0.3,
     chainTvl: { ethereum: 40_000_000, base: 10_000_000 },
-    pharosYieldScore: 80,
-    apy30d: 5,
-    apyVariance30d: 0.5,
-    benchmarkRate: 4.5,
-    sourceRiskScore: 20,
-    venueRiskTier: "low",
-    warningSignals: [],
-    deploymentPlace: "native-wrapper",
-    sourceSwitch: false,
     yieldProtocolSlug: "aave-v3",
     yieldVenueChain: "ethereum",
-    yieldHistoryDays: 365,
     yieldFreshness: { capturedAt: 0, ageSeconds: 60 },
-    trackingSpanDays: 365,
-    isRecentListing: false,
     pegSummaryAgeSec: 30,
     dexTvlAgeSec: 120,
     dewsAgeSec: 200,
     ...overrides,
-  };
+  });
 }
 
 function makeInput(overrides: Partial<SelectorInput> = {}): SelectorInput {

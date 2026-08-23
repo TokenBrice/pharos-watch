@@ -49,27 +49,28 @@ describe("check-cron-schedule-sync", () => {
   it("maps multiple physical triggers to one logical scheduled slot", () => {
     const report = evaluateCronScheduleSync({
       cronSchedules: {
-        dexSlot: "10,40 * * * *",
+        v9PublicationOffset: "22,52 * * * *",
       },
       cronTriggerSchedules: {
-        dexSlot: ["10 * * * *", "40 * * * *"],
+        v9PublicationOffset: ["22 * * * *", "52 * * * *"],
       },
       scheduledSlotPlans: {
-        dexSlot: {
-          schedule: "10,40 * * * *",
-          triggerSchedules: ["10 * * * *", "40 * * * *"],
-          jobChains: [["sync-dex"]],
+        v9PublicationOffset: {
+          schedule: "22,52 * * * *",
+          triggerSchedules: ["22 * * * *", "52 * * * *"],
+          jobChains: [["compute-safety-score-v9"]],
         },
       },
-      cronJobDefinitions: [{ job: "sync-dex" }],
-      cronConnectionBudgetEntries: [{ job: "sync-dex" }],
-      wranglerCronTriggers: ["10 * * * *", "40 * * * *"],
+      cronJobDefinitions: [{ job: "compute-safety-score-v9" }],
+      cronConnectionBudgetEntries: [{ job: "compute-safety-score-v9" }],
+      wranglerCronTriggers: ["22 * * * *", "52 * * * *"],
     });
 
     expect(report.failed).toBe(false);
     expect(report.wranglerTriggerCount).toBe(2);
     expect(report.slotPlanTriggerCount).toBe(2);
-    expect(report.scheduleKeyByExpression.get("40 * * * *")).toBe("dexSlot");
+    expect(report.scheduleKeyByExpression.get("22 * * * *")).toBe("v9PublicationOffset");
+    expect(report.scheduleKeyByExpression.get("52 * * * *")).toBe("v9PublicationOffset");
   });
 
   it("requires consolidation before the reviewed physical trigger topology grows", () => {

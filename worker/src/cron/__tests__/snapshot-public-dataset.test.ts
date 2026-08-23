@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import {
+  makePublicDatasetDb,
+  makeSnapshotAsset,
+  snapshotCacheRows,
+  stablecoinsCacheTable,
+  type MockD1Database,
+} from "./snapshot-cron.test-support";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
@@ -11,12 +17,7 @@ import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9-consumer-freshness";
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
 
-function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
-  return createMockD1([
-    ...tables,
-    { match: "FROM public_snapshots WHERE snapshot_date", rows: [], first: null },
-  ]);
-}
+const mockD1 = makePublicDatasetDb;
 
 const ISO_DATE = "2026-05-16";
 const NOW_MS = new Date(`${ISO_DATE}T08:00:00Z`).getTime();
@@ -25,7 +26,7 @@ const EXPECTED_PSI_COMPUTED_AT = new Date("2026-05-15T00:00:00Z").getTime() / 10
 
 const STABLECOINS_CACHE_PAYLOAD = {
   peggedAssets: [
-    {
+    makeSnapshotAsset({
       id: "usdc-circle",
       symbol: "USDC",
       name: "USD Coin",
@@ -34,8 +35,8 @@ const STABLECOINS_CACHE_PAYLOAD = {
       pegMechanism: "fiat-backed",
       circulating: { peggedUSD: 50_000_000_000 },
       chains: ["Ethereum"],
-    },
-    {
+    }),
+    makeSnapshotAsset({
       id: "usdt-tether",
       symbol: "USDT",
       name: "Tether",
@@ -44,7 +45,7 @@ const STABLECOINS_CACHE_PAYLOAD = {
       pegMechanism: "fiat-backed",
       circulating: { peggedUSD: 110_000_000_000 },
       chains: ["Ethereum"],
-    },
+    }),
   ],
 };
 
@@ -138,13 +139,10 @@ function publishedDewsPointer(rows = STRESS_ROWS) {
 function buildDb(): MockD1Database {
   return mockD1([
     publishedDewsPointer(),
-    {
-      match: "FROM cache WHERE key",
-      rows: [
-        { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-        { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
-      ],
-    },
+    snapshotCacheRows([
+      { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+    ]),
     { match: "FROM stability_index", rows: [], first: PSI_ROW },
     { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
     { match: "FROM dex_liquidity", rows: DEX_ROWS },
@@ -210,14 +208,11 @@ describe("snapshotPublicDataset", () => {
 
   it("degrades before immutable insert when the stablecoins cache predates the scheduled slot", async () => {
     const staleForSlotUpdatedAt = NOW_SEC - 15 * 60;
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: staleForSlotUpdatedAt },
-        ],
-      },
-    ]);
+    const db = mockD1([stablecoinsCacheTable({
+      assets: STABLECOINS_CACHE_PAYLOAD,
+      updatedAt: staleForSlotUpdatedAt,
+      first: false,
+    })]);
 
     const result = await snapshotPublicDataset(db, undefined, {
       minStablecoinsCacheUpdatedAtSec: NOW_SEC,
@@ -238,14 +233,11 @@ describe("snapshotPublicDataset", () => {
 
   it("retries a pre-slot stablecoins cache before degrading", async () => {
     const staleForSlotUpdatedAt = NOW_SEC - 15 * 60;
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: staleForSlotUpdatedAt },
-        ],
-      },
-    ]);
+    const db = mockD1([stablecoinsCacheTable({
+      assets: STABLECOINS_CACHE_PAYLOAD,
+      updatedAt: staleForSlotUpdatedAt,
+      first: false,
+    })]);
 
     const resultPromise = snapshotPublicDataset(db, undefined, {
       minStablecoinsCacheUpdatedAtSec: NOW_SEC,
@@ -475,13 +467,10 @@ describe("snapshotPublicDataset", () => {
 
   it("degrades instead of writing when the PSI daily snapshot is missing", async () => {
     const db = mockD1([
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
-        ],
-      },
+      snapshotCacheRows([
+        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ]),
       { match: "FROM stability_index", rows: [], first: null },
     ]);
 
@@ -493,13 +482,10 @@ describe("snapshotPublicDataset", () => {
 
   it("degrades instead of writing when the PSI daily snapshot is stale", async () => {
     const db = mockD1([
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
-        ],
-      },
+      snapshotCacheRows([
+        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ]),
       { match: "FROM stability_index", rows: [], first: { ...PSI_ROW, computed_at: EXPECTED_PSI_COMPUTED_AT - 86400 } },
     ]);
 
@@ -512,13 +498,10 @@ describe("snapshotPublicDataset", () => {
   it("does not seal the dataset when the published DEWS generation is missing", async () => {
     const db = mockD1([
       publishedDewsPointer(),
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
-        ],
-      },
+      snapshotCacheRows([
+        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: [] },
       { match: "FROM dex_liquidity", rows: [] },
@@ -537,13 +520,10 @@ describe("snapshotPublicDataset", () => {
   it("does not seal a mixed DEWS generation while a newer chunk is staging", async () => {
     const db = mockD1([
       publishedDewsPointer(),
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
-        ],
-      },
+      snapshotCacheRows([
+        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "pharos:stress-signals:published-exact", rows: [STRESS_ROWS[1]!] },
       { match: "FROM dex_liquidity", rows: DEX_ROWS },
@@ -568,13 +548,10 @@ describe("snapshotPublicDataset", () => {
   it("degrades instead of writing when the DEWS section read fails", async () => {
     const db = mockD1([
       publishedDewsPointer(),
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
-        ],
-      },
+      snapshotCacheRows([
+        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: [], throwError: new Error("D1 read failed") },
       { match: "FROM dex_liquidity", rows: DEX_ROWS },
@@ -594,13 +571,10 @@ describe("snapshotPublicDataset", () => {
   it("degrades instead of writing when the DEX liquidity section read fails", async () => {
     const db = mockD1([
       publishedDewsPointer(),
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
-        ],
-      },
+      snapshotCacheRows([
+        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
       { match: "FROM dex_liquidity", rows: [], throwError: new Error("D1 liquidity read failed") },

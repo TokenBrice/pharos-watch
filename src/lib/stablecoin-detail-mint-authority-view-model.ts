@@ -47,7 +47,7 @@ import {
  * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
  * it is a description of the curated control row, not a score input.
  */
-export const EOA_UNVERIFIED_CUSTODY_LABEL = "Single-key address - custody unverifiable";
+const EOA_UNVERIFIED_CUSTODY_LABEL = "Single-key address - custody unverifiable";
 
 export type MintAuthorityDetailStatus = "reviewed" | "not-reviewed";
 

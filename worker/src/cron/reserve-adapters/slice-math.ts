@@ -12,7 +12,8 @@ const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
 };
 
 const MAX_DECIMALS = 36;
-export const RATIO_SCALE = 1_000_000_000_000n;
+export const PCT_SUM_ERROR_TOLERANCE = 2;
+const RATIO_SCALE = 1_000_000_000_000n;
 
 export function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): ReserveSlice["risk"] {
   return RISK_SEVERITY[a] >= RISK_SEVERITY[b] ? a : b;
@@ -48,6 +49,21 @@ export function ratioFromRaw(numerator: bigint, denominator: bigint): number | u
   return Number.isFinite(ratio) ? ratio : undefined;
 }
 
+export function assertFiniteNonNegativeReserveRows<Value>(
+  values: readonly Value[],
+  valueOf: (value: Value) => number,
+  context: string,
+): void {
+  const invalidIndex = values.findIndex((value) => {
+    const numeric = valueOf(value);
+    return !Number.isFinite(numeric) || numeric < 0;
+  });
+  if (invalidIndex < 0) return;
+  throw new Error(
+    `${context} row ${invalidIndex + 1} has invalid value: ${String(valueOf(values[invalidIndex]!))}`,
+  );
+}
+
 /**
  * Deduplicate and normalize reserve slices so percentages sum to exactly 100%.
  * Slices sharing the same (name, risk, coinId, depType, blacklistable) key are merged by summing pct.
@@ -55,11 +71,18 @@ export function ratioFromRaw(numerator: bigint, denominator: bigint): number | u
  * Returns slices sorted by pct descending.
  */
 export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSlice[] {
+  assertFiniteNonNegativeReserveRows(slices, (slice) => slice.pct, "reserve percentages");
+  const rawTotal = slices.reduce((sum, slice) => sum + slice.pct, 0);
+  if (rawTotal > 0 && Math.abs(rawTotal - 100) > PCT_SUM_ERROR_TOLERANCE) {
+    throw new Error(
+      `reserve percentages sum to ${rawTotal.toFixed(1)}% (expected 100% ± ${PCT_SUM_ERROR_TOLERANCE}%)`,
+    );
+  }
   const factor = 10 ** decimals;
   const grouped = new Map<string, ReserveSlice>();
 
   for (const slice of slices) {
-    if (!Number.isFinite(slice.pct) || slice.pct <= 0) continue;
+    if (slice.pct === 0) continue;
     const key = [
       slice.name,
       slice.risk,
@@ -89,10 +112,8 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
     (maxIndex, slice, index, arr) => (slice.pctUnits > arr[maxIndex].pctUnits ? index : maxIndex),
     0,
   );
-  // Clamp the largest slice's corrected value so a wildly-oversummed upstream
-  // (e.g. 300%) can't push it below zero. The remainder adjustment still fires
-  // for normal rounding drift (e.g. 100.1 → 100.0); validation catches gross
-  // deviations upstream. This is defense-in-depth.
+  // The raw-total check above bounds this correction to ordinary rounding
+  // drift; the clamp remains defense-in-depth against arithmetic edge cases.
   normalized[maxIdx].pctUnits = Math.max(0, normalized[maxIdx].pctUnits + (100 * factor) - sumUnits);
 
   return normalized
@@ -161,14 +182,16 @@ export function slicesFromPercentages(
     context?: string;
   },
 ): ReserveSlice[] {
-  const filtered = values.filter((value) => Number.isFinite(value.pct) && value.pct > 0);
+  const context = options?.context ?? "reserve percentages";
+  assertFiniteNonNegativeReserveRows(values, (value) => value.pct, context);
+  const filtered = values.filter((value) => value.pct > 0);
   const total = filtered.reduce((acc, value) => acc + value.pct, 0);
   if (total <= 0) return [];
 
   const tolerancePct = options?.tolerancePct ?? 1.5;
   if (Math.abs(total - 100) > tolerancePct) {
     throw new Error(
-      `${options?.context ?? "reserve percentages"} sum to ${total.toFixed(1)}% (expected 100% ± ${tolerancePct}%)`,
+      `${context} sum to ${total.toFixed(1)}% (expected 100% ± ${tolerancePct}%)`,
     );
   }
 
@@ -205,8 +228,12 @@ export function slicesFromValues(
   }>,
   decimals = 1,
 ): ReserveSlice[] {
-  const filtered = values.filter((value) => Number.isFinite(value.value) && value.value > 0);
+  assertFiniteNonNegativeReserveRows(values, (value) => value.value, "reserve values");
+  const filtered = values.filter((value) => value.value > 0);
   const total = filtered.reduce((acc, value) => acc + value.value, 0);
+  if (!Number.isFinite(total)) {
+    throw new Error("reserve values total is not finite");
+  }
   if (total <= 0) return [];
 
   return normalizeSlices(filtered.map((value) => ({

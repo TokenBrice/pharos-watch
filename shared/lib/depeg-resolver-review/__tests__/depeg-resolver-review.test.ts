@@ -263,6 +263,30 @@ describe("DDRR scoring", () => {
     expect(row.actual.actualEndedAt).toBe(LOCKED_AT + 3_600);
     expect(row.verdictReview).toBe("data_issue");
     expect(row.durationReview).toBe("data_issue");
+
+    const superseded = reviewDepegResolverAssessment(
+      assessment(),
+      actualEvent({
+        endedAt: LOCKED_AT + 3_600,
+        recoveryPrice: 1.02,
+        closeReason: "superseded-direction",
+      }),
+      REVIEWED_AT,
+    );
+    expect(superseded.actual.kind).toBe("orphan_closed");
+    expect(superseded.verdictReview).toBe("data_issue");
+
+    const nativeRecovery = reviewDepegResolverAssessment(
+      assessment(),
+      actualEvent({
+        endedAt: LOCKED_AT + 3_600,
+        recoveryPrice: null,
+        closeReason: "recovered-native",
+      }),
+      REVIEWED_AT,
+    );
+    expect(nativeRecovery.actual.kind).toBe("recovered");
+    expect(nativeRecovery.verdictReview).toBe("correct_recoverable");
   });
 
   it("computes duration errors from lockedAt instead of an earlier diagnostic assessment time", () => {

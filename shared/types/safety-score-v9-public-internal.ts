@@ -132,6 +132,17 @@ export function refineCard(
       : null;
     const wrapperParentLimit = scoreTrace.wrapperParentLimit;
     const parentCaps = card.caps.filter((cap) => cap.source === "parent");
+    // A wrapper parent limit is the exact MEASUREMENT: parent score minus the
+    // summed local-risk discount plus documented credit, verified to the point
+    // in SafetyScoreV9WrapperParentLimitSchema. A published cap limit is that
+    // measurement quantized into the published score space, floored so a
+    // ceiling can never be raised by rounding. The two therefore agree up to
+    // one quantization step, not exactly: a 5.45-point discount off a parent of
+    // 55 measures 49.55 and publishes a ceiling of 49.
+    const capAgreesWithWrapperLimit = (capLimit: number, measuredLimit: number): boolean =>
+      numbersAgree(capLimit, measuredLimit) ||
+      (capLimit <= measuredLimit + SCORE_TOLERANCE && measuredLimit - capLimit < 1);
+
     if (
       wrapperParentLimit !== null &&
       (
@@ -139,7 +150,7 @@ export function refineCard(
         !numbersAgree(wrapperParentLimit.parentScore, rawParentScore) ||
         parentCaps.length !== 1 ||
         parentCaps[0]!.kind !== "parent" ||
-        !numbersAgree(parentCaps[0]!.limit, wrapperParentLimit.limit)
+        !capAgreesWithWrapperLimit(parentCaps[0]!.limit, wrapperParentLimit.limit)
       )
     ) {
       ctx.addIssue({
@@ -153,7 +164,7 @@ export function refineCard(
       (
         card.bindingCap.kind !== "parent" ||
         rawParentScore === null ||
-        !numbersAgree(
+        !capAgreesWithWrapperLimit(
           card.bindingCap.limit,
           wrapperParentLimit?.limit ?? rawParentScore,
         )
@@ -419,6 +430,13 @@ export function refineCard(
         }
       }
     }
+    // An unrated card deliberately withholds the binding assertion: its score
+    // does not exist, so no ceiling can be said to have constrained it. Checks
+    // that reconcile attribution against `bindingCap` therefore fall back to the
+    // declared candidate list when the card is NR. The attribution still has to
+    // name a real ceiling — it just cannot be required to name a binding one.
+    const reconcilableCaps =
+      card.score === null ? card.caps : card.bindingCap === null ? [] : [card.bindingCap];
     for (const item of scoreTrace.boundedUncertaintyAttribution.items) {
       if (item.source === "reason") {
         const matchesPillarReason = Object.values(card.pillars).some((pillar) =>
@@ -431,11 +449,13 @@ export function refineCard(
               reason.message === item.message,
           ),
         );
-        const matchesBindingReasonCap =
-          card.bindingCap?.source === "evidence" &&
-          card.bindingCap.kind === `reason:${item.code}` &&
-          card.bindingCap.reason === item.message;
-        if (!matchesPillarReason && !matchesBindingReasonCap) {
+        const matchesReasonCap = reconcilableCaps.some(
+          (cap) =>
+            cap.source === "evidence" &&
+            cap.kind === `reason:${item.code}` &&
+            cap.reason === item.message,
+        );
+        if (!matchesPillarReason && !matchesReasonCap) {
           ctx.addIssue({
             code: "custom",
             path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
@@ -445,7 +465,7 @@ export function refineCard(
       } else if (item.source === "parent-score") {
         const parent = attributedSerialParent(card, item.path, item.message);
         if (
-          card.bindingCap?.source !== "parent" ||
+          !reconcilableCaps.some((cap) => cap.source === "parent") ||
           parent === null ||
           parent.blocked ||
           parent.score === null ||

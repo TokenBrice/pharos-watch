@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import { handleYieldAdapterManifest } from "../yield-adapter-manifest";
 import { getRouteMatch } from "../../routes/registry";
@@ -16,10 +17,9 @@ import {
 describe("handleYieldAdapterManifest", () => {
   it("returns 200 JSON with the typed manifest payload", async () => {
     const res = await handleYieldAdapterManifest();
-    expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("application/json");
 
-    const body = (await res.json()) as YieldAdapterManifestResponse;
+    const body = (await readJsonResponse(res, 200)) as YieldAdapterManifestResponse;
     expect(() => YieldAdapterManifestResponseSchema.parse(body)).not.toThrow();
     expect(body.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION_LABEL);
     expect(typeof body.updatedAt).toBe("number");

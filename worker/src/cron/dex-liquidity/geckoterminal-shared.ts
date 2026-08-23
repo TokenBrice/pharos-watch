@@ -81,7 +81,7 @@ export function parseGtPool(pool: GtPool, chain: string): ParsedPool | null {
 // misclassified. Add new concentrated-liquidity venues here as they appear.
 const CONCENTRATED_DEX_PREFIXES = ["uniswap-v3", "uniswap-v4", "pancakeswap-v3", "sushiswap-v3", "quickswap-v3"];
 
-export function getGtPoolKind(dexId: string): GtPoolKind {
+function getGtPoolKind(dexId: string): GtPoolKind {
   if (CONCENTRATED_DEX_PREFIXES.some((prefix) => dexId.startsWith(prefix))) {
     return "concentrated";
   }

@@ -1,7 +1,7 @@
 import { computePysComponents, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import { scoreToColorClass } from "@/lib/severity-colors";
 
-export const WARNING_SIGNAL_LABELS: Record<string, string> = {
+const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "yield-spike": "Yield spike",
   "yield-divergence": "Yield divergence",
   "negative-trend": "Negative trend",

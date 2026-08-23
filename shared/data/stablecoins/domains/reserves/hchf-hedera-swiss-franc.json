@@ -17,32 +17,60 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "GPT Safety Score V9 Tranche 2 (live re-read)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "HLiquity token IDs, pools, and contracts",
+        "label": "HLiquity mainnet deployment config (chain 295; read 2026-08-23)",
+        "url": "https://hliquity.finance/assets/index-BNlosmd2.js"
+      },
+      {
+        "label": "HLiquity token IDs, pools, and contracts (read 2026-08-23)",
         "url": "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts"
       },
       {
-        "label": "HLiquity documentation",
-        "url": "https://docs.hliquity.org/"
+        "label": "HLiquity overview (read 2026-08-23)",
+        "url": "https://docs.hliquity.org/overview/overview"
       },
       {
-        "label": "Hedera mirror node — HCHF token 0.0.6070123",
+        "label": "HLiquity Stability Pool and liquidations (read 2026-08-23)",
+        "url": "https://docs.hliquity.org/deep-dive/stability-pool-and-liquidations"
+      },
+      {
+        "label": "HLiquity ActivePool, DefaultPool, and StabilityPool source (pinned)",
+        "url": "https://github.com/SwisscoastAG/HLiquity/tree/c20211d0ba512c4f51eb70666854234933a64182/packages/contracts/contracts"
+      },
+      {
+        "label": "Hedera mainnet Hashio RPC - block 99,191,362 (read 2026-08-23)",
+        "url": "https://mainnet.hashio.io/api"
+      },
+      {
+        "label": "Hedera mirror node - HCHF token 0.0.6070123 (read 2026-08-23)",
         "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+      },
+      {
+        "label": "Hedera mirror node - ActivePool 0.0.6070027",
+        "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0.0.6070027"
+      },
+      {
+        "label": "Hedera mirror node - DefaultPool 0.0.6070041",
+        "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0.0.6070041"
+      },
+      {
+        "label": "Hedera mirror node - StabilityPool 0.0.6070108",
+        "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0.0.6070108"
       },
       {
         "label": "Omniscia HLiquity audit",
         "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
       }
     ],
-    "rationale": "HCHF is issued by HLiquity, a Liquity V1 fork on Hedera developed by Swisscoast AG, and is backed solely by HBAR locked in per-user Troves whose collateral is held in aggregate protocol pools (ActivePool, DefaultPool, StabilityPool, CollSurplusPool, GasPool). The mirror node confirms token 0.0.6070123 with no admin, freeze, KYC, or wipe keys, and HLiquity's contract ownership is renounced, so the entire reserve is on-chain HBAR verifiable in real time; there is no fiat or off-chain component.",
-    "compositionBasis": "HLiquity protocol design (single-collateral HBAR CDP) confirmed against Hedera mirror-node token and contract state",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Fresh live re-read on 2026-08-23. The current HLiquity chain-295 deployment maps ActivePool to Hedera contract 0.0.6070027 / EVM address 0x00000000000000000000000000000000005c9f0b, DefaultPool to 0.0.6070041 / 0x00000000000000000000000000000000005c9f19, and StabilityPool to 0.0.6070108 / 0x00000000000000000000000000000000005c9f5c. At Hedera mainnet EVM block 99,191,362 (hash 0x4b2512e592bd21c25eb147fb173699aa1c82bcf97156cbb290b08a56029c5664; 2026-08-23 17:30:32 UTC), eth_call getETH() (selector 0x14f6c3be) returned 2,611,489.67796086 HBAR for ActivePool, 0 HBAR for DefaultPool, and 31,327.48841693 HBAR for StabilityPool. At the same block, eth_call getHCHFDebt() (selector 0x6690df1f) returned 64,019.05358754 HCHF for ActivePool and 0 HCHF for DefaultPool; eth_call getTotalHCHFDeposits() (selector 0x1985480d) returned 41,061.53705120 HCHF for StabilityPool. The official HLiquity docs state that it provides interest-free loans using HBAR collateral and that the Stability Pool repays debt from liquidated Troves; the pinned protocol source states HBAR is recorded per user but stored in aggregate pools. This is a borrow-against-collateral design, not an issuer reserve: the unchanged 100% slice is HBAR collateral in protocol pools, not custodied fiat, and no other reserve asset class is asserted.",
+    "compositionBasis": "HLiquity single-collateral HBAR CDP design and same-block Hedera mainnet state reads from ActivePool, DefaultPool, and StabilityPool",
+    "compositionAsOf": "2026-08-23",
     "scope": "full-composition",
-    "knownUnknownExposure": "No reserve asset class is unclassified; the only collateral is HBAR in protocol pools. Per-Trove collateral ratios vary by user, and aggregate coverage floats with the HBAR price.",
+    "knownUnknownExposure": "No reserve asset class is unclassified; current protocol state shows HBAR collateral in the named pools and HCHF debt/deposits. Per-Trove collateral ratios vary by user, liquidation state can move HBAR between pools, and aggregate coverage floats with the HBAR price.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -65,13 +93,21 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "GPT Safety Score V9 Tranche 2 (live re-read)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "HLiquity token IDs, pools, and contracts",
+        "label": "HLiquity mainnet deployment config (chain 295; read 2026-08-23)",
+        "url": "https://hliquity.finance/assets/index-BNlosmd2.js"
+      },
+      {
+        "label": "HLiquity token IDs, pools, and contracts (read 2026-08-23)",
         "url": "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts"
+      },
+      {
+        "label": "Hedera mainnet Hashio RPC - block 99,191,362 (read 2026-08-23)",
+        "url": "https://mainnet.hashio.io/api"
       },
       {
         "label": "Omniscia HLiquity audit",
@@ -82,7 +118,7 @@
         "url": "https://swisscoast.org/contact"
       }
     ],
-    "uncertainty": "Collateral is pooled in immutable, ownership-renounced protocol contracts rather than held by any bank or custodian, and it is not lent out by the protocol design. Legal segregation and bankruptcy-remoteness concepts do not map onto contract custody, so those fields remain unknown; Trove-level collateral is recorded per user in the TroveManager but held in aggregate pools.",
+    "uncertainty": "Collateral is pooled in immutable, ownership-renounced protocol contracts rather than held by any bank or custodian, and the 2026-08-23 Hedera reads confirm current HBAR state in the named pools. Legal segregation and bankruptcy-remoteness concepts do not map onto contract custody, so those fields remain unknown; Trove-level collateral is recorded per user in the TroveManager but held in aggregate pools.",
     "knownUnknownExposurePct": 0
   }
 }

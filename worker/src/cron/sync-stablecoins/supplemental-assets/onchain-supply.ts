@@ -22,6 +22,7 @@ import {
 import {
   fetchErc20TotalSupply,
   fetchIcrcLedgerTotalSupply,
+  fetchMovementFungibleAssetSupply,
   fetchOnchainUint256,
   fetchSolanaTokenSupply,
   fetchStarknetTotalSupply,
@@ -37,6 +38,10 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   "eearn-ember",
 ]);
 const EXCLUDED_BALANCE_READ_CONCURRENCY = 1;
+const MOVEMENT_USDCX_ID = "usdcx-movement";
+const MOVEMENT_XRESERVE = "0x8888888199b2Df864bf678259607d6D5EBb4e3Ce";
+const MOVEMENT_XRESERVE_CALL = "0xc47cf5ef000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000002715";
+const MOVEMENT_XRESERVE_TOLERANCE_BPS = 1n;
 
 export interface OnChainMcapResult {
   mcap: number;
@@ -96,6 +101,22 @@ async function readContractSupplyRaw(input: {
       apiBaseUrl: input.rpcUrl,
       fallbackApiBaseUrl: input.fallbackRpcUrl,
     });
+  }
+
+  if (input.family === "movement") {
+    if (input.meta.id !== MOVEMENT_USDCX_ID || !input.rpcUrl) {
+      throw new Error("Movement supply probe is not configured for this asset");
+    }
+    const observation = await fetchMovementFungibleAssetSupply(
+      supplyContract.address,
+      input.signal,
+      input.rpcUrl,
+    );
+    if (!observation) throw new Error("Movement supply probe returned no pinned-ledger observation");
+    if (observation.decimals !== supplyContract.decimals) {
+      throw new Error("Movement coin-resource decimals do not match tracked metadata");
+    }
+    return observation.rawSupply;
   }
 
   if (input.allowZeroSupply) {
@@ -204,7 +225,7 @@ async function fetchOnChainSupplyForContract(input: {
     return null;
   }
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
-  const chainRpc = family === "evm" ? input.chainRpcs?.get(input.supplyContract.chain) : undefined;
+  const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
   const allowZeroSupply = input.curated?.allowZeroSupply === true;
 
   try {
@@ -220,6 +241,25 @@ async function fetchOnChainSupplyForContract(input: {
       fallbackRpcUrl,
     });
     if (raw == null || (raw <= 0n && !allowZeroSupply)) return null;
+
+    if (family === "movement") {
+      const ethereumRpc = input.chainRpcs?.get("ethereum");
+      if (!ethereumRpc) throw new Error("Ethereum xReserve RPC is unavailable");
+      const backingRaw = await fetchOnchainUint256({
+        contract: MOVEMENT_XRESERVE,
+        data: MOVEMENT_XRESERVE_CALL,
+        signal: supplySignal,
+        rpcUrl: ethereumRpc.rpcUrl,
+        fallbackRpcUrl: ethereumRpc.fallbackRpcUrl,
+        rpcMode: "public-rpc",
+        chain: "ethereum",
+      });
+      if (backingRaw == null) throw new Error("Movement xReserve backing read is unavailable");
+      if (backingRaw < raw) throw new Error("Movement supply exceeds xReserve backing");
+      if ((backingRaw - raw) * 10_000n > raw * MOVEMENT_XRESERVE_TOLERANCE_BPS) {
+        throw new Error("Movement supply does not reconcile to xReserve within one basis point");
+      }
+    }
 
     const adjustment = raw > 0n
       ? await adjustOnChainSupplyForExcludedBalances({

@@ -39,6 +39,9 @@ export function PegScoreDewsOverview() {
             Extreme moves of 50% or more, small-cap assets, and fresh multi-source clusters all use the same minimum 15-minute onset window. Independent source agreement can satisfy the source rule after that window, but it never bypasses temporal confirmation.
           </p>
           <p>
+            Those 15-minute windows are continuous-observation windows, not endpoint-age checks. Onset and recovery both require consecutive qualifying observations no more than 1200 seconds apart, and a longer gap resets the window to the new observation rather than counting the blind interval toward confirmation. The tolerance is deliberately wider than the 900-second producer cadence: measured start-to-start gaps for the producing job run 868&ndash;932 seconds, so a tolerance equal to one interval would reset almost every observation and suppress confirmation entirely. It stays below two intervals, so a fully missed run still resets the episode. A depeg therefore cannot be promoted with a start time backdated across an interval nobody observed, and missing data leaves an event open rather than proving recovery.
+          </p>
+          <p>
             Non-USD fiat pegs use the live fiat FX rate as their primary reference whenever it is available, even when three or more same-peg assets are tracked. A peer median is only a fallback and must contain at least three contributors; thinner peer groups or an empty peer set fail closed. The same authority gate covers the displayed deviation: while no trustworthy reference is available, peg surfaces report the current deviation as reference unavailable instead of quoting a self-referential number. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
           </p>
           <p>
@@ -46,6 +49,9 @@ export function PegScoreDewsOverview() {
           </p>
           <p>
             Resolution uses hysteresis and persistence rather than the onset boundary. A live event enters recovery only at half the trigger threshold, then must remain there for 15 minutes before closing; a move back into the deadband or depeg range resets that recovery timer. This prevents near-boundary prices from repeatedly closing and reopening one incident.
+          </p>
+          <p>
+            How an incident closed is decided by its recorded closure reason, not by whether a recovery price happens to be stored. An explicit recovered-primary, recovered-dex, or recovered-native reason means recovered even where quote-domain policy stores no recovery price, so a genuinely recovered non-USD event is no longer misfiled as orphan-closed and excluded from duration training. Conversely, direction supersession, coverage loss, orphan cleanup, and unknown explicit closures cannot be read as recovered just because a stray recovery price is present, so they stay out of the recovered duration corpus and out of Resolver Reviewer outcomes. Legacy rows that predate recorded closure reasons keep the older price-based reading, so historical recovered labels are preserved rather than rewritten.
           </p>
           <p>
             Live depeg events still require at least $1M of current circulating supply. Historical replay applies the same floor from historical supply snapshots, or from current stablecoins-cache supply when historical supply is absent; if neither supply source exists, backfill preserves existing rows. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.

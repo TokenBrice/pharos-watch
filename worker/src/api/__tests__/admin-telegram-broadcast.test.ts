@@ -1,3 +1,4 @@
+import { makeJsonRequest, readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { handleAdminTelegramBroadcast } from "../admin-telegram-broadcast";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -15,13 +16,9 @@ function latestDb() {
 }
 
 function request(body: unknown, idempotencyKey?: string) {
-  const headers: Record<string, string> = { "Content-Type": "application/json", "X-Pharos-Admin": "1" };
+  const headers: Record<string, string> = { "X-Pharos-Admin": "1" };
   if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
-  return new Request("https://ops-api.pharos.watch/api/admin-telegram-broadcast", {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
+  return makeJsonRequest("https://ops-api.pharos.watch/api/admin-telegram-broadcast", body, { headers });
 }
 
 function capacityRow(active: number) {
@@ -69,8 +66,7 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
       request: request({ messageHtml: "loss < 1%", scope: "all", dryRun: true }),
       trustedAdmin: true,
     });
-    expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ error: expect.stringContaining("Raw <") });
+    expect(await readJsonResponse(response, 422)).toMatchObject({ error: expect.stringContaining("Raw <") });
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers"))).toBe(false);
   });
 
@@ -85,8 +81,7 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
       request: request({ messageHtml, scope: "all", dryRun: true }),
       trustedAdmin: true,
     });
-    expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ error: expect.stringContaining(error) });
+    expect(await readJsonResponse(response, 422)).toMatchObject({ error: expect.stringContaining(error) });
   });
 
   it("preserves global and deliverable-watcher scope semantics", async () => {
@@ -123,8 +118,7 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
       request: request({ messageHtml: "<b>Maintenance</b>", scope: "all", dryRun: true, canaryChatId: "10" }),
       trustedAdmin: true,
     });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    expect(await readJsonResponse(response, 200)).toMatchObject({
       targetChatCount: 2,
       targetMessageCount: 1,
       canary: { requiredForLive: true, chatId: "10", wouldSendChunkCount: 1 },
@@ -151,8 +145,7 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
       trustedAdmin: true,
       telegramBotToken: "token",
     });
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({
+    expect(await readJsonResponse(response, 409)).toMatchObject({
       deliveryEstimate: { hasMaterialTtlReserve: false },
     });
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -174,8 +167,7 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
       trustedAdmin: true,
       telegramBotToken: "token",
     });
-    expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ fleetEnqueued: 0, errorClass: "formatting_error" });
+    expect(await readJsonResponse(response, 422)).toMatchObject({ fleetEnqueued: 0, errorClass: "formatting_error" });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 0 });
   });
 
@@ -240,8 +232,7 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
       trustedAdmin: true,
       telegramBotToken: "token",
     });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    expect(await readJsonResponse(response, 200)).toMatchObject({
       enqueued: 2,
       canary: { chatId: "10", chunksSent: 1 },
     });

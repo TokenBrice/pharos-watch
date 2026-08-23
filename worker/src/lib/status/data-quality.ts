@@ -11,6 +11,7 @@ import {
   STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC,
 } from "@shared/lib/status-thresholds";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
@@ -429,9 +430,7 @@ export async function getDataQuality(
         for (const row of onchainRows.results) {
           const asset = stablecoinAssetMap.get(row.stablecoin_id);
           if (!asset?.price || asset.price <= 0 || !asset.circulating) continue;
-          const llamaValues = Object.values(asset.circulating);
-          const llamaTotal = llamaValues.reduce((sum, value) => sum + (value ?? 0), 0);
-          const llamaSupply = llamaTotal / asset.price;
+          const llamaSupply = getCirculatingRaw(asset) / asset.price;
           if (llamaSupply > 0) {
             const divergence = Math.abs(row.total_supply - llamaSupply) / llamaSupply;
             if (divergence > STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD) onchainSupplyDivergences++;

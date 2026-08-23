@@ -14,7 +14,6 @@
   "worker/src/api/dex-liquidity.ts": 1,
   "worker/src/api/feedback.ts": 1,
   "worker/src/api/feedback/verification.ts": 1,
-  "worker/src/api/mint-burn-flows-shared.ts": 1,
   "worker/src/api/mint-burn-flows.ts": 2,
   "worker/src/api/og.tsx": 1,
   "worker/src/api/peg-summary.ts": 1,

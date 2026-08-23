@@ -26,6 +26,11 @@ import {
   hasScoringEligibleLiveReserveFreshness,
 } from "./live-reserves-store-snapshot-state";
 
+function effectiveObservedAt(record: Pick<ReserveCompositionRecord, "fetchedAt" | "metadata">): number {
+  const sourceTimestamp = record.metadata.freshnessMode === "verified" ? record.metadata.sourceTimestamp : undefined;
+  return typeof sourceTimestamp === "number" && Number.isFinite(sourceTimestamp) ? sourceTimestamp : record.fetchedAt;
+}
+
 function buildReserveProvenanceView(
   record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata">,
   syncState: ReserveSyncStateRecord | null,
@@ -158,8 +163,14 @@ export async function resolveReserveResult(
         ? compositionRow.fetched_at
         : syncState?.lastSuccessAt ?? null
     );
-  const stale = !!(liveAtCandidate && now - liveAtCandidate > freshnessSec);
+  const stale = (liveAtCandidate != null && now - liveAtCandidate > freshnessSec)
+    || (liveSnapshot != null && now - effectiveObservedAt(liveSnapshot) > freshnessSec);
 
+  // Prior live detail deliberately stays visible when the *current* sync attempt
+  // failed: the earlier snapshot was validly observed, and scoring already
+  // excludes it separately by requiring `lastStatus === "ok"`. Only genuine
+  // staleness (Worker fetch age or effective upstream observation age, computed
+  // above) may demote it, and that surfaces as `live-stale` rather than hiding it.
   if (liveSnapshot) {
     const provenance = buildReserveProvenanceView(liveSnapshot, syncState, stale);
     const displayBadge = buildReserveDisplayBadgeView(liveSnapshot);

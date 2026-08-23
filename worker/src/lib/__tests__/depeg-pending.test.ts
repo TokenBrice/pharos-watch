@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import {
   buildUpsertPendingDepegStmt,
   normalizePendingDepegRow,
@@ -96,7 +97,10 @@ describe("buildUpsertPendingDepegStmt", () => {
     }) as unknown as { sql: string; boundValues: unknown[] };
 
     expect(stmt.sql).toContain("ON CONFLICT(stablecoin_id) DO UPDATE SET");
-    expect(stmt.sql).toContain("WHEN depeg_pending.direction = excluded.direction THEN depeg_pending.first_seen_at");
+    expect(stmt.sql).toContain(
+      `depeg_pending.direction = excluded.direction AND excluded.last_seen_at - depeg_pending.last_seen_at <= ${DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC}`,
+    );
+    expect(stmt.sql).toContain("THEN depeg_pending.first_seen_at");
     expect(stmt.sql).toContain("ELSE excluded.first_seen_at");
     expect(stmt.sql).toContain("last_seen_bps = excluded.last_seen_bps");
     expect(stmt.sql).toContain("peak_seen_bps = CASE");
@@ -168,13 +172,46 @@ describe("buildUpsertPendingDepegStmt", () => {
       peak_price: 0.965,
     });
 
+    // Anchored to the tolerance: two observations inside it must preserve
+    // first_seen_at, and one observation past it must reset the episode.
+    const tol = DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
+    const withinA = 1_700_000_900 + tol - 1;
+    const withinB = withinA + tol;
+    const afterGapAt = withinB + tol + 1;
+    for (const seenAt of [withinA, withinB]) {
+      sqlite.prepare(worsenStmt.sql).run(
+        "usdt-tether", "USDT", "peggedUSD", "below", -300, seenAt, 0.97,
+        -300, seenAt, 0.97, -300, 0.97, 1, "large-cap", seenAt,
+      );
+    }
+    const withinTolerance = sqlite
+      .prepare("SELECT first_seen_at, last_seen_at FROM depeg_pending WHERE stablecoin_id = ?")
+      .get("usdt-tether") as { first_seen_at: number; last_seen_at: number };
+    expect(withinTolerance).toEqual({
+      first_seen_at: 1_700_000_000,
+      last_seen_at: withinB,
+    });
+
+    sqlite.prepare(worsenStmt.sql).run(
+      "usdt-tether", "USDT", "peggedUSD", "below", -280, afterGapAt, 0.972,
+      -280, afterGapAt, 0.972, -280, 0.972, 1, "large-cap", afterGapAt,
+    );
+    const afterGap = sqlite
+      .prepare("SELECT first_seen_at, last_seen_at, peak_seen_bps FROM depeg_pending WHERE stablecoin_id = ?")
+      .get("usdt-tether") as { first_seen_at: number; last_seen_at: number; peak_seen_bps: number };
+    expect(afterGap).toEqual({
+      first_seen_at: afterGapAt,
+      last_seen_at: afterGapAt,
+      peak_seen_bps: -280,
+    });
+
     const flipStmt = buildUpsertPendingDepegStmt(d1Recorder, {
       stablecoinId: "usdt-tether",
       symbol: "USDT",
       pegType: "peggedUSD",
       direction: "above",
       bps: 180,
-      seenAt: 1_700_001_200,
+      seenAt: 1_700_003_900,
       price: 1.018,
       pegReference: 1,
       reason: "low-confidence",
@@ -188,10 +225,10 @@ describe("buildUpsertPendingDepegStmt", () => {
     expect(flippedRow).toMatchObject({
       direction: "above",
       first_seen_bps: 180,
-      first_seen_at: 1_700_001_200,
+      first_seen_at: 1_700_003_900,
       first_price: 1.018,
       last_seen_bps: 180,
-      last_seen_at: 1_700_001_200,
+      last_seen_at: 1_700_003_900,
       last_price: 1.018,
       peak_seen_bps: 180,
       peak_price: 1.018,

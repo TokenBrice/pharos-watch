@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -208,8 +209,7 @@ describe("handleBackfillDEWS", () => {
     const request = makeApiRequest("/api/backfill-dews?repair=refresh-current", { adminKey: "secret" });
 
     const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
-    expect(response.status).toBe(405);
-    const body = (await response.json()) as { error: string };
+    const body = (await readJsonResponse(response, 405)) as { error: string };
     expect(body.error).toContain("dry-run=true");
   });
 
@@ -218,8 +218,7 @@ describe("handleBackfillDEWS", () => {
     const request = makeApiRequest("/api/backfill-dews?repair=refresh-current&dry-run=true", { adminKey: "secret" });
 
     const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       repair: string;
       dryRun: boolean;
       preview: { targetCoinCount: number; targetStablecoinIds: string[]; insufficientDataCount: number };
@@ -248,8 +247,7 @@ describe("handleBackfillDEWS", () => {
     });
 
     const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       repair: string;
       dryRun: boolean;
       execution: { itemCount: number; status: string; metadata: { rowsWritten: number; rowsDropped: number } };
@@ -299,8 +297,7 @@ describe("handleBackfillDEWS", () => {
     );
 
     const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       repair: string;
       dryRun: boolean;
       stablecoinId: string | null;
@@ -349,8 +346,7 @@ describe("handleBackfillDEWS", () => {
     );
 
     const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       stablecoinId: string | null;
       candidateRowsSample: Array<{ stablecoinId: string; snapshotDate: number }>;
     };
@@ -413,8 +409,7 @@ describe("handleBackfillDEWS", () => {
     });
 
     const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       repair: string;
       dryRun: boolean;
       prunedRows: number;

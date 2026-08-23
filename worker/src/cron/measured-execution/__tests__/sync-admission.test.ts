@@ -15,7 +15,7 @@ import {
   selectExpiringScoreBearingPriorityPacket,
   summarizeMeasuredExecutionQuoteFailures,
   type PublishedScoreBearingDexRoute,
-} from "../sync";
+} from "../admission";
 import {
   UNISWAP_V4_ADAPTER_PROFILE_ID,
   UNISWAP_V4_HOOK_FREE_ADDRESS,

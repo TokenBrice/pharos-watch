@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleStabilityIndex } from "../stability-index";
@@ -35,8 +36,7 @@ describe("handleStabilityIndex contract tests", () => {
     const url = new URL("https://x/api/stability-index");
     const res = await handleStabilityIndex(db, url);
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await readJsonResponse(res, 200);
 
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
@@ -54,8 +54,7 @@ describe("handleStabilityIndex contract tests", () => {
     const url = new URL("https://x/api/stability-index?detail=true");
     const res = await handleStabilityIndex(db, url);
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await readJsonResponse(res, 200);
 
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
@@ -119,9 +118,8 @@ describe("handleStabilityIndex contract tests", () => {
     ]);
 
     const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
-    expect(res.status).toBe(200);
 
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: {
         computedAt: number;
         totalMcapUsd: number;
@@ -163,8 +161,7 @@ describe("handleStabilityIndex contract tests", () => {
     ]);
 
     const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: { methodologyVersion: string };
       history: Array<{ methodologyVersion: string }>;
       methodology: { version: string };
@@ -210,9 +207,8 @@ describe("handleStabilityIndex contract tests", () => {
     ]);
 
     const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
-    expect(res.status).toBe(200);
 
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       history: Array<{ date: number; score: number; band: string }>;
     };
 
@@ -252,9 +248,8 @@ describe("handleStabilityIndex contract tests", () => {
     ]);
 
     const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index?detail=true"));
-    expect(res.status).toBe(200);
 
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       history: Array<{ components?: Record<string, unknown> }>;
       malformedRows: number;
     };
@@ -279,9 +274,8 @@ describe("handleStabilityIndex contract tests", () => {
     ]);
 
     const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
-    expect(res.status).toBe(200);
 
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: {
         inputDegradation?: {
           dewsUnavailable: boolean;

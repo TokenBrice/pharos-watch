@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StatusResponseSchema } from "@shared/types/status";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -130,8 +131,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       rawOverallStatus: string;
       availabilityStatus: string;
       overallStatus: string;
@@ -272,8 +272,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request, workerCanaryMode: "status" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       summary: {
         canaryTotalChecks?: number;
         canaryErrorCount?: number;
@@ -341,8 +340,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request, workerCanaryMode: "status" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       summary: Record<string, unknown>;
       canaries: unknown;
       sectionErrors: Record<string, { code: string }>;
@@ -374,8 +372,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       dependencyHealth: Record<string, unknown> | null;
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
     };
@@ -425,8 +422,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       rawOverallStatus: string;
       availabilityStatus: string;
       causes: { availability: Array<{ code: string }> };
@@ -483,8 +479,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       rawOverallStatus: string;
       availabilityStatus: string;
       causes: { availability: Array<{ code: string }> };
@@ -514,8 +509,7 @@ describe("handleStatus", () => {
     const request = { url: "http://[" } as Request;
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { rawOverallStatus: string };
+    const body = (await readJsonResponse(res, 200)) as { rawOverallStatus: string };
     expect(["healthy", "degraded", "stale"]).toContain(body.rawOverallStatus);
     expect(db.getHistory().some((entry) => entry.binds[0] === STATUS_RAW_SNAPSHOT_CACHE_KEY)).toBe(true);
   });
@@ -654,8 +648,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       timestamp: number;
       dbHealthy: boolean;
       overallStatus: string;
@@ -797,8 +790,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       liquidityHealth: {
         currentCoverageClasses: Record<string, number>;
         previousCoverageClasses: Record<string, number>;
@@ -901,8 +893,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       priceProviderDiagnostics: Array<Record<string, unknown>> | null;
       gtProbe: Record<string, unknown> | null;
     };
@@ -969,9 +960,8 @@ describe("handleStatus", () => {
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
-    expect(res.status).toBe(200);
 
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       availabilityStatus: string;
       summary: { unhealthyCrons: number };
       crons: Record<string, { healthy: boolean; telemetryUnknown?: boolean }>;

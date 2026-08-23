@@ -1,22 +1,13 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { PageLoadingHeader, PageLoadingShell } from "@/components/page-loading-skeleton";
 
 // Power-user tier: coin-selector strip, radar + comparison chart pair,
 // then comparison table. Matches the dynamic chart placeholders used
 // by compare/client.tsx.
-export function CompareLoadingState() {
+export function CompareContentLoadingState() {
   return (
-    <div className="space-y-6" aria-busy="true" aria-live="polite">
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-1.5">
-          <Skeleton className="h-4 w-20 rounded-sm" />
-          <span className="text-xs text-muted-foreground">/</span>
-          <Skeleton className="h-4 w-20 rounded-sm" />
-        </div>
-        <Skeleton className="h-9 w-80 rounded-md sm:h-11 sm:w-[26rem]" />
-        <Skeleton className="h-4 w-full max-w-2xl rounded-sm" />
-      </div>
-
+    <>
       <div className="pharos-card-shell space-y-3 p-4">
         <div className="flex items-center justify-between">
           <Skeleton className="h-4 w-28 rounded-sm" />
@@ -35,10 +26,15 @@ export function CompareLoadingState() {
       </div>
 
       <ChartSkeleton className="h-[340px] rounded-xl" />
-    </div>
+    </>
   );
 }
 
 export default function Loading() {
-  return <CompareLoadingState />;
+  return (
+    <PageLoadingShell>
+      <PageLoadingHeader sectionWidth="w-20" titleWidth="w-80 sm:w-[26rem]" includeEyebrow={false} />
+      <CompareContentLoadingState />
+    </PageLoadingShell>
+  );
 }

@@ -1,177 +1,33 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as baseMockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import {
+  BOT_TOKEN,
+  NOW_SEC,
+  encoder,
+  historyHas,
+  hex,
+  hmacSha256,
+  makeMiniAppDb,
+  makeMiniAppRequest,
+  makeStreamedMiniAppRequest,
+  makeVersionedMiniAppRequest,
+  privateInitData,
+  signedInitData,
+  stateReadTables,
+  type MockTableConfig,
+} from "./telegram-mini-app.test-support";
+import { type MockPreparedStatement } from "../../test-helpers/__shared/mock-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { encodeWatchlistTokenV3 } from "../../lib/telegram-watchlist-token";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
-  TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
-  TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
   TelegramMiniAppSnapshotSchema,
 } from "@shared/lib/telegram-mini-app-contract";
 
 const { handleTelegramMiniAppMutation } = await import("../telegram-mini-app");
 const { mutationActionDetail } = await import("../telegram-mini-app-mutations");
-
-const BOT_TOKEN = "123456:test-token";
-const NOW_SEC = 1_800_000_000;
-const encoder = new TextEncoder();
-
-function mockD1(
-  tables: Parameters<typeof baseMockD1>[0] = [],
-  options: Parameters<typeof baseMockD1>[1] = {},
-) {
-  return baseMockD1([
-    ...tables,
-    { match: "WHERE cache.updated_at <= ?", rows: [] },
-    { match: "FROM telegram_subscribers", rows: [], first: null },
-    { match: "FROM telegram_subscriptions", rows: [] },
-    { match: "FROM telegram_preset_subscriptions", rows: [] },
-    { match: "FROM telegram_pending_alerts", rows: [], first: null },
-    { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
-    { match: "FROM telegram_recap_preferences", rows: [], first: null },
-    { match: "FROM telegram_recap_targets", rows: [] },
-    { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
-    { match: "INSERT INTO telegram_subscribers", rows: [] },
-    { match: "UPDATE telegram_subscribers", rows: [] },
-    { match: "INSERT INTO telegram_subscriptions", rows: [] },
-    { match: "UPDATE telegram_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
-    { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
-    { match: "DELETE FROM telegram_pending_alerts", rows: [] },
-    { match: "INSERT INTO telegram_recap_preferences", rows: [] },
-    { match: "UPDATE telegram_recap_preferences", rows: [] },
-    { match: "DELETE FROM telegram_recap_targets", rows: [] },
-    { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
-    { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
-    { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
-    { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
-    { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
-    { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
-    { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
-    { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
-    { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
-    { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "INSERT INTO cache", rows: [] },
-    { match: "UPDATE cache", rows: [] },
-    { match: "DELETE FROM cache", rows: [] },
-    { match: "INSERT INTO telegram_usage_daily", rows: [] },
-    { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "FROM cache", rows: [], first: null },
-  ], options);
-}
-
-async function hmacSha256(keyBytes: Uint8Array, value: string): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value)));
-}
-
-function hex(bytes: Uint8Array): string {
-  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function signedInitData(fields: Record<string, string>, token = BOT_TOKEN): Promise<string> {
-  const params = new URLSearchParams(fields);
-  const check = [...params.entries()]
-    .filter(([key]) => key !== "hash")
-    .map(([key, value]) => `${key}=${value}`)
-    .sort()
-    .join("\n");
-  const secret = await hmacSha256(encoder.encode("WebAppData"), token);
-  params.set("hash", hex(await hmacSha256(secret, check)));
-  return params.toString();
-}
-
-function request(path: string, body: unknown): Request {
-  return new Request(`https://api.pharos.watch${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-function versionedRequest(path: string, body: unknown, versions: {
-  contractVersion?: string;
-  catalogVersion?: string;
-} = {}): Request {
-  const url = new URL(path, "https://api.pharos.watch");
-  url.searchParams.set(
-    TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
-    versions.contractVersion ?? TELEGRAM_MINI_APP_CONTRACT_VERSION,
-  );
-  url.searchParams.set(
-    TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
-    versions.catalogVersion ?? TELEGRAM_MINI_APP_CATALOG_VERSION,
-  );
-  return new Request(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-function streamedRequest(path: string, chunks: string[], headers: Record<string, string> = {}): Request {
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const chunk of chunks) {
-        controller.enqueue(encoder.encode(chunk));
-      }
-      controller.close();
-    },
-  });
-  return new Request(`https://api.pharos.watch${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body,
-    duplex: "half",
-  } as RequestInit & { duplex: "half" });
-}
-
-async function privateInitData(ageSec = 60, startParam?: string): Promise<string> {
-  return signedInitData({
-    auth_date: String(NOW_SEC - ageSec),
-    chat_type: "private",
-    ...(startParam ? { start_param: startParam } : {}),
-    user: JSON.stringify({ id: 42, username: "alice" }),
-  });
-}
-
-function stateReadTables(overrides: {
-  subscriber?: Record<string, unknown> | null;
-  subscriptions?: Record<string, unknown>[];
-  presets?: Record<string, unknown>[];
-} = {}): MockTableConfig[] {
-  const subscriber = overrides.subscriber ?? {
-    global_alert_dews: 0,
-    global_alert_depeg: 0,
-    global_alert_safety: 0,
-    global_alert_launch: 0,
-    global_alert_reserve: 0,
-    global_depeg_worsening_bps_step: null,
-    quiet_hours_enabled: 0,
-    quiet_hours_start_utc: null,
-    quiet_hours_end_utc: null,
-    timezone: null,
-    alert_snooze_until_ts: null,
-  };
-  return [
-    {
-      match: "FROM telegram_subscribers",
-      first: subscriber,
-      rows: subscriber == null ? [] : [subscriber],
-    },
-    { match: "FROM telegram_subscriptions", rows: overrides.subscriptions ?? [] },
-    { match: "FROM telegram_preset_subscriptions", rows: overrides.presets ?? [] },
-    { match: "FROM telegram_chat_delivery_diagnostics", first: null, rows: [] },
-    { match: "FROM telegram_pending_alerts", first: { queued_alerts: 0 }, rows: [{ queued_alerts: 0 }] },
-  ];
-}
 
 function recapPreferenceTable(overrides: Partial<Record<string, unknown>> = {}): MockTableConfig {
   const row = {
@@ -212,13 +68,6 @@ function stablecoinsCacheTable(): MockTableConfig {
   };
 }
 
-function historyHas(db: MockD1Database, sqlNeedle: string, bindNeedles: unknown[] = []): boolean {
-  return db.getHistory().some((entry) =>
-    entry.sql.includes(sqlNeedle)
-    && bindNeedles.every((value) => entry.binds.includes(value)),
-  );
-}
-
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW_SEC * 1000);
@@ -232,9 +81,9 @@ afterEach(() => {
 describe("handleTelegramMiniAppMutation", () => {
   it("returns only mutable state and revision for a routine versioned mutation", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, versionedRequest("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-global", alertType: "safety", enabled: true },
     }), BOT_TOKEN);
@@ -249,16 +98,15 @@ describe("handleTelegramMiniAppMutation", () => {
   });
 
   it("rejects version skew before burst admission, analytics, or mutation writes", async () => {
-    const db = mockD1();
-    const response = await handleTelegramMiniAppMutation(db, versionedRequest("/api/telegram-mini-app/mutate", {
+    const db = makeMiniAppDb();
+    const response = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData: "not-signed",
       operation: { kind: "set-global", alertType: "safety", enabled: true },
     }, {
       contractVersion: "1",
     }), BOT_TOKEN);
 
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({
+    expect(await readJsonResponse(response, 409)).toMatchObject({
       code: "contract-version-mismatch",
       contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
       catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -274,7 +122,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("enables a timezone-confirmed recap, records recap telemetry, and returns refreshed state", async () => {
     const initData = await privateInitData();
-    const db = mockD1([
+    const db = makeMiniAppDb([
       recapPreferenceTable(),
       ...stateReadTables({
         subscriber: {
@@ -294,27 +142,26 @@ describe("handleTelegramMiniAppMutation", () => {
       }),
     ]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 14 },
     }), BOT_TOKEN);
 
-    expect(response.status).toBe(200);
     expect(historyHas(db, "INSERT INTO telegram_recap_preferences", ["42", 1, 14])).toBe(true);
     expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_recap", "recap"])).toBe(true);
-    expect(await response.json()).toMatchObject({
+    expect(await readJsonResponse(response, 200)).toMatchObject({
       subscriber: { recap: { enabled: true, deliveryHourLocal: 14, timezoneConfirmed: true } },
     });
   });
 
   it("disables a recap without requiring a timezone and cancels uncommitted recap delivery", async () => {
     const initData = await privateInitData();
-    const db = mockD1([
+    const db = makeMiniAppDb([
       recapPreferenceTable({ enabled: 0, delivery_hour_local: 9, next_due_at: null }),
       ...stateReadTables(),
     ]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-recap", enabled: false, deliveryHourLocal: 9 },
     }), BOT_TOKEN);
@@ -327,7 +174,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("returns a retryable recap-preference conflict when the generation fence is stale", async () => {
     const initData = await privateInitData();
-    const db = mockD1([
+    const db = makeMiniAppDb([
       recapPreferenceTable({ preference_generation: 2 }),
       ...stateReadTables({
         subscriber: {
@@ -348,7 +195,7 @@ describe("handleTelegramMiniAppMutation", () => {
       }),
     ]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 14 },
     }), BOT_TOKEN);
@@ -364,14 +211,14 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("requires an existing subscriber and confirmed timezone before enabling a recap", async () => {
     const initData = await privateInitData();
-    const missingSubscriberDb = mockD1([
+    const missingSubscriberDb = makeMiniAppDb([
       { match: "FROM telegram_subscribers", first: null, rows: [] },
     ]);
-    const missingTimezoneDb = mockD1(stateReadTables());
+    const missingTimezoneDb = makeMiniAppDb(stateReadTables());
 
     const missingSubscriber = await handleTelegramMiniAppMutation(
       missingSubscriberDb,
-      request("/api/telegram-mini-app/mutate", {
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", {
         initData,
         operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
       }),
@@ -379,7 +226,7 @@ describe("handleTelegramMiniAppMutation", () => {
     );
     const missingTimezone = await handleTelegramMiniAppMutation(
       missingTimezoneDb,
-      request("/api/telegram-mini-app/mutate", {
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", {
         initData,
         operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
       }),
@@ -402,7 +249,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("allows a stale signed session to export without consuming mutation burst capacity", async () => {
     const initData = await privateInitData(60 * 60);
-    const db = mockD1(stateReadTables({
+    const db = makeMiniAppDb(stateReadTables({
       subscriptions: [{
         stablecoin_id: "usdc-circle",
         alert_dews: 1,
@@ -421,13 +268,12 @@ describe("handleTelegramMiniAppMutation", () => {
       }],
     }));
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "export-watchlist" },
     }), BOT_TOKEN);
-    const body = await response.json() as { result?: { kind?: string; token?: string } };
+    const body = await readJsonResponse(response, 200) as { result?: { kind?: string; token?: string } };
 
-    expect(response.status).toBe(200);
     expect(body.result?.kind).toBe("watchlist-export");
     expect(body.result?.token).toMatch(/^pw3\./);
     expect(db.getHistory().some((entry) => entry.binds.some((value) => String(value).includes("mini-app:mutation")))).toBe(false);
@@ -437,7 +283,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("exports freeze intent through pw3 without using mutation telemetry", async () => {
     const initData = await privateInitData(60 * 60);
-    const db = mockD1(stateReadTables({
+    const db = makeMiniAppDb(stateReadTables({
       subscriptions: [{
         stablecoin_id: "usdc-circle",
         alert_dews: 0,
@@ -458,22 +304,21 @@ describe("handleTelegramMiniAppMutation", () => {
       }],
     }));
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "export-watchlist" },
     }), BOT_TOKEN);
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ result: { kind: "watchlist-export", token: expect.stringMatching(/^pw3\./) } });
+    expect(await readJsonResponse(response, 200)).toMatchObject({ result: { kind: "watchlist-export", token: expect.stringMatching(/^pw3\./) } });
     expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_portability", "watchlist_export"])).toBe(true);
     expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_mutation_denied", "watchlist_export"])).toBe(false);
   });
 
   it("routes a signed bulk preview through the read-only portability path", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [] },
     }), BOT_TOKEN);
@@ -509,7 +354,7 @@ describe("handleTelegramMiniAppMutation", () => {
       }],
       presets: [],
     });
-    const db = mockD1(stateReadTables({
+    const db = makeMiniAppDb(stateReadTables({
       subscriptions: [{
         stablecoin_id: "usdc-circle",
         alert_dews: 1,
@@ -531,12 +376,12 @@ describe("handleTelegramMiniAppMutation", () => {
       }],
     }));
 
-    const previewResponse = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const previewResponse = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "preview-watchlist-import", token },
     }), BOT_TOKEN);
     const preview = await previewResponse.json() as { result: { expectedPreferenceGeneration: number; previewFingerprint: string } };
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: {
         kind: "confirm-watchlist-import",
@@ -554,20 +399,20 @@ describe("handleTelegramMiniAppMutation", () => {
   it("returns stable portability errors for invalid tokens, empty exports, and stale bulk previews", async () => {
     const initData = await privateInitData();
     const invalidToken = await handleTelegramMiniAppMutation(
-      mockD1(stateReadTables()),
-      request("/api/telegram-mini-app/mutate", { initData, operation: { kind: "preview-watchlist-import", token: "not-a-watchlist" } }),
+      makeMiniAppDb(stateReadTables()),
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData, operation: { kind: "preview-watchlist-import", token: "not-a-watchlist" } }),
       BOT_TOKEN,
     );
     const emptyExport = await handleTelegramMiniAppMutation(
-      mockD1(stateReadTables()),
-      request("/api/telegram-mini-app/mutate", { initData, operation: { kind: "export-watchlist" } }),
+      makeMiniAppDb(stateReadTables()),
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData, operation: { kind: "export-watchlist" } }),
       BOT_TOKEN,
     );
     const staleBulk = await handleTelegramMiniAppMutation(
-      mockD1(stateReadTables({
+      makeMiniAppDb(stateReadTables({
         subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 0, alert_freeze: 0, alert_dews_override: 1, alert_depeg_override: 0, alert_safety_override: 0, alert_launch_override: 0, alert_reserve_override: 0, alert_freeze_override: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null }],
       })),
-      request("/api/telegram-mini-app/mutate", { initData, operation: { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: ["eurc-circle"] } }),
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData, operation: { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: ["eurc-circle"] } }),
       BOT_TOKEN,
     );
 
@@ -579,7 +424,7 @@ describe("handleTelegramMiniAppMutation", () => {
   it("rate-limits repeated read-only portability requests with portable telemetry", async () => {
     const initData = await privateInitData();
     const cooldownKey = "telegram:command-cooldown:42:mini-app:session";
-    const db = mockD1([
+    const db = makeMiniAppDb([
       {
         match: "INSERT INTO cache (key, value, updated_at)",
         matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 2],
@@ -594,7 +439,7 @@ describe("handleTelegramMiniAppMutation", () => {
       },
     ]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "export-watchlist" },
     }), BOT_TOKEN);
@@ -606,11 +451,11 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("applies global alert mutations", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables({
+    const db = makeMiniAppDb(stateReadTables({
       subscriber: { global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 1, global_alert_launch: 0, global_depeg_worsening_bps_step: null, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null, timezone: null, alert_snooze_until_ts: null },
     }));
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-global", alertType: "safety", enabled: true },
     }), BOT_TOKEN);
@@ -621,9 +466,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("applies global depeg-step mutations", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-global-depeg-step", depegStepBps: 500 },
     }), BOT_TOKEN);
@@ -635,9 +480,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("applies quiet-hour mutations with exact quiet window binds", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-quiet-hours", enabled: true, startHourUtc: 22, endHourUtc: 7 },
     }), BOT_TOKEN);
@@ -648,9 +493,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("clears subscriber snooze through the Mini App mutation path", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "clear-snooze" },
     }), BOT_TOKEN);
@@ -661,7 +506,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("does not re-enable an explicitly disabled coin alert family", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
     const batchSizes: number[] = [];
     const originalBatch = db.batch.bind(db);
     (db as { batch: D1Database["batch"] }).batch = async (statements: D1PreparedStatement[]) => {
@@ -669,7 +514,7 @@ describe("handleTelegramMiniAppMutation", () => {
       return originalBatch(statements);
     };
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: {
         kind: "set-coin",
@@ -694,9 +539,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("enables per-coin depeg alerts when setting a worsening step", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: {
         kind: "set-coin",
@@ -712,9 +557,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("applies reserve alert mutations through direct and alert-type patches", async () => {
     const initData = await privateInitData();
-    const enableDb = mockD1(stateReadTables());
+    const enableDb = makeMiniAppDb(stateReadTables());
 
-    const enableResponse = await handleTelegramMiniAppMutation(enableDb, request("/api/telegram-mini-app/mutate", {
+    const enableResponse = await handleTelegramMiniAppMutation(enableDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: {
         kind: "set-coin",
@@ -727,8 +572,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(enableDb, "alert_reserve = excluded.alert_reserve", ["42", "usdc-circle", 1])).toBe(true);
     expect(historyHas(enableDb, "alert_reserve = MAX(telegram_subscribers.alert_reserve, excluded.alert_reserve)", ["42", "alice", NOW_SEC])).toBe(true);
 
-    const disableDb = mockD1(stateReadTables());
-    const disableResponse = await handleTelegramMiniAppMutation(disableDb, request("/api/telegram-mini-app/mutate", {
+    const disableDb = makeMiniAppDb(stateReadTables());
+    const disableResponse = await handleTelegramMiniAppMutation(disableDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: {
         kind: "set-coin",
@@ -744,11 +589,11 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("returns a marker-backed local opt-out after disabling the last alert", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables({
+    const db = makeMiniAppDb(stateReadTables({
       subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_depeg_override: 1, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null }],
     }));
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: {
         kind: "set-coin",
@@ -756,9 +601,8 @@ describe("handleTelegramMiniAppMutation", () => {
         patch: { alertTypes: { depeg: false } },
       },
     }), BOT_TOKEN);
-    const body = await response.json() as { subscriptions: Array<{ stablecoinId: string; alertOverrides: { depeg: boolean } }> };
+    const body = await readJsonResponse(response, 200) as { subscriptions: Array<{ stablecoinId: string; alertOverrides: { depeg: boolean } }> };
 
-    expect(response.status).toBe(200);
     expect(historyHas(db, "alert_depeg = 0", ["42", "usdc-circle"])).toBe(true);
     expect(body.subscriptions).toEqual([
       expect.objectContaining({ stablecoinId: "usdc-circle", alertOverrides: expect.objectContaining({ depeg: true }) }),
@@ -767,9 +611,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("removes explicit coin subscriptions", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
     }), BOT_TOKEN);
@@ -781,9 +625,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("writes recommended setup as preset provenance without materializing coin rows", async () => {
     const initData = await privateInitData();
-    const db = mockD1([stablecoinsCacheTable(), ...stateReadTables()]);
+    const db = makeMiniAppDb([stablecoinsCacheTable(), ...stateReadTables()]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] },
     }), BOT_TOKEN);
@@ -795,7 +639,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("keeps authenticated transient failures inside the bounded mutation budget", async () => {
     const initData = await privateInitData();
-    const db = mockD1([
+    const db = makeMiniAppDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -804,21 +648,20 @@ describe("handleTelegramMiniAppMutation", () => {
       },
     ]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] },
     }), BOT_TOKEN);
 
-    expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({ code: "preset-unavailable" });
+    expect(await readJsonResponse(response, 503)).toMatchObject({ code: "preset-unavailable" });
     expect(historyHas(db, "INSERT INTO cache (key, value, updated_at)", ["telegram:mini-app-mutation-burst:42"])).toBe(true);
     expect(historyHas(db, "DELETE FROM cache WHERE key = ?", [])).toBe(false);
   });
 
   it("follows and unfollows presets through exact preset tables", async () => {
     const initData = await privateInitData();
-    const followDb = mockD1([stablecoinsCacheTable(), ...stateReadTables()]);
-    const followResponse = await handleTelegramMiniAppMutation(followDb, request("/api/telegram-mini-app/mutate", {
+    const followDb = makeMiniAppDb([stablecoinsCacheTable(), ...stateReadTables()]);
+    const followResponse = await handleTelegramMiniAppMutation(followDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "follow-preset", presetId: "usd-top10", alertTypes: { dews: true, depeg: true }, depegStepBps: 250 },
     }), BOT_TOKEN);
@@ -827,8 +670,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(followDb, "INSERT INTO telegram_subscriptions", ["42"])).toBe(false);
     expect(historyHas(followDb, "INSERT INTO telegram_preset_subscriptions", ["42", "usd-top10", 1, 1, 0, 250])).toBe(true);
 
-    const unfollowDb = mockD1(stateReadTables());
-    const unfollowResponse = await handleTelegramMiniAppMutation(unfollowDb, request("/api/telegram-mini-app/mutate", {
+    const unfollowDb = makeMiniAppDb(stateReadTables());
+    const unfollowResponse = await handleTelegramMiniAppMutation(unfollowDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "unfollow-preset", presetId: "usd-top10" },
     }), BOT_TOKEN);
@@ -840,9 +683,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("accepts non-USD preset ids through Mini App follow mutations", async () => {
     const initData = await privateInitData();
-    const db = mockD1([stablecoinsCacheTable(), ...stateReadTables()]);
+    const db = makeMiniAppDb([stablecoinsCacheTable(), ...stateReadTables()]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "follow-preset", presetId: "non-usd-top10", alertTypes: { dews: true } },
     }), BOT_TOKEN);
@@ -854,7 +697,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("does not persist subscription, preset, or analytics rows when D1 fails mid-batch", async () => {
     const initData = await privateInitData();
-    const db = mockD1([stablecoinsCacheTable()]);
+    const db = makeMiniAppDb([stablecoinsCacheTable()]);
     const stagedStatements: Array<{ sql: string; binds: unknown[] }> = [];
     const committedStatements: Array<{ sql: string; binds: unknown[] }> = [];
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -876,7 +719,7 @@ describe("handleTelegramMiniAppMutation", () => {
       }));
     }) as D1Database["batch"];
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] },
     }), BOT_TOKEN);
@@ -895,7 +738,7 @@ describe("handleTelegramMiniAppMutation", () => {
       chat_type: "group",
       user: JSON.stringify({ id: 42 }),
     });
-    const response = await handleTelegramMiniAppMutation(mockD1(), request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(makeMiniAppDb(), makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-global", alertType: "dews", enabled: true },
     }), BOT_TOKEN);
@@ -908,9 +751,9 @@ describe("handleTelegramMiniAppMutation", () => {
       chat_type: "sender",
       user: JSON.stringify({ id: 42, username: "alice" }),
     });
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "clear-snooze" },
     }), BOT_TOKEN);
@@ -922,13 +765,13 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("allows multiple mutations from the same fresh Mini App launch", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const firstResponse = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const firstResponse = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "clear-snooze" },
     }), BOT_TOKEN);
-    const secondResponse = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const secondResponse = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-global", alertType: "safety", enabled: true },
     }), BOT_TOKEN);
@@ -947,7 +790,7 @@ describe("handleTelegramMiniAppMutation", () => {
       chat_type: "private",
       user: JSON.stringify({ id: 42 }),
     });
-    const response = await handleTelegramMiniAppMutation(mockD1(), request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(makeMiniAppDb(), makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "clear-snooze" },
     }), BOT_TOKEN);
@@ -957,7 +800,7 @@ describe("handleTelegramMiniAppMutation", () => {
   it("shares the mutation burst budget across operation kinds", async () => {
     const initData = await privateInitData();
     const burstKey = "telegram:mini-app-mutation-burst:42";
-    const db = mockD1([
+    const db = makeMiniAppDb([
       {
         match: "INSERT INTO cache (key, value, updated_at)",
         matchBinds: [burstKey, NOW_SEC, NOW_SEC - 30, NOW_SEC - 30, NOW_SEC - 30, 12],
@@ -971,14 +814,13 @@ describe("handleTelegramMiniAppMutation", () => {
       },
     ]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
     }), BOT_TOKEN);
 
-    expect(response.status).toBe(429);
     expect(response.headers.get("Retry-After")).toBe("13");
-    expect(await response.json()).toMatchObject({ code: "rate-limited", retryAfterSec: 13 });
+    expect(await readJsonResponse(response, 429)).toMatchObject({ code: "rate-limited", retryAfterSec: 13 });
     // P1.3: mutation budget denials must emit `mini_app_mutation_denied`
     // with the `rate_limited` failure class so abuse signals are visible.
     const deniedRows = db
@@ -998,7 +840,7 @@ describe("handleTelegramMiniAppMutation", () => {
       body: JSON.stringify({ initData: "x", operation: { kind: "clear-snooze" } }),
     });
 
-    const db = mockD1();
+    const db = makeMiniAppDb();
     const response = await handleTelegramMiniAppMutation(db, req, BOT_TOKEN);
 
     expect(response.status).toBe(413);
@@ -1008,8 +850,8 @@ describe("handleTelegramMiniAppMutation", () => {
   });
 
   it("rejects oversized streamed mutation bodies without relying on Content-Length", async () => {
-    const db = mockD1();
-    const req = streamedRequest("/api/telegram-mini-app/mutate", [
+    const db = makeMiniAppDb();
+    const req = makeStreamedMiniAppRequest("/api/telegram-mini-app/mutate", [
       "{\"initData\":\"x\",\"operation\":{\"kind\":\"set-timezone\",\"timezone\":\"",
       "x".repeat(17 * 1024),
       "\"}}",
@@ -1017,17 +859,16 @@ describe("handleTelegramMiniAppMutation", () => {
 
     const response = await handleTelegramMiniAppMutation(db, req, BOT_TOKEN);
 
-    expect(response.status).toBe(413);
-    expect(await response.json()).toMatchObject({ code: "body-too-large" });
+    expect(await readJsonResponse(response, 413)).toMatchObject({ code: "body-too-large" });
     // Streamed body-cap failures are also pre-auth and must not write analytics.
     expect(db.getHistory()).toHaveLength(0);
   });
 
   it("rejects strict-schema violations on mutation payloads", async () => {
     const initData = await privateInitData();
-    const db = mockD1();
+    const db = makeMiniAppDb();
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "clear-snooze", evil: 1 },
     }), BOT_TOKEN);
@@ -1038,9 +879,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("rejects empty set-coin patches", async () => {
     const initData = await privateInitData();
-    const db = mockD1();
+    const db = makeMiniAppDb();
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-coin", stablecoinId: "usdc-circle", patch: {} },
     }), BOT_TOKEN);
@@ -1051,9 +892,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("rejects set-quiet-hours with equal start and end hours", async () => {
     const initData = await privateInitData();
-    const db = mockD1();
+    const db = makeMiniAppDb();
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-quiet-hours", enabled: true, startHourUtc: 3, endHourUtc: 3 },
     }), BOT_TOKEN);
@@ -1063,9 +904,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("rejects non-canonical recommended-setup payloads", async () => {
     const initData = await privateInitData();
-    const db = mockD1();
+    const db = makeMiniAppDb();
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "recommended-setup", presetId: "usd-top10", alertTypes: ["dews", "depeg"] },
     }), BOT_TOKEN);
@@ -1075,12 +916,12 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("returns no-store on internal server errors", async () => {
     const initData = await privateInitData();
-    const db = mockD1();
+    const db = makeMiniAppDb();
     (db as { batch: D1Database["batch"] }).batch = async () => {
       throw new Error("transient D1 failure");
     };
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
     }), BOT_TOKEN);
@@ -1107,9 +948,9 @@ describe("handleTelegramMiniAppMutation", () => {
     params.set("hash", hex(await hmacSha256(secret, check)));
     const initData = params.toString();
 
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "clear-snooze" },
     }), BOT_TOKEN, PREVIOUS_TOKEN);
@@ -1121,9 +962,9 @@ describe("handleTelegramMiniAppMutation", () => {
     // The discriminator is the literal `alert_snooze_until_ts = NULL` SET
     // clause written by the canonical store helper.
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "clear-snooze" },
     }), BOT_TOKEN);
@@ -1136,9 +977,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("applies a chat-wide snooze with the duration token offset", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-snooze", durationToken: "4h" },
     }), BOT_TOKEN);
@@ -1150,9 +991,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("writes the durable Paused sentinel via the pause op", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "pause" },
     }), BOT_TOKEN);
@@ -1163,9 +1004,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("snoozes a single coin via set-coin-snooze and clears via the clear token", async () => {
     const initData = await privateInitData();
-    const setDb = mockD1(stateReadTables());
+    const setDb = makeMiniAppDb(stateReadTables());
 
-    const setResponse = await handleTelegramMiniAppMutation(setDb, request("/api/telegram-mini-app/mutate", {
+    const setResponse = await handleTelegramMiniAppMutation(setDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-coin-snooze", stablecoinId: "usdc-circle", durationToken: "1h" },
     }), BOT_TOKEN);
@@ -1174,8 +1015,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(setDb, "INSERT INTO telegram_subscribers", ["42", null, NOW_SEC])).toBe(true);
     expect(historyHas(setDb, "INSERT INTO telegram_subscriptions", ["42", "usdc-circle", NOW_SEC + 3600])).toBe(true);
 
-    const clearDb = mockD1(stateReadTables());
-    const clearResponse = await handleTelegramMiniAppMutation(clearDb, request("/api/telegram-mini-app/mutate", {
+    const clearDb = makeMiniAppDb(stateReadTables());
+    const clearResponse = await handleTelegramMiniAppMutation(clearDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-coin-snooze", stablecoinId: "usdc-circle", durationToken: "clear" },
     }), BOT_TOKEN);
@@ -1191,8 +1032,8 @@ describe("handleTelegramMiniAppMutation", () => {
     if (!frozen) throw new Error("Expected a frozen stablecoin fixture");
     const initData = await privateInitData();
 
-    const setDb = mockD1();
-    const setResponse = await handleTelegramMiniAppMutation(setDb, request("/api/telegram-mini-app/mutate", {
+    const setDb = makeMiniAppDb();
+    const setResponse = await handleTelegramMiniAppMutation(setDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: {
         kind: "set-coin",
@@ -1200,29 +1041,27 @@ describe("handleTelegramMiniAppMutation", () => {
         patch: { alertTypes: { dews: true } },
       },
     }), BOT_TOKEN);
-    expect(setResponse.status).toBe(400);
-    expect(await setResponse.json()).toMatchObject({ code: "unknown-coin" });
+    expect(await readJsonResponse(setResponse, 400)).toMatchObject({ code: "unknown-coin" });
     expect(historyHas(setDb, "INSERT INTO telegram_subscriptions", [frozen.id])).toBe(false);
 
-    const snoozeDb = mockD1();
-    const snoozeResponse = await handleTelegramMiniAppMutation(snoozeDb, request("/api/telegram-mini-app/mutate", {
+    const snoozeDb = makeMiniAppDb();
+    const snoozeResponse = await handleTelegramMiniAppMutation(snoozeDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-coin-snooze", stablecoinId: frozen.id, durationToken: "1h" },
     }), BOT_TOKEN);
-    expect(snoozeResponse.status).toBe(400);
-    expect(await snoozeResponse.json()).toMatchObject({ code: "unknown-coin" });
+    expect(await readJsonResponse(snoozeResponse, 400)).toMatchObject({ code: "unknown-coin" });
     expect(historyHas(snoozeDb, "INSERT INTO telegram_subscriptions", [frozen.id])).toBe(false);
 
-    const clearDb = mockD1(stateReadTables());
-    const clearResponse = await handleTelegramMiniAppMutation(clearDb, request("/api/telegram-mini-app/mutate", {
+    const clearDb = makeMiniAppDb(stateReadTables());
+    const clearResponse = await handleTelegramMiniAppMutation(clearDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-coin-snooze", stablecoinId: frozen.id, durationToken: "clear" },
     }), BOT_TOKEN);
     expect(clearResponse.status).toBe(200);
     expect(historyHas(clearDb, "UPDATE telegram_subscriptions", ["42", frozen.id])).toBe(true);
 
-    const removeDb = mockD1(stateReadTables());
-    const removeResponse = await handleTelegramMiniAppMutation(removeDb, request("/api/telegram-mini-app/mutate", {
+    const removeDb = makeMiniAppDb(stateReadTables());
+    const removeResponse = await handleTelegramMiniAppMutation(removeDb, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "remove-coin", stablecoinId: frozen.id },
     }), BOT_TOKEN);
@@ -1232,22 +1071,21 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("rejects set-coin-snooze with a stable unknown-coin code on unknown coin", async () => {
     const initData = await privateInitData();
-    const db = mockD1();
+    const db = makeMiniAppDb();
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-coin-snooze", stablecoinId: "not-a-coin", durationToken: "1h" },
     }), BOT_TOKEN);
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: "Unknown stablecoin", code: "unknown-coin" });
+    expect(await readJsonResponse(response, 400)).toMatchObject({ error: "Unknown stablecoin", code: "unknown-coin" });
   });
 
   it("persists a valid IANA timezone via set-timezone", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-timezone", timezone: "Europe/Paris" },
     }), BOT_TOKEN);
@@ -1258,9 +1096,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("clears the timezone to UTC default when null is passed", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-timezone", timezone: null },
     }), BOT_TOKEN);
@@ -1271,22 +1109,21 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("rejects invalid IANA timezones with a stable invalid-timezone code", async () => {
     const initData = await privateInitData();
-    const db = mockD1();
+    const db = makeMiniAppDb();
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-timezone", timezone: "Not/AZone" },
     }), BOT_TOKEN);
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: "Unknown timezone", code: "invalid-timezone" });
+    expect(await readJsonResponse(response, 400)).toMatchObject({ error: "Unknown timezone", code: "invalid-timezone" });
   });
 
   it("unsubscribe-all clears subscriptions, presets, and global flags in one batch", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "unsubscribe-all" },
     }), BOT_TOKEN);
@@ -1301,9 +1138,9 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("forget-me deletes subscriber-owned rows but retains processed_updates", async () => {
     const initData = await privateInitData();
-    const db = mockD1(stateReadTables());
+    const db = makeMiniAppDb(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "forget-me" },
     }), BOT_TOKEN);
@@ -1325,7 +1162,7 @@ describe("handleTelegramMiniAppMutation", () => {
   it("applies the same mutation burst budget to destructive operation kinds", async () => {
     const initData = await privateInitData();
     const burstKey = "telegram:mini-app-mutation-burst:42";
-    const db = mockD1([
+    const db = makeMiniAppDb([
       {
         match: "INSERT INTO cache (key, value, updated_at)",
         matchBinds: [burstKey, NOW_SEC, NOW_SEC - 30, NOW_SEC - 30, NOW_SEC - 30, 12],
@@ -1339,22 +1176,21 @@ describe("handleTelegramMiniAppMutation", () => {
       },
     ]);
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "forget-me" },
     }), BOT_TOKEN);
 
-    expect(response.status).toBe(429);
-    expect(await response.json()).toMatchObject({ code: "rate-limited", retryAfterSec: 1 });
+    expect(await readJsonResponse(response, 429)).toMatchObject({ code: "rate-limited", retryAfterSec: 1 });
   });
 
   it("attaches a non-null latencyBucket to failed mutation analytics rows", async () => {
     // T-64: failed mutations also carry latency telemetry. With fake timers
     // `Date.now() - start === 0`, which buckets to "lt_250ms".
     const initData = await privateInitData();
-    const db = mockD1();
+    const db = makeMiniAppDb();
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "set-coin-snooze", stablecoinId: "not-a-coin", durationToken: "1h" },
     }), BOT_TOKEN);
@@ -1373,12 +1209,11 @@ describe("handleTelegramMiniAppMutation", () => {
   it("attaches stable error codes to each known-error response", async () => {
     // Configuration error: missing bot token.
     const notConfigured = await handleTelegramMiniAppMutation(
-      mockD1(),
-      request("/api/telegram-mini-app/mutate", { initData: "x", operation: { kind: "clear-snooze" } }),
+      makeMiniAppDb(),
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData: "x", operation: { kind: "clear-snooze" } }),
       undefined,
     );
-    expect(notConfigured.status).toBe(503);
-    expect(await notConfigured.json()).toMatchObject({ code: "not-configured" });
+    expect(await readJsonResponse(notConfigured, 503)).toMatchObject({ code: "not-configured" });
 
     // Oversized body: 413 body-too-large.
     const oversize = new Request("https://api.pharos.watch/api/telegram-mini-app/mutate", {
@@ -1386,9 +1221,8 @@ describe("handleTelegramMiniAppMutation", () => {
       headers: { "Content-Type": "application/json", "Content-Length": String(20 * 1024) },
       body: JSON.stringify({ initData: "x", operation: { kind: "clear-snooze" } }),
     });
-    const oversizeResponse = await handleTelegramMiniAppMutation(mockD1(), oversize, BOT_TOKEN);
-    expect(oversizeResponse.status).toBe(413);
-    expect(await oversizeResponse.json()).toMatchObject({ code: "body-too-large" });
+    const oversizeResponse = await handleTelegramMiniAppMutation(makeMiniAppDb(), oversize, BOT_TOKEN);
+    expect(await readJsonResponse(oversizeResponse, 413)).toMatchObject({ code: "body-too-large" });
 
     // Stale auth: 5-minute boundary.
     const staleInitData = await signedInitData({
@@ -1397,22 +1231,20 @@ describe("handleTelegramMiniAppMutation", () => {
       user: JSON.stringify({ id: 42 }),
     });
     const staleResponse = await handleTelegramMiniAppMutation(
-      mockD1(),
-      request("/api/telegram-mini-app/mutate", { initData: staleInitData, operation: { kind: "clear-snooze" } }),
+      makeMiniAppDb(),
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData: staleInitData, operation: { kind: "clear-snooze" } }),
       BOT_TOKEN,
     );
-    expect(staleResponse.status).toBe(401);
-    expect(await staleResponse.json()).toMatchObject({ code: "stale-auth" });
+    expect(await readJsonResponse(staleResponse, 401)).toMatchObject({ code: "stale-auth" });
 
     // Validation error: strict-mode unknown field.
     const validInitData = await privateInitData();
     const validationResponse = await handleTelegramMiniAppMutation(
-      mockD1(),
-      request("/api/telegram-mini-app/mutate", { initData: validInitData, operation: { kind: "clear-snooze", evil: 1 } }),
+      makeMiniAppDb(),
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData: validInitData, operation: { kind: "clear-snooze", evil: 1 } }),
       BOT_TOKEN,
     );
-    expect(validationResponse.status).toBe(400);
-    expect(await validationResponse.json()).toMatchObject({ code: "validation-error" });
+    expect(await readJsonResponse(validationResponse, 400)).toMatchObject({ code: "validation-error" });
 
     // Group chat: 403 not-private.
     const groupInitData = await signedInitData({
@@ -1421,19 +1253,18 @@ describe("handleTelegramMiniAppMutation", () => {
       user: JSON.stringify({ id: 42 }),
     });
     const groupResponse = await handleTelegramMiniAppMutation(
-      mockD1(),
-      request("/api/telegram-mini-app/mutate", { initData: groupInitData, operation: { kind: "clear-snooze" } }),
+      makeMiniAppDb(),
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData: groupInitData, operation: { kind: "clear-snooze" } }),
       BOT_TOKEN,
     );
-    expect(groupResponse.status).toBe(403);
-    expect(await groupResponse.json()).toMatchObject({ code: "not-private" });
+    expect(await readJsonResponse(groupResponse, 403)).toMatchObject({ code: "not-private" });
 
     // Fresh auth remains reusable within the same Mini App launch.
     const reusableInitData = await privateInitData();
-    const reusableDb = mockD1(stateReadTables());
+    const reusableDb = makeMiniAppDb(stateReadTables());
     const reusableResponse = await handleTelegramMiniAppMutation(
       reusableDb,
-      request("/api/telegram-mini-app/mutate", { initData: reusableInitData, operation: { kind: "clear-snooze" } }),
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData: reusableInitData, operation: { kind: "clear-snooze" } }),
       BOT_TOKEN,
     );
     expect(reusableResponse.status).toBe(200);

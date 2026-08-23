@@ -299,6 +299,14 @@ function structuralSignalNeedsHardCap(signal: V9StructuralSignal): boolean {
     return signal.responsibility === undefined || signal.responsibility === "measured-adverse";
   }
   if (signal.responsibility !== "measured-adverse") return false;
+  // A signal already priced inside a pillar has its causal account there. Letting
+  // it also impose a whole-asset ceiling charges one fact twice, so the second
+  // charge must be an explicit reviewed assertion that the ceiling covers a
+  // residual the pillar cannot express. Without the marker a pillar-priced signal
+  // shapes its pillar and stops there.
+  if (signal.pricedInPillar !== undefined && signal.additionalHardCapRisk === undefined) {
+    return false;
+  }
   // Reserve and access facts are already owned by backing/exit. A reserve
   // condition that can impair the whole claim must be emitted as global-claim;
   // treating every reserve slice as global charges the same exposure twice.
@@ -735,6 +743,32 @@ function capPriority(source: V9CapTrace["source"], policy: V9ValidatedPolicyEnve
   return priority === -1 ? policy.policy.semantic.formula.capTiePriority.length : priority;
 }
 
+// Generic absence reasons are less informative than a specific observed or
+// withheld fact at the same source and limit. Keep this semantic precedence
+// explicit; code-unit kind and reason comparisons below remain the total,
+// locale-independent fallback for replay-stable publication.
+const GENERIC_ABSENCE_CAP_KINDS = new Set<string>([
+  "reason:missing-applicable-peg",
+]);
+
+function capReasonPrecedence(kind: string): number {
+  return GENERIC_ABSENCE_CAP_KINDS.has(kind) ? 1 : 0;
+}
+
+function compareCapCandidates(
+  left: Omit<V9CapTrace, "binding">,
+  right: Omit<V9CapTrace, "binding">,
+  policy: V9ValidatedPolicyEnvelope,
+): number {
+  return (
+    left.limit - right.limit ||
+    capPriority(left.source, policy) - capPriority(right.source, policy) ||
+    capReasonPrecedence(left.kind) - capReasonPrecedence(right.kind) ||
+    compareCodeUnits(left.kind, right.kind) ||
+    compareCodeUnits(left.reason, right.reason)
+  );
+}
+
 /**
  * Apply one explicit asset premium after the ordinary score has established
  * eligibility. The adjustment remains pre-cap, and only its named cap relief
@@ -784,12 +818,7 @@ export function applyV9AssetPremium(
   const bindingCandidate =
     [...adjustedCandidates]
       .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
-      .sort(
-        (left, right) =>
-          left.limit - right.limit ||
-          capPriority(left.source, policy) - capPriority(right.source, policy) ||
-          compareCodeUnits(left.kind, right.kind),
-      )[0] ?? null;
+      .sort((left, right) => compareCapCandidates(left, right, policy))[0] ?? null;
   const rawFinal = Math.min(adjustedPreCapRaw, bindingCandidate?.limit ?? SCORE_MAX);
   const finalScore = bindingCandidate
     ? floorTo(rawFinal, formula.scoreDecimals)
@@ -1085,19 +1114,30 @@ function scoreV9InputWithCaps(
     capCandidates.push({ source: "structural", ...cap });
   }
 
+  // A cap limit is a PUBLISHED ceiling, so it must live in the published score
+  // space. Wrapper-local parent limits are the only source of fractional limits
+  // (wrapper-risk sums assessment multipliers such as 0.7 x 3 = 2.1), and a
+  // fractional limit combined with the capped-score floor at :1123-1128 lets a
+  // sub-point remainder decide a whole grade band: asusdf-astherus resolved a
+  // 49.55 parent limit, floored to 49 (D) where the D/C- boundary sits at 50.
+  //
+  // Flooring every limit here — one funnel, before dedup and selection — keeps
+  // the ceiling honest (floor never raises a limit, so no cap can be breached),
+  // makes the dedup key collapse candidates that publish identically, and
+  // removes the mixed-quantizer hazard because every limit is now integral in
+  // the same space as the score it constrains.
+  const normalizedCandidates = capCandidates.map((cap) => ({
+    ...cap,
+    limit: floorTo(cap.limit, formula.scoreDecimals),
+  }));
+
   // Identical (source, kind, limit) candidates collapse to one trace row; the
   // deterministically first reason survives so repeated shared-path signals do
   // not flood the published cap list.
   const dedupedCandidates = [
     ...new Map(
-      [...capCandidates]
-        .sort(
-          (left, right) =>
-            left.limit - right.limit ||
-            capPriority(left.source, policy) - capPriority(right.source, policy) ||
-            compareCodeUnits(left.kind, right.kind) ||
-            compareCodeUnits(left.reason, right.reason),
-        )
+      [...normalizedCandidates]
+        .sort((left, right) => compareCapCandidates(left, right, policy))
         .reverse()
         .map((cap) => [`${cap.source}\u0000${cap.kind}\u0000${cap.limit}`, cap]),
     ).values(),
@@ -1111,12 +1151,7 @@ function scoreV9InputWithCaps(
       ? null
       : ([...dedupedCandidates]
           .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
-          .sort(
-            (left, right) =>
-              left.limit - right.limit ||
-              capPriority(left.source, policy) - capPriority(right.source, policy) ||
-              compareCodeUnits(left.kind, right.kind),
-          )[0] ?? null);
+          .sort((left, right) => compareCapCandidates(left, right, policy))[0] ?? null);
   const caps = dedupedCandidates.map<V9CapTrace>((cap) => ({ ...cap, binding: cap === bindingCandidate }));
   const rateable = nrReasons.length === 0 && preCapScoreRaw !== null;
   const rawFinal = rateable ? Math.min(preCapScoreRaw!, bindingCandidate?.limit ?? SCORE_MAX) : null;

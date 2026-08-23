@@ -565,18 +565,25 @@ describe("evaluateV9Exit", () => {
   });
 
   it("is deterministic under route and capacity-curve permutation", () => {
-    const first = route();
+    const first = route({
+      routeKey: "route:ä",
+      failureDomains: ["redemption-rail:umlaut"],
+      physicalResourceKeys: ["rail:umlaut"],
+    });
     const second = route({
-      routeKey: "dex:second",
+      routeKey: "route:z",
       lane: "dex",
       routeFamily: "dex-amm",
       evidenceKind: "measured-executable-depth",
-      failureDomains: ["dex-protocol:second"],
-      physicalResourceKeys: ["pool:second"],
+      failureDomains: ["dex-protocol:z"],
+      physicalResourceKeys: ["pool:z"],
       capacityCurve: [...route().capacityCurve].reverse(),
     });
     const forward = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [first, second] }, V9_CANDIDATE_POLICY_V1);
     const reverse = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [second, first] }, V9_CANDIDATE_POLICY_V1);
+    expect(forward.primaryRouteKey).toBe("route:z");
+    expect(forward.diversificationRouteKey).toBe("route:ä");
+    expect(forward.routes.map((entry) => entry.routeKey)).toEqual(["route:z", "route:ä"]);
     expect(reverse).toEqual(forward);
   });
 

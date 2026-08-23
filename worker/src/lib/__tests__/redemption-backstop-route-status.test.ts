@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mergeRedemptionRouteStatus, REDEMPTION_ROUTE_STATUS_PRODUCER } from "../redemption-backstop-route-status";
+import { severeMarketEvidence } from "./redemption-backstop-sources.test-support";
 
 const staticOpen = {
   routeStatus: "open" as const,
@@ -52,15 +53,7 @@ describe("mergeRedemptionRouteStatus", () => {
   it("applies severe market impairment after static status", () => {
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,
-      severeMarketImplied: {
-        routeStatus: "degraded",
-        routeStatusSource: "market-implied",
-        routeStatusReason: "Active severe depeg",
-        routeStatusReviewedAt: "2026-05-12",
-        activeDepegBps: 3000,
-        activeDepegStartedAt: 1_777_000_000,
-        activeDepegDirection: "below",
-      },
+      severeMarketImplied: severeMarketEvidence(),
       allowSevereMarketOpenException: false,
     });
 
@@ -77,15 +70,7 @@ describe("mergeRedemptionRouteStatus", () => {
         routeStatus: "open",
         routeStatusSource: "onchain",
       },
-      severeMarketImplied: {
-        routeStatus: "degraded",
-        routeStatusSource: "market-implied",
-        routeStatusReason: "Active severe depeg",
-        routeStatusReviewedAt: "2026-05-12",
-        activeDepegBps: 3000,
-        activeDepegStartedAt: 1_777_000_000,
-        activeDepegDirection: "below",
-      },
+      severeMarketImplied: severeMarketEvidence(),
       allowSevereMarketOpenException: true,
     });
 
@@ -102,15 +87,7 @@ describe("mergeRedemptionRouteStatus", () => {
         routeStatus: "open",
         routeStatusSource: "onchain",
       },
-      severeMarketImplied: {
-        routeStatus: "degraded",
-        routeStatusSource: "market-implied",
-        routeStatusReason: "Active severe depeg",
-        routeStatusReviewedAt: "2026-05-12",
-        activeDepegBps: 3000,
-        activeDepegStartedAt: 1_777_000_000,
-        activeDepegDirection: "below",
-      },
+      severeMarketImplied: severeMarketEvidence(),
       allowSevereMarketOpenException: false,
     });
 
@@ -126,15 +103,7 @@ describe("mergeRedemptionRouteStatus", () => {
     // evidence channel carried the open status.
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,
-      severeMarketImplied: {
-        routeStatus: "degraded",
-        routeStatusSource: "market-implied",
-        routeStatusReason: "Active severe depeg",
-        routeStatusReviewedAt: "2026-05-12",
-        activeDepegBps: 3000,
-        activeDepegStartedAt: 1_777_000_000,
-        activeDepegDirection: "below",
-      },
+      severeMarketImplied: severeMarketEvidence(),
       allowSevereMarketOpenException: true,
     });
 
@@ -151,17 +120,11 @@ describe("mergeRedemptionRouteStatus", () => {
         routeStatus: "open",
         routeStatusSource: "onchain",
       },
-      severeMarketImplied: {
-        routeStatus: "degraded",
-        routeStatusSource: "market-implied",
+      severeMarketImplied: severeMarketEvidence({
         routeStatusReason: "Output asset impairment",
-        routeStatusReviewedAt: "2026-05-12",
-        activeDepegBps: 3000,
-        activeDepegStartedAt: 1_777_000_000,
-        activeDepegDirection: "below",
         outputImpairedDependencyId: "usdc-circle",
         outputImpairedShare: 1,
-      },
+      }),
       allowSevereMarketOpenException: true,
     });
 

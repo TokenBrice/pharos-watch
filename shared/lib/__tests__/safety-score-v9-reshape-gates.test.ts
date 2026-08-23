@@ -4,8 +4,6 @@ import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score
 import { V9_SCORE_BEARING_GATES_POLICY_V923 } from "../safety-score-v9/score-bearing-gates-policy";
 import {
   scoreV9EvaluatedAsset,
-  type V9PillarEvaluation,
-  type V9ProductionScoreInput,
 } from "../safety-score-v9/score";
 import type {
   V9ScoringInput,
@@ -13,11 +11,9 @@ import type {
   V9StructuralSignal,
   V9StructuralSignalKind,
 } from "../../types/safety-score-v9";
+import { makeV9Pillar as pillar, makeV9ProductionScoreInput as assetInput } from "./safety-score-v9-score.test-support";
 
 const POLICY = V9_CANDIDATE_POLICY_V1;
-const DIGEST = "a".repeat(64);
-const BUILD_DIGEST = "b".repeat(64);
-const BASE_ID = `report-cards-input:v1:${"c".repeat(64)}`;
 
 function signal(kind: V9StructuralSignalKind, severity: V9Severity): V9StructuralSignal {
   return {
@@ -27,30 +23,6 @@ function signal(kind: V9StructuralSignalKind, severity: V9Severity): V9Structura
     responsibility: "measured-adverse",
     failureDomainKeys: [],
     evidence: [],
-  };
-}
-
-function pillar(score: number | null, overrides: Partial<V9PillarEvaluation> = {}): V9PillarEvaluation {
-  return { score, evidenceLevel: "strong", reasons: [], structuralSignals: [], ...overrides };
-}
-
-function assetInput(overrides: Partial<V9ProductionScoreInput> = {}): V9ProductionScoreInput {
-  return {
-    assetId: "asset",
-    identity: {
-      factSetDigest: DIGEST,
-      baseInputGenerationId: BASE_ID,
-      evaluationBuildDigest: BUILD_DIGEST,
-      asOfSec: 1_000,
-      sourceGenerations: {},
-    },
-    pillars: { backing: pillar(95), exit: pillar(95), control: pillar(95) },
-    peg: { applicable: true, score: 100, activeDepegBps: null, reasons: [] },
-    trackRecordMonths: 48,
-    parent: { required: false, score: null, propagatedReasons: [] },
-    dependencyReasons: [],
-    dependencyStructuralSignals: [],
-    ...overrides,
   };
 }
 

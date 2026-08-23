@@ -82,6 +82,7 @@ vi.mock("../fallback-publish", () => ({
   publishFallbackStablecoinsCache: subPhaseMocks.publishFallbackStablecoinsCache,
   runFallbackDepegFollowThrough: subPhaseMocks.runFallbackDepegFollowThrough,
 }));
+vi.mock("../supplemental-assets/onchain-supply", () => ({ fetchCuratedAggregateOnChainMcap: vi.fn(async () => null) }));
 
 // runtime reporter is optional; stub to a no-op
 vi.mock("../runtime", () => ({
@@ -105,12 +106,12 @@ import { syncViaCoingeckoFallback } from "../fallback";
 /** Build a CoinGecko mcap payload that returns positive data for the first N
  *  ACTIVE_STABLECOINS that have a geckoId. */
 function buildRealCgData(countLimit: number, usdPrice = 1, usdMarketCap = 5_000_000) {
-  const data: Record<string, { usd: number; usd_market_cap: number }> = {};
+  const data: Record<string, { usd: number; usd_market_cap: number; last_updated_at: number }> = {};
   let included = 0;
   for (const coin of ACTIVE_STABLECOINS) {
     if (!coin.geckoId) continue;
     if (included >= countLimit) break;
-    data[coin.geckoId] = { usd: usdPrice, usd_market_cap: usdMarketCap };
+    data[coin.geckoId] = { usd: usdPrice, usd_market_cap: usdMarketCap, last_updated_at: NOW_SEC };
     included++;
   }
   return data;
@@ -220,6 +221,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
         [testCoin.geckoId!]: {
           usd: EUR_USD_PRICE,
           usd_market_cap: USD_MARKET_CAP,
+          last_updated_at: NOW_SEC,
         },
       },
       // Use real registry implicitly (stablecoins param defaults to ACTIVE_STABLECOINS)
@@ -253,9 +255,9 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     const withGeckoIdCoins = ACTIVE_STABLECOINS.filter((c) => c.geckoId);
 
     // Provide zero market cap for coins that DO have geckoIds
-    const zeroCgData: Record<string, { usd: number; usd_market_cap: number }> = {};
+    const zeroCgData: Record<string, { usd: number; usd_market_cap: number; last_updated_at: number }> = {};
     for (const coin of withGeckoIdCoins.slice(0, 10)) {
-      zeroCgData[coin.geckoId!] = { usd: 1, usd_market_cap: 0 };
+      zeroCgData[coin.geckoId!] = { usd: 1, usd_market_cap: 0, last_updated_at: NOW_SEC };
     }
 
     const assets = buildFallbackAssetsFromCoinGecko({
@@ -290,7 +292,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
   it("(f) runFallbackIntakePhase short-circuits on too-few assets", async () => {
     const result = await runFallbackIntakePhase({
       syncStartSec: NOW_SEC,
-      cgData: { "some-coin": { usd: 1, usd_market_cap: 100 } },
+      cgData: { "some-coin": { usd: 1, usd_market_cap: 100, last_updated_at: NOW_SEC } },
       stablecoins: [
         {
           id: "some-coin",

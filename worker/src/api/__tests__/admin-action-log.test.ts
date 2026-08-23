@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import { handleAdminActionLog } from "../admin-action-log";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -55,8 +56,7 @@ describe("handleAdminActionLog", () => {
 
     const { request, url } = buildRequest();
     const res = await handleAdminActionLog({ db, url, request, trustedAdmin: true });
-    expect(res.status).toBe(200);
-    const body = await res.json() as { entries: BodyEntry[] };
+    const body = await readJsonResponse(res, 200) as { entries: BodyEntry[] };
     expect(body.entries).toHaveLength(2);
     expect(body.entries[0]).toMatchObject({
       id: 2,

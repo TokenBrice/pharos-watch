@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { withEnv } from "./helpers/test-state";
 
 import {
   chunkOverflowRoutes,
@@ -22,25 +23,6 @@ import {
   shouldRetryLiveAnalyticsSmoke,
   verifyAnalyticsSnippet,
 } from "../maintenance/smoke-ui.mjs";
-
-function withEnv(key: string, value: string | undefined, fn: () => void) {
-  const previous = process.env[key];
-  if (value == null) {
-    delete process.env[key];
-  } else {
-    process.env[key] = value;
-  }
-
-  try {
-    fn();
-  } finally {
-    if (previous == null) {
-      delete process.env[key];
-    } else {
-      process.env[key] = previous;
-    }
-  }
-}
 
 describe("hasGaConfigInit", () => {
   it("accepts the single-quoted GA config emitted by older builds", () => {

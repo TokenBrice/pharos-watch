@@ -3,21 +3,12 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   return {
     ...actual,
     fetchOnchainUint256,
-    makeOnchainCallers: vi.fn((input, options) => ({
-      uint256: (contract: string, data: string) =>
-        fetchOnchainUint256({
-          ...options,
-          contract,
-          data,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-        }),
-      raw: vi.fn(),
-    })),
+    makeOnchainCallers: makeOnchainCallersMock({ uint256: fetchOnchainUint256 }),
   };
 });
 

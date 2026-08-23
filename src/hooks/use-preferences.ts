@@ -12,7 +12,6 @@ export {
   DEFAULT_VISIBLE_COLUMNS,
   MOBILE_DEFAULT_COLUMNS,
   normalizeVisibleColumns,
-  isColumnId,
   LOCKED_COLUMNS,
   type ColumnId,
 } from "@/lib/column-visibility";

@@ -13,9 +13,8 @@ import {
   DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1,
   ensureCanonicalIncidents,
   loadCanonicalIncidents,
-  recordLockDeferral,
-  recordLockOpportunity,
 } from "../depeg-resolver-incident-store";
+import { recordLockDeferral, recordLockOpportunity } from "../depeg-resolver-lock-opportunity-store";
 import {
   loadFirstPublicationMembership,
   loadLatestPublicationManifest,
@@ -585,7 +584,7 @@ describe("DDRv2 storage migrations and stores", () => {
       const incident = await ensureIncident(db);
       const backstopAt = 100000 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
 
-      await recordLockDeferral(db, {
+      const deferralInput = {
         incidentKey: incident.incidentKey,
         eventId: 1,
         predictionPolicyVersion: "sticky-24h-v1",
@@ -601,7 +600,10 @@ describe("DDRv2 storage migrations and stores", () => {
         readinessThreshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
         backstopAt,
         backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
-      });
+      } as const;
+      await recordLockDeferral(db, deferralInput);
+      await recordLockDeferral(db, deferralInput);
+      await recordLockDeferral(db, { ...deferralInput, runId: "ddr:test:deferral:next", runAt: 144100 });
 
       const [loaded] = await loadCanonicalIncidents(db, {
         stablecoinIds: ["lusd-liquity"],
@@ -629,7 +631,7 @@ describe("DDRv2 storage migrations and stores", () => {
         },
         lockState: {
           eligibleAt: 143200,
-          deferralCount: 1,
+          deferralCount: 2,
           lastDeferralReason: "scheduler unhealthy",
           lastState: "lock_deferred",
           lockTrigger: "forecast_readiness",
@@ -640,6 +642,15 @@ describe("DDRv2 storage migrations and stores", () => {
           backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
         },
       });
+      const auditRows = db.sqlite
+        .prepare("SELECT run_id, attempt_key FROM depeg_resolver_lock_opportunity_audit WHERE incident_key = ? ORDER BY run_at")
+        .all(incident.incidentKey) as Array<{ run_id: string; attempt_key: string }>;
+      expect(auditRows).toHaveLength(2);
+      expect(auditRows.map((row) => row.run_id)).toEqual(["ddr:test:deferral", "ddr:test:deferral:next"]);
+      expect(auditRows.map((row) => row.attempt_key)).toEqual([
+        expect.stringMatching(/^[0-9a-f]{64}$/),
+        expect.stringMatching(/^[0-9a-f]{64}$/),
+      ]);
     } finally {
       db.close();
     }
@@ -1043,7 +1054,9 @@ describe("DDRv2 storage migrations and stores", () => {
       insertOpenEvent(db, 90511);
       const firstIncident = await ensureIncident(db, 90511, firstStartedAt + 300);
       db.sqlite
-        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = 1 WHERE id = ?")
+        .prepare(
+          "UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = 'recovered-native' WHERE id = ?",
+        )
         .run(firstEndedAt, 90511);
 
       const closeEligibleAt =
@@ -1070,7 +1083,8 @@ describe("DDRv2 storage migrations and stores", () => {
             currentEventId: 90511,
             startedAt: firstStartedAt,
             endedAt: firstEndedAt,
-            recoveryPrice: 1,
+            recoveryPrice: null,
+            closeReason: "recovered-native",
             stablecoinStatus: null,
             terminalObserved: null,
             terminalEvidenceAt: null,
@@ -1184,6 +1198,16 @@ describe("DDRv2 storage migrations and stores", () => {
           .prepare("SELECT COUNT(*) AS count FROM depeg_resolver_incidents WHERE stablecoin_id = 'lusd-liquity'")
           .get(),
       ).toEqual({ count: 2 });
+
+      db.sqlite
+        .prepare("UPDATE depeg_events SET close_reason = 'superseded-direction' WHERE id = 90513")
+        .run();
+      expect(
+        await closeRecoveredPreLockIncidents(
+          db,
+          withinEndedAt + DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC + DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1,
+        ),
+      ).toBe(0);
     } finally {
       db.close();
     }
@@ -2654,7 +2678,7 @@ describe("DDRv2 storage migrations and stores", () => {
     try {
       const { incident } = await sealPredictionFixture(db);
 
-      await recordLockOpportunity(db, {
+      const retryInput = {
         incidentKey: incident.incidentKey,
         eventId: 1,
         predictionPolicyVersion: "sticky-24h-v1",
@@ -2663,12 +2687,19 @@ describe("DDRv2 storage migrations and stores", () => {
         action: "publication_retry_pending",
         reason: "manifest write failed",
         healthStatus: "healthy",
-      });
+        runId: "ddr:test:publication-retry",
+      } as const;
+      await recordLockOpportunity(db, retryInput);
+      await recordLockOpportunity(db, retryInput);
 
       const row = db.sqlite
         .prepare("SELECT last_state FROM depeg_resolver_prediction_lock_state WHERE incident_key = ?")
         .get(incident.incidentKey) as { last_state: string };
       expect(row.last_state).toBe("publication_retry_pending");
+      const auditCount = db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM depeg_resolver_lock_opportunity_audit WHERE incident_key = ? AND action = 'publication_retry_pending'")
+        .get(incident.incidentKey) as { count: number };
+      expect(auditCount.count).toBe(1);
     } finally {
       db.close();
     }

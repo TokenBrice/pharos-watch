@@ -26,21 +26,21 @@ export const FEATURE_FLAGS = {
   // `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false` explicitly to disable.
   heroVerdict: process.env.NEXT_PUBLIC_PHAROS_HERO_VERDICT !== "false",
   // owner: tokenbrice; evidence: 2026-07-29 blacklist banner and hook tests pass.
-  // expiresAt: 2026-09-01 — awaiting iOS Safari sticky review on a coin with active freezes
+  // expiresAt: 2026-12-01 — awaiting iOS Safari sticky review on a coin with active freezes
   blacklistBanner: process.env.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER === "true",
   // owner: tokenbrice; evidence: 2026-07-29 CLI contrast review passes AA (min 4.78:1 light, 7.23:1 dark).
-  // expiresAt: 2026-09-01 — awaiting human visual review on USDC, USDe, and an active depeg
+  // expiresAt: 2026-12-01 — awaiting human visual review on USDC, USDe, and an active depeg
   quietDeviations: process.env.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS === "true",
   // owner: tokenbrice; evidence: 2026-07-29 sticky summary and scrollspy tests pass.
-  // expiresAt: 2026-09-01 — awaiting real-device iOS Safari and Android Chrome scrollspy review
+  // expiresAt: 2026-12-01 — awaiting real-device iOS Safari and Android Chrome scrollspy review
   mobileStickySummary:
     process.env.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY === "true",
-  // expiresAt: 2026-09-01 — pending curation owner + cadence
+  // expiresAt: 2026-12-01 — pending curation owner + cadence
   chartAnnotations:
     process.env.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS === "true",
-  // expiresAt: 2026-09-01 — DDR emergency rollback
+  // expiresAt: 2026-12-01 — DDR emergency rollback, retained through the 4.3 continuity release
   depegResolver: process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER !== "false",
-  // expiresAt: 2026-09-01 — DDRR emergency rollback
+  // expiresAt: 2026-12-01 — DDRR emergency rollback, retained through the 4.3 continuity release
   depegResolverReviewer:
     process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER !== "false",
 } as const;

@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleDigestSnapshot } from "../digest-snapshot";
@@ -38,8 +39,7 @@ describe("handleDigestSnapshot", () => {
       { match: "blacklist_events", rows: [] },
     ]);
     const res = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       date: string;
       inputData: Record<string, unknown>;
       depegEvents: unknown[];
@@ -72,8 +72,7 @@ describe("handleDigestSnapshot", () => {
       { match: "blacklist_events", rows: [] },
     ]);
     const res = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       inputData: { totalMcapUsd: number; mcap7dDelta: number } | null;
       prevInputData: { totalMcapUsd: number; mcap7dDelta: number } | null;
     };
@@ -109,10 +108,8 @@ describe("handleDigestSnapshot", () => {
     const dailyRes = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
     const weeklyRes = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}-weekly`));
 
-    expect(dailyRes.status).toBe(200);
-    expect(weeklyRes.status).toBe(200);
-    const dailyBody = await dailyRes.json() as { inputData: { totalMcapUsd: number } | null };
-    const weeklyBody = await weeklyRes.json() as { inputData: { totalMcapUsd: number } | null };
+    const dailyBody = await readJsonResponse(dailyRes, 200) as { inputData: { totalMcapUsd: number } | null };
+    const weeklyBody = await readJsonResponse(weeklyRes, 200) as { inputData: { totalMcapUsd: number } | null };
     expect(dailyBody.inputData?.totalMcapUsd).toBe(100e9);
     expect(weeklyBody.inputData?.totalMcapUsd).toBe(110e9);
   });
@@ -132,8 +129,7 @@ describe("handleDigestSnapshot", () => {
       { match: "blacklist_events", rows: [] },
     ]);
     const res = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { inputData: unknown };
+    const body = (await readJsonResponse(res, 200)) as { inputData: unknown };
     expect(body.inputData).toBeNull();
   });
 

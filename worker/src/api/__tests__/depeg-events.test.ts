@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { DepegEventsResponseSchema } from "@shared/types/market";
 import { describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
@@ -15,8 +16,7 @@ describe("handleDepegEvents", () => {
       { match: "depeg_events", rows: [row] },
     ]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=usdt-tether"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       events: unknown[];
       total: number;
       methodology: Record<string, unknown>;
@@ -100,8 +100,7 @@ describe("handleDepegEvents", () => {
       { match: "depeg_events", rows: [] },
     ]);
     const res = await handleDepegEvents(emptyDb, new URL("https://x/api/depeg-events"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number };
+    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(0);
     expect(body.total).toBe(0);
   });
@@ -121,8 +120,7 @@ describe("handleDepegEvents", () => {
 
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number };
+    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
     const dataQuery = db
@@ -180,8 +178,7 @@ describe("handleDepegEvents", () => {
 
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: Array<Record<string, unknown>> };
+    const body = (await readJsonResponse(res, 200)) as { events: Array<Record<string, unknown>> };
     expect(body.events[0]).toMatchObject({
       id: 90089,
       startedAt: 1_780_437_028,
@@ -231,8 +228,7 @@ describe("handleDepegEvents", () => {
 
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?includeTotal=false"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number; totalExact: boolean };
+    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number; totalExact: boolean };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
     expect(body.totalExact).toBe(false);
@@ -249,8 +245,7 @@ describe("handleDepegEvents", () => {
       new URL("https://x/api/depeg-events?stablecoin=usdt-tether&includeTotal=false"),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).not.toHaveProperty("counts");
     expect(db.getHistory().some((entry) => entry.sql.includes("threshold-crossing-count"))).toBe(false);
   });
@@ -342,8 +337,7 @@ describe("handleDepegEvents", () => {
         new URL("https://x/api/depeg-events?includeTotal=false&includePending=true"),
       );
 
-      expect(res.status).toBe(200);
-      const body = DepegEventsResponseSchema.parse(await res.json());
+      const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
       expect(body.pending).toEqual([
         {
           stablecoinId: "usdt-tether",
@@ -401,8 +395,7 @@ describe("handleDepegEvents", () => {
       new URL("https://x/api/depeg-events?stablecoin=usdc-circle&includePending=true"),
     );
 
-    expect(res.status).toBe(200);
-    const body = DepegEventsResponseSchema.parse(await res.json());
+    const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.pending?.map((pending) => pending.stablecoinId)).toEqual(["usdc-circle"]);
     const pendingQuery = db.getHistory().find((entry) => entry.sql.includes("FROM depeg_pending"));
     expect(pendingQuery?.binds).toEqual(["usdc-circle"]);

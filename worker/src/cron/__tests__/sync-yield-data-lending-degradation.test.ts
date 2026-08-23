@@ -16,6 +16,7 @@ import {
   fixtureYieldConfigModule,
   fixtureYieldHelpersModule,
 } from "./sync-yield-data.test-support";
+import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -23,10 +24,8 @@ describe("syncYieldData", () => {
   it("labels yield-bearing auto-discovered rows as lending opportunities", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-placeholder",
               chain: "Ethereum",
@@ -40,11 +39,7 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec - 60,
-        };
-      }
-      return null;
+          ], nowSec - 60),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fixtureYieldHelpersModule.findBestLendingPool).mockImplementation((symbol) =>
@@ -73,10 +68,8 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "stablecoins") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      stablecoins: cacheRow({
             peggedAssets: [
               {
                 id: "usdc-circle",
@@ -86,13 +79,8 @@ describe("syncYieldData", () => {
                 circulating: { peggedUSD: 10_000_000_000 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+      }, nowSec),
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-placeholder",
               chain: "Ethereum",
@@ -106,11 +94,7 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec - 60,
-        };
-      }
-      return null;
+      ], nowSec - 60),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fixtureYieldHelpersModule.findBestLendingPool).mockReturnValue(null);
@@ -132,27 +116,16 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([]),
-          updatedAt: nowSec - 6 * 3600,
-        };
-      }
-      if (key === "risk_free_rate") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([], nowSec - 6 * 3600),
+      risk_free_rate: cacheRow({
             rate: 3.71,
             recordDate: "2025-06-13",
             fetchedAt: nowSec - 6 * 3600,
             source: "fred-dgs3mo",
             isFallback: true,
             fallbackMode: "fred-api-error-retained",
-          }),
-          updatedAt: nowSec - 6 * 3600,
-        };
-      }
-      return null;
+          }, nowSec - 6 * 3600),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -176,27 +149,16 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([]),
-          updatedAt: nowSec - 49 * 3600,
-        };
-      }
-      if (key === "risk_free_rate") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([], nowSec - 49 * 3600),
+      risk_free_rate: cacheRow({
             rate: 3.71,
             recordDate: "2025-06-10",
             fetchedAt: nowSec - 49 * 3600,
             source: "fred-dgs3mo",
             isFallback: true,
             fallbackMode: "fred-api-error-retained",
-          }),
-          updatedAt: nowSec - 49 * 3600,
-        };
-      }
-      return null;
+          }, nowSec - 49 * 3600),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -212,7 +174,7 @@ describe("syncYieldData", () => {
 
   it("marks run degraded but still writes yield-rankings cache when safety snapshot coverage is empty", async () => {
     const db = makeDb();
-    vi.mocked(fixtureGetCache).mockResolvedValue(null);
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {});
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
 
@@ -257,10 +219,8 @@ describe("syncYieldData", () => {
     const nativePoolMap = fixtureYieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
     nativePoolMap["100"] = "pool-sdai-native";
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-native",
               chain: "Ethereum",
@@ -289,24 +249,15 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: ["0x5f98805a4e8be255a32880fdec7f6728c6568ba0"],
             },
-          ]),
-          updatedAt: nowSec - 60,
-        };
-      }
-      if (key === "risk_free_rate") {
-        return {
-          value: JSON.stringify({
+          ], nowSec - 60),
+      risk_free_rate: cacheRow({
             rate: 4,
             source: "fred-dgs3mo",
             fetchedAt: nowSec,
             recordDate: "2025-06-13",
             isFallback: false,
             fallbackMode: null,
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+          }, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -366,10 +317,8 @@ describe("syncYieldData", () => {
     const db = makeYieldOrphanDb(["orphan-coin"]);
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-cached",
               chain: "Ethereum",
@@ -384,24 +333,15 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "risk_free_rate") {
-        return {
-          value: JSON.stringify({
+          ], nowSec),
+      risk_free_rate: cacheRow({
             rate: 4.0,
             source: "fred",
             fetchedAt: nowSec - 50 * 3600,
             recordDate: "2026-03-20",
             isFallback: true,
             fallbackMode: "fred-api-error-retained",
-          }),
-          updatedAt: nowSec - 50 * 3600,
-        };
-      }
-      return null;
+          }, nowSec - 50 * 3600),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);

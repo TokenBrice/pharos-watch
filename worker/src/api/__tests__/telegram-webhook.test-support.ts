@@ -1,5 +1,10 @@
 import { expect } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import {
+  mockD1,
+  type MockD1Database,
+  type MockD1Options,
+  type MockTableConfig,
+} from "../../test-helpers/__shared/mock-d1";
 import {
   createTelegramFetchSpy,
   lastSendMessageBody,
@@ -181,6 +186,105 @@ function resetTelegramWebhookTest() {
 const fixtureMockD1 = mockD1;
 const fixtureLastSendMessageBody = lastSendMessageBody;
 const fixtureTelegramApiCallBody = telegramApiCallBody;
+
+const WEBHOOK_DB_BASE_TABLES: MockTableConfig[] = [
+  { match: "FROM telegram_subscribers", rows: [], first: null },
+  { match: "FROM telegram_subscriptions", rows: [] },
+  { match: "FROM telegram_preset_subscriptions", rows: [] },
+  { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
+  { match: "FROM telegram_pending_alerts", rows: [], first: null },
+  { match: "FROM telegram_recap_preferences", rows: [], first: null },
+  { match: "FROM cache", rows: [], first: null },
+  { match: "INSERT INTO telegram_subscribers", rows: [] },
+  { match: "UPDATE telegram_subscribers", rows: [] },
+  { match: "DELETE FROM telegram_subscribers", rows: [] },
+  { match: "INSERT INTO telegram_subscriptions", rows: [] },
+  { match: "UPDATE telegram_subscriptions", rows: [] },
+  { match: "DELETE FROM telegram_subscriptions", rows: [] },
+  { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
+  { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+  { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
+  { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
+  { match: "INSERT INTO cache", rows: [] },
+  { match: "DELETE FROM cache", rows: [] },
+];
+
+const COMMAND_DB_EXTRA_TABLES: MockTableConfig[] = [
+  { match: "FROM telegram_recap_targets", rows: [] },
+  { match: "FROM price_cache", rows: [] },
+  { match: "FROM dex_liquidity", rows: [] },
+  { match: "FROM yield_data", rows: [] },
+  { match: "FROM stress_signals", rows: [] },
+  { match: "FROM depeg_events", rows: [] },
+  { match: "UPDATE telegram_pending_disambiguation", rows: [] },
+  { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+  { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+  { match: "UPDATE telegram_recap_preferences", rows: [] },
+  { match: "DELETE FROM telegram_recap_preferences", rows: [] },
+  { match: "DELETE FROM telegram_recap_targets", rows: [] },
+  { match: "INSERT INTO telegram_usage_daily", rows: [] },
+  { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+  { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "UPDATE cache", rows: [] },
+  { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
+  { match: "RETURNING value", rows: [{ value: "1" }] },
+];
+
+const LIFECYCLE_DB_EXTRA_TABLES: MockTableConfig[] = [
+  { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+  { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+  { match: "SELECT status, received_at, effect_state, claim_owner, claim_generation", rows: [], first: null },
+  { match: "INSERT OR IGNORE INTO telegram_pending_disambiguation", rows: [] },
+  { match: "UPDATE telegram_preset_subscriptions", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_pending_alerts", rows: [] },
+  { match: "UPDATE telegram_pending_alerts", rows: [] },
+  { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+  { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+  { match: "INSERT INTO telegram_recap_preferences", rows: [] },
+  { match: "UPDATE telegram_recap_preferences", rows: [] },
+  { match: "DELETE FROM telegram_recap_preferences", rows: [] },
+  { match: "DELETE FROM telegram_recap_targets", rows: [] },
+  { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_freeze_alert_targets", rows: [] },
+  { match: "UPDATE telegram_freeze_alert_targets", rows: [] },
+  { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_source_resolution_targets", rows: [] },
+  { match: "UPDATE telegram_alert_source_resolution_targets", rows: [] },
+  { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
+  { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
+  { match: "UPDATE telegram_alert_job_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_job_targets", rows: [] },
+  { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_job_target_items", rows: [] },
+  { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
+  { match: "UPDATE telegram_alert_target_plans", rows: [] },
+  { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_planning_subscribers", rows: [] },
+  { match: "UPDATE telegram_alert_planning_subscribers", rows: [] },
+  { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_transport_failure_observations", rows: [] },
+  { match: "UPDATE telegram_transport_failure_observations", rows: [] },
+  { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
+  { match: "UPDATE telegram_alert_dead_letters", rows: [] },
+  { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
+  { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
+  { match: "UPDATE telegram_chat_delivery_diagnostics", rows: [] },
+  { match: "INSERT INTO telegram_webhook_operation_mutations", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "UPDATE cache", rows: [] },
+];
+
+export function makeTelegramWebhookDb(
+  tables: MockTableConfig[] = [],
+  options: MockD1Options = {},
+  profile: "command" | "lifecycle" = "command",
+): MockD1Database {
+  const defaults = profile === "lifecycle"
+    ? [...WEBHOOK_DB_BASE_TABLES, ...LIFECYCLE_DB_EXTRA_TABLES]
+    : [...WEBHOOK_DB_BASE_TABLES, ...COMMAND_DB_EXTRA_TABLES];
+  return mockD1([...tables, ...defaults], options);
+}
 
 export {
   fetchSpy,

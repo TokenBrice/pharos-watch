@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -114,9 +115,8 @@ describe("handleBackfillDepegs replay windows", () => {
     });
 
     const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
-    expect(res.status).toBe(200);
 
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       dryRun: boolean;
       coinsProcessed: number;
       recomputedBackfillEvents: number;
@@ -197,8 +197,7 @@ describe("handleBackfillDepegs replay windows", () => {
     });
 
     const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
-    expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       recomputedBackfillEvents: number;
       previews: Array<{
         recomputedBackfillEventCount: number | null;
@@ -233,9 +232,8 @@ describe("handleBackfillDepegs replay windows", () => {
     });
 
     const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
-    expect(res.status).toBe(200);
 
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       dryRun: boolean;
       startDay: number | null;
       endDay: number | null;
@@ -276,9 +274,8 @@ describe("handleBackfillDepegs replay windows", () => {
     });
 
     const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
-    expect(res.status).toBe(200);
 
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       contextDays: number | null;
     };
     expect(body.contextDays).toBe(30);
@@ -429,9 +426,8 @@ describe("handleBackfillDepegs replay windows", () => {
     });
 
     const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
-    expect(res.status).toBe(200);
 
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       eventsCreated: number;
       errors?: string[] | null;
     };
@@ -480,8 +476,7 @@ describe("handleBackfillDepegs replay windows", () => {
     });
 
     const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
-    expect(res.status).toBe(200);
-    const body = await res.json() as { eventsCreated: number; skipped?: string[] };
+    const body = await readJsonResponse(res, 200) as { eventsCreated: number; skipped?: string[] };
     expect(body.eventsCreated).toBe(0);
     expect(body.skipped ?? []).toEqual([]);
 

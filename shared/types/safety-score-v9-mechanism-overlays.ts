@@ -6,7 +6,7 @@ import {
 
 const MechanismQualitySchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);
 
-export const SafetyScoreV9MechanismArchetypeSchema = z.enum([
+const SafetyScoreV9MechanismArchetypeSchema = z.enum([
   "cdp",
   "synthetic-delta-neutral",
   "algorithmic",
@@ -16,7 +16,7 @@ export const SafetyScoreV9MechanismArchetypeSchema = z.enum([
   "commodity-claim",
 ]);
 
-export const SafetyScoreV9MechanismOverlayComponentSchema = z.union([
+const SafetyScoreV9MechanismOverlayComponentSchema = z.union([
   z.object({ quality: MechanismQualitySchema }).strict(),
   z.object({ applicability: z.literal("measured"), quality: MechanismQualitySchema }).strict(),
   z
@@ -35,7 +35,7 @@ export const SafetyScoreV9MechanismOverlayComponentSchema = z.union([
     .strict(),
 ]);
 
-export const SafetyScoreV9MechanismMetricApplicabilitySchema = z.discriminatedUnion("state", [
+const SafetyScoreV9MechanismMetricApplicabilitySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("measured") }).strict(),
   z
     .object({
@@ -53,7 +53,7 @@ export const SafetyScoreV9MechanismMetricApplicabilitySchema = z.discriminatedUn
     .strict(),
 ]);
 
-export const SafetyScoreV9MechanismOverlaySourceSchema = z
+const SafetyScoreV9MechanismOverlaySourceSchema = z
   .object({ label: z.string().min(1), url: z.string().url() })
   .strict();
 

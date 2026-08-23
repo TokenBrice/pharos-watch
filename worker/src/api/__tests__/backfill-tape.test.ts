@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -43,8 +44,7 @@ describe("handleBackfillTape", () => {
 
   it("rejects unknown class names with 400", async () => {
     const res = await handleBackfillTape({ db: emptyDb(), url: makeApiUrl("/api/backfill-tape?class=does.not.exist"), trustedAdmin: true, request: makeApiRequest("/api/backfill-tape?class=does.not.exist", { method: "POST", adminKey: "secret" }) });
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toContain("Unknown class");
   });
 
@@ -60,8 +60,7 @@ describe("handleBackfillTape", () => {
 
   it("returns ok=true with per-class counts in dryRun mode", async () => {
     const res = await handleBackfillTape({ db: emptyDb(), url: makeApiUrl("/api/backfill-tape?dryRun=true"), trustedAdmin: true, request: makeApiRequest("/api/backfill-tape?dryRun=true", { method: "POST", adminKey: "secret" }) });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       ok: boolean;
       dryRun: boolean;
       perClass: Record<string, number>;
@@ -87,8 +86,7 @@ describe("handleBackfillTape", () => {
         method: "POST",
         adminKey: "secret",
       }) });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { selectedClasses: string[] };
+    const body = (await readJsonResponse(res, 200)) as { selectedClasses: string[] };
     expect(body.selectedClasses).toEqual(["depeg.opened", "score.upgraded"]);
   });
 
@@ -98,13 +96,12 @@ describe("handleBackfillTape", () => {
     const path = `/api/backfill-tape?class=${encodeURIComponent(job.name)}&dryRun=true`;
 
     const res = await handleBackfillTape({ db: emptyDb(), url: makeApiUrl(path), trustedAdmin: true, request: makeApiRequest(path, { method: "POST", adminKey: "secret" }) });
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 500)) as {
       ok: boolean;
       errors: Array<{ name: string; message: string }>;
       projected: number;
     };
 
-    expect(res.status).toBe(500);
     expect(body.ok).toBe(false);
     expect(body.projected).toBe(0);
     expect(body.errors).toEqual([{ name: job.name, message: "projector unavailable" }]);

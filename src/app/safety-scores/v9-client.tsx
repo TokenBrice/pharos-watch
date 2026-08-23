@@ -12,11 +12,11 @@ import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import { SafetyScoresContentLoadingState } from "./loading";
 import {
   SafetyEmptyState,
   SafetyResultsSummary,
   SafetyScoresHero,
-  SafetyScoresLoadingState,
 } from "./presentational";
 import { SafetyPillarExplainer } from "./pillar-explainer";
 import {
@@ -278,7 +278,7 @@ export function ReportCardsV9Client() {
     [reportCardsQuery.refetch, stablecoinsQuery.refetch],
   );
 
-  if (reportCardsQuery.isLoading) return <SafetyScoresLoadingState />;
+  if (reportCardsQuery.isLoading) return <SafetyScoresContentLoadingState />;
 
   const renderCard = (card: V9ConsumerCard, index: number) => (
     <LazySection key={card.id} rootMargin="100px" placeholder={lazyCardSkeleton}>

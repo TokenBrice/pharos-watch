@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
@@ -43,6 +44,7 @@ import type {
   DepegPersistenceCommand,
   DexPoolChallenger,
   PendingDepegCommandPayload,
+  DepegDetectionRow,
 } from "./types";
 import {
   applyNativeQuoteVeto,
@@ -469,7 +471,7 @@ function decideNewNativePegDepeg(ctx: DecisionContext): Omit<DepegAssetDecision,
  */
 function decideExistingEvent(
   ctx: DecisionContext,
-  existing: DepegRow,
+  existing: DepegDetectionRow,
 ): Omit<DepegAssetDecision, "trackedCoinId"> {
   const {
     now,
@@ -499,7 +501,7 @@ function decideExistingEvent(
         type: "close-event",
         id: existing.id,
         endedAt: now,
-        recoveryPrice: recoveryPriceForEvent(existing, price),
+        recoveryPrice: null,
         closeReason: "superseded-direction",
       });
       commands.push(buildPendingCommand(asset, now, direction, bps, price, pegRef, pendingReason));
@@ -519,7 +521,7 @@ function decideExistingEvent(
 
   // Same direction - event stays open.
   seenEventIds.push(existing.id);
-  if (existing.recovery_first_seen_at != null) {
+  if (existing.recovery_first_seen_at != null || existing.recovery_last_seen_at != null) {
     commands.push({ type: "clear-recovery", id: existing.id });
   }
   const peakUpdate = resolvePeakUpdateCommand({
@@ -590,7 +592,7 @@ function decideNewDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "tracked
  */
 function decideRecovery(
   ctx: DecisionContext,
-  existing: DepegRow,
+  existing: DepegDetectionRow,
 ): Omit<DepegAssetDecision, "trackedCoinId"> {
   const {
     now,
@@ -634,8 +636,12 @@ function decideRecovery(
 
   if (recovery) {
     const recoveryFirstSeenAt = existing.recovery_first_seen_at;
-    if (recoveryFirstSeenAt == null) {
-      commands.push({ type: "begin-recovery", id: existing.id, firstSeenAt: now });
+    const recoveryLastSeenAt = existing.recovery_last_seen_at;
+    const continuousWithPrevious =
+      recoveryLastSeenAt != null &&
+      now - recoveryLastSeenAt <= DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
+    if (recoveryFirstSeenAt == null || !continuousWithPrevious) {
+      commands.push({ type: "begin-recovery", id: existing.id, firstSeenAt: now, lastSeenAt: now });
       seenEventIds.push(existing.id);
     } else if (now - recoveryFirstSeenAt >= DEPEG_PENDING_MIN_AGE_SEC) {
       commands.push({
@@ -645,11 +651,12 @@ function decideRecovery(
         ...recovery,
       });
     } else {
+      commands.push({ type: "continue-recovery", id: existing.id, lastSeenAt: now });
       seenEventIds.push(existing.id);
     }
   } else {
     seenEventIds.push(existing.id);
-    if (existing.recovery_first_seen_at != null) {
+    if (existing.recovery_first_seen_at != null || existing.recovery_last_seen_at != null) {
       commands.push({ type: "clear-recovery", id: existing.id });
     }
     if (isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) {
@@ -679,10 +686,10 @@ function decideRecovery(
   return { seenEventIds, commands, diagnostics };
 }
 
-function decideRecoveryDeadband(existing: DepegRow): Omit<DepegAssetDecision, "trackedCoinId"> {
+function decideRecoveryDeadband(existing: DepegDetectionRow): Omit<DepegAssetDecision, "trackedCoinId"> {
   return {
     seenEventIds: [existing.id],
-    commands: existing.recovery_first_seen_at == null
+    commands: existing.recovery_first_seen_at == null && existing.recovery_last_seen_at == null
       ? []
       : [{ type: "clear-recovery", id: existing.id }],
     diagnostics: [],

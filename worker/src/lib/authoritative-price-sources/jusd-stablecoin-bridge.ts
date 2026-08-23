@@ -32,6 +32,7 @@ const JUSD_RUNTIME_CODE_HASH = "0xf822bbd111d9275ce9d4e62bfff5f45932618ab55960e4
 
 const ONE_JUSD_RAW = 10n ** 18n;
 const MIN_REDEEMABLE_JUSD_RAW = 1_000n * ONE_JUSD_RAW;
+const BURN_CAPABILITY_CALLER = "0x0000000000000000000000000000000000000001";
 
 const USD_SELECTOR = "0xd63a6ccd";
 const JUSD_SELECTOR = "0xa012e78d";
@@ -42,7 +43,6 @@ const MINTED_SELECTOR = "0x4f02c420";
 const DECIMALS_SELECTOR = "0x313ce567";
 const RESERVE_SELECTOR = "0xcd3293de";
 const BALANCE_OF_SELECTOR = "0x70a08231";
-const ALLOWANCE_SELECTOR = "0xdd62ed3e";
 const IS_MINTER_SELECTOR = "0xaa271e1a";
 const BURN_SELECTOR = "0x42966c68";
 
@@ -107,6 +107,15 @@ interface ValidatedBridgeState {
   redeemableJusd: number;
 }
 
+class JusdCitreaProviderError extends Error {
+  override readonly name = "JusdCitreaProviderError";
+}
+
+function providerFailure(message: string): never {
+  logWorkerEventArgs("lib", "warn", message);
+  throw new JusdCitreaProviderError(message);
+}
+
 function rpcCall(id: string, method: string, params: unknown[]): JsonRpcCall {
   return { jsonrpc: "2.0", id, method, params };
 }
@@ -114,7 +123,7 @@ function rpcCall(id: string, method: string, params: unknown[]): JsonRpcCall {
 async function fetchCitreaRpcBatch(
   calls: readonly JsonRpcCall[],
   signal?: AbortSignal,
-): Promise<Map<string, unknown> | null> {
+): Promise<Map<string, unknown>> {
   const result = await fetchJsonWithRetry<unknown>(
     CITREA_RPC_URL,
     {
@@ -134,26 +143,26 @@ async function fetchCitreaRpcBatch(
     },
   );
   if (!result?.response.ok) {
-    logWorkerEventArgs("lib", "warn", `[jusd-stablecoin-bridge] Citrea RPC returned ${result?.response.status ?? "no response"}`);
-    return null;
+    providerFailure(`[jusd-stablecoin-bridge] Citrea RPC returned ${result?.response.status ?? "no response"}`);
   }
 
   const parsed = z.array(JsonRpcBatchEntrySchema).safeParse(result.body);
   if (!parsed.success || parsed.data.length !== calls.length) {
-    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] Citrea RPC batch response failed schema or cardinality validation");
-    return null;
+    providerFailure("[jusd-stablecoin-bridge] Citrea RPC batch response failed schema or cardinality validation");
   }
 
   const expectedIds = new Set(calls.map((call) => call.id));
   const values = new Map<string, unknown>();
   for (const entry of parsed.data) {
     if (!expectedIds.has(entry.id) || values.has(entry.id) || entry.error !== undefined || entry.result === undefined) {
-      logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] Citrea RPC batch contained an error or unexpected result id");
-      return null;
+      providerFailure("[jusd-stablecoin-bridge] Citrea RPC batch contained an error or unexpected result id");
     }
     values.set(entry.id, entry.result);
   }
-  return values.size === expectedIds.size ? values : null;
+  if (values.size !== expectedIds.size) {
+    providerFailure("[jusd-stablecoin-bridge] Citrea RPC batch omitted an expected result");
+  }
+  return values;
 }
 
 function parseHexBigInt(value: unknown): bigint | null {
@@ -197,10 +206,6 @@ function balanceOfCalldata(account: string): `0x${string}` {
   return `${BALANCE_OF_SELECTOR}${encodeAddress(account)}`;
 }
 
-function allowanceCalldata(owner: string, spender: string): `0x${string}` {
-  return `${ALLOWANCE_SELECTOR}${encodeAddress(owner)}${encodeAddress(spender)}`;
-}
-
 function isMinterCalldata(minter: string): `0x${string}` {
   return `${IS_MINTER_SELECTOR}${encodeAddress(minter)}`;
 }
@@ -213,16 +218,16 @@ function ethCall(id: string, to: string, data: string, blockTag: string): JsonRp
   return rpcCall(id, "eth_call", [{ to, data }, blockTag]);
 }
 
-async function fetchFreshCitreaHead(signal?: AbortSignal): Promise<CitreaHead | null> {
+async function fetchFreshCitreaHead(signal?: AbortSignal): Promise<CitreaHead> {
   const response = await fetchCitreaRpcBatch(
     [rpcCall("chain-id", "eth_chainId", []), rpcCall("latest-block", "eth_getBlockByNumber", ["latest", false])],
     signal,
   );
-  if (!response) return null;
-
   const chainId = parseHexSafeInteger(response.get("chain-id"));
   const block = CitreaBlockSchema.safeParse(response.get("latest-block"));
-  if (!block.success) return null;
+  if (!block.success) {
+    providerFailure("[jusd-stablecoin-bridge] Citrea head response failed schema validation");
+  }
   const blockNumber = parseHexSafeInteger(block.data.number);
   const blockTimestamp = parseHexSafeInteger(block.data.timestamp);
   const nowSec = Math.floor(Date.now() / 1_000);
@@ -234,8 +239,7 @@ async function fetchFreshCitreaHead(signal?: AbortSignal): Promise<CitreaHead | 
     nowSec - blockTimestamp > CITREA_BLOCK_MAX_AGE_SEC ||
     blockTimestamp - nowSec > CITREA_BLOCK_MAX_FUTURE_SKEW_SEC
   ) {
-    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] Citrea head identity or freshness validation failed");
-    return null;
+    providerFailure("[jusd-stablecoin-bridge] Citrea head identity or freshness validation failed");
   }
   return { blockNumber, blockTimestamp };
 }
@@ -252,8 +256,6 @@ async function fetchValidatedBridgeState(
       rpcCall("bridge-code", "eth_getCode", [route.bridge, blockTag]),
       ethCall("jusd-decimals", JUSD_ADDRESS, DECIMALS_SELECTOR, blockTag),
       ethCall("jusd-reserve", JUSD_ADDRESS, RESERVE_SELECTOR, blockTag),
-      ethCall("reserve-balance", JUSD_ADDRESS, balanceOfCalldata(JUSD_RESERVE), blockTag),
-      ethCall("reserve-allowance", JUSD_ADDRESS, allowanceCalldata(JUSD_RESERVE, route.bridge), blockTag),
       ethCall("bridge-usd", route.bridge, USD_SELECTOR, blockTag),
       ethCall("bridge-jusd", route.bridge, JUSD_SELECTOR, blockTag),
       ethCall("bridge-stopped", route.bridge, STOPPED_SELECTOR, blockTag),
@@ -263,21 +265,20 @@ async function fetchValidatedBridgeState(
       ethCall("bridge-minter", JUSD_ADDRESS, isMinterCalldata(route.bridge), blockTag),
       ethCall("quote-decimals", route.quoteToken, DECIMALS_SELECTOR, blockTag),
       ethCall("quote-balance", route.quoteToken, balanceOfCalldata(route.bridge), blockTag),
-      // StablecoinBridge v4.0.2 gates minting, not `_burn`. The pinned runtime
-      // makes this funded reserve simulation a permissionless burn-path witness.
-      rpcCall("burn-simulation", "eth_estimateGas", [
+      // StablecoinBridge v4.0.2 gates minting, not `_burn`. With the runtime
+      // pinned above, a zero-notional call proves the public burn capability
+      // without depending on any sentinel holder's balance or allowance.
+      rpcCall("burn-capability", "eth_call", [
         {
-          from: JUSD_RESERVE,
+          from: BURN_CAPABILITY_CALLER,
           to: route.bridge,
-          data: burnCalldata(ONE_JUSD_RAW),
+          data: burnCalldata(0n),
         },
         blockTag,
       ]),
     ],
     signal,
   );
-  if (!response) return null;
-
   const jusdCode = asRuntimeCode(response.get("jusd-code"));
   const bridgeCode = asRuntimeCode(response.get("bridge-code"));
   if (
@@ -286,14 +287,11 @@ async function fetchValidatedBridgeState(
     keccak256(jusdCode).toLowerCase() !== JUSD_RUNTIME_CODE_HASH ||
     keccak256(bridgeCode).toLowerCase() !== route.expectedBridgeCodeHash
   ) {
-    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] JUSD or bridge runtime bytecode does not match the reviewed deployment");
-    return null;
+    providerFailure("[jusd-stablecoin-bridge] JUSD or bridge runtime bytecode does not match the reviewed deployment");
   }
 
   const jusdDecimals = parseAbiUint256(response.get("jusd-decimals"));
   const jusdReserve = parseAbiAddress(response.get("jusd-reserve"));
-  const reserveBalance = parseAbiUint256(response.get("reserve-balance"));
-  const reserveAllowance = parseAbiUint256(response.get("reserve-allowance"));
   const bridgeUsd = parseAbiAddress(response.get("bridge-usd"));
   const bridgeJusd = parseAbiAddress(response.get("bridge-jusd"));
   const stopped = parseAbiBool(response.get("bridge-stopped"));
@@ -303,35 +301,30 @@ async function fetchValidatedBridgeState(
   const isMinter = parseAbiBool(response.get("bridge-minter"));
   const quoteDecimals = parseAbiUint256(response.get("quote-decimals"));
   const quoteBalance = parseAbiUint256(response.get("quote-balance"));
-  const simulatedGas = parseHexBigInt(response.get("burn-simulation"));
+  const burnCapability = response.get("burn-capability");
 
   if (
     jusdDecimals !== BigInt(JUSD_DECIMALS) ||
     jusdReserve !== JUSD_RESERVE ||
-    reserveBalance == null ||
-    reserveBalance < ONE_JUSD_RAW ||
-    reserveAllowance == null ||
-    reserveAllowance < ONE_JUSD_RAW ||
     bridgeUsd !== route.quoteToken ||
     bridgeJusd !== JUSD_ADDRESS ||
     stopped == null ||
     horizon == null ||
     limit == null ||
     minted == null ||
-    minted <= 0n ||
-    minted > limit ||
     isMinter !== true ||
     quoteDecimals !== BigInt(route.quoteDecimals) ||
     quoteBalance == null ||
-    simulatedGas == null ||
-    simulatedGas <= 0n
+    burnCapability !== "0x"
   ) {
-    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] bridge identity, availability, or static burn validation failed");
-    return null;
+    providerFailure("[jusd-stablecoin-bridge] bridge identity, schema, or public burn capability validation failed");
+  }
+  if (minted > limit) {
+    providerFailure("[jusd-stablecoin-bridge] bridge minted amount exceeds its reviewed limit");
   }
 
   const quoteBalanceInJusdRaw = quoteBalance * 10n ** BigInt(JUSD_DECIMALS - route.quoteDecimals);
-  if (quoteBalanceInJusdRaw < minted || minted < MIN_REDEEMABLE_JUSD_RAW) {
+  if (minted <= 0n || quoteBalanceInJusdRaw < minted || minted < MIN_REDEEMABLE_JUSD_RAW) {
     logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] bridge is underfunded or below the minimum redemption capacity");
     return null;
   }
@@ -347,7 +340,6 @@ export const jusdStablecoinBridgeProvider: PriceSourceProvider = {
   liveCircuitSource: CIRCUIT_SOURCE.JUSD_CITREA_BRIDGE,
   livePriority: 1,
   liveTimeoutMs: 5_000,
-  recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === JUSD_ID;
   },
@@ -369,7 +361,6 @@ export const jusdStablecoinBridgeProvider: PriceSourceProvider = {
     if (trustedRoutes.length === 0) return null;
 
     const head = await fetchFreshCitreaHead(signal);
-    if (!head) return null;
 
     for (const { route, parent } of trustedRoutes) {
       throwIfAborted(signal);

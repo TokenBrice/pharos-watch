@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -42,7 +43,7 @@ describe("API key lifecycle idempotency", () => {
       apiKeyHashPepper: "pepper",
       request: mutationRequest("/api/api-keys", "create-intent", { name: "Ops Key" }),
     });
-    const firstCreateBody = (await firstCreate.json()) as { key: { id: number; name: string }; token: string };
+    const firstCreateBody = (await readJsonResponse(firstCreate, 201)) as { key: { id: number; name: string }; token: string };
     const createReplay = await handleApiKeysRoute({
       db,
       trustedAdmin: true,
@@ -54,7 +55,6 @@ describe("API key lifecycle idempotency", () => {
       .prepare("SELECT response_body FROM admin_idempotency_keys WHERE action = 'api-key-create'")
       .get() as { response_body: string };
 
-    expect(firstCreate.status).toBe(201);
     expect(firstCreate.headers.get("X-Idempotent-Replay")).toBe("false");
     expect(firstCreateBody.token).toMatch(/^ph_live_/);
     expect(createReplay.headers.get("X-Idempotent-Replay")).toBe("true");

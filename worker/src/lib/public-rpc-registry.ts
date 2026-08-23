@@ -21,6 +21,7 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   fluent: "https://rpc.fluent.xyz",
   // Required for reviewed CHFAU native supply aggregation.
   tempo: "https://rpc.tempo.xyz",
+  movement: "https://mainnet.movementnetwork.xyz/v1",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {

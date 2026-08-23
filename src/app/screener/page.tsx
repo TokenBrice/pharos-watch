@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
-import { ScreenerLoadingState } from "@/app/screener/loading";
+import { ScreenerContentLoadingState } from "@/app/screener/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
@@ -92,7 +92,7 @@ const SCREENER_SUPPORT_SECTION = (
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.ScreenerClient })),
-  loading: <ScreenerLoadingState />,
+  loading: <ScreenerContentLoadingState />,
   shell: {
     breadcrumbName: "Screener",
     path: "/screener/",

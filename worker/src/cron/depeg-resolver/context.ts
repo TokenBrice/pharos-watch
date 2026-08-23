@@ -215,7 +215,7 @@ export async function loadDdrContext(
   const windowStart = nowSec - TRAINING_WINDOW_SEC;
   const histResult = await runWithOverloadRetry(() => db
     .prepare(
-      "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price " +
+      "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price, close_reason " +
         "FROM depeg_events WHERE ended_at IS NOT NULL AND started_at >= ? " +
         `AND direction IN (${placeholders(directions.length)}) LIMIT ${HISTORICAL_ROW_CAP}`,
     )
@@ -227,6 +227,7 @@ export async function loadDdrContext(
       started_at: number;
       ended_at: number | null;
       recovery_price: number | null;
+      close_reason: string | null;
     }>());
   const histRows = histResult.results ?? [];
   const historical = histRows.map((r) => ({
@@ -236,6 +237,7 @@ export async function loadDdrContext(
     startedAt: r.started_at,
     endedAt: r.ended_at,
     recoveryPrice: r.recovery_price,
+    closeReason: r.close_reason,
   }));
 
   const incidents: DdrIncident[] = groupIncidents(historical, currencyOf).map((inc) => ({

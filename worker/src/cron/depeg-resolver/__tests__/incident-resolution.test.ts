@@ -22,7 +22,7 @@ const NOW_SEC = 1_780_358_400;
 const DAY = 86_400;
 
 const DEFAULT_DDR_D1_TABLES: MockTableConfig[] = [
-  { match: "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
+  { match: "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price, close_reason FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
   { match: "FROM supply_history", rows: [] },
   { match: "FROM mint_burn_hourly", rows: [] },
   { match: "FROM dex_liquidity", rows: [] },

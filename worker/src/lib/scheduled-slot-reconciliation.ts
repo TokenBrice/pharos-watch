@@ -57,7 +57,7 @@ export interface StaleSlotReconciliationSummary {
   }>;
 }
 
-export const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
+const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
 
 /**
  * Exact `cron_runs.error` text the fence writes when it expires a stale slot.
@@ -216,7 +216,7 @@ async function insertSyntheticStaleCronRun(
   db: D1Database,
   slot: StaleSlotExecutionArtifact,
   progress: StaleSlotProgressRow,
-  lease: StaleSlotLeaseRow,
+  lease: StaleSlotLeaseRow | null,
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
   reconcilerWorkerVersion?: string | null,
@@ -234,7 +234,7 @@ async function insertSyntheticStaleCronRun(
     progressStage: progress.stage,
     progressUpdatedAt: progress.updated_at,
     leaseOwner: progress.lease_owner,
-    leaseUntil: lease.lease_until,
+    leaseUntil: lease?.lease_until ?? null,
     reconciledAt: nowSec,
     activeDurationMs,
     reconciliationDelayMs,
@@ -529,7 +529,42 @@ async function reconcileStaleSlotArtifacts(
 
   for (const progress of progressRowsWithOwner) {
     const lease = await getCronLeaseForJob(db, progress.job);
-    if (!lease || lease.lease_owner !== progress.lease_owner) continue;
+    if (!lease || lease.lease_owner !== progress.lease_owner) {
+      if (!(await isSlotFenceCurrent(db, slot, fence))) continue;
+      const progressDelete = await runWithOverloadRetry(() =>
+        db.prepare(
+          `DELETE FROM cron_run_progress
+           WHERE job = ? AND slot_started_at = ? AND started_at = ? AND updated_at = ?
+             AND lease_owner = ? AND NOT EXISTS (SELECT 1 FROM cron_leases WHERE job = ? AND lease_owner = ?)
+             AND (? IS NULL OR EXISTS (
+               SELECT 1 FROM cron_slot_executions
+                WHERE slot_key = ? AND slot_started_at = ? AND state = ?
+                  AND execution_owner = ? AND execution_generation = ?
+             ))`,
+        )
+          .bind(
+            progress.job, slot.slot_started_at, progress.started_at, progress.updated_at,
+            progress.lease_owner, progress.job, progress.lease_owner, fence?.owner ?? null,
+            slot.slot_key, slot.slot_started_at, fence?.state ?? null, fence?.owner ?? null, fence?.generation ?? null,
+          )
+          .run(),
+      );
+      const cleared = progressDelete.meta.changes ?? 0;
+      summary.progressRowsCleared += cleared;
+      if (cleared === 0) continue;
+
+      if (await insertSyntheticStaleCronRun(db, slot, progress, null, nowSec, fence, reconcilerWorkerVersion)) {
+        summary.syntheticCronRuns++;
+      }
+      summary.abandonedJobs.push({
+        job: progress.job,
+        progressStage: progress.stage,
+        progressUpdatedAt: progress.updated_at,
+        leaseOwner: progress.lease_owner,
+        leaseUntil: null,
+      });
+      continue;
+    }
     // A lease is dead when its TTL expired OR its heartbeat went silent past
     // the child heartbeat window: renewals run every 30-120s, so a silent
     // lease belongs to a killed isolate even while the TTL has not lapsed.

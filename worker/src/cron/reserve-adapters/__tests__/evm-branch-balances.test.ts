@@ -5,6 +5,7 @@ import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   const fetchOnchainRawCall = vi.fn();
   return {
@@ -12,24 +13,10 @@ vi.mock("../helpers", async (importOriginal) => {
     fetchErc20Balance: vi.fn(),
     fetchDefiLlamaPrices: vi.fn(),
     fetchOnchainUint256,
-    makeOnchainCallers: vi.fn((input, options) => ({
-      uint256: (contract: string, data: string) =>
-        fetchOnchainUint256({
-          ...options,
-          contract,
-          data,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-        }),
-      raw: (contract: string, data: string) =>
-        fetchOnchainRawCall({
-          ...options,
-          contract,
-          data,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-        }),
-    })),
+    makeOnchainCallers: makeOnchainCallersMock({
+      uint256: fetchOnchainUint256,
+      raw: fetchOnchainRawCall,
+    }),
     fetchOnchainRawCall,
     probeOptionalRedemptionRateBps: vi.fn(),
   };

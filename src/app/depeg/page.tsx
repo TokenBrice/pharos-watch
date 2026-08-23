@@ -3,7 +3,7 @@ import { Bell } from "lucide-react";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
-import { DepegLoadingState } from "@/app/depeg/loading";
+import { DepegContentLoadingState } from "@/app/depeg/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
@@ -68,7 +68,7 @@ function TelegramAlertsHeaderAction() {
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.DepegClient })),
-  loading: <DepegLoadingState />,
+  loading: <DepegContentLoadingState />,
   shell: {
     breadcrumbName: "Depeg Tracker",
     path: "/depeg/",

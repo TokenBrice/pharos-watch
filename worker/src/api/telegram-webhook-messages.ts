@@ -343,7 +343,7 @@ export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): s
   return labels.join(", ") || "None";
 }
 
-export function formatCoinLines(coins: ResolvedCoin[]): string {
+function formatCoinLines(coins: ResolvedCoin[]): string {
   return coins.map((coin) => `- ${coin.symbol} (${coin.id})`).join("\n") || "None";
 }
 

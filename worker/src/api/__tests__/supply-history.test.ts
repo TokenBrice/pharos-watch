@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeSupplyRow } from "../../test-helpers/__shared/fixtures";
@@ -27,8 +28,7 @@ describe("handleSupplyHistory", () => {
   it("returns 200 with history array", async () => {
     const db = mockD1([{ match: "supply_history", rows: [row] }]);
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{ date: number; circulatingUsd: number; price: number | null }>;
+    const body = (await readJsonResponse(res, 200)) as Array<{ date: number; circulatingUsd: number; price: number | null }>;
     expect(body).toHaveLength(1);
     expect(body[0]).toHaveProperty("date");
     expect(body[0]).toHaveProperty("circulatingUsd");
@@ -38,16 +38,14 @@ describe("handleSupplyHistory", () => {
   it("returns 200 with empty array when no data", async () => {
     const db = mockD1([{ match: "supply_history", rows: [] }]);
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await readJsonResponse(res, 200);
     expect(body).toEqual([]);
   });
 
   it("rejects out-of-range day windows instead of clamping them", async () => {
     const db = mockD1([], { requireMatch: true });
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=9999"));
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 5000" });
+    expect(await readJsonResponse(res, 400)).toEqual({ error: "Invalid days: must be between 1 and 5000" });
     expect(db.getHistory()).toEqual([]);
   });
 
@@ -73,8 +71,7 @@ describe("handleSupplyHistory", () => {
 
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=5000"));
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([
+    expect(await readJsonResponse(res, 200)).toEqual([
       {
         date: row.snapshot_date,
         circulatingUsd: row.circulating_usd,

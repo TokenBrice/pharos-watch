@@ -231,7 +231,7 @@ export function contagionEdgeWeight(edge: ReportCardsV9DependencyEdge): number {
  * `basket-bounded-unknown`), which the map deliberately discards — see
  * `ContagionEdgeRelationship`.
  */
-export function contagionEdgeRelationship(edge: ReportCardsV9DependencyEdge): ContagionEdgeRelationship {
+function contagionEdgeRelationship(edge: ReportCardsV9DependencyEdge): ContagionEdgeRelationship {
   return edge.kind === "serial" ? "wrapper" : "collateral";
 }
 

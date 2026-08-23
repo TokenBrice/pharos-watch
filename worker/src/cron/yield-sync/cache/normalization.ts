@@ -14,7 +14,7 @@ import { toErrorMessage } from "../../../lib/error-utils";
 // Coercion primitives shared by every cache submodule.
 // ---------------------------------------------------------------------------
 
-export function toNullableString(value: unknown): string | null {
+function toNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value : null;
 }
 
@@ -24,7 +24,7 @@ export function toNonNegativeInteger(value: unknown): number {
   return Math.floor(parsed);
 }
 
-export function toStringArray(value: unknown): string[] {
+function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter(
     (entry): entry is string => typeof entry === "string" && entry.trim().length > 0,

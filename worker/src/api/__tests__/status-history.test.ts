@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -85,8 +86,7 @@ describe("handleStatusHistoryRoute", () => {
 
     const request = makeApiRequest("/api/status-history?limit=5", { adminKey: "secret-key" });
     const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       state: { currentStatus: string } | null;
       probe: { status: string; sampleCount: number };
       discrepancy: { hasDivergence: boolean };
@@ -156,9 +156,8 @@ describe("handleStatusHistoryRoute", () => {
 
     const request = makeApiRequest("/api/status-history?limit=5", { adminKey: "secret-key" });
     const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
-    const body = (await res.json()) as { transitions: unknown[]; hasMore: boolean | null };
+    const body = (await readJsonResponse(res, 200)) as { transitions: unknown[]; hasMore: boolean | null };
 
-    expect(res.status).toBe(200);
     expect(body.transitions).toEqual([]);
     expect(body.hasMore).toBeNull();
     errorSpy.mockRestore();

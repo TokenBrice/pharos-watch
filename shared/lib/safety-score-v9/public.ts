@@ -767,14 +767,15 @@ function allPublicReasonCodes(input: V9PublicCardProjectionInput): V9ReasonCode[
 // output without assembling a whole response envelope. Production callers go
 // through `buildSafetyScoreV9Response`.
 export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): SafetyScoreV9CurrentCard {
+  const isRateable = input.trace.finalScore !== null;
   const caps = input.trace.caps.map((cap) => ({
     kind: cap.kind,
     limit: cap.limit,
     source: cap.source,
     reason: cap.reason,
-    binding: cap.binding,
+    binding: isRateable && cap.binding,
   }));
-  const bindingCap = caps.find((cap) => cap.binding) ?? null;
+  const bindingCap = isRateable ? (caps.find((cap) => cap.binding) ?? null) : null;
   return SafetyScoreV9CurrentCardSchema.parse({
     id: input.trace.assetId,
     ...(input.backingFromLiveReserves === undefined

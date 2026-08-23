@@ -22,7 +22,7 @@ export interface CoverageLegendItem {
   kinds: readonly string[];
 }
 
-export function createStatus(
+function createStatus(
   kind: string,
   label: string,
   tone: CoverageTone,

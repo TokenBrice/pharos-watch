@@ -392,6 +392,23 @@ describe("curated on-chain supply paths", () => {
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["syrupusdt-maple"]).toBe("ethereum");
     expect(syrup?.find((entry) => entry.config.chain === "ink")?.config.rpcUrl).toBe("https://rpc-gel.inkonchain.com");
 
+    const syrupUsdc = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "ethereum", address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", decimals: 6 },
+      { chain: "base", address: "0x660975730059246a68521a3e2fbd4740173100f5", decimals: 6 },
+      { chain: "arbitrum", address: "0x41ca7586cc1311807b4605fbb748a3b8862b42b5", decimals: 6 },
+      { chain: "solana", address: "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj", decimals: 6 },
+      { chain: "ink", address: "0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9", decimals: 6 },
+      { chain: "monad", address: "0xab6e5a0c3799d020c790d34f7b2c02639e238af7", decimals: 6 },
+      { chain: "robinhood", address: "0xc6a4854eeb493224d5f9485e12dd3a81f22eee14", decimals: 6 },
+      { chain: "tempo", address: "0x20c0000000000000000000008191667423f70e67", decimals: 6 },
+    ], "syrupusdc-maple"));
+
+    expect(syrupUsdc?.map((entry) => entry.config.chain)).toEqual([
+      "ethereum", "base", "arbitrum", "solana", "ink", "monad", "robinhood", "tempo",
+    ]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["syrupusdc-maple"]).toBe("ethereum");
+    expect(syrupUsdc?.find((entry) => entry.config.chain === "monad")?.config.rpcUrl).toBe("https://rpc.monad.xyz");
+
     // Same shape: the Ethereum escrow holds the whole MegaETH float.
     const witry = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
       { chain: "ethereum", address: "0xe346c29b5b60ef870b9724c57ccfbbc631e47dee", decimals: 18 },

@@ -9,7 +9,7 @@ type AdminPollingOptions<T> = Pick<ApiQueryOptions<T>, "enabled" | "retry" | "sc
 
 const ADMIN_QUERY_SCOPE = "ops-proxy";
 
-export function useAdminPollingQuery<T>(
+function useAdminPollingQuery<T>(
   key: readonly unknown[],
   path: string | (() => string),
   cronInterval: number,

@@ -63,7 +63,7 @@ export type V9ScoreBearingGatesPolicy = z.infer<typeof V9ScoreBearingGatesPolicy
  * mintPostureQuality change, not from this projection.
  */
 export const V9_SCORE_BEARING_GATES_POLICY_V923 = V9ScoreBearingGatesPolicySchema.parse({
-  methodologyVersion: "9.33",
+  methodologyVersion: "9.35",
   withhold: {
     maxScoreExclusive: 55,
     minimumLimitedPillarCount: 2,

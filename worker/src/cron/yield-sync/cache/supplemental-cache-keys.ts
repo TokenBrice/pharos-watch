@@ -28,7 +28,7 @@ interface YieldSupplementalSourcesCachePayload {
   data: ResolvedYieldCandidate[];
 }
 
-export interface ParsedYieldSupplementalSourcesCache {
+interface ParsedYieldSupplementalSourcesCache {
   candidates: ResolvedYieldCandidate[];
   updatedAt: number;
   ageSeconds: number;

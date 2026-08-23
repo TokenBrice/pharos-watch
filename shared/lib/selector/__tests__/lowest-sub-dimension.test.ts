@@ -5,59 +5,16 @@ import {
   selectLowestSubDimension,
 } from "../lowest-sub-dimension";
 import type { MergedRow } from "../types";
+import { makeMergedRow } from "./fixture";
 
 function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
-  return {
+  return makeMergedRow({
     id: "t",
     symbol: "T",
     name: "T",
-    protocolSlug: null,
-    variantOf: null,
-    isYieldBearing: false,
-    pegCurrency: "USD",
-    lifecycle: "active",
-    governance: "decentralized",
-    canBeBlacklisted: false,
-    mechanismArchetype: null,
-    supplyUsd: 1e9,
-    pegScore: 90,
-    activeDepeg: false,
-    currentDeviationBps: 10,
-    depegEventCount: 0,
-    lastEventAt: null,
-    dewsScore: 20,
-    safetyGrade: "A",
-    safetyScore: 80,
-    safetyProvenance: "safety-score-v9",
-    safetyResilienceScore: 80,
-    safetyDecentralizationScore: 80,
-    safetyLiquidityScore: 80,
-    custodyModel: "onchain",
-    bluechipGrade: "A",
-    liquidityScore: 80,
     effectiveTvlUsd: 1e8,
-    concentrationHhi: 0.2,
-    chainTvl: { ethereum: 1e8 },
-    pharosYieldScore: 80,
-    apy30d: 5,
-    apyVariance30d: 0.5,
-    benchmarkRate: 4.5,
-    sourceRiskScore: 20,
-    venueRiskTier: "low",
-    warningSignals: [],
-    deploymentPlace: "native-wrapper",
-    sourceSwitch: false,
-    yieldProtocolSlug: null,
-    yieldVenueChain: null,
-    yieldHistoryDays: 365,
-    yieldFreshness: null,
-    trackingSpanDays: 365,
-    isRecentListing: false,
-    pegSummaryAgeSec: null,
-    dexTvlAgeSec: null,
-    dewsAgeSec: null,
     ...overrides,
-  };
+  });
 }
 
 describe("candidate sets", () => {

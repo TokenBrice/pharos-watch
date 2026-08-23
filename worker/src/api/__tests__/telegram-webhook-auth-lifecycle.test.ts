@@ -1,3 +1,4 @@
+import { makeJsonRequest } from "./api-request-response.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchSpy,
@@ -7,78 +8,19 @@ import {
   makeChatMigrationRequest,
   sentMessageBody,
   resetTelegramWebhookTest,
-  fixtureMockD1 as baseFixtureMockD1,
+  makeTelegramWebhookDb,
 } from "./telegram-webhook.test-support";
 
-function fixtureMockD1(
-  tables: Parameters<typeof baseFixtureMockD1>[0] = [],
-  options: Parameters<typeof baseFixtureMockD1>[1] = {},
-) {
-  return baseFixtureMockD1([
-    ...tables,
-    { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "SELECT status, received_at, effect_state, claim_owner, claim_generation", rows: [], first: null },
-    { match: "FROM telegram_subscribers", rows: [], first: null },
-    { match: "INSERT INTO telegram_subscribers", rows: [] },
-    { match: "UPDATE telegram_subscribers", rows: [] },
-    { match: "DELETE FROM telegram_subscribers", rows: [] },
-    { match: "INSERT INTO telegram_subscriptions", rows: [] },
-    { match: "UPDATE telegram_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
-    { match: "UPDATE telegram_preset_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
-    { match: "INSERT OR IGNORE INTO telegram_pending_disambiguation", rows: [] },
-    { match: "UPDATE telegram_pending_disambiguation", rows: [] },
-    { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
-    { match: "INSERT INTO telegram_pending_alerts", rows: [] },
-    { match: "UPDATE OR IGNORE telegram_pending_alerts", rows: [] },
-    { match: "UPDATE telegram_pending_alerts", rows: [] },
-    { match: "DELETE FROM telegram_pending_alerts", rows: [] },
-    { match: "INSERT INTO telegram_recap_preferences", rows: [] },
-    { match: "UPDATE telegram_recap_preferences", rows: [] },
-    { match: "DELETE FROM telegram_recap_preferences", rows: [] },
-    { match: "DELETE FROM telegram_recap_targets", rows: [] },
-    { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
-    { match: "UPDATE OR IGNORE telegram_freeze_alert_targets", rows: [] },
-    { match: "UPDATE telegram_freeze_alert_targets", rows: [] },
-    { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
-    { match: "UPDATE OR IGNORE telegram_alert_source_resolution_targets", rows: [] },
-    { match: "UPDATE telegram_alert_source_resolution_targets", rows: [] },
-    { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
-    { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
-    { match: "UPDATE telegram_alert_job_targets", rows: [] },
-    { match: "UPDATE OR IGNORE telegram_alert_job_targets", rows: [] },
-    { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
-    { match: "UPDATE OR IGNORE telegram_alert_job_target_items", rows: [] },
-    { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
-    { match: "UPDATE telegram_alert_target_plans", rows: [] },
-    { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
-    { match: "UPDATE OR IGNORE telegram_alert_planning_subscribers", rows: [] },
-    { match: "UPDATE telegram_alert_planning_subscribers", rows: [] },
-    { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
-    { match: "UPDATE OR IGNORE telegram_transport_failure_observations", rows: [] },
-    { match: "UPDATE telegram_transport_failure_observations", rows: [] },
-    { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
-    { match: "UPDATE telegram_alert_dead_letters", rows: [] },
-    { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
-    { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
-    { match: "UPDATE telegram_chat_delivery_diagnostics", rows: [] },
-    { match: "INSERT INTO telegram_webhook_operation_mutations", rows: [] },
-    { match: "FROM cache", rows: [], first: null },
-    { match: "INSERT INTO cache", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "UPDATE cache", rows: [] },
-    { match: "DELETE FROM cache", rows: [] },
-  ], options);
-}
+
+const makeLifecycleDb = (
+  tables: Parameters<typeof makeTelegramWebhookDb>[0] = [],
+  options: Parameters<typeof makeTelegramWebhookDb>[1] = {},
+) => makeTelegramWebhookDb(tables, options, "lifecycle");
 
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
   it("returns 200 for invalid secret", async () => {
-    const db = fixtureMockD1([]);
+    const db = makeLifecycleDb([]);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const res = await handleTelegramWebhook(
       db,
@@ -102,13 +44,11 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("returns 200 for missing secret without logging timing-safe compare misconfiguration", async () => {
-    const db = fixtureMockD1([]);
+    const db = makeLifecycleDb([]);
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const request = new Request("https://x/api/telegram-webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: { chat: { id: 123 }, text: "/start" } }),
+    const request = makeJsonRequest("https://x/api/telegram-webhook", { message: { chat: { id: 123 }, text: "/start" } }, {
+      headers: {},
     });
 
     const res = await handleTelegramWebhook(db, request, "test-secret", "bot-token");
@@ -124,7 +64,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("acknowledges malformed authenticated update bodies without creating an effect fence", async () => {
-    const db = fixtureMockD1([]);
+    const db = makeLifecycleDb([]);
     const request = new Request("https://x/api/telegram-webhook", {
       method: "POST",
       headers: {
@@ -142,7 +82,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("accepts the previous webhook secret during the overlap window", async () => {
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeLifecycleDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(
       db,
       makeWebhookRequest(123, "/start", "old-secret"),
@@ -157,7 +97,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("skips duplicate update ids that are already processed", async () => {
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "INSERT OR IGNORE INTO telegram_processed_updates",
         rows: [],
@@ -190,7 +130,7 @@ describe("handleTelegramWebhook", () => {
 
   it("does not replay command effects when the terminal processed marker fails", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const firstDb = fixtureMockD1([
+    const firstDb = makeLifecycleDb([
       {
         match: "INSERT OR IGNORE INTO telegram_processed_updates",
         rows: [],
@@ -223,7 +163,7 @@ describe("handleTelegramWebhook", () => {
     expect(first.status).toBe(500);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-    const retryDb = fixtureMockD1([
+    const retryDb = makeLifecycleDb([
       {
         match: "INSERT OR IGNORE INTO telegram_processed_updates",
         rows: [],
@@ -257,7 +197,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("welcomes a group when my_chat_member reports the bot was added", async () => {
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "FROM cache WHERE key = ?",
         rows: [],
@@ -287,7 +227,7 @@ describe("handleTelegramWebhook", () => {
 
   it("does not cache group welcome idempotency when Telegram send fails", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("blocked", { status: 403 }));
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "FROM cache WHERE key = ?",
         rows: [],
@@ -309,7 +249,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("suppresses duplicate group welcomes while the idempotency cache is fresh", async () => {
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "FROM cache WHERE key = ?",
         rows: [],
@@ -328,7 +268,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("returns ok when a my_chat_member welcome cache read fails", async () => {
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "FROM cache WHERE key = ?",
         rows: [],
@@ -349,7 +289,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("ignores private my_chat_member updates", async () => {
-    const db = fixtureMockD1([]);
+    const db = makeLifecycleDb([]);
 
     await handleTelegramWebhook(
       db,
@@ -363,7 +303,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("cleans up group subscriber state when my_chat_member reports bot removal", async () => {
-    const db = fixtureMockD1();
+    const db = makeLifecycleDb();
 
     const res = await handleTelegramWebhook(
       db,
@@ -398,7 +338,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("cleans up channel subscriber state when my_chat_member reports bot removal", async () => {
-    const db = fixtureMockD1();
+    const db = makeLifecycleDb();
 
     const res = await handleTelegramWebhook(
       db,
@@ -430,7 +370,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("ignores my_chat_member status changes that are not bot-added transitions", async () => {
-    const db = fixtureMockD1([]);
+    const db = makeLifecycleDb([]);
 
     await handleTelegramWebhook(
       db,
@@ -444,7 +384,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("migrates stored chat state on migrate_to_chat_id service messages", async () => {
-    const db = fixtureMockD1();
+    const db = makeLifecycleDb();
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const res = await handleTelegramWebhook(
@@ -533,7 +473,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("migrates stored chat state on migrate_from_chat_id service messages", async () => {
-    const db = fixtureMockD1();
+    const db = makeLifecycleDb();
 
     await handleTelegramWebhook(
       db,
@@ -552,7 +492,7 @@ describe("handleTelegramWebhook", () => {
 
   it("acknowledges a failed migration while emitting bounded error telemetry", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "INSERT INTO telegram_subscribers",
         rows: [],
@@ -575,7 +515,7 @@ describe("handleTelegramWebhook", () => {
 
   it("returns a retryable status for duplicate update ids still in flight", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "INSERT OR IGNORE INTO telegram_processed_updates",
         rows: [],
@@ -609,7 +549,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("reclaims stale in-flight update ids so a Telegram retry can process them", async () => {
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "INSERT OR IGNORE INTO telegram_processed_updates",
         rows: [],
@@ -654,7 +594,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("reclaims failed update ids so Telegram retries can process them", async () => {
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "INSERT OR IGNORE INTO telegram_processed_updates",
         rows: [],
@@ -699,7 +639,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("processes older out-of-order update ids without using the old high-watermark cache", async () => {
-    const db = fixtureMockD1([
+    const db = makeLifecycleDb([
       {
         match: "INSERT OR IGNORE INTO telegram_processed_updates",
         rows: [],

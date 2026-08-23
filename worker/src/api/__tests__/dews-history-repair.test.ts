@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
@@ -42,16 +43,14 @@ describe("DEWS history repair", () => {
     );
 
     const repairResponse = await handleBackfillDEWS({ db, url: makeApiUrl(repairRequest.url), trustedAdmin: true, request: repairRequest });
-    expect(repairResponse.status).toBe(200);
-    const repairBody = (await repairResponse.json()) as { prunedRows: number };
+    const repairBody = (await readJsonResponse(repairResponse, 200)) as { prunedRows: number };
     expect(repairBody.prunedRows).toBe(2);
 
     const historyResponse = await handleStressSignals(
       db,
       new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=90"),
     );
-    expect(historyResponse.status).toBe(200);
-    const historyBody = (await historyResponse.json()) as {
+    const historyBody = (await readJsonResponse(historyResponse, 200)) as {
       history: Array<{ date: number }>;
     };
     expect(historyBody.history.map((row) => row.date)).toEqual([1_772_928_000]);

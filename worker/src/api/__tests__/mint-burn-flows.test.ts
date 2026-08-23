@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
@@ -125,9 +126,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(scopedDb, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const usdai = body.coins.find((coin) => coin.stablecoinId === "usdai-usd-ai");
 
     expect(body.scope).toEqual({
@@ -194,8 +194,7 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(inactiveDb, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.coins.some((coin) => coin.stablecoinId === "busd0-usual")).toBe(false);
     expect(body.hourly.some((row) => row.netFlowUsd === 5_000_000)).toBe(false);
     expect(body.gauge.trackedMcapUsd).toBe(0);
@@ -243,9 +242,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(sparseDb, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
 
     expect(usdt).toBeDefined();
@@ -366,9 +364,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.gauge.classificationSource).toBe("safety-score-v9-publication");
     expect(body.gauge.flightToQuality).toBe(true);
     expect(body.gauge.flightIntensity).toBe(20);
@@ -448,9 +445,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(mixedDb, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const noActivityCoin = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
     const activeCoin = body.coins.find((coin) => coin.stablecoinId === "usdc-circle");
 
@@ -542,9 +538,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(multiChainDb, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     // Gauge mcap must sum only tracked-chain supply (ethereum = 30B), NOT the
     // peg-bucket total (34B). This guards the Bank Run Gauge from over-weighting
     // coins whose intensity is measured on one chain but whose supply lives on many.
@@ -613,9 +608,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     // Single source for the digest's top-chains block: same tracked-pair
     // universe as `coins`, ordered by absolute 24h net flow.
     expect(body.chains).toEqual([
@@ -676,9 +670,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(regressionDb, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const usdf = body.coins.find((coin) => coin.stablecoinId === "usdf-falcon");
 
     expect(usdf).toBeDefined();
@@ -754,9 +747,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
 
     expect(usdt?.baselineDailyNetUsd).toBe(1_000_000);
@@ -863,9 +855,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
 
     expect(usdt?.largestEvent24h?.txHash).toBe("0xnewer");
@@ -950,9 +941,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?hours=168"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
 
     expect(body.windowHours).toBe(168);
@@ -1045,9 +1035,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?hours=1"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
 
     expect(body.windowHours).toBe(1);
@@ -1141,9 +1130,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
 
-    expect(res.status).toBe(200);
     expect(body.gauge).toMatchObject({
       flightToQuality: false,
       flightIntensity: 0,
@@ -1347,9 +1335,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
 
-    expect(res.status).toBe(200);
     expect(body.gauge).toMatchObject({
       flightToQuality: false,
       flightIntensity: 0,
@@ -1414,8 +1401,7 @@ describe("handleMintBurnFlows contract tests", () => {
     } as unknown as D1Database;
 
     const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await readJsonResponse(res, 200);
     expect(body).toMatchObject({
       gauge: {
         flightToQuality: false,
@@ -1524,9 +1510,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.gauge.classificationSource).toBe("unavailable");
     expect(body.gauge.safetyScoreIdentity).toBeNull();
     expect(body.sync?.classificationWarning).toContain("v9-snapshot-unavailable");
@@ -1605,9 +1590,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const sync = body.sync!;
     const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
     expect(sync.freshnessStatus).toBe("fresh");
@@ -1694,9 +1678,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     const sync = body.sync!;
     expect(sync.freshnessStatus).toBe("degraded");
     expect(sync.warning).toBe("Mint/burn sync freshness is degraded versus the 30-minute cron cadence.");
@@ -1779,9 +1762,8 @@ describe("handleMintBurnFlows contract tests", () => {
     ]);
 
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-    expect(res.status).toBe(200);
 
-    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.sync?.freshnessStatus).toBe("degraded");
     expect(body.sync?.warning).toContain("Mint/burn sync freshness is degraded");
     expect(body.sync?.warning).toContain("freshness lookup failed");

@@ -8,11 +8,9 @@ import {
 // Analytics tier: filter strip + leaderboard table skeleton ~10 rows.
 const YIELD_SKELETON_ROW_COUNT = 10;
 
-export function YieldLoadingState() {
+export function YieldContentLoadingState() {
   return (
-    <PageLoadingShell>
-      <PageLoadingHeader sectionWidth="w-32" titleWidth="w-72 sm:w-96" />
-
+    <>
       <div className="pharos-card-shell space-y-3 p-4">
         <Skeleton className="h-3.5 w-44 rounded-sm" />
         <div className="grid gap-3 text-sm leading-relaxed lg:grid-cols-3">
@@ -52,10 +50,15 @@ export function YieldLoadingState() {
         headerClassName="flex items-center justify-between border-b border-border/60 px-4 py-3"
         rowClassName="px-4 py-3"
       />
-    </PageLoadingShell>
+    </>
   );
 }
 
 export default function Loading() {
-  return <YieldLoadingState />;
+  return (
+    <PageLoadingShell>
+      <PageLoadingHeader sectionWidth="w-32" titleWidth="w-72 sm:w-96" />
+      <YieldContentLoadingState />
+    </PageLoadingShell>
+  );
 }

@@ -4,7 +4,7 @@ import { z } from "zod";
 // eslint-disable-next-line security/detect-unsafe-regex
 const DECIMAL_SOURCE_PATTERN = /^([+-]?)([0-9]+)(?:\.([0-9]*))?(?:[eE]([+-]?[0-9]+))?$/;
 // eslint-disable-next-line security/detect-unsafe-regex
-export const CANONICAL_DECIMAL_PATTERN = /^-?(0|[1-9][0-9]*)(\.[0-9]*[1-9])?$/;
+const CANONICAL_DECIMAL_PATTERN = /^-?(0|[1-9][0-9]*)(\.[0-9]*[1-9])?$/;
 export const JSON_NUMBER_TOKEN_KEY = "__protocolApiJsonNumberToken";
 
 export interface JsonNumberToken {

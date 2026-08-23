@@ -296,6 +296,30 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
           String(encodedRoles),
         ).toBe(true);
       }
+
+      const unicodeTiedEdges = [
+        dependencyEdge("route:ä", "child", "basket"),
+        dependencyEdge("route:z", "child", "basket"),
+      ];
+      const unicodePlan = buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["child", "route:ä", "route:z"],
+        assets: [
+          planningAsset("child", unicodeTiedEdges),
+          planningAsset("route:ä", []),
+          planningAsset("route:z", []),
+        ],
+      });
+      const permutedUnicodePlan = buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["route:z", "route:ä", "child"],
+        assets: [
+          planningAsset("route:z", []),
+          planningAsset("route:ä", []),
+          planningAsset("child", [...unicodeTiedEdges].reverse()),
+        ],
+      });
+      expect(unicodePlan.basketPaths.map((path) => path.upstreamAssetId)).toEqual(["route:z", "route:ä"]);
+      expect(permutedUnicodePlan).toEqual(unicodePlan);
+      expect(permutedUnicodePlan.planDigest).toBe(unicodePlan.planDigest);
     });
 
     it("preserves same-upstream materiality across one-, two-, and three-way threshold partitions", () => {

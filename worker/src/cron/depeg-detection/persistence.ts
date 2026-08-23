@@ -11,7 +11,7 @@ function buildDepegPersistenceStatement(
       return buildUpsertPendingDepegStmt(db, command.payload);
     case "close-event":
       return db
-        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_first_seen_at = NULL WHERE id = ?")
+        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_first_seen_at = NULL, recovery_last_seen_at = NULL WHERE id = ?")
         .bind(command.endedAt, command.recoveryPrice, command.closeReason, command.id);
     case "update-peak":
       return db
@@ -19,11 +19,15 @@ function buildDepegPersistenceStatement(
         .bind(command.peakDeviationBps, command.peakPrice, command.id);
     case "begin-recovery":
       return db
-        .prepare("UPDATE depeg_events SET recovery_first_seen_at = ? WHERE id = ? AND recovery_first_seen_at IS NULL")
-        .bind(command.firstSeenAt, command.id);
+        .prepare("UPDATE depeg_events SET recovery_first_seen_at = ?, recovery_last_seen_at = ? WHERE id = ?")
+        .bind(command.firstSeenAt, command.lastSeenAt, command.id);
+    case "continue-recovery":
+      return db
+        .prepare("UPDATE depeg_events SET recovery_last_seen_at = ? WHERE id = ?")
+        .bind(command.lastSeenAt, command.id);
     case "clear-recovery":
       return db
-        .prepare("UPDATE depeg_events SET recovery_first_seen_at = NULL WHERE id = ? AND recovery_first_seen_at IS NOT NULL")
+        .prepare("UPDATE depeg_events SET recovery_first_seen_at = NULL, recovery_last_seen_at = NULL WHERE id = ? AND (recovery_first_seen_at IS NOT NULL OR recovery_last_seen_at IS NOT NULL)")
         .bind(command.id);
     case "delete-event":
       return db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(command.id);

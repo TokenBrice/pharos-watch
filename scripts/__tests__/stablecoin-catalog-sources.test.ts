@@ -1,6 +1,3 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   buildGeneratedPerCoinAsset,
@@ -14,22 +11,9 @@ import {
   syncGeneratedPerCoinAsset,
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
+import { createTempRepoTracker } from "./helpers/test-state";
 
-const tempDirs: string[] = [];
-
-function makeTempRoot(): string {
-  const rootDir = mkdtempSync(join(tmpdir(), "stablecoin-catalog-"));
-  tempDirs.push(rootDir);
-  return rootDir;
-}
-
-function writeJson(rootDir: string, relativePath: string, value: unknown): void {
-  const absolutePath = join(rootDir, relativePath);
-  // Test helper writes only into per-test temp directories.
-  mkdirSync(dirname(absolutePath), { recursive: true });
-  // Test helper writes only into per-test temp directories.
-  writeFileSync(absolutePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-}
+const { cleanup, makeRoot: makeTempRoot, writeJson } = createTempRepoTracker("stablecoin-catalog");
 
 function makeCoin(id: string, overrides: Record<string, unknown> = {}): StablecoinSourceEntry["coin"] {
   return {
@@ -131,11 +115,7 @@ function makeBlacklistabilityReview(): Record<string, unknown> {
   };
 }
 
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) {
-    rmSync(dir, { force: true, recursive: true });
-  }
-});
+afterEach(cleanup);
 
 describe("stablecoin catalog source helpers", () => {
   it("detects duplicate IDs across per-coin source files", () => {

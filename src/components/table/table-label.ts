@@ -10,7 +10,7 @@ function labelizeTableId(tableId: TableId): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function withFallbackTableAriaLabel<T extends Omit<React.ComponentProps<"table">, "children" | "className">>(
+function withFallbackTableAriaLabel<T extends Omit<React.ComponentProps<"table">, "children" | "className">>(
   tableId: TableId | undefined,
   tableProps: T | undefined,
   options: { hasCaption?: boolean } = {},
@@ -32,7 +32,7 @@ export function resolveTableFrameProps<T extends Omit<React.ComponentProps<"tabl
   return withFallbackTableAriaLabel(tableId, tableProps, { hasCaption: hasTableCaptionChild(children) });
 }
 
-export function hasTableCaptionChild(children: React.ReactNode): boolean {
+function hasTableCaptionChild(children: React.ReactNode): boolean {
   let found = false;
 
   function visit(child: React.ReactNode) {

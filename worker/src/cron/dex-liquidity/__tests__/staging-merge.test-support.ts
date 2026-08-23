@@ -1,31 +1,8 @@
-type StagedPoolTestRow = {
-  pool_id: string;
-  stablecoin_id: string;
-  source: "cg_onchain" | "cg_tickers" | "gecko_terminal" | "horizon";
-  chain: string;
-  protocol: string;
-  dex_id: string | null;
-  symbol: string;
-  tvl_usd: number | null;
-  volume_24h: number | null;
-  quality_multiplier: number | null;
-  pool_type: string | null;
-  fee_tier: number | null;
-  balance_ratio: number | null;
-  is_stable: number | boolean | null;
-  base_token: string | null;
-  quote_token: string | null;
-  quote_symbol: string | null;
-  price_usd: number | null;
-  locked_liq_pct: number | null;
-  raw_json: string | null;
-  discovered_at: number;
-  refreshed_at: number;
-};
+import type { StagedPoolRow } from "../staging-merge";
 
 export function makeStagedPoolRow(
-  overrides: Partial<StagedPoolTestRow> = {},
-): StagedPoolTestRow {
+  overrides: Partial<StagedPoolRow> = {},
+): StagedPoolRow {
   return {
     pool_id: "ethereum:0x0000000000000000000000000000000000000abc",
     stablecoin_id: "usdt-tether",

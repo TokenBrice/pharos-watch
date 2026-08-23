@@ -23,7 +23,7 @@ const DEFAULT_COLLISION_PADDING_PX = 5;
  * this many passes. Exported so UI tests can lower it for speed; if clusters
  * ever grow much larger, prefer a spatial grid over raising this ceiling.
  */
-export const DEFAULT_COLLISION_ITERATIONS = 90;
+const DEFAULT_COLLISION_ITERATIONS = 90;
 
 function centerDistancePx(a: PackedCoin, b: PackedCoin): number {
   const dx = (a.x - b.x) * (FRAME_W / 100);

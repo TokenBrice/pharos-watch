@@ -1,3 +1,4 @@
+import { makeJsonRequest, readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -93,14 +94,11 @@ function makeFeedbackBody(
 }
 
 function makeRequest(body: unknown, idempotencyKey = FEEDBACK_IDEMPOTENCY_KEY): Request {
-  return new Request("https://x/api/feedback", {
-    method: "POST",
+  return makeJsonRequest("https://x/api/feedback", body, {
     headers: {
-      "Content-Type": "application/json",
       "CF-Connecting-IP": "1.2.3.4",
       "Idempotency-Key": idempotencyKey,
     },
-    body: JSON.stringify(body),
   });
 }
 
@@ -165,8 +163,7 @@ describe("handleFeedback", () => {
     });
     const res = await handleFeedback(db, request, makeEnv());
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toMatch(/Invalid JSON/i);
   });
 
@@ -206,8 +203,7 @@ describe("handleFeedback", () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "spam" })), makeEnv());
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toMatch(/type/i);
   });
 
@@ -215,8 +211,7 @@ describe("handleFeedback", () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ description: "short" })), makeEnv());
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toMatch(/Description/i);
   });
 
@@ -224,8 +219,7 @@ describe("handleFeedback", () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "bug", title: "" })), makeEnv());
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toMatch(/Title/i);
   });
 
@@ -233,8 +227,7 @@ describe("handleFeedback", () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ pageUrl: "https://evil.com" })), makeEnv());
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toMatch(/pageUrl/i);
   });
 
@@ -242,8 +235,7 @@ describe("handleFeedback", () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ pageUrl: "//evil.com" })), makeEnv());
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toMatch(/pageUrl/i);
   });
 
@@ -258,10 +250,8 @@ describe("handleFeedback", () => {
 
   it("requires a well-formed idempotency key only after payload validation", async () => {
     const db = mockD1([], { requireMatch: true });
-    const missingKeyRequest = new Request("https://x/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "CF-Connecting-IP": "1.2.3.4" },
-      body: JSON.stringify(makeFeedbackBody()),
+    const missingKeyRequest = makeJsonRequest("https://x/api/feedback", makeFeedbackBody(), {
+      headers: { "CF-Connecting-IP": "1.2.3.4" },
     });
     const missing = await handleFeedback(db, missingKeyRequest, makeEnv());
     const malformed = await handleFeedback(db, makeRequest(makeFeedbackBody(), "bad key"), makeEnv());
@@ -278,8 +268,7 @@ describe("handleFeedback", () => {
     const db = mockD1([], { requireMatch: true });
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ website: "I am a bot" })), makeEnv());
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
+    const body = (await readJsonResponse(res, 200)) as { ok: boolean };
     expect(body.ok).toBe(true);
     expect(db.getHistory()).toHaveLength(0);
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -298,8 +287,7 @@ describe("handleFeedback", () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 0 } }]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
 
-    expect(res.status).toBe(429);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 429)) as { error: string };
     expect(body.error).toMatch(/Too many/i);
   });
 
@@ -352,8 +340,7 @@ describe("handleFeedback", () => {
     const db = mockD1([]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), { GITHUB_PAT: "ghp_test_token" });
 
-    expect(res.status).toBe(503);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 503)) as { error: string };
     expect(body.error).toMatch(/misconfigured/i);
   });
 
@@ -363,8 +350,7 @@ describe("handleFeedback", () => {
     const env: FeedbackEnv = { FEEDBACK_IP_SALT: "test-salt" };
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), env);
 
-    expect(res.status).toBe(503);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 503)) as { error: string };
     expect(body.error).toMatch(/unavailable/i);
     expect(db.getHistory().some((entry) => entry.sql.includes("feedback_rate_limit"))).toBe(false);
   });
@@ -399,8 +385,7 @@ describe("handleFeedback", () => {
       makeEnv(),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
+    const body = (await readJsonResponse(res, 200)) as { ok: boolean };
     expect(body.ok).toBe(true);
 
     // Verify GitHub API was called
@@ -433,8 +418,7 @@ describe("handleFeedback", () => {
       makeEnv(),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
+    const body = (await readJsonResponse(res, 200)) as { ok: boolean };
     expect(body.ok).toBe(true);
   });
 
@@ -568,8 +552,7 @@ describe("handleFeedback", () => {
     const first = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
     const replay = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
 
-    expect(first.status).toBe(500);
-    const body = (await first.json()) as { error: string };
+    const body = (await readJsonResponse(first, 500)) as { error: string };
     expect(body.error).toMatch(/Failed to submit/i);
     expect(replay.status).toBe(500);
     expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");

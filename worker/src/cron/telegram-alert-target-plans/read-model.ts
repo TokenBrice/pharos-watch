@@ -1,4 +1,3 @@
-import { parsePendingAlertScope, parsePendingMarkupPolicy } from "../../lib/telegram-pending-provenance";
 
 export async function loadTelegramTargetPlanProgress(
   db: D1Database,
@@ -84,12 +83,4 @@ export async function loadTelegramTargetPlanProgress(
         }
       : null,
   };
-}
-
-export function validatePersistedTargetColumns(row: {
-  alertScopeJson: string;
-  markupPolicyJson: string;
-}): boolean {
-  return parsePendingAlertScope(row.alertScopeJson).kind === "ok" &&
-    parsePendingMarkupPolicy(row.markupPolicyJson).kind === "ok";
 }

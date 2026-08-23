@@ -58,28 +58,6 @@ export function buildDedupeKey(message: BatchMessage, splitVersion: number = TEL
  * are therefore byte-identical for both callers.
  */
 
-/** Insert column list, in bind order for the `VALUES` form. */
-export const PENDING_ALERT_UPSERT_COLUMNS = [
-  "chat_id",
-  "message_html",
-  "disable_notification",
-  "created_at",
-  "not_before_at",
-  "last_error_class",
-  "retry_after_sec",
-  "updated_at",
-  "dedupe_key",
-  "chunk_index",
-  "priority",
-  "source_type",
-  "alert_type",
-  "expires_at",
-  "source_event_id",
-  "alert_scope_json",
-  "preference_generation",
-  "markup_policy_json",
-] as const;
-
 const COLUMN_LIST_SQL = `chat_id, message_html, disable_notification, created_at, not_before_at,
            last_error_class, retry_after_sec, updated_at, dedupe_key, chunk_index,
            priority, source_type, alert_type, expires_at, source_event_id,

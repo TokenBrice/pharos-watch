@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -32,10 +33,9 @@ describe("api-key-audit-log handler", () => {
 
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log");
     const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
-    expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
 
-    const body = await response.json() as { entries: Array<{ action: string; detail: unknown }> };
+    const body = await readJsonResponse(response, 200) as { entries: Array<{ action: string; detail: unknown }> };
     expect(body.entries).toHaveLength(1);
     expect(body.entries[0]?.action).toBe("created");
     expect(body.entries[0]?.detail).toEqual({ name: "Smoke" });
@@ -96,8 +96,7 @@ describe("api-key-audit-log handler", () => {
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log");
     const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
 
-    expect(response.status).toBe(200);
-    const body = await response.json() as { entries: Array<{ detail: unknown }> };
+    const body = await readJsonResponse(response, 200) as { entries: Array<{ detail: unknown }> };
     expect(body.entries[0]?.detail).toBeNull();
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("[api-key-audit-log] Failed to parse detail_json for row 2:"),

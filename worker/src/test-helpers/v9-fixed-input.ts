@@ -47,7 +47,7 @@ const DAY_SEC = 86_400;
  * registry lost review dates — fail loudly instead of silently relaxing the
  * freshness gates every V9 suite depends on.
  */
-export const V9_TEST_CLOCK_FLOOR_SEC = 1_786_320_000;
+const V9_TEST_CLOCK_FLOOR_SEC = 1_786_320_000;
 
 const REVIEW_DATE_KEYS = new Set(["reviewedAt", "compositionAsOf"]);
 
@@ -187,7 +187,7 @@ export function v9ExitRouteObservation(
 }
 
 /** A strong three-component fiat-cash mechanism review. */
-export function v9MechanismReview() {
+function v9MechanismReview() {
   const component = {
     status: v9Status(),
     quality: "strong" as const,
@@ -636,8 +636,8 @@ export function makeV9ThreeAssetFixedInput(gammaCompletionRatio = 0.8) {
  * placeholder DEX row per coin. Used by the fixed-input identity suites, which
  * exercise fingerprinting over the full active set rather than one asset.
  */
-export const V9_REGISTRY_FIXTURE_CLOCK_SEC = 1_783_891_200;
-export const V9_REGISTRY_FIXTURE_DEX_UPDATED_AT_SEC = V9_REGISTRY_FIXTURE_CLOCK_SEC - 100;
+const V9_REGISTRY_FIXTURE_CLOCK_SEC = 1_783_891_200;
+const V9_REGISTRY_FIXTURE_DEX_UPDATED_AT_SEC = V9_REGISTRY_FIXTURE_CLOCK_SEC - 100;
 
 export function makeV9RegistryFixedInput(
   options: {

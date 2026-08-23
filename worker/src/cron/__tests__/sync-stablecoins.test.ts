@@ -1269,9 +1269,10 @@ describe("syncStablecoins", () => {
   it("writes diagnostic cache and returns degraded when fallback payload fails schema validation", async () => {
     const db = makeDb();
     const cacheWrites = trackCacheWrites(db);
-    const cgData: Record<string, { usd: number; usd_market_cap: number }> = {};
+    const cgObservedAt = Math.floor(Date.now() / 1000);
+    const cgData: Record<string, { usd: number; usd_market_cap: number; last_updated_at: number }> = {};
     for (let i = 0; i < 60; i++) {
-      cgData[`fallback-coin-${i}`] = { usd: 1, usd_market_cap: 1_000_000 + i };
+      cgData[`fallback-coin-${i}`] = { usd: 1, usd_market_cap: 1_000_000 + i, last_updated_at: cgObservedAt };
     }
 
     vi.spyOn(apiUtils, "validatePayloadWithSchema").mockReturnValueOnce({
@@ -2500,7 +2501,7 @@ describe("syncStablecoins", () => {
     const cgBody = Object.fromEntries(
       Array.from({ length: 60 }, (_, i) => [
         `fallback-coin-${i}`,
-        { usd: i === 0 ? 2.5 : 1, usd_market_cap: 1_000_000 + i },
+        { usd: i === 0 ? 2.5 : 1, usd_market_cap: 1_000_000 + i, last_updated_at: Math.floor(Date.now() / 1000) },
       ]),
     );
 

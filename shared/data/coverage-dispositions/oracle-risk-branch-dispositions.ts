@@ -26,13 +26,13 @@
  */
 
 /** Branch evidence fields a reviewed disposition may cover. */
-export const ORACLE_RISK_BRANCH_DISPOSITION_FIELDS = ["liquidationDelaySec"] as const;
+const ORACLE_RISK_BRANCH_DISPOSITION_FIELDS = ["liquidationDelaySec"] as const;
 export type OracleRiskBranchDispositionField = (typeof ORACLE_RISK_BRANCH_DISPOSITION_FIELDS)[number];
 
-export const ORACLE_RISK_BRANCH_DISPOSITIONS = ["reviewed-inoperable"] as const;
+const ORACLE_RISK_BRANCH_DISPOSITIONS = ["reviewed-inoperable"] as const;
 export type OracleRiskBranchDisposition = (typeof ORACLE_RISK_BRANCH_DISPOSITIONS)[number];
 
-export const ORACLE_RISK_BRANCH_DISPOSITION_REASON_CODES = ["liquidation-uncallable-dead-oracle"] as const;
+const ORACLE_RISK_BRANCH_DISPOSITION_REASON_CODES = ["liquidation-uncallable-dead-oracle"] as const;
 export type OracleRiskBranchDispositionReasonCode = (typeof ORACLE_RISK_BRANCH_DISPOSITION_REASON_CODES)[number];
 
 export interface ReviewedOracleRiskBranchDisposition {
@@ -65,9 +65,9 @@ function maiDeadOracleBranch(
 ): ReviewedOracleRiskBranchDisposition {
   return {
     id: "mai-qidao",
-    field: "liquidationDelaySec",
-    disposition: "reviewed-inoperable",
-    reasonCode: "liquidation-uncallable-dead-oracle",
+    field: ORACLE_RISK_BRANCH_DISPOSITION_FIELDS[0],
+    disposition: ORACLE_RISK_BRANCH_DISPOSITIONS[0],
+    reasonCode: ORACLE_RISK_BRANCH_DISPOSITION_REASON_CODES[0],
     schemaLimitation: MAI_SCHEMA_LIMITATION,
     reviewer: "Pharos Safety research",
     reviewedDate: "2026-08-09",
