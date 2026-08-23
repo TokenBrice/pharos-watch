@@ -10,37 +10,23 @@ import {
   resolveV9SerialParentBoundedUncertaintyAttribution,
   resolveV9SerialParentAdverseAttribution,
   scoreV9EvaluatedAsset,
-  type V9PillarEvaluation,
   type V9ProductionScoreInput,
 } from "../safety-score-v9/score";
 import { computeV9ResultDigest, projectCompactV9ScoreTrace } from "../safety-score-v9/trace";
+import { makeV9Pillar as pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 
 const DIGEST = "a".repeat(64);
 const BUILD_DIGEST = "b".repeat(64);
 const BASE_ID = `report-cards-input:v1:${"c".repeat(64)}`;
 
-function pillar(score: number | null, overrides: Partial<V9PillarEvaluation> = {}): V9PillarEvaluation {
-  return { score, evidenceLevel: "strong", reasons: [], structuralSignals: [], ...overrides };
-}
-
 function input(overrides: Partial<V9ProductionScoreInput> = {}): V9ProductionScoreInput {
-  return {
-    assetId: "asset",
-    identity: {
-      factSetDigest: DIGEST,
-      baseInputGenerationId: BASE_ID,
-      evaluationBuildDigest: BUILD_DIGEST,
-      asOfSec: 1_000,
-      sourceGenerations: { peg: "peg:1", dex: "dex:1" },
-    },
-    pillars: { backing: pillar(95), exit: pillar(95), control: pillar(95) },
-    peg: { applicable: true, score: 100, activeDepegBps: null, reasons: [] },
-    trackRecordMonths: 48,
-    parent: { required: false, score: null, propagatedReasons: [] },
-    dependencyReasons: [],
-    dependencyStructuralSignals: [],
+  return makeV9ProductionScoreInput({
     ...overrides,
-  };
+    identity: {
+      sourceGenerations: { peg: "peg:1", dex: "dex:1" },
+      ...overrides.identity,
+    },
+  });
 }
 
 const ROOT_ADVERSE: V9AdverseAttribution = {

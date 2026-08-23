@@ -1,34 +1,22 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { join } from "node:path";
 
 import {
   findBroadSharedTypesValueImports,
   findSharedTypesRuntimeImports,
 } from "../ci/check-shared-types-imports";
+import { createTempRepoTracker } from "./helpers/test-state";
 
-let tempDirs: string[] = [];
+const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-shared-types-imports");
 
-function makeTempRepo(): string {
-  const dir = mkdtempSync(join(tmpdir(), "pharos-shared-types-imports-"));
-  tempDirs.push(dir);
-  return dir;
-}
-
-afterEach(() => {
-  for (const dir of tempDirs) {
-    rmSync(dir, { recursive: true, force: true });
-  }
-  tempDirs = [];
-});
+afterEach(cleanup);
 
 describe("findBroadSharedTypesValueImports", () => {
   it("allows type-only imports from the broad @shared/types barrel", () => {
-    const root = makeTempRepo();
-    mkdirSync(join(root, "src"), { recursive: true });
-    writeFileSync(
-      join(root, "src/allowed.ts"),
+    const root = makeRoot();
+    writeText(
+      root,
+      "src/allowed.ts",
       'import type { StablecoinData } from "@shared/types";\nexport type Row = StablecoinData;\n',
     );
 
@@ -36,10 +24,10 @@ describe("findBroadSharedTypesValueImports", () => {
   });
 
   it("rejects value imports from the broad @shared/types barrel", () => {
-    const root = makeTempRepo();
-    mkdirSync(join(root, "src"), { recursive: true });
-    writeFileSync(
-      join(root, "src/rejected.ts"),
+    const root = makeRoot();
+    writeText(
+      root,
+      "src/rejected.ts",
       'import { StablecoinListResponseSchema, type StablecoinData } from "@shared/types";\n',
     );
 
@@ -55,10 +43,10 @@ describe("findBroadSharedTypesValueImports", () => {
 
 describe("findSharedTypesRuntimeImports", () => {
   it("rejects shared/types imports from shared/lib", () => {
-    const root = makeTempRepo();
-    mkdirSync(join(root, "shared/types"), { recursive: true });
-    writeFileSync(
-      join(root, "shared/types/status.ts"),
+    const root = makeRoot();
+    writeText(
+      root,
+      "shared/types/status.ts",
       'import type { PricingSourceKey } from "../lib/pricing-source-registry";\nexport type Row = PricingSourceKey;\n',
     );
 
@@ -72,10 +60,10 @@ describe("findSharedTypesRuntimeImports", () => {
   });
 
   it("allows shared/types imports from sibling type modules", () => {
-    const root = makeTempRepo();
-    mkdirSync(join(root, "shared/types/status"), { recursive: true });
-    writeFileSync(
-      join(root, "shared/types/status.ts"),
+    const root = makeRoot();
+    writeText(
+      root,
+      "shared/types/status.ts",
       'import type { CronStatus } from "./status/cron";\nexport type Row = CronStatus;\n',
     );
 
@@ -83,10 +71,10 @@ describe("findSharedTypesRuntimeImports", () => {
   });
 
   it("ignores test files under shared/types", () => {
-    const root = makeTempRepo();
-    mkdirSync(join(root, "shared/types/__tests__"), { recursive: true });
-    writeFileSync(
-      join(root, "shared/types/__tests__/core.test.ts"),
+    const root = makeRoot();
+    writeText(
+      root,
+      "shared/types/__tests__/core.test.ts",
       'import { getFilterTags } from "../../lib/filter-tags";\n',
     );
 

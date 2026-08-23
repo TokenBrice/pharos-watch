@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
+import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { makeYieldViewModelRow, renderYieldMobileCard, YIELD_TEST_PROVENANCE } from "./yield-test-support";
@@ -34,6 +35,7 @@ function renderBoard(
     isCompared?: boolean;
     compareDisabled?: boolean;
     onToggleCompare?: (id: string) => void;
+    onToggleSort?: (key: YieldTableSortKey) => void;
   } = {},
 ) {
   return render(
@@ -47,7 +49,7 @@ function renderBoard(
         pageStartIndex={0}
         sortKey="pys"
         sortDirection="desc"
-        onToggleSort={vi.fn()}
+        onToggleSort={overrides.onToggleSort ?? vi.fn()}
         rangeStart={1}
         rangeEnd={1}
         total={1}
@@ -205,31 +207,7 @@ describe("YieldInstrumentBoard", () => {
 
   it("renders sort pills wired to the sort handler", () => {
     const onToggleSort = vi.fn();
-    render(
-      <TooltipProvider>
-        <YieldInstrumentBoard
-          rows={[baseRow]}
-          logos={{}}
-          riskFreeRate={3.5}
-          medianApy={4}
-          scalingFactor={1}
-          pageStartIndex={0}
-          sortKey="pys"
-          sortDirection="desc"
-          onToggleSort={onToggleSort}
-          rangeStart={1}
-          rangeEnd={1}
-          total={1}
-          expandedId={null}
-          compareHas={() => false}
-          compareCanAdd
-          onPrefetch={vi.fn()}
-          onToggleExpanded={vi.fn()}
-          onOpenSourceSheet={vi.fn()}
-          onToggleCompare={vi.fn()}
-        />
-      </TooltipProvider>,
-    );
+    renderBoard(baseRow, false, { onToggleSort });
 
     fireEvent.click(screen.getByRole("button", { name: /APY sort/ }));
     expect(onToggleSort).toHaveBeenCalledWith("apy30d");

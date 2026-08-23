@@ -10,9 +10,7 @@ import {
   scoreCompiledAssetSet,
   scoreV9Input,
 } from "../safety-score-v9-research";
-
-const AS_OF_SEC = 1_780_000_000;
-const AS_OF = new Date(AS_OF_SEC * 1_000).toISOString();
+import { makeCompiledV9AssetInput } from "./safety-score-v9-score.test-support";
 
 /**
  * Supply chosen so the pillar's grid-snapped stress request lands on the
@@ -105,38 +103,8 @@ function minimumCap(signals: readonly V9StructuralSignal[]): number {
   );
 }
 
-function compiledInput(
-  assetId: string,
-  pillarScore: number,
-  parent: CompiledV9AssetInput["parent"] = null,
-): CompiledV9AssetInput {
-  const pillar = {
-    score: pillarScore,
-    evidenceLevel: "strong" as const,
-    evidence: [{ sourceId: `matched:${assetId}`, observedAt: AS_OF }],
-    unresolved: [],
-    signals: [],
-  };
-  return {
-    schemaVersion: 1,
-    compilerPolicy: {
-      policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
-      semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
-    },
-    assetId,
-    asOf: AS_OF,
-    compiledAt: AS_OF,
-    archetype: "fiat-cash",
-    pillars: { backing: pillar, exit: pillar, control: pillar },
-    peg: { applicable: false, score: null, activeDepegBps: null, evidence: [], unresolved: [] },
-    implementationLaunchDate: "2022-01-01",
-    trackRecordMonths: 48,
-    parent,
-    structuralSignals: [],
-    unresolved: [],
-    sourceTimestamps: { matched: AS_OF },
-  };
-}
+const compiledInput = (assetId: string, pillarScore: number, parent: CompiledV9AssetInput["parent"] = null) =>
+  makeCompiledV9AssetInput({ assetId, pillarScore, parent, sourceKey: "matched" });
 
 function executeInvariant(invariant: MatchedV9Invariant): void {
   switch (invariant.kind) {

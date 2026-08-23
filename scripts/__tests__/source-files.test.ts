@@ -1,28 +1,17 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mts";
+import { createTempRepoTracker } from "./helpers/test-state";
 
-let tempDirs: string[] = [];
+const { cleanup, makeRoot } = createTempRepoTracker("pharos-source-files");
 
-function makeTempRepo(): string {
-  const dir = mkdtempSync(join(tmpdir(), "pharos-source-files-"));
-  tempDirs.push(dir);
-  return dir;
-}
-
-afterEach(() => {
-  for (const dir of tempDirs) {
-    rmSync(dir, { recursive: true, force: true });
-  }
-  tempDirs = [];
-});
+afterEach(cleanup);
 
 describe("collectSourceFiles", () => {
   it("recursively collects matching extensions while skipping default generated/test dirs", () => {
-    const root = makeTempRepo();
+    const root = makeRoot();
     mkdirSync(join(root, "src/app/demo"), { recursive: true });
     mkdirSync(join(root, "src/app/__tests__"), { recursive: true });
     mkdirSync(join(root, "src/app/__mocks__"), { recursive: true });
@@ -44,14 +33,14 @@ describe("collectSourceFiles", () => {
   });
 
   it("resolves relative roots from the provided cwd and preserves absolute roots", () => {
-    const root = makeTempRepo();
+    const root = makeRoot();
 
     expect(resolveSourceRoot("src/app", root)).toBe(join(root, "src/app"));
     expect(resolveSourceRoot(root, "/tmp/elsewhere")).toBe(root);
   });
 
   it("can skip dot files and dot directories without changing the default scan contract", () => {
-    const root = makeTempRepo();
+    const root = makeRoot();
     mkdirSync(join(root, "src/.cache"), { recursive: true });
     writeFileSync(join(root, "src/page.ts"), "export const page = true;\n");
     writeFileSync(join(root, "src/.hidden.ts"), "export const hidden = true;\n");

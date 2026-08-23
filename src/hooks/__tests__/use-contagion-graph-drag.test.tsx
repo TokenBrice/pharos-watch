@@ -3,33 +3,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { useContagionGraphDrag } from "@/hooks/use-contagion-graph-drag";
+import { installSvgCoordinateShim } from "@/components/__tests__/contagion-graph-test-support";
 
-beforeAll(() => {
-  Object.defineProperty(SVGSVGElement.prototype, "createSVGPoint", {
-    configurable: true,
-    value() {
-      const point = {
-        x: 0,
-        y: 0,
-        matrixTransform() {
-          return { x: point.x, y: point.y };
-        },
-      };
-      return point;
-    },
-  });
-
-  Object.defineProperty(SVGSVGElement.prototype, "getScreenCTM", {
-    configurable: true,
-    value() {
-      return {
-        inverse() {
-          return null;
-        },
-      };
-    },
-  });
-});
+beforeAll(installSvgCoordinateShim);
 
 function DragHarness({ simulationKey = "stable" }: { simulationKey?: string }) {
   const {

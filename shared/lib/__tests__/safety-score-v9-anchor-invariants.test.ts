@@ -16,6 +16,7 @@ import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "../safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonPolicy } from "../safety-score-v9/policy";
 import { scoreV9GoldenScenario } from "../safety-score-v9/scenario-evaluator";
 import { scoreCompiledAssetSet } from "../safety-score-v9-research";
+import { makeCompiledV9AssetInput } from "./safety-score-v9-score.test-support";
 
 /**
  * STAGE A invariant + adverse-anchor re-pins for the 2026-07-17 anchor-
@@ -89,41 +90,8 @@ function score(overrides: Partial<V9ScoringInput> = {}) {
   return scoreV9Input(scoringInput(overrides), V9_CANDIDATE_POLICY_V1);
 }
 
-const AS_OF_SEC = 1_780_000_000;
-const AS_OF = new Date(AS_OF_SEC * 1_000).toISOString();
-
-function compiledInput(
-  assetId: string,
-  pillarScore: number,
-  parent: CompiledV9AssetInput["parent"] = null,
-): CompiledV9AssetInput {
-  const pillar = {
-    score: pillarScore,
-    evidenceLevel: "strong" as const,
-    evidence: [{ sourceId: `fixture:${assetId}`, observedAt: AS_OF }],
-    unresolved: [],
-    signals: [],
-  };
-  return {
-    schemaVersion: 1,
-    compilerPolicy: {
-      policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
-      semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
-    },
-    assetId,
-    asOf: AS_OF,
-    compiledAt: AS_OF,
-    archetype: "fiat-cash",
-    pillars: { backing: pillar, exit: pillar, control: pillar },
-    peg: { applicable: false, score: null, activeDepegBps: null, evidence: [], unresolved: [] },
-    implementationLaunchDate: "2022-01-01",
-    trackRecordMonths: 48,
-    parent,
-    structuralSignals: [],
-    unresolved: [],
-    sourceTimestamps: { fixture: AS_OF },
-  };
-}
+const compiledInput = (assetId: string, pillarScore: number, parent: CompiledV9AssetInput["parent"] = null) =>
+  makeCompiledV9AssetInput({ assetId, pillarScore, parent, sourceKey: "fixture" });
 
 describe("anchor-coherence invariants — active", () => {
   it("keeps the 32 golden orderings passing unmodified", () => {

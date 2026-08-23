@@ -1,38 +1,19 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
   collectTableInventory,
   scanTablePrimitives,
 } from "../ci/check-table-primitives.ts";
+import { createTempRepoTracker } from "./helpers/test-state";
 
-let tempDirs: string[] = [];
+const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-table-primitives");
 
-function makeTempRepo(): string {
-  const dir = mkdtempSync(join(tmpdir(), "pharos-table-primitives-"));
-  tempDirs.push(dir);
-  return dir;
-}
-
-function writeFixture(cwd: string, file: string, source: string): void {
-  const path = join(cwd, file);
-  mkdirSync(path.slice(0, path.lastIndexOf("/")), { recursive: true });
-  writeFileSync(path, source);
-}
-
-afterEach(() => {
-  for (const dir of tempDirs) {
-    rmSync(dir, { recursive: true, force: true });
-  }
-  tempDirs = [];
-});
+afterEach(cleanup);
 
 describe("scanTablePrimitives", () => {
   it("allows product code that uses the shared table primitives", () => {
-    const cwd = makeTempRepo();
-    writeFixture(
+    const cwd = makeRoot();
+    writeText(
       cwd,
       "src/app/demo/page.tsx",
       'import { TableFrame } from "@/components/table";\nexport function Page() { return <TableFrame tableId="demo" />; }\n',
@@ -45,8 +26,8 @@ describe("scanTablePrimitives", () => {
   });
 
   it("rejects direct shadcn table imports in product source", () => {
-    const cwd = makeTempRepo();
-    writeFixture(
+    const cwd = makeRoot();
+    writeText(
       cwd,
       "src/app/demo/page.tsx",
       'import { Table } from "@/components/ui/table";\nexport function Page() { return <Table />; }\n',
@@ -63,8 +44,8 @@ describe("scanTablePrimitives", () => {
   });
 
   it("rejects relative and require shadcn table imports in product source", () => {
-    const cwd = makeTempRepo();
-    writeFixture(
+    const cwd = makeRoot();
+    writeText(
       cwd,
       "src/app/demo/page.tsx",
       'import { Table } from "../../components/ui/table";\nconst required = require("../../components/ui/table.tsx");\nexport function Page() { return <Table data-required={Boolean(required)} />; }\n',
@@ -87,8 +68,8 @@ describe("scanTablePrimitives", () => {
   });
 
   it("rejects visible raw table markup in product source", () => {
-    const cwd = makeTempRepo();
-    writeFixture(
+    const cwd = makeRoot();
+    writeText(
       cwd,
       "src/components/raw-table.tsx",
       "export function RawTable() { return <table><tbody /></table>; }\n",
@@ -105,23 +86,23 @@ describe("scanTablePrimitives", () => {
   });
 
   it("allows raw table markup in explicit implementation and fixture allowlists", () => {
-    const cwd = makeTempRepo();
-    writeFixture(
+    const cwd = makeRoot();
+    writeText(
       cwd,
       "src/components/table/table-element.tsx",
       "export function TableElement() { return <table />; }\n",
     );
-    writeFixture(
+    writeText(
       cwd,
       "src/components/ui/table.tsx",
       "export function Table() { return <table />; }\n",
     );
-    writeFixture(
+    writeText(
       cwd,
       "src/components/chart-primitives/data-table.tsx",
       "export function ChartDataTable() { return <table><caption>Chart</caption></table>; }\n",
     );
-    writeFixture(
+    writeText(
       cwd,
       "tests/fixtures/raw-fragment.tsx",
       "export const fixture = <table><tbody /></table>;\n",
@@ -136,8 +117,8 @@ describe("scanTablePrimitives", () => {
 
 describe("collectTableInventory", () => {
   it("lists table identity, primitive kind, chrome, density, naming, and duplicate swipe hints", () => {
-    const cwd = makeTempRepo();
-    writeFixture(
+    const cwd = makeRoot();
+    writeText(
       cwd,
       "src/app/demo/page.tsx",
       `import { DataTableShell, MatrixTable } from "@/components/table";

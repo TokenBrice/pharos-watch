@@ -14,6 +14,7 @@ import {
   type LowestSubDimension,
   type MergedRow,
 } from "../types";
+import { makeMergedRow } from "./fixture";
 import { getTemplate, renderWatchText, TEMPLATES } from "../what-to-watch-templates";
 import type { LiveWatchKey } from "../what-to-watch-templates";
 
@@ -25,57 +26,27 @@ const LIVE_WATCH_KEYS = LOWEST_SUB_DIMENSION_KEYS.filter(
 );
 
 function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
-  return {
+  return makeMergedRow({
     id: "watch-row",
     symbol: "WATCH",
     name: "Watch Row",
     protocolSlug: "watch",
-    variantOf: null,
-    isYieldBearing: false,
-    pegCurrency: "USD",
-    lifecycle: "active",
-    governance: "decentralized",
-    canBeBlacklisted: false,
     mechanismArchetype: "cdp",
-    supplyUsd: 1_000_000_000,
     pegScore: 95,
-    activeDepeg: false,
     currentDeviationBps: 5,
-    depegEventCount: 0,
-    lastEventAt: null,
-    dewsScore: 20,
-    safetyGrade: "A",
-    safetyScore: 90,
-    safetyProvenance: "safety-score-v9",
     safetyResilienceScore: 85,
-    safetyDecentralizationScore: 80,
+    safetyScore: 90,
     safetyLiquidityScore: 78,
-    custodyModel: "onchain",
-    bluechipGrade: "A",
-    liquidityScore: 80,
     effectiveTvlUsd: 100_000_000,
-    concentrationHhi: 0.2,
-    chainTvl: { ethereum: 100_000_000 },
-    pharosYieldScore: 80,
-    apy30d: 5,
     apyVariance30d: 0.4,
-    benchmarkRate: 4.5,
-    sourceRiskScore: 20,
-    venueRiskTier: "low",
-    warningSignals: [],
-    deploymentPlace: "native-wrapper",
-    sourceSwitch: false,
     yieldProtocolSlug: "watch",
     yieldVenueChain: "ethereum",
-    yieldHistoryDays: 365,
     yieldFreshness: { capturedAt: 0, ageSeconds: 60 },
-    trackingSpanDays: 365,
-    isRecentListing: false,
     pegSummaryAgeSec: 60,
     dexTvlAgeSec: 60,
     dewsAgeSec: 60,
     ...overrides,
-  };
+  });
 }
 
 function lowest(

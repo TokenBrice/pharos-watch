@@ -6,59 +6,21 @@ import type {
   SelectorComponent,
   SelectorInput,
 } from "../types";
+import { makeMergedRow } from "./fixture";
 
 function makeRow(id: string, overrides: Partial<MergedRow> = {}): MergedRow {
-  return {
+  return makeMergedRow({
     id,
     symbol: id.toUpperCase(),
     name: id,
     protocolSlug: id,
-    variantOf: null,
-    isYieldBearing: false,
-    pegCurrency: "USD",
-    lifecycle: "active",
-    governance: "decentralized",
-    canBeBlacklisted: false,
-    mechanismArchetype: null,
     supplyUsd: 100_000_000,
-    pegScore: 90,
-    activeDepeg: false,
-    currentDeviationBps: 10,
-    depegEventCount: 0,
-    lastEventAt: null,
     dewsScore: 25,
-    safetyGrade: "A",
-    safetyScore: 80,
-    safetyProvenance: "safety-score-v9",
-    safetyResilienceScore: 80,
-    safetyDecentralizationScore: 80,
-    safetyLiquidityScore: 80,
-    custodyModel: "onchain",
-    bluechipGrade: "A",
-    liquidityScore: 80,
     effectiveTvlUsd: 50_000_000,
     concentrationHhi: 0.3,
     chainTvl: { ethereum: 40_000_000 },
-    pharosYieldScore: 80,
-    apy30d: 5,
-    apyVariance30d: 0.5,
-    benchmarkRate: 4.5,
-    sourceRiskScore: 20,
-    venueRiskTier: "low",
-    warningSignals: [],
-    deploymentPlace: "native-wrapper",
-    sourceSwitch: false,
-    yieldProtocolSlug: null,
-    yieldVenueChain: null,
-    yieldHistoryDays: 365,
-    yieldFreshness: null,
-    trackingSpanDays: 365,
-    isRecentListing: false,
-    pegSummaryAgeSec: null,
-    dexTvlAgeSec: null,
-    dewsAgeSec: null,
     ...overrides,
-  };
+  });
 }
 
 function input(overrides: Partial<SelectorInput> = {}): SelectorInput {

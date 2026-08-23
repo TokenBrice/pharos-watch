@@ -1,24 +1,12 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import { migrateStablecoinSidecar } from "../lib/stablecoin-sidecar-workflow";
 import { parseStablecoinSidecarMigrationArgs } from "../maintenance/migrate-stablecoin-sidecar";
+import { createTempRepoTracker } from "./helpers/test-state";
 
-const tempDirs: string[] = [];
-
-function makeTempRoot(): string {
-  const rootDir = mkdtempSync(join(tmpdir(), "stablecoin-sidecar-workflow-"));
-  tempDirs.push(rootDir);
-  return rootDir;
-}
-
-function writeJson(rootDir: string, relativePath: string, value: unknown): void {
-  const absolutePath = join(rootDir, relativePath);
-  mkdirSync(dirname(absolutePath), { recursive: true });
-  writeFileSync(absolutePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-}
+const { cleanup, makeRoot: makeTempRoot, writeJson } = createTempRepoTracker("stablecoin-sidecar-workflow");
 
 function readJson(rootDir: string, relativePath: string): Record<string, unknown> {
   return JSON.parse(readFileSync(join(rootDir, relativePath), "utf8")) as Record<string, unknown>;
@@ -95,11 +83,7 @@ const custodyProfile = {
   knownUnknownExposurePct: 0,
 };
 
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) {
-    rmSync(dir, { force: true, recursive: true });
-  }
-});
+afterEach(cleanup);
 
 describe("stablecoin sidecar migration workflow", () => {
   const cases = [
