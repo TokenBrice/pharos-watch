@@ -127,4 +127,5 @@ export interface DdrHistoricalEvent {
   startedAt: number;
   endedAt: number | null;
   recoveryPrice: number | null;
+  closeReason?: string | null;
 }

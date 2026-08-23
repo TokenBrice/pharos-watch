@@ -1,11 +1,13 @@
+import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import {
   hasTerminalEvidence,
+  type DdrrActualEventInput,
   type DdrrV2CoverageInput,
 } from "@shared/lib/depeg-resolver-review";
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { numberValue, stringValue } from "@shared/lib/type-guards";
-import type { DdrrActualEvent, DdrrLineage } from "@shared/types/depeg-resolver-review";
+import type { DdrrLineage } from "@shared/types/depeg-resolver-review";
 import type {
   DdrCanonicalIncident,
   DdrSealedPublicPrediction,
@@ -77,16 +79,21 @@ export function baseFieldsForSealedExposure(
   };
 }
 
-function sourceEventState(actual: DdrrActualEvent | null): DdrrV2CoverageInput["sourceEventState"] {
+function isRecoveredClosure(actual: DdrrActualEventInput): boolean {
+  const closure = classifyDepegClosure(actual);
+  return closure === "recovered" || closure === "legacy_recovered";
+}
+
+function sourceEventState(actual: DdrrActualEventInput | null): DdrrV2CoverageInput["sourceEventState"] {
   if (!actual) return "missing";
   if (hasTerminalEvidence(actual)) return "terminal";
-  if (actual.endedAt != null && actual.recoveryPrice != null) return "recovered";
+  if (isRecoveredClosure(actual)) return "recovered";
   if (actual.endedAt != null) return "orphan_closed";
   return "active";
 }
 
 function terminalEvidenceAtForEligibility(
-  actual: DdrrActualEvent | null,
+  actual: DdrrActualEventInput | null,
   eligibleAt: number,
 ): number | null {
   if (!actual) return null;
@@ -99,16 +106,16 @@ function terminalEvidenceAtForEligibility(
   return actual.terminalEvidenceAt ?? null;
 }
 
-function hasTerminalBeforeEligibility(actual: DdrrActualEvent | null, eligibleAt: number): boolean {
+function hasTerminalBeforeEligibility(actual: DdrrActualEventInput | null, eligibleAt: number): boolean {
   const evidenceAt = terminalEvidenceAtForEligibility(actual, eligibleAt);
   return evidenceAt != null && evidenceAt < eligibleAt;
 }
 
-function hasTerminalStatusOrEvidence(actual: DdrrActualEvent | null): boolean {
+function hasTerminalStatusOrEvidence(actual: DdrrActualEventInput | null): boolean {
   return actual != null && hasTerminalEvidence(actual);
 }
 
-function terminalEvidenceSourceDate(actual: DdrrActualEvent | null): string | null {
+function terminalEvidenceSourceDate(actual: DdrrActualEventInput | null): string | null {
   if (!actual || !("terminalEvidenceSourceDate" in actual)) return null;
   const value = actual.terminalEvidenceSourceDate;
   return typeof value === "string" ? value : null;
@@ -116,7 +123,7 @@ function terminalEvidenceSourceDate(actual: DdrrActualEvent | null): string | nu
 
 function coverageStateForIncident(
   incident: DdrCanonicalIncident,
-  actual: DdrrActualEvent | null,
+  actual: DdrrActualEventInput | null,
   nowSec: number,
 ): Pick<DdrrV2CoverageInput, "predictionState" | "coverageCause" | "operationalCoverageCause" | "outcomeQualityState" | "reason"> {
   const reviewEligibleAt = coverageEligibilityAt(incident);
@@ -129,7 +136,7 @@ function coverageStateForIncident(
       reason: "source_event_missing",
     };
   }
-  if (actual.endedAt != null && actual.recoveryPrice != null && actual.endedAt < reviewEligibleAt) {
+  if (isRecoveredClosure(actual) && actual.endedAt != null && actual.endedAt < reviewEligibleAt) {
     return {
       predictionState: "resolved_before_prediction",
       coverageCause: "pre_lock_recovered",
@@ -156,7 +163,7 @@ function coverageStateForIncident(
       reason: null,
     };
   }
-  if (actual.endedAt != null && actual.recoveryPrice != null) {
+  if (isRecoveredClosure(actual)) {
     return {
       predictionState: "missed_lock_recovered",
       coverageCause: "lock_missed",
@@ -203,7 +210,7 @@ function coverageStateForIncident(
 
 export function coverageRowForIncident(
   incident: DdrCanonicalIncident,
-  actual: DdrrActualEvent | null,
+  actual: DdrrActualEventInput | null,
   nowSec: number,
   lineage?: DdrrLineage,
 ): DdrrV2CoverageInput {
@@ -226,7 +233,7 @@ export function coverageRowForIncident(
 export function failedPublicationCoverageRow(
   sealed: DdrSealedPublicPrediction,
   incident: DdrCanonicalIncident,
-  actual: DdrrActualEvent | null,
+  actual: DdrrActualEventInput | null,
   payload: Record<string, unknown>,
   lineage?: DdrrLineage,
 ): DdrrV2CoverageInput {

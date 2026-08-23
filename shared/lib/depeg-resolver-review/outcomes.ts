@@ -1,5 +1,6 @@
 import type { DdrrActualOutcome, DdrrSourceEventState } from "../../types/depeg-resolver-review";
 import type { DdrrActualEventInput, DdrrAssessmentInput } from "./inputs";
+import { classifyDepegClosure } from "../depeg-closure";
 import { isTerminalStablecoinStatus } from "../stablecoin-lifecycle";
 
 export interface DdrrDerivedOutcome {
@@ -127,10 +128,12 @@ export function deriveActualOutcome(
   const terminalEvidenceAt = event.terminalEvidenceAt ?? null;
   const terminalEvidenceInterval = event.terminalEvidenceInterval ?? null;
   const terminalEvidencePrecision = event.terminalEvidencePrecision ?? null;
+  const closure = classifyDepegClosure(event);
+  const recovered = closure === "recovered" || closure === "legacy_recovered";
   if (
     terminalObserved &&
+    recovered &&
     event.endedAt != null &&
-    event.recoveryPrice != null &&
     isTerminalEvidenceSettledBy(terminalEvidenceAt, terminalEvidenceInterval, event.endedAt)
   ) {
     return terminalOutcome({
@@ -140,7 +143,7 @@ export function deriveActualOutcome(
       terminalEvidencePrecision,
     });
   }
-  if (event.endedAt != null && event.recoveryPrice != null) {
+  if (recovered && event.endedAt != null) {
     return {
       actualOutcome: "recovered",
       sourceEventState: "recovered",
@@ -153,7 +156,7 @@ export function deriveActualOutcome(
       dataIssueReason: null,
     };
   }
-  if (terminalObserved && (event.endedAt == null || event.recoveryPrice == null)) {
+  if (terminalObserved && !recovered) {
     return terminalOutcome({
       actualEndedAt: event.endedAt,
       terminalEvidenceAt,
@@ -161,7 +164,7 @@ export function deriveActualOutcome(
       terminalEvidencePrecision,
     });
   }
-  if (event.endedAt != null && event.recoveryPrice == null) {
+  if (event.endedAt != null) {
     return {
       actualOutcome: "orphan_closed",
       sourceEventState: "orphan_closed",

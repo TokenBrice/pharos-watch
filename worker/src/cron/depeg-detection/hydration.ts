@@ -11,14 +11,13 @@ import {
   loadDexPoolChallengers,
   loadDexPriceRows,
   loadDexPriceSources,
-  type DepegRow,
 } from "../../lib/depeg-helpers";
 import {
   fetchCurrentNativePegQuotes,
   type NativePegQuoteSession,
 } from "../../lib/native-peg-quotes";
 import { logWorkerEvent } from "../../lib/structured-log";
-import type { HydratedDepegDetection } from "./types";
+import type { DepegDetectionRow, HydratedDepegDetection } from "./types";
 
 /** Bound open-event hydration so one detection pass cannot materialize an unbounded set. */
 export const MAX_OPEN_DEPEG_EVENTS = 200;
@@ -63,9 +62,9 @@ export async function hydrateDepegDetection(
 
   throwIfAborted(signal);
   const openResult = await db
-    .prepare(`SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events WHERE ended_at IS NULL LIMIT ?`)
+    .prepare(`SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS}, recovery_last_seen_at FROM depeg_events WHERE ended_at IS NULL LIMIT ?`)
     .bind(MAX_OPEN_DEPEG_EVENTS)
-    .all<DepegRow>();
+    .all<DepegDetectionRow>();
   const openRows = openResult.results ?? [];
   const openRowsLimitReached = openRows.length >= MAX_OPEN_DEPEG_EVENTS;
   if (openRowsLimitReached) {

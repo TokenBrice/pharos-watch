@@ -1,4 +1,5 @@
 import type { DepegDirection } from "./depeg-signals";
+import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { coerceDepegDirection, pickMoreSevereBps } from "./depeg-signals";
 import type { PendingDepegReason } from "./depeg-helpers";
 
@@ -103,6 +104,9 @@ export function buildUpsertPendingDepegStmt(
   db: D1Database,
   params: PendingDepegUpsertParams,
 ): D1PreparedStatement {
+  const preservesEpisode =
+    `depeg_pending.direction = excluded.direction AND ` +
+    `excluded.last_seen_at - depeg_pending.last_seen_at <= ${DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC}`;
   return db.prepare(
     `INSERT INTO depeg_pending (
        stablecoin_id,
@@ -128,26 +132,26 @@ export function buildUpsertPendingDepegStmt(
        reason = excluded.reason,
        updated_at = excluded.updated_at,
        direction = CASE
-         WHEN depeg_pending.direction = excluded.direction THEN depeg_pending.direction
+         WHEN ${preservesEpisode} THEN depeg_pending.direction
          ELSE excluded.direction
        END,
        first_seen_bps = CASE
-         WHEN depeg_pending.direction = excluded.direction THEN depeg_pending.first_seen_bps
+         WHEN ${preservesEpisode} THEN depeg_pending.first_seen_bps
          ELSE excluded.first_seen_bps
        END,
        first_seen_at = CASE
-         WHEN depeg_pending.direction = excluded.direction THEN depeg_pending.first_seen_at
+         WHEN ${preservesEpisode} THEN depeg_pending.first_seen_at
          ELSE excluded.first_seen_at
        END,
        first_price = CASE
-         WHEN depeg_pending.direction = excluded.direction THEN depeg_pending.first_price
+         WHEN ${preservesEpisode} THEN depeg_pending.first_price
          ELSE excluded.first_price
        END,
        last_seen_bps = excluded.last_seen_bps,
        last_seen_at = excluded.last_seen_at,
        last_price = excluded.last_price,
        peak_seen_bps = CASE
-         WHEN depeg_pending.direction = excluded.direction THEN
+         WHEN ${preservesEpisode} THEN
            CASE
              WHEN ABS(excluded.peak_seen_bps) > ABS(COALESCE(depeg_pending.peak_seen_bps, depeg_pending.first_seen_bps))
                THEN excluded.peak_seen_bps
@@ -156,7 +160,7 @@ export function buildUpsertPendingDepegStmt(
          ELSE excluded.peak_seen_bps
        END,
        peak_price = CASE
-         WHEN depeg_pending.direction = excluded.direction THEN
+         WHEN ${preservesEpisode} THEN
            CASE
              WHEN ABS(excluded.peak_seen_bps) > ABS(COALESCE(depeg_pending.peak_seen_bps, depeg_pending.first_seen_bps))
                THEN excluded.peak_price
@@ -165,7 +169,7 @@ export function buildUpsertPendingDepegStmt(
          ELSE excluded.peak_price
        END,
        peg_reference = CASE
-         WHEN depeg_pending.direction = excluded.direction THEN depeg_pending.peg_reference
+         WHEN ${preservesEpisode} THEN depeg_pending.peg_reference
          ELSE excluded.peg_reference
        END`
   ).bind(

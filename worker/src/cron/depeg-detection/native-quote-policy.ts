@@ -8,7 +8,7 @@ import {
   type DepegDirection,
   type DepegSignal,
 } from "../../lib/depeg-signals";
-import type { DepegAssetDecision, DepegPersistenceCommand } from "./types";
+import type { DepegAssetDecision, DepegDetectionRow, DepegPersistenceCommand } from "./types";
 
 interface NativeQuotePolicyContext {
   trackedCoinId: string;
@@ -95,7 +95,7 @@ function suppressionMessage(ctx: NativeQuotePolicyContext): string {
 
 export function applyNativeQuoteVeto(
   ctx: NativeQuotePolicyContext,
-  existing: DepegRow | undefined,
+  existing: DepegDetectionRow | undefined,
 ): DepegAssetDecision | null {
   const nativeSupportsPrimaryDirection =
     ctx.nativeSignal != null &&
@@ -119,7 +119,7 @@ export function applyNativeQuoteVeto(
 
     if (existing) {
       decision.seenEventIds.push(existing.id);
-      if (existing.recovery_first_seen_at != null) {
+      if (existing.recovery_first_seen_at != null || existing.recovery_last_seen_at != null) {
         decision.commands.push({ type: "clear-recovery", id: existing.id });
       }
     }
@@ -130,7 +130,7 @@ export function applyNativeQuoteVeto(
   if (ctx.rawAbsBps < ctx.threshold && existing && nativeSupportsExistingDirection) {
     const decision = emptyDecision(ctx.trackedCoinId);
     decision.seenEventIds.push(existing.id);
-    if (existing.recovery_first_seen_at != null) {
+    if (existing.recovery_first_seen_at != null || existing.recovery_last_seen_at != null) {
       decision.commands.push({ type: "clear-recovery", id: existing.id });
     }
     decision.diagnostics.push({

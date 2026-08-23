@@ -1,8 +1,8 @@
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import type { DdrrActualEventInput } from "@shared/lib/depeg-resolver-review";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
-import type { DdrrActualEvent } from "@shared/types/depeg-resolver-review";
 import { abortIf } from "../depeg-resolver/utils";
 import { buildInClause, chunkArray } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
@@ -18,6 +18,7 @@ interface ActualEventDbRow {
   started_at: number;
   ended_at: number | null;
   recovery_price: number | null;
+  close_reason: string | null;
 }
 
 interface TapeTerminalEvidenceRow {
@@ -47,7 +48,7 @@ interface TapeTerminalEvidenceCachePayload {
   evidenceByStablecoinId: Record<string, TerminalEvidence>;
 }
 
-export interface DdrrActualEventWithTerminalEvidence extends DdrrActualEvent {
+export interface DdrrActualEventWithTerminalEvidence extends DdrrActualEventInput {
   terminalEvidenceSourceDate: string | null;
 }
 
@@ -435,7 +436,7 @@ export async function loadActualEventsByEventIds(
     const inClause = buildInClause(ids);
     const result = await db
       .prepare(
-        `SELECT id, stablecoin_id, started_at, ended_at, recovery_price
+        `SELECT id, stablecoin_id, started_at, ended_at, recovery_price, close_reason
          FROM depeg_events
          WHERE id IN (${inClause.sql})`,
       )
@@ -475,6 +476,7 @@ export async function loadActualEventsByEventIds(
       startedAt: row.started_at,
       endedAt: row.ended_at,
       recoveryPrice: row.recovery_price,
+      closeReason: row.close_reason,
       stablecoinStatus: meta?.status ?? null,
       terminalObserved,
       terminalEvidenceAt: terminalEvidence.terminalEvidenceAt,

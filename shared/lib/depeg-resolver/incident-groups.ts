@@ -5,11 +5,12 @@
  * shallow, top coins 1000s of fragments). Grouping collapses same-coin,
  * same-direction fragments separated by < 6h into one incident; quarantine
  * removes pathological high-frequency detectors so they cannot dominate a
- * stratum. Outcome labels come from `recovery_price` presence, NOT survival
- * (a dead coin can show "recovered" backfill fragments — handled in resolution).
+ * stratum. Outcome labels use explicit closure reasons with a recovery-price
+ * fallback only for legacy rows that predate reliable reasons.
  */
 
 import { median } from "../stats";
+import { classifyDepegClosure, type DepegClosureClassification } from "../depeg-closure";
 import type { DepegDirection } from "../../types/market";
 import type { DdrHistoricalEvent } from "./inputs";
 import {
@@ -46,7 +47,7 @@ export interface DdrIncident {
   startedAt: number;
   endedAt: number | null;
   durationSec: number | null;
-  /** true when the final fragment closed in-band (recovery_price present) */
+  /** true when the final fragment has an explicit or legacy-compatible recovery close */
   recovered: boolean;
   /** Fragment peak severities relative to incident start; used to avoid depth leakage at landmark age. */
   fragments?: DdrIncidentFragment[];
@@ -77,7 +78,7 @@ export function groupIncidents(
       startedAt: number;
       endedAt: number | null;
       worstBps: number;
-      lastRecovery: number | null;
+      lastClosure: DepegClosureClassification;
       fragments: DdrIncidentFragment[];
     } | null = null;
 
@@ -94,7 +95,7 @@ export function groupIncidents(
         startedAt: cur.startedAt,
         endedAt: cur.endedAt,
         durationSec,
-        recovered: cur.endedAt != null && cur.lastRecovery != null,
+        recovered: cur.lastClosure === "recovered" || cur.lastClosure === "legacy_recovered",
         fragments: cur.fragments,
       });
       cur = null;
@@ -106,7 +107,7 @@ export function groupIncidents(
           startedAt: ev.startedAt,
           endedAt: ev.endedAt,
           worstBps: ev.peakDeviationBps,
-          lastRecovery: ev.recoveryPrice,
+          lastClosure: classifyDepegClosure(ev),
           fragments: [{ offsetSec: 0, peakDeviationBps: ev.peakDeviationBps }],
         };
         continue;
@@ -117,7 +118,7 @@ export function groupIncidents(
       if (contiguous) {
         if (Math.abs(ev.peakDeviationBps) > Math.abs(cur.worstBps)) cur.worstBps = ev.peakDeviationBps;
         cur.endedAt = ev.endedAt; // null if this fragment is open
-        cur.lastRecovery = ev.recoveryPrice;
+        cur.lastClosure = classifyDepegClosure(ev);
         cur.fragments.push({
           offsetSec: Math.max(0, ev.startedAt - cur.startedAt),
           peakDeviationBps: ev.peakDeviationBps,
@@ -128,7 +129,7 @@ export function groupIncidents(
           startedAt: ev.startedAt,
           endedAt: ev.endedAt,
           worstBps: ev.peakDeviationBps,
-          lastRecovery: ev.recoveryPrice,
+          lastClosure: classifyDepegClosure(ev),
           fragments: [{ offsetSec: 0, peakDeviationBps: ev.peakDeviationBps }],
         };
       }

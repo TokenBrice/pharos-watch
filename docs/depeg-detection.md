@@ -23,6 +23,7 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 | `DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD` | $750,000,000 | Adds the large-cap flag when source depth is below 2 or severity is at least 2x the peg threshold |
 | `DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD` | $500,000,000 | Adds the large-cap flag when both source depth is below 2 and severity is at least 2x the peg threshold |
 | `DEPEG_PENDING_MIN_AGE_SEC` | 900 (15 min) | Minimum continuous onset or recovery confirmation window |
+| `DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC` | 1200 (20 min) | Largest gap allowed between consecutive qualifying onset or recovery observations. Set above measured `sync-stablecoins` start jitter (sampled gaps 868/907/932/932s) so ordinary scheduler drift is not read as a coverage break, and below two producer intervals so a fully missed run still resets the episode |
 | `DEPEG_PENDING_EXPIRY_SEC` | 2700 (45 min) | Base time before a pending record can expire |
 | `DEPEG_PENDING_EXTENDED_EXPIRY_SEC` | 8100 (135 min) | Extended limit when primary evidence still points same-direction or confirmation sources are unavailable/circuit-open |
 | `DEPEG_PENDING_SEVERE_EXPIRY_SEC` | 10800 (180 min) | Severe/extreme-move limit; expiry records `unconfirmed-severe` |
@@ -60,7 +61,8 @@ CREATE TABLE IF NOT EXISTS depeg_events (
   confirmation_sources TEXT,            -- JSON/provenance for promoted pending rows
   pending_reason TEXT,                  -- reason flags carried from depeg_pending
   close_reason TEXT,                    -- why the row closed, NULL for open/legacy rows
-  recovery_first_seen_at INTEGER        -- first qualifying recovery observation, NULL outside recovery confirmation
+  recovery_first_seen_at INTEGER,       -- first qualifying recovery observation, NULL outside recovery confirmation
+  recovery_last_seen_at INTEGER         -- most recent consecutive qualifying recovery observation
 );
 
 CREATE INDEX idx_depeg_stablecoin ON depeg_events(stablecoin_id);
@@ -108,7 +110,7 @@ CREATE TABLE IF NOT EXISTS depeg_pending (
 CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
 ```
 
-One row per coin maximum. Holds depeg candidates awaiting confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema and follow-on changes through migration 0227 were squashed into `0000_baseline.sql` on 2026-07-30, so their individual migration files no longer exist. Migration `0228_depeg_resolver_incident_closed_pre_lock.sql` is the current unsquashed tail; use `worker/migrations/MANIFEST.md` for the historical sequence and field ownership.
+One row per coin maximum. Holds depeg candidates awaiting confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema and follow-on changes through migration 0227 were squashed into `0000_baseline.sql` on 2026-07-30, so their individual migration files no longer exist. The active migration tail starts at `0228_depeg_resolver_incident_closed_pre_lock.sql`; `0232_depeg_recovery_continuity.sql` adds the nullable recovery-continuity endpoint and `0233_ddr_lock_opportunity_attempt_key.sql` adds resolver audit idempotency. Use `worker/migrations/MANIFEST.md` for the full sequence and field ownership.
 
 ### depeg_event_provenance (migration 0127)
 
@@ -202,8 +204,11 @@ Threshold decisions use `abs(rawBps)` so a value that merely rounds to the bound
 
 Whenever a row is written to `depeg_pending`, the worker now upserts directional state instead of treating the table as write-once:
 
-- same direction: preserve `first_seen_*`, refresh `last_seen_*`, and update `peak_seen_*` when the move worsens
+- same direction with no more than 1200 seconds since the prior qualifying observation: preserve `first_seen_*`, refresh `last_seen_*`, and update `peak_seen_*` when the move worsens
+- same direction after a gap greater than 1200 seconds: reset first/last/peak fields to the new observation; the blind interval cannot count toward confirmation
 - opposite direction: reset the row as a new incident instead of preserving stale first-seen direction metadata
+
+The 1200-second continuity tolerance is bounded from both sides. A production sample of five consecutive `sync-stablecoins` invocations captured on 2026-08-07 measured start-to-start gaps of 932, 932, 868, and 907 seconds (range 868-932, or -32/+32 seconds around the declared 900-second schedule). The tolerance therefore **cannot** equal one producer interval: three of those four ordinary gaps exceed 900 seconds, so a 900-second tolerance would reset `first_seen_at` on almost every observation, leave `last_seen_at - first_seen_at` permanently at zero, and prevent the 15-minute confirmation window from ever completing — silently disabling depeg confirmation rather than tightening it. The tolerance also stays below two producer intervals so that a genuinely missed run (~1800 seconds) still resets the episode, which is the property this rule exists to enforce: a blind interval must never prove persistence.
 
 Detection persistence commits all mutations for one stablecoin as one ordered atomic transition, then proceeds to the next asset.
 
@@ -212,7 +217,8 @@ Detection persistence commits all mutations for one stablecoin as one ordered at
 - If a supported CoinGecko native-currency quote still shows the same-direction depeg: keep the event open and ignore the derived recovery
 - If a fresh trusted aggregate DEX row still crosses the depeg threshold in the existing event direction, with at least 2 protocol-level DEX groups corroborating that direction: keep the event open and ignore the primary recovery print
 - If qualifying individual pool challengers still cross the threshold in the existing event direction — either one pool with at least $5M TVL or at least 2 independent protocol/source-family groups — keep the event open and ignore the primary recovery print
-- A qualifying recovery must be at or inside 50% of the trigger threshold: 50 bps for USD pegs and 75 bps for non-USD pegs. The first qualifying observation sets `recovery_first_seen_at`; the row closes only after the recovery remains qualified for at least 15 minutes.
+- A qualifying recovery must be at or inside 50% of the trigger threshold: 50 bps for USD pegs and 75 bps for non-USD pegs. The first qualifying observation sets both recovery timestamps; each consecutive qualifying observation refreshes `recovery_last_seen_at`. The row closes only after total recovery age reaches 15 minutes and the gap from the prior qualified observation is no more than 1200 seconds.
+- A later qualifying recovery after a gap greater than 1200 seconds resets both recovery timestamps to the new observation. Missing data leaves the event open, but the missing interval never proves recovery.
 - A reading between the recovery and trigger thresholds is a deadband: keep the event open and clear any partial recovery timer.
 - When the existing row was opened from a native-fiat quote, prefer the recovered native quote and persist it with `close_reason = 'recovered-native'`; if only a qualifying USD primary or DEX recovery exists, close with `recovery_price = NULL` to preserve the row's quote-domain invariant.
 - Authoritative or fresh multi-source primary recovery can advance the timer. Ambiguous primary recovery requires a trusted aggregate DEX row, at least 2 corroborating DEX protocol groups, and no qualifying challenger showing the old direction.
@@ -293,7 +299,7 @@ Age checks:
 
 **Primary-still-depegged safeguard:** the REJECT rows above assume the refreshed authoritative primary price no longer shows the pending direction. When it still does (`primarySameDirectionDepegged`), a single opposing secondary source cannot reject the row -- rejection then requires at least two independent hard-opposing sources (reason `two-hard-opposing-sources:...`); otherwise one opposing source suffices (reason `secondary-evidence-opposes`).
 
-Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, direction = the active pending direction, the refreshed authoritative `peg_reference` (or the stored pending reference when the refreshed non-USD fiat reference is not authoritative), canonical `confirmation_sources` beginning with `temporal:15m`, and peak = worst of the stored pending peak, current same-domain authoritative price, and trustworthy same-direction confirmer prices, then atomically inserts the outcome and deletes from `depeg_pending` as one candidate transition.
+Promotion inserts into `depeg_events` with `started_at` = the current continuous episode's `first_seen_at`, direction = the active pending direction, the refreshed authoritative `peg_reference` (or the stored pending reference when the refreshed non-USD fiat reference is not authoritative), canonical `confirmation_sources` beginning with `temporal:15m`, and peak = worst of the stored pending peak, current same-domain authoritative price, and trustworthy same-direction confirmer prices, then atomically inserts the outcome and deletes from `depeg_pending` as one candidate transition.
 
 Pending rows that pass the 45-minute base expiry but still have same-direction primary evidence, unavailable sources, or open confirmation circuits remain pending until their final dynamic limit. Rows that exceed that final limit are deleted with a recorded pending outcome; extreme-move expiries use `unconfirmed-severe` instead of the generic `expired` label.
 

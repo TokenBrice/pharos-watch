@@ -18,6 +18,8 @@
 | 0229     | `0229_d1_capacity_compaction.sql`                            | Add gzip DDR publication snapshots, daily yield history, and decision-episode fingerprints.                |
 | 0230     | `0230_reduce_measured_execution_write_amplification.sql`     | Drop two redundant measured-execution indexes that multiply target and quote inserts.                      |
 | 0231     | `0231_dex_liquidity_7d_volume_measurement.sql`               | Add nullable DEX liquidity 7d-volume measurement markers for null-safe public API presentation.           |
+| 0232     | `0232_depeg_recovery_continuity.sql`                         | Add nullable last-qualified recovery observation time for continuity-safe recovery confirmation.          |
+| 0233     | `0233_ddr_lock_opportunity_attempt_key.sql`                  | Add nullable retry-attempt identity and a partial unique index for idempotent DDR lock audit writes.       |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -298,6 +300,8 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0227_cngn_ddr_events_90718_90738_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90718, 90729, and 90738 without a separate corrective migration.
 - `0230_reduce_measured_execution_write_amplification.sql`: Worker rollback needs no schema change. If production query latency regresses, restore only the affected index in a forward migration after confirming its query plan; Worker rollback does not recreate dropped indexes.
 - `0231_dex_liquidity_7d_volume_measurement.sql`: Worker rollback ignores the additive nullable columns. Retain them so forward Workers can distinguish measured 7d volume from unknown source coverage after redeploy.
+- `0232_depeg_recovery_continuity.sql`: Worker rollback ignores the additive nullable column. Retain it; prior Workers continue using `recovery_first_seen_at`, while forward Workers reset incomplete legacy recovery episodes safely.
+- `0233_ddr_lock_opportunity_attempt_key.sql`: Worker rollback ignores the additive nullable column and partial unique index. Retain both; historical null-key audit rows remain append-only and prior Workers continue writing null keys.
 
 ## Rollback Procedure
 

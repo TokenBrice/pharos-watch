@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
-import type { DepegRow } from "../../../lib/depeg-helpers";
+import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { decideDepegAsset } from "../decision-engine";
+import type { DepegDetectionRow } from "../types";
 
 const usdMeta: StablecoinMeta = {
   id: "usdt-tether",
@@ -48,7 +49,7 @@ function makeAsset(overrides: Partial<PegAssetBase> = {}): PegAssetBase {
   };
 }
 
-function makeExistingEvent(overrides: Partial<DepegRow> = {}): DepegRow {
+function makeExistingEvent(overrides: Partial<DepegDetectionRow> = {}): DepegDetectionRow {
   return {
     ...makeDepegRow({
       id: 7,
@@ -155,6 +156,27 @@ describe("decideDepegAsset", () => {
       level: "log",
       message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window)",
     }]);
+
+    const directionFlip = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({ price: 1.02 }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+    expect(directionFlip.commands[0]).toMatchObject({
+      type: "close-event",
+      recoveryPrice: null,
+      closeReason: "superseded-direction",
+    });
   });
 
   it("returns pending command diagnostics without logging as a side effect", () => {
@@ -444,6 +466,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.9758,
         peg_reference: 1,
         recovery_first_seen_at: 1_750_000_000,
+        recovery_last_seen_at: 1_750_000_000,
       }),
       pegRates: { peggedREAL: 0.191895 },
       pegRateSources: { peggedREAL: "median" },
@@ -495,13 +518,18 @@ describe("decideDepegAsset", () => {
         type: "begin-recovery",
         id: 7,
         firstSeenAt: 1_750_000_900,
+        lastSeenAt: 1_750_000_900,
       },
     ]);
   });
 
   it("keeps an event open until the full recovery window elapses", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_900,
+    const now = 1_750_000_900;
+    const tolerance = DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
+    // Anchored to the tolerance rather than a literal: a gap at or under it is still
+    // continuous coverage, one second past it is a blind interval that must reset.
+    const decisions = [tolerance - 1, tolerance, tolerance + 1].map((gap) => decideDepegAsset({
+      now,
       asset: makeAsset({ price: 1.001 }),
       meta: usdMeta,
       existing: makeExistingEvent({
@@ -513,15 +541,22 @@ describe("decideDepegAsset", () => {
         start_price: 0.98,
         peak_price: 0.98,
         peg_reference: 1,
-        recovery_first_seen_at: 1_750_000_300,
+        recovery_first_seen_at: now - gap - 900,
+        recovery_last_seen_at: now - gap,
       }),
       pegRates: { peggedUSD: 1 },
       pegRateSources: { peggedUSD: "median" },
       pegRateCounts: { peggedUSD: 4 },
-    });
+    }));
 
-    expect(decision.seenEventIds).toEqual([7]);
-    expect(decision.commands).toEqual([]);
+    expect(decisions[0]?.commands[0]?.type).toBe("close-event");
+    expect(decisions[1]?.commands[0]?.type).toBe("close-event");
+    expect(decisions[2]?.commands).toEqual([{
+      type: "begin-recovery",
+      id: 7,
+      firstSeenAt: now,
+      lastSeenAt: now,
+    }]);
   });
 
   it("clears a partial recovery when price returns to the deadband", () => {
@@ -688,6 +723,7 @@ describe("decideDepegAsset", () => {
         type: "begin-recovery",
         id: 42,
         firstSeenAt: 1_780_630_000,
+        lastSeenAt: 1_780_630_000,
       },
     ]);
   });

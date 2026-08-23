@@ -305,7 +305,10 @@ export async function closeRecoveredPreLockIncidents(
            FROM depeg_events current_event
            WHERE current_event.id = incident.current_event_id
              AND current_event.ended_at IS NOT NULL
-             AND current_event.recovery_price IS NOT NULL
+             AND (
+               current_event.close_reason IN ('recovered-primary', 'recovered-dex', 'recovered-native')
+               OR (current_event.close_reason IS NULL AND current_event.recovery_price IS NOT NULL)
+             )
              AND current_event.ended_at + ? + ? <= ?
          )`,
     )
@@ -1337,7 +1340,20 @@ function assertLockInput(input: RecordLockDeferralInput): void {
   assertPositiveInteger(input.runAt, "runAt");
   assertNonEmpty(input.incidentKey, "incidentKey");
   assertNonEmpty(input.predictionPolicyVersion, "predictionPolicyVersion");
+  if (input.runId != null) assertNonEmpty(input.runId, "runId");
   assertLockMetadata(input);
+}
+
+async function lockOpportunityAttemptKey(
+  input: RecordLockDeferralInput,
+  action: DdrLockAuditAction,
+): Promise<string | null> {
+  if (input.runId == null) return null;
+  return sha256Hex(stableJsonStringifyV1({
+    incidentKey: input.incidentKey,
+    runId: input.runId,
+    action,
+  }));
 }
 
 export async function recordLockDeferral(db: D1Database, input: RecordLockDeferralInput): Promise<void> {
@@ -1345,6 +1361,8 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
 
   const createdAt = input.createdAt ?? input.runAt;
   const reason = input.reason ?? null;
+  const action = input.action ?? "deferred";
+  const attemptKey = await lockOpportunityAttemptKey(input, action);
   await executeAtomicBatch(db, [
     db
       .prepare(
@@ -1352,7 +1370,7 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
          (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
          VALUES (${lockStateInsertValuesSql("1", "?", "'lock_deferred'")})
          ${lockStateOnConflictUpdateSql({
-           incrementDeferralCount: true,
+           incrementDeferralCount: "if-new-attempt",
            preserveDeferralReason: false,
            preserveMetadata: false,
            lastStateSql: "'lock_deferred'",
@@ -1369,12 +1387,13 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
         createdAt,
         createdAt,
         ...bindLockMetadata(input),
+        attemptKey,
       ),
     db
       .prepare(
-        `INSERT INTO depeg_resolver_lock_opportunity_audit
-         (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL})
-         VALUES (${lockAuditInsertValuesSql("NULL", "NULL", "?")})`,
+        `INSERT OR IGNORE INTO depeg_resolver_lock_opportunity_audit
+         (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL}, attempt_key)
+         VALUES (${lockAuditInsertValuesSql("NULL", "NULL", "?")}, ?)`,
       )
       .bind(
         input.incidentKey,
@@ -1383,10 +1402,11 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
         input.runAt,
         input.eligibleAt,
         input.healthStatus ?? "degraded",
-        input.action ?? "deferred",
+        action,
         reason,
         createdAt,
         ...bindLockMetadata(input),
+        attemptKey,
       ),
   ]);
 }
@@ -1403,6 +1423,7 @@ export async function recordLockOpportunity(
   assertLockInput(input);
 
   const createdAt = input.createdAt ?? input.runAt;
+  const attemptKey = await lockOpportunityAttemptKey(input, input.action);
   const stateAction =
     input.action === "publication_retry_pending" ||
     input.action === "publication_failed" ||
@@ -1442,9 +1463,9 @@ export async function recordLockOpportunity(
   statements.push(
     db
       .prepare(
-        `INSERT INTO depeg_resolver_lock_opportunity_audit
-         (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL})
-         VALUES (${lockAuditInsertValuesSql("?", "?", "?")})`,
+        `INSERT OR IGNORE INTO depeg_resolver_lock_opportunity_audit
+         (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL}, attempt_key)
+         VALUES (${lockAuditInsertValuesSql("?", "?", "?")}, ?)`,
       )
       .bind(
         input.incidentKey,
@@ -1459,6 +1480,7 @@ export async function recordLockOpportunity(
         input.reason ?? null,
         createdAt,
         ...bindLockMetadata(input),
+        attemptKey,
       ),
   );
   await executeAtomicBatch(db, statements);
