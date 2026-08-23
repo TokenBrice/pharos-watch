@@ -46,7 +46,6 @@ function emptyDegradedPublicSnapshot(input: {
   nowSec: number;
   reason: string;
   lineage: DdrLineage;
-  storageAvailable: boolean;
 }): DdrResponse {
   const snapshot = buildDdrResponse({
     candidateRows: [],
@@ -57,7 +56,6 @@ function emptyDegradedPublicSnapshot(input: {
     errata: [],
     lineage: input.lineage,
     nowSec: input.nowSec,
-    storageAvailable: input.storageAvailable,
   });
   snapshot._meta.degraded = true;
   snapshot._meta.degradedReason = input.reason;
@@ -69,7 +67,6 @@ async function degradedPublicSnapshotFromCache(input: {
   nowSec: number;
   reason: string;
   lineage: DdrLineage;
-  storageAvailable: boolean;
 }): Promise<DdrResponse> {
   let cached: Awaited<ReturnType<typeof loadDepegResolverSnapshot>>;
   try {
@@ -146,14 +143,13 @@ async function persistDegradedArtifacts(input: {
   reason: string;
   lineage: DdrLineage;
   signal?: AbortSignal;
-  storeContracts: ComputeDepegResolverV2Options["storeContracts"];
+  storeContracts: NonNullable<ComputeDepegResolverV2Options["storeContracts"]>;
 }): Promise<{ reviewRows: number; reviewError: string | null }> {
   const publicSnapshot = await degradedPublicSnapshotFromCache({
     db: input.db,
     nowSec: input.nowSec,
     reason: input.reason,
     lineage: input.lineage,
-    storageAvailable: input.storeContracts != null,
   });
   await persistDepegResolverSnapshot(input.db, publicSnapshot);
 
@@ -161,8 +157,8 @@ async function persistDegradedArtifacts(input: {
   const reviewArtifacts = await persistDepegResolverReviewArtifacts(
     input.db,
     diagnosticSnapshot,
-    input.signal,
     input.storeContracts,
+    input.signal,
   );
   return {
     reviewRows: reviewArtifacts.reviewRows,
@@ -329,9 +325,7 @@ export async function computeDepegResolver(
   v2LockedNoCalls = lockResult.noCallCount;
   v2PendingLocks = lockResult.pendingCount;
 
-  const refreshedPublicationState = storeContracts
-    ? await loadSealedAndPublicationState({ stores: storeContracts, db, incidentKeys: activeIncidentKeys })
-    : { sealed: lockResult.sealed, firstPublication: publicationState.firstPublication };
+  const refreshedPublicationState = await loadSealedAndPublicationState({ stores: storeContracts, db, incidentKeys: activeIncidentKeys });
   const errataState = await loadErrataForSealedPredictions({
     stores: storeContracts,
     db,
@@ -363,14 +357,13 @@ export async function computeDepegResolver(
     errata: errataState.errata,
     lineage,
     nowSec,
-    storageAvailable: storeContracts != null,
   });
   if (publication.attempted && !publication.ok) {
     publicSnapshot._meta.degraded = true;
     publicSnapshot._meta.degradedReason = `publication-retry-pending:${publication.error ?? "manifest-write-failed"}`;
   }
   await persistDepegResolverSnapshot(db, publicSnapshot);
-  const reviewArtifacts = await persistDepegResolverReviewArtifacts(db, diagnosticSnapshot, options.signal, storeContracts);
+  const reviewArtifacts = await persistDepegResolverReviewArtifacts(db, diagnosticSnapshot, storeContracts, options.signal);
   assessmentWriteCount = reviewArtifacts.assessmentWriteCount;
   reviewRows = reviewArtifacts.reviewRows;
   reviewError = reviewArtifacts.reviewError;
