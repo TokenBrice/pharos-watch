@@ -41,13 +41,16 @@ export function Footer() {
   return (
     <footer className="border-t border-border/70 py-1 sm:py-2">
       <div className="mx-auto w-full max-w-[120rem] space-y-1 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0 lg:px-5 xl:px-9">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <p className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground sm:text-xs lg:whitespace-nowrap">
+        {/* Side-by-side only from lg. The eleven-chip nav is shrink-0, so at sm/md
+            it claimed ~709 of 768px and crushed the disclaimer to a one-character
+            column. Below lg the two rows stack and the chips wrap. */}
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+          <p className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground sm:text-xs">
             Pharos tracks stablecoin cap, peg stability, liquidity, and dependency risk. Not financial advice.
           </p>
           <nav
             aria-label="Explore and reference"
-            className="flex flex-wrap items-center gap-1 text-muted-foreground sm:shrink-0 sm:justify-end sm:gap-1.5 lg:flex-nowrap"
+            className="flex flex-wrap items-center gap-1 text-muted-foreground lg:shrink-0 lg:justify-end lg:gap-1.5"
           >
             {FOOTER_NAV.map((link) => (
               <Link key={link.href} href={link.href} className={PILL_CLASS}>
