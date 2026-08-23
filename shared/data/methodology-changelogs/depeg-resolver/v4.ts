@@ -7,7 +7,7 @@ export const DEPEG_RESOLVER_V4: readonly MethodologyChangelogEntry[] = [
     date: "2026-08-23",
     effectiveAt: 1787443200,
     summary:
-      "Depeg onset and recovery windows now require consecutive observations no more than one producer interval apart, while DDR training and DDRR review classify recovery from explicit closure reasons with a legacy price fallback only for null-reason rows.",
+      "Depeg onset and recovery windows now require consecutive observations, with a 1200-second continuity tolerance deliberately set above the 900-second producer cadence so ordinary scheduler jitter does not read as a coverage break, while DDR training and DDRR review classify recovery from explicit closure reasons with a legacy price fallback only for null-reason rows.",
     impact: [
       "Same-direction pending episodes reset after an observation gap greater than 1200 seconds, so a blind interval cannot backdate a confirmed onset",
       "Recovery confirmation stores both first and last qualified observations, resets after a gap greater than 1200 seconds or contradictory evidence, and keeps events open through missing data",
