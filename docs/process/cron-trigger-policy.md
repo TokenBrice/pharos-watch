@@ -15,7 +15,7 @@ Cloudflare Workers enforce a limit of **6 simultaneous outbound requests waiting
 
 **Do not add a new cron trigger expression unless every existing 6-budget slot has been audited for headroom and rebalanced.**
 
-The growth gate is **34 physical trigger expressions**, **32 fetch-capable scheduled entries**, and two headroom-full (`5/6`) slots before re-architecting batched dispatch. ADR-10 replaced the prior single 20-expression soft cap after the schedule became fully source-owned, fenced, connection-budgeted, and status-tracked; ADR-20 records the current 34-expression reviewed topology. Crossing any gate requires a follow-up ADR plus a trigger consolidation or rebalance plan. Failure-isolated recovery work must remain independent of the invocation it is intended to recover.
+The growth gate and current counts are owned by `CRON_GROWTH_HEADROOM_POLICY` and explained in the [architectural decision records](../architecture.md#architectural-decision-records). Crossing any gate requires a follow-up ADR plus a trigger consolidation or rebalance plan. Failure-isolated recovery work must remain independent of the invocation it is intended to recover.
 
 ### Current growth gate
 

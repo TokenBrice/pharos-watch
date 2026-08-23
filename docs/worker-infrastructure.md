@@ -64,7 +64,7 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 
 Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
-Measured DEX execution keeps its `0,30 * * * *` scheduled slot and `sync-cl-exit-depth` lease. The slot runs score-bearing active EVM first, then the shadow Solana collector serially, so the peak remains three outbound connections. Active EVM caps remain 1,300 actual RPC requests and eight minutes. Shadow-only EVM routes and Tron diagnostics run once daily at `08:10 UTC`; Solana retains its separate shadow generation surface but collects every half hour so a complete bounded rotation fits the universal two-hour evidence horizon. Whole active EVM coin cohorts are admitted against a 1,220-request estimate that includes one block read per chain, deduplicated deployment verification, quote batches, refinement, and serialized Quoter confirmation; the remaining 80 requests are reserved for adaptive fragmentation and other nondeterministic overhead. A non-fitting cohort anchors the next cursor while later whole cohorts may fill remaining capacity. Runtime favorable-output quote mismatches against untracked pool-implied counter-asset references remain failed target rows and score-excluded, but they are diagnostic rather than degrading because the source spot may drift before the pinned quote block. Solana bounds each asset to the ten-route public observation denominator, admits 30 cursor-rotated targets per run with fair asset interleaving, and separately reserves the exact HYUSD/USDC Orca and wM/USDC Raydium identities. Tron admits the complete current SunSwap inventory. Each native stream retains its seven-minute producer-scoped network deadline and bounded response policies.
+Measured DEX execution, including current cohorts and historical native-lane removals, is owned by the [DEX liquidity methodology](./dex-liquidity.md). This document retains only the generic cron capacity, scheduling, and retention contracts; operators should not infer removed native collectors or former schedules from this infrastructure overview.
 
 The EVM lane first reserves at most one published score-bearing direction packet closest to its adapter-specific expiry, bounded to 20 estimated requests inside the same 1,220-request ceiling. The legacy Curve 3pool packet remains atomic, the reservation does not advance the durable cursor, and the remaining inventory keeps the existing whole-coin rotation.
 
@@ -412,28 +412,9 @@ Every endpoint with `statusPageAction` metadata is audited at the shared router 
 
 **File:** `worker/src/lib/idempotency.ts`
 
-These router-dispatched admin routes honor an optional `Idempotency-Key` header:
+These router-dispatched admin routes honor an optional `Idempotency-Key` header. The complete action inventory and endpoint contracts live in the [API reference](./api-reference.md) and are derived from the shared endpoint registry:
 
-- `POST /api/backfill-depegs`
-- `POST /api/backfill-supply-history`
-- `POST /api/backfill-stability-index`
-- `POST /api/backfill-cg-prices`
-- `POST /api/backfill-yield-history`
-- `POST /api/backfill-mint-burn-prices`
-- `POST /api/backfill-mint-burn`
-- `POST /api/backfill-tape`
-- `POST /api/reclassify-atomic-roundtrips`
-- `POST /api/backfill-dews`
-- `POST /api/audit-depeg-history`
-- `POST /api/trigger-digest`
-- `POST /api/reset-blacklist-sync`
-- `POST /api/remediate-blacklist-amount-gaps`
-- `POST /api/backfill-blacklist-current-balances`
-- `POST /api/api-keys`
-- `POST /api/api-keys/:id/update`
-- `POST /api/api-keys/:id/deactivate`
-- `POST /api/api-keys/:id/rotate`
-- `POST /api/admin-telegram-broadcast`
+The list above is intentionally limited to the idempotency behavior documented here; consult the API reference for the current route inventory.
 
 Retired on 2026-08-09 with the rest of the curl-only operator surface: `POST /api/reset-cron-lease`, `POST /api/reset-circuit-breaker`, `POST /api/kill-cron-in-flight`, `POST /api/telegram-pending`, and `POST /api/admin-telegram-resend`. They had no UI or script consumer and now return `404`. A scoped direct D1 delete is equivalent only for the simple lease and circuit rows, after the owning runbook's freshness and upstream-recovery checks. Kill, Telegram pending-clear, and resend operations have no blanket direct-D1 equivalent: pending cleanup performs dead-letter, projection, and audit work before deletion, and direct deletion destroys evidence. Follow the feature-specific recovery runbook; restoring a control requires a reviewed implementation rather than merely reverting its route.
 

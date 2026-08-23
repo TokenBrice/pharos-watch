@@ -14,8 +14,11 @@ export interface UnknownRecord {
   [key: string]: unknown;
 }
 
-export function extractStablecoinRows(payload: unknown): UnknownRecord[] {
-  const envelope = isRecord(payload) && isRecord(payload.payload) ? payload.payload : payload;
+export function extractStablecoinRows(
+  payload: unknown,
+  { unwrapPayload = true }: { unwrapPayload?: boolean } = {},
+): UnknownRecord[] {
+  const envelope = unwrapPayload && isRecord(payload) && isRecord(payload.payload) ? payload.payload : payload;
   const rows = Array.isArray(envelope)
     ? envelope
     : isRecord(envelope) && Array.isArray(envelope.peggedAssets)
@@ -24,10 +27,17 @@ export function extractStablecoinRows(payload: unknown): UnknownRecord[] {
   return rows.filter(isRecord);
 }
 
+export function circulatingForStablecoinRow(
+  row: { circulating?: Record<string, number> | null | undefined } | undefined,
+): number {
+  if (!row) return 0;
+  return getCirculatingRaw(row);
+}
+
 function marketCapForStablecoinRow(row: UnknownRecord): number {
   const direct = numberValue(row.marketCapUsd ?? row.marketCap ?? row.mcapUsd);
   if (direct != null) return direct;
-  return getCirculatingRaw(row as { circulating?: Record<string, number> | null | undefined });
+  return circulatingForStablecoinRow(row as { circulating?: Record<string, number> | null | undefined });
 }
 
 export function sortByMarketCapOrRank<T extends { marketCapUsd: number | null; rank: number; coinId: string }>(

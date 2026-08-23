@@ -1,4 +1,5 @@
 import { defineConfig, globalIgnores } from "eslint/config";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import security from "eslint-plugin-security";
@@ -43,22 +44,75 @@ const NON_WORKER_SOURCE_GLOBS = [
 ];
 
 // ADR-2, frontend→worker half: nothing under src/, shared/, scripts/ or
-// functions/ may reach into worker/src/. The reviewed exceptions are the
-// `BOUNDARY_WAIVERS` registry in `scripts/ci/check-worker-import-boundary.ts`
-// (capped at MAX_BOUNDARY_WAIVERS, documented in
-// docs/process/boundary-waivers.md); that script cross-checks that every waived
-// file is ignored here, so the two lists cannot drift apart.
+// functions/ may reach into worker/src/.
 const frontendToWorkerRestrictedImportPatterns = [
   {
     group: ["worker/src", "worker/src/**", "**/worker/src", "**/worker/src/**"],
     message:
-      "ADR-2: src/, shared/, scripts/ and functions/ must not import worker/src/**. Promote runtime-neutral logic into shared/ instead, or add a reviewed entry to BOUNDARY_WAIVERS (docs/process/boundary-waivers.md).",
+      "ADR-2: src/, shared/, scripts/ and functions/ must not import worker/src/**. Promote runtime-neutral logic into shared/ instead, or add a reviewed entry in eslint.config.mjs (docs/process/boundary-waivers.md).",
   },
 ];
 
-// Waived by docs/process/boundary-waivers.md → keep in sync with
-// BOUNDARY_WAIVERS in scripts/ci/check-worker-import-boundary.ts.
+// The sole reviewed waiver documented in docs/process/boundary-waivers.md.
 const FRONTEND_TO_WORKER_WAIVED_FILES = ["scripts/ci/check-frozen-invariants.ts"];
+
+function isWithinPath(parentDir, candidatePath) {
+  const relativePath = relative(parentDir, candidatePath);
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+}
+
+function staticImportSpecifier(node) {
+  if (node.type === "ImportDeclaration" || node.type === "ExportNamedDeclaration" || node.type === "ExportAllDeclaration") {
+    return typeof node.source?.value === "string" ? node.source.value : null;
+  }
+  if (node.type === "ImportExpression") {
+    return node.source.type === "Literal" && typeof node.source.value === "string" ? node.source.value : null;
+  }
+  return null;
+}
+
+const pharosBoundaryPlugin = {
+  rules: {
+    "worker-import-boundaries": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+          workerFrontend: "ADR-2: worker code must not import frontend src/** modules; promote runtime-neutral logic into shared/**.",
+          apiCron: "Worker API and cron modules must not import each other; move shared logic into worker/src/lib or shared/**.",
+        },
+      },
+      create(context) {
+        const filename = context.filename;
+        const normalizedFilename = filename.replaceAll("\\\\", "/");
+        const workerRoot = resolve(process.cwd(), "worker/src");
+        const apiRoot = resolve(workerRoot, "api");
+        const cronRoot = resolve(workerRoot, "cron");
+        const inTests = normalizedFilename.includes("/__tests__/");
+
+        function check(node) {
+          const specifier = staticImportSpecifier(node);
+          if (!specifier) return;
+          if (specifier.includes("@/") || specifier.includes("src/")) {
+            context.report({ node, messageId: "workerFrontend" });
+          }
+          if (inTests || !specifier.startsWith(".")) return;
+          const target = resolve(dirname(filename), specifier);
+          const apiToCron = isWithinPath(apiRoot, filename) && isWithinPath(cronRoot, target);
+          const cronToApi = isWithinPath(cronRoot, filename) && isWithinPath(apiRoot, target);
+          if (apiToCron || cronToApi) context.report({ node, messageId: "apiCron" });
+        }
+
+        return {
+          ImportDeclaration: check,
+          ExportNamedDeclaration: check,
+          ExportAllDeclaration: check,
+          ImportExpression: check,
+        };
+      },
+    },
+  },
+};
 
 // Cached StablecoinData current-supply reads in route/component/API code go
 // through `getCirculatingRaw()`; `sumPegBuckets` is the raw bucket adder and
@@ -184,7 +238,9 @@ const eslintConfig = defineConfig([
   },
   {
     files: ["worker/src/**/*.{ts,tsx}"],
+    plugins: { pharos: pharosBoundaryPlugin },
     rules: {
+      "pharos/worker-import-boundaries": "error",
       "no-restricted-imports": [
         "error",
         { paths: workerRestrictedImportPaths, patterns: workerRestrictedImportPatterns },

@@ -94,7 +94,6 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
       { name: "check:cron-sync" },
       { name: "check:migrations" },
       { name: "check:sql-safety" },
-      { name: "check:worker-boundary" },
       { name: "check:worker-config" },
       { name: "check:worker-package" },
     );

@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
-import type { UnknownRecord } from "../lib/coverage-audit-cli";
+import { circulatingForStablecoinRow, type UnknownRecord } from "../lib/coverage-audit-cli";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
@@ -186,10 +186,7 @@ function sourceDepth(row: DexGapStablecoinRow): number {
 
 function marketCapUsd(row: DexGapStablecoinRow): number {
   if (typeof row.marketCapUsd === "number" && Number.isFinite(row.marketCapUsd)) return row.marketCapUsd;
-  return Object.values(row.circulating ?? {}).reduce(
-    (sum, value) => (typeof value === "number" && Number.isFinite(value) ? sum + value : sum),
-    0,
-  );
+  return circulatingForStablecoinRow(row);
 }
 
 function deploymentCount(row: DexGapStablecoinRow): number {
