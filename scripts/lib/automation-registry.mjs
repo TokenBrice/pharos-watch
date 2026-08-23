@@ -168,7 +168,8 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "depeg-event-search-data",
-    autoStage: true,
+    // No autoStage: every output below is gitignored by `/src/generated/*`
+    // since 0b76714f03 untracked them. Staging them aborts the commit.
     checkCommand: "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
     command: "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
     bootstrap: true,
