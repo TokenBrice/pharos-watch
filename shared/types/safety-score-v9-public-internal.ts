@@ -132,6 +132,17 @@ export function refineCard(
       : null;
     const wrapperParentLimit = scoreTrace.wrapperParentLimit;
     const parentCaps = card.caps.filter((cap) => cap.source === "parent");
+    // A wrapper parent limit is the exact MEASUREMENT: parent score minus the
+    // summed local-risk discount plus documented credit, verified to the point
+    // in SafetyScoreV9WrapperParentLimitSchema. A published cap limit is that
+    // measurement quantized into the published score space, floored so a
+    // ceiling can never be raised by rounding. The two therefore agree up to
+    // one quantization step, not exactly: a 5.45-point discount off a parent of
+    // 55 measures 49.55 and publishes a ceiling of 49.
+    const capAgreesWithWrapperLimit = (capLimit: number, measuredLimit: number): boolean =>
+      numbersAgree(capLimit, measuredLimit) ||
+      (capLimit <= measuredLimit + SCORE_TOLERANCE && measuredLimit - capLimit < 1);
+
     if (
       wrapperParentLimit !== null &&
       (
@@ -139,7 +150,7 @@ export function refineCard(
         !numbersAgree(wrapperParentLimit.parentScore, rawParentScore) ||
         parentCaps.length !== 1 ||
         parentCaps[0]!.kind !== "parent" ||
-        !numbersAgree(parentCaps[0]!.limit, wrapperParentLimit.limit)
+        !capAgreesWithWrapperLimit(parentCaps[0]!.limit, wrapperParentLimit.limit)
       )
     ) {
       ctx.addIssue({
@@ -153,7 +164,7 @@ export function refineCard(
       (
         card.bindingCap.kind !== "parent" ||
         rawParentScore === null ||
-        !numbersAgree(
+        !capAgreesWithWrapperLimit(
           card.bindingCap.limit,
           wrapperParentLimit?.limit ?? rawParentScore,
         )

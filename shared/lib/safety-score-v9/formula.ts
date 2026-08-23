@@ -1085,12 +1085,29 @@ function scoreV9InputWithCaps(
     capCandidates.push({ source: "structural", ...cap });
   }
 
+  // A cap limit is a PUBLISHED ceiling, so it must live in the published score
+  // space. Wrapper-local parent limits are the only source of fractional limits
+  // (wrapper-risk sums assessment multipliers such as 0.7 x 3 = 2.1), and a
+  // fractional limit combined with the capped-score floor at :1123-1128 lets a
+  // sub-point remainder decide a whole grade band: asusdf-astherus resolved a
+  // 49.55 parent limit, floored to 49 (D) where the D/C- boundary sits at 50.
+  //
+  // Flooring every limit here — one funnel, before dedup and selection — keeps
+  // the ceiling honest (floor never raises a limit, so no cap can be breached),
+  // makes the dedup key collapse candidates that publish identically, and
+  // removes the mixed-quantizer hazard because every limit is now integral in
+  // the same space as the score it constrains.
+  const normalizedCandidates = capCandidates.map((cap) => ({
+    ...cap,
+    limit: floorTo(cap.limit, formula.scoreDecimals),
+  }));
+
   // Identical (source, kind, limit) candidates collapse to one trace row; the
   // deterministically first reason survives so repeated shared-path signals do
   // not flood the published cap list.
   const dedupedCandidates = [
     ...new Map(
-      [...capCandidates]
+      [...normalizedCandidates]
         .sort(
           (left, right) =>
             left.limit - right.limit ||
