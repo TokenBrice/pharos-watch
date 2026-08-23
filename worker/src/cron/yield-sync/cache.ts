@@ -30,5 +30,4 @@ export {
   getYieldSupplementalFamilyCacheKey,
   buildYieldSupplementalSourcesCache,
   parseYieldSupplementalSourcesCache,
-  type ParsedYieldSupplementalSourcesCache,
 } from "./cache/supplemental-cache-keys";

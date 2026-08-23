@@ -162,7 +162,7 @@ export function parseCommand(text: string): { command: string; args: string; bot
   return { command, args, botMention };
 }
 
-export function parseStoredSetCommand(payload: Record<string, unknown>): ParsedSetCommand | null {
+function parseStoredSetCommand(payload: Record<string, unknown>): ParsedSetCommand | null {
   const ticker = typeof payload.ticker === "string" ? payload.ticker : "unknown";
   const setting = typeof payload.setting === "string" ? payload.setting : null;
   switch (setting) {
@@ -216,12 +216,12 @@ export function parseStoredSetCommand(payload: Record<string, unknown>): ParsedS
   }
 }
 
-export function parseStringArray(value: unknown): string[] {
+function parseStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string");
 }
 
-export function parseResolvedCoins(value: unknown): ResolvedCoin[] {
+function parseResolvedCoins(value: unknown): ResolvedCoin[] {
   if (!Array.isArray(value)) return [];
 
   const coins: ResolvedCoin[] = [];

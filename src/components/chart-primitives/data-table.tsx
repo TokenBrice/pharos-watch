@@ -109,7 +109,7 @@ export function ChartDataTable<T>({ caption, data, columns, srOnly = true, class
  * indicating whether the original series was truncated, so callers can amend
  * the table caption.
  */
-export function capDataForTable<T>(
+function capDataForTable<T>(
   data: ReadonlyArray<T>,
   maxRows: number,
 ): { rows: ReadonlyArray<T>; truncated: boolean } {

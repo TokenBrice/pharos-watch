@@ -5,7 +5,7 @@ import { z } from "zod";
 // stages.ts:42 is a post-parse narrowing, not a raw API cast. No new schema needed.
 
 // --- TronGrid events (Q11) ---
-export const TronEventResultSchema = z.object({
+const TronEventResultSchema = z.object({
   _user: z.string().optional(),
   _blackListedUser: z.string().optional(),
   _balance: z.string().optional(),
@@ -14,7 +14,7 @@ export const TronEventResultSchema = z.object({
   "1": z.string().optional(),
 }).passthrough();
 
-export const TronEventSchema = z.object({
+const TronEventSchema = z.object({
   block_number: z.number(),
   block_timestamp: z.number(),
   transaction_id: z.string(),

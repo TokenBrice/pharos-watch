@@ -13,7 +13,7 @@ const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
 
 const MAX_DECIMALS = 36;
 export const PCT_SUM_ERROR_TOLERANCE = 2;
-export const RATIO_SCALE = 1_000_000_000_000n;
+const RATIO_SCALE = 1_000_000_000_000n;
 
 export function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): ReserveSlice["risk"] {
   return RISK_SEVERITY[a] >= RISK_SEVERITY[b] ? a : b;

@@ -9,7 +9,7 @@ import {
   measuredGenerationId, parsePersistedJson, publishGenerationPointer, type MeasuredQuoteGenerationDependency,
 } from "./generation-store";
 export { buildDexMeasuredQuoteGenerationId, buildDexShadowMeasuredQuoteGenerationId } from "./generation-store";
-export { DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE, getDexMeasuredHistoryFreshnessSec, isOperationalDexMeasuredFailure, loadLatestPublishedDexMeasuredQuoteEvidence, materializeDexMeasuredQuoteProfile } from "./evidence-reader";
+export { isOperationalDexMeasuredFailure, loadLatestPublishedDexMeasuredQuoteEvidence, materializeDexMeasuredQuoteProfile } from "./evidence-reader";
 export type { LoadedDexMeasuredQuoteEvidence } from "./evidence-reader";
 /**
  * Retain the complete scoring window plus one missed producer cycle. This must

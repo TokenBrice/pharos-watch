@@ -376,7 +376,7 @@ function activeMetapoolPolicy(
  * with pinned registry, implementation, base-pool, token-order, and runtime
  * code identities. No other metapool is admitted by this adapter.
  */
-export const CURVE_ALUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
+const CURVE_ALUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   chain: "ethereum",
   stablecoinId: "alusd-alchemix",
   poolAddress: CURVE_ALUSD_3CRV_METAPOOL_ADDRESS,
@@ -457,7 +457,7 @@ function ethereumFraxBpMetapool(input: {
   });
 }
 
-export const CURVE_DOLA_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
+const CURVE_DOLA_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
   stablecoinId: "dola-inverse-finance",
   poolAddress: CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS,
   factoryPoolIndex: 176,
@@ -469,7 +469,7 @@ export const CURVE_DOLA_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
   },
 });
 
-export const CURVE_EUSD_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
+const CURVE_EUSD_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
   stablecoinId: "eusd-electronic-usd",
   poolAddress: CURVE_EUSD_FRAXBP_METAPOOL_ADDRESS,
   factoryPoolIndex: 277,
@@ -481,7 +481,7 @@ export const CURVE_EUSD_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
   },
 });
 
-export const CURVE_MSUSD_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
+const CURVE_MSUSD_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
   stablecoinId: "msusd-metronome",
   poolAddress: CURVE_MSUSD_FRAXBP_METAPOOL_ADDRESS,
   factoryPoolIndex: 251,
@@ -538,7 +538,7 @@ export const CURVE_GUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   },
 });
 
-export const CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY = activeMetapoolPolicy({
+const CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY = activeMetapoolPolicy({
   chain: "ethereum",
   stablecoinId: "meusd-mezo",
   poolAddress: CURVE_MEUSD_CRV2POOL_METAPOOL_ADDRESS,
@@ -582,7 +582,7 @@ export const CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY = activeMetapoolPolicy({
   },
 });
 
-export const CURVE_OUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
+const CURVE_OUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
   chain: "ethereum",
   stablecoinId: "ousd-origin-protocol",
   poolAddress: CURVE_OUSD_3CRV_METAPOOL_ADDRESS,
@@ -663,7 +663,7 @@ function polygonAm3CrvMetapool(input: {
   });
 }
 
-export const CURVE_MAI_AM3CRV_METAPOOL_POLICY = polygonAm3CrvMetapool({
+const CURVE_MAI_AM3CRV_METAPOOL_POLICY = polygonAm3CrvMetapool({
   stablecoinId: "mai-qidao",
   poolAddress: CURVE_MAI_AM3CRV_METAPOOL_ADDRESS,
   factoryPoolIndex: 107,
@@ -675,7 +675,7 @@ export const CURVE_MAI_AM3CRV_METAPOOL_POLICY = polygonAm3CrvMetapool({
   },
 });
 
-export const CURVE_TUSD_AM3CRV_METAPOOL_POLICY = polygonAm3CrvMetapool({
+const CURVE_TUSD_AM3CRV_METAPOOL_POLICY = polygonAm3CrvMetapool({
   stablecoinId: "tusd-trueusd",
   poolAddress: CURVE_TUSD_AM3CRV_METAPOOL_ADDRESS,
   factoryPoolIndex: 152,
@@ -721,4 +721,3 @@ export function isCurveCompositeAdapterProfileId(profileId: string): boolean {
   return profileId === CURVE_RATE_BEARING_ADAPTER_PROFILE_ID ||
     profileId === CURVE_METAPOOL_ADAPTER_PROFILE_ID;
 }
-

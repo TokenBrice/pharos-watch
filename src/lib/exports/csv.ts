@@ -11,7 +11,7 @@ export { escapeCsvField } from "@shared/lib/csv";
  * Build the CSV string (header + rows). Pure: no DOM access.
  * Mirrors `downloadCsv` field-escaping rules exactly.
  */
-export function buildCsv<T>(data: T[], columns: CsvColumn<T>[]): string {
+function buildCsv<T>(data: T[], columns: CsvColumn<T>[]): string {
   return buildSharedCsv(data, columns);
 }
 

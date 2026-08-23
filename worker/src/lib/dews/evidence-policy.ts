@@ -10,7 +10,7 @@
 import type { DewsSignalKey } from "@shared/lib/dews-config";
 import type { DEWSEvidenceKind, DEWSInput, SignalResult } from "./types";
 
-export const EVIDENCE_STRESS_THRESHOLD = 10;
+const EVIDENCE_STRESS_THRESHOLD = 10;
 
 /**
  * Known sub-bps rounding window on non-USD pegs (accepted, not a defect).
@@ -30,7 +30,7 @@ export const EVIDENCE_STRESS_THRESHOLD = 10;
  * than the window is worth. Every other threshold is safe: `piecewiseLinear` is
  * continuous and the composite margin is <=0.39 points on an integer score.
  */
-export function hasStressEvidence(signal: SignalResult): boolean {
+function hasStressEvidence(signal: SignalResult): boolean {
   return signal.available && signal.value >= EVIDENCE_STRESS_THRESHOLD;
 }
 

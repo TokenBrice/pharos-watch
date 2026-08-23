@@ -44,7 +44,7 @@ const FEATURE_QUERY_AVAILABLE_KEYS = [
   "dependency",
 ] as const satisfies readonly CoverageFeatureKey[];
 
-export const COVERAGE_MATRIX_QUERY_KEYS = [
+const COVERAGE_MATRIX_QUERY_KEYS = [
   "stablecoins",
   "pegSummary",
   "dexLiquidity",

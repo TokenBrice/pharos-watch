@@ -47,7 +47,7 @@ export type ParsedVerb =
  *   4. Id startsWith.
  *   5. Name startsWith (first word).
  */
-export function resolveCoinIdFromToken(token: string): string | null {
+function resolveCoinIdFromToken(token: string): string | null {
   const t = token.trim().toLowerCase();
   if (!t) return null;
 

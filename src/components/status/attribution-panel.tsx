@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * this window" branch) — only the surrounding chrome is shared, so neither
  * card's content is constrained by the other's.
  */
-export function AttributionWindowBadge({ hours }: { hours: number | null }) {
+function AttributionWindowBadge({ hours }: { hours: number | null }) {
   if (hours == null) return null;
   return (
     <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">

@@ -29,7 +29,7 @@ interface MintAuthorityStatusConfig {
   badgeClassName: string;
 }
 
-export const MINT_AUTHORITY_STATUS_VALUES = [
+const MINT_AUTHORITY_STATUS_VALUES = [
   "no-privileged-mint",
   "governed-mint",
   "multisig-mint",

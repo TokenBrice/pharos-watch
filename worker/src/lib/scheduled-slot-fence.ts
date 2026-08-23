@@ -11,10 +11,7 @@ import {
   type StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
 
-export {
-  STALE_SLOT_ABANDONED_EVENT_TYPE,
-  staleSlotEventCacheKey,
-} from "./scheduled-slot-reconciliation";
+export { staleSlotEventCacheKey } from "./scheduled-slot-reconciliation";
 
 export interface ScheduledSlotExecutionOptions {
   slotStartedAt: number;

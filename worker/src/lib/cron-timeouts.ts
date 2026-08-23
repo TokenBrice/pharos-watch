@@ -87,7 +87,7 @@ function positiveFiniteMs(value: number | undefined, fallback: number): number {
   return Number.isFinite(value) && value != null && value > 0 ? value : fallback;
 }
 
-export function getConfiguredCronTimeoutMs(job: string): number {
+function getConfiguredCronTimeoutMs(job: string): number {
   return CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
 }
 

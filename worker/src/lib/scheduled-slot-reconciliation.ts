@@ -57,7 +57,7 @@ export interface StaleSlotReconciliationSummary {
   }>;
 }
 
-export const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
+const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
 
 /**
  * Exact `cron_runs.error` text the fence writes when it expires a stale slot.

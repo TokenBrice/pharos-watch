@@ -113,7 +113,7 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
   };
 }
 
-export function cloneRedemptionDocSource(doc: RedemptionDocSource): RedemptionDocSource {
+function cloneRedemptionDocSource(doc: RedemptionDocSource): RedemptionDocSource {
   return {
     label: doc.label,
     url: doc.url,

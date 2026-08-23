@@ -54,7 +54,7 @@ export function buildPsiHistoricalSupplySnapshotMap(
   return supplyByCoin;
 }
 
-export function buildPsiHistoricalUniverseForDay(supplyByCoin: SupplySnapshotMap, day: number): PsiHistoricalUniverse {
+function buildPsiHistoricalUniverseForDay(supplyByCoin: SupplySnapshotMap, day: number): PsiHistoricalUniverse {
   const mcapById = new Map<string, number>();
   let totalMcapUsd = 0;
   let coveredUniverseCount = 0;

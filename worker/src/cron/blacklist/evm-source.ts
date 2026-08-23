@@ -287,7 +287,7 @@ export function parseEvmLogs(
   return parseEvmLogsWithCoverage(config, logs, blockTimestamps).rows;
 }
 
-export async function resolveRpcLogTarget(
+async function resolveRpcLogTarget(
   chainId: string,
   runBudget: Pick<BlacklistRunBudget, "subrequestBudget">,
   signal?: AbortSignal,

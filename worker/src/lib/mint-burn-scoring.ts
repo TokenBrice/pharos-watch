@@ -32,7 +32,7 @@ const FLOW_INTENSITY_Z_MULTIPLIER = 50;
 const FLOW_INTENSITY_MIN_DATA_DAYS = 7;
 const FLOW_INTENSITY_MIN = -100;
 const FLOW_INTENSITY_MAX = 100;
-export const MIN_ACTIVITY_USD = 50_000;
+const MIN_ACTIVITY_USD = 50_000;
 
 /**
  * Compute the Flow Intensity Score for a single stablecoin.

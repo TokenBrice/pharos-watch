@@ -4,7 +4,7 @@ import type { NetFlowDirection24h, PressureShiftState } from "../types/mint-burn
 export { PRESSURE_SHIFT_STATE_VALUES } from "../types/mint-burn-signals";
 export type { CoinFlowCompositeState, NetFlowDirection24h, PressureShiftState } from "../types/mint-burn-signals";
 
-export const PRESSURE_SHIFT_STABLE_BAND_MAX = 10;
+const PRESSURE_SHIFT_STABLE_BAND_MAX = 10;
 
 export function getNetFlowDirection24h(input: { netFlow24hUsd: number; has24hActivity: boolean }): NetFlowDirection24h {
   if (!input.has24hActivity) {
