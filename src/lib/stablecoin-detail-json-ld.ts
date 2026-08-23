@@ -90,7 +90,10 @@ export function buildStablecoinDatasetJsonLd(
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const datasetSameAs = buildStablecoinSameAs(coin);
+  // Third-party identity links (CoinGecko, DefiLlama, CMC, issuer) describe the
+  // STABLECOIN, so they belong on the nested `about` Thing. Putting them on the
+  // Dataset would claim those sites host copies of the Pharos dataset.
+  const stablecoinIdentityUrls = buildStablecoinSameAs(coin);
   const organization = buildPharosOrganizationNode();
   const contractIdentifiers = (coin.contracts ?? []).slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT).map((contract) => ({
     "@type": "PropertyValue",
@@ -144,7 +147,7 @@ export function buildStablecoinDatasetJsonLd(
     coin,
     detailUrl,
     description: statusCopy.description,
-    sameAs: datasetSameAs,
+    sameAs: stablecoinIdentityUrls,
     image,
   });
 
@@ -157,6 +160,10 @@ export function buildStablecoinDatasetJsonLd(
     url: detailUrl,
     inLanguage: "en",
     mainEntityOfPage: detailUrl,
+    // Google defines Dataset.sameAs as a reference page that unambiguously
+    // identifies the dataset. For a per-coin dataset that is its canonical
+    // Pharos page — not the third-party pages that describe the coin itself.
+    sameAs: [detailUrl],
     about: stablecoinThing,
     ...(image ? { image } : {}),
     creator: organization,
