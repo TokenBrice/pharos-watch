@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
+import { CHAIN_META, getActiveChainIds, type ChainMeta } from "@shared/lib/chains";
 import { formatProseList } from "@shared/lib/format";
 import { buildApiOgImageUrl, buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
@@ -77,21 +77,65 @@ function formatDeploymentList(deployments: readonly Pick<ChainTrackedDeployment,
   );
 }
 
+function formatClassificationMix(
+  deployments: readonly ChainTrackedDeployment[],
+  key: "pegLabel" | "backingLabel" | "governanceLabel",
+): string {
+  const counts = new Map<string, number>();
+  for (const deployment of deployments) {
+    counts.set(deployment[key], (counts.get(deployment[key]) ?? 0) + 1);
+  }
+
+  return formatProseList(
+    [...counts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .map(([label, count]) => `${label} (${count})`),
+  );
+}
+
+function buildChainRuntimeDescription(meta: ChainMeta): string {
+  if (meta.type === "evm" && meta.evmChainId != null) {
+    return `an EVM network with chain ID ${meta.evmChainId}`;
+  }
+  if (meta.type === "tron") {
+    return "a Tron account-model network";
+  }
+  return "a non-EVM or app-specific network";
+}
+
 function buildChainEditorialIntro({
   chainName,
+  meta,
   deployments,
 }: {
   chainName: string;
+  meta: ChainMeta;
   deployments: readonly ChainTrackedDeployment[];
-}): string {
-  const topDeployments = deployments.slice(0, 3);
+}): string[] {
+  const highlightedDeployments = deployments.slice(0, 5);
   const trackedDeploymentCount = deployments.reduce((sum, deployment) => sum + deployment.contractCount, 0);
 
   if (trackedDeploymentCount === 0) {
-    return `${chainName} is part of the Pharos chain map, but no active tracked stablecoin contract has been mapped to this profile yet. Use the live Chain Health card to verify whether market supply appears before relying on this route for deployment-level risk review.`;
+    const explorerHost = new URL(meta.explorerUrl).hostname;
+    return [
+      `${chainName} is ${buildChainRuntimeDescription(meta)} in the Pharos chain map; its registered explorer is ${explorerHost}. The checked-in registry currently maps zero active tracked stablecoin contracts to this profile, so there are no named deployments or static peg and backing mixes to summarize.`,
+      `This route remains a chain-level monitoring surface because coordinated live data can report market supply even when no explicit contract is mapped. Until a deployment enters the checked-in registry, treat the live Chain Health card as the available evidence rather than assuming that ${chainName} has no stablecoin activity.`,
+    ];
   }
 
-  return `${chainName} has ${deploymentCountLabel(trackedDeploymentCount)} in the checked-in Pharos registry, led by ${formatDeploymentList(topDeployments)}. Use this page to compare live stablecoin supply, global market share, concentration, peg health, and backing mix before treating ${chainName} liquidity as interchangeable with the same assets on other chains.`;
+  const stablecoinCount = deployments.length;
+  const multiContractAssets = deployments.filter((deployment) => deployment.contractCount > 1);
+  const contractDistribution = multiContractAssets.length > 0
+    ? `${formatDeploymentList(multiContractAssets)} ${multiContractAssets.length === 1 ? "has" : "have"} more than one mapped contract on the network.`
+    : stablecoinCount === 1
+      ? "That stablecoin has one mapped contract on the network."
+      : `Each of the ${stablecoinCountLabel(stablecoinCount)} has one mapped contract on the network.`;
+
+  return [
+    `${chainName} has ${deploymentCountLabel(trackedDeploymentCount)} across ${stablecoinCountLabel(stablecoinCount)} in the checked-in Pharos registry. The mapped set includes ${formatDeploymentList(highlightedDeployments)}. ${contractDistribution}`,
+    `The ${chainName} cohort's peg mix is ${formatClassificationMix(deployments, "pegLabel")}; its backing mix is ${formatClassificationMix(deployments, "backingLabel")}; and its governance mix is ${formatClassificationMix(deployments, "governanceLabel")}. These counts classify stablecoins rather than contracts, so an asset with multiple deployments is not double-counted.`,
+    `Current supply ordering, global market share, and largest-asset concentration for ${chainName} come from the coordinated live snapshots below. Keeping those volatile values in the live profile lets this static overview identify the exact registry cohort without presenting a build-time concentration figure as current.`,
+  ];
 }
 
 function RelatedLinkCard({ link }: { link: ChainTaxonomyLink | ChainFeatureLink }) {
@@ -263,7 +307,7 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
         { name: meta.name, url: `/chains/${chain}/` },
       ]}
       title={chainPageTitle(meta.name, deployments)}
-      leadParagraphs={[buildChainEditorialIntro({ chainName: meta.name, deployments })]}
+      leadParagraphs={buildChainEditorialIntro({ chainName: meta.name, meta, deployments })}
       preface={
         <script
           type="application/ld+json"

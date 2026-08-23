@@ -169,6 +169,36 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
   );
 }
 
+function buildDepegRecordContext({
+  event,
+  versionLabel,
+}: {
+  event: DepegEventEntry;
+  versionLabel: string;
+}): string {
+  const startPrice = formatEventPrice(event.startPrice);
+  const pegReference = formatEventPrice(event.pegReference);
+  const sourceLabel = event.source === "live" ? "live monitoring" : "a historical backfill";
+  const pricePath = startPrice && pegReference
+    ? `The checked-in price path starts at ${startPrice} against a recorded peg reference of ${pegReference}.`
+    : startPrice
+      ? `The checked-in price path starts at ${startPrice}.`
+      : pegReference
+        ? `The checked-in record uses a peg reference of ${pegReference}.`
+        : "The checked-in record preserves the measured direction and peak deviation.";
+  const confirmation = event.confirmationSources
+    ? ` Confirmation evidence is recorded as “${event.confirmationSources}”.`
+    : "";
+  const confidenceFlag = event.pendingReason
+    ? ` The source row also retains the quality flag “${event.pendingReason}”.`
+    : "";
+  const closeReason = event.closeReason
+    ? ` Its recorded close reason is “${event.closeReason}”.`
+    : "";
+
+  return `${pricePath} Pharos captured the incident through ${sourceLabel} and evaluates it under ${versionLabel}.${confirmation}${confidenceFlag}${closeReason} The record reports the observed price path and resolution state without inferring a cause from those measurements.`;
+}
+
 export default async function DepegEventPage(
   { params }: { params: Promise<{ event: string }> },
 ) {
@@ -184,9 +214,10 @@ export default async function DepegEventPage(
     ? `${curated.label}${isCollision ? ` — ${formatEventUtcTime(event.startedAt)}` : ""}`
     : baseHeroTitle;
   const heroDescription = buildDepegEventDescription(event, isCollision);
-  const eventSynopsis = isCollision ? buildDepegEventSynopsis(event) : null;
+  const eventSynopsis = buildDepegEventSynopsis(event);
   const methodologyVersion = getDepegDewsMethodologyVersionAt(event.startedAt);
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);
+  const eventRecordContext = buildDepegRecordContext({ event, versionLabel });
   const canonicalUrl = `${SITE_URL}/depeg/${event.slug}/`;
 
   const authoredEditorial = getDepegEditorial(event.slug);
@@ -263,9 +294,10 @@ export default async function DepegEventPage(
           {heroTitle}
         </h1>
         <ProvenanceLine event={event} />
-        {eventSynopsis ? (
-          <p className="max-w-[72ch] text-sm leading-6 text-muted-foreground">{eventSynopsis}</p>
-        ) : null}
+        <div className="max-w-[72ch] space-y-3 text-sm leading-6 text-muted-foreground">
+          <p>{eventSynopsis}</p>
+          <p>{eventRecordContext}</p>
+        </div>
       </div>
 
       {editorial && timelineParagraphs.length > 0 ? (

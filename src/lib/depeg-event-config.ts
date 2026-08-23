@@ -85,7 +85,10 @@ export function selectIndexableDepegEvents<T extends DepegEventIndexCandidate>(
 /**
  * Static pages and indexable pages are deliberately the same set: every
  * generated event page is linked from the archive, listed in the sitemap,
- * and served `index,follow` — no page ships noindexed.
+ * and served `index,follow`. Each qualifying record carries the measured
+ * price path, resolution state, source, and methodology context needed for
+ * the route's data-driven briefing, so there is no low-information noindex
+ * tier within the current archive.
  */
 export function selectStaticDepegEventPages<T extends DepegEventStaticPageCandidate>(
   events: readonly T[],
