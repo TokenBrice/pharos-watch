@@ -4,10 +4,10 @@ import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import {
   DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
   DEWS_STALE_DEX_LIQUIDITY_SEC,
-} from "../source-state/hydration";
+} from "../../../lib/dews/source-state/hydration";
 
-describe("legacy DEWS hydration compatibility", () => {
-  it("retains the allowlisted freshness constants at their historical path", () => {
+describe("DEWS hydration freshness bounds", () => {
+  it("keeps both hydration freshness windows positive", () => {
     expect(DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC).toBeGreaterThan(0);
     expect(DEWS_STALE_DEX_LIQUIDITY_SEC).toBeGreaterThan(0);
   });

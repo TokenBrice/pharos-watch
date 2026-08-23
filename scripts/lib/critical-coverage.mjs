@@ -282,7 +282,6 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   // the owners are enrolled above, while the compatibility surfaces remain
   // covered by their direct import contracts.
   "worker/src/cron/compute-dews.ts": "2026-09-05",
-  "worker/src/cron/dews/source-state/hydration.ts": "2026-09-05",
   "worker/src/lib/safety-score-v9-transfer-materiality-observer.ts": "2026-09-05",
   "worker/src/lib/safety-score-v9-transfer-materiality.ts": "2026-09-05",
   "worker/src/cron/depeg-resolver/storage-adapters.ts": "2026-08-30",
