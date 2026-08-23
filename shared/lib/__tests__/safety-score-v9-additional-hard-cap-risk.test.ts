@@ -19,7 +19,7 @@ function signal(overrides: Partial<V9StructuralSignal> = {}): V9StructuralSignal
     failureDomainKeys: ["mint-control:asset:probe"],
     evidence: [],
     ...overrides,
-  } as V9StructuralSignal;
+  };
 }
 
 function input(signals: readonly V9StructuralSignal[]): V9ScoringInput {
@@ -33,9 +33,9 @@ function input(signals: readonly V9StructuralSignal[]): V9ScoringInput {
     activeDepegBps: null,
     parentRequired: false,
     parentScore: null,
-    structuralSignals: signals,
+    structuralSignals: [...signals],
     unresolved: [],
-  } as V9ScoringInput;
+  };
 }
 
 const MARKER = {
@@ -85,12 +85,13 @@ describe("additionalHardCapRisk gates the second charge for pillar-priced signal
   });
 
   it("rejects a marker that does not carry a reviewed reason", () => {
+    // An empty reason satisfies the TS type but not the schema's min(1), so this
+    // is a runtime rejection rather than a compile-time one.
     expect(() =>
       scoreV9Input(
         input([
           signal({
             pricedInPillar: "control",
-            // @ts-expect-error the schema requires a non-empty reviewed reason
             additionalHardCapRisk: { reviewed: true, reason: "" },
           }),
         ]),

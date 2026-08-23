@@ -49,6 +49,18 @@ function fixture(assetId: string, rated: boolean): V9PublicCardProjectionInput {
   const nrReasons = rated
     ? []
     : [{ code: "missing-pillar" as const, field: "pillars.backing", message: "Backing is missing." }];
+  // The trace carries V9NRReason (code/field/message); a pillar carries
+  // V9PublicReason (code/path/message/responsibility). Same fact, two shapes.
+  const pillarReasons = rated
+    ? []
+    : [
+        {
+          code: "missing-pillar" as const,
+          path: "pillars.backing",
+          message: "Backing is missing.",
+          responsibility: "integration-missing" as const,
+        },
+      ];
   const trace: V9ProductionScoreTrace = {
     assetId,
     policyId: "safety-score-v9",
@@ -102,7 +114,7 @@ function fixture(assetId: string, rated: boolean): V9PublicCardProjectionInput {
         backing: {
           score: pillars.backing,
           evidenceLevel: rated ? "strong" : "insufficient",
-          reasons: nrReasons,
+          reasons: pillarReasons,
           structuralSignals: [],
         },
         exit: { score: pillars.exit, evidenceLevel: "strong", reasons: [], structuralSignals: [] },
