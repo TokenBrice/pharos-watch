@@ -7,6 +7,7 @@ const fetchOnchainUint256Mock = vi.fn();
 const fetchSolanaTokenSupplyMock = vi.fn();
 const fetchStarknetTotalSupplyMock = vi.fn();
 const fetchIcrcLedgerTotalSupplyMock = vi.fn();
+const fetchMovementFungibleAssetSupplyMock = vi.fn();
 
 vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchErc20TotalSupply: (...args: unknown[]) => fetchErc20TotalSupplyMock(...args),
@@ -14,10 +15,33 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchSolanaTokenSupply: (...args: unknown[]) => fetchSolanaTokenSupplyMock(...args),
   fetchStarknetTotalSupply: (...args: unknown[]) => fetchStarknetTotalSupplyMock(...args),
   fetchIcrcLedgerTotalSupply: (...args: unknown[]) => fetchIcrcLedgerTotalSupplyMock(...args),
+  fetchMovementFungibleAssetSupply: (...args: unknown[]) => fetchMovementFungibleAssetSupplyMock(...args),
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
+
+function makeMovementMeta(): StablecoinMeta {
+  return {
+    id: "usdcx-movement",
+    name: "Movement USDCx",
+    symbol: "USDCx",
+    detailProvider: "coingecko",
+    contracts: [{
+      chain: "movement",
+      address: "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+      decimals: 6,
+    }],
+    flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized-dependent" },
+  } as StablecoinMeta;
+}
+
+function movementChainRpcs() {
+  return new Map([
+    ["movement", { chainId: "movement", chainName: "Movement", type: "other" as const, rpcUrl: "https://mainnet.movementnetwork.xyz/v1", explorerUrl: "https://explorer.movementnetwork.xyz" }],
+    ["ethereum", { chainId: "ethereum", chainName: "Ethereum", type: "evm" as const, rpcUrl: "https://ethereum-rpc.publicnode.com", explorerUrl: "https://etherscan.io" }],
+  ]);
+}
 
 function makeSkyMeta(): StablecoinMeta {
   return {
@@ -213,6 +237,46 @@ describe("fetchOnChainMcap", () => {
 });
 
 describe("fetchCuratedAggregateOnChainMcap", () => {
+  it("admits Movement USDCx only when its pinned-ledger supply reconciles to xReserve", async () => {
+    fetchMovementFungibleAssetSupplyMock.mockResolvedValue({
+      rawSupply: 1_739_632_096_715n,
+      decimals: 6,
+      ledgerVersion: "199722477",
+    });
+    fetchOnchainUint256Mock.mockResolvedValue(1_739_679_096_715n);
+
+    const result = await fetchCuratedAggregateOnChainMcap(
+      makeMovementMeta(), 1, movementChainRpcs(),
+    );
+
+    expect(result).toMatchObject({
+      mcap: 1_739_632.096715,
+      supplySource: "onchain-total-supply",
+      chainCirculating: { Movement: 1_739_632.096715 },
+    });
+  });
+
+  it("fails Movement USDCx closed when xReserve differs by more than one basis point", async () => {
+    fetchMovementFungibleAssetSupplyMock.mockResolvedValue({
+      rawSupply: 1_739_632_096_715n,
+      decimals: 6,
+      ledgerVersion: "199722477",
+    });
+    fetchOnchainUint256Mock.mockResolvedValue(1_740_000_000_000n);
+
+    await expect(fetchCuratedAggregateOnChainMcap(
+      makeMovementMeta(), 1, movementChainRpcs(),
+    )).resolves.toBeNull();
+  });
+
+  it("fails Movement USDCx closed when its ledger observation is unavailable", async () => {
+    fetchMovementFungibleAssetSupplyMock.mockResolvedValue(null);
+
+    await expect(fetchCuratedAggregateOnChainMcap(
+      makeMovementMeta(), 1, movementChainRpcs(),
+    )).resolves.toBeNull();
+    expect(fetchOnchainUint256Mock).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     fetchErc20TotalSupplyMock.mockReset();
     probeTrackedTokenSupplyMock.mockReset();
@@ -220,6 +284,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     fetchSolanaTokenSupplyMock.mockReset();
     fetchStarknetTotalSupplyMock.mockReset();
     fetchIcrcLedgerTotalSupplyMock.mockReset();
+    fetchMovementFungibleAssetSupplyMock.mockReset();
   });
 
   it("reallocates canonical lock/mint supply without double counting representations", async () => {

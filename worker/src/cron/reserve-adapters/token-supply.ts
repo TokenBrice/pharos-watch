@@ -3,7 +3,7 @@ import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { throwIfAborted } from "../../lib/abort";
 import { fetchErc20TotalSupply } from "./onchain";
-import { fetchJsonPostWithRetry } from "./request";
+import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
 import { requireOnchainInput } from "./input-guards";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
@@ -22,6 +22,54 @@ const SOLANA_RPC_URLS = [
   "https://api.mainnet.solana.com",
   "https://solana-rpc.publicnode.com",
 ] as const;
+
+const MOVEMENT_CONCURRENT_SUPPLY_TYPE = "0x1::fungible_asset::ConcurrentSupply";
+const MOVEMENT_METADATA_TYPE = "0x1::fungible_asset::Metadata";
+
+interface MovementLedgerResponse {
+  ledger_version?: string;
+}
+
+interface MovementResourceResponse {
+  type?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface MovementFungibleAssetSupplyObservation {
+  rawSupply: bigint;
+  decimals: number;
+  ledgerVersion: string;
+}
+
+/** Reads Movement fungible-asset supply and decimals at one pinned ledger. */
+export async function fetchMovementFungibleAssetSupply(
+  metadataAddress: string,
+  signal: AbortSignal,
+  rpcUrl = "https://mainnet.movementnetwork.xyz/v1",
+  ctx?: AdapterContext,
+): Promise<MovementFungibleAssetSupplyObservation | null> {
+  const baseUrl = rpcUrl.replace(/\/$/, "");
+  const ledger = await fetchJsonWithRetry<MovementLedgerResponse>(baseUrl, signal, 10_000, ctx);
+  if (!ledger.ledger_version || !/^(0|[1-9][0-9]*)$/.test(ledger.ledger_version)) return null;
+
+  const resourceUrl = (type: string) =>
+    `${baseUrl}/accounts/${metadataAddress}/resource/${type}?ledger_version=${ledger.ledger_version}`;
+  const supply = await fetchJsonWithRetry<MovementResourceResponse>(
+    resourceUrl(MOVEMENT_CONCURRENT_SUPPLY_TYPE), signal, 10_000, ctx,
+  );
+  const metadata = await fetchJsonWithRetry<MovementResourceResponse>(
+    resourceUrl(MOVEMENT_METADATA_TYPE), signal, 10_000, ctx,
+  );
+  if (supply.type !== MOVEMENT_CONCURRENT_SUPPLY_TYPE || metadata.type !== MOVEMENT_METADATA_TYPE) return null;
+
+  const current = supply.data?.current;
+  const raw = current && typeof current === "object" ? (current as Record<string, unknown>).value : null;
+  const decimals = metadata.data?.decimals;
+  if (typeof raw !== "string" || !/^(0|[1-9][0-9]*)$/.test(raw)) return null;
+  if (!Number.isInteger(decimals) || (decimals as number) < 0 || (decimals as number) > 30) return null;
+
+  return { rawSupply: BigInt(raw), decimals: decimals as number, ledgerVersion: ledger.ledger_version };
+}
 
 function isOnchainEvmInput(input: LiveReserveInput): input is EvmInput {
   return input.kind === "onchain-evm";

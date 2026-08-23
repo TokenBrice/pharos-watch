@@ -24,9 +24,11 @@ export const ZEPHYR_ZYS_ASSET_ID = "zys-zephyr-protocol";
 
 const ZEPHYR_SCANNER_SUPPLY_IDS = new Set([ZEPHYR_ZSD_ASSET_ID, ZEPHYR_ZYS_ASSET_ID]);
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
-// Starknet contract addresses are felts: hex, up to 252 bits, usually written
-// zero-padded to 64 nibbles.
-const STARKNET_ADDRESS_RE = /^0x[0-9a-fA-F]{1,64}$/;
+// Shared by Starknet contract addresses (felts: hex, up to 252 bits, usually
+// written zero-padded to 64 nibbles) and Movement fungible-asset metadata
+// addresses (32-byte account ids, leading zeros customarily trimmed). Both are
+// a 0x prefix followed by at most 64 nibbles, so one bound serves both.
+const HEX32_ADDRESS_RE = /^0x[0-9a-fA-F]{1,64}$/;
 // ICP canister ids are 10-byte principals in base32-with-CRC text form, i.e.
 // four groups of five characters plus a three-character tail. Longer
 // self-authenticating (user) principals are deliberately rejected.
@@ -38,10 +40,11 @@ const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
  * original two; Starknet and ICP were added so non-EVM legs can join
  * fail-closed curated aggregates instead of poisoning them.
  */
-export type OnchainSupplyProbeFamily = "evm" | "solana" | "starknet" | "icp";
+export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "starknet" | "icp";
 
 const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeFamily>> = {
   solana: "solana",
+  movement: "movement",
   starknet: "starknet",
   icp: "icp",
 };
@@ -50,6 +53,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
+  // Movement USDCx is a Circle xReserve representation. Its fungible-asset
+  // supply is admitted only after the Worker reconciles it to the matching
+  // Ethereum xReserve domain balance within one basis point.
+  "usdcx-movement": [{ chain: "movement" }],
   // DefiLlama currently lists these active assets but intermittently reports a
   // zero supply row. Use only verified live deployments and fail closed if any
   // configured chain cannot be read, so this cannot silently undercount.
@@ -372,6 +379,24 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "mantle", rpcUrl: "https://rpc.mantle.xyz", fallbackRpcUrl: "https://mantle-rpc.publicnode.com" },
     { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org" },
   ],
+  // syrupUSDC is an Ethereum ERC-4626 vault carried to seven Chainlink CCIP
+  // representations. Chainlink's directory identifies Ethereum as the
+  // LockRelease leg and every remote token as BurnMint, so Ethereum totalSupply
+  // is the conserved global total and the remote supplies are reallocated out
+  // of it. Verified 2026-08-23: Monad held 147,171,074.696779 shares at block
+  // 98,551,586; the three routes absent from CoinGecko were live but immaterial
+  // (Ink 0.000110, Robinhood 0.009000, Tempo 886.105125). Pin reviewed public
+  // RPCs for chains outside buildChainRpcs(); any unreadable leg fails closed.
+  "syrupusdc-maple": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "arbitrum" },
+    { chain: "solana" },
+    { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org", allowZeroSupply: true },
+    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
+    { chain: "robinhood", rpcUrl: "https://rpc.mainnet.chain.robinhood.com", allowZeroSupply: true },
+    { chain: "tempo", rpcUrl: "https://rpc.tempo.xyz", allowZeroSupply: true },
+  ],
   // srUSD has the same Reservoir shape as wsrUSD but a different adapter:
   // 0x316cd39632Cac4F4CdfC21757c4500FE12f64514 (SrusdOftAdapter). Verified
   // 2026-07-29: it escrows 6,882.636512 srUSD, exactly the Berachain
@@ -611,6 +636,7 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "witry-brix": "ethereum",
   "krwq-iq": "ethereum",
   "syrupusdt-maple": "ethereum",
+  "syrupusdc-maple": "ethereum",
   "srusd-reservoir": "ethereum",
   "pgold-pleasing": "arbitrum",
 };
@@ -660,8 +686,10 @@ export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): Oncha
   switch (NON_EVM_PROBE_FAMILY_BY_CHAIN[contract.chain]) {
     case "solana":
       return contract.address.length > 0 ? "solana" : null;
+    case "movement":
+      return HEX32_ADDRESS_RE.test(contract.address) ? "movement" : null;
     case "starknet":
-      return STARKNET_ADDRESS_RE.test(contract.address) ? "starknet" : null;
+      return HEX32_ADDRESS_RE.test(contract.address) ? "starknet" : null;
     case "icp":
       return ICP_CANISTER_ID_RE.test(contract.address) ? "icp" : null;
     default:

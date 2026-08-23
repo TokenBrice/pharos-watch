@@ -70,7 +70,7 @@ export {
   type OnchainRateProbe,
   type OnchainUint256Caller,
 } from "./onchain";
-export { fetchSolanaTokenSupply, probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
+export { fetchMovementFungibleAssetSupply, fetchSolanaTokenSupply, probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
 export { fetchStarknetTotalSupply } from "./starknet";
 export { fetchIcrcLedgerTotalSupply } from "./icp";
 export { buildRedemptionSnapshotMetadata, probeOptionalRedemptionRateBps } from "./redemption";

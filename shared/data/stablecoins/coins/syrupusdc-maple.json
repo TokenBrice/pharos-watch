@@ -81,6 +81,26 @@
       "chain": "solana",
       "address": "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
       "decimals": 6
+    },
+    {
+      "chain": "ink",
+      "address": "0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0xab6e5a0c3799d020c790d34f7b2c02639e238af7",
+      "decimals": 6
+    },
+    {
+      "chain": "robinhood",
+      "address": "0xc6a4854eeb493224d5f9485e12dd3a81f22eee14",
+      "decimals": 6
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c0000000000000000000008191667423f70e67",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

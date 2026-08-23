@@ -20,7 +20,7 @@ export {
 export interface ChainRpcConfig {
   chainId: string;
   chainName: string;
-  type: "evm" | "tron";
+  type: "evm" | "tron" | "other";
   rpcUrl: string;
   fallbackRpcUrl?: string;
   /** Alchemy supports higher batch sizes (no 25-request limit) */
@@ -65,6 +65,7 @@ const DRPC_CHAINS: Record<string, string> = {
 };
 
 const PUBLIC_ONLY_EVM_CHAINS = ["tempo"] as const;
+const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 
 export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map<string, ChainRpcConfig> {
   const configs: ChainRpcConfig[] = [];
@@ -129,6 +130,19 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
       type: "evm",
       rpcUrl: publicRpc,
       fallbackRpcUrl: getSecondaryFallbackRpcUrl(chainId),
+      explorerUrl: meta.explorerUrl,
+    });
+  }
+
+  for (const chainId of PUBLIC_ONLY_OTHER_CHAINS) {
+    const meta = CHAIN_META[chainId];
+    const publicRpc = getPublicRpcUrl(chainId);
+    if (!meta || !publicRpc) continue;
+    configs.push({
+      chainId,
+      chainName: meta.name,
+      type: "other",
+      rpcUrl: publicRpc,
       explorerUrl: meta.explorerUrl,
     });
   }
