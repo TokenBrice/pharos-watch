@@ -58,3 +58,9 @@ export const V9MechanismProfileReviewSchema = z.discriminatedUnion("profile", [
 export type V9MechanismProfileFact = z.infer<typeof V9MechanismProfileFactSchema>;
 export type V9MechanismProfileReview = z.infer<typeof V9MechanismProfileReviewSchema>;
 export type V9MechanismScoringProfile = V9MechanismProfileReview["profile"];
+
+export function safetyScoreV9MechanismProfileArchetype(
+  profile: V9MechanismScoringProfile,
+): "fiat-cash" | "algorithmic" {
+  return profile === "allocated-commodity-claim" ? "fiat-cash" : "algorithmic";
+}

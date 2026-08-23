@@ -24,7 +24,7 @@ import {
   type V9FailureDomainRef,
   type V9ObservationState,
 } from "./safety-score-v9-fact-primitives";
-import { VARIANT_KIND_VALUES } from "./core";
+import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES, VARIANT_KIND_VALUES } from "./core";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import {
   BaseInputGenerationIdSchema,
@@ -839,17 +839,7 @@ const V9OracleBranchReviewV2Schema = z
 const V9OracleControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
-    tier: z
-      .enum([
-        "oracleless",
-        "privileged-internal-pricing",
-        "redundant-with-failover",
-        "medianized-with-delay",
-        "standard-external",
-        "single-source-or-laggy",
-        "opaque-or-unknown",
-      ])
-      .nullable(),
+    tier: z.enum(ORACLE_RISK_TIER_VALUES).nullable(),
     liquidationBranchesApplicable: z.boolean().optional(),
     branches: canonicalArrayBy(V9OracleBranchReviewV2Schema, (branch) => branch.branch),
     // Worst severity band contributed by weak market branches whose measured
@@ -879,16 +869,7 @@ const V9OracleControlReviewV2Schema = z
 const V9BridgeRouteControlReviewV2Schema = z
   .object({
     controlKey: CanonicalTextSchema,
-    tier: z.enum([
-      "single-chain-or-native",
-      "issuer-native-burn-mint",
-      "canonical-rollup-bridge",
-      "issuer-native-lock-mint",
-      "external-validated-network",
-      "liquidity-or-intent-route",
-      "external-lock-mint",
-      "opaque-or-unknown",
-    ]),
+    tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
   })
   .strict();
 

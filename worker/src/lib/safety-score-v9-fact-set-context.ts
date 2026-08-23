@@ -184,6 +184,65 @@ export function reviewedGapResponsibility(
   return "integration-missing";
 }
 
+export function normalizeReviewedFactStatus(
+  context: AssetBuildContext,
+  original: V9FactStatusV2,
+  descriptor: {
+    bindingKey: string;
+    staleEvidenceError: string;
+    gapId: string;
+    reasonCode: V9FactGapV3["reasonCode"];
+    ownerDomain: V9FactGapV3["ownerDomain"];
+    componentKey: string;
+    message: string;
+    responsibility?: V9EvidenceResponsibility;
+  },
+): V9FactStatusV2 {
+  const evidenceIds =
+    original.observationState === "known" ||
+    original.observationState === "stale" ||
+    original.observationState === "bounded-unknown"
+      ? componentResearchEvidence(context, descriptor.bindingKey)
+      : [];
+  if (original.observationState === "known") {
+    assertKnownComponentEvidenceCurrent(context, descriptor.bindingKey, evidenceIds);
+    return createV9FactStatus({
+      applicability: original.applicability,
+      observationState: "known",
+      evidenceRefIds: evidenceIds,
+    });
+  }
+  const keepEvidence = original.observationState === "stale" || original.observationState === "bounded-unknown";
+  if (
+    original.observationState === "stale" &&
+    !evidenceIds.some((evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale")
+  ) {
+    throw new Error(descriptor.staleEvidenceError);
+  }
+  const evidenceRefIds = keepEvidence ? evidenceIds : [];
+  const gapId = addGap(
+    context,
+    createV9FactGapV3({
+      gapId: descriptor.gapId,
+      reasonCode: descriptor.reasonCode,
+      ownerDomain: descriptor.ownerDomain,
+      policyRuleId: original.applicability.policyRuleId,
+      observationState: original.observationState,
+      responsibility: descriptor.responsibility ?? reviewedGapResponsibility(original.observationState),
+      path: { kind: "local-component", componentKey: descriptor.componentKey },
+      message: descriptor.message,
+      evidenceRefIds,
+    }),
+  );
+  return createV9FactStatus({
+    applicability:
+      original.applicability.state === "unresolved" ? { ...original.applicability, gapId } : original.applicability,
+    observationState: original.observationState,
+    evidenceRefIds,
+    gapIds: [gapId],
+  });
+}
+
 export function missingLocalFact(
   context: AssetBuildContext,
   args: {

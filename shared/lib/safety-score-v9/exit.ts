@@ -1,6 +1,12 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9AssetFactsBase, V9ExitRouteFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import type { ExitRouteObservationHistory } from "../../types/exit-route";
+import type {
+  RedemptionAccessModel,
+  RedemptionExecutionModel,
+  RedemptionOutputAssetType,
+  RedemptionSettlementModel,
+} from "../../types/redemption";
 import {
   blendExitCapacityComponent,
   composeExitComponentScore,
@@ -12,13 +18,12 @@ import {
 import { clampScore } from "../math";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
-export type V9ExitAccess = "permissionless-onchain" | "whitelisted-onchain" | "issuer-api" | "manual";
-export type V9ExitSettlement = "atomic" | "immediate" | "same-day" | "days" | "queued";
+export type V9ExitAccess = RedemptionAccessModel;
+export type V9ExitSettlement = RedemptionSettlementModel;
 export type V9ExitHorizon = "immediate" | "near-term" | "queued";
 export type V9ExitCapacityScoringHorizon = "immediate" | "daily" | "queued" | "eventual" | "unknown";
-export type V9ExitExecution = "deterministic-onchain" | "deterministic-basket" | "rules-based-nav" | "opaque";
-export type V9ExitOutputQuality =
-  "stable-single" | "stable-basket" | "bluechip-collateral" | "mixed-collateral" | "nav";
+export type V9ExitExecution = RedemptionExecutionModel;
+export type V9ExitOutputQuality = RedemptionOutputAssetType;
 export type V9ExitHolderEligibility =
   | "any-holder"
   | "verified-customer"

@@ -17,7 +17,7 @@ import {
   assertKnownComponentEvidenceCurrent,
   componentResearchEvidence,
   missingLocalFact,
-  reviewedGapResponsibility,
+  normalizeReviewedFactStatus,
   type AssetBuildContext,
 } from "./safety-score-v9-fact-set-context";
 
@@ -154,51 +154,14 @@ function normalizeEconomicControlStatus(
   componentKey: string,
   reasonCode: V9FactGapV3["reasonCode"],
 ): V9FactStatusV2 {
-  const bindingKey = `economic-control:${componentKey}`;
-  const evidenceIds =
-    original.observationState === "known" ||
-    original.observationState === "stale" ||
-    original.observationState === "bounded-unknown"
-      ? componentResearchEvidence(context, bindingKey)
-      : [];
-  if (original.observationState === "known") {
-    assertKnownComponentEvidenceCurrent(context, bindingKey, evidenceIds);
-    return createV9FactStatus({
-      applicability: original.applicability,
-      observationState: "known",
-      evidenceRefIds: evidenceIds,
-    });
-  }
-  const keepEvidence = original.observationState === "stale" || original.observationState === "bounded-unknown";
-  if (
-    original.observationState === "stale" &&
-    !evidenceIds.some((evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale")
-  ) {
-    throw new Error(
-      `Economic-control review ${context.asset.assetId}:${componentKey} is stale but its source is current`,
-    );
-  }
-  const evidenceRefIds = keepEvidence ? evidenceIds : [];
-  const gapId = addGap(
-    context,
-    createV9FactGapV3({
-      gapId: `${context.asset.assetId}:gap:economic-control:${componentKey}`,
-      reasonCode,
-      ownerDomain: "control",
-      policyRuleId: original.applicability.policyRuleId,
-      observationState: original.observationState,
-      responsibility: reviewedGapResponsibility(original.observationState),
-      path: { kind: "local-component", componentKey: `economic-control:${componentKey}` },
-      message: `The ${componentKey} economic-control review is not a current known fact.`,
-      evidenceRefIds,
-    }),
-  );
-  return createV9FactStatus({
-    applicability:
-      original.applicability.state === "unresolved" ? { ...original.applicability, gapId } : original.applicability,
-    observationState: original.observationState,
-    evidenceRefIds,
-    gapIds: [gapId],
+  return normalizeReviewedFactStatus(context, original, {
+    bindingKey: `economic-control:${componentKey}`,
+    staleEvidenceError: `Economic-control review ${context.asset.assetId}:${componentKey} is stale but its source is current`,
+    gapId: `${context.asset.assetId}:gap:economic-control:${componentKey}`,
+    reasonCode,
+    ownerDomain: "control",
+    componentKey: `economic-control:${componentKey}`,
+    message: `The ${componentKey} economic-control review is not a current known fact.`,
   });
 }
 
@@ -283,29 +246,6 @@ function normalizeAccessStatus(
   componentKey: string,
   structuralDisposition?: NonNullable<V9AccessReviewV2["freeze"]["structuralDisposition"]>,
 ): V9FactStatusV2 {
-  const bindingKey = `access:${componentKey}`;
-  const evidenceIds =
-    original.observationState === "known" ||
-    original.observationState === "stale" ||
-    original.observationState === "bounded-unknown"
-      ? componentResearchEvidence(context, bindingKey)
-      : [];
-  if (original.observationState === "known") {
-    assertKnownComponentEvidenceCurrent(context, bindingKey, evidenceIds);
-    return createV9FactStatus({
-      applicability: original.applicability,
-      observationState: "known",
-      evidenceRefIds: evidenceIds,
-    });
-  }
-  const keepEvidence = original.observationState === "stale" || original.observationState === "bounded-unknown";
-  if (
-    original.observationState === "stale" &&
-    !evidenceIds.some((evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale")
-  ) {
-    throw new Error(`Access review ${context.asset.assetId}:${componentKey} is stale but its source is current`);
-  }
-  const evidenceRefIds = keepEvidence ? evidenceIds : [];
   // Owner ruling 2026-07-27: a current, evidenced structural verdict
   // (inherited-upstream) is a measured fact, not missing data. The status
   // stays bounded-unknown for scoring and the gap invariant is preserved, but
@@ -327,26 +267,17 @@ function normalizeAccessStatus(
       : structuralDisposition === "inherited-untracked-upstream"
         ? `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from an upstream that is not a tracked asset.`
         : `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from a named upstream asset.`;
-  const gapId = addGap(
-    context,
-    createV9FactGapV3({
-      gapId: `${context.asset.assetId}:gap:access:${componentKey}`,
-      reasonCode: structural ? structuralReasonCode : "missing-access-review",
-      ownerDomain: "control",
-      policyRuleId: original.applicability.policyRuleId,
-      observationState: original.observationState,
-      responsibility: structural ? "measured-adverse" : reviewedGapResponsibility(original.observationState),
-      path: { kind: "local-component", componentKey: `access:${componentKey}` },
-      message: structural ? structuralMessage : `The ${componentKey} access/censorship review is not a current known fact.`,
-      evidenceRefIds,
-    }),
-  );
-  return createV9FactStatus({
-    applicability:
-      original.applicability.state === "unresolved" ? { ...original.applicability, gapId } : original.applicability,
-    observationState: original.observationState,
-    evidenceRefIds,
-    gapIds: [gapId],
+  return normalizeReviewedFactStatus(context, original, {
+    bindingKey: `access:${componentKey}`,
+    staleEvidenceError: `Access review ${context.asset.assetId}:${componentKey} is stale but its source is current`,
+    gapId: `${context.asset.assetId}:gap:access:${componentKey}`,
+    reasonCode: structural ? structuralReasonCode : "missing-access-review",
+    ownerDomain: "control",
+    componentKey: `access:${componentKey}`,
+    message: structural
+      ? structuralMessage
+      : `The ${componentKey} access/censorship review is not a current known fact.`,
+    responsibility: structural ? "measured-adverse" : undefined,
   });
 }
 

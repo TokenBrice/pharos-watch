@@ -4,73 +4,13 @@ import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/acce
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
-  CanonicalChainIdSchema,
-  CanonicalTextSchema,
-} from "@shared/types/safety-score-v9-fact-input-primitives";
-import { z } from "zod";
+  SafetyScoreV9ReviewedTransferFileSchema,
+  safetyScoreV9TransferDeploymentKey,
+  type SafetyScoreV9ReviewedTransferFact,
+} from "@shared/types/safety-score-v9-transfer-overlays";
 
-const TransferPostureSchema = z.enum(["permissionless", "restrictable", "permissioned"]);
-const TransferSourceSchema = z.object({ label: CanonicalTextSchema, url: z.string().url() }).strict();
-
-function canonicalTransferTokenId(contractOrTokenId: string): string {
-  const trimmed = contractOrTokenId.trim();
-  return /^0x[0-9a-f]+$/i.test(trimmed) ? trimmed.toLowerCase() : trimmed;
-}
-
-export function safetyScoreV9TransferDeploymentKey(chainId: string, contractOrTokenId: string): string {
-  return `${chainId}:${canonicalTransferTokenId(contractOrTokenId)}`;
-}
-
-const SafetyScoreV9ReviewedTransferDeploymentSchema = z
-  .object({
-    chainId: CanonicalChainIdSchema,
-    contractOrTokenId: CanonicalTextSchema,
-    scope: z.enum(["canonical", "material-bridge", "additional"]),
-    posture: TransferPostureSchema,
-    evidence: CanonicalTextSchema,
-    sources: z.array(TransferSourceSchema).min(1),
-  })
-  .strict();
-
-const SafetyScoreV9ReviewedTransferFactSchema = z
-  .object({
-    assetId: CanonicalTextSchema,
-    reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    reviewer: CanonicalTextSchema,
-    deployments: z.array(SafetyScoreV9ReviewedTransferDeploymentSchema).min(1),
-  })
-  .strict()
-  .superRefine((review, ctx) => {
-    const deploymentKeys = review.deployments.map((deployment) =>
-      safetyScoreV9TransferDeploymentKey(deployment.chainId, deployment.contractOrTokenId),
-    );
-    if (new Set(deploymentKeys).size !== deploymentKeys.length) {
-      ctx.addIssue({ code: "custom", path: ["deployments"], message: "Duplicate reviewed transfer deployment" });
-    }
-    if (!review.deployments.some((deployment) => deployment.scope === "canonical")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["deployments"],
-        message: "A reviewed transfer fact requires at least one canonical deployment",
-      });
-    }
-  });
-
-const SafetyScoreV9ReviewedTransferFileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    note: CanonicalTextSchema,
-    reviews: z.array(SafetyScoreV9ReviewedTransferFactSchema),
-  })
-  .strict()
-  .superRefine((file, ctx) => {
-    const assetIds = file.reviews.map((review) => review.assetId);
-    if (new Set(assetIds).size !== assetIds.length) {
-      ctx.addIssue({ code: "custom", path: ["reviews"], message: "Duplicate reviewed transfer assetId" });
-    }
-  });
-
-export type SafetyScoreV9ReviewedTransferFact = z.infer<typeof SafetyScoreV9ReviewedTransferFactSchema>;
+export { safetyScoreV9TransferDeploymentKey };
+export type { SafetyScoreV9ReviewedTransferFact };
 
 const REVIEWED_TRANSFER_FILE = SafetyScoreV9ReviewedTransferFileSchema.parse(transferReviewOverlaysAsset);
 

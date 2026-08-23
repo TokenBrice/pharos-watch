@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { V9MechanismProfileReviewSchema } from "./safety-score-v9-mechanism-profile";
+import {
+  V9MechanismProfileReviewSchema,
+  safetyScoreV9MechanismProfileArchetype,
+} from "./safety-score-v9-mechanism-profile";
 
 const MechanismQualitySchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);
 
@@ -81,8 +84,7 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
   .strict()
   .superRefine((overlay, ctx) => {
     if (overlay.profileReview !== undefined) {
-      const expectedArchetype =
-        overlay.profileReview.profile === "allocated-commodity-claim" ? "fiat-cash" : "algorithmic";
+      const expectedArchetype = safetyScoreV9MechanismProfileArchetype(overlay.profileReview.profile);
       if (expectedArchetype !== overlay.archetype) {
         ctx.addIssue({
           code: "custom",

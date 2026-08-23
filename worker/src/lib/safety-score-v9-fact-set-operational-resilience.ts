@@ -5,7 +5,7 @@ import {
   type V9OperationalResilienceClaimConfidence,
   type V9OperationalResilienceFact,
 } from "@shared/types/safety-score-v9-operational-resilience";
-import type { SafetyScoreV9OperationalResilienceOverlay } from "./safety-score-v9-extension-operational-resilience";
+import type { SafetyScoreV9OperationalResilienceOverlay } from "@shared/types/safety-score-v9-operational-resilience-overlays";
 import {
   addEvidence,
   isoDateStartSec,

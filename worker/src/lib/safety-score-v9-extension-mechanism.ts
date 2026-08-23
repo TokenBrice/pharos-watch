@@ -1,7 +1,5 @@
-import { z } from "zod";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import {
-  V9MechanismProfileReviewSchema,
   projectV9MechanismProfile,
   type V9MechanismProfileComponentProjection,
 } from "@shared/lib/safety-score-v9/mechanism-profiles";
@@ -20,6 +18,11 @@ import {
   type V9TbillMechanismRiskReview,
 } from "@shared/types/safety-score-v9-backing";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
+import {
+  SafetyScoreV9MechanismReviewOverlayFileSchema,
+  SafetyScoreV9MechanismReviewOverlaySchema,
+  type SafetyScoreV9MechanismReviewOverlay,
+} from "@shared/types/safety-score-v9-mechanism-overlays";
 import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
@@ -170,177 +173,8 @@ function buildTbillReview(
   };
 }
 
-const OverlayMeasuredComponentSchema = z
-  .object({
-    quality: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
-  })
-  .strict();
-
-const OverlayComponentSchema = z.union([
-  // Legacy rows predate explicit applicability; a numeric quality always
-  // meant that the component was measured/reviewed.
-  OverlayMeasuredComponentSchema,
-  z
-    .object({
-      applicability: z.literal("measured"),
-      quality: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
-    })
-    .strict(),
-  z
-    .object({
-      applicability: z.literal("not-applicable"),
-      rationale: z.string().trim().min(1),
-      sourceUrl: z.string().url(),
-    })
-    .strict(),
-  z
-    .object({
-      applicability: z.literal("unavailable"),
-      rationale: z.string().trim().min(1),
-      sourceUrl: z.string().url(),
-    })
-    .strict(),
-]);
-
-const OverlayMetricApplicabilitySchema = z.discriminatedUnion("state", [
-  z.object({ state: z.literal("measured") }).strict(),
-  z
-    .object({
-      state: z.literal("not-applicable"),
-      rationale: z.string().trim().min(1),
-      sourceUrl: z.string().url(),
-    })
-    .strict(),
-  // Owner ruling 2026-07-27 (wave-7 D2): the metric structurally applies but
-  // the issuer publishes no measurable value. Admitted for the sdn/rwa
-  // archetypes only; the linked structural penalty signal keeps firing.
-  z
-    .object({
-      state: z.literal("unavailable"),
-      rationale: z.string().trim().min(1),
-      sourceUrl: z.string().url(),
-    })
-    .strict(),
-]);
-
-const OverlaySourceSchema = z.object({ label: z.string().min(1), url: z.string().url() }).strict();
-
-export const MechanismReviewOverlaySchema = z
-  .object({
-    assetId: z.string().min(1),
-    archetype: z.enum([
-      "cdp",
-      "synthetic-delta-neutral",
-      "algorithmic",
-      "rwa-credit-fund",
-      "fiat-cash",
-      "tbill",
-      "commodity-claim",
-    ]),
-    reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    sources: z.array(OverlaySourceSchema).min(1),
-    notes: z.string().min(1),
-    metrics: z.record(z.string(), z.number().finite().nullable()),
-    profileReview: V9MechanismProfileReviewSchema.optional(),
-    metricApplicability: z.record(z.string(), OverlayMetricApplicabilitySchema).optional(),
-    analogousMetrics: z.record(z.string(), z.number().finite()).optional(),
-    venueShares: z
-      .array(
-        z
-          .object({
-            venueKey: z.string().min(1),
-            share: z.number().min(0).max(1),
-            failureDomains: z.array(z.object({ kind: z.string().min(1), key: z.string().min(1) }).strict()).default([]),
-          })
-          .strict(),
-      )
-      .optional(),
-    components: z.record(z.string(), OverlayComponentSchema),
-  })
-  .strict()
-  .superRefine((overlay, ctx) => {
-    if (overlay.profileReview !== undefined) {
-      const projection = projectV9MechanismProfile(overlay.profileReview);
-      if (projection.archetype !== overlay.archetype) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["profileReview", "profile"],
-          message: `Profile ${overlay.profileReview.profile} is incompatible with ${overlay.archetype}`,
-        });
-      }
-      if (Object.keys(overlay.metrics).length > 0 || Object.keys(overlay.components).length > 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["profileReview"],
-          message: "Profile-driven overlays cannot duplicate projected metrics or components",
-        });
-      }
-    }
-    const sourceUrls = new Set(overlay.sources.map((source) => source.url));
-    for (const [componentKey, component] of Object.entries(overlay.components)) {
-      if (
-        "applicability" in component &&
-        component.applicability !== "measured" &&
-        !sourceUrls.has(component.sourceUrl)
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["components", componentKey, "sourceUrl"],
-          message: "Non-measured component sourceUrl must match an overlay source",
-        });
-      }
-    }
-    for (const [metricKey, applicability] of Object.entries(overlay.metricApplicability ?? {})) {
-      if (applicability.state !== "measured" && !sourceUrls.has(applicability.sourceUrl)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["metricApplicability", metricKey, "sourceUrl"],
-          message: "Not-applicable metric sourceUrl must match an overlay source",
-        });
-      }
-    }
-  });
-
-const MechanismReviewOverlayFileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    note: z.string(),
-    overlays: z.array(MechanismReviewOverlaySchema),
-  })
-  .strict()
-  .superRefine((file, ctx) => {
-    const ids = file.overlays.map((overlay) => overlay.assetId);
-    if (new Set(ids).size !== ids.length) {
-      ctx.addIssue({ code: "custom", path: ["overlays"], message: "Duplicate overlay assetId" });
-    }
-    file.overlays.forEach((overlay, overlayIndex) => {
-      const sourceUrls = new Set(overlay.sources.map((source) => source.url));
-      for (const [componentKey, component] of Object.entries(overlay.components)) {
-        if (
-          "applicability" in component &&
-          component.applicability !== "measured" &&
-          !sourceUrls.has(component.sourceUrl)
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["overlays", overlayIndex, "components", componentKey, "sourceUrl"],
-            message: "Non-measured component sourceUrl must match an overlay source",
-          });
-        }
-      }
-      for (const [metricKey, applicability] of Object.entries(overlay.metricApplicability ?? {})) {
-        if (applicability.state !== "measured" && !sourceUrls.has(applicability.sourceUrl)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["overlays", overlayIndex, "metricApplicability", metricKey, "sourceUrl"],
-            message: "Not-applicable metric sourceUrl must match an overlay source",
-          });
-        }
-      }
-    });
-  });
-
-export type MechanismReviewOverlay = z.infer<typeof MechanismReviewOverlaySchema>;
+export type MechanismReviewOverlay = SafetyScoreV9MechanismReviewOverlay;
+export const MechanismReviewOverlaySchema = SafetyScoreV9MechanismReviewOverlaySchema;
 
 // Component fields (camelCase) per archetype; numeric metric fields separate.
 const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
@@ -513,7 +347,9 @@ export function expandOverlayReview(
   return V9MechanismRiskReviewSchema.parse(review);
 }
 
-const MECHANISM_REVIEW_OVERLAY_FILE = MechanismReviewOverlayFileSchema.parse(mechanismReviewOverlaysAsset);
+const MECHANISM_REVIEW_OVERLAY_FILE = SafetyScoreV9MechanismReviewOverlayFileSchema.parse(
+  mechanismReviewOverlaysAsset,
+);
 
 export const SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST = sha256Hex(
   stableJsonStringifyV1({

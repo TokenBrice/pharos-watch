@@ -17,7 +17,7 @@ import {
   V9CdpStressCoverageFactSchema,
   V9MechanismRiskReviewSchema,
 } from "@shared/types/safety-score-v9-backing";
-import { SafetyScoreV9OperationalResilienceOverlaySchema } from "./safety-score-v9-extension-operational-resilience";
+import { SafetyScoreV9OperationalResilienceOverlaySchema } from "@shared/types/safety-score-v9-operational-resilience-overlays";
 import {
   DexExitRouteObservationSchema,
   ExitRouteObservationSchema,
