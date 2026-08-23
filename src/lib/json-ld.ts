@@ -1,5 +1,4 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { MEDIA_APPEARANCES } from "@/lib/media-appearances";
 
@@ -39,6 +38,7 @@ export const PHAROS_ORG_NODE = {
   "@type": "Organization",
   "@id": `${SITE_URL}#organization`,
   name: "Pharos",
+  alternateName: ["Pharos Watch", "pharos.watch"],
   url: SITE_URL,
   logo: `${SITE_URL}/pharos-mark.png`,
   description: PHAROS_SITE_DESCRIPTION,
@@ -47,10 +47,6 @@ export const PHAROS_ORG_NODE = {
     "https://x.com/PharosWatch",
     "https://github.com/TokenBrice/pharos-watch",
     "https://t.me/pharoswatch",
-    TELEGRAM_BOT_URL,
-    "https://t.me/pharoswatchers",
-    "https://pharosville.pharos.watch/",
-    "https://farcaster.xyz/tokenbrice",
   ],
   contactPoint: [
     {

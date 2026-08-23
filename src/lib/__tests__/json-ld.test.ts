@@ -18,13 +18,17 @@ describe("PHAROS_ORG_NODE", () => {
       },
       founder: { "@id": "https://pharos.watch#person-tokenbrice" },
     });
-    expect(parsed.sameAs).toEqual(
-      expect.arrayContaining([
-        "https://x.com/PharosWatch",
-        "https://github.com/TokenBrice/pharos-watch",
-        "https://pharosville.pharos.watch/",
-      ]),
-    );
+    // sameAs asserts identity equivalence: these must all BE Pharos, not merely
+    // relate to it. Related properties (bot, community chat, PharosVille) moved
+    // to WebSite.relatedLink; the founder's personal profiles live on the Person
+    // node. A separate "Pharos Network" blockchain exists, so entity precision
+    // here is load-bearing for disambiguation.
+    expect(parsed.sameAs).toEqual([
+      "https://x.com/PharosWatch",
+      "https://github.com/TokenBrice/pharos-watch",
+      "https://t.me/pharoswatch",
+    ]);
+    expect(parsed.alternateName).toEqual(expect.arrayContaining(["Pharos Watch"]));
     expect(parsed.contactPoint).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
