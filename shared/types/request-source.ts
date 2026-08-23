@@ -1,9 +1,5 @@
 import { z } from "zod";
-import { ApiKeyTrafficClassSchema, type ApiKeyTrafficClass } from "./api-keys";
-
-export type ApiRequestConsumerClass = "site" | "external";
-
-export type ApiRequestWorkerLane = "public-api" | "site-api";
+import { ApiKeyTrafficClassSchema } from "./api-keys";
 
 export type SiteDataRequestDeliveryPath =
   | "pages-cache-hit"
@@ -13,89 +9,6 @@ export type SiteDataRequestDeliveryPath =
 
 export type SiteDataRequestUpstreamLane = "" | "site-api" | "public-api-fallback";
 
-export interface ApiRequestAttributionSplit {
-  siteRequests: number;
-  externalRequests: number;
-  totalRequests: number;
-  siteSharePct: number;
-  externalSharePct: number;
-}
-
-export interface ApiRequestAttributionRouteStat extends ApiRequestAttributionSplit {
-  routeKey: string;
-  routePath: string;
-}
-
-export interface ApiRequestAttributionTimeBucket extends ApiRequestAttributionSplit {
-  bucketStart: number;
-}
-
-export interface ApiRequestAttributionLaneStat extends ApiRequestAttributionSplit {
-  lane: ApiRequestWorkerLane;
-}
-
-export interface ApiRequestAttributionSiteDelivery {
-  totalSiteRequests: number;
-  pagesCacheHits: number;
-  pagesUpstreamFetches: number;
-  pagesUpstreamTimeouts: number;
-  pagesUpstreamErrors: number;
-  publicApiSiteRequests: number;
-}
-
-export interface ApiRequestAttributionScope {
-  countsTotalSiteDemand: boolean;
-  countsWorkerLoad: boolean;
-  includesPagesProxyCacheHits: boolean;
-}
-
-export interface ApiRequestAttributionKeyedPublicApiSummary {
-  keyedRequests: number;
-  unkeyedRequests: number;
-  totalRequests: number;
-  keyedSharePct: number;
-  unkeyedSharePct: number;
-  totalKeys: number;
-  returnedKeys: number;
-  omittedKeys: number;
-  omittedRequests: number;
-  truncated: boolean;
-}
-
-export interface ApiRequestAttributionApiKeyStat {
-  apiKeyId: number;
-  name: string;
-  maskedToken: string;
-  trafficClass: ApiKeyTrafficClass;
-  isActive: boolean;
-  expiresAt: number | null;
-  rateLimitPerMinute: number;
-  requestCount: number;
-  shareOfKeyedRequestsPct: number;
-  shareOfTotalPublicApiRequestsPct: number;
-}
-
-export interface ApiRequestAttributionResponse {
-  generatedAt: number;
-  window: {
-    from: number;
-    to: number;
-    durationSec: number;
-    bucketSizeSec: number;
-    routeLimit: number;
-    apiKeyLimit: number;
-    retentionDays: number;
-  };
-  totals: ApiRequestAttributionSplit;
-  siteDelivery: ApiRequestAttributionSiteDelivery;
-  lanes: ApiRequestAttributionLaneStat[];
-  routes: ApiRequestAttributionRouteStat[];
-  buckets: ApiRequestAttributionTimeBucket[];
-  keyedPublicApi: ApiRequestAttributionKeyedPublicApiSummary;
-  apiKeys: ApiRequestAttributionApiKeyStat[];
-  scope: ApiRequestAttributionScope;
-}
-
 const ApiRequestAttributionSplitSchema = z.object({
   siteRequests: z.number(),
   externalRequests: z.number(),
@@ -103,19 +16,24 @@ const ApiRequestAttributionSplitSchema = z.object({
   siteSharePct: z.number(),
   externalSharePct: z.number(),
 });
+export type ApiRequestAttributionSplit = z.output<typeof ApiRequestAttributionSplitSchema>;
 
 const ApiRequestAttributionRouteStatSchema = ApiRequestAttributionSplitSchema.extend({
   routeKey: z.string(),
   routePath: z.string(),
 });
+export type ApiRequestAttributionRouteStat = z.output<typeof ApiRequestAttributionRouteStatSchema>;
 
 const ApiRequestAttributionTimeBucketSchema = ApiRequestAttributionSplitSchema.extend({
   bucketStart: z.number(),
 });
+export type ApiRequestAttributionTimeBucket = z.output<typeof ApiRequestAttributionTimeBucketSchema>;
 
 const ApiRequestAttributionLaneStatSchema = ApiRequestAttributionSplitSchema.extend({
   lane: z.enum(["public-api", "site-api"]),
 });
+export type ApiRequestAttributionLaneStat = z.output<typeof ApiRequestAttributionLaneStatSchema>;
+export type ApiRequestWorkerLane = ApiRequestAttributionLaneStat["lane"];
 
 const ApiRequestAttributionSiteDeliverySchema = z.object({
   totalSiteRequests: z.number(),
@@ -125,12 +43,14 @@ const ApiRequestAttributionSiteDeliverySchema = z.object({
   pagesUpstreamErrors: z.number(),
   publicApiSiteRequests: z.number(),
 });
+export type ApiRequestAttributionSiteDelivery = z.output<typeof ApiRequestAttributionSiteDeliverySchema>;
 
 const ApiRequestAttributionScopeSchema = z.object({
   countsTotalSiteDemand: z.boolean(),
   countsWorkerLoad: z.boolean(),
   includesPagesProxyCacheHits: z.boolean(),
 });
+export type ApiRequestAttributionScope = z.output<typeof ApiRequestAttributionScopeSchema>;
 
 const ApiRequestAttributionKeyedPublicApiSummarySchema = z.object({
   keyedRequests: z.number(),
@@ -144,6 +64,9 @@ const ApiRequestAttributionKeyedPublicApiSummarySchema = z.object({
   omittedRequests: z.number(),
   truncated: z.boolean(),
 });
+export type ApiRequestAttributionKeyedPublicApiSummary = z.output<
+  typeof ApiRequestAttributionKeyedPublicApiSummarySchema
+>;
 
 const ApiRequestAttributionApiKeyStatSchema = z.object({
   apiKeyId: z.number(),
@@ -157,8 +80,10 @@ const ApiRequestAttributionApiKeyStatSchema = z.object({
   shareOfKeyedRequestsPct: z.number(),
   shareOfTotalPublicApiRequestsPct: z.number(),
 });
+export type ApiRequestAttributionApiKeyStat = z.output<typeof ApiRequestAttributionApiKeyStatSchema>;
+export type ApiRequestConsumerClass = ApiRequestAttributionApiKeyStat["trafficClass"];
 
-export const ApiRequestAttributionResponseSchema: z.ZodType<ApiRequestAttributionResponse> = z.object({
+export const ApiRequestAttributionResponseSchema = z.object({
   generatedAt: z.number(),
   window: z.object({
     from: z.number(),
@@ -178,3 +103,4 @@ export const ApiRequestAttributionResponseSchema: z.ZodType<ApiRequestAttributio
   apiKeys: z.array(ApiRequestAttributionApiKeyStatSchema),
   scope: ApiRequestAttributionScopeSchema,
 });
+export type ApiRequestAttributionResponse = z.output<typeof ApiRequestAttributionResponseSchema>;

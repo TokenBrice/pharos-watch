@@ -1,38 +1,5 @@
 import { z } from "zod";
-import type {
-  BlacklistabilityReview,
-  BridgeRouteControl,
-  BridgeRouteDeployment,
-  BridgeRouteProtocolEvidence,
-  BridgeRouteRiskProfile,
-  BridgeRouteScopedQuestion,
-  CoinNotice,
-  ContractDeployment,
-  CustodyProfile,
-  DateHistoryEntry,
-  DependencyReview,
-  DependencyWeight,
-  FeaturedContent,
-  GeniusApplicabilityBasis,
-  GeniusForeignExceptionEvidence,
-  GeniusNegativeEvidenceReview,
-  GeniusProfile,
-  GeniusReference,
-  Jurisdiction,
-  LaunchMilestone,
-  MicaProfile,
-  MintAuthorityControl,
-  MintAuthorityDirectMintAbility,
-  MintAuthorityNoLocalIssuanceException,
-  MintAuthorityProfile,
-  MintAuthorityReview,
-  MintAuthorityRouteChecks,
-  MintAuthorityScopedQuestion,
-  OracleRiskProfile,
-  MintAuthoritySafeState,
-  ReserveReview,
-  YieldConfig,
-} from "./core";
+import type { MintAuthorityDirectMintAbility } from "./core";
 import {
   ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
@@ -397,7 +364,7 @@ export const OracleRiskBranchSchema = z
 
 export type OracleRiskBranch = z.infer<typeof OracleRiskBranchSchema>;
 
-export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
+export const OracleRiskProfileSchema = z
   .object({
     tier: z.enum(ORACLE_RISK_TIER_VALUES),
     summary: z.string().min(12),
@@ -479,7 +446,7 @@ export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
     }
   });
 
-export const BridgeRouteProtocolEvidenceSchema: z.ZodType<BridgeRouteProtocolEvidence> = z
+const BridgeRouteProtocolEvidenceSchema = z
   .object({
     source: z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUES),
     name: z.string().min(1),
@@ -490,7 +457,7 @@ export const BridgeRouteProtocolEvidenceSchema: z.ZodType<BridgeRouteProtocolEvi
   })
   .strict();
 
-const BridgeRouteDeploymentSchema: z.ZodType<BridgeRouteDeployment> = z
+const BridgeRouteDeploymentSchema = z
   .object({
     id: z.string().min(1),
     sourceChain: z.string().min(1).optional(),
@@ -581,7 +548,7 @@ const BridgeRouteDeploymentSchema: z.ZodType<BridgeRouteDeployment> = z
     }
   });
 
-export const BridgeRouteRiskProfileSchema: z.ZodType<BridgeRouteRiskProfile> = z
+export const BridgeRouteRiskProfileSchema = z
   .object({
     tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
     summary: z.string().min(12),
@@ -653,7 +620,7 @@ export const BridgeRouteRiskProfileSchema: z.ZodType<BridgeRouteRiskProfile> = z
     }
   });
 
-export const BlacklistabilityReviewSchema: z.ZodType<BlacklistabilityReview> = z
+export const BlacklistabilityReviewSchema = z
   .object({
     reviewedStatus: BlacklistabilityReviewStatusSchema,
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
@@ -675,7 +642,7 @@ export const BlacklistabilityReviewSchema: z.ZodType<BlacklistabilityReview> = z
     });
   });
 
-export const JurisdictionSchema: z.ZodType<Jurisdiction> = z
+export const JurisdictionSchema = z
   .object({
     country: z.string(),
     regulator: z.string().optional(),
@@ -683,7 +650,7 @@ export const JurisdictionSchema: z.ZodType<Jurisdiction> = z
   })
   .strict();
 
-export const MicaProfileSchema: z.ZodType<MicaProfile> = z
+export const MicaProfileSchema = z
   .object({
     status: z.enum(MICA_STATUS_VALUES),
     tokenType: z.enum(MICA_TOKEN_TYPE_VALUES).optional(),
@@ -719,14 +686,7 @@ export const MicaProfileSchema: z.ZodType<MicaProfile> = z
 const GENIUS_REGULATOR_SOURCE_KINDS = new Set(["federal-register", "federal-regulator", "state-regulator"]);
 const GENIUS_FEDERAL_SOURCE_KINDS = new Set(["federal-register", "federal-regulator"]);
 
-function hasGeniusReferenceKind(
-  references: readonly GeniusReference[] | undefined,
-  sourceKinds: ReadonlySet<string>,
-): boolean {
-  return references?.some((reference) => sourceKinds.has(reference.sourceKind)) ?? false;
-}
-
-const GeniusReferenceSchema: z.ZodType<GeniusReference> = z
+const GeniusReferenceSchema = z
   .object({
     label: z.string().min(1),
     url: HttpUrlSchema,
@@ -735,22 +695,30 @@ const GeniusReferenceSchema: z.ZodType<GeniusReference> = z
     accessedAt: ReviewDateSchema.optional(),
   })
   .strict();
+export type GeniusReference = z.output<typeof GeniusReferenceSchema>;
 
-const GeniusApplicabilityBasisSchema: z.ZodType<GeniusApplicabilityBasis> = z
+function hasGeniusReferenceKind(
+  references: readonly GeniusReference[] | undefined,
+  sourceKinds: ReadonlySet<string>,
+): boolean {
+  return references?.some((reference) => sourceKinds.has(reference.sourceKind)) ?? false;
+}
+
+const GeniusApplicabilityBasisSchema = z
   .object({
     summary: z.string().min(12),
     references: z.array(GeniusReferenceSchema).optional(),
   })
   .strict();
 
-const GeniusForeignExceptionEvidenceSchema: z.ZodType<GeniusForeignExceptionEvidence> = z
+const GeniusForeignExceptionEvidenceSchema = z
   .object({
     summary: z.string().min(12),
     references: z.array(GeniusReferenceSchema).optional(),
   })
   .strict();
 
-const GeniusNegativeEvidenceReviewSchema: z.ZodType<GeniusNegativeEvidenceReview> = z
+const GeniusNegativeEvidenceReviewSchema = z
   .object({
     sourcesChecked: z.array(z.string().min(1)).min(1),
     summary: z.string().min(12),
@@ -760,7 +728,7 @@ const GeniusNegativeEvidenceReviewSchema: z.ZodType<GeniusNegativeEvidenceReview
   })
   .strict();
 
-export const GeniusProfileSchema: z.ZodType<GeniusProfile> = z
+export const GeniusProfileSchema = z
   .object({
     applicability: z.enum(GENIUS_APPLICABILITY_VALUES),
     applicabilityBasis: GeniusApplicabilityBasisSchema.optional(),
@@ -856,7 +824,7 @@ export const GeniusProfileSchema: z.ZodType<GeniusProfile> = z
     }
   });
 
-const MintAuthoritySafeStateSchema: z.ZodType<MintAuthoritySafeState> = z
+const MintAuthoritySafeStateSchema = z
   .object({
     version: z.string().min(1).optional(),
     owners: z.array(z.string().min(1)).optional(),
@@ -881,7 +849,7 @@ const MintAuthoritySafeStateSchema: z.ZodType<MintAuthoritySafeState> = z
     }
   });
 
-const MintAuthorityRouteChecksSchema: z.ZodType<MintAuthorityRouteChecks> = z
+const MintAuthorityRouteChecksSchema = z
   .object({
     lockboxOrEscrow: z.string().min(1).optional(),
     trustedPeerOrRemote: z.string().min(1).optional(),
@@ -895,15 +863,14 @@ const MintAuthorityRouteChecksSchema: z.ZodType<MintAuthorityRouteChecks> = z
   })
   .strict();
 
-const MintAuthorityKeyCustodyAttestationSchema: z.ZodType<NonNullable<MintAuthorityControl["keyCustodyAttestation"]>> =
-  z
+const MintAuthorityKeyCustodyAttestationSchema = z
     .object({
       kind: z.enum(MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES),
       sources: z.array(StablecoinLinkSchema).min(1),
     })
     .strict();
 
-const MintAuthorityNoLocalIssuanceExceptionSchema: z.ZodType<MintAuthorityNoLocalIssuanceException> = z
+const MintAuthorityNoLocalIssuanceExceptionSchema = z
   .object({
     kind: z.enum(MINT_AUTHORITY_NO_LOCAL_ISSUANCE_KIND_VALUES),
     reviewedAt: ReviewDateSchema,
@@ -913,7 +880,7 @@ const MintAuthorityNoLocalIssuanceExceptionSchema: z.ZodType<MintAuthorityNoLoca
   })
   .strict();
 
-const BridgeRouteControlSchema: z.ZodType<BridgeRouteControl> = z
+const BridgeRouteControlSchema = z
   .object({
     // Kebab-case without a nested quantifier: `^[a-z0-9]+(?:-[a-z0-9]+)*$` accepts
     // the same ids but trips security/detect-unsafe-regex. The character-class
@@ -953,7 +920,7 @@ const BridgeRouteControlSchema: z.ZodType<BridgeRouteControl> = z
   })
   .strict();
 
-const BridgeRouteScopedQuestionSchema: z.ZodType<BridgeRouteScopedQuestion> = z
+const BridgeRouteScopedQuestionSchema = z
   .object({
     controlRef: z.string().min(1),
     question: z.string().min(12),
@@ -963,7 +930,7 @@ const BridgeRouteScopedQuestionSchema: z.ZodType<BridgeRouteScopedQuestion> = z
   })
   .strict();
 
-const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z
+const MintAuthorityControlSchema = z
   .object({
     chain: z.string().min(1).optional(),
     address: z.string().min(1).optional(),
@@ -1028,7 +995,7 @@ const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z
     }
   });
 
-const MintAuthorityScopedQuestionSchema: z.ZodType<MintAuthorityScopedQuestion> = z
+const MintAuthorityScopedQuestionSchema = z
   .object({
     controlRef: z.string().min(1),
     question: z.string().min(12),
@@ -1038,7 +1005,7 @@ const MintAuthorityScopedQuestionSchema: z.ZodType<MintAuthorityScopedQuestion> 
   })
   .strict();
 
-const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z
+const MintAuthorityReviewSchema = z
   .object({
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     sourceFreeRationale: z.string().min(1).optional(),
@@ -1070,7 +1037,7 @@ const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z
     }
   });
 
-const MintAuthorityIncidentSchema: z.ZodType<NonNullable<MintAuthorityProfile["mintIncidents"]>[number]> = z
+const MintAuthorityIncidentSchema = z
   .object({
     date: ReviewDateSchema,
     status: z.enum(["active", "resolved"]),
@@ -1096,7 +1063,7 @@ const MintAuthorityIncidentSchema: z.ZodType<NonNullable<MintAuthorityProfile["m
     }
   });
 
-export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
+export const MintAuthorityProfileSchema = z
   .object({
     mintPath: z.enum(MINT_AUTHORITY_MINT_PATH_VALUES),
     authorityPosture: z.enum(MINT_AUTHORITY_POSTURE_VALUES),
@@ -1384,7 +1351,7 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
     }
   });
 
-export const ContractDeploymentSchema: z.ZodType<ContractDeployment> = z
+export const ContractDeploymentSchema = z
   .object({
     chain: z.string(),
     address: z.string(),
@@ -1392,7 +1359,7 @@ export const ContractDeploymentSchema: z.ZodType<ContractDeployment> = z
   })
   .strict();
 
-export const DependencyWeightSchema: z.ZodType<DependencyWeight> = z
+export const DependencyWeightSchema = z
   .object({
     id: z.string(),
     weight: DependencyWeightNumberSchema,
@@ -1400,7 +1367,7 @@ export const DependencyWeightSchema: z.ZodType<DependencyWeight> = z
   })
   .strict();
 
-export const ReserveReviewSchema: z.ZodType<ReserveReview> = z
+export const ReserveReviewSchema = z
   .object({
     reviewedAt: ReviewDateSchema,
     reviewer: z.string().min(1),
@@ -1429,7 +1396,7 @@ export const ReserveReviewSchema: z.ZodType<ReserveReview> = z
   })
   .strict();
 
-export const CustodyProfileSchema: z.ZodType<CustodyProfile> = z
+export const CustodyProfileSchema = z
   .object({
     providers: z
       .array(
@@ -1472,7 +1439,7 @@ export const CustodyProfileSchema: z.ZodType<CustodyProfile> = z
     }
   });
 
-export const DependencyReviewSchema: z.ZodType<DependencyReview> = z
+export const DependencyReviewSchema = z
   .object({
     reviewedAt: ReviewDateSchema,
     reviewer: z.string().min(1),
@@ -1495,7 +1462,7 @@ export const DependencyReviewSchema: z.ZodType<DependencyReview> = z
   })
   .strict();
 
-export const CoinNoticeSchema: z.ZodType<CoinNotice> = z
+export const CoinNoticeSchema = z
   .object({
     type: z.enum(COIN_NOTICE_TYPE_VALUES),
     title: z.string(),
@@ -1503,7 +1470,7 @@ export const CoinNoticeSchema: z.ZodType<CoinNotice> = z
   })
   .strict();
 
-export const YieldConfigSchema: z.ZodType<YieldConfig> = z
+export const YieldConfigSchema = z
   .object({
     defiLlamaPoolId: z.string().optional(),
     yieldSource: z.string(),
@@ -1511,7 +1478,7 @@ export const YieldConfigSchema: z.ZodType<YieldConfig> = z
   })
   .strict();
 
-export const LaunchMilestoneSchema: z.ZodType<LaunchMilestone> = z
+export const LaunchMilestoneSchema = z
   .object({
     date: FuzzyDateSchema,
     type: z.enum(LAUNCH_MILESTONE_TYPE_VALUES),
@@ -1521,14 +1488,14 @@ export const LaunchMilestoneSchema: z.ZodType<LaunchMilestone> = z
   })
   .strict();
 
-export const DateHistoryEntrySchema: z.ZodType<DateHistoryEntry> = z
+export const DateHistoryEntrySchema = z
   .object({
     date: FuzzyDateSchema,
     setOn: StrictIsoDateSchema,
   })
   .strict();
 
-export const FeaturedContentSchema: z.ZodType<FeaturedContent> = z
+export const FeaturedContentSchema = z
   .object({
     type: z.enum(FEATURED_CONTENT_TYPE_VALUES),
     url: HttpUrlSchema,
@@ -1538,6 +1505,45 @@ export const FeaturedContentSchema: z.ZodType<FeaturedContent> = z
     source: z.string().optional(),
   })
   .strict();
+
+export type OracleRiskProfile = z.output<typeof OracleRiskProfileSchema>;
+export type OracleRiskBranchApplicabilityReview = NonNullable<OracleRiskProfile["branchApplicability"]>;
+export type OracleRiskFeed = NonNullable<OracleRiskBranch["feeds"]>[number];
+export type OracleRiskCollateralParameter = NonNullable<OracleRiskBranch["collateralParameters"]>[number];
+export type BridgeRouteProtocolEvidence = z.output<typeof BridgeRouteProtocolEvidenceSchema>;
+export type BridgeRouteDeployment = z.output<typeof BridgeRouteDeploymentSchema>;
+export type BridgeRouteRiskProfile = z.output<typeof BridgeRouteRiskProfileSchema>;
+export type BridgeRouteControl = NonNullable<BridgeRouteRiskProfile["controls"]>[number];
+export type BridgeRouteScopedQuestion = NonNullable<BridgeRouteRiskProfile["scopedQuestions"]>[number];
+export type BlacklistabilityReview = z.output<typeof BlacklistabilityReviewSchema>;
+export type Jurisdiction = z.output<typeof JurisdictionSchema>;
+export type MicaProfile = z.output<typeof MicaProfileSchema>;
+export type GeniusApplicabilityBasis = z.output<typeof GeniusApplicabilityBasisSchema>;
+export type GeniusForeignExceptionEvidence = z.output<typeof GeniusForeignExceptionEvidenceSchema>;
+export type GeniusNegativeEvidenceReview = z.output<typeof GeniusNegativeEvidenceReviewSchema>;
+export type GeniusProfile = z.output<typeof GeniusProfileSchema>;
+export type MintAuthoritySafeState = z.output<typeof MintAuthoritySafeStateSchema>;
+export type MintAuthorityRouteChecks = z.output<typeof MintAuthorityRouteChecksSchema>;
+export type MintAuthorityKeyCustodyAttestation = z.output<typeof MintAuthorityKeyCustodyAttestationSchema>;
+export type MintAuthorityNoLocalIssuanceException = z.output<typeof MintAuthorityNoLocalIssuanceExceptionSchema>;
+export type MintAuthorityControl = z.output<typeof MintAuthorityControlSchema>;
+export type MintAuthorityScopedQuestion = z.output<typeof MintAuthorityScopedQuestionSchema>;
+export type MintAuthorityReview = z.output<typeof MintAuthorityReviewSchema>;
+export type MintAuthorityProfile = z.output<typeof MintAuthorityProfileSchema>;
+export type MintAuthorityUpgradeability = NonNullable<MintAuthorityProfile["upgradeability"]>;
+export type ContractDeployment = z.output<typeof ContractDeploymentSchema>;
+export type DependencyWeight = z.output<typeof DependencyWeightSchema>;
+export type ReserveReview = z.output<typeof ReserveReviewSchema>;
+export type ReserveNonLinkReview = NonNullable<ReserveReview["nonLinkDispositions"]>[number];
+export type CustodyProfile = z.output<typeof CustodyProfileSchema>;
+export type CustodyProviderReview = CustodyProfile["providers"][number];
+export type DependencyReview = z.output<typeof DependencyReviewSchema>;
+export type DependencyReviewRelationship = DependencyReview["relationships"][number];
+export type CoinNotice = z.output<typeof CoinNoticeSchema>;
+export type YieldConfig = z.output<typeof YieldConfigSchema>;
+export type LaunchMilestone = z.output<typeof LaunchMilestoneSchema>;
+export type DateHistoryEntry = z.output<typeof DateHistoryEntrySchema>;
+export type FeaturedContent = z.output<typeof FeaturedContentSchema>;
 
 export const StablecoinMetaEnumSchemas = {
   collateralQuality: CollateralQualitySchema,

@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-export type ApiKeyTrafficClass = "external" | "site";
-
 export const ApiKeyTrafficClassSchema = z.enum(["external", "site"]);
+export type ApiKeyTrafficClass = z.infer<typeof ApiKeyTrafficClassSchema>;
 
 /**
  * Issuance tiers. Only these two are writable: `standard` for operator-created
@@ -11,34 +10,6 @@ export const ApiKeyTrafficClassSchema = z.enum(["external", "site"]);
 export const API_KEY_TIER_VALUES = ["standard", "self-serve"] as const;
 export type ApiKeyTier = (typeof API_KEY_TIER_VALUES)[number];
 export const ApiKeyTierSchema = z.enum(API_KEY_TIER_VALUES);
-
-export interface ApiKeySummary {
-  id: number;
-  keyPrefix: string;
-  maskedToken: string;
-  name: string;
-  ownerEmail: string | null;
-  /** Read surface stays a plain string: rows written before the tier union narrowed keep their legacy value. */
-  tier: string;
-  /**
-   * Descriptive attribution label only. The real request lane is derived per
-   * request in `worker/src/handlers/http/gates.ts`; no issuance path assigns
-   * anything other than "external" any more.
-   */
-  trafficClass: ApiKeyTrafficClass;
-  rateLimitPerMinute: number;
-  isActive: boolean;
-  expiresAt: number | null;
-  createdAt: number;
-  updatedAt: number;
-  lastUsedAt: number | null;
-  lastUsedRoute: string | null;
-}
-
-export interface ApiKeyListResponse {
-  generatedAt: number;
-  keys: ApiKeySummary[];
-}
 
 export const ApiKeySummarySchema = z.object({
   id: z.number(),
@@ -56,36 +27,15 @@ export const ApiKeySummarySchema = z.object({
   lastUsedAt: z.number().nullable(),
   lastUsedRoute: z.string().nullable(),
 });
+export type ApiKeySummary = z.output<typeof ApiKeySummarySchema>;
 
-export const ApiKeyListResponseSchema: z.ZodType<ApiKeyListResponse> = z.object({
+export const ApiKeyListResponseSchema = z.object({
   generatedAt: z.number(),
   keys: z.array(ApiKeySummarySchema),
 });
+export type ApiKeyListResponse = z.output<typeof ApiKeyListResponseSchema>;
 
-export interface ApiKeyAuditEntry {
-  id: number;
-  apiKeyId: number;
-  action: string;
-  actor: string;
-  detail: unknown;
-  createdAt: number;
-}
-
-export interface ApiKeyAuditLogResponse {
-  entries: ApiKeyAuditEntry[];
-}
-
-export interface CredentialLifecycleSummaryResponse {
-  generatedAt: number;
-  totalKeys: number;
-  active: number;
-  expiringSoon: number;
-  expired: number;
-  nonExpiring: number;
-  auditAnomalies7d: number | null;
-}
-
-export const ApiKeyAuditEntrySchema: z.ZodType<ApiKeyAuditEntry> = z.object({
+export const ApiKeyAuditEntrySchema = z.object({
   id: z.number(),
   apiKeyId: z.number(),
   action: z.string(),
@@ -93,12 +43,14 @@ export const ApiKeyAuditEntrySchema: z.ZodType<ApiKeyAuditEntry> = z.object({
   detail: z.unknown(),
   createdAt: z.number(),
 });
+export type ApiKeyAuditEntry = z.output<typeof ApiKeyAuditEntrySchema>;
 
-export const ApiKeyAuditLogResponseSchema: z.ZodType<ApiKeyAuditLogResponse> = z.object({
+export const ApiKeyAuditLogResponseSchema = z.object({
   entries: z.array(ApiKeyAuditEntrySchema),
 });
+export type ApiKeyAuditLogResponse = z.output<typeof ApiKeyAuditLogResponseSchema>;
 
-export const CredentialLifecycleSummaryResponseSchema: z.ZodType<CredentialLifecycleSummaryResponse> = z.object({
+export const CredentialLifecycleSummaryResponseSchema = z.object({
   generatedAt: z.number(),
   totalKeys: z.number(),
   active: z.number(),
@@ -107,6 +59,7 @@ export const CredentialLifecycleSummaryResponseSchema: z.ZodType<CredentialLifec
   nonExpiring: z.number(),
   auditAnomalies7d: z.number().nullable(),
 });
+export type CredentialLifecycleSummaryResponse = z.output<typeof CredentialLifecycleSummaryResponseSchema>;
 
 export interface ApiKeyCreateRequest {
   name: string;

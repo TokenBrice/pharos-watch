@@ -34,46 +34,23 @@ export interface ApiKeySelfServeRequest {
   website?: string;
 }
 
-export interface ApiKeySelfServePendingResponse {
-  status: "pending_verification";
-  message?: string;
-}
-
 export interface ApiKeySelfServeVerifyRequest {
   token: string;
 }
 
-export interface ApiKeySelfServeIssueResponse {
-  status: "issued";
-  key: {
-    keyPrefix: string;
-    maskedToken: string;
-    tier: "self-serve";
-    trafficClass: "external";
-    /** Per-minute rate limit applied to the issued key (default 30). */
-    rateLimitPerMinute: number;
-    expiresAt: number | null;
-  };
-  token: string;
-  usage?: {
-    baseUrl: string;
-    headerName: string;
-    retryGuidance: string;
-  };
-}
-
 const ApiKeySelfServeNonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0);
 
-export const ApiKeySelfServePendingResponseSchema: z.ZodType<ApiKeySelfServePendingResponse> = z.object({
+export const ApiKeySelfServePendingResponseSchema = z.object({
   status: z.literal("pending_verification"),
 }).passthrough();
+export type ApiKeySelfServePendingResponse = z.output<typeof ApiKeySelfServePendingResponseSchema>;
 
 // shared/types must not import shared/lib, so the expected self-serve rate
 // limit is supplied by the caller (see SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE
 // in @shared/lib/ops-limits) instead of being imported here.
 export function buildApiKeySelfServeIssueResponseSchema(
   expectedRateLimitPerMinute: number,
-): z.ZodType<ApiKeySelfServeIssueResponse> {
+) {
   return z.object({
     status: z.literal("issued"),
     key: z.object({
@@ -87,38 +64,7 @@ export function buildApiKeySelfServeIssueResponseSchema(
     token: ApiKeySelfServeNonEmptyStringSchema,
   }).passthrough();
 }
-
-export interface ApiKeySelfServeRequestAdminSummary {
-  requestId: string;
-  status: ApiKeySelfServeStatus;
-  email: string;
-  requesterName: string | null;
-  organization: string | null;
-  projectUrl: string | null;
-  useCase: string;
-  expectedCadence: string | null;
-  expectedVolume: string | null;
-  acceptedTerms: boolean;
-  emailVerified: boolean;
-  linkedKeyId: number | null;
-  linkedKeyPrefix: string | null;
-  linkedKeyActive: boolean | null;
-  linkedKeyExpiresAt: number | null;
-  rateLimitPerMinute: number;
-  selfServeExpiresAt: number | null;
-  claimStatus: ApiKeySelfServeClaimStatus | null;
-  verificationSentAt: number | null;
-  verificationExpiresAt: number | null;
-  issuedAt: number | null;
-  rejectedAt: number | null;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface ApiKeySelfServeRequestAdminListResponse {
-  generatedAt: number;
-  requests: ApiKeySelfServeRequestAdminSummary[];
-}
+export type ApiKeySelfServeIssueResponse = z.output<ReturnType<typeof buildApiKeySelfServeIssueResponseSchema>>;
 
 export const ApiKeySelfServeRequestAdminSummarySchema = z.object({
   requestId: z.string(),
@@ -146,11 +92,13 @@ export const ApiKeySelfServeRequestAdminSummarySchema = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
 });
+export type ApiKeySelfServeRequestAdminSummary = z.output<typeof ApiKeySelfServeRequestAdminSummarySchema>;
 
-export const ApiKeySelfServeRequestAdminListResponseSchema: z.ZodType<ApiKeySelfServeRequestAdminListResponse> = z.object({
+export const ApiKeySelfServeRequestAdminListResponseSchema = z.object({
   generatedAt: z.number(),
   requests: z.array(ApiKeySelfServeRequestAdminSummarySchema),
 });
+export type ApiKeySelfServeRequestAdminListResponse = z.output<typeof ApiKeySelfServeRequestAdminListResponseSchema>;
 
 export interface ApiKeySelfServeAdminMutationResponse {
   ok: true;

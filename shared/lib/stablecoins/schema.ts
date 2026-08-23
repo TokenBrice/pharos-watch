@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
-import { LiveReservesConfigSchema } from "../live-reserve-adapters-config";
+import { DeadStablecoinSchema } from "../../types/market";
+import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 import { isCanonicalStablecoinId } from "../stablecoin-id";
 import { fuzzyDateRange } from "../classification/resolve-implementation-launch-date";
-import { DetailProviderSchema, PEG_CURRENCY_VALUES } from "../../types/core";
+import { DetailProviderSchema } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullReserveCompositionSchema } from "../../types/reserves";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
@@ -34,7 +35,6 @@ import {
   StablecoinMetaEnumSchemas,
   YieldConfigSchema,
 } from "../../types/stablecoin-meta-schemas";
-
 const CommodityOuncesSchema = z.number().finite().positive();
 const REVIEW_QUANTITATIVE_TOLERANCE = 1e-6;
 const UNRESOLVED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
@@ -120,7 +120,6 @@ const StablecoinIdSchema = z.string().refine(isCanonicalStablecoinId, {
 
 const obituarySchema = z.object({
   causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
-  // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-width date pattern; finite quantifiers, no backtracking risk.
   deathDate: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/),
   epitaph: z.string().min(1),
   obituary: z.string().min(1),
@@ -128,7 +127,6 @@ const obituarySchema = z.object({
   sourceUrl: z.string().url(),
   sourceLabel: z.string().min(1),
 });
-
 const StablecoinMetaAssetSchemaShape = {
   id: StablecoinIdSchema,
   llamaId: z.string().optional(),
@@ -183,36 +181,24 @@ const StablecoinMetaAssetSchemaShape = {
   tags: z.array(z.string()).optional(),
   yieldConfig: YieldConfigSchema.optional(),
   status: StablecoinMetaEnumSchemas.status.optional(),
-  listingStatusReview: z
-    .object({
-      changedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      reason: z.string().trim().min(1).max(280),
-      reviewBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      source: StablecoinLinkSchema.optional(),
-    })
-    .strict()
-    .optional(),
-  windDownAnnouncedAt: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  listingStatusReview: z.object({
+    changedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    reason: z.string().trim().min(1).max(280),
+    reviewBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    source: StablecoinLinkSchema.optional(),
+  }).strict().optional(),
+  windDownAnnouncedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   windDownSourceUrl: z.string().url().optional(),
-  frozenAt: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  frozenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   obituary: obituarySchema.optional(),
   launchDate: FuzzyDateSchema.optional(),
-  pegScoreCoverage: z
-    .object({
-      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      basis: z.literal("audited-replay-and-live"),
-      reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      replayRunId: z.string().trim().min(1).optional(),
-      notes: z.string().trim().min(1),
-    })
-    .strict()
-    .optional(),
+  pegScoreCoverage: z.object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    basis: z.literal("audited-replay-and-live"),
+    reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    replayRunId: z.string().trim().min(1).optional(),
+    notes: z.string().trim().min(1),
+  }).strict().optional(),
   announcedDate: FuzzyDateSchema.optional(),
   expectedLaunchDate: FuzzyDateSchema.optional(),
   launchPhase: StablecoinMetaEnumSchemas.launchPhase.optional(),
@@ -237,7 +223,7 @@ export const StablecoinMetaSourceAssetSchema: z.ZodType<StablecoinMeta, unknown>
 export const STABLECOIN_SOURCE_DOMAIN_VALUES = ["reserves", "mint-authority", "compliance", "risk-review"] as const;
 export type StablecoinSourceDomain = (typeof STABLECOIN_SOURCE_DOMAIN_VALUES)[number];
 
-export const StablecoinReservesSidecarSchema = z
+const StablecoinReservesSidecarSchema = z
   .object({
     id: StablecoinIdSchema,
     reserves: FullReserveCompositionSchema.optional(),
@@ -862,37 +848,9 @@ export const StablecoinMetaCatalogInvariantsSchema: z.ZodType<StablecoinMeta[], 
   .superRefine(refineMintAuthorityCatalog);
 export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
-export const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = z
-  .object({
-    id: DeadStablecoinIdSchema,
-    name: z.string(),
-    symbol: z.string(),
-    llamaId: z.string().optional(),
-    geckoId: z.string().optional(),
-    aliases: z.array(z.string()).optional(),
-    logo: z.string().optional(),
-    pegCurrency: z.enum(PEG_CURRENCY_VALUES),
-    causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
-    deathDate: z.string(),
-    peakMcap: z.number().optional(),
-    epitaph: z.string().optional(),
-    obituary: z.string(),
-    sourceUrl: z.string(),
-    sourceLabel: z.string(),
-    contracts: z
-      .array(
-        z
-          .object({
-            chain: z.string(),
-            address: z.string(),
-          })
-          .strict(),
-      )
-      .optional(),
-  })
-  .strict();
+const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = DeadStablecoinSchema.extend({ id: DeadStablecoinIdSchema });
 
-export const DeadStablecoinAssetArraySchema: z.ZodType<DeadStablecoin[]> = z.array(DeadStablecoinAssetSchema);
+const DeadStablecoinAssetArraySchema: z.ZodType<DeadStablecoin[]> = z.array(DeadStablecoinAssetSchema);
 
 function formatSchemaIssues(error: z.ZodError): string {
   const issues = error.issues;

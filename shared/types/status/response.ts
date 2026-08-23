@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ReserveCompositionOverviewSchema, type ReserveCompositionOverview } from "../live-reserves";
+import { ReserveCompositionOverviewSchema } from "../live-reserves";
 import type { PriceSourceHealth } from "../pricing-source-health";
 import type {
   CacheStatus,
@@ -59,39 +59,12 @@ export type StatusSectionKey =
   | "classificationWarnings"
   | "producerHistory";
 
-export interface StatusSectionError {
-  code: string;
-  message: string;
-}
+const StatusSectionErrorSchema = z.object({ code: z.string(), message: z.string() });
+export type StatusSectionError = z.output<typeof StatusSectionErrorSchema>;
 
 export type StatusSectionErrors = Partial<Record<StatusSectionKey, StatusSectionError>>;
 
-export interface StatusResponse {
-  timestamp: number;
-  dbHealthy: boolean;
-  availabilityStatus: StatusHealthValue;
-  dataQualityStatus: StatusHealthValue;
-  rawOverallStatus: StatusHealthValue;
-  overallStatus: StatusHealthValue;
-  confidence: number;
-  causes: {
-    availability: StatusCause[];
-    dataQuality: StatusCause[];
-    overall: StatusCause[];
-  };
-  state: StatusStateInfo;
-  staleness: StatusStaleness;
-  probe: StatusProbeSummary;
-  discrepancy: StatusDiscrepancy;
-  timeline: StatusTransition[];
-  caches: Record<string, CacheStatus>;
-  crons: Record<string, CronStatus>;
-  budgetOnlySurfaces: BudgetOnlySurfaceStatus[];
-  dataQuality: DataQuality;
-  telegramBot: TelegramBotStats | null;
-  sectionErrors: StatusSectionErrors;
-  datasetFreshness: DatasetFreshness;
-  summary: {
+type StatusSummary = {
     unhealthyCrons: number;
     availabilityImpactingUnhealthyCrons: number;
     watchUnhealthyCrons: number;
@@ -127,53 +100,7 @@ export interface StatusResponse {
      * the transitions table. Under normal operation this should be ≤ 2.
      */
     transitionsLast24h: number;
-  };
-  liquidityHealth: LiquidityHealth | null;
-  yieldHealth: YieldHealthSummary | null;
-  publicationHealth?: PublicationHealth | null;
-  dependencyHealth?: DependencyHealth | null;
-  providerCircuitHealth?: ProviderCircuitHealth | null;
-  canaries?: CanaryStatus | null;
-  alertBroker?: AlertBrokerHealthSummary;
-  producerHeads?: ProducerHeadStatus[];
-  priceSourceHealth: PriceSourceHealth | null;
-  /**
-   * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted
-   * to `cron_runs.metadata.providerDiagnostics` by the sync-stablecoins cron. Kept
-   * permissively typed because origin shape evolves with the pricing pipeline.
-   */
-  priceProviderDiagnostics: Array<Record<string, unknown>> | null;
-  /**
-   * Most recent GeckoTerminal probe run stats as persisted to `cron_runs.metadata.gtProbe`.
-   * Kept permissively typed for the same reason as `priceProviderDiagnostics`.
-   */
-  gtProbe: Record<string, unknown> | null;
-  coingeckoPriceDiff: CoinGeckoPriceDiff | null;
-  d1Usage: D1UsageSummary | null;
-  mintBurnReconciliation: MintBurnReconciliationSummary | null;
-  reserveComposition: StatusReserveComposition;
-  cacheBlobSizes?: Record<string, number>;
-  reserveDrift?: ReserveDriftEntry[];
-  classificationWarnings?: ClassificationWarning[];
-}
-
-type StatusReserveComposition = ReserveCompositionOverview & {
-  status: StatusHealthValue;
-  freshCoverageRatio: number;
-  authoritativeFreshCoverageRatio: number;
 };
-
-export interface StatusHistoryResponse {
-  timestamp: number;
-  state: StatusStateInfo | null;
-  staleness: StatusStaleness | null;
-  probe: StatusProbeSummary;
-  discrepancy: StatusDiscrepancy;
-  transitions: StatusTransition[];
-  /** Whether additional matching transitions exist beyond this response; null when completeness could not be determined. */
-  hasMore: boolean | null;
-  reserveComposition: StatusResponse["reserveComposition"] | null;
-}
 
 const StatusJsonObjectSchema = z.object({}).passthrough();
 
@@ -283,9 +210,10 @@ const StatusReserveCompositionSchema = ReserveCompositionOverviewSchema.extend({
   status: StatusHealthValueSchema,
   freshCoverageRatio: z.number(),
   authoritativeFreshCoverageRatio: z.number(),
-}) satisfies z.ZodType<StatusReserveComposition>;
+});
+type StatusReserveComposition = z.output<typeof StatusReserveCompositionSchema>;
 
-export const StatusResponseSchema: z.ZodType<StatusResponse> = z
+const StatusResponseObjectSchema = z
   .object({
     timestamp: z.number(),
     dbHealthy: z.boolean(),
@@ -309,9 +237,9 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z
     budgetOnlySurfaces: z.array(statusObjectSchema<BudgetOnlySurfaceStatus>()),
     dataQuality: statusObjectSchema<DataQuality>(),
     telegramBot: statusObjectSchema<TelegramBotStats>().nullable(),
-    sectionErrors: z.record(z.string(), z.object({ code: z.string(), message: z.string() })),
+    sectionErrors: z.record(z.string(), StatusSectionErrorSchema),
     datasetFreshness: statusObjectSchema<DatasetFreshness>(),
-    summary: statusObjectSchema<StatusResponse["summary"]>(),
+    summary: statusObjectSchema<StatusSummary>(),
     liquidityHealth: statusObjectSchema<LiquidityHealth>().nullable(),
     yieldHealth: statusObjectSchema<YieldHealthSummary>().nullable(),
     publicationHealth: statusObjectSchema<PublicationHealth>().nullable().optional(),
@@ -331,16 +259,18 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z
     reserveDrift: z.array(statusObjectSchema<ReserveDriftEntry>()).optional(),
     classificationWarnings: z.array(statusObjectSchema<ClassificationWarning>()).optional(),
   })
-  .passthrough()
-  .transform((value): StatusResponse => ({
+  .passthrough();
+
+export const StatusResponseSchema = StatusResponseObjectSchema.transform((value) => ({
     ...value,
     publicationHealth: value.publicationHealth ?? null,
     dependencyHealth: value.dependencyHealth ?? null,
     providerCircuitHealth: value.providerCircuitHealth ?? null,
     canaries: value.canaries ?? null,
   }));
+export type StatusResponse = z.output<typeof StatusResponseSchema>;
 
-export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.object({
+export const StatusHistoryResponseSchema = z.object({
   timestamp: z.number(),
   state: StatusStateInfoSchema.nullable(),
   staleness: StatusStalenessSchema.nullable(),
@@ -350,3 +280,4 @@ export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.o
   hasMore: z.boolean().nullable().default(null),
   reserveComposition: StatusReserveCompositionSchema.nullable(),
 });
+export type StatusHistoryResponse = z.output<typeof StatusHistoryResponseSchema>;

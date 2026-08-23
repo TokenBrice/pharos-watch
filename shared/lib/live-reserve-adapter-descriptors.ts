@@ -6,7 +6,7 @@ import {
   type LiveReserveAdapterKey,
   type LiveReserveAdapterProvenance,
 } from "../types/live-reserve-adapter-declarations";
-import { LIVE_RESERVE_PARAM_SCHEMAS } from "./live-reserve-adapter-schema-primitives";
+import { LIVE_RESERVE_PARAM_SCHEMAS } from "./live-reserve-adapter-param-schemas";
 
 export { LIVE_RESERVE_ADAPTER_STATUS_VALUES } from "../types/live-reserve-adapter-declarations";
 export type {
@@ -72,37 +72,14 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTORS = Object.fromEntries(
 
 export const LIVE_RESERVE_ADAPTER_DEFINITIONS = LIVE_RESERVE_ADAPTER_DESCRIPTORS;
 
-export const liveReserveAdapterSchemaMetadata = Object.fromEntries(
-  LIVE_RESERVE_ADAPTER_KEYS.map((key) => {
-    const descriptor = LIVE_RESERVE_ADAPTER_DESCRIPTORS[key];
-    return [key, { primaryInputKinds: descriptor.primaryInputKinds, params: descriptor.params }];
-  }),
-) as {
-  [K in LiveReserveAdapterKey]: {
-    params: LiveReserveAdapterDescriptorMap[K]["params"];
-    primaryInputKinds: LiveReserveAdapterDeclarationMap[K]["primaryInputKinds"];
-  };
-};
-
 export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = Object.fromEntries(
   LIVE_RESERVE_ADAPTER_KEYS.map((key) => [key, LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].primaryInputKinds]),
 ) as {
   [K in LiveReserveAdapterKey]: LiveReserveAdapterDeclarationMap[K]["primaryInputKinds"];
 };
 
-export const LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES = Object.fromEntries(
-  LIVE_RESERVE_ADAPTER_KEYS.map((key) => [
-    key,
-    LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].sourceOriginClass,
-  ]),
-) as Record<LiveReserveAdapterKey, ReserveEvidenceSourceOriginClass>;
-
 export const adapterParamsSchemas = Object.fromEntries(
   LIVE_RESERVE_ADAPTER_KEYS.map((key) => [key, LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].params]),
 ) as {
   [K in LiveReserveAdapterKey]: LiveReserveAdapterDescriptorMap[K]["params"];
 };
-
-export const LIVE_RESERVE_ADAPTER_PROVENANCE = Object.fromEntries(
-  LIVE_RESERVE_ADAPTER_KEYS.map((key) => [key, LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].provenance]),
-) as Record<LiveReserveAdapterKey, LiveReserveAdapterProvenance>;

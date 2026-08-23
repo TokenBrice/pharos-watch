@@ -5,38 +5,7 @@ export type D1CapacityForecastBasis =
   "linear-30d" | "linear-window" | "insufficient-history" | "non-growing";
 export type D1CapacityGrowthWindowKey = "24h" | "72h" | "7d" | "30d";
 
-export interface D1CapacityGrowthWindow {
-  window: D1CapacityGrowthWindowKey;
-  windowSeconds: number;
-  sampleCount: number;
-  spanHours: number;
-  valid: boolean;
-  growthBytesPerDay: number | null;
-}
-
-export interface D1CapacityAssessment {
-  observedAt: number;
-  databaseSizeBytes: number;
-  maximumSizeBytes: number;
-  utilizationRatio: number;
-  utilizationPercent: number;
-  thresholdState: D1CapacityThresholdState;
-  crossedThresholdPercent: 60 | 75 | 90 | null;
-  nextThresholdPercent: 60 | 75 | 90 | 100 | null;
-  sampleCount: number;
-  forecastBasis: D1CapacityForecastBasis;
-  forecastSpanHours: number;
-  growthBytesPerDay: number | null;
-  nextThresholdAt: number | null;
-  exhaustionAt: number | null;
-  daysUntilExhaustion: number | null;
-  /** Additive for compatibility with cached assessments written by older Workers. */
-  growthWindows?: D1CapacityGrowthWindow[];
-  /** The shortest valid regression window used for the conservative runway. */
-  conservativeWindow?: D1CapacityGrowthWindowKey | null;
-}
-
-const D1CapacityGrowthWindowSchema: z.ZodType<D1CapacityGrowthWindow> = z.object({
+const D1CapacityGrowthWindowSchema = z.object({
   window: z.enum(["24h", "72h", "7d", "30d"]),
   windowSeconds: z.number().int().positive(),
   sampleCount: z.number().int().nonnegative(),
@@ -44,8 +13,9 @@ const D1CapacityGrowthWindowSchema: z.ZodType<D1CapacityGrowthWindow> = z.object
   valid: z.boolean(),
   growthBytesPerDay: z.number().nullable(),
 });
+export type D1CapacityGrowthWindow = z.output<typeof D1CapacityGrowthWindowSchema>;
 
-export const D1CapacityAssessmentSchema: z.ZodType<D1CapacityAssessment> = z.object({
+export const D1CapacityAssessmentSchema = z.object({
   observedAt: z.number().int().nonnegative(),
   databaseSizeBytes: z.number().nonnegative(),
   maximumSizeBytes: z.number().positive(),
@@ -64,3 +34,4 @@ export const D1CapacityAssessmentSchema: z.ZodType<D1CapacityAssessment> = z.obj
   growthWindows: z.array(D1CapacityGrowthWindowSchema).optional(),
   conservativeWindow: z.enum(["24h", "72h", "7d", "30d"]).nullable().optional(),
 }).passthrough();
+export type D1CapacityAssessment = z.output<typeof D1CapacityAssessmentSchema>;

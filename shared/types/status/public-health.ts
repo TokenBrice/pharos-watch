@@ -1,14 +1,11 @@
 import { z } from "zod";
-import type { ActivePriceCoverageHealth, CacheStatus, StablecoinPublicationHealth, StatusHealthValue } from "./core";
+import type { StatusHealthValue } from "./core";
 import { StatusHealthValueSchema } from "./core";
 import { CacheStatusSchema } from "./schema-primitives";
 import {
   RESERVE_ALERT_SOURCE_STATE_VALUES,
   SAFETY_ALERT_SOURCE_STATE_VALUES,
-  type ReserveAlertFieldsNullable,
-  type SafetyAlertFieldsNullable,
 } from "./telegram";
-import type { AlertBrokerHealthSummary } from "./operational";
 
 const SafetyAlertFieldsNullableSchemaShape = {
   safetyAlertSourceState: z.enum(SAFETY_ALERT_SOURCE_STATE_VALUES).nullable(),
@@ -24,27 +21,11 @@ const ReserveAlertFieldsNullableSchemaShape = {
   reserveAlertSourceGeneration: z.string().nullable().optional(),
 } as const;
 
-export interface PublicStatusTransition {
-  id: number;
-  from: StatusHealthValue | null;
-  to: StatusHealthValue;
-  transitionType: "degrade" | "recover" | "init";
-  reason: string;
-  at: number;
-}
-
 export const PUBLIC_STATUS_HISTORY_WINDOWS = ["24h", "7d", "30d"] as const;
 
 export type PublicStatusHistoryWindow = (typeof PUBLIC_STATUS_HISTORY_WINDOWS)[number];
 
-export interface PublicStatusHistoryResponse {
-  timestamp: number;
-  currentStatus: StatusHealthValue;
-  lastChangedAt: number | null;
-  transitions: PublicStatusTransition[];
-}
-
-export const PublicStatusTransitionSchema: z.ZodType<PublicStatusTransition> = z
+export const PublicStatusTransitionSchema = z
   .object({
     id: z.number(),
     from: StatusHealthValueSchema.nullable(),
@@ -54,8 +35,9 @@ export const PublicStatusTransitionSchema: z.ZodType<PublicStatusTransition> = z
     at: z.number(),
   })
   .passthrough();
+export type PublicStatusTransition = z.output<typeof PublicStatusTransitionSchema>;
 
-export const PublicStatusHistoryResponseSchema: z.ZodType<PublicStatusHistoryResponse> = z
+export const PublicStatusHistoryResponseSchema = z
   .object({
     timestamp: z.number(),
     currentStatus: StatusHealthValueSchema,
@@ -63,6 +45,7 @@ export const PublicStatusHistoryResponseSchema: z.ZodType<PublicStatusHistoryRes
     transitions: z.array(PublicStatusTransitionSchema),
   })
   .passthrough();
+export type PublicStatusHistoryResponse = z.output<typeof PublicStatusHistoryResponseSchema>;
 
 const CircuitRecordSchema = z.object({
   state: z.enum(["closed", "half-open", "open"]),
@@ -72,54 +55,6 @@ const CircuitRecordSchema = z.object({
   openedAt: z.number().nullable(),
 });
 export type CircuitRecord = z.infer<typeof CircuitRecordSchema>;
-
-export interface TelegramHealthSummary extends SafetyAlertFieldsNullable, Partial<ReserveAlertFieldsNullable> {
-  totalChats: number;
-  pendingDeliveries: number | null;
-  pendingDeliveryLifecycleStatus?: "available" | "unknown";
-  pendingDeliveryBacklog?: import("./telegram").TelegramPendingDeliveryBacklog;
-  lastDispatchAt: number | null;
-  lastDispatchStatus: string | null;
-}
-
-interface MintBurnHealthQueryErrors {
-  latestSuccessfulSyncAt: string | null;
-  rowCount: string | null;
-}
-
-export interface HealthResponse {
-  status: StatusHealthValue;
-  timestamp: number;
-  warnings: string[];
-  caches: Record<string, CacheStatus>;
-  blacklist: {
-    totalEvents: number;
-    missingAmounts: number;
-    recentMissingAmounts: number;
-    recentWindowSec: number;
-    missingRatio: number;
-  };
-  mintBurn: {
-    totalEvents: number | null;
-    latestEventTs: number | null;
-    latestHourlyTs: number | null;
-    freshnessAgeSec: number | null;
-    majorStaleCount: number;
-    staleMajorSymbols: string[];
-    queryErrors?: MintBurnHealthQueryErrors;
-    sync: {
-      lastSuccessfulSyncAt: number | null;
-      freshnessStatus: "fresh" | "degraded" | "stale";
-      warning: string | null;
-      criticalLaneHealthy: boolean;
-    };
-  };
-  circuits: Record<string, CircuitRecord>;
-  stablecoinPublication?: StablecoinPublicationHealth;
-  activePriceCoverage?: ActivePriceCoverageHealth;
-  alertBroker?: AlertBrokerHealthSummary;
-  telegramSummary?: TelegramHealthSummary | null;
-}
 
 const TelegramHealthSummarySchema = z.object({
   totalChats: z.number(),
@@ -147,13 +82,15 @@ const TelegramHealthSummarySchema = z.object({
   ...SafetyAlertFieldsNullableSchemaShape,
   ...ReserveAlertFieldsNullableSchemaShape,
 });
+export type TelegramHealthSummary = z.output<typeof TelegramHealthSummarySchema>;
 
-const MintBurnHealthQueryErrorsSchema: z.ZodType<MintBurnHealthQueryErrors> = z.object({
+const MintBurnHealthQueryErrorsSchema = z.object({
   latestSuccessfulSyncAt: z.string().nullable(),
   rowCount: z.string().nullable(),
 });
+type MintBurnHealthQueryErrors = z.output<typeof MintBurnHealthQueryErrorsSchema>;
 
-export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
+export const HealthResponseSchema = z.object({
   status: StatusHealthValueSchema,
   timestamp: z.number(),
   warnings: z.array(z.string()),
@@ -232,6 +169,7 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
   }).optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
 });
+export type HealthResponse = z.output<typeof HealthResponseSchema>;
 
 export interface EndpointProbeResult {
   path: string;
