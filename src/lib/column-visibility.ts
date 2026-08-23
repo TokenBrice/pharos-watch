@@ -54,7 +54,7 @@ export const LOCKED_COLUMNS: Set<ColumnId> = new Set(
 
 const COLUMN_IDS = new Set<ColumnId>(ALL_COLUMNS.map((column) => column.id));
 
-export function isColumnId(value: unknown): value is ColumnId {
+function isColumnId(value: unknown): value is ColumnId {
   return typeof value === "string" && COLUMN_IDS.has(value as ColumnId);
 }
 

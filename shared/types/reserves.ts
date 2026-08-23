@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { DependencyTypeSchema, type DependencyType } from "./dependency-types";
 
-export const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
+const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
 export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
 export const ReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
 
-export const RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES = ["yes", "upstream", "possible", "no", "unknown"] as const;
+const RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES = ["yes", "upstream", "possible", "no", "unknown"] as const;
 export type ReserveBlacklistabilityExposure = (typeof RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES)[number];
-export const ReserveBlacklistabilityExposureSchema = z.enum(RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES);
+const ReserveBlacklistabilityExposureSchema = z.enum(RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES);
 
 const RESERVE_ASSET_CLASS_VALUES = [
   "cash",

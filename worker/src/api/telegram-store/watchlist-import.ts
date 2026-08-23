@@ -199,7 +199,7 @@ export async function isWatchlistImportPreviewCurrent(
   return JSON.stringify(recomputed) === JSON.stringify(input.preview);
 }
 
-export function prepareWatchlistDirectInsertStatements(
+function prepareWatchlistDirectInsertStatements(
   db: D1Database,
   chatId: string,
   generationLease: number,

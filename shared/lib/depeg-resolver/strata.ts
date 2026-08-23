@@ -16,7 +16,7 @@ export type DdrStructuralClass = "robust" | "fragile";
 export type DdrCurrencyClass = "USD" | "non-USD";
 
 /** Sentinel used in candidate strata to mean "ignore this dimension". */
-export const STRATUM_ANY = "__any__";
+const STRATUM_ANY = "__any__";
 
 export interface DdrStratumKey {
   direction: DepegDirection;

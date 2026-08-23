@@ -1,4 +1,3 @@
-import { D1_BATCH_SIZE } from "../../lib/constants";
 import {
   buildInClause,
   executeAtomicBatch,
@@ -151,27 +150,6 @@ export async function captureTelegramPlanningSubscriberPage(
     })),
     complete,
   };
-}
-
-export async function persistTelegramInitialEligibility(
-  db: D1Database,
-  claim: TelegramTargetPlanningClaim,
-  eligibilityByChat: ReadonlyMap<string, boolean>,
-): Promise<void> {
-  if (eligibilityByChat.size === 0) return;
-  const statements = [...eligibilityByChat].map(([chatId, eligible]) => db
-    .prepare(
-      `UPDATE telegram_alert_planning_subscribers
-          SET initially_eligible = COALESCE(initially_eligible, ?)
-        WHERE source_event_id = ?
-          AND plan_generation = ?
-          AND chat_id = ?
-          AND planning_outcome = 'pending'`,
-    )
-    .bind(eligible ? 1 : 0, claim.sourceEventId, claim.generation, chatId));
-  for (let offset = 0; offset < statements.length; offset += D1_BATCH_SIZE) {
-    await executeAtomicBatch(db, statements.slice(offset, offset + D1_BATCH_SIZE));
-  }
 }
 
 export async function loadTelegramPlanningSubscriberPage(

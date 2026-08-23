@@ -270,11 +270,6 @@ function buildProviderChainMap(provider: ChainProvider): Record<string, string> 
   );
 }
 
-function buildReverseChainMap(chainMap: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(chainMap).map(([chain, providerId]) => [providerId, chain]),
-  );
-}
 
 function subtractChainMaps(
   baseMap: Record<string, string>,
@@ -288,8 +283,6 @@ function subtractChainMaps(
 /** Our chain name -> CoinGecko onchain network ID. */
 export const CG_CHAIN_MAP: Record<string, string> = buildProviderChainMap("coingecko");
 
-/** CoinGecko onchain network ID -> our chain name. */
-export const CG_CHAIN_REVERSE: Record<string, string> = buildReverseChainMap(CG_CHAIN_MAP);
 
 /** Our chain name -> DexScreener chain ID. */
 export const DS_CHAIN_MAP: Record<string, string> = buildProviderChainMap("dexscreener");
@@ -297,8 +290,6 @@ export const DS_CHAIN_MAP: Record<string, string> = buildProviderChainMap("dexsc
 /** Our chain name -> GeckoTerminal network ID. */
 export const GT_CHAIN_MAP: Record<string, string> = buildProviderChainMap("geckoTerminal");
 
-/** GeckoTerminal network ID -> our chain name. */
-export const GT_CHAIN_REVERSE: Record<string, string> = buildReverseChainMap(GT_CHAIN_MAP);
 
 /** Our chain name -> Alchemy Prices API network ID. */
 export const ALCHEMY_CHAIN_MAP: Record<string, string> = buildProviderChainMap("alchemy");

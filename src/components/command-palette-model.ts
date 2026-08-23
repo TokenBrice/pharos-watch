@@ -35,8 +35,8 @@ import type {
   CommandPaletteStablecoinLiveMetadata,
 } from "./command-palette-types";
 
-// Re-export the split-out types and pure scoring helpers so existing importers
-// of this module keep working unchanged. [audit Q-130]
+// Re-export the split-out types and scoring helpers retained on this module's
+// public surface. [audit Q-130]
 export type {
   CommandPaletteSection,
   CommandPaletteActionId,
@@ -53,9 +53,6 @@ export type {
 } from "./command-palette-types";
 export {
   fuzzyMatch,
-  scoreStablecoinSearchMatch,
-  isExactStablecoinSymbolMatch,
-  stablecoinProminenceBonus,
   rankCommandPaletteResults,
 } from "./command-palette-scoring";
 

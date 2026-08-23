@@ -30,7 +30,7 @@ const CanonicalStringArraySchema = z
   .array(CanonicalTextSchema)
   .superRefine((values, ctx) => addCanonicalStringArrayIssues(values, ctx, []));
 
-export const V9EvidenceGapActionSchema = z.enum([
+const V9EvidenceGapActionSchema = z.enum([
   "adjudicate-bounded-unknown",
   "collect-evidence",
   "implement-producer-capability",
@@ -41,14 +41,14 @@ export const V9EvidenceGapActionSchema = z.enum([
 ]);
 export type V9EvidenceGapAction = z.infer<typeof V9EvidenceGapActionSchema>;
 
-export const V9EvidenceGapPolicyBindingIssueSchema = z.enum([
+const V9EvidenceGapPolicyBindingIssueSchema = z.enum([
   "archetype-not-permitted",
   "fact-owner-domain-mismatch",
   "path-kind-not-permitted",
 ]);
 export type V9EvidenceGapPolicyBindingIssue = z.infer<typeof V9EvidenceGapPolicyBindingIssueSchema>;
 
-export const V9EvidenceGapMaterialityBasisSchema = z.enum([
+const V9EvidenceGapMaterialityBasisSchema = z.enum([
   "asset-wide",
   "collateral-exposure",
   "deployment-supply-share",
@@ -60,7 +60,7 @@ export const V9EvidenceGapMaterialityBasisSchema = z.enum([
 ]);
 export type V9EvidenceGapMaterialityBasis = z.infer<typeof V9EvidenceGapMaterialityBasisSchema>;
 
-export const V9EvidenceGapMaterialityV1Schema = z
+const V9EvidenceGapMaterialityV1Schema = z
   .object({
     basis: V9EvidenceGapMaterialityBasisSchema,
     fractionOfAsset: z.number().finite().min(0).max(1).nullable(),
@@ -100,7 +100,7 @@ export const V9EvidenceGapMaterialityV1Schema = z
   });
 export type V9EvidenceGapMaterialityV1 = z.infer<typeof V9EvidenceGapMaterialityV1Schema>;
 
-export const V9EvidenceGapSupplyWeightV1Schema = z
+const V9EvidenceGapSupplyWeightV1Schema = z
   .object({
     state: z.enum(["current-valid", "unavailable"]),
     canonicalUsd: NonNegativeUsdSchema.nullable(),
@@ -193,13 +193,13 @@ function addEntryConsistencyIssues(entry: V9EvidenceGapQueueEntryBase, ctx: z.Re
   }
 }
 
-export const V9EvidenceGapQueueEntryV1Schema = z
+const V9EvidenceGapQueueEntryV1Schema = z
   .object(V9EvidenceGapQueueEntryV1Fields)
   .strict()
   .superRefine(addEntryConsistencyIssues);
 export type V9EvidenceGapQueueEntryV1 = z.infer<typeof V9EvidenceGapQueueEntryV1Schema>;
 
-export const V9EvidenceGapQueueEntryV2Schema = z
+const V9EvidenceGapQueueEntryV2Schema = z
   .object({
     ...V9EvidenceGapQueueEntryV1Fields,
     responsibility: V9EvidenceResponsibilitySchema,
@@ -412,5 +412,4 @@ export const V9EvidenceGapQueueV2Schema = z
   .superRefine(addQueueV2ConsistencyIssues);
 export type V9EvidenceGapQueueV2 = z.infer<typeof V9EvidenceGapQueueV2Schema>;
 
-export const V9EvidenceGapQueueSchema = z.union([V9EvidenceGapQueueV1Schema, V9EvidenceGapQueueV2Schema]);
-export type V9EvidenceGapQueue = z.infer<typeof V9EvidenceGapQueueSchema>;
+export type V9EvidenceGapQueue = V9EvidenceGapQueueV1 | V9EvidenceGapQueueV2;

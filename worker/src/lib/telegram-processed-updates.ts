@@ -9,9 +9,9 @@ import { d1ChangeCount } from "./telegram-operation-batch";
 import { unixNowSec as unixNow } from "@shared/lib/time-constants";
 
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT = 5_000;
-export const TELEGRAM_PROCESSED_UPDATE_BACKLOG_PROBE_LIMIT = TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT + 1;
+const TELEGRAM_PROCESSED_UPDATE_BACKLOG_PROBE_LIMIT = TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT + 1;
 export const TELEGRAM_WEBHOOK_INTENT_VERSION = 1 as const;
-export const TELEGRAM_WEBHOOK_INTENT_MAX_BYTES = 65_536;
+const TELEGRAM_WEBHOOK_INTENT_MAX_BYTES = 65_536;
 
 export interface TelegramProcessedUpdateBacklog {
   count: number;
@@ -853,4 +853,3 @@ export async function recordTelegramChatCommandFlood(
   }
   return { allowed: count <= input.limit, firstExceeded: count === input.limit + 1 };
 }
-

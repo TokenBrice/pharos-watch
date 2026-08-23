@@ -45,7 +45,7 @@ import {
  */
 
 /** True when any queue-visible counter moved this run. */
-export function pendingQueueChanged(
+function pendingQueueChanged(
   drainResult: PendingDrainResult,
   expiredCount: number,
   pendingEnqueued = 0,

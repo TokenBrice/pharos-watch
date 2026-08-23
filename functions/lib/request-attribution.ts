@@ -11,7 +11,7 @@ import type {
   SiteDataRequestUpstreamLane,
 } from "@shared/types";
 
-export { REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV, isRequestSourceAttributionDisabled } from "@shared/lib/request-attribution";
+export { isRequestSourceAttributionDisabled } from "@shared/lib/request-attribution";
 
 const REQUEST_ATTRIBUTION_RETENTION_SEC = REQUEST_ATTRIBUTION_RETENTION_DAYS * 24 * 60 * 60;
 const REQUEST_ATTRIBUTION_FLUSH_DELAY_MS = 10;

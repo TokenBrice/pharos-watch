@@ -9,9 +9,8 @@ export type ApiKeyTrafficClass = z.infer<typeof ApiKeyTrafficClassSchema>;
  */
 export const API_KEY_TIER_VALUES = ["standard", "self-serve"] as const;
 export type ApiKeyTier = (typeof API_KEY_TIER_VALUES)[number];
-export const ApiKeyTierSchema = z.enum(API_KEY_TIER_VALUES);
 
-export const ApiKeySummarySchema = z.object({
+const ApiKeySummarySchema = z.object({
   id: z.number(),
   keyPrefix: z.string(),
   maskedToken: z.string(),
@@ -35,7 +34,7 @@ export const ApiKeyListResponseSchema = z.object({
 });
 export type ApiKeyListResponse = z.output<typeof ApiKeyListResponseSchema>;
 
-export const ApiKeyAuditEntrySchema = z.object({
+const ApiKeyAuditEntrySchema = z.object({
   id: z.number(),
   apiKeyId: z.number(),
   action: z.string(),

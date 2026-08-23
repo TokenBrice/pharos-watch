@@ -5,7 +5,6 @@ import { buildCsv as buildSharedCsv, buildCsvBody } from "@shared/lib/csv";
 import type { CsvColumn } from "@shared/lib/csv";
 
 export type { CsvColumn };
-export { escapeCsvField } from "@shared/lib/csv";
 
 /**
  * Build the CSV string (header + rows). Pure: no DOM access.

@@ -109,7 +109,7 @@ export const V9UnresolvedFactSchema = z
   .strict();
 export type V9UnresolvedFact = z.infer<typeof V9UnresolvedFactSchema>;
 
-export const V9EvidenceReferenceSchema = z
+const V9EvidenceReferenceSchema = z
   .object({
     sourceId: z.string().min(1),
     observedAt: IsoTimestampSchema,
@@ -120,7 +120,7 @@ export const V9EvidenceReferenceSchema = z
   .strict();
 export type V9EvidenceReference = z.infer<typeof V9EvidenceReferenceSchema>;
 
-export const V9PillarEvidenceSchema = z
+const V9PillarEvidenceSchema = z
   .object({
     score: ScoreSchema.nullable(),
     evidenceLevel: V9EvidenceLevelSchema,
@@ -161,7 +161,7 @@ export const V9StructuralSignalKindSchema = z.enum([
 ]);
 export type V9StructuralSignalKind = z.infer<typeof V9StructuralSignalKindSchema>;
 
-export const V9SeveritySchema = z.enum(["low", "moderate", "high", "critical"]);
+const V9SeveritySchema = z.enum(["low", "moderate", "high", "critical"]);
 export type V9Severity = z.infer<typeof V9SeveritySchema>;
 
 export const V9StructuralSignalSchema = z
@@ -475,35 +475,6 @@ export const HistoricalV9FixtureSchema = HistoricalV9FixtureBaseSchema.superRefi
 });
 export type HistoricalV9Fixture = z.infer<typeof HistoricalV9FixtureSchema>;
 
-/**
- * The only historical input accepted by the scorer. Outcome labels and their
- * annotation provenance are intentionally absent so no caller can pass them
- * through the compiler boundary.
- */
-export const HistoricalV9FactsInputSchema = HistoricalV9FixtureBaseSchema.pick({
-  schemaVersion: true,
-  id: true,
-  assetId: true,
-  asOf: true,
-  factsVersion: true,
-  facts: true,
-  sources: true,
-  factFreeze: true,
-}).strict();
-export type HistoricalV9FactsInput = z.infer<typeof HistoricalV9FactsInputSchema>;
-
-export function historicalFactsInput(fixture: HistoricalV9Fixture): HistoricalV9FactsInput {
-  return HistoricalV9FactsInputSchema.parse({
-    schemaVersion: fixture.schemaVersion,
-    id: fixture.id,
-    assetId: fixture.assetId,
-    asOf: fixture.asOf,
-    factsVersion: fixture.factsVersion,
-    facts: fixture.facts,
-    sources: fixture.sources,
-    factFreeze: fixture.factFreeze,
-  });
-}
 
 export const HistoricalV9FixtureCorpusSchema = z
   .object({ schemaVersion: z.literal(1), fixtures: z.array(HistoricalV9FixtureSchema).min(24) })
@@ -540,7 +511,7 @@ export type V9CapSource = z.infer<typeof V9CapSourceSchema>;
 export const V9PolicyTreatmentSchema = z.enum(["pillar", "ceiling", "NR", "diagnostic"]);
 export type V9PolicyTreatment = z.infer<typeof V9PolicyTreatmentSchema>;
 
-export const V9FactClassSchema = z.enum([
+const V9FactClassSchema = z.enum([
   "not-applicable",
   "known-current",
   "missing-bounded-exposure",
@@ -554,7 +525,7 @@ export const V9FactClassSchema = z.enum([
 ]);
 export type V9FactClass = z.infer<typeof V9FactClassSchema>;
 
-export const V9BoundednessSchema = z.enum(["not-applicable", "exposure-bounded", "globally-bounded", "unbounded"]);
+const V9BoundednessSchema = z.enum(["not-applicable", "exposure-bounded", "globally-bounded", "unbounded"]);
 export type V9Boundedness = z.infer<typeof V9BoundednessSchema>;
 
 export const V9PathKindSchema = z.enum([
@@ -596,7 +567,7 @@ export type V9ManualInputClassification = z.infer<typeof V9ManualInputClassifica
 const V9ReasonArchetypeSchema = z.union([z.literal("*"), z.enum(MECHANISM_ARCHETYPE_VALUES)]);
 const V9ReasonPathKindSchema = z.union([z.literal("*"), V9PathKindSchema]);
 
-export const V9NamedReasonCeilingKeySchema = z.enum([
+const V9NamedReasonCeilingKeySchema = z.enum([
   "control-unverified",
   "control-scoped-gap",
   "oracle-unverified",
@@ -606,14 +577,14 @@ export const V9NamedReasonCeilingKeySchema = z.enum([
 ]);
 export type V9NamedReasonCeilingKey = z.infer<typeof V9NamedReasonCeilingKeySchema>;
 
-export const V9ReasonCeilingRuleSchema = z.discriminatedUnion("source", [
+const V9ReasonCeilingRuleSchema = z.discriminatedUnion("source", [
   z.object({ source: z.literal("evidence-level"), level: V9EvidenceLevelSchema }).strict(),
   z.object({ source: z.literal("minimum-track-record") }).strict(),
   z.object({ source: z.literal("named-ceiling"), key: V9NamedReasonCeilingKeySchema }).strict(),
 ]);
 export type V9ReasonCeilingRule = z.infer<typeof V9ReasonCeilingRuleSchema>;
 
-export const V9ReasonRegistryEntrySchema = z
+const V9ReasonRegistryEntrySchema = z
   .object({
     code: V9ReasonCodeSchema,
     ownerDomain: V9ReasonOwnerDomainSchema,
@@ -656,7 +627,7 @@ export const V9ReasonRegistryEntrySchema = z
   });
 export type V9ReasonRegistryEntry = z.infer<typeof V9ReasonRegistryEntrySchema>;
 
-export const V9FactDispositionSchema = z
+const V9FactDispositionSchema = z
   .object({
     factClass: V9FactClassSchema,
     boundedness: V9BoundednessSchema,
@@ -701,7 +672,7 @@ const V9MultiplierBandSchema = z
 export const V9AssetPremiumKindSchema = z.enum(["market-anchor-longevity"]);
 export type V9AssetPremiumKind = z.infer<typeof V9AssetPremiumKindSchema>;
 
-export const V9OperationalResilienceComponentSchema = z.enum([
+const V9OperationalResilienceComponentSchema = z.enum([
   "cumulative-redemption",
   "stress-redemption",
   "persistent-market-depth",
@@ -1397,7 +1368,7 @@ const V9DecisionPolicySchema = z
   })
   .strict();
 
-export const V9MethodologySemanticSchema = z
+const V9MethodologySemanticSchema = z
   .object({
     formula: V9FormulaPolicySchema,
     evidence: V9EvidencePolicySchema,
@@ -1899,14 +1870,11 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
 });
 export type V9MethodologyPolicy = z.infer<typeof V9MethodologyPolicySchema>;
 
-export const V9MethodologySemanticPayloadSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    semantic: V9MethodologySemanticSchema,
-    reasonRegistry: z.array(V9ReasonRegistryEntrySchema),
-  })
-  .strict();
-export type V9MethodologySemanticPayload = z.infer<typeof V9MethodologySemanticPayloadSchema>;
+export type V9MethodologySemanticPayload = {
+  schemaVersion: 1;
+  semantic: V9MethodologySemantic;
+  reasonRegistry: V9ReasonRegistryEntry[];
+};
 
 export interface V9ValidatedPolicyEnvelope {
   readonly policy: V9MethodologyPolicy;

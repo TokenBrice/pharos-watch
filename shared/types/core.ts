@@ -3,7 +3,6 @@ import type { LiveReservesConfig } from "./live-reserves";
 import type { CauseOfDeath } from "./cause-of-death";
 import type { ReserveSlice } from "./reserves";
 import {
-  GOVERNANCE_TYPE_VALUES,
   type GovernanceType,
   type MechanismArchetype,
   type StablecoinExitMechanism,
@@ -35,17 +34,8 @@ export type {
   StablecoinStatus,
 } from "./stablecoin-taxonomy";
 export {
-  RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES,
-  RESERVE_RISK_VALUES,
-  ReserveBlacklistabilityExposureSchema,
-  ReserveRiskSchema,
-} from "./reserves";
-export {
   DEPENDENCY_TYPE_VALUES,
-  DependencyTypeSchema,
   V9_DEPENDENCY_ECONOMIC_ROLE_VALUES,
-  V9DependencyEconomicRoleSchema,
-  defaultV9DependencyEconomicRole,
 } from "./dependency-types";
 
 // --- Flag-based classification ---
@@ -470,7 +460,7 @@ export type GeniusProfile = import("./stablecoin-meta-schemas").GeniusProfile;
 export type ContractDeployment = import("./stablecoin-meta-schemas").ContractDeployment;
 export type DependencyWeight = import("./stablecoin-meta-schemas").DependencyWeight;
 
-export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
+const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
 export type CollateralQuality = (typeof COLLATERAL_QUALITY_VALUES)[number];
 
 export const CUSTODY_MODEL_VALUES = [
@@ -483,7 +473,7 @@ export const CUSTODY_MODEL_VALUES = [
 ] as const;
 export type CustodyModel = (typeof CUSTODY_MODEL_VALUES)[number];
 
-export const GOVERNANCE_QUALITY_VALUES = [
+const GOVERNANCE_QUALITY_VALUES = [
   "immutable-code",
   "dao-governance",
   "multisig",
@@ -623,15 +613,11 @@ export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
 
 export const WRAPPER_OPERATOR_VALUES = ["parent-protocol", "third-party"] as const;
 export type WrapperOperator = (typeof WRAPPER_OPERATOR_VALUES)[number];
-export const GovernanceTypeSchema = z.enum(GOVERNANCE_TYPE_VALUES);
 export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
 export const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
 export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);
 export const OracleRiskTierSchema = z.enum(ORACLE_RISK_TIER_VALUES);
-export const OracleRiskConfidenceSchema = z.enum(ORACLE_RISK_CONFIDENCE_VALUES);
 export const BridgeRouteRiskTierSchema = z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES);
-export const BridgeRouteRiskConfidenceSchema = z.enum(BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES);
-export const BridgeRouteRiskSourceSchema = z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUES);
 
 export const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
 export type CoinNoticeType = (typeof COIN_NOTICE_TYPE_VALUES)[number];
@@ -809,11 +795,11 @@ export type FilterTag =
   | VariantFilterTag
   | GradeFilterTag;
 
-export const PRICE_CONFIDENCE_VALUES = ["high", "single-source", "low", "fallback"] as const;
+const PRICE_CONFIDENCE_VALUES = ["high", "single-source", "low", "fallback"] as const;
 export type PriceConfidence = (typeof PRICE_CONFIDENCE_VALUES)[number];
-export const PRICE_OBSERVED_AT_MODE_VALUES = ["upstream", "local_fetch", "unknown"] as const;
+const PRICE_OBSERVED_AT_MODE_VALUES = ["upstream", "local_fetch", "unknown"] as const;
 export type PriceObservedAtMode = (typeof PRICE_OBSERVED_AT_MODE_VALUES)[number];
-export const DEPEG_PRIMARY_TRUST_VALUES = ["authoritative", "confirm_required", "unusable"] as const;
+const DEPEG_PRIMARY_TRUST_VALUES = ["authoritative", "confirm_required", "unusable"] as const;
 export type DepegPrimaryTrust = (typeof DEPEG_PRIMARY_TRUST_VALUES)[number];
 
 export const PriceConfidenceSchema = z.enum(PRICE_CONFIDENCE_VALUES);

@@ -2,7 +2,6 @@ import { executeAtomicBatch } from "../../lib/db";
 import type { PresetSubscriptionRow } from "../telegram-webhook-shared";
 import {
   preparePreferenceGenerationBump,
-  prepareUpsertSubscriberRow,
   unixNow,
 } from "./subscribers";
 import {
@@ -79,29 +78,6 @@ function preparePresetSubscriptionStatements(
   });
 }
 
-export async function upsertPresetSubscriptions(
-  db: D1Database,
-  chatId: string,
-  presetIds: readonly string[],
-  alertTypes: Set<string>,
-  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null; operationStatements?: D1PreparedStatement[] },
-): Promise<void> {
-  const statements = preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options);
-  if (statements.length === 0 && (options?.operationStatements?.length ?? 0) === 0) return;
-  const domainStatements = statements.length === 0
-    ? []
-    : [
-        prepareUpsertSubscriberRow(db, {
-          chatId,
-          username: null,
-          nowSec: unixNow(),
-          bumpPreferenceGeneration: true,
-        }),
-        ...statements,
-      ];
-  await executeAtomicBatch(db, appendTelegramOperationStatements(domainStatements, options));
-}
-
 export function prepareSubscriberAndPresetStatements(
   db: D1Database,
   chatId: string,
@@ -145,7 +121,7 @@ export async function applySubscribeIntent(
   );
 }
 
-export function prepareRemovePresetSubscriptionStatements(
+function prepareRemovePresetSubscriptionStatements(
   db: D1Database,
   chatId: string,
   presetIds: readonly string[],

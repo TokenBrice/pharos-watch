@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-export const V9MechanismProfileQualitySchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);
+const V9MechanismProfileQualitySchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);
 
-export const V9MechanismProfileFactSchema = z.union([
+const V9MechanismProfileFactSchema = z.union([
   z.object({ disposition: z.literal("supported"), quality: V9MechanismProfileQualitySchema }).strict(),
   z.object({ disposition: z.enum(["issuer-undisclosed", "integration-missing", "method-unsupported"]) }).strict(),
 ]);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const ApiDependencyMetaSchema = z.object({
+const ApiDependencyMetaSchema = z.object({
   updatedAt: z.number().nullable().optional(),
   ageSeconds: z.number().nullable().optional(),
   status: z.enum(["fresh", "degraded", "stale", "unavailable"]),

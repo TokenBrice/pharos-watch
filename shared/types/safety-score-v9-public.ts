@@ -51,11 +51,7 @@ export type {
 
 export {
   SafetyScoreV9AccessPostureSchema,
-  SafetyScoreV9CapSchema,
-  SafetyScoreV9EvidenceFreshnessSchema,
-  SafetyScoreV9NrReasonSchema,
   SafetyScoreV9PillarSchema,
-  SafetyScoreV9PublicReasonSchema,
   V9_BOUNDED_ATTRIBUTION_REASON_CODES,
 } from "./safety-score-v9-public-facts";
 export type {
@@ -144,7 +140,7 @@ const SafetyScoreV9RolePillarLimitSchema = z
   })
   .strict();
 
-export const SafetyScoreV9DependencySummarySchema = z
+const SafetyScoreV9DependencySummarySchema = z
   .object({
     serial: z.array(SafetyScoreV9SerialDependencySchema),
     basket: z.array(SafetyScoreV9BasketDependencySchema),
@@ -200,7 +196,7 @@ export const SafetyScoreV9EvidenceSummarySchema = z
   .strict();
 export type SafetyScoreV9EvidenceSummary = z.infer<typeof SafetyScoreV9EvidenceSummarySchema>;
 
-export const SafetyScoreV9AggregationTraceSchema = z
+const SafetyScoreV9AggregationTraceSchema = z
   .object({
     method: z.literal("smooth-bounded-headroom"),
     score: ScoreSchema,
@@ -225,7 +221,7 @@ export const SafetyScoreV9AggregationTraceSchema = z
   });
 export type SafetyScoreV9AggregationTrace = z.infer<typeof SafetyScoreV9AggregationTraceSchema>;
 
-export const SafetyScoreV9DeploymentAdjustmentSchema = z
+const SafetyScoreV9DeploymentAdjustmentSchema = z
   .object({
     signalKey: z.string().min(1),
     sourceSignalKeys: z.array(z.string().min(1)).min(1),
@@ -268,7 +264,7 @@ export const SafetyScoreV9DeploymentAdjustmentSchema = z
   });
 export type SafetyScoreV9DeploymentAdjustment = z.infer<typeof SafetyScoreV9DeploymentAdjustmentSchema>;
 
-export const SafetyScoreV9UnresolvedDeploymentExposureSchema = z
+const SafetyScoreV9UnresolvedDeploymentExposureSchema = z
   .object({
     signalKey: z.string().min(1),
     exposureKey: z.string().min(1),
@@ -293,7 +289,7 @@ export type SafetyScoreV9UnresolvedDeploymentExposure = z.infer<
   typeof SafetyScoreV9UnresolvedDeploymentExposureSchema
 >;
 
-export const SafetyScoreV9DeploymentRiskTraceSchema = z
+const SafetyScoreV9DeploymentRiskTraceSchema = z
   .object({
     method: z.literal("holder-slice-exposure-weighted-v2"),
     totalAdjustmentPoints: z.number().finite().min(0).max(100).nullable(),
@@ -352,7 +348,7 @@ export const SafetyScoreV9DeploymentRiskTraceSchema = z
   });
 export type SafetyScoreV9DeploymentRiskTrace = z.infer<typeof SafetyScoreV9DeploymentRiskTraceSchema>;
 
-export const SafetyScoreV9AdverseAttributionItemSchema = z
+const SafetyScoreV9AdverseAttributionItemSchema = z
   .object({
     source: z.enum([
       "active-depeg",
@@ -371,7 +367,7 @@ export const SafetyScoreV9AdverseAttributionItemSchema = z
   .strict();
 export type SafetyScoreV9AdverseAttributionItem = z.infer<typeof SafetyScoreV9AdverseAttributionItemSchema>;
 
-export const SafetyScoreV9AdverseAttributionTraceSchema = z
+const SafetyScoreV9AdverseAttributionTraceSchema = z
   .object({
     semantics: z.literal("causal-measured-adverse-v1"),
     items: z.array(SafetyScoreV9AdverseAttributionItemSchema),
@@ -389,7 +385,7 @@ export const SafetyScoreV9AdverseAttributionTraceSchema = z
   });
 export type SafetyScoreV9AdverseAttributionTrace = z.infer<typeof SafetyScoreV9AdverseAttributionTraceSchema>;
 
-export const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
+const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
   .object({
     source: z.enum(["parent-score", "reason", "wrapper-local"]),
     code: V9ReasonCodeSchema,
@@ -430,7 +426,7 @@ export type SafetyScoreV9BoundedUncertaintyAttributionItem = z.infer<
   typeof SafetyScoreV9BoundedUncertaintyAttributionItemSchema
 >;
 
-export const SafetyScoreV9BoundedUncertaintyAttributionTraceSchema = z
+const SafetyScoreV9BoundedUncertaintyAttributionTraceSchema = z
   .object({
     semantics: z.literal("causal-bounded-uncertainty-v1"),
     items: z.array(SafetyScoreV9BoundedUncertaintyAttributionItemSchema),
@@ -458,7 +454,7 @@ export type SafetyScoreV9BoundedUncertaintyAttributionTrace = z.infer<
   typeof SafetyScoreV9BoundedUncertaintyAttributionTraceSchema
 >;
 
-export const SafetyScoreV9EvidenceResponsibilityItemSchema = z
+const SafetyScoreV9EvidenceResponsibilityItemSchema = z
   .object({
     responsibility: V9EvidenceResponsibilitySchema,
     factCount: z.number().int().nonnegative(),
@@ -486,7 +482,7 @@ export type SafetyScoreV9EvidenceResponsibilityItem = z.infer<
   typeof SafetyScoreV9EvidenceResponsibilityItemSchema
 >;
 
-export const SafetyScoreV9EvidenceResponsibilityFactSchema = z
+const SafetyScoreV9EvidenceResponsibilityFactSchema = z
   .object({
     reasonCode: V9ReasonCodeSchema,
     exactFactPath: z.string().min(1),
@@ -496,7 +492,7 @@ export const SafetyScoreV9EvidenceResponsibilityFactSchema = z
   })
   .strict();
 
-export const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
+const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
   .object({
     semantics: z.literal("limiting-fact-owner-v1"),
     totalFactCount: z.number().int().nonnegative(),
@@ -535,7 +531,7 @@ const SafetyScoreV9WrapperMissingFactClassSchema = z.union([
   z.enum(["riskTransfer", "wrapperForm"]),
 ]);
 
-export const SafetyScoreV9WrapperParentLimitSchema = z
+const SafetyScoreV9WrapperParentLimitSchema = z
   .object({
     schemaVersion: z.literal(1),
     parentScore: ScoreSchema,
@@ -873,7 +869,7 @@ function refineBoundedUncertaintyTrace(
 }
 
 /** Current trace. Schema v3 adds explicit policy-defined score adjustments. */
-export const SafetyScoreV9ScoreTraceSchema =
+const SafetyScoreV9ScoreTraceSchema =
   SafetyScoreV9AdjustedScoreTraceCommonSchema
     .extend({
       schemaVersion: z.literal(3),
@@ -887,7 +883,7 @@ export const SafetyScoreV9ScoreTraceSchema =
     });
 export type SafetyScoreV9ScoreTrace = z.infer<typeof SafetyScoreV9ScoreTraceSchema>;
 
-export const SafetyScoreV9PillarAdjustmentSchema = z
+const SafetyScoreV9PillarAdjustmentSchema = z
   .object({
     kind: z.enum(["operational-resilience-credit", "dependency-limit"]),
     scoreBefore: ScoreSchema,
@@ -980,7 +976,7 @@ function refineBreakdownAdjustments(
   }
 }
 
-export const SafetyScoreV9BackingBreakdownSchema = z
+const SafetyScoreV9BackingBreakdownSchema = z
   .object({
     ...SafetyScoreV9BreakdownPillarBaseShape,
     groups: z.array(
@@ -1078,7 +1074,7 @@ const EXIT_COMPONENT_KEYS = [
   "cost",
 ] as const;
 
-export const SafetyScoreV9ExitBreakdownSchema = z
+const SafetyScoreV9ExitBreakdownSchema = z
   .object({
     ...SafetyScoreV9BreakdownPillarBaseShape,
     stressRequest: z
@@ -1257,7 +1253,7 @@ export type SafetyScoreV9ExitBreakdown = z.infer<
   typeof SafetyScoreV9ExitBreakdownSchema
 >;
 
-export const SafetyScoreV9ControlBreakdownSchema = z
+const SafetyScoreV9ControlBreakdownSchema = z
   .object({
     ...SafetyScoreV9BreakdownPillarBaseShape,
     method: z.literal("minimum-binding-component"),
@@ -1445,7 +1441,6 @@ export const SafetyScoreV9CurrentCardSchema = z
   });
 export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSchema>;
 
-export const SafetyScoreV9CardSchema = SafetyScoreV9CurrentCardSchema;
 export type SafetyScoreV9Card = SafetyScoreV9CurrentCard;
 
 export const SafetyScoreV9CompletenessSchema = z

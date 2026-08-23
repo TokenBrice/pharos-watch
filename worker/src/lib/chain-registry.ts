@@ -5,10 +5,8 @@ import {
 } from "./public-rpc-registry";
 export {
   CG_CHAIN_MAP,
-  CG_CHAIN_REVERSE,
   DS_CHAIN_MAP,
   GT_CHAIN_MAP,
-  GT_CHAIN_REVERSE,
   GT_ONLY_CHAIN_MAP,
 } from "@shared/lib/chains";
 

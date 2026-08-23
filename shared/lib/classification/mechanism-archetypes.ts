@@ -24,7 +24,7 @@ export const MECHANISM_ARCHETYPE_SHORT_LABELS: Record<MechanismArchetype, string
   "commodity-claim": "Commodity Claim",
 };
 
-export const MECHANISM_ARCHETYPE_CTA_NOUNS: Record<MechanismArchetype, string> = {
+const MECHANISM_ARCHETYPE_CTA_NOUNS: Record<MechanismArchetype, string> = {
   "fiat-cash": "fiat-backed",
   tbill: "tokenized Treasury",
   cdp: "CDP",
