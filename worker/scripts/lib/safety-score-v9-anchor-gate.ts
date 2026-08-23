@@ -30,11 +30,25 @@ export interface V9AnchorPendingRuling {
   note: string;
 }
 
+/**
+ * A time-boxed anchor amendment. The eased `minGrade` holds only until
+ * `untilSec`; from that instant the gate asserts `restoreMinGrade` again with no
+ * further edit. Used when an owner eases an anchor because a *dated* penalty
+ * suppresses the asset, so the easement should expire exactly when the penalty
+ * does rather than outliving it as a stale assertion.
+ */
+export interface V9AnchorTimeBox {
+  untilSec: number;
+  restoreMinGrade: V9RatedGrade;
+  note: string;
+}
+
 export interface V9AnchorRule {
   id: string;
   minGrade: V9RatedGrade;
   label: string;
   pendingRuling?: V9AnchorPendingRuling;
+  timeBox?: V9AnchorTimeBox;
 }
 
 export interface V9RelativePairRule {
@@ -89,8 +103,71 @@ export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
     { id: "dai-makerdao", minGrade: "B", label: "DAI current-facts anchor" },
     { id: "sdai-sky", minGrade: "B-", label: "sDAI current-facts anchor" },
     { id: "sbold-k3-capital", minGrade: "B-", label: "sBOLD measured-withdrawal anchor" },
-    { id: "lusd-liquity", minGrade: "B+", label: "LUSD anchor" },
-    { id: "pyusd-paypal", minGrade: "B", label: "B-anchor" },
+    /**
+     * LUSD anchor AMENDED B+ to B- by owner ruling D-I, 2026-08-23.
+     *
+     * LUSD scores 65 (B-) against a B+ assertion, and the shortfall is not a
+     * cap: `bindingCap` is null with an empty `caps[]`. It is two measurements,
+     * only one of which is arguably wrong, and neither closes the gap.
+     *
+     * Exit is 58.74 because Liquity V1's collateral redemption is
+     * `scoreEligible: false` on `outputQuality: "mixed-collateral"` — it pays
+     * ETH, not dollars. That exclusion is evenhanded, not an LUSD penalty:
+     * bold-liquity's redemption is excluded identically, same $25,000,000, same
+     * class. The whole BOLD(84/A) vs LUSD(65/B-) gap is measured DEX depth —
+     * $4,603,636 executable (15.3% of supply) against $441,716 (1.6%). LUSD is a
+     * legacy asset whose market liquidity thinned; the anchor was set when it
+     * had not.
+     *
+     * The peg multiplier of 0.896036 is separately suspect — LUSD's worst
+     * deviation is a *premium* (+682 bps) and it sits at +115 bps now, while
+     * `peg-score.ts` charges `Math.abs()` and `docs/depeg-resolver.md` calls
+     * overpeg recovery quasi-certain. But that is tracked as its own item, and
+     * measurement settles it here: a directional treatment moves LUSD to 67,
+     * and even a total peg exemption reaches only 72. B+ requires an aggregated
+     * 83.14 against 71.99 today.
+     *
+     * So B+ is unsatisfiable on honest facts and no single defensible fix
+     * reaches it. Amended rather than tuned around, per the rule stated for the
+     * removed R8 pair rule below: scores and constraints are not adjusted to
+     * force an ordering. If the peg asymmetry is fixed, B becomes reachable and
+     * this anchor can be raised again on evidence.
+     */
+    { id: "lusd-liquity", minGrade: "B-", label: "LUSD anchor (amended B+ to B- by owner ruling D-I, 2026-08-23)" },
+    /**
+     * B-anchor AMENDED B to B- by owner ruling D-J, 2026-08-23, TIME-BOXED to
+     * 2027-10-15.
+     *
+     * PYUSD scores 69 against a B (70) assertion. The score is correct and the
+     * anchor is the stale part: methodology 9.12 deliberately moved this asset
+     * "A- to B (mint 79 to 55, score 80 to 70)" on a resolved 2025-10-15 mint
+     * incident, and the anchor was pinned to exactly the 70 that change
+     * produced. An anchor sitting on the threshold a change lands on fails on
+     * any later sub-point drift; 0.37 aggregated points is what drifted. Its
+     * control pillar is still that single deliberate `mint` component at 55.
+     *
+     * The easement is time-boxed because the cause is dated: 9.12 relaxes the
+     * incident cap to 70 on 2027-10-15, which restores B+ by its own arithmetic.
+     * The anchor therefore reasserts B automatically at that instant instead of
+     * outliving the penalty that justified it.
+     *
+     * The B band does not depend on this asset meanwhile: dai-makerdao 80,
+     * rlusd-ripple 80 and fxusd-f-x-protocol 72 all hold at or above 70.
+     * Relaxing the incident cap to clear the anchor was rejected — that inverts
+     * the dependency and bends a risk judgement to satisfy an assertion.
+     */
+    {
+      id: "pyusd-paypal",
+      minGrade: "B-",
+      label: "B-anchor (amended B to B- by owner ruling D-J, 2026-08-23; restores B on 2027-10-15)",
+      timeBox: {
+        // 2027-10-15T00:00:00Z — the date methodology 9.12 relaxes the
+        // resolved-mint-incident cap to 70.
+        untilSec: 1823558400,
+        restoreMinGrade: "B",
+        note: "9.12 incident cap relaxes to 70 on 2027-10-15, restoring B+ by its own arithmetic",
+      },
+    },
     { id: "ausd-agora", minGrade: "C+", label: "AUSD anchor (amended B to C+ by owner ruling D-G, 2026-07-19)" },
     { id: "rlusd-ripple", minGrade: "B", label: "B-anchor" },
     { id: "zchf-frankencoin", minGrade: "C+", label: "ZCHF anchor (amended B to C+ by owner ruling D-H, 2026-07-19)" },
@@ -261,6 +338,13 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
   policy?: V9ValidatedPolicyEnvelope;
   applyRulings?: readonly string[];
   contract?: V9AnchorContract;
+  /**
+   * Publication clock the cards were scored at. Required whenever the contract
+   * carries a time-boxed anchor: without it an expired easement would keep
+   * applying, which is the stale-assertion failure the time box exists to
+   * prevent. Fail closed rather than guessing a date.
+   */
+  asOfSec?: number;
 }): V9AnchorGateReport {
   const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
   const contract: V9AnchorContract = input.contract ?? SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1;
@@ -278,6 +362,13 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
   }
   const appliedSet = new Set(appliedRulings);
 
+  const timeBoxed = contract.anchors.filter((anchor) => anchor.timeBox !== undefined);
+  if (timeBoxed.length > 0 && input.asOfSec === undefined) {
+    throw new Error(
+      `Anchor gate needs asOfSec to resolve time-boxed anchor(s): ${timeBoxed.map((anchor) => anchor.id).join(", ")}`,
+    );
+  }
+
   const byId = new Map<string, V9AnchorGateCard>();
   for (const card of input.cards) {
     if (byId.has(card.id)) throw new Error(`Anchor gate received duplicate card id: ${card.id}`);
@@ -289,8 +380,15 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
   for (const anchor of contract.anchors) {
     const rule = `anchor:${anchor.id}`;
     const rulingApplied = anchor.pendingRuling !== undefined && appliedSet.has(anchor.pendingRuling.decisionId);
-    const minGrade =
-      rulingApplied && anchor.pendingRuling ? anchor.pendingRuling.alternativeMinGrade : anchor.minGrade;
+    // An expired time box restores the stricter grade with no further edit. The
+    // pending-ruling path still wins: an explicitly applied ruling is a live
+    // owner decision, where a lapsed easement is only an absent one.
+    const timeBoxExpired = anchor.timeBox !== undefined && input.asOfSec !== undefined && input.asOfSec >= anchor.timeBox.untilSec;
+    const minGrade = rulingApplied && anchor.pendingRuling
+      ? anchor.pendingRuling.alternativeMinGrade
+      : timeBoxExpired && anchor.timeBox
+        ? anchor.timeBox.restoreMinGrade
+        : anchor.minGrade;
     const minScore = thresholds.get(minGrade);
     if (minScore === undefined) throw new Error(`Policy carries no grade threshold for ${minGrade}`);
     const required = `score ≥ ${minScore} (${minGrade})`;

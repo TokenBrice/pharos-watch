@@ -57,6 +57,18 @@ function withoutId(cards: V9AnchorGateCard[], id: string): V9AnchorGateCard[] {
   return cards.filter((entry) => entry.id !== id);
 }
 
+/**
+ * 2026-08-23 publication clock — inside the pyusd-paypal time box, so these
+ * cases see the eased contract that shipped with owner ruling D-J.
+ */
+const CAPTURE_CLOCK_SEC = 1787500014;
+
+function evaluateAtCaptureClock(
+  input: Omit<Parameters<typeof evaluateSafetyScoreV9AnchorGate>[0], "asOfSec">,
+): V9AnchorGateReport {
+  return evaluateSafetyScoreV9AnchorGate({ ...input, asOfSec: CAPTURE_CLOCK_SEC });
+}
+
 function verdict(report: V9AnchorGateReport, rule: string) {
   const found = report.verdicts.find((entry) => entry.rule === rule);
   if (!found) throw new Error(`Report is missing verdict for rule ${rule}`);
@@ -65,7 +77,7 @@ function verdict(report: V9AnchorGateReport, rule: string) {
 
 describe("evaluateSafetyScoreV9AnchorGate", () => {
   it("passes a fully coherent anchor set", () => {
-    const report = evaluateSafetyScoreV9AnchorGate({ cards: passingCards() });
+    const report = evaluateAtCaptureClock({ cards: passingCards() });
     expect(report.decision).toBe("gate-passed");
     expect(report.verdicts.every((entry) => entry.status === "pass")).toBe(true);
     expect(report.appliedRulings).toEqual([]);
@@ -73,7 +85,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
   });
 
   it("fails an anchor below its policy-derived threshold", () => {
-    const report = evaluateSafetyScoreV9AnchorGate({ cards: withScore(passingCards(), "bold-liquity", 82) });
+    const report = evaluateAtCaptureClock({ cards: withScore(passingCards(), "bold-liquity", 82) });
     expect(report.decision).toBe("no-go");
     const entry = verdict(report, "anchor:bold-liquity");
     expect(entry.status).toBe("fail");
@@ -91,7 +103,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
         (rule) => rule.kind === "pair" && rule.id === "pyusd-paypal" && rule.overId === "pusd-polymarket",
       ),
     ).toBe(false);
-    const report = evaluateSafetyScoreV9AnchorGate({ cards: withScore(passingCards(), "pusd-polymarket", 72) });
+    const report = evaluateAtCaptureClock({ cards: withScore(passingCards(), "pusd-polymarket", 72) });
     expect(report.decision).toBe("gate-passed");
   });
 
@@ -102,12 +114,12 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     };
     const rule = "relative:pyusd-paypal>=pusd-polymarket";
 
-    const passing = evaluateSafetyScoreV9AnchorGate({ cards: passingCards(), contract });
+    const passing = evaluateAtCaptureClock({ cards: passingCards(), contract });
     expect(passing.decision).toBe("gate-passed");
     expect(verdict(passing, rule).status).toBe("pass");
     expect(verdict(passing, rule).observed).toBe("71 vs 64");
 
-    const inverted = evaluateSafetyScoreV9AnchorGate({
+    const inverted = evaluateAtCaptureClock({
       cards: withScore(passingCards(), "pusd-polymarket", 72),
       contract,
     });
@@ -117,7 +129,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(entry.code).toBe("relative-inversion");
     expect(entry.observed).toBe("71 vs 72");
 
-    const missing = evaluateSafetyScoreV9AnchorGate({
+    const missing = evaluateAtCaptureClock({
       cards: withoutId(passingCards(), "pusd-polymarket"),
       contract,
     });
@@ -126,7 +138,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
 
   it("fails USDC dominance when another centralized fiat asset outscores it", () => {
     const cards = [...passingCards(), card("wusd-synthetic", 91, "tbill")];
-    const report = evaluateSafetyScoreV9AnchorGate({ cards });
+    const report = evaluateAtCaptureClock({ cards });
     expect(report.decision).toBe("no-go");
     const entry = verdict(report, "relative:usdc-circle>=archetype(fiat-cash|tbill)");
     expect(entry.status).toBe("fail");
@@ -144,7 +156,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
       ...SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1,
       adverse: [{ kind: "max-score", id: "u-united-stables", maxScore: 32, label: "U adverse pin" }],
     };
-    const report = evaluateSafetyScoreV9AnchorGate({
+    const report = evaluateAtCaptureClock({
       cards: withScore(passingCards(), "u-united-stables", 33),
       contract,
     });
@@ -156,7 +168,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
   });
 
   it("fails a max-grade adverse pin once the score leaves the grade band", () => {
-    const report = evaluateSafetyScoreV9AnchorGate({ cards: withScore(passingCards(), "eurs-stasis", 40) });
+    const report = evaluateAtCaptureClock({ cards: withScore(passingCards(), "eurs-stasis", 40) });
     expect(report.decision).toBe("no-go");
     const entry = verdict(report, "adverse:eurs-stasis");
     expect(entry.status).toBe("fail");
@@ -165,7 +177,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
   });
 
   it("fails explicitly when an anchor asset is missing from the card set", () => {
-    const report = evaluateSafetyScoreV9AnchorGate({ cards: withoutId(passingCards(), "bold-liquity") });
+    const report = evaluateAtCaptureClock({ cards: withoutId(passingCards(), "bold-liquity") });
     expect(report.decision).toBe("no-go");
     const entry = verdict(report, "anchor:bold-liquity");
     expect(entry.status).toBe("fail");
@@ -197,7 +209,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
       card("mim-abracadabra", 39, "cdp"),
       card("tusd-trueusd", 54),
     ];
-    const report = evaluateSafetyScoreV9AnchorGate({ cards });
+    const report = evaluateAtCaptureClock({ cards });
     expect(report.decision).toBe("gate-passed");
   });
 
@@ -211,7 +223,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
       "usdg-paxos",
       61,
     );
-    const report = evaluateSafetyScoreV9AnchorGate({ cards });
+    const report = evaluateAtCaptureClock({ cards });
     expect(report.decision).toBe("gate-passed");
     expect(verdict(report, "anchor:usdt-tether").required).toBe("score ≥ 87 (A+)");
     expect(verdict(report, "anchor:dai-makerdao").required).toBe("score ≥ 70 (B)");
@@ -221,25 +233,25 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(verdict(report, "anchor:zchf-frankencoin").required).toBe("score ≥ 60 (C+)");
     expect(report.verdicts.some((entry) => entry.rule === "anchor:usdg-paxos")).toBe(false);
 
-    const usdtBelow = evaluateSafetyScoreV9AnchorGate({
+    const usdtBelow = evaluateAtCaptureClock({
       cards: withScore(cards, "usdt-tether", 86),
     });
     expect(usdtBelow.decision).toBe("no-go");
     expect(verdict(usdtBelow, "anchor:usdt-tether").status).toBe("fail");
 
-    const below = evaluateSafetyScoreV9AnchorGate({ cards: withScore(cards, "ausd-agora", 59) });
+    const below = evaluateAtCaptureClock({ cards: withScore(cards, "ausd-agora", 59) });
     expect(below.decision).toBe("no-go");
     expect(verdict(below, "anchor:ausd-agora").status).toBe("fail");
   });
 
   it("rejects an unknown pending-ruling id", () => {
-    expect(() => evaluateSafetyScoreV9AnchorGate({ cards: passingCards(), applyRulings: ["D-Z"] })).toThrow(
+    expect(() => evaluateAtCaptureClock({ cards: passingCards(), applyRulings: ["D-Z"] })).toThrow(
       "Unknown anchor-gate pending ruling: D-Z",
     );
   });
 
   it("resolves every declared anchor threshold from the candidate policy", () => {
-    const report = evaluateSafetyScoreV9AnchorGate({ cards: passingCards() });
+    const report = evaluateAtCaptureClock({ cards: passingCards() });
     const thresholds = new Map(report.gradeThresholds.map((entry) => [entry.grade, entry.minScore]));
     expect(thresholds.get("A")).toBe(83);
     expect(thresholds.get("A-")).toBe(80);
@@ -251,5 +263,55 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
         SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1.relative.length +
         SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1.adverse.length,
     );
+  });
+
+  describe("time-boxed anchor amendments (owner ruling D-J)", () => {
+    const PYUSD_RESTORE_SEC = 1823558400; // 2027-10-15T00:00:00Z
+
+    it("applies the eased grade while the box is open", () => {
+      // 69 clears B- (65) but not B (70): the easement is what passes it.
+      const report = evaluateAtCaptureClock({ cards: withScore(passingCards(), "pyusd-paypal", 69) });
+      expect(verdict(report, "anchor:pyusd-paypal").status).toBe("pass");
+      expect(verdict(report, "anchor:pyusd-paypal").required).toBe("score ≥ 65 (B-)");
+      expect(report.decision).toBe("gate-passed");
+    });
+
+    it("restores the stricter grade the instant the box expires, with no edit", () => {
+      const report = evaluateSafetyScoreV9AnchorGate({
+        cards: withScore(passingCards(), "pyusd-paypal", 69),
+        asOfSec: PYUSD_RESTORE_SEC,
+      });
+      expect(verdict(report, "anchor:pyusd-paypal").required).toBe("score ≥ 70 (B)");
+      expect(verdict(report, "anchor:pyusd-paypal").status).toBe("fail");
+      expect(report.decision).toBe("no-go");
+    });
+
+    it("keeps the easement one second before expiry", () => {
+      const report = evaluateSafetyScoreV9AnchorGate({
+        cards: withScore(passingCards(), "pyusd-paypal", 69),
+        asOfSec: PYUSD_RESTORE_SEC - 1,
+      });
+      expect(verdict(report, "anchor:pyusd-paypal").required).toBe("score ≥ 65 (B-)");
+      expect(verdict(report, "anchor:pyusd-paypal").status).toBe("pass");
+    });
+
+    it("fails closed when no clock can resolve a time-boxed anchor", () => {
+      // Omitting the clock must not silently keep an expired easement alive.
+      expect(() => evaluateSafetyScoreV9AnchorGate({ cards: passingCards() })).toThrow(
+        "Anchor gate needs asOfSec to resolve time-boxed anchor(s): pyusd-paypal",
+      );
+    });
+
+    it("holds lusd-liquity at its amended B- without a time box", () => {
+      // Ruling D-I is open-ended: 65 passes, and it stays eased after D-J lapses.
+      for (const asOfSec of [CAPTURE_CLOCK_SEC, PYUSD_RESTORE_SEC]) {
+        const report = evaluateSafetyScoreV9AnchorGate({
+          cards: withScore(passingCards(), "lusd-liquity", 65),
+          asOfSec,
+        });
+        expect(verdict(report, "anchor:lusd-liquity").required).toBe("score ≥ 65 (B-)");
+        expect(verdict(report, "anchor:lusd-liquity").status).toBe("pass");
+      }
+    });
   });
 });
