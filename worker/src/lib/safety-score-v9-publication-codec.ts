@@ -124,18 +124,19 @@ function parsePublicationPayload(
     throw new Error(`${label} JSON is not canonical`);
   }
   return SafetyScoreV9CurrentResponseSchema.parse(
-    withoutRetiredStressStateDigests(parsed.value),
+    normalizeRetiredCardFields(parsed.value),
   );
 }
 
 /**
- * Methodology 9.15 retired this unused card field without changing the V5
- * envelope version. Keep the storage reader able to cross that one-field
- * boundary so the first 9.15 candidate can compare with and replace the last
- * 9.14 publication. Integrity checks still cover the original stored bytes;
- * only the already-authenticated payload is normalized for the current schema.
+ * Methodology 9.15 retired `stressStateDigest`, and 9.35 stopped publishing a
+ * binding cap on NR cards, without changing the V5 envelope version. Keep the
+ * storage reader able to cross those card-field boundaries so a new candidate
+ * can compare with and replace the last accepted publication. Integrity checks
+ * still cover the original stored bytes; only the already-authenticated payload
+ * is normalized for the current schema.
  */
-function withoutRetiredStressStateDigests(value: unknown): unknown {
+function normalizeRetiredCardFields(value: unknown): unknown {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return value;
   }
@@ -147,16 +148,41 @@ function withoutRetiredStressStateDigests(value: unknown): unknown {
       return card;
     }
     const record = card as Record<string, unknown>;
-    if (!("stressStateDigest" in record)) return card;
-    const digest = record.stressStateDigest;
-    if (
-      digest !== null &&
-      (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest))
-    ) {
-      throw new Error("Retired Safety Score v9 stress state digest is invalid");
+    let currentCard = record;
+    if ("stressStateDigest" in currentCard) {
+      const digest = currentCard.stressStateDigest;
+      if (
+        digest !== null &&
+        (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest))
+      ) {
+        throw new Error("Retired Safety Score v9 stress state digest is invalid");
+      }
+      const { stressStateDigest: _retired, ...withoutStressStateDigest } = currentCard;
+      currentCard = withoutStressStateDigest;
+      changed = true;
     }
-    const { stressStateDigest: _retired, ...currentCard } = record;
-    changed = true;
+
+    if (
+      currentCard.score === null &&
+      (currentCard.bindingCap !== null ||
+        (Array.isArray(currentCard.caps) &&
+          currentCard.caps.some(
+            (cap) => cap !== null && typeof cap === "object" && !Array.isArray(cap) && cap.binding === true,
+          )))
+    ) {
+      currentCard = {
+        ...currentCard,
+        bindingCap: null,
+        caps: Array.isArray(currentCard.caps)
+          ? currentCard.caps.map((cap) =>
+              cap !== null && typeof cap === "object" && !Array.isArray(cap)
+                ? { ...cap, binding: false }
+                : cap,
+            )
+          : currentCard.caps,
+      };
+      changed = true;
+    }
     return currentCard;
   });
   return changed ? { ...publication, cards } : value;

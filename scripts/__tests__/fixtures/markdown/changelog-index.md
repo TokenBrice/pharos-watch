@@ -6,6 +6,18 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-08-17 to 2026-08-23
+
+The Safety Score map ships daily, Liquidity Score v6 lands, and the yield surface stops blanking.
+
+- **Daily Safety Score map**: The shareable Safety Score landscape became a daily 07:20 UTC publication, generated behind fail-closed guards for stale data, join coverage, font loading, and layout collisions, and it rides the social digest.
+- **Safety Score V9 stability**: V9 advanced from v9.23 to v9.33: the mint-authority and bridge-risk boundary closed its fail-open, Solana attribution anchors hardened, reserve-weight boundary drift was canonicalized, and curation entries now expire.
+- **Liquidity Score v6**: The v6.0 cutover corrected a Raydium double count that scored concentrated pools as plain AMMs, retired the native lane, and deleted the shadow inventory. v6.1 scopes native confirmation to covered pool families.
+- **Yield availability**: Yield rankings now fall back to the coherent publish-time safety snapshot instead of blanking scores after every scoring deploy, with an explicit stale label and a 24-hour window. Base Dollar yield joined at v8.41.
+- **Scheduler reliability**: Reserve interruption recovery left shadow mode, transient D1 transport loss became retriable, CPU-heavy quarter-hour lanes moved to the hourly class, and DDR now runs before V9 attribution to keep both inside the heap.
+- **Broader coverage**: Base Dollar was promoted to active with a verified Base deployment, Aerodrome price discovery, and a documented mint-authorization path. Reflexer's RAI Dollar joined as pre-launch, taking the tracked catalog to 405.
+- **Repository health**: A simplification wave drained 15k lines of duplication, a repository review closed four P0 correctness defects and hardened the Worker, and structured data stopped advertising a credentialed endpoint as a public download.
+
 ## 2026-08-10 to 2026-08-16
 
 MiCA and GENIUS backfilled across 322 coins, redemption reaches 327 routes, and the V9 stack is rebuilt.
