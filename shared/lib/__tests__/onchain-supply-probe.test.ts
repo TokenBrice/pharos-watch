@@ -4,7 +4,6 @@ import { resolveChainId } from "@shared/lib/chains";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
-  CURATED_ONCHAIN_SUPPLY_CONTRACTS,
   hasRuntimeOnchainSupplyPath,
   isZephyrScannerSupplyId,
   onchainSupplyProbeFamily,
@@ -116,26 +115,6 @@ describe("selectSingleOnchainSupplyProbeContract", () => {
 });
 
 describe("curated on-chain supply paths", () => {
-  it("allows curated single-chain supplemental assets to select the configured chain", () => {
-    // susdc-spark previously held this map's only entry; it moved to the
-    // aggregate map (see "resolves configured aggregate chains" below) once
-    // the Avalanche vault leg was verified, so exercise the still-supported
-    // single-chain override mechanism with a synthetic id instead.
-    const testId = "test-curated-single-chain-coin";
-    CURATED_ONCHAIN_SUPPLY_CONTRACTS[testId] = { chain: "ethereum" };
-    try {
-      const ethereumContract = { chain: "ethereum", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
-      const avalancheContract = { chain: "avalanche", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
-
-      expect(selectSupplementalOnchainSupplyProbeContract(makeMeta([
-        ethereumContract,
-        avalancheContract,
-      ], testId))).toBe(ethereumContract);
-    } finally {
-      delete CURATED_ONCHAIN_SUPPLY_CONTRACTS[testId];
-    }
-  });
-
   it("resolves configured aggregate chains only when every chain is present and supported", () => {
     const ethereumContract = { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 };
     const sonicContract = { chain: "sonic", address: "0x0000000000000000000000000000000000000002", decimals: 6 };

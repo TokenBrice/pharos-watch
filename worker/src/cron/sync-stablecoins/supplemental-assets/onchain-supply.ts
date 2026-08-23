@@ -5,7 +5,6 @@ import { CHAIN_META } from "@shared/lib/chains";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
-  CURATED_ONCHAIN_SUPPLY_CONTRACTS,
   onchainSupplyProbeFamily,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
@@ -50,9 +49,6 @@ export interface SingleContractOnChainMcapResult extends OnChainMcapResult {
   chain: string;
   chainLabel: string;
 }
-
-export const selectSingleOnChainSupplyContract = selectSingleOnchainSupplyProbeContract;
-export const selectSupplementalOnChainSupplyContract = selectSupplementalOnchainSupplyProbeContract;
 
 export function prefersOnChainSupplyMcap(meta: StablecoinMeta): boolean {
   return PREFER_ONCHAIN_SUPPLY_MCAP_IDS.has(meta.id);
@@ -317,10 +313,9 @@ export async function fetchOnChainMcap(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<SingleContractOnChainMcapResult | null> {
-  const curated = CURATED_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
-  const supplyContract = selectSupplementalOnChainSupplyContract(meta);
+  const supplyContract = selectSupplementalOnchainSupplyProbeContract(meta);
   if (!supplyContract) {
-    if (!curated && (meta.contracts?.length ?? 0) > 1) {
+    if ((meta.contracts?.length ?? 0) > 1) {
       logWorkerEventArgs("handler", "warn",
         `[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple contracts could undercount global supply`,
       );
@@ -334,7 +329,6 @@ export async function fetchOnChainMcap(
     priceUsd,
     chainRpcs,
     signal,
-    curated,
   });
   return result
     ? { mcap: result.mcap, supplySource: result.supplySource, chain: result.chain, chainLabel: result.chainLabel }

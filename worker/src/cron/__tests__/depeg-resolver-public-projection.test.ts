@@ -236,7 +236,6 @@ describe("depeg-resolver public projection", () => {
       errata: [erratumFor(invalidatedSealed)],
       lineage: LINEAGE,
       nowSec: NOW_SEC,
-      storageAvailable: true,
     });
 
     const byEventId = new Map(response.rows.map((row) => [row.eventId, row]));
@@ -318,7 +317,6 @@ describe("depeg-resolver public projection", () => {
       errata: [],
       lineage: LINEAGE,
       nowSec: NOW_SEC,
-      storageAvailable: true,
     }).rows[0];
     if (fallback?.kind !== "prediction") {
       throw new Error("Expected sealed prediction fixture");
@@ -365,7 +363,6 @@ describe("depeg-resolver public projection", () => {
       errata: [],
       lineage: LINEAGE,
       nowSec: NOW_SEC,
-      storageAvailable: true,
     });
     const projected = response.rows[0];
     if (projected?.kind !== "prediction") {

@@ -46,8 +46,6 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   icp: "icp",
 };
 
-export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, CuratedOnchainSupplyContractConfig> = {};
-
 const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
   readonly CuratedOnchainSupplyContractConfig[]
@@ -504,9 +502,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org", allowZeroSupply: true },
     { chain: "rootstock", rpcUrl: "https://public-node.rsk.co", allowZeroSupply: true },
   ],
-  // spUSDC is a per-chain Spark ERC-4626 over local USDC. Replaces the former
-  // singular ethereum-only CURATED_ONCHAIN_SUPPLY_CONTRACTS entry, which
-  // published Ethereum-only mcap and no chainCirculating split. Verified
+  // spUSDC is a per-chain Spark ERC-4626 over local USDC. The reviewed
+  // aggregate path replaces the former Ethereum-only fallback and publishes
+  // a complete chainCirculating split. Verified
   // 2026-08-19: Ethereum 262,732,021.385906 (asset=USDC, totalAssets
   // 271,160,715.325800, convertToAssets(1e6)=1.032081) + Avalanche
   // 11,720,796.241001 (asset=0xb97e…8a6e, totalAssets 12,024,527.957899)
@@ -687,12 +685,6 @@ export function selectSingleOnchainSupplyProbeContract(meta: StablecoinMeta): On
 }
 
 export function selectSupplementalOnchainSupplyProbeContract(meta: StablecoinMeta): OnchainSupplyContract | null {
-  const curated = CURATED_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
-  if (curated) {
-    const contract = meta.contracts?.find((entry) => entry.chain === curated.chain);
-    return contract && supportsOnchainSupplyProbe(contract) ? contract : null;
-  }
-
   return selectSingleOnchainSupplyProbeContract(meta);
 }
 

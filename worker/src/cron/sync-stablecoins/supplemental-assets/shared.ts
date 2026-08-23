@@ -177,7 +177,17 @@ export function resolveSupplementalContractPrice(
   return normalizeFreshSupplementalPriceResolution(resolution, { requireObservedAt: true });
 }
 
-export function getSupplementalChainLabels(meta: StablecoinMeta): string[] {
+type SupplementalAssetMeta = {
+  id: string;
+  name: string;
+  symbol: string;
+  geckoId?: string;
+  commodityOunces?: number;
+  flags: { pegCurrency: string; backing: string };
+  contracts?: StablecoinMeta["contracts"];
+};
+
+export function getSupplementalChainLabels(meta: Pick<SupplementalAssetMeta, "contracts">): string[] {
   const labels = (meta.contracts ?? [])
     .map((contract) => CHAIN_META[contract.chain]?.name ?? contract.chain)
     .filter((label): label is string => typeof label === "string" && label.length > 0);
@@ -186,16 +196,24 @@ export function getSupplementalChainLabels(meta: StablecoinMeta): string[] {
 }
 
 export function buildSupplementalAsset(input: {
-  meta: StablecoinMeta;
+  meta: SupplementalAssetMeta;
   priceResolution: SupplementalPriceResolution | null;
+  priceSource?: PeggedAsset["priceSource"];
+  priceConfidence?: PeggedAsset["priceConfidence"];
+  priceUpdatedAt?: number | null;
+  priceObservedAt?: number | null;
+  priceObservedAtMode?: PriceObservedAtMode | null;
+  priceSyncedAt?: number | null;
+  nowSec?: number;
   mcap: number;
   supplySource: string;
   chainCirculating?: PeggedAsset["chainCirculating"];
   circulatingPrevDay?: number | null;
   circulatingPrevWeek?: number | null;
   circulatingPrevMonth?: number | null;
+  chainLabels?: PeggedAsset["chains"];
 }): PeggedAsset {
-  const nowSec = Math.floor(Date.now() / 1000);
+  const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   const pKey = pegTypeKey(input.meta);
   const priceResolution = input.priceResolution;
   return {
@@ -206,19 +224,19 @@ export function buildSupplementalAsset(input: {
     pegType: pKey,
     pegMechanism: input.meta.flags.backing,
     price: priceResolution?.price ?? null,
-    priceSource: priceResolution?.source,
-    priceConfidence: priceResolution ? "single-source" : null,
-    priceUpdatedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : null,
-    priceObservedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : null,
-    priceObservedAtMode: priceResolution ? (priceResolution.observedAtMode ?? "local_fetch") : null,
-    priceSyncedAt: priceResolution ? nowSec : null,
+    priceSource: priceResolution?.source ?? input.priceSource,
+    priceConfidence: input.priceConfidence ?? (priceResolution ? "single-source" : null),
+    priceUpdatedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : (input.priceUpdatedAt ?? null),
+    priceObservedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : (input.priceObservedAt ?? null),
+    priceObservedAtMode: priceResolution ? (priceResolution.observedAtMode ?? "local_fetch") : (input.priceObservedAtMode ?? null),
+    priceSyncedAt: priceResolution ? nowSec : (input.priceSyncedAt ?? null),
     supplySource: input.supplySource,
     circulating: { [pKey]: input.mcap },
     circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
     circulatingPrevWeek: input.circulatingPrevWeek != null ? { [pKey]: input.circulatingPrevWeek } : null,
     circulatingPrevMonth: input.circulatingPrevMonth != null ? { [pKey]: input.circulatingPrevMonth } : null,
     chainCirculating: input.chainCirculating ?? {},
-    chains: getSupplementalChainLabels(input.meta),
+    chains: input.chainLabels ?? getSupplementalChainLabels(input.meta),
     commodityOunces: input.meta.commodityOunces,
   } as PeggedAsset;
 }

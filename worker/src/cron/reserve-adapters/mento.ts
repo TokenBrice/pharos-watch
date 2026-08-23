@@ -1,6 +1,6 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters-schemas";
+import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import {

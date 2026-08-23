@@ -5,7 +5,6 @@ import {
   LIVE_RESERVE_ADAPTER_DESCRIPTORS,
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
-  LIVE_RESERVE_ADAPTER_PROVENANCE,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
@@ -88,13 +87,10 @@ describe("adapter registry completeness", () => {
   });
 
   it("adapter provenance covers every canonical key with an explicit status and rationale", () => {
-    const provenanceKeys = Object.keys(LIVE_RESERVE_ADAPTER_PROVENANCE).sort();
-    const canonicalKeys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
     const validStatuses = new Set(LIVE_RESERVE_ADAPTER_STATUS_VALUES);
-    expect(provenanceKeys).toEqual(canonicalKeys);
 
     for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_PROVENANCE[key];
+      const provenance = LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].provenance;
       expect(validStatuses.has(provenance.status)).toBe(true);
       expect(provenance.rationale.trim().length).toBeGreaterThan(0);
     }
@@ -103,7 +99,7 @@ describe("adapter registry completeness", () => {
   it("parked and retired adapter entries declare parkedSince and nextReview", () => {
     const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
     for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_PROVENANCE[key] as {
+      const provenance = LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].provenance as {
         status: string;
         parkedSince?: string;
         nextReview?: string;
@@ -128,7 +124,7 @@ describe("adapter registry completeness", () => {
     );
 
     for (const key of LIVE_RESERVE_ADAPTER_KEYS) {
-      const provenance = LIVE_RESERVE_ADAPTER_PROVENANCE[key];
+      const provenance = LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].provenance;
       if (configuredKeys.has(key)) {
         expect(provenance.status, `${key} is configured and should be marked active`).toBe("active");
       } else {

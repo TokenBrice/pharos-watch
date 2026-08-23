@@ -265,7 +265,8 @@ describe("computeDepegResolver", () => {
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
 
-    const result = await computeDepegResolver({ db, storeContracts: null });
+    const { stores } = storesFor();
+    const result = await computeDepegResolver({ db, storeContracts: stores });
     const payload = readDdrSnapshotPayload(db);
 
     expect(result.itemCount).toBe(0);
@@ -335,7 +336,6 @@ describe("computeDepegResolver", () => {
         quarantinedCoins: 0,
       },
       nowSec: NOW_SEC - 600,
-      storageAvailable: true,
     });
     previousSnapshot.rows[0].live = {
       ...previousSnapshot.rows[0].live,

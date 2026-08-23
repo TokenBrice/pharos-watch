@@ -8,7 +8,7 @@ import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScann
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
-  getSupplementalChainLabels,
+  buildSupplementalAsset,
   pegTypeKey,
   resolveLowVolumeCoinGeckoPrice,
   resolveSupplementalContractPrice,
@@ -123,28 +123,18 @@ export async function fetchFiatCoinGeckoTokens(
             ? "fallback"
             : "single-source"
           : null;
-        return {
-          id: meta.id,
-          name: meta.name,
-          symbol: meta.symbol,
-          geckoId: meta.geckoId,
-          pegType: pKey,
-          pegMechanism: meta.flags.backing,
-          price: priceResolution?.price ?? null,
-          priceSource: priceResolution?.source,
+        return buildSupplementalAsset({
+          meta,
+          priceResolution,
           priceConfidence,
-          priceUpdatedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : null,
-          priceObservedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : null,
-          priceObservedAtMode: priceResolution ? (priceResolution.observedAtMode ?? "local_fetch") : null,
-          priceSyncedAt: priceResolution ? nowSec : null,
+          nowSec,
+          mcap,
           supplySource,
-          circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
           circulatingPrevMonth: null,
           chainCirculating,
-          chains: getSupplementalChainLabels(meta),
-        } as PeggedAsset;
+        });
       },
       { signal },
     );

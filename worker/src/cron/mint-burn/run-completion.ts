@@ -10,7 +10,7 @@ import {
   type MintBurnAttemptCoverageSummary,
   type MintBurnRunStateRow,
 } from "./run-state";
-import type { MintBurnConfigSummary } from "./sync-config";
+import type { MintBurnRunConfigPhaseResult } from "./run-configs";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { throwIfAborted } from "../../lib/abort";
 
@@ -21,7 +21,7 @@ import { throwIfAborted } from "../../lib/abort";
 // threshold rather than letting it silently accumulate in run metadata.
 const NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD = 50;
 
-export async function completeMintBurnRun(input: {
+export interface CompleteMintBurnRunInput {
   db: D1Database;
   budget: { limit: number; count: number };
   lane: MintBurnLane;
@@ -37,30 +37,15 @@ export async function completeMintBurnRun(input: {
   runStatePersistenceFailed: boolean;
   degradeConsecutiveThreshold: number;
   errorConsecutiveThreshold: number;
-  rowsRead: number;
-  rowsParsed: number;
-  rowsInserted: number;
-  rowsIgnored: number;
-  rowsDropped: number;
-  contractsProcessed: number;
-  contractsSkipped: number;
-  contractsDeferredExtended: number;
-  apiErrors: number;
-  effectiveBurns: number;
-  bridgeBurns: number;
-  reviewBurns: number;
-  atomicRoundtripsTotal: number;
-  txContextShortfalls: number;
-  bridgeClassificationDeferredRows: number;
+  phase: MintBurnRunConfigPhaseResult;
   criticalContractsEnabled: number;
-  criticalContractsSatisfied: number;
-  criticalContractsUnsatisfied: number;
-  configBreakdown: MintBurnConfigSummary[];
-  runtimeBudgetHit: boolean;
   attemptCoverage: MintBurnAttemptCoverageSummary;
   runDrilldown: { cacheKey: string; persistenceFailed: boolean };
   signal?: AbortSignal;
-}): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown>; error: string | null }> {
+}
+
+export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown>; error: string | null }> {
+  const phase = input.phase;
   const laggingConfigs = input.configs
     .map((config) => {
       const key = mintBurnConfigKey(config);
@@ -78,13 +63,13 @@ export async function completeMintBurnRun(input: {
     .sort((a, b) => (b.lagBlocks ?? -1) - (a.lagBlocks ?? -1))
     .slice(0, 6);
 
-  const coverageRatio = input.enabledConfigs.length > 0 ? input.contractsProcessed / input.enabledConfigs.length : 1;
+  const coverageRatio = input.enabledConfigs.length > 0 ? phase.contractsProcessed / input.enabledConfigs.length : 1;
   const criticalCoverageRatio =
-    input.criticalContractsEnabled > 0 ? input.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
+    input.criticalContractsEnabled > 0 ? phase.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
   const degradedSignal =
     input.lane === "extended"
-      ? input.apiErrors > 1 || input.attemptCoverage.staleAttemptCount > 0
-      : criticalCoverageRatio < 1 || input.apiErrors > 1;
+      ? phase.apiErrors > 1 || input.attemptCoverage.staleAttemptCount > 0
+      : criticalCoverageRatio < 1 || phase.apiErrors > 1;
   const degradedStreak = degradedSignal ? input.runState.degradedStreak + 1 : 0;
 
   let status: SyncMintBurnStatus = "ok";
@@ -93,8 +78,8 @@ export async function completeMintBurnRun(input: {
     status = "error";
     error =
       `Degraded for ${degradedStreak} consecutive runs: ` +
-      `critical coverage ${input.criticalContractsSatisfied}/${input.criticalContractsEnabled}, ` +
-      `apiErrors=${input.apiErrors}`;
+      `critical coverage ${phase.criticalContractsSatisfied}/${input.criticalContractsEnabled}, ` +
+      `apiErrors=${phase.apiErrors}`;
   } else if (degradedStreak >= input.degradeConsecutiveThreshold) {
     status = "degraded";
   }
@@ -194,15 +179,15 @@ export async function completeMintBurnRun(input: {
   const compatibilityChainHead = input.chainHeads.get("ethereum")
     ?? Math.max(0, ...input.chainHeads.values());
   const skippedReasonCounts: Record<string, number> = {};
-  for (const summary of input.configBreakdown) {
+  for (const summary of phase.configBreakdown) {
     if (summary.skippedReason) {
       skippedReasonCounts[summary.skippedReason] = (skippedReasonCounts[summary.skippedReason] ?? 0) + 1;
     }
   }
   const sampledConfigKeys = new Set<string>();
   const sampledConfigs = [
-    ...input.configBreakdown.slice(0, 6),
-    ...input.configBreakdown.filter(
+    ...phase.configBreakdown.slice(0, 6),
+    ...phase.configBreakdown.filter(
       (summary) => summary.errors > 0 || summary.skippedReason != null || summary.rowsInserted > 0,
     ),
   ].filter((summary) => {
@@ -242,46 +227,46 @@ export async function completeMintBurnRun(input: {
     jobName: input.jobName,
     chainHead: compatibilityChainHead || null,
     chainHeads: Object.fromEntries(input.chainHeads),
-    rowsRead: input.rowsRead,
-    rowsParsed: input.rowsParsed,
-    rowsInserted: input.rowsInserted,
-    rowsIgnored: input.rowsIgnored,
-    rowsDropped: input.rowsDropped,
+    rowsRead: phase.rowsRead,
+    rowsParsed: phase.rowsParsed,
+    rowsInserted: phase.rowsInserted,
+    rowsIgnored: phase.rowsIgnored,
+    rowsDropped: phase.rowsDropped,
     sourceCoverage: {
-      contractsProcessed: input.contractsProcessed,
-      contractsSkipped: input.contractsSkipped,
+      contractsProcessed: phase.contractsProcessed,
+      contractsSkipped: phase.contractsSkipped,
       contractsEnabled: input.enabledConfigs.length,
       contractsDisabled: input.configsDisabled,
       contractsTotal: input.contractsTotal,
     },
     configsDisabled: input.configsDisabled,
-    contractsProcessed: input.contractsProcessed,
-    contractsSkipped: input.contractsSkipped,
-    contractsDeferredExtended: input.contractsDeferredExtended,
-    apiErrors: input.apiErrors,
+    contractsProcessed: phase.contractsProcessed,
+    contractsSkipped: phase.contractsSkipped,
+    contractsDeferredExtended: phase.contractsDeferredExtended,
+    apiErrors: phase.apiErrors,
     validationFailures: 0,
     fallbackMode: null,
     burnClassification: {
-      effectiveBurns: input.effectiveBurns,
-      bridgeBurns: input.bridgeBurns,
-      reviewBurns: input.reviewBurns,
+      effectiveBurns: phase.effectiveBurns,
+      bridgeBurns: phase.bridgeBurns,
+      reviewBurns: phase.reviewBurns,
     },
-    atomicRoundtripsDetected: input.atomicRoundtripsTotal,
+    atomicRoundtripsDetected: phase.atomicRoundtripsTotal,
     bridgeClassification: {
-      txContextShortfalls: input.txContextShortfalls,
-      deferredRows: input.bridgeClassificationDeferredRows,
+      txContextShortfalls: phase.txContextShortfalls,
+      deferredRows: phase.bridgeClassificationDeferredRows,
     },
     criticalCoverage: {
       contractsEnabled: input.criticalContractsEnabled,
-      contractsSatisfied: input.criticalContractsSatisfied,
-      contractsUnsatisfied: input.criticalContractsUnsatisfied,
+      contractsSatisfied: phase.criticalContractsSatisfied,
+      contractsUnsatisfied: phase.criticalContractsUnsatisfied,
       ratio: criticalCoverageRatio,
     },
     configBreakdownSummary: {
-      total: input.configBreakdown.length,
-      attempted: input.configBreakdown.filter((summary) => summary.attempted).length,
-      skipped: input.configBreakdown.filter((summary) => summary.skippedReason != null).length,
-      withErrors: input.configBreakdown.filter((summary) => summary.errors > 0).length,
+      total: phase.configBreakdown.length,
+      attempted: phase.configBreakdown.filter((summary) => summary.attempted).length,
+      skipped: phase.configBreakdown.filter((summary) => summary.skippedReason != null).length,
+      withErrors: phase.configBreakdown.filter((summary) => summary.errors > 0).length,
       skippedReasonCounts,
     },
     configSamples,
@@ -291,7 +276,7 @@ export async function completeMintBurnRun(input: {
     attemptCoverage: input.attemptCoverage,
     laggingConfigs,
     coverageRatio,
-    runtimeBudgetHit: input.runtimeBudgetHit,
+    runtimeBudgetHit: phase.runtimeBudgetHit,
     degradedSignal,
     degradedStreak,
     runStatePersistenceFailed,
