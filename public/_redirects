@@ -119,3 +119,48 @@
 /sheets/depeg-history.csv /datasets/depeg-history/latest.csv 301
 /sheets/scores-latest.csv /datasets/scores-latest/latest.csv 301
 /sheets/peg-mechanism-distribution.csv /datasets/peg-mechanism-distribution/latest.csv 301
+
+# Retired stablecoin IDs and route-tree aliases (SEO cleanup, 2026-08-23).
+# Removed coin records have no exact current registry successor, so /coverage/
+# remains the honest destination. Retired surfaces use their current
+# equivalents where one exists; the hashed V9 preview follows the same route.
+/stablecoin/eura-angle/* /coverage/ 301
+/stablecoin/eura-angle /coverage/ 301
+/stablecoin/krwo-gimswap/* /coverage/ 301
+/stablecoin/krwo-gimswap /coverage/ 301
+/stablecoin/mmxn-moneta-digital/* /coverage/ 301
+/stablecoin/mmxn-moneta-digital /coverage/ 301
+/stablecoin/mnee-mnee/* /coverage/ 301
+/stablecoin/mnee-mnee /coverage/ 301
+/stablecoin/phpm-mento/* /coverage/ 301
+/stablecoin/phpm-mento /coverage/ 301
+/stablecoin/shyusd-hylo/* /coverage/ 301
+/stablecoin/shyusd-hylo /coverage/ 301
+/stablecoin/stbt-matrixdock/* /coverage/ 301
+/stablecoin/stbt-matrixdock /coverage/ 301
+/stablecoin/syusd-lucidly/* /coverage/ 301
+/stablecoin/syusd-lucidly /coverage/ 301
+/stablecoin/usd-nubank/* /coverage/ 301
+/stablecoin/usd-nubank /coverage/ 301
+/stablecoin/usdw-wisdomtree/* /coverage/ 301
+/stablecoin/usdw-wisdomtree /coverage/ 301
+/stablecoin/usp-pareto-credit/* /coverage/ 301
+/stablecoin/usp-pareto-credit /coverage/ 301
+/stablecoin/veur-vnx/* /coverage/ 301
+/stablecoin/veur-vnx /coverage/ 301
+/stablecoin/wstbt-matrixdock/* /coverage/ 301
+/stablecoin/wstbt-matrixdock /coverage/ 301
+/stablecoin/xai-silo-finance/* /coverage/ 301
+/stablecoin/xai-silo-finance /coverage/ 301
+/stablecoin/usd-dinari/* /coverage/ 301
+/stablecoin/usd-dinari /coverage/ 301
+/treasuries/* /coverage/ 301
+/treasuries /coverage/ 301
+/mint/* /flows/ 301
+/mint /flows/ 301
+/home-alt/* / 301
+/home-alt / 301
+/v9-preview/* /safety-scores/ 301
+/v9-preview /safety-scores/ 301
+/v9-preview-412d818c031b7bc5/* /safety-scores/ 301
+/v9-preview-412d818c031b7bc5 /safety-scores/ 301
