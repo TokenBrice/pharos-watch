@@ -108,6 +108,7 @@ export default defineConfig({
         test: {
           name: "src",
           include: ["src/**/*.test.?(c|m)[jt]s?(x)"],
+          setupFiles: [path.resolve(__dirname, "src/test/setup.ts")],
         },
       },
     ],

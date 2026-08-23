@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ApiFetchError } from "@/lib/api";
 import { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
+import { makeReserveResponse, renderReservePanelStatic } from "./reserve-panel-test-support";
 
 beforeAll(() => {
   globalThis.ResizeObserver = class ResizeObserver {
@@ -15,26 +16,21 @@ beforeAll(() => {
   };
 });
 
-afterEach(() => {
-  cleanup();
-});
-
 describe("ReservePanel", () => {
   it("surfaces live-reserve API failures when falling back to curated reserve metadata", () => {
     const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
     expect(coin).toBeDefined();
 
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
-          reserves: coin!.reserves ?? [{ name: "Curated fallback", pct: 100, risk: "low" }],
-          estimated: false,
-          mode: "curated-fallback",
-        }}
-        reserveFetchError={new ApiFetchError("/api/stablecoin-reserves/iusd-infinifi", 503, null)}
-      />,
-    );
+    const html = renderReservePanelStatic({
+      coin: coin!,
+      reserves: makeReserveResponse({
+        reserves: coin!.reserves ?? [{ name: "Curated fallback", pct: 100, risk: "low" }],
+        mode: "curated-fallback",
+        source: undefined,
+        liveAt: undefined,
+      }),
+      reserveFetchError: new ApiFetchError("/api/stablecoin-reserves/iusd-infinifi", 503, null),
+    });
 
     expect(html).toContain("Live reserve feed unavailable");
     expect(html).toContain("Showing curated reserve baseline");

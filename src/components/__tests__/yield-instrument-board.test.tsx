@@ -1,72 +1,31 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
-import { YieldMobileCard } from "@/components/yield-leaderboard";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import { makeYieldViewModelRow, renderYieldMobileCard, YIELD_TEST_PROVENANCE } from "./yield-test-support";
 
 vi.mock("@/components/yield-history-chart", () => ({
   YieldHistoryChart: () => <div data-testid="yield-history-chart" />,
 }));
 
-const baseRow = {
-  id: "usdt-tether",
-  symbol: "USDT",
-  name: "Tether",
-  currentApy: 4.2,
-  apy7d: 4.1,
-  apy30d: 4.3,
-  apyBase: 3.9,
-  apyReward: 0.4,
-  yieldSource: "Aave",
-  yieldSourceUrl: "https://example.com/yield",
-  yieldType: "lending-vault",
-  dataSource: "fixture",
-  sourceTvlUsd: 25_000_000,
-  pharosYieldScore: 76,
-  safetyScore: 82,
-  safetyGrade: "B+",
-  yieldToRisk: 1.1,
-  excessYield: 0.6,
-  benchmarkKey: "USD",
+const baseRow = makeYieldViewModelRow({
   benchmarkLabel: "USD 3M T-Bill",
-  benchmarkCurrency: "USD",
-  benchmarkRate: 3.7,
-  benchmarkIsFallback: false,
-  benchmarkSelectionMode: "native",
-  yieldStability: 0.9,
-  apyVariance30d: 0.1,
-  apyMin30d: 4,
-  apyMax30d: 4.5,
   warningSignals: [],
-  altSources: [],
-  provenance: {
-    sourceKey: "aave",
-    confidenceTier: "curated",
-    sourceObservedAt: 0,
-    sourceAgeSeconds: 60,
-    sourceFreshness: "fresh",
-    selectionMethod: "confidence-weighted",
-    selectionReason: "best source",
-    sourceSwitch: false,
-    previousBestSourceKey: null,
-    usedLegacyHistory: false,
-    usedDefaultSafety: false,
-    benchmarkRecordDate: null,
-    benchmarkIsFallback: false,
-    benchmarkFallbackMode: null,
-    anomalies: [],
-  },
+  provenance: { ...YIELD_TEST_PROVENANCE, sourceFreshness: "fresh" },
   sourceRisk: { sourceRiskScore: 70, sourceRiskPenalty: 1.02, sourceAgeSeconds: 60 },
-  peg: "USD",
-  viewRank: 1,
-  rankLabel: "#1",
-  opportunity: "holder-yield",
-  sourceDepthLens: "moderate",
-} as unknown as YieldViewModelRow;
+});
+
+function renderMobileCard(
+  row: YieldViewModelRow,
+  expanded = false,
+  overrides: { isCompared?: boolean; compareDisabled?: boolean; onToggleCompare?: (id: string) => void } = {},
+) {
+  return renderYieldMobileCard(row, { expanded, ...overrides });
+}
 
 function renderBoard(
   row: YieldViewModelRow,
@@ -103,37 +62,6 @@ function renderBoard(
     </TooltipProvider>,
   );
 }
-
-function renderMobileCard(
-  row: YieldViewModelRow,
-  expanded: boolean = false,
-  overrides: {
-    isCompared?: boolean;
-    compareDisabled?: boolean;
-    onToggleCompare?: (id: string) => void;
-  } = {},
-) {
-  return render(
-    <TooltipProvider>
-      <YieldMobileCard
-        row={row}
-        riskFreeRate={3.5}
-        medianApy={4}
-        expanded={expanded}
-        isCompared={overrides.isCompared ?? false}
-        compareDisabled={overrides.compareDisabled ?? false}
-        onToggleExpanded={vi.fn()}
-        onOpenSourceSheet={vi.fn()}
-        onToggleCompare={overrides.onToggleCompare ?? vi.fn()}
-      />
-    </TooltipProvider>,
-  );
-}
-
-afterEach(() => {
-  cleanup();
-  window.localStorage.clear();
-});
 
 describe("YieldInstrumentBoard", () => {
   it("renders the rank-attribution chip when pys delta is material", () => {
