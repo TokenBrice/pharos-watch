@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronResult } from "../lib/cron-logger";
-import { RUB_FALLBACK, CIRCUIT_SOURCE } from "../lib/constants";
+import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import {
@@ -250,7 +250,7 @@ async function runFxRatePublication(
       runBestEffort,
     );
 
-    syncState.ensureCachedOrHardcodedRate("peggedRUB", "RUB", RUB_FALLBACK);
+    syncState.ensureCadenceValidRate("peggedRUB", "RUB");
     if (!("peggedCNH" in syncState.usableRates)) {
       syncState.ensureCachedRate("peggedCNH", "CNH");
     }

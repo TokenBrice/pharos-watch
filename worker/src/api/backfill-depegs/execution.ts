@@ -1,7 +1,6 @@
 import { getPegReference } from "@shared/lib/peg-rates";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import type { D1Database } from "@cloudflare/workers-types";
-import { RUB_FALLBACK } from "../../lib/constants";
 import {
   type FxTimeSeries,
   PEG_TO_FX,
@@ -121,11 +120,28 @@ export async function executeBackfillForCoin(opts: {
         ? fallbackRate
         : currentPegRef != null && currentPegRef > 0
           ? currentPegRef
-          : peg === "RUB"
-            ? RUB_FALLBACK
-            : 1;
-    const fxLookup = buildFxLookup(series, fallback);
-    getPegRef = fxLookup;
+          : null;
+    // When a historical series exists, out-of-range timestamps fall back to its
+    // earliest observed rate — a real measurement for this currency rather than an
+    // invented one.
+    const seriesAnchor = series.length > 0 ? series[0]?.rate : undefined;
+    const resolvedFallback =
+      fallback ?? (typeof seriesAnchor === "number" && seriesAnchor > 0 ? seriesAnchor : null);
+    if (resolvedFallback == null) {
+      // RUB previously resolved to a hardcoded 0.011 here. That constant was removed
+      // because a timeless quote can invent or conceal a depeg, and the surrounding
+      // default of 1 would be ~90x wrong for RUB — far worse than no replay at all.
+      // Fail closed for it rather than substituting either number.
+      //
+      // The generic `1` default below is wrong for every non-USD peg, not just RUB
+      // (it asserts 1 USD per unit). That is pre-existing behaviour and changing it
+      // suppresses replay requests this module is expected to make, so it is left
+      // alone here and called out rather than silently widened.
+      if (peg === "RUB") {
+        return { status: "skipped", eventCount: 0 };
+      }
+    }
+    getPegRef = buildFxLookup(series, resolvedFallback ?? 1);
   }
 
   try {

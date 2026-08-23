@@ -51,7 +51,7 @@ describe("syncFxRates", () => {
   it("caches FX rates from frankfurter.dev when API succeeds", async () => {
     mockFetch(fxMirrors({
       frankfurter: { body: frankfurterBody({ HKD: 7.81, INR: 85.5 }) },
-      secondary: { body: secondaryBody({ vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 }) },
+      secondary: { body: secondaryBody({ rub: 0, vnd: 26000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 }) },
     }));
 
     const db = makeFxRatesDb();
@@ -69,7 +69,7 @@ describe("syncFxRates", () => {
 
     const metadata = JSON.parse(result.metadata!);
     expect(metadata.rateCount).toBeGreaterThan(5);
-    expect(metadata.sources.fawazahmed0).toBe("ok");
+    expect(metadata.sources.fawazahmed0).toBe("partial");
     expect(metadata.mode).toBe("live");
 
     const write = findCacheWrite(db, "fx-rates");
@@ -78,6 +78,11 @@ describe("syncFxRates", () => {
     expect(cachedRates.peggedCNH).not.toBe(cachedRates.peggedCNY);
     expect(cachedRates.peggedHKD).toBeCloseTo(1 / 7.81, 6);
     expect(cachedRates.peggedINR).toBeCloseTo(1 / 85.5, 6);
+    expect(cachedRates.peggedVND).toBe(1 / 26_000);
+    expect(cachedRates.peggedIDR).toBe(1 / 15_800);
+    expect(cachedRates.peggedCOP).toBe(1 / 3_200);
+    expect(cachedRates.peggedRUB).toBeUndefined();
+    expect(findCacheWrite(db, "cron:event:sync-fx-rates:hardcoded-rate-used")).toBeUndefined();
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
@@ -714,6 +719,9 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBe(Math.floor(Date.now() / 1000));
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedGBP).toBe(staleUpdatedAt);
     expect(cachedMeta.consecutiveFallbackRuns).toBe(3);
+    const ratesWrite = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(ratesWrite?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedRUB).toBeUndefined();
   });
 
   it("keeps syncing when the OXR telemetry write fails", async () => {

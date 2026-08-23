@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FX_RATE_BOUNDS } from "@shared/lib/peg-price-bounds";
-import { EXPECTED_FX_PEG_KEYS, REALTIME_FX_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../fx-config";
+import { EXPECTED_FX_PEG_KEYS, invertUnitsPerUsd, REALTIME_FX_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../fx-config";
 
 describe("fx-config currency maps", () => {
   it("SECONDARY (lowercase keys) and REALTIME (uppercase keys) agree on the same currencies", () => {
@@ -25,6 +25,23 @@ describe("fx-config currency maps", () => {
       expect(bounds, `missing FX_RATE_BOUNDS for ${pegKey}`).toBeDefined();
       expect(bounds![0]).toBeGreaterThan(0);
       expect(bounds![1]).toBeGreaterThan(bounds![0]);
+    }
+
+    for (const [pegKey, unitsPerUsd] of [
+      ["peggedVND", 26_000],
+      ["peggedIDR", 15_800],
+      ["peggedCOP", 3_200],
+    ] as const) {
+      const exact = 1 / unitsPerUsd;
+      const inverted = invertUnitsPerUsd(unitsPerUsd);
+      const bounds = FX_RATE_BOUNDS[pegKey]!;
+      expect(inverted).toBe(exact);
+      expect(Math.abs(inverted - exact) / exact).toBe(0);
+      expect(inverted).toBeGreaterThanOrEqual(bounds[0]);
+      expect(inverted).toBeLessThanOrEqual(bounds[1]);
+    }
+    for (const invalid of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => invertUnitsPerUsd(invalid)).toThrow(RangeError);
     }
   });
 });

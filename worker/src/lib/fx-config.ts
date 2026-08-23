@@ -89,6 +89,13 @@ export const EXPECTED_FX_PEG_KEYS = [
 
 const MAX_FX_RATE_DELTA_PCT = 0.20;
 
+export function invertUnitsPerUsd(unitsPerUsd: number): number {
+  if (!Number.isFinite(unitsPerUsd) || unitsPerUsd <= 0) {
+    throw new RangeError("unitsPerUsd must be a positive finite number");
+  }
+  return 1 / unitsPerUsd;
+}
+
 export function isValidFxRate(
   pegKey: string,
   rate: number,

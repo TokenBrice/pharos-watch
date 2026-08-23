@@ -14,6 +14,7 @@ import {
   canCarryForwardFxRates,
   inheritFxSourceMetadata,
 } from "../lib/fx-source-metadata";
+import { invertUnitsPerUsd } from "../lib/fx-config";
 import { toErrorMessage } from "../lib/error-utils";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
@@ -258,13 +259,6 @@ export class FxSyncRunState {
     );
   }
 
-  setHardcoded(pegKey: string): void {
-    this.sourceModeByPeg[pegKey] = "hardcoded";
-    this.sourceUpdatedAtByPeg[pegKey] = null;
-    this.sourceCadenceByPeg[pegKey] = "intraday";
-    this.sourceDateByPeg[pegKey] = null;
-  }
-
   canCarryForwardPreviousRates(): boolean {
     return canCarryForwardFxRates(
       this.expectedPegKeys,
@@ -306,8 +300,8 @@ export class FxSyncRunState {
 
     for (const [currency, pegKey] of mappings) {
       const perUsd = getPerUsd(currency);
-      if (typeof perUsd === "number" && perUsd > 0) {
-        const rate = Number((1 / perUsd).toFixed(6));
+      if (typeof perUsd === "number" && Number.isFinite(perUsd) && perUsd > 0) {
+        const rate = invertUnitsPerUsd(perUsd);
         if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
           this.usableRates[pegKey] = rate;
           this.markLive(pegKey, sourceUpdatedAt, cadence, sourceDate);
@@ -492,8 +486,8 @@ export class FxSyncRunState {
 
     for (const [currency, unitsPerUsd] of Object.entries(rates)) {
       const pegKey = currencyToPeg[currency];
-      if (!pegKey || unitsPerUsd <= 0) continue;
-      const rate = Number((1 / unitsPerUsd).toFixed(6));
+      if (!pegKey || !Number.isFinite(unitsPerUsd) || unitsPerUsd <= 0) continue;
+      const rate = invertUnitsPerUsd(unitsPerUsd);
       if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
         this.usableRates[pegKey] = rate;
         this.markLive(pegKey, ecbUpdatedAt, "business-daily", sourceDate);
@@ -646,8 +640,24 @@ export class FxSyncRunState {
     return accepted;
   }
 
-  ensureCachedRate(pegKey: string, label: string): boolean {
+  ensureCachedRate(
+    pegKey: string,
+    label: string,
+    options: { requireCadenceValid?: boolean } = {},
+  ): boolean {
     if (typeof this.prevRates[pegKey] !== "number" || this.prevRates[pegKey] <= 0) {
+      return false;
+    }
+    if (options.requireCadenceValid && getFxSourceStatus(
+      this.prevState?.sourceUpdatedAtByPeg[pegKey] ?? null,
+      this.prevState?.sourceModeByPeg[pegKey],
+      this.syncStartSec,
+      {
+        pegKey,
+        cadence: this.prevState?.sourceCadenceByPeg[pegKey],
+        sourceDate: this.prevState?.sourceDateByPeg[pegKey] ?? null,
+      },
+    ) !== "fresh") {
       return false;
     }
 
@@ -662,18 +672,27 @@ export class FxSyncRunState {
     return true;
   }
 
-  ensureCachedOrHardcodedRate(pegKey: string, label: string, fallbackRate: number): void {
-    if (pegKey in this.usableRates) return;
-    if (this.ensureCachedRate(pegKey, label)) return;
+  ensureCadenceValidRate(pegKey: string, label: string): boolean {
+    const currentRate = this.usableRates[pegKey];
+    if (typeof currentRate === "number" && currentRate > 0 && getFxSourceStatus(
+      this.sourceUpdatedAtByPeg[pegKey] ?? null,
+      this.sourceModeByPeg[pegKey],
+      this.syncStartSec,
+      {
+        pegKey,
+        cadence: this.sourceCadenceByPeg[pegKey],
+        sourceDate: this.sourceDateByPeg[pegKey] ?? null,
+      },
+    ) === "fresh") {
+      return true;
+    }
 
-    this.usableRates[pegKey] = fallbackRate;
-    this.setHardcoded(pegKey);
-    this.recordCronEvent({
-      eventType: "hardcoded-rate-used",
-      severity: "warning",
-      message: "Using hardcoded FX fallback rate.",
-      metadata: { pegKey, label, fallbackRate },
-    });
+    delete this.usableRates[pegKey];
+    delete this.sourceUpdatedAtByPeg[pegKey];
+    delete this.sourceModeByPeg[pegKey];
+    delete this.sourceCadenceByPeg[pegKey];
+    delete this.sourceDateByPeg[pegKey];
+    return this.ensureCachedRate(pegKey, label, { requireCadenceValid: true });
   }
 
   applyResolvedMetals(metals: MetalsResolution): void {

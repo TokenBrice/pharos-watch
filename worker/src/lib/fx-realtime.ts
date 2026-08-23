@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { z } from "zod";
 import {
+  invertUnitsPerUsd,
   isValidFxRate,
   REALTIME_FX_CURRENCY_TO_PEG,
 } from "./fx-config";
@@ -57,8 +58,8 @@ export async function fetchRealtimeFxRates(
 
     for (const [currency, unitsPerUsd] of Object.entries(data.rates)) {
       const pegKey = REALTIME_FX_CURRENCY_TO_PEG[currency];
-      if (!pegKey || unitsPerUsd <= 0) continue;
-      const rate = Number((1 / unitsPerUsd).toFixed(8));
+      if (!pegKey || !Number.isFinite(unitsPerUsd) || unitsPerUsd <= 0) continue;
+      const rate = invertUnitsPerUsd(unitsPerUsd);
       if (!isValidFxRate(pegKey, rate, undefined, "[fx-realtime]")) {
         continue;
       }

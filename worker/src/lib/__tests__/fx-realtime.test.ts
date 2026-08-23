@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { isValidFxRate } from "../fx-config";
 import { fetchRealtimeFxRates } from "../fx-realtime";
+import { FxSyncRunState } from "../../cron/sync-fx-rates-helpers";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 afterEach(() => {
@@ -12,7 +14,7 @@ describe("fetchRealtimeFxRates", () => {
     mockFetch([{
       match: () => true,
       body: {
-        rates: { JPY: 150.5, EUR: 0.925, BRL: 5.1, ZAR: 18.2, IDR: 15800 },
+        rates: { JPY: 150.5, EUR: 0.925, BRL: 5.1, ZAR: 18.2, VND: 26000, IDR: 15800, COP: 3200 },
       },
     }]);
     const result = await fetchRealtimeFxRates("test-key");
@@ -20,6 +22,25 @@ describe("fetchRealtimeFxRates", () => {
     expect(result.rates.get("peggedJPY")).toBeCloseTo(1 / 150.5, 6);
     expect(result.rates.get("peggedEUR")).toBeCloseTo(1 / 0.925, 4);
     expect(result.rates.get("peggedREAL")).toBeCloseTo(1 / 5.1, 4);
+
+    const dailyState = new FxSyncRunState({
+      prevState: null,
+      syncStartSec: Math.floor(Date.parse("2025-06-15T12:00:00Z") / 1000),
+      expectedPegKeys: ["peggedVND", "peggedIDR", "peggedCOP"],
+      initialSources: {},
+      validateRate: (pegKey, rate, prevRate) => isValidFxRate(pegKey, rate, prevRate, "[fx-realtime:test]"),
+    });
+    dailyState.applySecondaryRates({
+      endpoint: "pages.dev",
+      payload: { date: "2025-06-15", usd: { vnd: 26_000, idr: 15_800, cop: 3_200 } },
+    }, [
+      ["vnd", "peggedVND"],
+      ["idr", "peggedIDR"],
+      ["cop", "peggedCOP"],
+    ]);
+    for (const pegKey of ["peggedVND", "peggedIDR", "peggedCOP"] as const) {
+      expect(result.rates.get(pegKey)).toBe(dailyState.usableRates[pegKey]);
+    }
   });
 
   it("returns empty map on API failure", async () => {
