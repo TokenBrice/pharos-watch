@@ -45,7 +45,12 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
     expect(baseDollarFacts?.cdpStressCoverage).toMatchObject({
       complete: true,
       exactReplayPassed: true,
-      stressLiquidationCoverageRatio: 0.360948114363,
+      // Snapshot value at FULL_REGISTRY_CLOCK_SEC, which the fixture derives from
+      // the newest curated review date + 24h. Re-pin when curation advances the
+      // clock onto a different shock-coverage measurement: the 2026-08-23 DOC and
+      // HCHF reserve re-verifications moved the clock to 2026-08-24T00:00:00Z and
+      // this ratio with it, from 0.360948114363.
+      stressLiquidationCoverageRatio: 0.349856249087,
     });
   });
 
