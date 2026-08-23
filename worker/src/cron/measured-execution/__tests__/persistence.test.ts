@@ -7,9 +7,9 @@ import {
   isOperationalDexMeasuredFailure,
   loadLatestPublishedDexMeasuredQuoteEvidence,
   materializeDexMeasuredQuoteProfile,
-  publishDexMeasuredQuoteGeneration,
-  publishDexMeasuredTargetInventory,
-  pruneDexMeasuredExecutionGenerations,
+} from "../evidence-reader";
+import {
+  publishDexMeasuredQuoteGeneration, publishDexMeasuredTargetInventory, pruneDexMeasuredExecutionGenerations,
 } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { makeUniswapV3Target } from "./measured-execution.test-support";

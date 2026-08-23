@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { decodeMeasuredLedgerRecord, encodeMeasuredLedgerRecord } from "@shared/lib/measured-execution-ledger";
 import type { DexMeasuredRawQuotePoint } from "../profiles";
-import { buildMeasuredShadowQuoteLedgerRecord } from "../sync";
+import { buildMeasuredShadowQuoteLedgerRecord } from "../admission";
 
 function target(overrides: Partial<DexMeasuredExecutionTarget> = {}): DexMeasuredExecutionTarget {
   return {
