@@ -18,7 +18,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
-      "sha256": "5957e5a30506def2a52383243c95c138531f27a711a4e39565cbd46887ad3484"
+      "sha256": "a10e52f5dc57ebc452546f118a834b35fa490feb90d27efaa4b63581ee7e0a6b"
     },
     {
       "path": "shared/lib/chains/index.ts",
@@ -565,7 +565,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "984bd2473b010641979fab7a37ddcee451f3968cec8896a87595c39622a0b275"
+  "digest": "cdfd4074516d1d0b767bdcb74fd40da9cda4fea3d2ff6cabfad640065245950d"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
