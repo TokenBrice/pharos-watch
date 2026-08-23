@@ -169,11 +169,6 @@ const MINT_AUTHORITY_SCORE_TEXT_CLASS: Record<MintAuthorityScoreFilterValue, str
   nr: "text-muted-foreground",
 };
 
-/** Band-toned text class for a published mint posture. */
-export function mintPostureTextClassName(posture: string | null | undefined): string {
-  return MINT_AUTHORITY_SCORE_TEXT_CLASS[resolveV9MintPostureBand(posture) ?? "nr"];
-}
-
 /**
  * The published V9 mint component, as every cross-coin surface reads it off
  * `card.breakdowns.control.components`. `breakdowns` is nullable on older

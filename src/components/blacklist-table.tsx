@@ -11,34 +11,19 @@ import { Download, ExternalLink } from "lucide-react";
 import { downloadCsv } from "@/lib/exports/csv";
 import { getNextSortState } from "@/hooks/use-sort";
 import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/format";
-import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
-
-function formatBlacklistAmountCell(evt: BlacklistEvent): string {
-  if (evt.amountUsdAtEvent != null) return formatCurrency(evt.amountUsdAtEvent);
-  if (evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")) {
-    const digits = isGoldBlacklistStablecoin(evt.stablecoin) ? 4 : 2;
-    return `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: digits })} ${evt.stablecoin}`;
-  }
-  if (evt.amountStatus === "permanently_unavailable") return "N/A";
-  return "\u2014";
-}
+import {
+  formatBlacklistAmount,
+  formatBlacklistNativeAmount,
+  getBlacklistAmountSourceLabel,
+} from "@/lib/blacklist-event-presentation";
 
 const AMOUNT_STATUS_TOOLTIPS: Record<string, string> = {
   recoverable_pending: "Amount not yet recovered from historical balance — backfill pass pending.",
   provider_failed: "Amount recovery failed at the data provider; next backfill pass will retry.",
   ambiguous: "Multiple candidate amounts; manual review required.",
   permanently_unavailable: "Amount cannot be recovered (e.g., EURC mirror-zero or Tron legacy row).",
-};
-
-const AMOUNT_SOURCE_LABELS: Record<string, string> = {
-  event: "Event",
-  historical_balance: "Historical",
-  current_balance_snapshot: "Snapshot",
-  derived: "Derived",
-  legacy_migration: "Legacy",
-  unavailable: "Unavailable",
 };
 
 const AMOUNT_SOURCE_TOOLTIPS: Record<string, string> = {
@@ -117,9 +102,7 @@ export function BlacklistTable({
           accessor: (row) =>
             row.amountNative == null
               ? ""
-              : row.amountNative.toLocaleString(undefined, {
-                  maximumFractionDigits: isGoldBlacklistStablecoin(row.stablecoin) ? 4 : 2,
-                }),
+              : formatBlacklistNativeAmount(row),
         },
         { header: "Amount Unit", accessor: (row) => row.stablecoin },
         { header: "Amount (USD at event)", accessor: (row) => row.amountUsdAtEvent },
@@ -272,7 +255,13 @@ function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: 
 function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
   return (
     <>
-      {formatBlacklistAmountCell(evt)}
+      {evt.amountUsdAtEvent != null
+        ? formatCurrency(evt.amountUsdAtEvent)
+        : evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")
+          ? formatBlacklistAmount(evt)
+          : evt.amountStatus === "permanently_unavailable"
+            ? "N/A"
+            : "\u2014"}
       <AmountBadges
         event={evt}
         badgeClassName="ml-1 inline-flex cursor-help items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
@@ -291,7 +280,7 @@ function AmountBadges({ event: evt, badgeClassName }: { event: BlacklistEvent; b
         <Tooltip>
           <TooltipTrigger asChild>
             <span className={badgeClassName} aria-label={sourceTooltip ?? undefined}>
-              {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
+              {getBlacklistAmountSourceLabel(evt).replace(/^./, (char) => char.toUpperCase())}
             </span>
           </TooltipTrigger>
           {sourceTooltip ? (
@@ -347,7 +336,15 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
         </div>
         <div className="shrink-0 text-right">
           <p className="pharos-kicker">Amount</p>
-          <p className="pharos-numeric text-sm font-semibold text-foreground">{formatBlacklistAmountCell(evt)}</p>
+        <p className="pharos-numeric text-sm font-semibold text-foreground">
+          {evt.amountUsdAtEvent != null
+            ? formatCurrency(evt.amountUsdAtEvent)
+            : evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")
+              ? formatBlacklistAmount(evt)
+              : evt.amountStatus === "permanently_unavailable"
+                ? "N/A"
+                : "\u2014"}
+        </p>
         </div>
       </div>
 

@@ -12,7 +12,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { TimeXAxis, MonoYAxis, TimeGrid, ChartLegendChip } from "@/components/chart-primitives/axes";
-import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import { ChartFigure } from "@/components/chart-primitives/figure";
+import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
@@ -220,14 +221,6 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     return <Skeleton className={`${CHART_HEIGHT} w-full rounded-xl`} />;
   }
 
-  if (chartData.length === 0) {
-    return (
-      <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
-        No flow data available for this period.
-      </div>
-    );
-  }
-
   const animationActive = !prefersReducedMotion;
 
   return (
@@ -249,23 +242,21 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
           {useDailyBuckets ? "Daily" : "Hourly"}
         </span>
       </div>
-      <div
-        ref={chartContainerRef}
-        className={CHART_HEIGHT}
-        role="figure"
-        aria-label={`Mint and burn waterfall chart showing ${chartData.length} ${useDailyBuckets ? "daily" : "hourly"} data points`}
-      >
-        <ScreenReaderDataTable
-          data={chartData}
-          columns={FLOW_TABLE_COLUMNS}
-          caption={(rows, truncated, total) => {
-            const bucketLabel = useDailyBuckets ? "daily" : "hourly";
-            return truncated
-              ? `Mint and burn flow — most recent ${rows.length} of ${total} ${bucketLabel} buckets`
-              : `Mint and burn flow — ${total} ${bucketLabel} buckets`;
-          }}
-        />
-        {isChartReady ? (
+      <ChartFigure
+        data={chartData}
+        columns={FLOW_TABLE_COLUMNS}
+        caption={(rows, truncated, total) => {
+          const bucketLabel = useDailyBuckets ? "daily" : "hourly";
+          return truncated
+            ? `Mint and burn flow — most recent ${rows.length} of ${total} ${bucketLabel} buckets`
+            : `Mint and burn flow — ${total} ${bucketLabel} buckets`;
+        }}
+        ariaLabel={`Mint and burn waterfall chart showing ${chartData.length} ${useDailyBuckets ? "daily" : "hourly"} data points`}
+        emptyMessage="No flow data available for this period."
+        heightClassName={CHART_HEIGHT}
+        containerRef={chartContainerRef}
+        isReady={isChartReady}
+        renderChart={() => (
           <ComposedChart
             width={width}
             height={height}
@@ -321,10 +312,8 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
               isAnimationActive={false}
             />
           </ComposedChart>
-        ) : (
-          <Skeleton className="h-full w-full rounded-xl" />
         )}
-      </div>
+      />
       {hasInterpolated && (
         <p className="mt-1 text-xs text-muted-foreground">Gaps in {useDailyBuckets ? "daily" : "hourly"} data are filled with zero values.</p>
       )}
