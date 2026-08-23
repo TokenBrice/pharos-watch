@@ -17,40 +17,40 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "GPT Safety Score V9 Tranche 2 (live re-read)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Money On Chain DOC documentation",
-        "url": "https://moneyonchain.com/doc-stablecoin/"
+        "label": "Money On Chain minting DOCs documentation (read 2026-08-23)",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/getting-docs/minting-docs"
       },
       {
-        "label": "Money On Chain platform concepts",
-        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+        "label": "Money On Chain MoC contract documentation (read 2026-08-23)",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/contracts-architecture/moc"
       },
       {
-        "label": "MoC protocol contract on Rootstock (Blockscout)",
+        "label": "MoC protocol contract on Rootstock (Blockscout; read 2026-08-23)",
         "url": "https://rootstock.blockscout.com/address/0xf773B590aF754D597770937Fa8ea7AbDf2668370"
       },
       {
-        "label": "DOC token on Rootstock (Blockscout)",
+        "label": "DOC token on Rootstock (Blockscout; read 2026-08-23)",
         "url": "https://rootstock.blockscout.com/token/0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB"
       },
       {
-        "label": "Rootstock Blockscout - pinned block 9,080,700",
-        "url": "https://rootstock.blockscout.com/block/9080700"
+        "label": "Rootstock Blockscout - block 9,176,862",
+        "url": "https://rootstock.blockscout.com/block/9176862"
       },
       {
-        "label": "Rootstock public RPC",
+        "label": "Rootstock public RPC - block 9,176,862 (read 2026-08-23)",
         "url": "https://public-node.rsk.co"
       }
     ],
-    "rationale": "DOC is backed solely by rBTC locked in the Money on Chain protocol contract, with BPRO absorbing BTC/USD volatility by design; there is no fiat, T-bill, or stablecoin component. At Rootstock block 9,080,700 (hash 0x724d88376c86934387d39f8b7f65c7cec3f4030807765ef514111847115fdeed; 2026-07-22 19:16:34 UTC), eth_getBalance for MoC proxy 0xf773B590aF754D597770937Fa8ea7AbDf2668370 returned 292.636933857635580544 rBTC, while an eth_call of totalSupply() on DOC 0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB returned 3,203,057.992378573495716782 DOC. These pinned reads confirm the single fully on-chain-verifiable reserve asset class without relying on the degraded statistics API.",
-    "compositionBasis": "Money on Chain protocol design (single-asset rBTC collateral) confirmed against Rootstock contract and token state",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Fresh live re-read on 2026-08-23. At Rootstock block 9,176,862 (hash 0x3d87d43209d3c8be7112d65533f14c6dcd3cc9b60ef56e3299e041dd197207cd; 2026-08-23 17:30:36 UTC), eth_getBalance for MoC proxy 0xf773B590aF754D597770937Fa8ea7AbDf2668370 returned 282.460500975219498625 rBTC, and eth_call totalSupply() (selector 0x18160ddd) on DOC 0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB returned 3,126,808.182966185929591714 DOC. The Money On Chain docs read today state: \"DOC can only be minted in exchange for RBTC\" and MoC \"is also the only one that receives RBTC and holds the actual value of the system.\" The current balance and protocol design support the unchanged 100% rBTC slice; no fiat, Treasury, stablecoin, or other reserve category is asserted.",
+    "compositionBasis": "Money on Chain single-asset rBTC collateral design confirmed against current Rootstock MoC balance and DOC token state",
+    "compositionAsOf": "2026-08-23",
     "scope": "full-composition",
-    "knownUnknownExposure": "No reserve asset class is unclassified; the only collateral is rBTC in the MoC contract. The legacy MoC statistics API is degraded (catalog responds, measurement endpoints return not-found), so ongoing balances are read directly from chain state.",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the current MoC balance and DOC total supply were read directly on Rootstock, and the official protocol documentation describes no off-chain reserve component.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -73,8 +73,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-08-23",
+    "reviewer": "GPT Safety Score V9 Tranche 2 (live re-read)",
     "confidence": "verified",
     "sources": [
       {
@@ -82,11 +82,11 @@
         "url": "https://rootstock.blockscout.com/address/0xf773B590aF754D597770937Fa8ea7AbDf2668370"
       },
       {
-        "label": "Rootstock Blockscout - pinned block 9,080,700",
-        "url": "https://rootstock.blockscout.com/block/9080700"
+        "label": "Rootstock Blockscout - block 9,176,862",
+        "url": "https://rootstock.blockscout.com/block/9176862"
       },
       {
-        "label": "Rootstock public RPC",
+        "label": "Rootstock public RPC - block 9,176,862 (read 2026-08-23)",
         "url": "https://public-node.rsk.co"
       },
       {
@@ -98,7 +98,7 @@
         "url": "https://github.com/money-on-chain/main-RBTC-contract"
       }
     ],
-    "uncertainty": "All collateral sits in the single MoC system contract, an upgradeable proxy, so contract-admin action is the operative custody risk rather than a custodian. The protocol does not lend out collateral by design, but no legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody. Public code audits in the official repository date to 2019.",
+    "uncertainty": "All collateral sits in the single MoC system contract, an upgradeable proxy, so contract-admin action is the operative custody risk rather than a custodian. The 2026-08-23 Rootstock read confirms the current balance at the MoC address; no legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody. Public code audits in the official repository date to 2019.",
     "knownUnknownExposurePct": 0
   }
 }
