@@ -26,10 +26,12 @@ describe("check-cron-connection-budget", () => {
     expect(report.failed).toBe(false);
   });
 
-  it("models DDR as a serial D1-only precompute in the V9 supply lane", () => {
+  it("models the V9 supply and publication lanes without adding publication connection pressure", () => {
     const report = evaluateCronConnectionBudget();
     const v9Supply = report.triggerReports.find((trigger) => trigger.scheduleKey === "v9SupplyAttributionOffset");
+    const v9Publication = report.triggerReports.find((trigger) => trigger.scheduleKey === "v9PublicationOffset");
     const ddr = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "compute-depeg-resolver");
+    const compiler = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "compute-safety-score-v9");
 
     expect(ddr?.maxConnections).toBe(0);
     expect(v9Supply?.chains).toEqual([
@@ -40,6 +42,16 @@ describe("check-cron-connection-budget", () => {
       },
     ]);
     expect(v9Supply?.totalConnections).toBe(3);
+    expect(compiler?.maxConnections).toBe(0);
+    expect(v9Publication?.chains).toEqual([
+      {
+        chainKey: "chain-1",
+        jobs: ["compute-safety-score-v9"],
+        peak: 0,
+      },
+    ]);
+    expect(v9Publication?.totalConnections).toBe(0);
+    expect(report.triggerReports).toHaveLength(23);
     expect(report.failed).toBe(false);
   });
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CRON_JOB_DEFINITIONS,
+  CRON_GROWTH_HEADROOM_POLICY,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
@@ -29,16 +30,18 @@ describe("cron job schedule metadata", () => {
   });
 
   // Cloudflare caps Cron expressions with an interval below one hour at 30
-  // seconds of CPU time, and 15 minutes at hourly or longer. These three lanes
+  // seconds of CPU time, and 15 minutes at hourly or longer. These four lanes
   // carry CPU-heavy legs (full DefiLlama parse plus price enrichment, the V9
-  // capture/DDR pair, and a ~600KB status document serialization), so each is
-  // deployed as single-minute hourly expressions to earn the hourly class. A
-  // regression back to one comma expression silently re-enters the 30-second
-  // class and gets the isolate killed mid-chain, which starves the chain tail.
-  it("keeps CPU-heavy quarter-hour lanes on hourly physical triggers", () => {
+  // capture/DDR pair, the one-shot V9 publication compiler, and a ~600KB status
+  // document serialization), so each is deployed as single-minute hourly
+  // expressions to earn the hourly class. A regression back to one comma
+  // expression silently re-enters the 30-second class and gets the isolate
+  // killed mid-chain, which starves the chain tail.
+  it("keeps CPU-heavy sub-hourly lanes on hourly physical triggers", () => {
     const hourlyCpuClassLanes = {
       quarterHourly: ["0 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"],
       v9SupplyAttributionOffset: ["8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *"],
+      v9PublicationOffset: ["22 * * * *", "52 * * * *"],
       statusSelfCheckOffset: ["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"],
     } as const;
 
@@ -60,6 +63,7 @@ describe("cron job schedule metadata", () => {
     // must not move when the physical topology changes.
     expect(CRON_SCHEDULES.quarterHourly).toBe("*/15 * * * *");
     expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe("8,23,38,53 * * * *");
+    expect(CRON_SCHEDULES.v9PublicationOffset).toBe("22,52 * * * *");
     expect(CRON_SCHEDULES.statusSelfCheckOffset).toBe("9,24,39,54 * * * *");
 
     // Every physical alias must normalize to the logical slot it fired in.
@@ -70,8 +74,15 @@ describe("cron job schedule metadata", () => {
       getCronSlotStartedAtForSchedule("v9SupplyAttributionOffset", Date.parse("2026-08-21T19:53:04Z")),
     ).toBe(Math.floor(Date.parse("2026-08-21T19:53:00Z") / 1000));
     expect(
+      getCronSlotStartedAtForSchedule("v9PublicationOffset", Date.parse("2026-08-21T19:52:04Z")),
+    ).toBe(Math.floor(Date.parse("2026-08-21T19:52:00Z") / 1000));
+    expect(
       getCronSlotStartedAtForSchedule("statusSelfCheckOffset", Date.parse("2026-08-21T19:24:07Z")),
     ).toBe(Math.floor(Date.parse("2026-08-21T19:24:00Z") / 1000));
+
+    const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
+    expect(physicalTriggers).toHaveLength(35);
+    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(35);
   });
 
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {

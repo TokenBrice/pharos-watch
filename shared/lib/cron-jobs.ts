@@ -56,7 +56,15 @@ const CRON_SCHEDULE_DEFINITIONS = {
     triggerSchedules: ["8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *"],
     ...CRON_SCHEDULE_CADENCES.v9SupplyAttributionOffset,
   },
-  v9PublicationOffset: { schedule: "22,52 * * * *", ...CRON_SCHEDULE_CADENCES.v9PublicationOffset },
+  // The one-shot V9 publication writer needs the same hourly Cron CPU class as
+  // the other CPU-heavy sub-hourly lanes. Keeping the logical comma expression
+  // preserves its :22/:52 cadence and slot identity, while the two hourly
+  // aliases prevent platform termination in Cloudflare's 30-second class.
+  v9PublicationOffset: {
+    schedule: "22,52 * * * *",
+    triggerSchedules: ["22 * * * *", "52 * * * *"],
+    ...CRON_SCHEDULE_CADENCES.v9PublicationOffset,
+  },
   // Paired hourly physical triggers for the hourly Cron CPU class. status-self-check
   // serializes a ~600KB status document, so the 30-second sub-hourly class killed
   // this isolate on ~29% of slots (measured 2026-08-21). The chain tail carried it:
@@ -139,13 +147,14 @@ export const CRON_CONNECTION_BUDGET = {
  * triggers without adding any scheduled work, connection pressure, or fetch
  * surface: it only moves those invocations from Cloudflare's 30-second
  * sub-hourly Cron CPU class into the 15-minute hourly class. ADR-20 raised the
- * gate from 25 to 34 to buy that CPU class for quarterHourly,
- * v9SupplyAttributionOffset, and statusSelfCheckOffset. The binding constraints
- * remain the fetch-capable-entry and per-trigger connection limits below, plus
- * Cloudflare's 250-Cron-Triggers-per-account platform ceiling.
+ * gate from 25 to 34 for quarterHourly, v9SupplyAttributionOffset, and
+ * statusSelfCheckOffset; ADR-21 raises it to 35 for the missed one-shot
+ * v9PublicationOffset writer. The binding constraints remain the
+ * fetch-capable-entry and per-trigger connection limits below, plus Cloudflare's
+ * 250-Cron-Triggers-per-account platform ceiling.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
-  maxPhysicalTriggersBeforeRebalance: 34,
+  maxPhysicalTriggersBeforeRebalance: 35,
   maxFetchCapableEntriesBeforeRebalance: 32,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {

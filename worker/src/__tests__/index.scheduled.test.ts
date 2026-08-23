@@ -529,18 +529,23 @@ describe("worker.scheduled", () => {
     ).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeSafetyScoreV9).not.toHaveBeenCalled();
 
-    const publication = makeCtx();
-    await worker.scheduled(
-      {
-        cron: "22,52 * * * *",
-        scheduledTime: Date.parse("2026-07-26T12:22:00Z"),
-      } as ScheduledEvent,
-      env,
-      publication.ctx,
-    );
-    await Promise.all(publication.waits);
+    for (const [cron, scheduledTime] of [
+      ["22 * * * *", "2026-07-26T12:22:00Z"],
+      ["52 * * * *", "2026-07-26T12:52:00Z"],
+    ] as const) {
+      const publication = makeCtx();
+      await worker.scheduled(
+        {
+          cron,
+          scheduledTime: Date.parse(scheduledTime),
+        } as ScheduledEvent,
+        env,
+        publication.ctx,
+      );
+      await Promise.all(publication.waits);
+    }
 
-    expect(cronMocks.computeSafetyScoreV9).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeSafetyScoreV9).toHaveBeenCalledTimes(2);
     expect(
       cronMocks.syncSafetyScoreV9SupplyAttribution,
     ).toHaveBeenCalledTimes(1);
