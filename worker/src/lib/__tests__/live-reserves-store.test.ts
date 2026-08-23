@@ -117,17 +117,22 @@ describe("live-reserves-store", () => {
         warnings: JSON.stringify([staleSourceWarning]),
       },
     });
+    // RDP-01: a stale upstream observation must demote the card to live-stale rather
+    // than being presented as fresh. It stays visible -- the snapshot was validly
+    // observed, and V9 excludes it separately by requiring lastStatus "ok".
     const staleSourceResult = await resolveReserveResult(staleSourceDb, "iusd-infinifi", 1_200, 300);
     expect(staleSourceResult).toMatchObject({
-      mode: "curated-fallback",
+      mode: "live-stale",
       sync: {
         status: "degraded",
         stale: true,
         warnings: [staleSourceWarning.message],
       },
     });
-    expect(staleSourceResult?.reserves).not.toEqual(LIVE_SLICES);
+    expect(staleSourceResult?.reserves).toEqual(LIVE_SLICES);
 
+    // A fresh Worker fetch cannot launder a stale upstream observation into "live",
+    // even when the sync status is ok: the effective observation age governs.
     const staleObservationWithOkStatus = makeReservesDb({
       composition: {
         fetched_at: 1_100,
@@ -137,11 +142,12 @@ describe("live-reserves-store", () => {
     });
     await expect(
       resolveReserveResult(staleObservationWithOkStatus, "iusd-infinifi", 1_200, 300),
-    ).resolves.toMatchObject({ mode: "curated-fallback", sync: { stale: true } });
+    ).resolves.toMatchObject({ mode: "live-stale", sync: { stale: true } });
 
+    // A degraded current attempt does not hide a still-fresh prior snapshot.
     const degradedFreshDb = makeReservesDb({ syncState: { last_status: "degraded" } });
     await expect(resolveReserveResult(degradedFreshDb, "iusd-infinifi", 1_200)).resolves.toMatchObject({
-      mode: "curated-fallback",
+      mode: "live",
       sync: { status: "degraded", stale: false },
     });
   });
@@ -422,7 +428,9 @@ describe("live-reserves-store", () => {
 
   it("includes lastError in sync view when sync state has an error", async () => {
     const db = makeReservesDb({
+      composition: null,
       syncState: {
+        last_success_at: null,
         last_status: "error",
         last_error: "HTTP 503 for https://api.example.com",
       },
