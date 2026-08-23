@@ -1,10 +1,9 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import {
   fetchSpy,
   handleCallbackQuery,
   mockD1,
   resetCallbackTest,
-  sendAuditedTelegramReply,
 } from "./telegram-webhook-callbacks.test-support";
 import {
   lastSendMessageBody,

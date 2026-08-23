@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 import { buildDetailFeatureSnapshot } from "../stablecoin-detail-query-view-model";
 import { makeBuildStablecoinDetailViewModelParams } from "./fixtures/stablecoin-detail-view-model";
 

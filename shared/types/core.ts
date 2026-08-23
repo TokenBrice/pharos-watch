@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { DependencyType, V9DependencyEconomicRole } from "./dependency-types";
 import type { LiveReservesConfig } from "./live-reserves";
 import type { CauseOfDeath } from "./cause-of-death";
 import type { ReserveSlice } from "./reserves";

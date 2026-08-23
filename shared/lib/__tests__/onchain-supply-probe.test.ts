@@ -9,7 +9,6 @@ import {
   onchainSupplyProbeFamily,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
-  selectSupplementalOnchainSupplyProbeContract,
   supportsOnchainSupplyProbe,
 } from "@shared/lib/onchain-supply-probe";
 

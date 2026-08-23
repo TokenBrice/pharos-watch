@@ -3,7 +3,6 @@ import { setCacheMany } from "../lib/db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   getReportCardGradeRank,
-  REPORT_CARD_GRADE_RANK,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
 } from "@shared/lib/report-card-core";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";

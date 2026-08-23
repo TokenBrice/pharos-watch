@@ -10,7 +10,6 @@ import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlit
 import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
   insertPendingSqlite,
-  makeTelegramDeliveryResult,
 } from "./telegram-pending-queue.test-support";
 
 function mockD1(tables: MockTableConfig[] = []) {

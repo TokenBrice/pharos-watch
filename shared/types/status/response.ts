@@ -2,16 +2,8 @@ import { z } from "zod";
 import { ReserveCompositionOverviewSchema } from "../live-reserves";
 import type { PriceSourceHealth } from "../pricing-source-health";
 import type {
-  CacheStatus,
   DataQuality,
   DatasetFreshness,
-  StatusCause,
-  StatusDiscrepancy,
-  StatusHealthValue,
-  StatusProbeSummary,
-  StatusStaleness,
-  StatusStateInfo,
-  StatusTransition,
 } from "./core";
 import {
   STATUS_DISCREPANCY_REASON_VALUES,
@@ -211,7 +203,6 @@ const StatusReserveCompositionSchema = ReserveCompositionOverviewSchema.extend({
   freshCoverageRatio: z.number(),
   authoritativeFreshCoverageRatio: z.number(),
 });
-type StatusReserveComposition = z.output<typeof StatusReserveCompositionSchema>;
 
 const StatusResponseObjectSchema = z
   .object({

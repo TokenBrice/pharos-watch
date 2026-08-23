@@ -1,13 +1,9 @@
 import { z } from "zod";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-keys";
 import type {
-  LiveReserveEvidenceClass,
-  LiveReserveFreshnessMode,
   LiveReserveInput,
   LiveReserveSemantics,
-  LiveReserveSourceModel,
   LiveReserveWarningEffect,
-  ReserveDisplayBadgeKind,
 } from "./live-reserve-core";
 import {
   LIVE_RESERVE_EVIDENCE_CLASS_VALUES,
@@ -15,11 +11,10 @@ import {
   LIVE_RESERVE_SOURCE_MODEL_VALUES,
   RESERVE_DISPLAY_BADGE_KIND_VALUES,
 } from "./live-reserve-core";
-import { ReserveSliceSchema, type ReserveSlice } from "./reserves";
+import { ReserveSliceSchema } from "./reserves";
 import { HttpUrlSchema } from "./validators";
 import {
   RedemptionHolderEligibilitySchema,
-  type RedemptionHolderEligibility,
   RedemptionLiveCapacityKindValues,
   RedemptionLiveFreshnessKindValues,
   RedemptionRouteStatusSchema,

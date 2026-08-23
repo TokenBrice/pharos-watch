@@ -117,7 +117,6 @@ export function collectDuplicatedLineCounts(
     })) {
       const rel = relative(cwd, absolute).split("\\").join("/");
       if (!isScannableFile(rel) || normalised.has(rel)) continue;
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path comes from the explicit scan roots
       const lines = significantLines(readFileSync(absolute, "utf8"));
       if (lines.length < MIN_SIGNIFICANT_LINES) continue;
       normalised.set(rel, lines);

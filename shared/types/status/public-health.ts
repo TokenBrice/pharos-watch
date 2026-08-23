@@ -88,7 +88,6 @@ const MintBurnHealthQueryErrorsSchema = z.object({
   latestSuccessfulSyncAt: z.string().nullable(),
   rowCount: z.string().nullable(),
 });
-type MintBurnHealthQueryErrors = z.output<typeof MintBurnHealthQueryErrorsSchema>;
 
 export const HealthResponseSchema = z.object({
   status: StatusHealthValueSchema,

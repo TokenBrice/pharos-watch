@@ -7,7 +7,6 @@ import {
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
   onchainSupplyProbeFamily,
   selectCuratedAggregateOnchainSupplyProbeContracts,
-  selectSingleOnchainSupplyProbeContract,
   selectSupplementalOnchainSupplyProbeContract,
   type OnchainSupplyProbeFamily,
 } from "@shared/lib/onchain-supply-probe";

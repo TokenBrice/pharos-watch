@@ -12,7 +12,7 @@ import {
   type DdrRow,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
-import { DDR_TEST_META, makeDdrSourceRow } from "./depeg-resolver-test-support";
+import { DDR_TEST_META } from "./depeg-resolver-test-support";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverEnabled: () => true,

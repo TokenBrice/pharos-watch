@@ -6,7 +6,6 @@ import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
-  DdrRowSchema,
   DdrV2ResponseRowSchema,
   type DdrPredictionMeta,
   type DdrResponse,

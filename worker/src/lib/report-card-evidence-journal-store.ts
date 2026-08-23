@@ -7,7 +7,6 @@ import {
   type ReportCardEvidenceJournalV1,
 } from "@shared/lib/report-card-evidence-journal";
 import {
-  BOUNDED_JOURNAL_MAX_ROWS_PER_ASSET,
   BOUNDED_JOURNAL_RETENTION_SEC,
   loadBoundedJournal,
   type BoundedJournalStoreConfig,

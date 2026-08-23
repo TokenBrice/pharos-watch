@@ -224,7 +224,6 @@ describe("fetchErc4626SingleAssetReserves", () => {
     const convertedAssetsRaw = totalAssetsRaw + totalAssetsRaw / 100n + 1n;
     mockErc4626Rpc({ totalAssets: totalAssetsRaw, totalSupply: totalAssetsRaw, convertedAssets: convertedAssetsRaw, idleBalance: 0n });
 
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple")!;
     const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.metadata).toMatchObject({

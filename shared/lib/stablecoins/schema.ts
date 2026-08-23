@@ -120,7 +120,10 @@ const StablecoinIdSchema = z.string().refine(isCanonicalStablecoinId, {
 
 const obituarySchema = z.object({
   causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
-  deathDate: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/),
+  // Two fixed alternatives instead of `^\d{4}-\d{2}(-\d{2})?$`: the optional
+  // group around a counted repetition raises the star height and trips
+  // security/detect-unsafe-regex. Both branches are linear in the input.
+  deathDate: z.string().regex(/^\d{4}-\d{2}$|^\d{4}-\d{2}-\d{2}$/),
   epitaph: z.string().min(1),
   obituary: z.string().min(1),
   peakMcap: z.number().positive().optional(),

@@ -13,7 +13,6 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import {
-  V9_CANDIDATE_POLICY_V1,
   assertV9ReasonCodesRegistered,
   assertV9ValidatedPolicyEnvelope,
   getV9ScoreBearingGatesPolicy,
