@@ -45,10 +45,61 @@ export function deriveSafetyScoreV9PegScore(
 export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   const peg = context.fixedInput.pegDataById[context.asset.assetId];
   const reference = context.asset.pegReference;
+  const unresolvedReference =
+    reference?.referenceKind === "other" && reference.referenceKey.startsWith("unresolved:peg-reference:");
+  const pegReferenceMarker = ":peg-reference:";
+  const pegReferenceMarkerIndex = reference?.referenceKey.lastIndexOf(pegReferenceMarker) ?? -1;
+  const configuredReferenceId =
+    !unresolvedReference && reference !== null && pegReferenceMarkerIndex >= 0
+      ? reference.referenceKey.slice(pegReferenceMarkerIndex + pegReferenceMarker.length)
+      : null;
   const source = context.extension.sources.peg;
   const pegKey = reference
     ? `peg:${reference.referenceKind}:${reference.referenceKey}`
     : `peg:unresolved:${context.asset.assetId}`;
+  const activeDepegAssetId = configuredReferenceId ?? context.asset.assetId;
+  const activeDepegBps = context.fixedInput.activeDepegPeakBpsById[activeDepegAssetId] ?? null;
+  if (reference?.referenceKind === "nav" && configuredReferenceId !== null && activeDepegBps !== null) {
+    const evidenceId = addEvidence(
+      context,
+      createV9EvidenceReference(
+        {
+          evidenceId: `${context.asset.assetId}:peg-reference-active-depeg`,
+          sourceId: "report-cards-active-depeg-peak",
+          sourceGenerationId: source.generationId,
+          disposition: "observed",
+          observedAtSec: source.observedAtSec,
+          contentSha256: domainDigest("safety-score-v9.peg-reference-active-depeg.v1", {
+            pegReferenceId: configuredReferenceId,
+            activeDepegBps,
+          }),
+          maxAgeSec: source.maxAgeSec,
+        },
+        context.fixedInput.clockSec,
+      ),
+    );
+    return {
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("v9.peg.current"),
+        observationState: "known",
+        evidenceRefIds: [evidenceId],
+      }),
+      pegKey,
+      sourceGenerationId: source.generationId,
+      referenceKind: reference.referenceKind,
+      referenceKey: reference.referenceKey,
+      methodologyVersion: context.fixedInput.methodologyVersion,
+      // Part A carries only the inherited active-depeg peak. A neutral score
+      // preserves the child's pre-existing peg multiplier; parent peg-score
+      // inheritance is the separately reviewed Part B change.
+      pegScore: 100,
+      currentDeviationBps: 0,
+      activeDepeg: true,
+      activeDepegBps,
+      trackingSpanDays: null,
+      failureDomains: reference.failureDomains,
+    };
+  }
   if (reference?.referenceKind === "nav") {
     // Pure NAV tokens have no fixed peg by design (v8 pure NAV carve-over):
     // the peg fact is a known not-applicable review, and the formula skips
@@ -115,22 +166,28 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     ),
   );
   const evidence = context.evidence.get(evidenceId)!;
-  const activeDepegBps = context.fixedInput.activeDepegPeakBpsById[context.asset.assetId] ?? null;
+  const activeDepeg = configuredReferenceId === null ? peg.activeDepeg : activeDepegBps !== null;
   const pegScore = deriveSafetyScoreV9PegScore(peg, context.fixedInput.clockSec);
   const quietPegObservation =
     reference !== null &&
+    !unresolvedReference &&
     pegScore !== null &&
     peg.currentDeviationBps === null &&
-    peg.activeDepeg === false &&
+    activeDepeg === false &&
     peg.eventCount === 0 &&
     peg.worstDeviationBps === null;
   const complete =
     reference !== null &&
+    !unresolvedReference &&
     pegScore !== null &&
     (peg.currentDeviationBps !== null || quietPegObservation) &&
-    (!peg.activeDepeg || activeDepegBps !== null);
+    (!activeDepeg || activeDepegBps !== null);
   const hasPartialActiveDepegEvidence =
-    reference !== null && pegScore !== null && peg.activeDepeg === true && activeDepegBps !== null;
+    reference !== null &&
+    !unresolvedReference &&
+    pegScore !== null &&
+    activeDepeg &&
+    activeDepegBps !== null;
   // Owner ruling 2026-07-27: a deviation withheld solely by the $1M supply
   // floor is deliberate methodology (deviation fails closed on thin supply),
   // not a failed feed. The ceiling treatment is byte-identical to
@@ -138,10 +195,11 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   // classification changes: measured-structural instead of missing data.
   const supplyFloorWithheld =
     reference !== null &&
+    !unresolvedReference &&
     pegScore !== null &&
     peg.currentDeviationBps === null &&
     peg.depegEventCoverageLimited === true &&
-    !peg.activeDepeg;
+    !activeDepeg;
   // Owner ruling 2026-07-29 (P4, nxusd-nereus): when the producer reports that
   // no usable price observation exists AND the asset's tracked record already
   // holds adverse peg evidence, the null deviation is neither a feed failure
@@ -151,10 +209,11 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   // DEX quote is never admitted as a price source.
   const priceUnavailableWithAdverseRecord =
     reference !== null &&
+    !unresolvedReference &&
     pegScore !== null &&
     peg.currentDeviationBps === null &&
     peg.currentPriceUnavailable === true &&
-    (peg.activeDepeg === true || peg.eventCount > 0 || peg.worstDeviationBps !== null);
+    (activeDepeg || peg.eventCount > 0 || peg.worstDeviationBps !== null);
   let status: V9FactStatusV2;
   if (evidence.freshness.state === "stale") {
     status = missingLocalFact(context, {
@@ -171,7 +230,7 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     status = missingLocalFact(context, {
       componentKey: "peg",
       reasonCode:
-        reference === null
+        reference === null || unresolvedReference
           ? "missing-applicable-peg"
           : supplyFloorWithheld
             ? "peg-supply-floor-withheld"
@@ -180,7 +239,7 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
               : "missing-peg-input",
       ownerDomain: "peg",
       responsibility:
-        reference === null
+        reference === null || unresolvedReference
           ? "integration-missing"
           : supplyFloorWithheld || priceUnavailableWithAdverseRecord
             ? "measured-adverse"
@@ -190,7 +249,9 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         ? "Peg deviation is withheld by the $1M supply floor: below it, deviation fails closed by methodology design."
         : priceUnavailableWithAdverseRecord
           ? "No usable price observation exists for this asset and its tracked peg record is adverse, so the current deviation is unobservable rather than at peg."
-          : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
+          : unresolvedReference
+            ? `The configured peg reference ${reference?.referenceKey ?? "unknown"} could not be resolved; child peg metrics are withheld.`
+            : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
       observationState: "bounded-unknown",
       evidenceRefIds: [evidenceId],
     }).status;
@@ -212,8 +273,8 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     // The v8 peg summary reports signed deviation; the v9 peg fact carries the
     // magnitude per its nonnegative schema contract.
     currentDeviationBps: complete ? Math.abs(peg.currentDeviationBps ?? 0) : null,
-    activeDepeg: complete ? peg.activeDepeg : hasPartialActiveDepegEvidence ? true : null,
-    activeDepegBps: (complete && peg.activeDepeg) || hasPartialActiveDepegEvidence ? activeDepegBps : null,
+    activeDepeg: complete ? activeDepeg : hasPartialActiveDepegEvidence ? true : null,
+    activeDepegBps: (complete && activeDepeg) || hasPartialActiveDepegEvidence ? activeDepegBps : null,
     trackingSpanDays: peg.trackingSpanDays,
     failureDomains: reference?.failureDomains ?? [],
   };
