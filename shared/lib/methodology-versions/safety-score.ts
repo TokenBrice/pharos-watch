@@ -7,6 +7,7 @@ import { SAFETY_SCORE_V6 } from "../../data/methodology-changelogs/safety-score/
 import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/v7";
 import { SAFETY_SCORE_V8 } from "../../data/methodology-changelogs/safety-score/v8";
 import {
+  SAFETY_SCORE_V9_CAP_AND_EVIDENCE_CLARIFICATIONS,
   SAFETY_SCORE_V9_EXIT_ROUTE_STABILITY,
   SAFETY_SCORE_V9_MINT_POSTURE_LADDER_REFINEMENT,
   SAFETY_SCORE_V9_ACTIVATION,
@@ -52,6 +53,7 @@ const safetyScore = createMethodologyVersion({
   currentVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
   changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
+    SAFETY_SCORE_V9_CAP_AND_EVIDENCE_CLARIFICATIONS,
     SAFETY_SCORE_V9_EXIT_ROUTE_STABILITY,
     SAFETY_SCORE_V9_MINT_POSTURE_LADDER_REFINEMENT,
     SAFETY_SCORE_V9_CURATED_DEPENDENCY_GATE,

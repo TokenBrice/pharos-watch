@@ -1,5 +1,24 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_CAP_AND_EVIDENCE_CLARIFICATIONS: MethodologyChangelogEntry = {
+  version: "9.34",
+  title: "Cap claims become integral, scope-gated, and explicit",
+  date: "2026-08-23",
+  effectiveAt: 1787500014,
+  summary:
+    "Safety Score V9 aligns cap outputs and evidence dispositions with their published meaning: cap limits now live in the integral published score space, unrated cards do not assert binding caps, and a pillar-priced signal needs an asserted residual before it can impose a whole-score cap. Absent wrapper facts stop being treated as issuer non-disclosure, and active-depeg peaks resolve through `pegReferenceId`; the release also records the existing policy-declared USDT market-anchor-longevity premium and its non-inheritable public adjustment.",
+  impact: [
+    "Candidate cap limits are floored at the published-score funnel before deduplication and selection. Wrapper-local parent measurements remain exact in their own trace, while published cap limits are integral. On the frozen capture replay (clock 1787500014, 337 cards), 0 scores and 0 grades moved; asusdf-astherus 49.55 became 49, susd1plus-lorenzo 43.45 became 43, and susn-noon 61.9 became 61, with no non-integral cap limit remaining",
+    "An NR card no longer reports a binding cap because no numeric score exists for a cap to constrain. syzusd-yuzu was the only affected card; rated scores did not move, all 18 NR cards now report `bindingCap: null` with zero binding flags, and their `caps[]` candidates remain available as counterfactual diagnostics",
+    "Absent custodyEscrow, leverage, and rehypothecationCorrelation profiles on known pure serial wrappers resolve as `not-applicable` rather than `issuer-undisclosed`; strategy vaults retain the latter when disclosure is genuinely missing, and reviewed leverage 1.0 resolves as reviewed/none. Complete wrapper fact sets rise from 1 to 11 of 56, exactly 6 published scores move, all upward: sdai-sky 75 to 78, scrvusd-curve 68 B- to 71 B, sdola-inverse-finance 51 to 54, susdd-tron-dao-reserve 38 F to 41 D, srusd-reservoir 54 C- to 55 C, and susds-sky 75 to 77",
+    "A signal already priced in a pillar can impose a whole-score cap only when `additionalHardCapRisk` asserts the residual risk that remains outside that pillar. The replay moves 0 scores, changes 0 binding-cap identities, and preserves all 15 structural caps; the 9 pillar-priced caps remain grandfathered by the provisional marker still owed per-asset review: seven `centralized-mint:high` caps (cusd-celo, ftusd-flying-tulip, jpym-mento, jupusd-jupiter, rusd-reservoir, usd0-usual, and ussd-sonic-labs), `usdt-tether` at `centralized-mint:low`, and pht-pht at `weak-oracle-branch:critical`",
+    "Active-depeg peak inheritance follows one `pegReferenceId` hop without redirecting child-keyed peg data, supply, or wrapper-local facts. The replay moves 0 scores and 0 `pegMultiplier` values; apyusd-apyx gains a non-binding inherited `active-depeg:f@39` candidate",
+    "The policy-declared `market-anchor-longevity` premium is recorded as a bounded USDT-specific adjustment: 12 points, with `signal:centralized-mint:low` relief from 83 to 87 and a maximum published score of 87. Eligibility remains gated on rank 1, at least 120 months, base score at least 75, exit score at least 70, strong evidence, a clean peg, and `stress-redemption` plus `reserve-reconciliation`; the public 87 does not replace the pre-premium 83 returned for dependency inheritance",
+  ],
+  commits: ["fa7ce76ce", "1037bc89c", "80f319339", "b8260d9f1", "fd4d5f590"],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_EXIT_ROUTE_STABILITY: MethodologyChangelogEntry = {
   version: "9.33",
   title: "An expired exit-route observation is derated, not discarded",
