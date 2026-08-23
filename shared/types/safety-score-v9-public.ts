@@ -1382,6 +1382,20 @@ function refineCardBase(
   if (bindingCaps.length > 1) {
     ctx.addIssue({ code: "custom", path: ["caps"], message: "At most one V9 cap candidate may bind" });
   }
+  if (card.score === null && card.bindingCap !== null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["bindingCap"],
+      message: "An NR result cannot carry a binding cap",
+    });
+  }
+  if (card.score === null && bindingCaps.length > 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["caps"],
+      message: "An NR result cannot carry a binding cap candidate",
+    });
+  }
   if (
     card.bindingCap === null
       ? bindingCaps.length !== 0

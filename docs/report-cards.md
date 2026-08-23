@@ -57,7 +57,7 @@ Exit selects the strongest eligible route as primary. An independent secondary r
 
 Serial dependencies remain binding because the child cannot diversify away the parent claim. Basket dependencies contribute at their live exposure weights. Wrapper-local risks are evaluated separately from the parent asset so a wrapper cannot inherit safety it does not possess. Parent-cap form follows the wrapper relationship rather than the product label: a reviewed third-party risk-absorption wrapper uses the existing strategy-vault treatment, while a wrapper operated by the parent protocol uses the existing native-staked treatment.
 
-Rateable report-v5 cards include complete Backing, Exit, and Economic Control breakdowns plus per-card live-reserve provenance. Each breakdown reconciles evaluator and published values through ordered adjustments. NR cards carry explicit reason rows and have `breakdowns: null`.
+Rateable report-v5 cards include complete Backing, Exit, and Economic Control breakdowns plus per-card live-reserve provenance. Each breakdown reconciles evaluator and published values through ordered adjustments. NR cards carry explicit reason rows and have `breakdowns: null`; they never report a binding cap (`bindingCap: null` and every `caps[].binding: false`). The `caps[]` array may still list candidate ceilings as diagnostics.
 
 ## Canonical Publication
 
