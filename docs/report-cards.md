@@ -73,6 +73,8 @@ The `signalLimits` table is not a table of whole-score ceilings. Each rung has o
 
 This scope gate prevents a pillar fact from being charged twice while retaining the proportional deployment-risk adjustment. Since methodology `9.34`, cap limits are integral in the published score space, and a pillar-priced signal can bind only when its residual is explicitly asserted.
 
+Since methodology `9.35`, equal-limit caps publish a specific observed or withheld fact before a generic absence reason. Remaining ties are resolved by source priority, then locale-independent code-unit ordering of kind and reason, so the selected reason and full cap trace remain total and byte-stable across replay environments. This changes explanation precedence only: cap limits and score arithmetic are unchanged.
+
 Rateable report-v5 cards include complete Backing, Exit, and Economic Control breakdowns plus per-card live-reserve provenance. Each breakdown reconciles evaluator and published values through ordered adjustments. Since methodology `9.34`, NR cards carry explicit reason rows and have `breakdowns: null`; they never report a binding cap (`bindingCap: null` and every `caps[].binding: false`). The `caps[]` array may still list candidate ceilings as diagnostics.
 
 ### Asset premiums and dependency inheritance

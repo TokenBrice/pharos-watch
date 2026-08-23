@@ -87,3 +87,46 @@ describe("V9 cap limits are quantized into the published score space", () => {
     expect(fractional.finalGrade).toBe(integral.finalGrade);
   });
 });
+
+describe("V9 equal-limit cap reason precedence", () => {
+  const withheldPegFact = {
+    code: "peg-supply-floor-withheld" as const,
+    reason: "Peg deviation is withheld by the $1M supply floor.",
+    critical: false,
+    path: "peg:local-component:supply-floor",
+    responsibility: "measured-adverse" as const,
+  };
+
+  it("publishes a specific withheld fact before the generic missing-peg reason", () => {
+    const trace = scoreV9Input(
+      input({ pegScore: null, unresolved: [withheldPegFact] }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.caps.filter((cap) => cap.limit === 60).map((cap) => cap.kind)).toEqual([
+      "reason:peg-supply-floor-withheld",
+      "reason:missing-applicable-peg",
+    ]);
+    expect(trace.bindingCap?.kind).toBe("reason:peg-supply-floor-withheld");
+    expect(trace.finalScore).toBe(60);
+  });
+
+  it("keeps equal-limit ordering total and deterministic across input order", () => {
+    const alternateFact = {
+      ...withheldPegFact,
+      reason: "Alternate wording for the same withheld fact.",
+      path: "peg:local-component:supply-floor-alternate",
+    };
+    const forward = scoreV9Input(
+      input({ pegScore: null, unresolved: [withheldPegFact, alternateFact] }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const reversed = scoreV9Input(
+      input({ pegScore: null, unresolved: [alternateFact, withheldPegFact] }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(JSON.stringify(forward.caps)).toBe(JSON.stringify(reversed.caps));
+    expect(forward.bindingCap).toEqual(reversed.bindingCap);
+  });
+});

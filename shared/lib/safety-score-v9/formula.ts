@@ -743,6 +743,32 @@ function capPriority(source: V9CapTrace["source"], policy: V9ValidatedPolicyEnve
   return priority === -1 ? policy.policy.semantic.formula.capTiePriority.length : priority;
 }
 
+// Generic absence reasons are less informative than a specific observed or
+// withheld fact at the same source and limit. Keep this semantic precedence
+// explicit; code-unit kind and reason comparisons below remain the total,
+// locale-independent fallback for replay-stable publication.
+const GENERIC_ABSENCE_CAP_KINDS = new Set<string>([
+  "reason:missing-applicable-peg",
+]);
+
+function capReasonPrecedence(kind: string): number {
+  return GENERIC_ABSENCE_CAP_KINDS.has(kind) ? 1 : 0;
+}
+
+function compareCapCandidates(
+  left: Omit<V9CapTrace, "binding">,
+  right: Omit<V9CapTrace, "binding">,
+  policy: V9ValidatedPolicyEnvelope,
+): number {
+  return (
+    left.limit - right.limit ||
+    capPriority(left.source, policy) - capPriority(right.source, policy) ||
+    capReasonPrecedence(left.kind) - capReasonPrecedence(right.kind) ||
+    compareCodeUnits(left.kind, right.kind) ||
+    compareCodeUnits(left.reason, right.reason)
+  );
+}
+
 /**
  * Apply one explicit asset premium after the ordinary score has established
  * eligibility. The adjustment remains pre-cap, and only its named cap relief
@@ -792,12 +818,7 @@ export function applyV9AssetPremium(
   const bindingCandidate =
     [...adjustedCandidates]
       .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
-      .sort(
-        (left, right) =>
-          left.limit - right.limit ||
-          capPriority(left.source, policy) - capPriority(right.source, policy) ||
-          compareCodeUnits(left.kind, right.kind),
-      )[0] ?? null;
+      .sort((left, right) => compareCapCandidates(left, right, policy))[0] ?? null;
   const rawFinal = Math.min(adjustedPreCapRaw, bindingCandidate?.limit ?? SCORE_MAX);
   const finalScore = bindingCandidate
     ? floorTo(rawFinal, formula.scoreDecimals)
@@ -1116,13 +1137,7 @@ function scoreV9InputWithCaps(
   const dedupedCandidates = [
     ...new Map(
       [...normalizedCandidates]
-        .sort(
-          (left, right) =>
-            left.limit - right.limit ||
-            capPriority(left.source, policy) - capPriority(right.source, policy) ||
-            compareCodeUnits(left.kind, right.kind) ||
-            compareCodeUnits(left.reason, right.reason),
-        )
+        .sort((left, right) => compareCapCandidates(left, right, policy))
         .reverse()
         .map((cap) => [`${cap.source}\u0000${cap.kind}\u0000${cap.limit}`, cap]),
     ).values(),
@@ -1136,12 +1151,7 @@ function scoreV9InputWithCaps(
       ? null
       : ([...dedupedCandidates]
           .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
-          .sort(
-            (left, right) =>
-              left.limit - right.limit ||
-              capPriority(left.source, policy) - capPriority(right.source, policy) ||
-              compareCodeUnits(left.kind, right.kind),
-          )[0] ?? null);
+          .sort((left, right) => compareCapCandidates(left, right, policy))[0] ?? null);
   const caps = dedupedCandidates.map<V9CapTrace>((cap) => ({ ...cap, binding: cap === bindingCandidate }));
   const rateable = nrReasons.length === 0 && preCapScoreRaw !== null;
   const rawFinal = rateable ? Math.min(preCapScoreRaw!, bindingCandidate?.limit ?? SCORE_MAX) : null;

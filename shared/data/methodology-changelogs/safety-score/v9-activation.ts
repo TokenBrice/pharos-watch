@@ -1,5 +1,21 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_CAP_REASON_PRECEDENCE: MethodologyChangelogEntry = {
+  version: "9.35",
+  title: "Equal-limit caps publish the more specific reason",
+  date: "2026-08-23",
+  effectiveAt: 1787500014,
+  summary:
+    "When two cap candidates share a limit, Safety Score V9 now publishes the specific observed or withheld fact ahead of the generic absence reason instead of letting alphabetical ordering decide. Cap limits and score arithmetic are unchanged; only the published explanation moves.",
+  impact: [
+    "A specific observed or withheld fact outranks a generic absence reason at equal source and limit. Remaining ties fall through to source priority, then locale-independent code-unit ordering of kind and then reason, so the selection stays total and replay-stable",
+    "The candidate dedupe and binding-selection comparators were unified into one ordering function. They previously differed: only the dedupe path applied the final `reason` tie-break, so the two stages could rank identical candidates differently",
+    "On the frozen capture replay (clock 1787500014, 337 cards) no score, grade, or cap limit moves. Exactly one binding reason changes: usdaf-asymmetry publishes `peg-supply-floor-withheld` instead of `missing-applicable-peg`, both 60-point evidence ceilings. The diagnostic `caps[]` ordering also changes on 12 cards — bd-basedollar, deuro-deuro, kau-kinesis, krwq-iq, nect-beraborrow, pht-pht, scusd-rings, usdaf-asymmetry, usdu-usdu-finance, usdxl-last, weusd-picwe and xnk-kinka — where a specific peg reason now precedes `missing-applicable-peg`. Every candidate set is identical before and after; only the order moves, and two consecutive replays are byte-identical",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_CAP_AND_EVIDENCE_CLARIFICATIONS: MethodologyChangelogEntry = {
   version: "9.34",
   title: "Cap claims become integral, scope-gated, and explicit",
