@@ -1,29 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { flattenScheduledSlotGroupTasks, runScheduledSlotGroups } from "../slot-groups";
 
 function buildRuntime(
   runLeasedCron: ScheduledRuntimeContext["runLeasedCron"],
 ): ScheduledRuntimeContext {
-  return {
+  return makeScheduledRuntime({
     db: {
       prepare: () => ({
         bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
       }),
     } as unknown as D1Database,
-    env: {} as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
     cron: "0 8 * * *",
     scheduleKey: "daily0800Utc",
     scheduledTimeMs: null,
     slotStartedAt: 0,
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
     runLeasedCron,
-  };
+  });
 }
 
 describe("scheduled slot groups", () => {

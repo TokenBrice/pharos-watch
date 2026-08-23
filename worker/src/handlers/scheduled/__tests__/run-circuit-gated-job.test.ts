@@ -7,6 +7,7 @@ import {
 } from "../../../lib/circuit-breaker";
 import { runCircuitGatedLeasedScheduledJob } from "../run-circuit-gated-job";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 vi.mock("../../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(),
@@ -26,21 +27,14 @@ describe("runCircuitGatedLeasedScheduledJob", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   function buildRuntime(): ScheduledRuntimeContext {
-    return {
+    return makeScheduledRuntime({
       db: {} as D1Database,
-      env: {} as ScheduledRuntimeContext["env"],
-      ctx: {} as ExecutionContext,
       cron: "*/30 * * * *",
       scheduleKey: "halfHourlyOffset",
       scheduledTimeMs: null,
       slotStartedAt: 0,
-      mintBurnDisabledIds: [],
-      mintBurnDisabledSymbols: [],
-      mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-      coingeckoApiKey: null,
-      chainRpcs: new Map(),
       runLeasedCron: runLeasedCron as unknown as ScheduledRuntimeContext["runLeasedCron"],
-    };
+    });
   }
 
   beforeEach(() => {

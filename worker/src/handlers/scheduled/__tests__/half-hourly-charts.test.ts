@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 const mocks = vi.hoisted(() => ({
   consumeDexLiquidityScoringStage: vi.fn(),
@@ -27,26 +28,19 @@ import { runHalfHourlyChartsSlot } from "../half-hourly-charts";
 
 function runtime(): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
-  return {
+  return makeScheduledRuntime({
     db: {
       prepare: () => ({
         bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
       }),
     } as unknown as D1Database,
-    env: {} as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
     cron: "16,46 * * * *",
     scheduleKey: "halfHourlyChartsOffset",
     scheduledTimeMs: 960_000,
     slotStartedAt: 960,
     workerVersion: "worker-v1",
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
     runLeasedCron: vi.fn(async (_job, fn) => fn(signal, vi.fn())),
-  };
+  });
 }
 
 describe("half-hourly charts scheduling", () => {

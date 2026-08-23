@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 
 const mocks = vi.hoisted(() => ({
@@ -36,28 +37,21 @@ import { runDaily0300Slot } from "../daily-0300";
 
 function runtime(order: string[]): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
-  return {
+  return makeScheduledRuntime({
     db: {
       prepare: () => ({
         bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
       }),
     } as unknown as D1Database,
-    env: {} as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
     cron: "0 3 * * *",
     scheduleKey: "daily0300Utc",
     scheduledTimeMs: null,
     slotStartedAt: 0,
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
     runLeasedCron: vi.fn(async (job, fn) => {
       order.push(job);
       return fn(signal, vi.fn());
     }),
-  };
+  });
 }
 
 describe("daily 03:00 scheduling", () => {
