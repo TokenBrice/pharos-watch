@@ -2,7 +2,11 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { createHash } from "node:crypto";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import {
+  makeWorkerSafetyScoreV9Publication,
+  makeWorkerV9Card,
+  makeWorkerV9Pillars,
+} from "../../test-helpers/report-cards-v9";
 import {
   parseSafetyScoreV9Publication,
   serializeSafetyScoreV9Publication,
@@ -38,6 +42,58 @@ describe("Safety Score V9 publication codec", () => {
         stressStateDigest: "a".repeat(64),
       })),
     });
+    const compressed = gzipSync(Buffer.from(legacyPayload));
+    const stored = stableJsonStringifyV1({
+      ...envelope,
+      payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
+      uncompressedBytes: Buffer.byteLength(legacyPayload),
+      compressedBytes: compressed.byteLength,
+      payload: compressed.toString("base64"),
+    });
+
+    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
+      publication,
+    );
+  });
+
+  it("reads an authenticated V5 publication emitted before NR binding caps were suppressed", async () => {
+    const cap = {
+      kind: "reason:missing-reserve-composition",
+      limit: 55,
+      source: "evidence" as const,
+      reason: "Reserve composition is unavailable.",
+      binding: true,
+    };
+    const publication = makeWorkerSafetyScoreV9Publication({
+      cards: [
+        makeWorkerV9Card({
+          score: null,
+          grade: "NR",
+          qualityScore: null,
+          pegMultiplier: null,
+          pegAdjustedScore: null,
+          pillars: makeWorkerV9Pillars({ backing: null, exit: null, control: null }),
+          caps: [{ ...cap, binding: false }],
+          bindingCap: null,
+          nrReasons: [{
+            code: "missing-reserve-composition",
+            field: "pillars.backing",
+            message: "Reserve composition is unavailable.",
+            origin: "asset",
+          }],
+          reasonCodes: ["missing-reserve-composition"],
+        }),
+      ],
+    });
+    const envelope = JSON.parse(
+      await serializeSafetyScoreV9Publication(publication),
+    ) as Record<string, unknown>;
+    const legacyPublication = JSON.parse(
+      gunzipSync(Buffer.from(String(envelope.payload), "base64")).toString("utf8"),
+    ) as typeof publication;
+    legacyPublication.cards[0]!.caps = [cap];
+    legacyPublication.cards[0]!.bindingCap = cap;
+    const legacyPayload = stableJsonStringifyV1(legacyPublication);
     const compressed = gzipSync(Buffer.from(legacyPayload));
     const stored = stableJsonStringifyV1({
       ...envelope,
