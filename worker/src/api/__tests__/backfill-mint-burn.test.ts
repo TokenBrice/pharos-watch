@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -69,8 +70,7 @@ describe("handleBackfillMintBurn", () => {
         body: JSON.stringify({}),
       }), alchemyApiKey: "alchemy-key" });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       configKey: string;
       selectedSymbol: string;
       selectionMode: string;
@@ -92,8 +92,7 @@ describe("handleBackfillMintBurn", () => {
         body: JSON.stringify({}),
       }), alchemyApiKey: "alchemy-key" });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       configKey: string;
       selectedSymbol: string;
       selectionMode: string;
@@ -113,8 +112,7 @@ describe("handleBackfillMintBurn", () => {
         body: JSON.stringify({ configKey: "ethereum-0xdeadbeef" }),
       }), alchemyApiKey: "alchemy-key" });
 
-    expect(response.status).toBe(404);
-    const body = (await response.json()) as { error: string };
+    const body = (await readJsonResponse(response, 404)) as { error: string };
     expect(body.error).toContain("Unknown mint/burn configKey");
   });
 
@@ -156,8 +154,7 @@ describe("handleBackfillMintBurn", () => {
 
     const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       done: boolean;
       chunksProcessed: number;
       effectiveBurns: number;
@@ -189,8 +186,7 @@ describe("handleBackfillMintBurn", () => {
 
     const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       done: boolean;
       nextFromBlock: number | null;
       chunksProcessed: number;
@@ -221,8 +217,7 @@ describe("handleBackfillMintBurn", () => {
 
     const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as { done: boolean; chunksProcessed: number };
+    const body = (await readJsonResponse(response, 200)) as { done: boolean; chunksProcessed: number };
     expect(body.chunksProcessed).toBe(1);
     expect(body.done).toBe(true);
   });
@@ -376,8 +371,7 @@ describe("handleBackfillMintBurn", () => {
         }),
       }), alchemyApiKey: "alchemy-key" });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       reclassified: { flowTypeChanges: number; burnTypeChanges: number };
     };
 

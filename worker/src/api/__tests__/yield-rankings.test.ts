@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
@@ -387,8 +388,7 @@ describe("handleYieldRankings", () => {
 
     const res = await handleYieldRankings(db);
 
-    expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       rankings: Array<{
         id: string;
         safetyGrade: string;
@@ -585,9 +585,8 @@ describe("handleYieldRankings", () => {
     });
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse;
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
 
-    expect(res.status).toBe(200);
     // The cached payload's own publish-time values are coherent (one identity
     // per publish); a live identity mismatch must never null them.
     expect(body.rankings[0]).toMatchObject({
@@ -631,9 +630,8 @@ describe("handleYieldRankings", () => {
     });
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse;
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
 
-    expect(res.status).toBe(200);
     expect(body.rankings[0]).toMatchObject({
       safetyScore: null,
       safetyGrade: "NR",
@@ -655,9 +653,8 @@ describe("handleYieldRankings", () => {
     computeSafetyScoresSnapshotMock.mockRejectedValueOnce(new Error("D1 unavailable"));
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse;
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
 
-    expect(res.status).toBe(200);
     expect(body.rankings[0]).toMatchObject({
       safetyScore: 40,
       pharosYieldScore: 11,
@@ -678,9 +675,8 @@ describe("handleYieldRankings", () => {
 
     const db = makeCacheDb(v748RankingsPayload, V748_RANKINGS_UPDATED_AT);
     const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse & { _meta: { ageSeconds: number } };
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse & { _meta: { ageSeconds: number } };
 
-    expect(res.status).toBe(200);
     expect(body.rankings).toHaveLength(1);
     expect(body.rankings[0]?.publishedRank).toBeUndefined();
     // The canonical safety ladder (yield v8.33) assesses every external
@@ -1006,9 +1002,8 @@ describe("handleYieldRankings", () => {
     const db = makeCacheDb(payload, updatedAt);
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse;
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
 
-    expect(res.status).toBe(200);
     expect(body.methodology?.version).toBe(YIELD_METHODOLOGY_VERSION);
     expect(body.publication).toMatchObject({
       generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
@@ -1052,10 +1047,9 @@ describe("handleYieldRankings", () => {
     const db = makeCacheDb(payload, updatedAt);
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse;
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
     const row = body.rankings[0];
 
-    expect(res.status).toBe(200);
     // The row may only carry derived opportunity evidence — never the flattened
     // row-level shorthand the schema stripped.
     expect(row?.sourceRisk?.sourceRiskPenalty).toBeUndefined();
@@ -1221,9 +1215,8 @@ describe("handleYieldRankings", () => {
     const db = makeCacheDb(payload, updatedAt);
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse;
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
 
-    expect(res.status).toBe(200);
     expect(body.rankings[0]?.decisionLedger).toEqual({
       selectedReasonCode: "curated-over-discovered",
       previousBestSourceKey: "defillama-auto:legacy",
@@ -1271,12 +1264,11 @@ describe("handleYieldRankings", () => {
     const db = makeCacheDb(v748RankingsPayload, updatedAt);
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse & {
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse & {
       warnings?: Array<{ code: string; reasons?: string[] }>;
       _meta: { ageSeconds: number };
     };
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Warning")).toContain("199");
     expect(body.warnings?.[0]).toMatchObject({
       code: "yield-safety-hydration-stale",
@@ -1339,9 +1331,8 @@ describe("handleYieldRankings", () => {
     }, updatedAt);
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as { _meta: { ageSeconds: number; status: string } };
+    const body = await readJsonResponse(res, 200) as { _meta: { ageSeconds: number; status: string } };
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Warning")).toContain("safety-identity-missing");
     expect(body._meta.ageSeconds).toBe(3_500);
     expect(body._meta.status).toBe("fresh");

@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
@@ -362,8 +363,7 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       stats: {
         usdtBlacklisted: number;
         usdcBlacklisted: number;

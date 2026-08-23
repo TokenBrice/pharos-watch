@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { assertAllD1MatchesUsed, mockD1Strict } from "../../test-helpers/__shared/mock-d1";
@@ -124,9 +125,8 @@ describe("handleRedemptionBackstops", () => {
     ]);
 
     const response = await handleRedemptionBackstops(db);
-    expect(response.status).toBe(200);
 
-    const rawBody = await response.json();
+    const rawBody = await readJsonResponse(response, 200);
     const parsed = RedemptionBackstopsResponseSchema.safeParse(rawBody);
     expect(parsed.success).toBe(true);
     const body = rawBody as {
@@ -215,9 +215,8 @@ describe("handleRedemptionBackstops", () => {
     ]);
 
     const response = await handleRedemptionBackstops(db);
-    expect(response.status).toBe(200);
 
-    const rawBody = await response.json();
+    const rawBody = await readJsonResponse(response, 200);
     const parsed = RedemptionBackstopsResponseSchema.safeParse(rawBody);
     expect(parsed.success).toBe(true);
     expect(parsed.success ? parsed.data.methodology.version : null).toBe("4.04");
@@ -264,8 +263,7 @@ describe("handleRedemptionBackstops", () => {
     ]);
 
     const response = await handleRedemptionBackstops(db);
-    expect(response.status).toBe(200);
-    const rawBody = await response.json();
+    const rawBody = await readJsonResponse(response, 200);
     const parsed = RedemptionBackstopsResponseSchema.safeParse(rawBody);
 
     expect(parsed.success).toBe(true);
@@ -380,8 +378,7 @@ describe("handleRedemptionBackstops", () => {
     ]);
 
     const response = await handleRedemptionBackstops(db);
-    expect(response.status).toBe(200);
-    const rawBody = await response.json();
+    const rawBody = await readJsonResponse(response, 200);
     const parsed = RedemptionBackstopsResponseSchema.safeParse(rawBody);
 
     expect(parsed.success).toBe(true);

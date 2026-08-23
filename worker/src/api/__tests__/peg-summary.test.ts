@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect, vi } from "vitest";
 import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -187,8 +188,7 @@ describe("handlePegSummary", () => {
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makePegSummaryDb([asset]);
     const res = await handlePegSummary(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coins: Array<{ id: string; methodologyVersion: string; currentDeviationBps: number | null }>;
       summary: {
         activeDepegCount: number;
@@ -323,8 +323,7 @@ describe("handlePegSummary", () => {
       ]);
 
       const res = await handlePegSummary(db);
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as {
+      const body = (await readJsonResponse(res, 200)) as {
         coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
       };
       expect(body.coins.find((c) => c.id === "usdt-tether")?.dexPriceCheck).toBeUndefined();
@@ -444,8 +443,7 @@ describe("handlePegSummary", () => {
     ]);
 
     const res = await handlePegSummary(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coins: Array<{
         id: string;
         dexPriceCheck?: { dexDeviationBps: number; agrees: boolean } | null;
@@ -815,8 +813,7 @@ describe("handlePegSummary", () => {
     ]);
 
     const res = await handlePegSummary(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { coins: Array<{ id: string }> };
+    const body = (await readJsonResponse(res, 200)) as { coins: Array<{ id: string }> };
     expect(body.coins.some((coin) => coin.id === "usdt-tether")).toBe(true);
   });
 });

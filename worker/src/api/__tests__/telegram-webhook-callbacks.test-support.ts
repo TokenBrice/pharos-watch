@@ -1,6 +1,9 @@
 import { vi } from "vitest";
 import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
-import { createTelegramFetchSpy } from "../../test-helpers/__shared/telegram";
+import {
+  createTelegramFetchSpy,
+  telegramApiCallBody,
+} from "../../test-helpers/__shared/telegram";
 
 // Keep the callback suites focused on action-specific fixtures and assertions.
 vi.mock("../telegram-webhook-insights", async (importOriginal) => {
@@ -26,6 +29,38 @@ const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies")
 const { resolveTicker } = await import("../../lib/telegram-alerts");
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
+
+type InlineButton = {
+  text?: string;
+  callback_data?: string;
+  url?: string;
+  web_app?: { url?: string };
+};
+
+export type TelegramSentMessageBody = {
+  text: string;
+  reply_markup?: { inline_keyboard?: InlineButton[][] };
+};
+
+export function firstSentMessageBody(): TelegramSentMessageBody {
+  return telegramApiCallBody(fetchSpy, "sendMessage", { last: false });
+}
+
+export function lastSentMessageBody(): TelegramSentMessageBody {
+  return telegramApiCallBody(fetchSpy, "sendMessage");
+}
+
+export function firstAckBody(): { text?: string } {
+  return telegramApiCallBody(fetchSpy, "answerCallbackQuery", { last: false });
+}
+
+export function lastAckBody(): { text?: string } {
+  return telegramApiCallBody(fetchSpy, "answerCallbackQuery");
+}
+
+export function lastEditedMessageBody(): { text: string; reply_markup?: unknown } {
+  return telegramApiCallBody(fetchSpy, "editMessageText");
+}
 
 function mockD1(
   tables: Parameters<typeof baseMockD1>[0] = [],

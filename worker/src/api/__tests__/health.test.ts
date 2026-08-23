@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
@@ -192,8 +193,7 @@ describe("handleHealth", () => {
       },
     ]);
     const res = await handleHealth(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       status: string;
       timestamp: number;
       warnings: string[];
@@ -283,8 +283,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       status: "healthy" | "degraded" | "stale";
       warnings: string[];
       d1Capacity?: unknown;
@@ -327,8 +326,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       status: "healthy" | "degraded" | "stale";
       warnings: string[];
       stablecoinPublication: { status: string };
@@ -378,8 +376,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       status: "healthy" | "degraded" | "stale";
       warnings: string[];
       activePriceCoverage: {
@@ -425,9 +422,8 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    expect(res.status).toBe(200);
 
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       status: "healthy" | "degraded" | "stale";
       warnings: string[];
       mintBurn: {
@@ -580,8 +576,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       warnings: string[];
       caches: Record<
         string,
@@ -607,8 +602,7 @@ describe("handleHealth", () => {
     const db = mockD1([{ match: "SELECT 1", rows: [], throwError: new Error("db down") }]);
 
     const res = await handleHealth(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       status: "healthy" | "degraded" | "stale";
       warnings: string[];
       caches: Record<string, unknown>;
@@ -626,8 +620,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       status: "healthy" | "degraded" | "stale";
       warnings: string[];
     };

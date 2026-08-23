@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
@@ -21,8 +22,7 @@ describe("handleDexLiquidity", () => {
       { match: "dex_prices", rows: [] },
     ]);
     const res = await handleDexLiquidity(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).toHaveProperty("usdt-tether");
     const coin = body["usdt-tether"] as Record<string, unknown>;
     expect(coin).toHaveProperty("totalTvlUsd");
@@ -188,8 +188,7 @@ describe("handleDexLiquidity", () => {
     ]);
 
     const res = await handleDexLiquidity(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, Record<string, unknown>>;
     expect(body["usdt-tether"]?.protocolTvl).toEqual({});
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("[cache] Failed to parse persisted JSON (dex-liquidity:usdt-tether:protocol_tvl_json); count=1:"),
@@ -204,8 +203,7 @@ describe("handleDexLiquidity", () => {
       { match: "dex_prices", rows: [] },
     ]);
     const res = await handleDexLiquidity(db);
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await readJsonResponse(res, 200);
     expect(body).toEqual({});
   });
 
@@ -231,8 +229,7 @@ describe("handleDexLiquidity", () => {
 
     const res = await handleDexLiquidity(db);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, Record<string, unknown>>;
     expect(body["usdt-tether"]?.dexPriceUsd).toBeNull();
     expect(body["usdt-tether"]?.priceSources).toBeNull();
   });
@@ -251,8 +248,7 @@ describe("handleDexLiquidity", () => {
 
     const res = await handleDexLiquidity(db);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, Record<string, unknown>>;
     expect(body["usdt-tether"]?.deploymentCoverage).toBeNull();
   });
 
@@ -296,8 +292,7 @@ describe("handleDexLiquidity", () => {
     const res = await handleDexLiquidity(db);
     const after = Math.floor(Date.now() / 1000);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, Record<string, unknown>>;
     expect(body["usdt-tether"]?.dexPriceUsd).toBe(0.999);
     expect(body["usdt-tether"]?.priceSources).toEqual([{ source: "curve" }]);
     const age = Number(res.headers.get("X-Data-Age"));

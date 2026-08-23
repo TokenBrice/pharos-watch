@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 /**
  * Contract tests for cache-backed public handlers.
  * Object payload handlers add `_meta`; array payload handlers keep header-only freshness.
@@ -74,8 +75,7 @@ describe("cache-passthrough: handleStablecoins", () => {
     const db = makeCacheDb("stablecoins", { peggedAssets: [] }, nowSec);
     const res = await handleStablecoins(db);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       _meta: { status: string; updatedAt: number; ageSeconds: number };
     };
 
@@ -92,8 +92,7 @@ describe("cache-passthrough: handleStablecoins", () => {
     const db = makeCacheDb("stablecoins", { peggedAssets: [] }, staleUpdatedAt);
     const res = await handleStablecoins(db);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       _meta: { status: string; updatedAt: number; ageSeconds: number };
     };
     expect(body._meta.updatedAt).toBe(staleUpdatedAt);
@@ -109,8 +108,7 @@ describe("cache-passthrough: handleStablecoins", () => {
     const db = makeCacheDb("stablecoins", { peggedAssets: "not-an-array" }, nowSec);
     const res = await handleStablecoins(db);
 
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Cached stablecoins payload is malformed" });
+    expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins payload is malformed" });
   });
 
   it("serves response-ready stablecoins body when it matches the canonical cache timestamp", async () => {
@@ -131,8 +129,7 @@ describe("cache-passthrough: handleStablecoins", () => {
 
     const res = await handleStablecoins(db);
 
-    expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       peggedAssets: unknown[];
       _meta: { updatedAt: number; ageSeconds: number };
     };
@@ -155,8 +152,7 @@ describe("cache-passthrough: handleStablecoins", () => {
 
     const res = await handleStablecoins(db);
 
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Cached stablecoins payload is malformed" });
+    expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins payload is malformed" });
   });
 
   it("falls back to canonical stablecoins cache when response-ready lookup fails", async () => {
@@ -177,8 +173,7 @@ describe("cache-passthrough: handleStablecoins", () => {
 
     const res = await handleStablecoins(db);
 
-    expect(res.status).toBe(200);
-    const body = await res.json() as {
+    const body = await readJsonResponse(res, 200) as {
       peggedAssets: unknown[];
       _meta: { updatedAt: number; ageSeconds: number };
     };
@@ -201,8 +196,7 @@ describe("cache-passthrough: handleStablecoins", () => {
 
     const res = await handleStablecoins(db);
 
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Cached stablecoins payload is malformed" });
+    expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins payload is malformed" });
   });
 });
 
@@ -269,8 +263,7 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
     ]);
     const res = await handleStablecoinCharts(db);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{
+    const body = (await readJsonResponse(res, 200)) as Array<{
       date: number;
       totalCirculatingUSD: Record<string, number>;
       aggregateUniverse: string;
@@ -299,8 +292,7 @@ describe("cache-passthrough: handleUsdsStatus", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeCacheDb("usds-status", makeUsdsStatus(), nowSec - 42);
     const res = await handleUsdsStatus(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       freezeCapabilityPresent: boolean;
       implementationAddress: string;
       lastChecked: number;
@@ -323,8 +315,7 @@ describe("cache-passthrough: handleUsdsStatus", () => {
 
     const res = await handleUsdsStatus(db);
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       freezeCapabilityPresent: boolean;
       implementationAddress: string;
       lastChecked: number;
@@ -348,8 +339,7 @@ describe("cache-passthrough: handleBluechipRatings", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeCacheDb("bluechip-ratings", { "usdt-tether": makeBluechipRating() }, nowSec - 120);
     const res = await handleBluechipRatings(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
+    const body = (await readJsonResponse(res, 200)) as { _meta: { status: string; ageSeconds: number } };
     expect(body._meta.status).toBe("fresh");
     expect(body._meta.ageSeconds).toBe(120);
   });

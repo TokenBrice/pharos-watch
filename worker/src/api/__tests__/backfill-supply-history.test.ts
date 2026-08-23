@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -179,8 +180,7 @@ describe("handleBackfillSupplyHistory", () => {
   it("returns no-op response for out-of-range batches", async () => {
     const res = await handleBackfillSupplyHistoryTrusted({ db: makeDb(), url: makeApiUrl("/api/backfill-supply-history?batch=999999&batchSize=100"), request: makeApiRequest("/api/backfill-supply-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ message: "No coins in this batch" });
+    expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("inserts rows for a valid USD stablecoin detail payload", async () => {
@@ -204,8 +204,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }) });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -249,8 +248,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }) });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       rowsInserted: number;
       done: boolean;
       continuationCursor: string | null;
@@ -395,8 +393,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }) });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -470,8 +467,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }) });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -559,8 +555,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -645,8 +640,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -712,8 +706,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -794,8 +787,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -853,8 +845,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -884,8 +875,7 @@ describe("handleBackfillSupplyHistory", () => {
       request: makeApiRequest(path, { adminKey: "secret" }),
     });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { rowsInserted: number; errors?: string[] };
+    const body = (await readJsonResponse(res, 200)) as { rowsInserted: number; errors?: string[] };
     expect(body.rowsInserted).toBe(0);
     expect(body.errors?.[0]).toContain("requires contract decimals");
     expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
@@ -944,8 +934,7 @@ describe("handleBackfillSupplyHistory", () => {
       chainRpcs,
     });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -1043,8 +1032,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -1122,8 +1110,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }), coingeckoApiKey: null, chainRpcs });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -1167,8 +1154,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }), coingeckoApiKey: null });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -1228,8 +1214,7 @@ describe("handleBackfillSupplyHistory", () => {
         adminKey: "secret",
       }) });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
       rowsInserted: number;
       errors?: string[];
@@ -1289,8 +1274,7 @@ describe("handleBackfillSupplyHistory", () => {
     const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10";
     const res = await handleBackfillSupplyHistoryTrusted({ db: makeDb(), url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }) });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { errors?: string[] };
+    const body = (await readJsonResponse(res, 200)) as { errors?: string[] };
     expect(body.errors?.[0]).toContain("no TVL history");
     expect(priceBodyConsumed).toBe(true);
   });

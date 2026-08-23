@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleStablecoinSummary } from "../stablecoin-summary";
@@ -34,8 +35,7 @@ describe("handleStablecoinSummary", () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
     const res = await handleStablecoinSummary(db, "usdt-tether");
 
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Cached stablecoins data is corrupt" });
+    expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins data is corrupt" });
   });
 
   it("returns 503 when stablecoins cache is corrupt", async () => {
@@ -45,8 +45,7 @@ describe("handleStablecoinSummary", () => {
     ]);
     const res = await handleStablecoinSummary(db, "usdt-tether");
 
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Cached stablecoins data is corrupt" });
+    expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins data is corrupt" });
   });
 
   it("returns 503 when stablecoins cache payload is structurally invalid", async () => {
@@ -56,8 +55,7 @@ describe("handleStablecoinSummary", () => {
     ]);
     const res = await handleStablecoinSummary(db, "usdt-tether");
 
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Cached stablecoins data is corrupt" });
+    expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins data is corrupt" });
   });
 
   it("returns 404 when stablecoin id is missing in cache payload", async () => {
@@ -67,8 +65,7 @@ describe("handleStablecoinSummary", () => {
     ]);
     const res = await handleStablecoinSummary(db, "999");
 
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Stablecoin 999 not found" });
+    expect(await readJsonResponse(res, 404)).toEqual({ error: "Stablecoin 999 not found" });
   });
 
   it("returns compact per-coin summary with freshness headers", async () => {

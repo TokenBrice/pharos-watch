@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it, vi } from "vitest";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { handleRequestSourceStats } from "../request-source-stats";
@@ -102,9 +103,8 @@ describe("handleRequestSourceStats", () => {
 
     const request = new Request("https://ops-api.pharos.watch/api/request-source-stats?hours=24&bucketSec=3600&routeLimit=2");
     const response = await handleRequestSourceStats({ db, trustedAdmin: true, request });
-    const body = await response.json() as ApiRequestAttributionResponse;
+    const body = await readJsonResponse(response, 200) as ApiRequestAttributionResponse;
 
-    expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.totals).toEqual({
       siteRequests: 600,

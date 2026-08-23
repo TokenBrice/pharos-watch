@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
@@ -13,8 +14,7 @@ describe("handleMintBurnEvents", () => {
       { match: "mint_burn_events", rows: [row] },
     ]);
     const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number };
+    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
   });
@@ -90,8 +90,7 @@ describe("handleMintBurnEvents", () => {
       db,
       new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&burnType=bridge_burn"),
     );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: Array<{ burnType: string | null }> };
+    const body = (await readJsonResponse(res, 200)) as { events: Array<{ burnType: string | null }> };
     expect(body.events[0]?.burnType).toBe("bridge_burn");
   });
 
@@ -109,8 +108,7 @@ describe("handleMintBurnEvents", () => {
       db,
       new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"),
     );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: Array<{ flowType: string }> };
+    const body = (await readJsonResponse(res, 200)) as { events: Array<{ flowType: string }> };
     expect(body.events[0]?.flowType).toBe("atomic_roundtrip");
   });
 
@@ -127,8 +125,7 @@ describe("handleMintBurnEvents", () => {
       db,
       new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"),
     );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: Array<{ flowType: string }> };
+    const body = (await readJsonResponse(res, 200)) as { events: Array<{ flowType: string }> };
     expect(body.events[0]?.flowType).toBe("bridge_transfer");
   });
 
@@ -215,8 +212,7 @@ describe("handleMintBurnEvents", () => {
       new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&includeTotal=false"),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number; totalExact: boolean };
+    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number; totalExact: boolean };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
     expect(body.totalExact).toBe(false);

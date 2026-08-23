@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -142,8 +143,7 @@ describe("handleSnapshotsIndex", () => {
   it("returns an empty list when no snapshots exist", async () => {
     const db = mockD1([{ match: "FROM public_snapshots", rows: [] }]);
     const res = await handleSnapshotsIndex(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { snapshots: unknown[] };
+    const body = (await readJsonResponse(res, 200)) as { snapshots: unknown[] };
     expect(body.snapshots).toEqual([]);
   });
 
@@ -170,8 +170,7 @@ describe("handleSnapshotsIndex", () => {
       },
     ]);
     const res = await handleSnapshotsIndex(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       snapshots: {
         snapshotDate: string;
         contentHash: string;
@@ -248,8 +247,7 @@ describe("handleSnapshotsIndex", () => {
       const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
 
       const response = await handleSnapshotCoin(db, transitionDate, "usdc-circle");
-      expect(response.status).toBe(200);
-      const body = (await response.json()) as {
+      const body = (await readJsonResponse(response, 200)) as {
         safetyScoreIdentity: unknown;
         scores: { reportCard: { grade: string } | null };
       };
@@ -276,11 +274,10 @@ describe("handleSnapshotDay", () => {
     const row = await buildSnapshotRow();
     const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
     const res = await handleSnapshotDay(db, ISO_DATE);
-    expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe(
       "public, s-maxage=31536000, max-age=31536000, immutable",
     );
-    const body = (await res.json()) as { snapshotDate: string; stablecoins: { id: string }[] };
+    const body = (await readJsonResponse(res, 200)) as { snapshotDate: string; stablecoins: { id: string }[] };
     expect(body.snapshotDate).toBe(ISO_DATE);
     expect(body.stablecoins.map((c) => c.id).sort()).toEqual(["usdc-circle", "usdt-tether"]);
     expect(res.headers.get("etag")).toBe(`"${row.content_hash}"`);
@@ -441,11 +438,10 @@ describe("handleSnapshotCoin", () => {
     const row = await buildSnapshotRow();
     const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
     const res = await handleSnapshotCoin(db, ISO_DATE, "usdc-circle");
-    expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe(
       "public, s-maxage=31536000, max-age=31536000, immutable",
     );
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       snapshotDate: string;
       stablecoinId: string;
       methodologyVersions: { pegScore: string };
@@ -473,8 +469,7 @@ describe("handleSnapshotCoin", () => {
     const row = await buildSnapshotRow();
     const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
     const res = await handleSnapshotCoin(db, ISO_DATE, "usdt-tether");
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       stablecoinId: string;
       scores: {
         reportCard: unknown;

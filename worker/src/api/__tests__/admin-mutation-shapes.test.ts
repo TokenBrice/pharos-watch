@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 /**
  * Per-handler shape contracts for the mutation-heaviest admin handlers.
  *
@@ -44,8 +45,7 @@ describe("handleAuditDepegHistory shape", () => {
 
     const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).toMatchObject({
       dryRun: true,
       totalMatching: expect.any(Number),
@@ -63,8 +63,7 @@ describe("handleAuditDepegHistory shape", () => {
 
     const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(typeof body.error).toBe("string");
   });
 });
@@ -79,8 +78,7 @@ describe("handleReclassifyAtomicRoundtrips shape", () => {
 
     const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).toMatchObject({
       done: expect.any(Boolean),
       since: expect.any(Number),
@@ -99,8 +97,7 @@ describe("handleReclassifyAtomicRoundtrips shape", () => {
 
     const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(typeof body.error).toBe("string");
   });
 });
@@ -117,8 +114,7 @@ describe("handleRemediateBlacklistAmountGaps shape", () => {
 
     const res = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl(req.url), request: req });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).toMatchObject({
       ok: true,
       dryRun: true,
@@ -142,8 +138,7 @@ describe("handleRemediateBlacklistAmountGaps shape", () => {
 
     const res = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl(req.url), request: req });
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(typeof body.error).toBe("string");
   });
 });
@@ -157,8 +152,7 @@ describe("handleBackfillSupplyHistory shape", () => {
 
     const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).toMatchObject({ message: expect.any(String) });
   });
 
@@ -170,8 +164,7 @@ describe("handleBackfillSupplyHistory shape", () => {
 
     const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
 
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(typeof body.error).toBe("string");
   });
 });

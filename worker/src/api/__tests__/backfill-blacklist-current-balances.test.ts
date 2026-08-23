@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -31,8 +32,7 @@ describe("handleBackfillBlacklistCurrentBalances", () => {
 
     const response = await handleBackfillBlacklistCurrentBalances({ db, url: makeApiUrl("/api/backfill-blacklist-current-balances?stablecoin=USDT&chainId=optimism&dryRun=true&limit=10"), trustedAdmin: true, request });
 
-    expect(response.status).toBe(200);
-    const body = await response.json() as {
+    const body = await readJsonResponse(response, 200) as {
       dryRun: boolean;
       configs: Array<{ configKey: string; candidateCount: number; truncated: boolean }>;
       truncated: boolean;

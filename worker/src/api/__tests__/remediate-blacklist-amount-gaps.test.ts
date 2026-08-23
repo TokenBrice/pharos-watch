@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -155,8 +156,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
 
     const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs });
 
-    expect(response.status).toBe(200);
-    const body = await response.json() as {
+    const body = await readJsonResponse(response, 200) as {
       dryRun: boolean;
       candidateCount: number;
       resolutionCounts: Record<string, number>;
@@ -199,8 +199,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
 
     const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs });
 
-    expect(response.status).toBe(200);
-    const body = await response.json() as {
+    const body = await readJsonResponse(response, 200) as {
       filters: { onlyMissingProvenance: boolean };
       candidateCount: number;
       resolutionCounts: Record<string, number>;
@@ -227,8 +226,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
 
     const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?onlyMissingProvenance=true"), request, chainRpcs: testChainRpcs });
 
-    expect(response.status).toBe(200);
-    const body = await response.json() as {
+    const body = await readJsonResponse(response, 200) as {
       filters: { onlyMissingProvenance: boolean };
       candidateCount: number;
     };
@@ -255,8 +253,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
 
     const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs });
 
-    expect(response.status).toBe(200);
-    const body = await response.json() as { filters: { maxAttempts: number } };
+    const body = await readJsonResponse(response, 200) as { filters: { maxAttempts: number } };
     expect(body.filters.maxAttempts).toBe(0);
     const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
     // maxAttempts clamped to 0 means the COALESCE(amount_attempt_count, 0) <= ? guard is skipped,
@@ -311,8 +308,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
 
     const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs });
 
-    expect(response.status).toBe(200);
-    const body = await response.json() as {
+    const body = await readJsonResponse(response, 200) as {
       applied: {
         resolved: number;
         resolvedZero: number;

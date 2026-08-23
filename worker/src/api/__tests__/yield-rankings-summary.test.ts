@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldRankingsSummaryResponseSchema } from "@shared/types/yield-summary";
 import type { YieldRankingsResponse } from "@shared/types/yield";
@@ -97,9 +98,8 @@ describe("handleYieldRankings summary projection", () => {
       makeCacheDb(makePayload()),
       new URL("https://api.pharos.watch/api/yield-rankings?projection=summary"),
     );
-    const body = YieldRankingsSummaryResponseSchema.parse(await response.json());
+    const body = YieldRankingsSummaryResponseSchema.parse(await readJsonResponse(response, 200));
 
-    expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toContain("s-maxage=300");
     expect(body).toMatchObject({
       projection: "summary",
@@ -129,9 +129,8 @@ describe("handleYieldRankings summary projection", () => {
       makeCacheDb(makePayload()),
       new URL("https://api.pharos.watch/api/yield-rankings"),
     );
-    const body = (await response.json()) as YieldRankingsResponse;
+    const body = (await readJsonResponse(response, 200)) as YieldRankingsResponse;
 
-    expect(response.status).toBe(200);
     expect(body).not.toHaveProperty("projection");
     expect(body.rankings[0].altSources).toHaveLength(1);
     expect(body.rankings[0].decisionLedger?.alternatives).toHaveLength(1);

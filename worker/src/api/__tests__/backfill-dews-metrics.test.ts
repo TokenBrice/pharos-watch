@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -46,8 +47,7 @@ describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
     });
     const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       detectionRate: number;
       precision: number | null;
       recall: number;

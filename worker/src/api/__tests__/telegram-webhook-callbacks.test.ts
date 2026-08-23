@@ -1,26 +1,14 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   fetchSpy,
+  firstAckBody,
   handleCallbackQuery,
+  lastAckBody,
+  lastSentMessageBody,
   mockD1,
   resetCallbackTest,
   resolveTicker,
 } from "./telegram-webhook-callbacks.test-support";
-import {
-  lastSendMessageBody,
-  telegramApiCallBody,
-} from "../../test-helpers/__shared/telegram";
-
-
-
-function lastSentMessageBody(): {
-  text: string;
-  reply_markup?: {
-    inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
-  };
-} {
-  return lastSendMessageBody(fetchSpy);
-}
 
 
 
@@ -30,13 +18,9 @@ function lastSentMessageBody(): {
 
 
 
-function lastAckBody(): { text?: string } {
-  return telegramApiCallBody(fetchSpy, "answerCallbackQuery");
-}
 
-function firstAckBody(): { text?: string } {
-  return telegramApiCallBody(fetchSpy, "answerCallbackQuery", { last: false });
-}
+
+
 
 
 

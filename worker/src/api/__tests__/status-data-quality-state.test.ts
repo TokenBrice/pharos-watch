@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleStatus,
@@ -587,9 +588,8 @@ describe("handleStatus", () => {
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
-    expect(res.status).toBe(200);
 
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       dbHealthy: boolean;
       availabilityStatus: "healthy" | "degraded" | "stale";
       dataQualityStatus: "healthy" | "degraded" | "stale";
@@ -635,9 +635,8 @@ describe("handleStatus", () => {
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
-    expect(res.status).toBe(200);
 
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       availabilityStatus: "healthy" | "degraded" | "stale";
       causes: { availability: Array<{ code: string }> };
     };

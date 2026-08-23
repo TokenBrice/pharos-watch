@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it } from "vitest";
 import { TELEGRAM_PENDING_CAPACITY_SQL } from "../../lib/telegram-pending-capacity";
 import {
@@ -143,8 +144,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       budgetOnlySurfaces: Array<{
         job: string;
         telemetryStatus: string;
@@ -595,9 +595,8 @@ describe("handleStatus", () => {
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
-    const body = (await res.json()) as { telegramBot: unknown };
+    const body = (await readJsonResponse(res, 200)) as { telegramBot: unknown };
 
-    expect(res.status).toBe(200);
     expect(body.telegramBot).toBeNull();
   });
 
@@ -665,13 +664,12 @@ describe("handleStatus", () => {
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       dbHealthy: boolean;
       rawOverallStatus: string;
       overallStatus: string;
     };
 
-    expect(res.status).toBe(200);
     expect(body.dbHealthy).toBe(false);
     expect(["degraded", "stale"]).toContain(body.rawOverallStatus);
     expect(["degraded", "stale"]).toContain(body.overallStatus);

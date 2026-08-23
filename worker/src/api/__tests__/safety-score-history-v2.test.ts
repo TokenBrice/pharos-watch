@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -48,8 +49,7 @@ describe("handleSafetyScoreHistoryV2", () => {
       new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
     );
 
-    expect(response.status).toBe(200);
-    const body = SafetyScoreHistoryV2ResponseSchema.parse(await response.json());
+    const body = SafetyScoreHistoryV2ResponseSchema.parse(await readJsonResponse(response, 200));
     expect(body).toMatchObject({
       schemaVersion: 2,
       history: [
@@ -99,8 +99,7 @@ describe("handleSafetyScoreHistoryV2", () => {
       new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
     );
 
-    expect(response.status).toBe(200);
-    const body = SafetyScoreHistoryV2ResponseSchema.parse(await response.json());
+    const body = SafetyScoreHistoryV2ResponseSchema.parse(await readJsonResponse(response, 200));
     expect(body.history).toEqual([
       {
         date: 200,

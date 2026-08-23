@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { handleDepegResolver } from "../depeg-resolver";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -285,9 +286,8 @@ describe("handleDepegResolver", () => {
     const db = mockD1(cacheRows(payload));
 
     const res = await handleDepegResolver(db);
-    const body = (await res.json()) as DdrResponse;
+    const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.schemaVersion).toBe(2);
     expect(body._meta.degraded).toBe(true);
@@ -310,9 +310,8 @@ describe("handleDepegResolver", () => {
     ]);
 
     const res = await handleDepegResolver(db);
-    const body = (await res.json()) as DdrResponse;
+    const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
-    expect(res.status).toBe(200);
     expect(body.rows[0].live.eventState).toBe("closed_pending_review");
     expect(body._meta.readOverlay.closedPendingReviewIncidentKeys).toContain("ddr2:11111111111111111111111111111111");
   });
@@ -346,9 +345,8 @@ describe("handleDepegResolver", () => {
     ]);
 
     const res = await handleDepegResolver(db);
-    const body = (await res.json()) as DdrResponse;
+    const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
-    expect(res.status).toBe(200);
     expect(body.rows[0].kind).toBe("invalidated_prediction");
     if (body.rows[0].kind !== "invalidated_prediction") throw new Error("expected invalidated row");
     expect(body.rows[0].originalKind).toBe("prediction");
@@ -452,9 +450,8 @@ describe("handleDepegResolver", () => {
     ]);
 
     const res = await handleDepegResolver(db);
-    const body = (await res.json()) as DdrResponse;
+    const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
-    expect(res.status).toBe(200);
     expect(body._meta.basePayloadHash).toBeNull();
     expect(body._meta.readOverlay.degradedLockDeferralIncidentKeys).toContain("ddr2:22222222222222222222222222222222");
     expect(body.rows[0].kind).toBe("pending");
@@ -480,9 +477,8 @@ describe("handleDepegResolver", () => {
     ]);
 
     const res = await handleDepegResolver(db);
-    const body = (await res.json()) as DdrResponse;
+    const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.snapshotToken).toBe("ddrpub_002");
     expect(body._meta.degradedReason).toBe("manifest-fallback:cache-manifest-token-behind");
@@ -498,9 +494,8 @@ describe("handleDepegResolver", () => {
     const db = mockD1(cacheRows(payload));
 
     const res = await handleDepegResolver(db);
-    const body = (await res.json()) as DdrResponse;
+    const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.degradedReason).toBe("base-payload-hash-mismatch");
@@ -541,9 +536,8 @@ describe("handleDepegResolver", () => {
     ]);
 
     const res = await handleDepegResolver(db);
-    const body = (await res.json()) as DdrResponse;
+    const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.readOverlay.degradedLockDeferralIncidentKeys).toContain("ddr2:22222222222222222222222222222222");

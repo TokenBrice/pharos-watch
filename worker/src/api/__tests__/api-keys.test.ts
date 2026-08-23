@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../../index";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -67,9 +68,8 @@ describe("api key handlers", () => {
       makeApiRequest("/api/api-keys", { adminKey: "secret-key" }),
       "pepper",
     );
-    const body = (await response.json()) as { keys: Array<{ expiresAt: number | null }> };
+    const body = (await readJsonResponse(response, 200)) as { keys: Array<{ expiresAt: number | null }> };
 
-    expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.keys).toHaveLength(1);
     expect(body.keys[0]?.expiresAt).toBe(900);
@@ -102,9 +102,8 @@ describe("api key handlers", () => {
     vi.setSystemTime(new Date(nowSec * 1000));
 
     const response = await handleCredentialLifecycleSummary(db, true);
-    const body = (await response.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(response, 200)) as Record<string, unknown>;
 
-    expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body).toEqual({
       generatedAt: nowSec,
@@ -160,9 +159,8 @@ describe("api key handlers", () => {
       }),
       "pepper",
     );
-    const body = (await response.json()) as { key: { expiresAt: number | null } };
+    const body = (await readJsonResponse(response, 201)) as { key: { expiresAt: number | null } };
 
-    expect(response.status).toBe(201);
     expect(body.key.expiresAt).toBe(nowSec + 90 * 24 * 60 * 60);
     vi.useRealTimers();
   });
@@ -213,9 +211,8 @@ describe("api key handlers", () => {
         body: JSON.stringify({ expiresAt: 5_000 }),
       }),
     );
-    const body = (await response.json()) as { key: { expiresAt: number | null } };
+    const body = (await readJsonResponse(response, 200)) as { key: { expiresAt: number | null } };
 
-    expect(response.status).toBe(200);
     expect(body.key.expiresAt).toBe(5_000);
   });
 
@@ -301,9 +298,8 @@ describe("api key handlers", () => {
       }),
       "pepper",
     );
-    const body = (await response.json()) as { key: { expiresAt: number | null } };
+    const body = (await readJsonResponse(response, 200)) as { key: { expiresAt: number | null } };
 
-    expect(response.status).toBe(200);
     expect(body.key.expiresAt).toBe(5_000);
   });
 
@@ -346,9 +342,8 @@ describe("api key handlers", () => {
       }),
       "pepper",
     );
-    const body = (await response.json()) as Record<string, unknown>;
+    const body = (await readJsonResponse(response, 503)) as Record<string, unknown>;
 
-    expect(response.status).toBe(503);
     expect(response.headers.get("X-Execution-Certainty")).toBe("unknown");
     expect(body).toMatchObject({
       error: "api_key_post_write_readback_failed",
@@ -400,8 +395,7 @@ describe("api key handlers", () => {
       ctx,
     );
 
-    expect(response.status).toBe(401);
-    const body = (await response.json()) as { error: string };
+    const body = (await readJsonResponse(response, 401)) as { error: string };
     expect(body.error).toMatch(/Unauthorized/);
     await Promise.all(waits);
   });

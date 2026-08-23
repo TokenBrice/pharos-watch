@@ -1,26 +1,14 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import {
-  fetchSpy,
   handleCallbackQuery,
+  lastAckBody,
+  lastSentMessageBody,
   mockD1,
   resetCallbackTest,
   sendAuditedTelegramReply,
 } from "./telegram-webhook-callbacks.test-support";
-import {
-  lastSendMessageBody,
-  telegramApiCallBody,
-} from "../../test-helpers/__shared/telegram";
 
 
-
-function lastSentMessageBody(): {
-  text: string;
-  reply_markup?: {
-    inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
-  };
-} {
-  return lastSendMessageBody(fetchSpy);
-}
 
 
 
@@ -48,9 +36,6 @@ function pendingRowFromForget(
 
 
 
-function lastAckBody(): { text?: string } {
-  return telegramApiCallBody(fetchSpy, "answerCallbackQuery");
-}
 
 
 

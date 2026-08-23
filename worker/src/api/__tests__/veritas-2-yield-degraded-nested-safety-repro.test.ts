@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it, vi } from "vitest";
 import type { YieldRankingsResponse } from "@shared/types/yield";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -112,12 +113,11 @@ describe("VERITAS-II finding: degraded yield rows retain nested safety numbers",
     });
 
     const response = await handleYieldRankings(db);
-    const body = (await response.json()) as YieldRankingsResponse;
+    const body = (await readJsonResponse(response, 200)) as YieldRankingsResponse;
     const row = body.rankings[0]!;
     const selectedRisk = row.sourceRisk;
     const alternateRisk = row.altSources[0]?.sourceRisk;
 
-    expect(response.status).toBe(200);
     expect(row).toMatchObject({
       safetyScore: null,
       safetyGrade: "NR",

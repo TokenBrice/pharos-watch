@@ -6,49 +6,16 @@ import {
   makeCallbackRequest,
   sentMessageBody,
   resetTelegramWebhookTest,
-  fixtureMockD1 as baseFixtureMockD1,
+  makeTelegramWebhookDb,
   fixtureTelegramApiCallBody,
 } from "./telegram-webhook.test-support";
 
-function fixtureMockD1(
-  tables: Parameters<typeof baseFixtureMockD1>[0] = [],
-  options: Parameters<typeof baseFixtureMockD1>[1] = {},
-) {
-  return baseFixtureMockD1([
-    ...tables,
-    { match: "FROM telegram_subscribers", rows: [], first: null },
-    { match: "FROM telegram_subscriptions", rows: [] },
-    { match: "FROM telegram_preset_subscriptions", rows: [] },
-    { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
-    { match: "FROM telegram_pending_alerts", rows: [], first: null },
-    { match: "FROM telegram_recap_preferences", rows: [], first: null },
-    { match: "FROM cache", rows: [], first: null },
-    { match: "FROM price_cache", rows: [], first: null },
-    { match: "FROM dex_liquidity", rows: [], first: null },
-    { match: "FROM yield_data", rows: [], first: null },
-    { match: "FROM stress_signals", rows: [], first: null },
-    { match: "FROM depeg_events", rows: [], first: null },
-    { match: "INSERT INTO telegram_subscribers", rows: [] },
-    { match: "UPDATE telegram_subscribers", rows: [] },
-    { match: "INSERT INTO telegram_subscriptions", rows: [] },
-    { match: "UPDATE telegram_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
-    { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
-    { match: "INSERT INTO telegram_usage_daily", rows: [] },
-    { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "INSERT INTO cache", rows: [] },
-    { match: "DELETE FROM cache", rows: [] },
-  ], options);
-}
 
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
   it("drops callback taps over the ingress flood cap before callback handlers run", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "RETURNING value",
         rows: [{ value: "21" }],
@@ -67,7 +34,7 @@ describe("handleTelegramWebhook", () => {
 
   it("rate-limits status callbacks through the /status cooldown bucket", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "INSERT INTO cache (key, value, updated_at)",
         matchBinds: ["telegram:command-cooldown:123:/status", "1", 1_700_000_000, 1_699_999_980],
@@ -93,7 +60,7 @@ describe("handleTelegramWebhook", () => {
 
   it("releases a status callback cooldown when the callback handler throws", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const db = fixtureMockD1([{ match: "FROM stress_signals", rows: [], throwError: new Error("status read failed") }]);
+    const db = makeTelegramWebhookDb([{ match: "FROM stress_signals", rows: [], throwError: new Error("status read failed") }]);
 
     const res = await handleTelegramWebhook(db, makeCallbackRequest("status:usdc-circle"), "test-secret", "bot-token");
 
@@ -113,7 +80,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("executes private quicksub through the webhook with the expected mutations and Telegram transcript", async () => {
-    const db = fixtureMockD1();
+    const db = makeTelegramWebhookDb();
 
     const res = await handleTelegramWebhook(
       db,
@@ -165,7 +132,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("rejects channel-originated mutating callbacks before callback handlers run", async () => {
-    const db = fixtureMockD1();
+    const db = makeTelegramWebhookDb();
 
     const res = await handleTelegramWebhook(
       db,
@@ -181,7 +148,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("confirm:bulk callback executes a deferred /unsubscribe all", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -213,7 +180,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("cancel:bulk callback clears pending without executing", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -245,7 +212,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("pending confirm-bulk ignores plain text replies in private chats with a reminder", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -294,7 +261,7 @@ describe("handleTelegramWebhook", () => {
       expires_at: Math.floor(Date.now() / 1000) + 60,
       initiator_user_id: "999",
     };
-    const nonInitiatorDb = fixtureMockD1([
+    const nonInitiatorDb = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -313,7 +280,7 @@ describe("handleTelegramWebhook", () => {
 
     fetchSpy.mockClear();
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    const initiatorDb = fixtureMockD1([
+    const initiatorDb = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -332,7 +299,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("pending forget-confirm ignores plain text replies in private chats with a reminder", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],

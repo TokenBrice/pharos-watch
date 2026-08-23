@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -13,9 +14,8 @@ describe("handleStablecoinReserves", () => {
     ]);
     const res = await handleStablecoinReserves(db, "usdai-usd-ai");
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
-    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body).toMatchObject({
       mode: "curated-fallback",
       estimated: false,
@@ -41,9 +41,8 @@ describe("handleStablecoinReserves", () => {
       { match: "FROM reserve_sync_state", rows: [] },
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
-    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.mode).toBe("curated-fallback");
     expect(body.estimated).toBe(false);
     expect(body.displayBadge).toBeUndefined();
@@ -95,9 +94,8 @@ describe("handleStablecoinReserves", () => {
       },
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=3600, max-age=300");
-    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.reserves).toEqual(slices);
     expect(body.estimated).toBe(false);
     expect(body.source).toBe("infinifi");
@@ -160,9 +158,8 @@ describe("handleStablecoinReserves", () => {
     ]);
 
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
-    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.mode).toBe("curated-fallback");
     expect(body.provenance).toBeUndefined();
     expect(body.displayBadge).toBeUndefined();
@@ -260,8 +257,7 @@ describe("handleStablecoinReserves", () => {
       },
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    expect(res.status).toBe(200);
-    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
   });
 
@@ -296,8 +292,7 @@ describe("handleStablecoinReserves", () => {
     ]);
 
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    expect(res.status).toBe(200);
-    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.sync).toMatchObject({
       status: "error",
       uncertainWrite: true,
@@ -345,8 +340,7 @@ describe("handleStablecoinReserves", () => {
     ]);
 
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    expect(res.status).toBe(200);
-    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.mode).toBe("live-stale");
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=1800, max-age=120");
   });
@@ -358,8 +352,7 @@ describe("handleStablecoinReserves", () => {
       { match: "FROM reserve_sync_state", rows: [] },
     ]);
     const res = await handleStablecoinReserves(db, "usdai-usd-ai");
-    expect(res.status).toBe(200);
-    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.mode).toBe("curated-fallback");
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
   });

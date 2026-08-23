@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DDR_METHODOLOGY_VERSION,
@@ -164,9 +165,8 @@ describe("handleDepegResolverReview", () => {
     ]);
 
     const res = await handleDepegResolverReview(db);
-    const body = (await res.json()) as DdrrApiTestBody;
+    const body = (await readJsonResponse(res, 200)) as DdrrApiTestBody;
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(["invalid-payload", "reviewer-version-mismatch"]).toContain(body._meta.degradedReason);
@@ -181,9 +181,8 @@ describe("handleDepegResolverReview", () => {
     const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: [] }]);
 
     const res = await handleDepegResolverReview(db);
-    const body = (await res.json()) as DdrrApiTestBody;
+    const body = (await readJsonResponse(res, 200)) as DdrrApiTestBody;
 
-    expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.degradedReason).toBe("missing-cache");

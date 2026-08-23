@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -230,8 +231,7 @@ describe("handleStressSignals contract tests", () => {
     const url = new URL("https://x/api/stress-signals");
     const res = await handleStressSignals(db, url);
 
-    expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await readJsonResponse(res, 200);
 
     const parsed = StressSignalsAllResponseSchema.safeParse(json);
     expect(parsed.success).toBe(true);
@@ -268,8 +268,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { computedCount: number; signals: Record<string, unknown> };
+    const body = (await readJsonResponse(res, 200)) as { computedCount: number; signals: Record<string, unknown> };
     expect(body.computedCount).toBe(1);
     expect(body.signals).toHaveProperty("usdt-tether");
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
@@ -306,8 +305,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       computedCount: number;
       signals: Record<string, { score: number }>;
     };
@@ -334,8 +332,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       computedCount: number;
       signals: Record<string, { score: number; computedAt: number }>;
     };
@@ -379,8 +376,7 @@ describe("handleStressSignals contract tests", () => {
     const url = new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7");
     const res = await handleStressSignals(db, url);
 
-    expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await readJsonResponse(res, 200);
 
     const parsed = StressSignalDetailResponseSchema.safeParse(json);
     expect(parsed.success).toBe(true);
@@ -415,8 +411,7 @@ describe("handleStressSignals contract tests", () => {
       new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: { score: number; computedAt: number } | null;
       currentStatus: string;
     };
@@ -448,8 +443,7 @@ describe("handleStressSignals contract tests", () => {
       new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: { score: number; computedAt: number } | null;
       currentStatus: string;
     };
@@ -488,8 +482,7 @@ describe("handleStressSignals contract tests", () => {
     ]);
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
       malformedRows: number;
     };
@@ -517,8 +510,7 @@ describe("handleStressSignals contract tests", () => {
     ]);
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
     };
     expect(body.signals).toHaveProperty("usdt-tether");
@@ -551,8 +543,7 @@ describe("handleStressSignals contract tests", () => {
     ]);
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
       eligibleCount: number;
       computedCount: number;
@@ -576,8 +567,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       computedCount: number;
       missingCount: number;
       coverageStatus: string;
@@ -609,8 +599,7 @@ describe("handleStressSignals contract tests", () => {
     ]);
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, {
         signals: Record<string, unknown>;
         amplifiers: { psi: number; contagion: number };
@@ -640,8 +629,7 @@ describe("handleStressSignals contract tests", () => {
     ]);
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, { amplifiers: { psi: number; contagion: number } }>;
     };
     expect(body.signals["usdt-tether"].amplifiers).toEqual({ psi: 1, contagion: 1 });
@@ -680,8 +668,7 @@ describe("handleStressSignals contract tests", () => {
       db,
       new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
     );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: { amplifiers: { psi: number; contagion: number }; signals: Record<string, unknown> } | null;
       history: { amplifiers: { psi: number; contagion: number }; signals: Record<string, unknown> }[];
     };
@@ -716,8 +703,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       updatedAt: number;
       oldestComputedAt?: number;
       signals: Record<string, { ageClassification?: string }>;
@@ -746,8 +732,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, { ageClassification?: string }>;
     };
     expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(7_400);
@@ -760,8 +745,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       computedCount: number;
       coverageStatus: string;
       coverageReasons: string[];
@@ -781,8 +765,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       updatedAt: number;
       computedCount: number;
       coverageStatus: string;
@@ -817,8 +800,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
       computedCount: number;
       malformedRows: number;
@@ -843,8 +825,7 @@ describe("handleStressSignals contract tests", () => {
       new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: unknown;
       currentStatus: string;
       currentReasons: string[];
@@ -873,8 +854,7 @@ describe("handleStressSignals contract tests", () => {
       new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: { ageClassification?: string } | null;
     };
     expect(body.current?.ageClassification).toBe("stale");
@@ -904,8 +884,7 @@ describe("handleStressSignals contract tests", () => {
       new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
     );
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       current: unknown;
       currentReasons: string[];
       history: unknown[];
@@ -931,8 +910,7 @@ describe("handleStressSignals contract tests", () => {
 
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
       coverageStatus: string;
       coverageReasons: string[];

@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import {
   handleDebugSyncState,
@@ -15,8 +16,7 @@ describe("admin mutation auth — custom header required for mutating methods", 
       request: req,
       trustedAdmin: true,
     });
-    expect(res.status).toBe(403);
-    const body = (await res.json()) as { error: string };
+    const body = (await readJsonResponse(res, 403)) as { error: string };
     expect(body.error).toMatch(/admin header/i);
   });
 

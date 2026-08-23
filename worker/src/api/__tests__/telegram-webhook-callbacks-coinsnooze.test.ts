@@ -1,13 +1,12 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import {
+  firstAckBody,
   fetchSpy,
   handleCallbackQuery,
+  lastAckBody,
   mockD1,
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
-import {
-  telegramApiCallBody,
-} from "../../test-helpers/__shared/telegram";
 
 
 
@@ -21,13 +20,6 @@ import {
 
 
 
-function lastAckBody(): { text?: string } {
-  return telegramApiCallBody(fetchSpy, "answerCallbackQuery");
-}
-
-function firstAckBody(): { text?: string } {
-  return telegramApiCallBody(fetchSpy, "answerCallbackQuery", { last: false });
-}
 
 
 

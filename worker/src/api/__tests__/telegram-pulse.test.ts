@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import {
   mockD1 as baseMockD1,
@@ -68,8 +69,7 @@ describe("handleTelegramPulse", () => {
     ]);
 
     const response = await handleTelegramPulse(db);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
+    expect(await readJsonResponse(response, 200)).toEqual({
       ...cachedPulse,
       newWatchersToday: null,
       pendingDeliveries: null,
@@ -165,9 +165,8 @@ describe("handleTelegramPulse", () => {
     ]);
 
     const response = await handleTelegramPulse(db);
-    const body = (await response.json()) as { activeWatchers: number; topCoins: string[]; quality: { status: string } };
+    const body = (await readJsonResponse(response, 200)) as { activeWatchers: number; topCoins: string[]; quality: { status: string } };
 
-    expect(response.status).toBe(200);
     expect(body.activeWatchers).toBe(9);
     expect(body.topCoins).toEqual(["USDC"]);
     expect(body.quality.status).toBe("complete");
@@ -221,12 +220,11 @@ describe("handleTelegramPulse", () => {
     ]);
 
     const response = await handleTelegramPulse(db);
-    const body = (await response.json()) as {
+    const body = (await readJsonResponse(response, 200)) as {
       historySource: string;
       watcherHistory: Array<{ date: string; activeWatchers: number }>;
     };
 
-    expect(response.status).toBe(200);
     expect(body.historySource).toBe("snapshot");
     expect(body.watcherHistory.map((point) => point.date)).toEqual(["2026-05-13"]);
     expect(body.watcherHistory[0]?.activeWatchers).toBe(519);

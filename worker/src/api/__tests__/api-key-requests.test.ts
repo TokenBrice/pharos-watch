@@ -1,3 +1,4 @@
+import { makeJsonRequest, readJsonResponse } from "./api-request-response.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -44,15 +45,8 @@ function validBody(overrides: Record<string, unknown> = {}) {
 }
 
 function postRequest(path: string, body: unknown, headers: Record<string, string> = {}) {
-  return new Request(`https://api.pharos.watch${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "CF-Connecting-IP": "203.0.113.10",
-      "User-Agent": "vitest",
-      ...headers,
-    },
-    body: JSON.stringify(body),
+  return makeJsonRequest(`https://api.pharos.watch${path}`, body, {
+    headers: { "CF-Connecting-IP": "203.0.113.10", "User-Agent": "vitest", ...headers },
   });
 }
 
@@ -116,9 +110,8 @@ describe("api key self-serve request handlers", () => {
 
   it("creates only a pending verification request and email claim on initial request", async () => {
     const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
-    const body = await response.json() as { status: string; requestId?: string };
+    const body = await readJsonResponse(response, 202) as { status: string; requestId?: string };
 
-    expect(response.status).toBe(202);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.status).toBe("pending_verification");
     expect(body.requestId).toBeUndefined();
@@ -233,13 +226,12 @@ describe("api key self-serve request handlers", () => {
       env(),
       "api-key-pepper",
     );
-    const body = await response.json() as {
+    const body = await readJsonResponse(response, 201) as {
       requestId?: string;
       token: string;
       key: Record<string, unknown> & { tier: string; rateLimitPerMinute: number; expiresAt: number };
     };
 
-    expect(response.status).toBe(201);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.requestId).toBeUndefined();
     expect(body.token).toMatch(/^ph_live_[0-9a-f]{16}_[A-Za-z0-9_-]{32}$/);
@@ -315,9 +307,8 @@ describe("api key self-serve request handlers", () => {
       env(),
       "api-key-pepper",
     );
-    const body = await response.json() as { token?: string };
+    const body = await readJsonResponse(response, 503) as { token?: string };
 
-    expect(response.status).toBe(503);
     expect(body.token).toBeUndefined();
     expect(sqlite.prepare("SELECT is_active FROM api_keys").get()).toEqual({ is_active: 0 });
     expect(sqlite.prepare("SELECT status, verification_token_hash, issuance_locked_at FROM api_key_requests").get()).toEqual({
@@ -496,9 +487,8 @@ describe("api key self-serve request handlers", () => {
       env(),
       "api-key-pepper",
     );
-    const body = await response.json() as { token?: string };
+    const body = await readJsonResponse(response, 503) as { token?: string };
 
-    expect(response.status).toBe(503);
     expect(body.token).toBeUndefined();
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_keys").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT status FROM api_key_requests").get()).toEqual({ status: "pending_verification" });
@@ -512,9 +502,8 @@ describe("api key self-serve request handlers", () => {
       true,
       new Request("https://api.pharos.watch/api/api-key-requests-admin"),
     );
-    const body = await response.json() as { requests: Array<{ email: string; token?: string; useCase: string }> };
+    const body = await readJsonResponse(response, 200) as { requests: Array<{ email: string; token?: string; useCase: string }> };
 
-    expect(response.status).toBe(200);
     expect(body.requests).toHaveLength(1);
     expect(body.requests[0]?.email).toBe("builder@example.com");
     expect(body.requests[0]?.useCase).toContain("stablecoin monitoring");

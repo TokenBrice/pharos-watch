@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
@@ -46,8 +47,7 @@ describe("handleBlacklist", () => {
       { match: "blacklist_events", rows: [row] },
     ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number; totalExact: boolean };
+    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number; totalExact: boolean };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
     expect(body.totalExact).toBe(false);
@@ -133,8 +133,7 @@ describe("handleBlacklist", () => {
       { match: "blacklist_events", rows: [] },
     ], { requireMatch: true });
     const res = await handleBlacklist(emptyDb, new URL("https://x/api/blacklist"));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number };
+    const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(0);
     expect(body.total).toBe(0);
   });

@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -62,9 +63,8 @@ describe("handleBackfillMintBurnPrices", () => {
     const path = "/api/backfill-mint-burn-prices?dry-run=false";
     const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl(path), trustedAdmin: true, request: makeApiRequest(path, { adminKey: "secret" }) });
 
-    expect(response.status).toBe(400);
     expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
-    expect(await response.json()).toMatchObject({
+    expect(await readJsonResponse(response, 400)).toMatchObject({
       error: expect.stringContaining("confirm=historical-mint-prices"),
     });
   });
@@ -92,9 +92,8 @@ describe("handleBackfillMintBurnPrices", () => {
       "/api/backfill-mint-burn-prices?dry-run=false&confirm=historical-mint-prices&bookmark=bookmark-123";
     const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl(path), trustedAdmin: true, request: makeApiRequest(path, { adminKey: "secret", headers: { "Idempotency-Key": "x".repeat(129) } }) });
 
-    expect(response.status).toBe(400);
     expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
-    expect(await response.json()).toMatchObject({
+    expect(await readJsonResponse(response, 400)).toMatchObject({
       error: expect.stringContaining("1 to 128 characters"),
     });
   });

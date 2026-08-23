@@ -12,51 +12,9 @@ import {
   sentMessageBody,
   makeStablecoinsCacheValue,
   resetTelegramWebhookTest,
-  fixtureMockD1 as baseFixtureMockD1,
+  makeTelegramWebhookDb,
 } from "./telegram-webhook.test-support";
 
-function fixtureMockD1(
-  tables: Parameters<typeof baseFixtureMockD1>[0] = [],
-  options: Parameters<typeof baseFixtureMockD1>[1] = {},
-) {
-  return baseFixtureMockD1([
-    ...tables,
-    { match: "FROM telegram_subscribers", rows: [], first: null },
-    { match: "FROM telegram_subscriptions", rows: [] },
-    { match: "FROM telegram_preset_subscriptions", rows: [] },
-    { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
-    { match: "FROM telegram_pending_alerts", rows: [], first: null },
-    { match: "FROM telegram_recap_preferences", rows: [], first: null },
-    { match: "FROM telegram_recap_targets", rows: [] },
-    { match: "FROM cache", rows: [], first: null },
-    { match: "FROM dex_liquidity", rows: [], first: null },
-    { match: "FROM yield_data", rows: [], first: null },
-    { match: "INSERT INTO telegram_subscribers", rows: [] },
-    { match: "UPDATE telegram_subscribers", rows: [] },
-    { match: "DELETE FROM telegram_subscribers", rows: [] },
-    { match: "INSERT INTO telegram_subscriptions", rows: [] },
-    { match: "UPDATE telegram_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
-    { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
-    { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
-    { match: "UPDATE telegram_pending_disambiguation", rows: [] },
-    { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
-    { match: "INSERT INTO telegram_pending_alerts", rows: [] },
-    { match: "DELETE FROM telegram_pending_alerts", rows: [] },
-    { match: "INSERT INTO telegram_recap_preferences", rows: [] },
-    { match: "UPDATE telegram_recap_preferences", rows: [] },
-    { match: "DELETE FROM telegram_recap_preferences", rows: [] },
-    { match: "DELETE FROM telegram_recap_targets", rows: [] },
-    { match: "INSERT INTO telegram_usage_daily", rows: [] },
-    { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-    { match: "INSERT INTO cache", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "UPDATE cache", rows: [] },
-    { match: "DELETE FROM cache", rows: [] },
-  ], options);
-}
 
 // Webhook tests exercise command routing, so stub the canonical V9 loader with
 // one matching card (the fail-closed paths have their own focused tests).
@@ -80,7 +38,7 @@ vi.mock("../../lib/safety-score-active-source", async () => {
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
   it("handles /subscribe happy path with unique ticker", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
@@ -109,7 +67,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDPT to resolve uniquely for launch subscription test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
@@ -144,7 +102,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("gates /subscribe ... all behind a confirmation prompt", async () => {
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews safety all"), "test-secret", "bot-token");
 
@@ -165,7 +123,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("subscribe reserve all (after Confirm) writes the global reserve flag", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -204,7 +162,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("gates /subscribe with a >10-coin preset behind a confirmation prompt", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
@@ -243,7 +201,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews", "reserve"],
       presetIds: ["usd-top25"],
     });
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -272,7 +230,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews"],
       presetIds: [],
     });
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -305,7 +263,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews"],
       presetIds: [],
     });
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -327,7 +285,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews"],
       presetIds: [],
     });
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -353,7 +311,7 @@ describe("handleTelegramWebhook", () => {
       depeg_worsening_bps_step: null,
       alert_snooze_until_ts: null,
     }));
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       { match: "FROM telegram_subscriptions", rows: subscriptions },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
@@ -369,7 +327,7 @@ describe("handleTelegramWebhook", () => {
 
   it("refuses to export an unavailable row instead of silently dropping it", async () => {
     const stablecoinId = "retired-stablecoin";
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
@@ -398,7 +356,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("gates /subscribe with a >10-coin preset and depeg-step modifier behind a confirmation prompt", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
@@ -438,7 +396,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("handles /subscribe with a dashed preset alias (still gated above threshold)", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
@@ -470,14 +428,14 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("rejects preset watchlists for launch alerts", async () => {
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe launch usd-top25"), "test-secret", "bot-token");
 
     expect(sentMessageBody().text).toContain("Preset watchlists support dews, depeg, and safety only");
   });
 
   it("rejects mixing all with preset targets", async () => {
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(
       db,
       makeWebhookRequest(123, "/subscribe dews all usd-top25"),
@@ -489,7 +447,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("handles /subscribe with unknown ticker", async () => {
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews XYZZY"), "test-secret", "bot-token");
 
     const text = sentMessageBody().text;
@@ -504,7 +462,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for disambiguation test");
     }
 
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews USDF"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -527,7 +485,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF and USDA to be ambiguous for chained disambiguation test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -565,7 +523,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected fixed ticker fixtures for telegram disambiguation flow test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -626,7 +584,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for depeg-step disambiguation flow test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -676,7 +634,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for group ownership test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -713,7 +671,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for sample passthrough test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -746,7 +704,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for forget clear-and-run test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -783,7 +741,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for pending reply flood test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -824,7 +782,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for group ownership noise test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -861,7 +819,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for invalid selection reminder test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -897,7 +855,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for group ownership test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -947,7 +905,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected fixed ticker fixtures for telegram unsubscribe disambiguation flow test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -983,7 +941,7 @@ describe("handleTelegramWebhook", () => {
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -1035,7 +993,7 @@ describe("handleTelegramWebhook", () => {
 
   it("clears malformed active pending selections with a recovery message", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -1062,7 +1020,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("gates /unsubscribe all behind a confirmation prompt", async () => {
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe all"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -1078,7 +1036,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("gates /unsubscribe with a >10-coin preset behind a confirmation prompt", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
@@ -1113,7 +1071,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected at least one frozen stablecoin fixture");
     }
 
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/unsubscribe ${frozen.id}`), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -1131,7 +1089,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for unsubscribe disambiguation test");
     }
 
-    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe USDF"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -1153,7 +1111,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for cancel test");
     }
 
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -1178,7 +1136,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("unsubscribe all (after Confirm) clears launch alert flags", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
@@ -1215,7 +1173,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("handles D1 error gracefully", async () => {
-    const db = fixtureMockD1([]);
+    const db = makeTelegramWebhookDb([]);
     vi.spyOn(db, "prepare").mockImplementationOnce(() => {
       throw new Error("D1 error");
     });
@@ -1227,7 +1185,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("/status USDC replies with a compact card", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "SELECT action_type, action_payload", rows: [], first: null },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1700000000 }] },
       { match: "FROM safety_grade_history", rows: [{ grade: "A", score: 85, recorded_at: 1700000000 }] },
@@ -1270,7 +1228,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for status ambiguity test");
     }
 
-    const db = fixtureMockD1([{ match: "SELECT action_type, action_payload", rows: [], first: null }]);
+    const db = makeTelegramWebhookDb([{ match: "SELECT action_type, action_payload", rows: [], first: null }]);
     const res = await handleTelegramWebhook(db, makeWebhookRequest(1, "/status USDF"), "test-secret", "bot-token");
 
     expect(res.status).toBe(200);
@@ -1281,7 +1239,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("replies with retry message when preset resolution cache is missing", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "SELECT action_type, action_payload", rows: [], first: null },
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null },
     ]);
@@ -1296,7 +1254,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("allows preset unfollow when dynamic membership preview is unavailable", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "SELECT action_type, action_payload", rows: [], first: null },
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null },
     ]);
@@ -1315,7 +1273,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("executes /subscribe with a small explicit ticker set without confirmation", async () => {
-    const db = fixtureMockD1([
+    const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",

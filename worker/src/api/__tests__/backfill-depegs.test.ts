@@ -1,3 +1,4 @@
+import { readJsonResponse } from "./api-request-response.test-support";
 import { describe, expect, it } from "vitest";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
@@ -19,15 +20,13 @@ describe("handleBackfillDepegs", () => {
   it("returns no-op response for out-of-range batches", async () => {
     const res = await handleBackfillDepegsTrusted({ db: mockD1(), url: makeApiUrl("/api/backfill-depegs?batch=999999") });
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ message: "No coins in this batch" });
+    expect(await readJsonResponse(res, 200)).toEqual({ message: "No coins in this batch" });
   });
 
   it("validates bounded replay contextDays", async () => {
     const res = await handleBackfillDepegsTrusted({ db: mockD1(), url: makeApiUrl("/api/backfill-depegs?stablecoin=usdt-tether&startDay=2025-01-01&endDay=2025-01-02&contextDays=999") });
 
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({
+    expect(await readJsonResponse(res, 400)).toEqual({
       error: "Invalid contextDays. Use an integer between 0 and 90.",
     });
   });
