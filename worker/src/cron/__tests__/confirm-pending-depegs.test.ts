@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
@@ -86,6 +86,21 @@ interface PreparedStatementWithMeta extends D1PreparedStatement {
   boundValues: unknown[];
 }
 
+interface OppositeDirectionCase {
+  pendingRows: PendingRow[];
+  dexRows?: Array<{
+    stablecoin_id: string;
+    dex_price_usd: number;
+    updated_at: number;
+    source_pool_count?: number;
+    source_total_tvl?: number;
+    deviation_from_primary_bps?: number | null;
+    price_sources_json?: string;
+  }>;
+  assets: ReturnType<typeof makeAsset>[];
+  expectedDeleteId?: number;
+}
+
 function makePendingRow(overrides: Partial<PendingRow> = {}): PendingRow {
   const firstSeenAt = overrides.first_seen_at ?? 0;
   const firstSeenBps = overrides.first_seen_bps ?? -200;
@@ -166,38 +181,64 @@ function makeDb(config: {
   openRows?: Array<{ stablecoin_id: string }>;
   dexError?: unknown;
 }): D1Database {
-  function createStatement(sql: string, boundValues: unknown[] = []): PreparedStatementWithMeta {
+  const emptyMeta = {
+    duration: 0,
+    size_after: 0,
+    rows_read: 0,
+    rows_written: 0,
+    last_row_id: 0,
+    changed_db: false,
+    changes: 0,
+  };
+
+  type FakeStatement = D1PreparedStatement & { sql: string; boundValues: unknown[] };
+
+  function createStatement(sql: string, boundValues: unknown[] = []): FakeStatement {
+    function raw<T = unknown[]>(options: { columnNames: true }): Promise<[string[], ...T[]]>;
+    function raw<T = unknown[]>(options?: { columnNames?: false }): Promise<T[]>;
+    function raw<T = unknown[]>(options?: { columnNames?: boolean }): Promise<T[] | [string[], ...T[]]> {
+      if (options?.columnNames) {
+        const result: [string[], ...T[]] = [[], ...[] as T[]];
+        return Promise.resolve(result);
+      }
+      return Promise.resolve([] as T[]);
+    }
+
     return {
       sql,
       boundValues,
       bind: (...args: unknown[]) => createStatement(sql, args),
-      all: async <T>() => {
+      all: async <T = Record<string, unknown>>() => {
         if (sql.includes("FROM depeg_pending")) {
-          return { results: (config.pendingRows ?? []) as T[], success: true, meta: {} };
+          return { results: (config.pendingRows ?? []) as T[], success: true, meta: emptyMeta };
         }
         if (sql.includes("FROM dex_prices")) {
           if (config.dexError != null) throw (config.dexError instanceof Error ? config.dexError : new Error(String(config.dexError)));
           const rows = sql.includes("price_sources_json")
             ? (config.dexRows ?? []).filter((row) => row.price_sources_json != null)
             : (config.dexRows ?? []);
-          return { results: rows as T[], success: true, meta: {} };
+          return { results: rows as T[], success: true, meta: emptyMeta };
         }
         if (sql.includes("FROM depeg_events")) {
-          return { results: (config.openRows ?? []) as T[], success: true, meta: {} };
+          return { results: (config.openRows ?? []) as T[], success: true, meta: emptyMeta };
         }
-        return { results: [] as T[], success: true, meta: {} };
+        return { results: [] as T[], success: true, meta: emptyMeta };
       },
-      first: async <T>() => null as T | null,
-      run: async () => ({ success: true, meta: { changes: 1 } }),
-    } as unknown as PreparedStatementWithMeta;
+      first: async <T = Record<string, unknown>>(_colName?: string) => null as T | null,
+      run: async <T = Record<string, unknown>>() => ({ results: [] as T[], success: true, meta: { ...emptyMeta, changes: 1 } }),
+      raw,
+    } satisfies FakeStatement;
   }
 
   return {
     prepare: (sql: string) => createStatement(sql),
-    batch: async () => [],
+    batch: async <T>(_statements: D1PreparedStatement[]) => [] as D1Result<T>[],
     exec: async () => ({ count: 0, duration: 0 }),
+    withSession: () => {
+      throw new Error("withSession is not used by this fixture");
+    },
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+  } satisfies D1Database;
 }
 
 function lastBatchStatements(): PreparedStatementWithMeta[] {
@@ -1834,5 +1875,329 @@ describe("confirmPendingDepegs", () => {
     const bound = inserts[0]!.boundValues;
     expect(bound[9]).toBe("temporal:15m+dex:curve+dex:uniswap");
     expect(bound[10]).toBe("large-cap");
+  });
+});
+
+describe("confirmPendingDepegs pool challenger status classification", () => {
+  function captureLogs(): string[] {
+    const logs: string[] = [];
+    vi.spyOn(console, "info").mockImplementation((...args: unknown[]) => {
+      logs.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "));
+    });
+    return logs;
+  }
+
+  function findStructuredLog(logs: string[], event: string): Record<string, unknown> | undefined {
+    return logs
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .find((record) => record.event === event);
+  }
+
+  it.each([
+    {
+      label: "reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar",
+      pendingId: 80,
+      // Pool 1: same-direction (below) but deviation 30 bps < 50 bps secondary bar => "recover"
+      // Pool 2: opposite-direction (above) deviation 120 bps > 50 bps bar          => "contradict"
+      dexPriceUsd: 1.0,
+      sourcePoolCount: 4,
+      sourceTotalTvl: 4_000_000,
+      pools: [
+        { price: 0.997, tvl: 5_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+        { price: 1.012, tvl: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+      ],
+      expectedStatus: "contradict",
+      expectedHighTvl: false,
+    },
+    {
+      label: "reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M",
+      pendingId: 82,
+      // Single pool, same-direction deviation 200bps > 50bps bar, TVL $6M > $5M high-TVL threshold.
+      // Below POOL_CHALLENGE_CONFIRM_MIN=2 count, but high-TVL short-circuits to confirm.
+      dexPriceUsd: 0.98,
+      sourcePoolCount: 1,
+      sourceTotalTvl: 6_000_000,
+      pools: [
+        { price: 0.98, tvl: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+      ],
+      expectedStatus: "confirm",
+      expectedHighTvl: true,
+    },
+    {
+      label: "reports poolStatus='recover' only when every qualifying pool is under the secondary bar",
+      pendingId: 81,
+      dexPriceUsd: 1.0,
+      sourcePoolCount: 4,
+      sourceTotalTvl: 4_000_000,
+      pools: [
+        { price: 0.998, tvl: 5_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+        { price: 0.999, tvl: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+      ],
+      expectedStatus: "recover",
+      expectedHighTvl: false,
+    },
+  ])("$label", async (testCase) => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const pendingRows: PendingRow[] = [makePendingRow({
+      id: testCase.pendingId,
+      stablecoin_id: "usdt-tether",
+      symbol: "USDT",
+      direction: "below",
+      first_seen_bps: -200,
+      first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+      first_price: 0.98,
+      peg_reference: 1,
+    })];
+    const dexRows = [
+      {
+        stablecoin_id: "usdt-tether",
+        dex_price_usd: testCase.dexPriceUsd,
+        updated_at: nowSec - 30,
+        source_pool_count: testCase.sourcePoolCount,
+        source_total_tvl: testCase.sourceTotalTvl,
+        price_sources_json: JSON.stringify(testCase.pools),
+      },
+    ];
+    const logs = captureLogs();
+
+    await confirmPendingDepegs(
+      makeDb({ pendingRows, dexRows }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(findStructuredLog(logs, "pool-confirmation-summary")).toMatchObject({
+      status: testCase.expectedStatus,
+      metadata: { highTvlConfirmation: testCase.expectedHighTvl },
+    });
+  });
+});
+
+describe("confirmPendingDepegs opposite-direction corroboration", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(fetchWithRetry).mockReset();
+    vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+    vi.mocked(fetchBinancePricesDetailed).mockReset().mockResolvedValue({
+      kind: "no-data",
+      value: {
+        prices: new Map<string, number>(),
+        diagnostics: [{
+          source: "binance",
+          stage: "primary",
+          endpoint: "data-api.binance.vision/api/v3/ticker/price",
+          status: 200,
+          ok: true,
+          success: false,
+          matchedCount: 0,
+        }],
+      },
+    });
+    vi.mocked(recordOutcomeSafe).mockReset().mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.mocked(fetchWithRetry).mockReset();
+    vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+  });
+
+  it.each([
+    {
+      label: "native quote",
+      setup: async (nowSec: number): Promise<OppositeDirectionCase> => {
+        vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
+          ["brz-transfero", {
+            stablecoinId: "brz-transfero",
+            geckoId: "brz",
+            pegCurrency: "BRL",
+            price: 1.03,
+            updatedAt: nowSec - 60,
+          }],
+        ]));
+        return {
+          pendingRows: [
+            makePendingRow({
+              id: 70,
+              stablecoin_id: "brz-transfero",
+              symbol: "BRZ",
+              peg_type: "peggedREAL",
+              direction: "below",
+              first_seen_bps: -220,
+              first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+              first_price: 0.1835,
+              peg_reference: 0.18765951,
+            }),
+          ],
+          assets: [
+            makeAsset({
+              id: "brz-transfero",
+              name: "Brazilian Digital",
+              symbol: "BRZ",
+              geckoId: "brz",
+              pegType: "peggedREAL",
+              price: 0.1835,
+            }),
+            ...makeNeutralUsdAssets(),
+          ],
+          expectedDeleteId: 70,
+        };
+      },
+    },
+    {
+      label: "off-chain quote",
+      setup: async (nowSec: number): Promise<OppositeDirectionCase> => {
+        vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 1.03, last_updated_at: nowSec - 30 } }), { status: 200 }));
+        return {
+          pendingRows: [
+            makePendingRow({
+              id: 71,
+              stablecoin_id: "usdt-tether",
+              symbol: "USDT",
+              direction: "below",
+              first_seen_bps: -220,
+              first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+              first_price: 0.978,
+            }),
+          ],
+          assets: [
+            makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.978 }),
+            ...makeNeutralUsdAssets(),
+          ],
+          expectedDeleteId: 71,
+        };
+      },
+    },
+    {
+      label: "DEX quote",
+      setup: async (nowSec: number): Promise<OppositeDirectionCase> => ({
+        pendingRows: [
+          makePendingRow({
+            id: 72,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -220,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.978,
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 1.03,
+            updated_at: nowSec - 30,
+            source_pool_count: 5,
+            source_total_tvl: 5_000_000,
+          },
+        ],
+        assets: [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.978 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      }),
+    },
+    {
+      label: "CEX quote",
+      setup: async (nowSec: number): Promise<OppositeDirectionCase> => {
+        vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
+          kind: "ok",
+          value: {
+            prices: new Map([["USDT", 1.03]]),
+            diagnostics: [{
+              source: "binance",
+              stage: "primary",
+              endpoint: "data-api.binance.vision/api/v3/ticker/price",
+              status: 200,
+              ok: true,
+              success: true,
+              matchedCount: 1,
+            }],
+          },
+        });
+        return {
+          pendingRows: [
+            makePendingRow({
+              id: 73,
+              stablecoin_id: "usdt-tether",
+              symbol: "USDT",
+              direction: "below",
+              first_seen_bps: -220,
+              first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+              first_price: 0.978,
+            }),
+          ],
+          assets: [
+            makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.978 }),
+            ...makeNeutralUsdAssets(),
+          ],
+        };
+      },
+    },
+    {
+      label: "pool challenger",
+      setup: async (nowSec: number): Promise<OppositeDirectionCase> => ({
+        pendingRows: [
+          makePendingRow({
+            id: 74,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -220,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.978,
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 1.0,
+            updated_at: nowSec - 30,
+            source_pool_count: 4,
+            source_total_tvl: 4_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 1.03, tvl: 1_500_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 1.001, tvl: 900_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+            ]),
+          },
+        ],
+        assets: [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.978 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      }),
+    },
+  ])("does not promote opposite-direction corroboration from $label", async ({ setup }) => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const { pendingRows, dexRows, assets, expectedDeleteId } = await setup(nowSec);
+
+    await confirmPendingDepegs(
+      makeDb({ pendingRows, dexRows }),
+      assets,
+    );
+
+    const batchCalls = vi.mocked(batchExecute).mock.calls;
+    const inserts = batchCalls.flatMap(([, statements]) =>
+      (statements as PreparedStatementWithMeta[]).filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events")),
+    );
+    expect(inserts).toHaveLength(0);
+
+    if (expectedDeleteId != null) {
+      const deletes = batchCalls.flatMap(([, statements]) =>
+        (statements as PreparedStatementWithMeta[])
+          .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
+          .map((stmt) => stmt.boundValues[0]),
+      );
+      expect(deletes).toContain(expectedDeleteId);
+    }
   });
 });
