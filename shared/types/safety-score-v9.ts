@@ -2,6 +2,13 @@ import { z } from "zod";
 import { ReportCardGradeSchema, type ReportCardGrade } from "./report-card-grade";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
+import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
+import {
+  RedemptionAccessModelSchema,
+  RedemptionExecutionModelSchema,
+  RedemptionOutputAssetTypeSchema,
+  RedemptionSettlementModelSchema,
+} from "./redemption";
 
 export const V9QualityPillarSchema = z.enum(["backing", "exit", "control"]);
 export type V9QualityPillar = z.infer<typeof V9QualityPillarSchema>;
@@ -79,6 +86,16 @@ export type V9ReasonCode = z.infer<typeof V9ReasonCodeSchema>;
 
 const IsoTimestampSchema = z.string().datetime({ offset: true });
 const ScoreSchema = z.number().finite().min(0).max(100);
+
+function exactEnumScoreMapSchema<const Value extends string>(values: readonly Value[]) {
+  return z
+    .object(
+      Object.fromEntries(values.map((value) => [value, ScoreSchema])) as {
+        [Key in Value]: typeof ScoreSchema;
+      },
+    )
+    .strict();
+}
 
 export const V9UnresolvedFactSchema = z
   .object({
@@ -1126,29 +1143,8 @@ const V9ControlPolicySchema = z
           });
         }
       }),
-    oracleTierQuality: z
-      .object({
-        "oracleless": ScoreSchema,
-        "privileged-internal-pricing": ScoreSchema,
-        "redundant-with-failover": ScoreSchema,
-        "medianized-with-delay": ScoreSchema,
-        "standard-external": ScoreSchema,
-        "single-source-or-laggy": ScoreSchema,
-        "opaque-or-unknown": ScoreSchema,
-      })
-      .strict(),
-    bridgeTierQuality: z
-      .object({
-        "single-chain-or-native": ScoreSchema,
-        "issuer-native-burn-mint": ScoreSchema,
-        "canonical-rollup-bridge": ScoreSchema,
-        "issuer-native-lock-mint": ScoreSchema,
-        "external-validated-network": ScoreSchema,
-        "liquidity-or-intent-route": ScoreSchema,
-        "external-lock-mint": ScoreSchema,
-        "opaque-or-unknown": ScoreSchema,
-      })
-      .strict(),
+    oracleTierQuality: exactEnumScoreMapSchema(ORACLE_RISK_TIER_VALUES),
+    bridgeTierQuality: exactEnumScoreMapSchema(BRIDGE_ROUTE_RISK_TIER_VALUES),
     boundedUnknownQuality: ScoreSchema,
   })
   .strict();
@@ -1212,40 +1208,10 @@ const V9ExitPolicySchema = z
     ammModeledTvlRatio: z
       .object({ min: z.number().finite().nonnegative(), max: z.number().finite().positive() })
       .strict(),
-    accessScores: z
-      .object({
-        "permissionless-onchain": ScoreSchema,
-        "whitelisted-onchain": ScoreSchema,
-        "issuer-api": ScoreSchema,
-        manual: ScoreSchema,
-      })
-      .strict(),
-    settlementScores: z
-      .object({
-        atomic: ScoreSchema,
-        immediate: ScoreSchema,
-        "same-day": ScoreSchema,
-        days: ScoreSchema,
-        queued: ScoreSchema,
-      })
-      .strict(),
-    executionScores: z
-      .object({
-        "deterministic-onchain": ScoreSchema,
-        "deterministic-basket": ScoreSchema,
-        "rules-based-nav": ScoreSchema,
-        opaque: ScoreSchema,
-      })
-      .strict(),
-    outputAssetScores: z
-      .object({
-        "stable-single": ScoreSchema,
-        "stable-basket": ScoreSchema,
-        "bluechip-collateral": ScoreSchema,
-        "mixed-collateral": ScoreSchema,
-        nav: ScoreSchema,
-      })
-      .strict(),
+    accessScores: exactEnumScoreMapSchema(RedemptionAccessModelSchema.options),
+    settlementScores: exactEnumScoreMapSchema(RedemptionSettlementModelSchema.options),
+    executionScores: exactEnumScoreMapSchema(RedemptionExecutionModelSchema.options),
+    outputAssetScores: exactEnumScoreMapSchema(RedemptionOutputAssetTypeSchema.options),
     routeFamilyCaps: z.object({ queueRedeem: ScoreSchema, offchainIssuer: ScoreSchema }).strict(),
     coverageRatioBreakpoints: z.array(V9ScoreBreakpointSchema).min(2),
     absoluteCapacityBreakpoints: z.array(V9ScoreBreakpointSchema).min(2),

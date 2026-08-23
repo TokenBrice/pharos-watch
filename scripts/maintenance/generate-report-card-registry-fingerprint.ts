@@ -10,7 +10,6 @@
  * the authoritative validation and runs on its own in CI.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,6 +17,7 @@ import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const OUTPUT_TS_REL = "shared/data/stablecoins/report-card-registry-fingerprint.generated.ts";
@@ -49,19 +49,10 @@ export const REPORT_CARDS_REGISTRY_FINGERPRINT =
   "${fingerprint}";
 `;
 
-if (CHECK_MODE) {
-  // Repo-owned generator only reads the checked-in fingerprint artifact.
-  const current = existsSync(OUTPUT_TS_ABS) ? readFileSync(OUTPUT_TS_ABS, "utf8") : "";
-  if (current !== contents) {
-    console.error(
-      `${OUTPUT_TS_REL} is stale. Run: npx tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts`,
-    );
-    process.exit(1);
-  }
-  console.log(`${OUTPUT_TS_REL}: report-card registry fingerprint is current (${fingerprint}).`);
-} else {
-  // Repo-owned generator only writes the checked-in fingerprint artifact.
-  mkdirSync(dirname(OUTPUT_TS_ABS), { recursive: true });
-  writeFileSync(OUTPUT_TS_ABS, contents, "utf8");
-  console.log(`${OUTPUT_TS_REL}: wrote report-card registry fingerprint (${fingerprint}).`);
-}
+syncGeneratedArtifacts({
+  artifacts: [{ path: OUTPUT_TS_ABS, contents }],
+  check: CHECK_MODE,
+  staleMessage: `${OUTPUT_TS_REL} is stale. Run: npx tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts`,
+  currentMessage: `${OUTPUT_TS_REL}: report-card registry fingerprint is current (${fingerprint}).`,
+  writtenMessage: `${OUTPUT_TS_REL}: wrote report-card registry fingerprint (${fingerprint}).`,
+});

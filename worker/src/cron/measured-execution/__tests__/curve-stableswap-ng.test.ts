@@ -28,6 +28,7 @@ import {
 } from "../curve-stableswap-ng";
 import { isOperationalDexMeasuredFailure } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
+import { makeMeasuredTarget } from "@shared/lib/__tests__/measured-execution.test-support";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -177,8 +178,7 @@ function target(
     ...policy.poolTokens[policy.outputIndex],
     referencePriceUsd: 1,
   };
-  return {
-    schemaVersion: "dex-measured-target-v1",
+  return makeMeasuredTarget({
     targetId: buildDexMeasuredExecutionTargetId({
       adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
       stablecoinId: policy.stablecoinId,
@@ -200,7 +200,7 @@ function target(
     retainedTvlUsd: 20_501_133,
     retainedPoolPriceUsd: 1,
     capturedAt: BLOCK_TIMESTAMP - 60,
-  };
+  });
 }
 
 describe("reviewed Curve StableSwap-NG policy", () => {

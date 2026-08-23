@@ -5,6 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 import { DigestNameplate } from "@/components/digest-nameplate";
 import { DigestColophon } from "@/components/digest-colophon";
+import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -73,6 +74,8 @@ export default function DigestArchivePage() {
           </Link>
         ))}
       </nav>
+
+      <PreferredSourcePrompt />
 
       <DigestColophon />
     </div>

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import activeStablecoinsFixture from "./fixtures/audit-price-source-depth/active-stablecoins.json";
 import pegSummaryFixture from "./fixtures/audit-price-source-depth/peg-summary.json";
 import stablecoinsFixture from "./fixtures/audit-price-source-depth/stablecoins.json";
+import { getCirculatingRaw } from "@shared/lib/supply";
+import { circulatingForStablecoinRow } from "../lib/coverage-audit-cli";
 import {
   bucketSourceDepth,
   buildPriceSourceDepthAudit,
@@ -10,6 +12,18 @@ import {
 } from "../maintenance/audit-price-source-depth";
 
 describe("audit-price-source-depth", () => {
+  it("uses canonical circulating normalization for mixed peg buckets", () => {
+    const row = {
+      circulating: {
+        peggedUSD: 100,
+        peggedEUR: 25,
+        invalid: Number.NaN,
+      },
+    };
+    expect(circulatingForStablecoinRow(row)).toBe(getCirculatingRaw(row));
+    expect(circulatingForStablecoinRow(undefined)).toBe(0);
+  });
+
   it("buckets source depths with a 5+ overflow bucket", () => {
     expect(bucketSourceDepth(-1)).toBe("0");
     expect(bucketSourceDepth(0)).toBe("0");

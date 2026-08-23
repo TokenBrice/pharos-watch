@@ -4,6 +4,7 @@ import type {
   V9ObservationState,
 } from "../../types/safety-score-v9-fact-primitives";
 import type { V9MechanismQualityLevel } from "../../types/safety-score-v9-backing";
+import { safetyScoreV9MechanismProfileArchetype } from "../../types/safety-score-v9-mechanism-profile";
 import { compareText } from "./primitives";
 
 const V9MechanismQualityLevelSchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);
@@ -192,7 +193,7 @@ export function projectV9MechanismProfile(
   const review = V9MechanismProfileReviewSchema.parse(input);
   if (review.profile === "allocated-commodity-claim") {
     return {
-      archetype: "fiat-cash",
+      archetype: safetyScoreV9MechanismProfileArchetype(review.profile),
       components: {
         claimAndSegregation: combineProfileFacts(review.facts, [
           "holderTitle",
@@ -211,7 +212,7 @@ export function projectV9MechanismProfile(
     };
   }
   return {
-    archetype: "algorithmic",
+    archetype: safetyScoreV9MechanismProfileArchetype(review.profile),
     components: {
       contractionCapacity: combineProfileFacts(review.facts, [
         "collateralCoverage",

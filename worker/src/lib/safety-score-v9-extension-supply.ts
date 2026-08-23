@@ -1,4 +1,5 @@
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v9-transfer-overlays";
 import { resolveChainId } from "@shared/lib/chains";
 import {
   V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
@@ -10,7 +11,6 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "./safety-score-v9-curated-single-route-supply";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared";
-import { safetyScoreV9TransferDeploymentKey } from "./safety-score-v9-extension-transfer";
 import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 import { safetyScoreV9ChainRows } from "./safety-score-v9-supply-attribution";
 import { normalizeReviewedDeploymentAddress } from "./safety-score-v9-supply-attribution-contract";

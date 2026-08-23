@@ -5,18 +5,11 @@ import {
   serializePendingMarkupPolicy,
 } from "../../lib/telegram-pending-provenance";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-
-const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
-  { match: "WHERE delivery_state = 'sending'", rows: [] },
-  { match: "delivery_state = 'sent'", rows: [] },
-  { match: "processing_owner = ?", rows: [] },
-  { match: "SET attempts = attempts + 1", rows: [] },
-  { match: "AND delivery_state = 'sending'", rows: [] },
-  { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
-  { match: "WHERE chat_id = ?", rows: [] },
-  { match: "UPDATE telegram_recap_preferences", rows: [] },
-  { match: "UPDATE telegram_recap_targets", rows: [] },
-];
+import {
+  DEFAULT_TELEGRAM_PENDING_D1_TABLES,
+  insertPendingSqlite,
+  resetTelegramPendingMocks,
+} from "./telegram-pending-queue.test-support";
 
 function mockD1(tables: MockTableConfig[] = []) {
   return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES]);
@@ -36,67 +29,6 @@ function parseLogRecords(spy: { mock: { calls: unknown[][] } }): Array<Record<st
 
 function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
-}
-
-/**
- * Seeds the source event a `telegram_alert_job_targets` row with a
- * `plan_generation` needs to satisfy `trg_tajt_source_generation_guard`.
- */
-
-
-/** Seeds a subscriber row satisfying the production NOT NULL columns. */
-
-
-function insertPendingSqlite(
-  sqlite: DatabaseSync,
-  row: {
-    id: number;
-    chatId: string;
-    html: string;
-    createdAt: number;
-    disableNotification?: number;
-    attempts?: number;
-    notBeforeAt?: number | null;
-    dedupeKey?: string | null;
-    chunkIndex?: number | null;
-    priority?: number | null;
-    sourceType?: string | null;
-    alertType?: string | null;
-    expiresAt?: number | null;
-    sourceEventId?: string | null;
-    alertScopeJson?: string | null;
-    preferenceGeneration?: number | null;
-    markupPolicyJson?: string | null;
-  },
-): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_pending_alerts (
-         id, chat_id, message_html, disable_notification, created_at, attempts,
-         not_before_at, dedupe_key, chunk_index, priority, source_type, alert_type, expires_at,
-         source_event_id, alert_scope_json, preference_generation, markup_policy_json
-       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      row.id,
-      row.chatId,
-      row.html,
-      row.disableNotification ?? 0,
-      row.createdAt,
-      row.attempts ?? 0,
-      row.notBeforeAt ?? null,
-      row.dedupeKey ?? null,
-      row.chunkIndex ?? 0,
-      row.priority ?? TELEGRAM_PENDING_PRIORITY.legacy,
-      row.sourceType ?? "legacy",
-      row.alertType ?? null,
-      row.expiresAt ?? null,
-      row.sourceEventId ?? null,
-      row.alertScopeJson ?? null,
-      row.preferenceGeneration ?? null,
-      row.markupPolicyJson ?? null,
-    );
 }
 
 /**
@@ -148,21 +80,12 @@ const {
 const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
-  mockSendToChat.mockReset();
-  mockMigrateTelegramChatId.mockReset().mockResolvedValue(undefined);
-  transportMocks.claim.mockReset().mockResolvedValue({
-    allowed: true,
-    mode: "pending",
-    maxDistinctChats: SEND_BATCH_SIZE,
-    reason: "closed",
-    circuitGeneration: 0,
-    probeOwner: null,
-    probeGeneration: null,
-    pauseGeneration: null,
-    deferUntil: null,
+  resetTelegramPendingMocks({
+    sendToChat: mockSendToChat,
+    migrateTelegramChatId: mockMigrateTelegramChatId,
+    transport: transportMocks,
+    sendBatchSize: SEND_BATCH_SIZE,
   });
-  transportMocks.readPause.mockReset().mockResolvedValue(null);
-  transportMocks.record.mockReset().mockResolvedValue({ state: "closed", generation: 0 });
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
 });

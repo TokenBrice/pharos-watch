@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -34,16 +35,10 @@ const redirects = Object.fromEntries(
 );
 const contents = `${JSON.stringify(redirects, null, 2)}\n`;
 
-if (CHECK_MODE) {
-  const current = existsSync(OUTPUT_JSON_ABS) ? readFileSync(OUTPUT_JSON_ABS, "utf8") : "";
-  if (current !== contents) {
-    console.error(`${OUTPUT_JSON_REL} is stale. Run \`node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts\`.`);
-    process.exit(1);
-  }
-  console.log(`${OUTPUT_JSON_REL}: legacy redirect map is current (${Object.keys(redirects).length} entries)`);
-  process.exit(0);
-}
-
-mkdirSync(dirname(OUTPUT_JSON_ABS), { recursive: true });
-writeFileSync(OUTPUT_JSON_ABS, contents, "utf8");
-console.log(`${OUTPUT_JSON_REL}: wrote legacy redirect map (${Object.keys(redirects).length} entries)`);
+syncGeneratedArtifacts({
+  artifacts: [{ path: OUTPUT_JSON_ABS, contents }],
+  check: CHECK_MODE,
+  staleMessage: `${OUTPUT_JSON_REL} is stale. Run \`node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts\`.`,
+  currentMessage: `${OUTPUT_JSON_REL}: legacy redirect map is current (${Object.keys(redirects).length} entries)`,
+  writtenMessage: `${OUTPUT_JSON_REL}: wrote legacy redirect map (${Object.keys(redirects).length} entries)`,
+});

@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { route, snapshot } from "./redemption-backstop-sources.test-support";
 
 const getReserveSyncStateMock = vi.fn();
 const getLatestSuccessfulReserveSnapshotMetadataMock = vi.fn();
@@ -20,6 +21,12 @@ describe("buildRedemptionBackstopEntry", () => {
   let buildRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildRedemptionBackstopEntry;
   let buildFailedRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildFailedRedemptionBackstopEntry;
   const now = 1_700_000_000;
+  const fixedFeeCases = [
+    { feeBps: 0, expectedScore: 100 },
+    { feeBps: 25, expectedScore: 80 },
+    { feeBps: 75, expectedScore: 60 },
+    { feeBps: 200, expectedScore: 40 },
+  ] as const;
 
   beforeAll(async () => {
     const mod = await import("../redemption-backstop-sources");
@@ -192,90 +199,42 @@ describe("buildRedemptionBackstopEntry", () => {
   });
 
   it("scores fixed 0 bps fee as 100", async () => {
-    const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
-      "test-coin",
-      {
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-        executionModel: "deterministic-onchain",
-        outputAssetType: "stable-single",
-        capacityModel: { kind: "supply-full" },
-        costModel: { kind: "fee-bps", feeBps: 0 },
-      },
-      100_000_000,
-      null,
-      now,
-    );
+    const { feeBps, expectedScore } = fixedFeeCases[0];
+    const entry = await buildRedemptionBackstopEntry(mockD1(), "test-coin", route({
+      costModel: { kind: "fee-bps", feeBps },
+    }), 100_000_000, null, now);
 
-    expect(entry.costScore).toBe(100);
-    expect(entry.feeBps).toBe(0);
+    expect(entry.costScore).toBe(expectedScore);
+    expect(entry.feeBps).toBe(feeBps);
     expect(entry.feeConfidence).toBe("fixed");
   });
 
   it("scores fixed 25 bps fee as 80", async () => {
-    const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
-      "test-coin",
-      {
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-        executionModel: "deterministic-onchain",
-        outputAssetType: "stable-single",
-        capacityModel: { kind: "supply-full" },
-        costModel: { kind: "fee-bps", feeBps: 25 },
-      },
-      100_000_000,
-      null,
-      now,
-    );
+    const { feeBps, expectedScore } = fixedFeeCases[1];
+    const entry = await buildRedemptionBackstopEntry(mockD1(), "test-coin", route({
+      costModel: { kind: "fee-bps", feeBps },
+    }), 100_000_000, null, now);
 
-    expect(entry.costScore).toBe(80);
-    expect(entry.feeBps).toBe(25);
+    expect(entry.costScore).toBe(expectedScore);
+    expect(entry.feeBps).toBe(feeBps);
   });
 
   it("scores fixed 75 bps fee as 60", async () => {
-    const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
-      "test-coin",
-      {
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-        executionModel: "deterministic-onchain",
-        outputAssetType: "stable-single",
-        capacityModel: { kind: "supply-full" },
-        costModel: { kind: "fee-bps", feeBps: 75 },
-      },
-      100_000_000,
-      null,
-      now,
-    );
+    const { feeBps, expectedScore } = fixedFeeCases[2];
+    const entry = await buildRedemptionBackstopEntry(mockD1(), "test-coin", route({
+      costModel: { kind: "fee-bps", feeBps },
+    }), 100_000_000, null, now);
 
-    expect(entry.costScore).toBe(60);
+    expect(entry.costScore).toBe(expectedScore);
   });
 
   it("scores fixed 200 bps fee as 40", async () => {
-    const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
-      "test-coin",
-      {
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-        executionModel: "deterministic-onchain",
-        outputAssetType: "stable-single",
-        capacityModel: { kind: "supply-full" },
-        costModel: { kind: "fee-bps", feeBps: 200 },
-      },
-      100_000_000,
-      null,
-      now,
-    );
+    const { feeBps, expectedScore } = fixedFeeCases[3];
+    const entry = await buildRedemptionBackstopEntry(mockD1(), "test-coin", route({
+      costModel: { kind: "fee-bps", feeBps },
+    }), 100_000_000, null, now);
 
-    expect(entry.costScore).toBe(40);
+    expect(entry.costScore).toBe(expectedScore);
   });
 
   it("scores formula-confidence dynamic fees as 60", async () => {
@@ -388,21 +347,11 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       now,
       {
-        reserveSnapshotMetadata: {
-          stablecoinId: "lusd-liquity",
-          fetchedAt: now - 1800,
-          source: "test",
-          metadata: {
-            immediateRedeemableUsd: 7_500_000,
-            immediateRedeemableRatio: 0.15,
-            sourceTimestamp: now - 1800,
-          },
-          warningCount: 0,
-          warnings: [],
-          sourceModel: "dynamic-mix",
-          evidenceClass: "independent",
-          syncStatus: "ok",
-        },
+        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+          immediateRedeemableUsd: 7_500_000,
+          immediateRedeemableRatio: 0.15,
+          sourceTimestamp: now - 1800,
+        }, { fetchedAt: now - 1800 }),
       },
     );
 

@@ -20,6 +20,7 @@ import {
 } from "./digest/platform";
 import {
   runTelegramDigestDeliveryWithPermit,
+  mapTelegramDigestPermittedDelivery,
   type TelegramDigestPermittedDelivery,
 } from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
@@ -28,7 +29,6 @@ import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { getMetaString } from "./daily-digest/digest-intelligence-utils";
 import type { DigestValidationIssue } from "./daily-digest/response";
-import type { TelegramTransportErrorClass } from "../lib/telegram-transport-errors";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
 import type { DailyDigestSourceRow } from "./weekly-recap/types";
@@ -54,26 +54,6 @@ interface WeeklyDigestMeta {
   telegramDeliveryUpdatedAt?: number;
   telegramDeliveredAt?: number;
   [key: string]: unknown;
-}
-
-function telegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
-  switch (value) {
-    case "blocked":
-    case "chat_not_found":
-    case "chat_migrated":
-    case "formatting_error":
-    case "payload_too_large":
-    case "rate_limit":
-    case "server_error":
-    case "bad_request":
-    case "auth_error":
-    case "timeout":
-    case "network":
-    case "unknown":
-      return value;
-    default:
-      return null;
-  }
 }
 
 function parseWeeklyDigestMeta(rawMeta: string | null, updatedAt: number | null): WeeklyDigestMeta {
@@ -195,29 +175,10 @@ async function deliverWeeklyDigestToTelegram(params: {
     signal: params.signal,
     deliver: async (creds): Promise<TelegramDigestPermittedDelivery> => {
       const delivery = await deliverTelegramDigestEdition(params.db, creds, editionKey, params.signal);
-      if (delivery.outcome === "sent") {
-        return {
-          status: "ok",
-          transportOutcome: { ok: true, errorClass: null, retryAfterSec: null },
-        };
-      }
-      if (delivery.outcome === "skipped" && delivery.state === "sent") {
-        return { status: "ok+already-sent", transportOutcome: null };
-      }
-      if (delivery.outcome === "skipped") {
-        return { status: `queued: ${delivery.state}`, transportOutcome: null };
-      }
-      const errorClass = telegramTransportErrorClass(delivery.errorClass);
-      return {
-        status: `failed: Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
-        transportOutcome: {
-          ok: false,
-          errorClass,
-          retryAfterSec: errorClass == null
-            ? null
-            : delivery.retryAfterSec,
-        },
-      };
+      return mapTelegramDigestPermittedDelivery(delivery, {
+        success: "ok",
+        alreadySent: "ok+already-sent",
+      });
     },
   });
 }

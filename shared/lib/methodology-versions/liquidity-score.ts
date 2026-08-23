@@ -31,6 +31,3 @@ export {
 
 /** Reconstructed changelog data. */
 export const LIQUIDITY_METHODOLOGY_CHANGELOG = liquidity.changelog;
-
-/** Resolve Liquidity Score methodology version active at a given Unix timestamp (seconds). */
-export const getLiquidityMethodologyVersionAt = liquidity.getVersionAt;

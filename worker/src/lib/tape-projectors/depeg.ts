@@ -19,12 +19,12 @@ import { getCache, setCache } from "../db-cache";
 import { isMissingColumnError } from "../db";
 import {
   insertTapeEvents,
-  setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
   DEFAULT_BATCH_LIMIT,
   fetchRowsWithTieExpansion,
+  finalizeProjectorBatch,
   resolveProjectorOptions,
   type ProjectorOptions,
   type ProjectorResult,
@@ -124,7 +124,7 @@ async function projectDepegByVariant(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const cursorKey = classCursorKey(variant);
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchDepegRows(db, variant, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
@@ -185,15 +185,7 @@ async function projectDepegByVariant(
     });
   }
 
-  if (!dryRun) {
-    await insertTapeEvents(db, events);
-    // Operator-supplied since/until skips watermark advancement so a partial
-    // backfill window does not corrupt the live cursor.
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
 }
 
 export function projectDepegOpened(db: D1Database, options?: ProjectorOptions): Promise<ProjectorResult> {

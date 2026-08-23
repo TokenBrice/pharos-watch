@@ -14,6 +14,7 @@ import { TopNav } from "@/components/top-nav";
 import { GlobalFooterChrome, MainContent, RegimeBarChrome, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
 import { bricolageDisplay, jetbrainsMono } from "@/lib/fonts/redesign";
 import {
@@ -155,7 +156,11 @@ export default function RootLayout({
                 url: SITE_URL,
                 description: siteDescription,
                 inLanguage: "en",
-                relatedLink: ["https://pharosville.pharos.watch/"],
+                relatedLink: [
+                  TELEGRAM_BOT_URL,
+                  "https://t.me/pharoswatchers",
+                  "https://pharosville.pharos.watch/",
+                ],
               },
               {
                 "@context": "https://schema.org",

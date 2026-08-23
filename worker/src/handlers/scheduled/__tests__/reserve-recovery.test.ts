@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 const mocks = vi.hoisted(() => ({
   claim: vi.fn(),
@@ -51,22 +52,16 @@ const EMPTY_INSPECTION = {
 };
 
 function runtime(mode: string | undefined): ScheduledRuntimeContext {
-  const value = {
+  const value = makeScheduledRuntime({
     db: {} as D1Database,
     env: { WORKER_RESERVE_RECOVERY_MODE: mode } as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
     cron: "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
     scheduleKey: "fiveMinuteReserveRecovery",
     scheduledTimeMs: 1_000_000,
     slotStartedAt: 1_000,
     invocationId: "recovery-poll",
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
     runLeasedCron: vi.fn(async (_job, fn) => fn(new AbortController().signal, vi.fn())),
-  } as ScheduledRuntimeContext;
+  });
   mocks.createRuntime.mockReturnValue(value);
   return value;
 }

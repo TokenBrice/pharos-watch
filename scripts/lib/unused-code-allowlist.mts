@@ -19,7 +19,10 @@
  */
 
 /** Modules whose only importers are invisible to the static scan. */
-export const SCANNER_BLIND_SPOT_MODULES: Record<string, string> = {};
+export const SCANNER_BLIND_SPOT_MODULES: Record<string, string> = {
+  "src/test/setup.ts":
+    "vitest.config.ts registers it via the src project's setupFiles, which is a config path string rather than an import.",
+};
 
 /** Exports whose only consumers are invisible to the static scan. */
 export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
@@ -30,15 +33,10 @@ export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
 };
 
 /** Unreferenced modules kept on purpose; deletion is a separate pass. */
-export const DEBT_MODULES: Record<string, string> = {
-  "worker/src/test-helpers/telegram-transport-control-schema.ts":
-    "Worker test-helper module left behind by the telegram transport work; no test imports it any more.",
-};
+export const DEBT_MODULES: Record<string, string> = {};
 
 /** Unreferenced exports kept on purpose; deletion is a separate pass. */
 export const DEBT_EXPORTS: Record<string, string> = {
-  "shared/lib/methodology-versions/liquidity-score.ts::getLiquidityMethodologyVersionAt":
-    "Runtime consumers (the pre-5.9 API reconstruction fallback) were removed in the v6.0 cutover; retained as the mixed-version boundary helper for history analysis. Deletion decision belongs to the v6 Phase 6 cleanup.",
   "shared/data/coverage-dispositions/oracle-risk-branch-dispositions.ts::ORACLE_RISK_BRANCH_DISPOSITION_FIELDS":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/data/coverage-dispositions/oracle-risk-branch-dispositions.ts::ORACLE_RISK_BRANCH_DISPOSITIONS":
@@ -55,18 +53,10 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/lib/redemption-backstop-configs/shared.ts::cloneRedemptionDocSource":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/stablecoins/schema.ts::StablecoinReservesSidecarSchema":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetSchema":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetArraySchema":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/types/safety-score-v9-facts.ts::V9FactSourceFingerprintsV2Schema":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/types/stablecoin-meta-schemas.ts::OracleRiskBranchSchema":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "shared/types/stablecoin-meta-schemas.ts::BridgeRouteProtocolEvidenceSchema":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
+    "Imported by the focused shared type test, which is outside the production unused-code scan graph.",
   "src/components/chart-primitives/data-table.tsx::capDataForTable":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "src/components/command-palette-model.ts::scoreStablecoinSearchMatch":
@@ -145,8 +135,6 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "src/lib/mint-authority-display.ts::MINT_AUTHORITY_STATUS_VALUES":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "src/lib/mint-authority-display.ts::mintPostureTextClassName":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "src/lib/safety-score-v9-consumers.ts::V9GradeRiskBucket":
     "Unreferenced here: consumers import the same name from '../safety-grade-buckets' instead.",
   "src/lib/stablecoin-detail-mint-authority-view-model.ts::EOA_UNVERIFIED_CUSTODY_LABEL":
@@ -211,8 +199,6 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts::buildSupplementalAsset":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/telegram-alert-snapshots.ts::SAFETY_GRADE_RANK":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/telegram-pending/upsert-sql.ts::PENDING_ALERT_UPSERT_COLUMNS":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/yield-sync/cache.ts::filterValidDlPools":
@@ -227,8 +213,6 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/chain-registry.ts::GT_CHAIN_REVERSE":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/lib/circuit-breaker.ts::isActiveCircuitSource":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/cron-timeouts.ts::getConfiguredCronTimeoutMs":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/dews/evidence-policy.ts::EVIDENCE_STRESS_THRESHOLD":
@@ -241,8 +225,6 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/external-api-schemas.ts::TronEventSchema":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/lib/fx-rate-state.ts::resetFxRateStateForTests":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/mint-burn-scoring.ts::MIN_ACTIVITY_USD":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/psi-history-universe.ts::buildPsiHistoricalUniverseForDay":
@@ -251,21 +233,13 @@ export const DEBT_EXPORTS: Record<string, string> = {
     "Unreferenced here: consumers import the same name from './profile' instead.",
   "worker/src/lib/repair-tasks.ts::DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it; only prose mentions the name (docs/depeg-resolver.md).",
-  "worker/src/lib/report-card-evidence-journal-store.ts::REPORT_CARD_EVIDENCE_JOURNAL_STORE_MAX_ROWS_PER_ASSET":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/report-cards-fixed-input.ts::FixedDexLiquidityRow":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/safety-score-v9-extension-shared.ts::isoDateStartSec":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/scheduled-slot-fence.ts::STALE_SLOT_ABANDONED_EVENT_TYPE":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/lib/schemas.ts::CronMetadataSchema":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/lib/stability-index.ts::BAND_COLORS":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/lib/telegram-transport-control.ts::TELEGRAM_DELIVERY_MODES":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/lib/telegram-transport-control.ts::readTelegramDeliveryPauses":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/test-helpers/v9-fixed-input.ts::V9_TEST_CLOCK_FLOOR_SEC":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",

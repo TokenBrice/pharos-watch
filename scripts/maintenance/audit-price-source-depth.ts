@@ -6,8 +6,9 @@ import type { StablecoinMeta } from "@shared/types";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
 import {
+  circulatingForStablecoinRow,
+  extractStablecoinRows,
   fetchJson,
   formatNumber,
   formatUsd,
@@ -231,15 +232,6 @@ function findCompositeSources(sources: string[]): string[] {
 
 function extractPegRows(payload: unknown): UnknownRecord[] {
   const rows = Array.isArray(payload) ? payload : isRecord(payload) && Array.isArray(payload.coins) ? payload.coins : [];
-  return rows.filter(isRecord);
-}
-
-function extractStablecoinRows(payload: unknown): UnknownRecord[] {
-  const rows = Array.isArray(payload)
-    ? payload
-    : isRecord(payload) && Array.isArray(payload.peggedAssets)
-      ? payload.peggedAssets
-      : [];
   return rows.filter(isRecord);
 }
 
@@ -495,11 +487,6 @@ function buildCandidateTriage(
   };
 }
 
-function marketCapForStablecoin(row: UnknownRecord | undefined): number {
-  if (!row) return 0;
-  return getCirculatingRaw(row as { circulating?: Record<string, number> | null | undefined });
-}
-
 function buildAuditRow(
   meta: AuditStablecoinMeta,
   pegRow: UnknownRecord | undefined,
@@ -533,7 +520,7 @@ function buildAuditRow(
     symbol: meta.symbol,
     name: meta.name,
     status: "active",
-    marketCapUsd: marketCapForStablecoin(stablecoinRow),
+    marketCapUsd: circulatingForStablecoinRow(stablecoinRow),
     price,
     priceSource,
     priceConfidence,
@@ -594,7 +581,7 @@ function sortByMarketCap(rows: PriceSourceDepthRow[]): PriceSourceDepthRow[] {
 export function buildPriceSourceDepthAudit(input: AuditInput): PriceSourceDepthAudit {
   const activeStablecoins = input.activeStablecoins ?? ACTIVE_STABLECOINS;
   const pegRows = extractPegRows(input.pegSummary);
-  const stablecoinRows = extractStablecoinRows(input.stablecoins);
+  const stablecoinRows = extractStablecoinRows(input.stablecoins, { unwrapPayload: false });
   const pegById = mapRowsById(pegRows);
   const stablecoinById = mapRowsById(stablecoinRows);
 

@@ -148,13 +148,15 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
         dangerouslySetInnerHTML={{
           __html: safeJsonLd(
             buildArticleJsonLd({
-              type: "TechArticle",
+              additionalType: "https://schema.org/TechArticle",
+              id: `${SITE_URL}/docs/${slug}/`,
               headline: doc.title,
               description: doc.summary,
               datePublished: meta?.dateCreated,
               dateModified: meta?.dateModified,
               image: `${SITE_URL}/og-card.png`,
               mainEntityOfPage: `${SITE_URL}/docs/${slug}/`,
+              url: `${SITE_URL}/docs/${slug}/`,
             }),
           ),
         }}

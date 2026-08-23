@@ -1,23 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { logSkippedCronRun } from "../preflight-skip";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 function buildRuntime(prepare: D1Database["prepare"]): ScheduledRuntimeContext {
-  return {
+  return makeScheduledRuntime({
     db: { prepare } as D1Database,
-    env: {} as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
     cron: "16,46 * * * *",
     scheduleKey: "halfHourlyChartsOffset",
     scheduledTimeMs: null,
     slotStartedAt: 1_772_000_000,
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
-    runLeasedCron: vi.fn(),
-  };
+    runLeasedCron: vi.fn() as ScheduledRuntimeContext["runLeasedCron"],
+  });
 }
 
 describe("logSkippedCronRun", () => {

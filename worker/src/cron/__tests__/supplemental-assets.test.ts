@@ -1,14 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
-import { CURATED_ONCHAIN_SUPPLY_CONTRACTS } from "@shared/lib/onchain-supply-probe";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
   getSupplementalDefiLlamaContractPriceKey,
   resolveLowVolumeCoinGeckoPrice,
   resolveSupplementalContractPrice,
   resolveSupplementalPrice,
-  selectSingleOnChainSupplyContract,
-  selectSupplementalOnChainSupplyContract,
 } from "../sync-stablecoins/supplemental-assets";
 import { fetchGoldTokens } from "../sync-stablecoins/supplemental-assets/gold";
 import { fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
@@ -59,64 +56,6 @@ function makeCircuitRow(source: string, state: "closed" | "open" | "half-open", 
     updated_at: Math.floor(Date.now() / 1000),
   };
 }
-
-describe("selectSingleOnChainSupplyContract", () => {
-  it("returns one supported EVM contract", () => {
-    const contract = { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 };
-
-    expect(selectSingleOnChainSupplyContract(makeMeta([contract]))).toBe(contract);
-  });
-
-  it("returns one supported Solana contract", () => {
-    const contract = { chain: "solana", address: "So11111111111111111111111111111111111111112", decimals: 6 };
-
-    expect(selectSingleOnChainSupplyContract(makeMeta([contract]))).toBe(contract);
-  });
-
-  it("ignores unsupported standalone contracts", () => {
-    expect(selectSingleOnChainSupplyContract(makeMeta([
-      { chain: "stellar", address: "TEST.STELLAR", decimals: 7 },
-      { chain: "tron", address: "TEST.TRON", decimals: 6 },
-    ]))).toBeNull();
-  });
-
-  it("rejects multiple supported contracts to avoid publishing partial global supply", () => {
-    expect(selectSingleOnChainSupplyContract(makeMeta([
-      { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 },
-      { chain: "bsc", address: "0x0000000000000000000000000000000000000002", decimals: 6 },
-    ]))).toBeNull();
-  });
-
-  it("rejects mixed supported and unsupported contracts to avoid partial global supply", () => {
-    expect(selectSingleOnChainSupplyContract(makeMeta([
-      { chain: "tron", address: "TEST.TRON", decimals: 6 },
-      { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 },
-    ]))).toBeNull();
-  });
-
-  it("allows curated multi-chain supplemental assets to use a configured supply chain", () => {
-    // susdc-spark previously held this map's only entry; it moved to the
-    // aggregate map once the Avalanche vault leg was verified, so exercise
-    // the still-supported single-chain override mechanism with a synthetic id.
-    const testId = "test-curated-single-chain-coin";
-    CURATED_ONCHAIN_SUPPLY_CONTRACTS[testId] = { chain: "ethereum" };
-    try {
-      const ethereumContract = { chain: "ethereum", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
-      const avalancheContract = { chain: "avalanche", address: "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d", decimals: 6 };
-
-      expect(selectSingleOnChainSupplyContract(makeMeta([
-        ethereumContract,
-        avalancheContract,
-      ], testId))).toBeNull();
-      expect(selectSupplementalOnChainSupplyContract(makeMeta([
-        ethereumContract,
-        avalancheContract,
-      ], testId))).toBe(ethereumContract);
-    } finally {
-      delete CURATED_ONCHAIN_SUPPLY_CONTRACTS[testId];
-    }
-  });
-});
 
 describe("computeExcludedBalanceAdjustedSupplyRaw", () => {
   it("subtracts configured non-circulating balances before decimal conversion", () => {

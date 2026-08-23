@@ -8,7 +8,7 @@ import { buildSyncMetadata } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
-import { pegTypeKey, toPositiveFiniteNumber } from "./supplemental-assets/shared";
+import { buildSupplementalAsset, pegTypeKey, toPositiveFiniteNumber } from "./supplemental-assets/shared";
 import type {
   FallbackIntakeInput,
   FallbackIntakeOutput,
@@ -46,31 +46,27 @@ export function buildFallbackAssetsFromCoinGecko(
     const mcap = input.cgData[meta.geckoId]?.usd_market_cap;
     if (!mcap || mcap <= 0) continue;
 
-    const pKey = pegTypeKey(meta);
     const price = input.cgData[meta.geckoId]?.usd ?? null;
-
-    assets.push({
-      id: meta.id,
-      name: meta.name,
-      symbol: meta.symbol,
-      geckoId: meta.geckoId,
-      pegType: pKey,
-      pegMechanism: meta.flags.backing,
-      price,
+    assets.push(buildSupplementalAsset({
+      meta,
+      priceResolution: price != null
+        ? { price, source: "coingecko", observedAt: null, observedAtMode: "local_fetch" }
+        : null,
       priceSource: "coingecko",
       priceConfidence: "single-source",
       priceUpdatedAt: input.syncStartSec,
       priceObservedAt: input.syncStartSec,
       priceObservedAtMode: "local_fetch",
       priceSyncedAt: input.syncStartSec,
+      nowSec: input.syncStartSec,
+      mcap,
       supplySource: "coingecko-fallback",
-      circulating: { [pKey]: mcap },
       circulatingPrevDay: null,
       circulatingPrevWeek: null,
       circulatingPrevMonth: null,
       chainCirculating: {},
-      chains: [],
-    });
+      chainLabels: [],
+    }));
   }
 
   return assets;

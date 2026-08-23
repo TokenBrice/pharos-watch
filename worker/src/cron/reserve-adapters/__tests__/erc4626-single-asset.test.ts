@@ -3,6 +3,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { jsonResponse } from "../../../test-helpers/__shared/mock-fetch";
 import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
+import { mockErc4626Rpc, runTrackedVault } from "./erc4626-single-asset.test-support";
 
 function uint256Result(value: bigint | number): string {
   return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
@@ -91,6 +92,12 @@ function calcFragmentsResult(
   ].join("")}`;
 }
 
+const catalogCases = [
+  { id: "syzusd-yuzu", asset: "0x6695c0f8706c5ace3bdf8995073179cca47926dc" },
+  { id: "savusd-avant", asset: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346" },
+  { id: "srusde-strata", asset: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3" },
+] as const;
+
 // Yearn V3 vault: 5M idle plus two queued strategies (60M debt fully redeemable,
 // 35M debt with 20M redeemable) => 85M withdrawable, with isShutdown() pinned.
 function yearnV3RpcMock(isShutdownRaw: bigint | number) {
@@ -160,45 +167,15 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("returns a 100% single-asset slice after probing ERC-4626 state", async () => {
     const balanceOfCalls: Array<{ to?: string; data: string }> = [];
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data === "0x18160ddd") {
-        // totalSupply = 100 shares
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a")) {
-        // convertToAssets(100) = 100 assets → ratio 1.0
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        balanceOfCalls.push(call);
-        return jsonResponse({ result: uint256Result(25_000_000n) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ extraHandlers: [({ call }) => {
+      if (call?.data.startsWith("0x70a08231")) balanceOfCalls.push(call);
+      return undefined;
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.slices).toEqual([
       {
@@ -245,37 +222,9 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("preserves BigInt precision when the NAV divergence is just above 1%", async () => {
     const totalAssetsRaw = 10n ** 30n;
     const convertedAssetsRaw = totalAssetsRaw + totalAssetsRaw / 100n + 1n;
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      const data = body.params[0].data;
-      if (data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (data === "0x01e1d114" || data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(totalAssetsRaw) });
-      }
-      if (data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(convertedAssetsRaw) });
-      }
-      if (data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(0n) });
-      }
-      if (data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ totalAssets: totalAssetsRaw, totalSupply: totalAssetsRaw, convertedAssets: convertedAssetsRaw, idleBalance: 0n });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
-    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple")!;
-    const result = await fetchErc4626SingleAssetReserves(
-      coin,
-      coin.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.metadata).toMatchObject({
       collateralizationRatio: 1.01,
@@ -287,81 +236,34 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("throws when the vault asset differs from the configured expectation", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000000000000000000000000000000000000000dead",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000001" });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ asset: "0xdead", totalAssets: 1, totalSupply: undefined, convertedAssets: undefined, idleBalance: undefined, decimals: undefined });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
     await expect(
-      fetchErc4626SingleAssetReserves(coin!, coin!.liveReservesConfig!, new AbortController().signal, {
-        chainRpcs: testChainRpcs,
-      }),
+      runTrackedVault("syrupusdc-maple"),
     ).rejects.toThrow(/asset\(\) returned/);
   });
 
   it("throws when expected vault asset identity cannot be read", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({ result: "0x" });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000001" });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ asset: null, totalAssets: 1, totalSupply: undefined, convertedAssets: undefined, idleBalance: undefined, decimals: undefined });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
     await expect(
-      fetchErc4626SingleAssetReserves(coin!, coin!.liveReservesConfig!, new AbortController().signal, {
-        chainRpcs: testChainRpcs,
-      }),
+      runTrackedVault("syrupusdc-maple"),
     ).rejects.toThrow(/asset\(\) could not be read/);
   });
 
   it("uses documented-eventual redemption telemetry when asset() is absent with no expected asset", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({ result: "0x" });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ asset: null, idleBalance: undefined, decimals: undefined });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithoutExpectedAsset(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithoutExpectedAsset);
 
     expect(result.metadata).toMatchObject({
       totalAssetsRaw: "100000000",
@@ -379,41 +281,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("suppresses redemption capacity when underlying decimals are invalid", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(25_000_000n) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(37) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ decimals: 37 });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.metadata).toMatchObject({
       assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -429,41 +302,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("emits zero redemption capacity when idle underlying balance is zero", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ idleBalance: 0 });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "0",
@@ -479,44 +323,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("reports a paused redemption route when the vault paused() returns true", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(25_000_000n) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      if (body.params[0].data === "0x5c975abb") {
-        return jsonResponse({ result: uint256Result(1) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ paused: 1 });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -530,42 +342,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("uses full convertible backing as capacity for atomic-full-backing vaults even with zero idle balance", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        // Vault holds no idle underlying — backing lives in an external savings module.
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ idleBalance: 0 });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithAtomicFullBacking(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithAtomicFullBacking);
 
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "0",
@@ -724,50 +506,19 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("uses sBOLD Stability-Pool-withdrawable capacity from calcFragments instead of the ~0 idle balance", async () => {
     const calcFragmentsCalls: Array<{ to?: string; data: string }> = [];
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
-      const call = body.params[0];
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        // Idle BOLD balance is ~1 unit (dead share); the real backing is deployed to SPs.
-        return jsonResponse({ result: uint256Result(1_000_000n) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      if (call.data === "0x160b71df") {
+    mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+      if (call?.data === "0x160b71df") {
         calcFragmentsCalls.push(call);
         return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
       }
-      if (call.data === "0xbf2428e6") {
-        return jsonResponse({ result: uint256Result(7_500_000n) });
-      }
-      return null;
-    });
+      if (call?.data === "0xbf2428e6") return jsonResponse({ result: uint256Result(7_500_000n) });
+      return undefined;
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithSboldSpWithdrawable(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithSboldSpWithdrawable);
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -791,45 +542,16 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("degrades sBOLD when collateral exceeds the maxCollInBold withdrawal gate", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      const call = body.params[0];
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114" || call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(1_000_000n) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      if (call.data === "0x160b71df") {
-        return jsonResponse({ result: calcFragmentsResult(85_000_000n, 7_500_001n) });
-      }
-      if (call.data === "0xbf2428e6") {
-        return jsonResponse({ result: uint256Result(7_500_000n) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+      if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n, 7_500_001n) });
+      if (call?.data === "0xbf2428e6") return jsonResponse({ result: uint256Result(7_500_000n) });
+      return undefined;
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithSboldSpWithdrawable(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithSboldSpWithdrawable);
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -848,42 +570,15 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("keeps the existing documented-bound sBOLD telemetry when maxCollInBold is unreadable", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      const call = body.params[0];
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114" || call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(1_000_000n) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      if (call.data === "0x160b71df") {
-        return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+      if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
+      return undefined;
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithSboldSpWithdrawable(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithSboldSpWithdrawable);
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata?.redemption).toEqual({
@@ -898,45 +593,15 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("degrades sBOLD to the idle balance when the calcFragments probe cannot be decoded", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      const call = body.params[0];
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(1_000_000n) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      if (call.data === "0x160b71df") {
-        return jsonResponse({ result: "0x" });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+      if (call?.data === "0x160b71df") return jsonResponse({ result: "0x" });
+      return undefined;
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithSboldSpWithdrawable(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithSboldSpWithdrawable);
 
     expect(result.warnings).toEqual([
       expect.objectContaining({
@@ -957,66 +622,30 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("uses validated Morpho V2 vault liquidity when it exceeds idle underlying balance", async () => {
     const morphoVariables: unknown[] = [];
-    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as {
-        params?: [{ data: string }];
-        variables?: Record<string, unknown>;
-      };
-      if (url === "https://api.morpho.org/graphql") {
-        morphoVariables.push(body.variables);
-        return jsonResponse({
-          data: {
-            vaultV2ByAddress: {
-              address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-              listed: true,
-              asset: {
-                address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-              },
-              chain: { id: 1 },
-              liquidity: "30000000",
-              liquidityUsd: 30,
-              forceDeallocatableLiquidity: "35000000",
-              forceDeallocatableLiquidityUsd: 35,
-              warnings: [],
-            },
+    mockErc4626Rpc({ idleBalance: 0, extraHandlers: [({ url, body }) => {
+      if (url !== "https://api.morpho.org/graphql") return undefined;
+      morphoVariables.push(body.variables);
+      return jsonResponse({
+        data: {
+          vaultV2ByAddress: {
+            address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+            listed: true,
+            asset: { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+            chain: { id: 1 },
+            liquidity: "30000000",
+            liquidityUsd: 30,
+            forceDeallocatableLiquidity: "35000000",
+            forceDeallocatableLiquidityUsd: 35,
+            warnings: [],
           },
-        });
-      }
-      const call = body.params?.[0];
-      if (!call) return null;
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+        },
+      });
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithMorphoVaultV2Liquidity(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithMorphoVaultV2Liquidity);
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -1048,66 +677,27 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("uses validated Morpho V1 vault liquidity when it exceeds idle underlying balance", async () => {
     const morphoVariables: unknown[] = [];
-    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as {
-        params?: [{ data: string }];
-        variables?: Record<string, unknown>;
-      };
-      if (url === "https://api.morpho.org/graphql") {
-        morphoVariables.push(body.variables);
-        return jsonResponse({
-          data: {
-            vaultByAddress: {
-              address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-              listed: true,
-              asset: {
-                address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-              },
-              chain: { id: 1 },
-              liquidity: {
-                underlying: "30000000",
-                usd: 30,
-              },
-              warnings: [],
-            },
+    mockErc4626Rpc({ idleBalance: 0, extraHandlers: [({ url, body }) => {
+      if (url !== "https://api.morpho.org/graphql") return undefined;
+      morphoVariables.push(body.variables);
+      return jsonResponse({
+        data: {
+          vaultByAddress: {
+            address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+            listed: true,
+            asset: { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+            chain: { id: 1 },
+            liquidity: { underlying: "30000000", usd: 30 },
+            warnings: [],
           },
-        });
-      }
-      const call = body.params?.[0];
-      if (!call) return null;
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+        },
+      });
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithMorphoVaultV1Liquidity(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithMorphoVaultV1Liquidity);
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -1136,62 +726,27 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("falls back to idle capacity and degrades when Morpho V2 identity validation fails", async () => {
-    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as {
-        params?: [{ data: string }];
-      };
-      if (url === "https://api.morpho.org/graphql") {
-        return jsonResponse({
-          data: {
-            vaultV2ByAddress: {
-              address: "0x000000000000000000000000000000000000dead",
-              listed: true,
-              asset: {
-                address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-              },
-              chain: { id: 1 },
-              liquidity: "90000000",
-              liquidityUsd: 90,
-              warnings: [],
-            },
+    mockErc4626Rpc({ extraHandlers: [({ url }) => {
+      if (url !== "https://api.morpho.org/graphql") return undefined;
+      return jsonResponse({
+        data: {
+          vaultV2ByAddress: {
+            address: "0x000000000000000000000000000000000000dead",
+            listed: true,
+            asset: { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+            chain: { id: 1 },
+            liquidity: "90000000",
+            liquidityUsd: 90,
+            warnings: [],
           },
-        });
-      }
-      const call = body.params?.[0];
-      if (!call) return null;
-      if (call.data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (call.data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (call.data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(25_000_000n) });
-      }
-      if (call.data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+        },
+      });
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      cloneConfigWithMorphoVaultV2Liquidity(coin!.liveReservesConfig!),
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithMorphoVaultV2Liquidity);
 
     expect(result.warnings).toEqual([
       expect.objectContaining({
@@ -1216,41 +771,17 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("skips NAV ratio when totalSupply is zero but still emits readable idle capacity USD", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: uint256Result(100_000_000n) });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
+    mockErc4626Rpc({ totalSupply: 0, convertedAssets: undefined, extraHandlers: [({ call }) => {
+      if (call?.data.startsWith("0x07a2d13a")) {
         throw new Error("convertToAssets should not be called when totalSupply is zero");
       }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(25_000_000n) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+      return undefined;
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.metadata).toMatchObject({
       totalAssetsRaw: "100000000",
@@ -1268,44 +799,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("emits degraded warning when convertToAssets diverges from totalAssets by >1%", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        // totalAssets = 100
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        // totalSupply = 100
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        // convertToAssets(100) = 110 → ratio 1.10 (10% divergence)
-        return jsonResponse({ result: "0x000000000000000000000000000000000000000000000000000000000000006e" });
-      }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(6) });
-      }
-      return null;
-    });
+    mockErc4626Rpc({ totalAssets: 100, totalSupply: 100, convertedAssets: 110, idleBalance: 0 });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.warnings).toEqual([
       expect.objectContaining({
@@ -1318,43 +817,17 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("uses explicit RPC URLs for ERC-4626 vaults on chains without registry RPCs", async () => {
+    const scenario = catalogCases[0];
     const calledUrls: string[] = [];
-    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    mockErc4626Rpc({ asset: scenario.asset, idleBalance: 0, decimals: 18, extraHandlers: [({ url }) => {
       calledUrls.push(url);
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x0000000000000000000000006695c0f8706c5ace3bdf8995073179cca47926dc",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(18) });
-      }
-      return null;
-    });
+      return undefined;
+    }] });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
-    const coin = TRACKED_META_BY_ID.get("syzusd-yuzu");
+    const coin = TRACKED_META_BY_ID.get(scenario.id);
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault(scenario.id);
 
     expect(calledUrls).toEqual([
       "https://rpc.plasma.to",
@@ -1386,41 +859,13 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("probes Avant savUSD as a high-risk avUSD wrapper", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x00000000000000000000000024de8771bc5ddb3362db529fc3358f2df3a0e346",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(18) });
-      }
-      return null;
-    });
+    const scenario = catalogCases[1];
+    mockErc4626Rpc({ asset: scenario.asset, idleBalance: 0, decimals: 18 });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
-    const coin = TRACKED_META_BY_ID.get("savusd-avant");
+    const coin = TRACKED_META_BY_ID.get(scenario.id);
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault(scenario.id);
 
     expect(result.slices).toEqual([
       {
@@ -1441,41 +886,13 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("probes Strata srUSDe as a high-risk USDe wrapper", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
-        return jsonResponse({
-          result: "0x0000000000000000000000004c9edd5852cd905f086c759e8383e09bff1e68b3",
-        });
-      }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data === "0x18160ddd") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
-      }
-      if (body.params[0].data.startsWith("0x70a08231")) {
-        return jsonResponse({ result: uint256Result(0) });
-      }
-      if (body.params[0].data === "0x313ce567") {
-        return jsonResponse({ result: uint256Result(18) });
-      }
-      return null;
-    });
+    const scenario = catalogCases[2];
+    mockErc4626Rpc({ asset: scenario.asset, idleBalance: 0, decimals: 18 });
 
-    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
-    const coin = TRACKED_META_BY_ID.get("srusde-strata");
+    const coin = TRACKED_META_BY_ID.get(scenario.id);
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
+    const result = await runTrackedVault(scenario.id);
 
     expect(result.slices).toEqual([
       {

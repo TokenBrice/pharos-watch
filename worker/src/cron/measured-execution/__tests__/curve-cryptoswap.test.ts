@@ -23,6 +23,7 @@ import {
   validateCurveCryptoSwapProfileProof,
   type CurveCryptoSwapPoolPolicy,
 } from "../curve-cryptoswap";
+import { makeMeasuredTarget } from "@shared/lib/__tests__/measured-execution.test-support";
 
 const ETHEREUM_BLOCK = 25_536_894;
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -97,8 +98,7 @@ function makeTarget(
     tokenOutAddress: tokenOut.address,
     poolTokenAddresses,
   });
-  return {
-    schemaVersion: "dex-measured-target-v1",
+  return makeMeasuredTarget({
     targetId,
     stablecoinId,
     adapterProfileId: CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
@@ -111,7 +111,7 @@ function makeTarget(
     retainedTvlUsd: 1_000_000,
     retainedPoolPriceUsd: tokenIn.referencePriceUsd,
     capturedAt: 1_752_500_000,
-  };
+  });
 }
 
 function completePinnedPolicy(

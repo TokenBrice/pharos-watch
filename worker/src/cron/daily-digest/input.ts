@@ -15,21 +15,27 @@ import { SECONDS } from "../../lib/time-constants";
 import {
   collectActiveDepegs,
   collectBlacklistActivity,
-  collectCrossDayTrends,
-  collectDewsStress,
-  collectGradeTransitions,
-  collectHistoricalContext,
   collectLiquidityShifts,
   collectMintBurnFlows,
-  collectPsiContributors,
   collectResolvedDepegs,
-  collectSafetyScores,
   collectSupplyVelocity,
-  collectTotalMcapAth,
+} from "./collectors-market";
+import {
+  collectDewsStress,
+  collectGradeTransitions,
+  collectSafetyScores,
   collectYieldAnomalies,
-  type CollectorContext,
-  type CollectorResult,
-} from "./collectors";
+} from "./collectors-risk";
+import {
+  collectCrossDayTrends,
+  collectHistoricalContext,
+  collectPsiContributors,
+  collectTotalMcapAth,
+} from "./collectors-history";
+import type {
+  CollectorContext,
+  CollectorResult,
+} from "./collectors-shared";
 import { markCollectorDegraded } from "./collectors-shared";
 import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";

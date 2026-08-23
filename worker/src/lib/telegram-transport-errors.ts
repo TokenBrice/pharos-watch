@@ -23,6 +23,26 @@ export interface TelegramTransportFailure {
   migrateToChatId?: string;
 }
 
+export function parseTelegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
+  switch (value) {
+    case "blocked":
+    case "chat_not_found":
+    case "chat_migrated":
+    case "formatting_error":
+    case "payload_too_large":
+    case "rate_limit":
+    case "server_error":
+    case "bad_request":
+    case "auth_error":
+    case "timeout":
+    case "network":
+    case "unknown":
+      return value;
+    default:
+      return null;
+  }
+}
+
 interface TelegramErrorPayload {
   description: string | null;
   retryAfterSec: number | null;

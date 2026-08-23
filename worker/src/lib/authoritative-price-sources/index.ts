@@ -16,7 +16,7 @@ import {
 import type { PriceValidationReferences } from "../price-validation";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { capCusdProvider } from "./cap-cusd";
-import { erc4626NavProvider } from "./erc4626-nav";
+import { erc4626NavProvider, previewRedeemProvider } from "./erc4626-nav";
 import {
   CACHED_VAULT_RATE_SOURCE,
   type CurrentPriceOverride,
@@ -32,7 +32,6 @@ import { iusdInfinifiProvider } from "./infinifi-iusd";
 import { jusdStablecoinBridgeProvider } from "./jusd-stablecoin-bridge";
 import { readVaultRateCache, writeVaultRateCache } from "./rate-cache";
 import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
-import { previewRedeemProvider } from "./preview-redeem";
 import { protocolParProvider } from "./protocol-par";
 
 export type {

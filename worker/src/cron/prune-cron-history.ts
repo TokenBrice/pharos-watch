@@ -54,21 +54,49 @@ function toUtcDateString(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().slice(0, 10);
 }
 
-export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
-  throwIfAborted(signal);
-  const now = Math.floor(Date.now() / 1000);
-  const selectorSnapshotDailyQuotaCutoffDate = toUtcDateString(now - SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC);
+interface SimpleRetentionPolicy {
+  sql: string;
+  cutoff: number | string;
+}
 
-  const cronRunsResult = await runWithOverloadRetry(() =>
-    db
-      .prepare("DELETE FROM cron_runs WHERE started_at < ?")
-      .bind(now - SECONDS.ONE_WEEK)
-      .run(),
+async function runSimpleRetentionPass(
+  db: D1Database,
+  policy: SimpleRetentionPolicy,
+  signal?: AbortSignal,
+): Promise<number> {
+  const result = await runWithOverloadRetry(
+    () => db.prepare(policy.sql).bind(policy.cutoff).run(),
     3,
     signal,
   );
   throwIfAborted(signal);
-  const cronRunsDeleted = cronRunsResult.meta?.changes ?? 0;
+  return result.meta?.changes ?? 0;
+}
+
+export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+  throwIfAborted(signal);
+  const now = Math.floor(Date.now() / 1000);
+  const selectorSnapshotDailyQuotaCutoffDate = toUtcDateString(now - SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC);
+  const simpleRetentionPolicies = {
+    cronRuns: {
+      sql: "DELETE FROM cron_runs WHERE started_at < ?",
+      cutoff: now - SECONDS.ONE_WEEK,
+    },
+    selectorSnapshotDailyQuota: {
+      sql: "DELETE FROM selector_snapshot_daily_quota WHERE quota_date < ?",
+      cutoff: selectorSnapshotDailyQuotaCutoffDate,
+    },
+    blockTimestampCache: {
+      sql: "DELETE FROM block_timestamp_cache WHERE updated_at < ?",
+      cutoff: now - BLOCK_TIMESTAMP_CACHE_RETENTION_SEC,
+    },
+    slotExecutions: {
+      sql: "DELETE FROM cron_slot_executions WHERE slot_started_at < ?",
+      cutoff: now - SLOT_EXECUTION_RETENTION_SEC,
+    },
+  } as const;
+
+  const cronRunsDeleted = await runSimpleRetentionPass(db, simpleRetentionPolicies.cronRuns, signal);
 
   const producerHistoryDeleted = await pruneProducerHistory(db, now, signal);
   throwIfAborted(signal);
@@ -83,38 +111,21 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   );
   throwIfAborted(signal);
 
-  const selectorSnapshotDailyQuotaResult = await runWithOverloadRetry(() =>
-    db
-      .prepare("DELETE FROM selector_snapshot_daily_quota WHERE quota_date < ?")
-      .bind(selectorSnapshotDailyQuotaCutoffDate)
-      .run(),
-    3,
+  const selectorSnapshotDailyQuotaDeleted = await runSimpleRetentionPass(
+    db,
+    simpleRetentionPolicies.selectorSnapshotDailyQuota,
     signal,
   );
-  throwIfAborted(signal);
-  const selectorSnapshotDailyQuotaDeleted = selectorSnapshotDailyQuotaResult.meta?.changes ?? 0;
-
-  const blockTimestampCacheResult = await runWithOverloadRetry(() =>
-    db
-      .prepare("DELETE FROM block_timestamp_cache WHERE updated_at < ?")
-      .bind(now - BLOCK_TIMESTAMP_CACHE_RETENTION_SEC)
-      .run(),
-    3,
+  const blockTimestampCacheDeleted = await runSimpleRetentionPass(
+    db,
+    simpleRetentionPolicies.blockTimestampCache,
     signal,
   );
-  throwIfAborted(signal);
-  const blockTimestampCacheDeleted = blockTimestampCacheResult.meta?.changes ?? 0;
-
-  const slotResult = await runWithOverloadRetry(() =>
-    db
-      .prepare("DELETE FROM cron_slot_executions WHERE slot_started_at < ?")
-      .bind(now - SLOT_EXECUTION_RETENTION_SEC)
-      .run(),
-    3,
+  const slotExecutionsDeleted = await runSimpleRetentionPass(
+    db,
+    simpleRetentionPolicies.slotExecutions,
     signal,
   );
-  throwIfAborted(signal);
-  const slotExecutionsDeleted = slotResult.meta?.changes ?? 0;
 
   return createCronResult({
     status: "ok",

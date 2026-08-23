@@ -1,6 +1,5 @@
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { API_ORIGIN, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { StablecoinMeta } from "@shared/types";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
@@ -91,8 +90,10 @@ export function buildStablecoinDatasetJsonLd(
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const datasetSameAs = buildStablecoinSameAs(coin);
-  const datasetIdentityUrls = datasetSameAs.length > 0 ? datasetSameAs : [detailUrl];
+  // Third-party identity links (CoinGecko, DefiLlama, CMC, issuer) describe the
+  // STABLECOIN, so they belong on the nested `about` Thing. Putting them on the
+  // Dataset would claim those sites host copies of the Pharos dataset.
+  const stablecoinIdentityUrls = buildStablecoinSameAs(coin);
   const organization = buildPharosOrganizationNode();
   const contractIdentifiers = (coin.contracts ?? []).slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT).map((contract) => ({
     "@type": "PropertyValue",
@@ -146,7 +147,7 @@ export function buildStablecoinDatasetJsonLd(
     coin,
     detailUrl,
     description: statusCopy.description,
-    sameAs: datasetSameAs,
+    sameAs: stablecoinIdentityUrls,
     image,
   });
 
@@ -159,9 +160,12 @@ export function buildStablecoinDatasetJsonLd(
     url: detailUrl,
     inLanguage: "en",
     mainEntityOfPage: detailUrl,
+    // Google defines Dataset.sameAs as a reference page that unambiguously
+    // identifies the dataset. For a per-coin dataset that is its canonical
+    // Pharos page — not the third-party pages that describe the coin itself.
+    sameAs: [detailUrl],
     about: stablecoinThing,
     ...(image ? { image } : {}),
-    sameAs: datasetIdentityUrls,
     creator: organization,
     ...(coin.proofOfReserves?.url ? { citation: [coin.proofOfReserves.url] } : {}),
     publisher: organization,
@@ -184,12 +188,6 @@ export function buildStablecoinDatasetJsonLd(
     ],
     variableMeasured: statusCopy.variableMeasured,
     distribution: [
-      {
-        "@type": "DataDownload",
-        name: `${coin.name} (${coin.symbol}) API response`,
-        encodingFormat: "application/json",
-        contentUrl: `${API_ORIGIN}${API_PATHS.stablecoinDetail(coin.id)}`,
-      },
       {
         "@type": "DataDownload",
         name: `${coin.name} (${coin.symbol}) markdown profile`,

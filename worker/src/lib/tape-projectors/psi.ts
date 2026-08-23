@@ -20,12 +20,13 @@ import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stabil
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { buildTapeEventId } from "../tape-event-helpers";
-import {
-  insertTapeEvents,
-  setProjectorWatermark,
-} from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
+import {
+  finalizeProjectorBatch,
+  resolveProjectorOptions,
+  type ProjectorOptions,
+  type ProjectorResult,
+} from "./types";
 
 const CURSOR_KEY = "psi.band_changed";
 const PSI_SOURCE_URL = "/stability-index/";
@@ -143,7 +144,7 @@ export async function projectPsiBandShifts(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, CURSOR_KEY, options);
+  const { since, until, limit } = await resolveProjectorOptions(db, CURSOR_KEY, options);
 
   const samples = await fetchSamplesSince(db, since, until, limit);
   if (samples.length === 0) return { projected: 0, advanced: null };
@@ -172,11 +173,5 @@ export async function projectPsiBandShifts(
     previous = curr;
   }
 
-  if (!dryRun) {
-    if (events.length > 0) await insertTapeEvents(db, events);
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, CURSOR_KEY, maxCursor);
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey: CURSOR_KEY, options });
 }

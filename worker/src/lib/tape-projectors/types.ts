@@ -5,7 +5,13 @@
  * calls them with watermark-based defaults; the `/api/backfill-tape` endpoint
  * passes operator-specified overrides.
  */
-import { getProjectorWatermark } from "../tape-event-store";
+import {
+  getProjectorWatermark,
+  insertTapeEvents,
+  loadObservedSourceRowIds,
+  setProjectorWatermark,
+} from "../tape-event-store";
+import type { TapeEventInsert } from "../tape-event-types";
 
 export interface ProjectorOptions {
   /**
@@ -116,4 +122,48 @@ export async function resolveProjectorOptions(
     limit: options?.maxRows ?? DEFAULT_BATCH_LIMIT,
     dryRun: options?.dryRun === true,
   };
+}
+
+export async function finalizeProjectorBatch(
+  db: D1Database,
+  input: {
+    events: TapeEventInsert[];
+    maxCursor: number;
+    options?: ProjectorOptions;
+    cursorKey?: string;
+    cursorUpdates?: readonly { key: string; value: number }[];
+  },
+): Promise<ProjectorResult> {
+  const dryRun = input.options?.dryRun === true;
+  if (!dryRun) {
+    if (input.events.length > 0) await insertTapeEvents(db, input.events);
+    if (input.options?.since == null && input.options?.until == null) {
+      const cursorUpdates = input.cursorUpdates ?? (input.cursorKey
+        ? [{ key: input.cursorKey, value: input.maxCursor }]
+        : []);
+      for (const cursor of cursorUpdates) {
+        await setProjectorWatermark(db, cursor.key, cursor.value);
+      }
+    }
+  }
+  return { projected: input.events.length, advanced: dryRun ? null : input.maxCursor };
+}
+
+export async function projectStaticCatalogEntries<T>(
+  db: D1Database,
+  input: {
+    eventType: string;
+    entries: readonly T[];
+    sourceRowId: (entry: T) => string;
+    buildEvent: (entry: T) => TapeEventInsert;
+  },
+  options?: ProjectorOptions,
+): Promise<ProjectorResult> {
+  const observed = await loadObservedSourceRowIds(db, input.eventType);
+  const events = input.entries
+    .filter((entry) => !observed.has(input.sourceRowId(entry)))
+    .map(input.buildEvent);
+  if (events.length === 0) return { projected: 0, advanced: null };
+  if (options?.dryRun !== true) await insertTapeEvents(db, events);
+  return { projected: events.length, advanced: null };
 }

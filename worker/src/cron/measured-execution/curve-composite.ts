@@ -34,7 +34,13 @@ import {
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { usdToRawAmount } from "./fixed-point";
-import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
+import { materializeEvmQuotePoint } from "./evm-quote-plan";
+import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
+import {
+  createCurveGetDyQuoteAdapter,
+  makeCurveGetDyPlan,
+  type CurveGetDyPlan,
+} from "./curve-get-dy-quote-engine";
 import {
   CURVE_ALUSD_3CRV_METAPOOL_ADDRESS,
   CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS,
@@ -84,7 +90,6 @@ const ERC4626_ABI = parseAbi([
   "function asset() view returns (address)",
   "function convertToAssets(uint256 shares) view returns (uint256)",
 ]);
-const EVM_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/;
 const BATCH_SIZE = 8;
 const MULTICALL_GAS = "0x1c9c380";
 
@@ -786,12 +791,6 @@ const POLICIES: readonly CurveCompositePoolPolicy[] = [
   ...CURVE_R3_METAPOOL_POLICIES,
 ];
 
-function canonicalAddress(value: unknown): `0x${string}` | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return EVM_ADDRESS_PATTERN.test(normalized) ? (normalized as `0x${string}`) : null;
-}
-
 function decodeFactoryAddressArray(
   policy: CurveCompositePoolPolicy,
   functionName: "get_coins" | "get_underlying_coins",
@@ -812,7 +811,7 @@ function decodeFactoryAddressArray(
     if (
       decoded.length < expectedLength ||
       decoded.slice(expectedLength).some(
-        (address) => canonicalAddress(address) !== "0x0000000000000000000000000000000000000000",
+        (address) => canonicalEvmAddress(address) !== "0x0000000000000000000000000000000000000000",
       )
     ) return null;
     return decoded.slice(0, expectedLength);
@@ -852,7 +851,7 @@ export function getCurveCompositePolicy(
   poolAddress: string,
 ): CurveCompositePoolPolicy | null {
   const normalizedChain = chain.trim().toLowerCase();
-  const normalizedAddress = canonicalAddress(poolAddress);
+  const normalizedAddress = canonicalEvmAddress(poolAddress);
   return POLICIES.find(
     (policy) => policy.chain === normalizedChain && policy.poolAddress === normalizedAddress,
   ) ?? null;
@@ -911,13 +910,13 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
   ) return null;
   if (
     policy.quoteFunction === "get_dy_underlying" &&
-    canonicalAddress(curveData.basePoolAddress) !== policy.metapool.basePoolAddress
+    canonicalEvmAddress(curveData.basePoolAddress) !== policy.metapool.basePoolAddress
   ) return null;
   for (let index = 0; index < policy.poolTokens.length; index += 1) {
     const expected = policy.poolTokens[index]!;
     const actual = curveData.poolCoins[index]!;
     if (
-      canonicalAddress(actual.address) !== expected.address ||
+      canonicalEvmAddress(actual.address) !== expected.address ||
       actual.symbol.trim().toLowerCase() !== expected.symbol.toLowerCase() ||
       actual.decimals !== expected.decimals ||
       actual.isBasePoolLpToken !==
@@ -936,7 +935,7 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
       curveData.underlyingCoins.length !== policy.executionTokens.length ||
       curveData.underlyingCoins.some((actual, index) => {
         const expected = policy.executionTokens[index]!;
-        return canonicalAddress(actual.address) !== expected.address ||
+        return canonicalEvmAddress(actual.address) !== expected.address ||
           actual.symbol.trim().toLowerCase() !== expected.symbol.toLowerCase() ||
           actual.decimals !== expected.decimals ||
           !Number.isFinite(actual.usdPrice) ||
@@ -1038,7 +1037,7 @@ export function evaluateCurveCompositeEligibility(input: {
 }): CurveCompositeEligibility {
   const policy = getCurveCompositePolicy(input.chain, input.endpointAddress);
   if (!policy) return { ok: false, reason: "pool-not-reviewed" };
-  if (canonicalAddress(input.endpointAddress) !== policy.poolAddress) {
+  if (canonicalEvmAddress(input.endpointAddress) !== policy.poolAddress) {
     return { ok: false, reason: "execution-endpoint-mismatch" };
   }
   if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
@@ -1140,11 +1139,9 @@ function decodeAddress(
   functionName: string,
   data: `0x${string}`,
 ): `0x${string}` | null {
-  try {
-    return canonicalAddress(decodeFunctionResult({ abi, functionName, data } as never));
-  } catch {
-    return null;
-  }
+  return decodeEvmAddressResult({
+    decode: () => decodeFunctionResult({ abi, functionName, data } as never),
+  });
 }
 
 function createCurveCompositeDeploymentVerifier(dependencies: VerificationDependencies) {
@@ -1294,7 +1291,7 @@ function createCurveCompositeDeploymentVerifier(dependencies: VerificationDepend
       ) ||
       factoryCoins.length !== policy.poolTokens.length ||
       factoryCoins.some(
-        (address, index) => canonicalAddress(address) !== policy.poolTokens[index]!.address,
+        (address, index) => canonicalEvmAddress(address) !== policy.poolTokens[index]!.address,
       )
     ) return { ok: false, reason: "factory-membership-mismatch" };
 
@@ -1471,7 +1468,7 @@ function createCurveCompositeDeploymentVerifier(dependencies: VerificationDepend
           !underlyingCoins ||
           underlyingCoins.length !== policy.executionTokens.length ||
           underlyingCoins.some(
-            (address, index) => canonicalAddress(address) !== policy.executionTokens[index]!.address,
+            (address, index) => canonicalEvmAddress(address) !== policy.executionTokens[index]!.address,
           ) ||
           !underlyingDecimals ||
           underlyingDecimals.length !== policy.executionTokens.length ||
@@ -1741,56 +1738,49 @@ interface QuoteDependencies {
 }
 
 export function createCurveCompositeQuoteExecutor(dependencies: QuoteDependencies) {
-  return async function quoteCurveCompositeRequests(input: {
-    requests: readonly CurveCompositeRequest[];
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<CurveCompositeBatchOutcome[]> {
-    const prepared = input.requests.map(prepareRequest);
-    const outcomes = input.requests.map((request, index): CurveCompositeBatchOutcome => ({
+  return createCurveGetDyQuoteAdapter<
+    CurveCompositeRequest,
+    CurveGetDyPlan<EncodedRequest>,
+    CurveCompositeEligibility,
+    CurveCompositeBatchOutcome,
+    QuoteFailure
+  >({
+    batchSize: BATCH_SIZE,
+    prepare: (request, index) => {
+      const prepared = prepareRequest(request, index);
+      return {
+        eligibility: prepared.eligibility,
+        ...(prepared.failureReason ? { failureReason: prepared.failureReason } : {}),
+        ...(prepared.encoded
+          ? {
+              plan: makeCurveGetDyPlan(prepared.encoded),
+            }
+          : {}),
+      };
+    },
+    makeOutcome: (request, eligibility, failureReason) => ({
       targetId: request.target.targetId,
       inputUsd: request.inputUsd,
       blockNumber: request.blockNumber,
-      eligibility: prepared[index]!.eligibility,
-      ...(prepared[index]!.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
-    }));
-    const plans = prepared.flatMap((entry) => entry.encoded ? [{
-      ...entry.encoded,
-      chain: entry.encoded.policy.chain,
-      call: {
-            label: entry.encoded.label,
-            target: entry.encoded.endpointAddress,
-            callData: entry.encoded.callData,
-            allowFailure: true,
-      },
-    }] : []);
-    return executeEvmQuotePlan({
-      plans,
-      outcomes,
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      rpcBudget: input.rpcBudget,
-      spec: {
-        batchSize: BATCH_SIZE,
-        executeMulticall: dependencies.executeMulticall,
-        resolveResult: (request, result) => ({
-            targetId: request.target.targetId,
-            inputUsd: request.inputUsd,
-            blockNumber: request.blockNumber,
-            eligibility: request.eligibility,
-            ...decodeQuotePoint(request, result),
-        }),
-        materializeTransportFailure: (request, reason) => ({
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          blockNumber: request.blockNumber,
-          eligibility: request.eligibility,
-          failureReason: reason ?? "rpc-failure",
-        }),
-      },
-    });
-  };
+      eligibility,
+      ...(failureReason ? { failureReason } : {}),
+    }),
+    executeMulticall: dependencies.executeMulticall,
+    resolveResult: (request, result) => ({
+      targetId: request.target.targetId,
+      inputUsd: request.inputUsd,
+      blockNumber: request.blockNumber,
+      eligibility: request.eligibility,
+      ...decodeQuotePoint(request, result),
+    }),
+    materializeTransportFailure: (request, reason) => ({
+      targetId: request.target.targetId,
+      inputUsd: request.inputUsd,
+      blockNumber: request.blockNumber,
+      eligibility: request.eligibility,
+      failureReason: reason ?? "rpc-failure",
+    }),
+  });
 }
 
 export const quoteCurveCompositeRequests = createCurveCompositeQuoteExecutor({
@@ -1919,7 +1909,7 @@ export function validateCurveCompositeProfileProof(profile: DexMeasuredExecution
       !decoded ||
       decoded.length !== policy.poolTokens.length ||
       decoded.some(
-        (address, index) => canonicalAddress(address) !== policy.poolTokens[index]!.address,
+        (address, index) => canonicalEvmAddress(address) !== policy.poolTokens[index]!.address,
       )
     ) issues.add("factory-coins-proof-mismatch");
   } catch {
@@ -2124,7 +2114,7 @@ export function validateCurveCompositeProfileProof(profile: DexMeasuredExecution
         !coins ||
         coins.length !== policy.executionTokens.length ||
         coins.some(
-          (address, index) => canonicalAddress(address) !== policy.executionTokens[index]!.address,
+        (address, index) => canonicalEvmAddress(address) !== policy.executionTokens[index]!.address,
         ) ||
         !decimals ||
         decimals.length !== policy.executionTokens.length ||

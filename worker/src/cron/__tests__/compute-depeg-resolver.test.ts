@@ -9,6 +9,7 @@ import { sealEligibleLocks } from "../depeg-resolver/publication";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+import { makeDdrCanonicalIncident, makeDdrResolverRow } from "./depeg-public-projection.test-support";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -53,81 +54,23 @@ describe("computeDepegResolver", () => {
   }
 
   function resolverRow(overrides: Partial<DdrRow> = {}): DdrRow {
-    return {
+    return makeDdrResolverRow(overrides, {
+      defaultAgeSec: 12 * 3600,
+      factorLabel: "Fixture has hard collateral and redemption",
+      name: "Lane B Test",
       stablecoinId: "lane-b-test",
       symbol: "LBT",
-      name: "Lane B Test",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      status: "active",
-      eventId: 42,
-      startedAt: NOW_SEC - 12 * 3600,
-      ageSec: 12 * 3600,
-      direction: "below",
-      peakDeviationBps: -250,
-      currentDeviationBps: -180,
-      resolution: {
-        tier: "recovery_likely",
-        factors: [
-          {
-            code: "R2_hard_collateral_redemption",
-            kind: "anchor",
-            severity: "strong",
-            label: "Fixture has hard collateral and redemption",
-          },
-        ],
-      },
-      duration: {
-        suppressed: false,
-        suppressedReason: null,
-        stratum: "below - moderate - robust - USD",
-        medianSec: 3600,
-        iqrSec: [1800, 7200],
-        ageStatus: "ordinary",
-        horizons: [
-          {
-            horizon: "6h",
-            state: "benchmarked",
-            probability: 0.75,
-            probabilityDisplay: "70-80%",
-            probabilityInterval: { lower: 0.7, upper: 0.8 },
-            rawAtRisk: 20,
-            uniqueCoins: 12,
-            intervalClosures: 15,
-            intervalNonClosures: 5,
-          },
-        ],
-      },
-      relatedContext: {
-        dewsBand: "WATCH",
-        dewsScore: 22,
-        liquidityScore: 88,
-        safetyGrade: "A",
-        safetyScore: 91,
-        supplyChange7dPct: 0,
-        supplyChange30dPct: 0,
-        mintSurge: false,
-      },
-      ...overrides,
-    };
+      nowSec: NOW_SEC,
+    });
   }
 
   function canonicalIncident(overrides: Partial<DdrCanonicalIncident> = {}): DdrCanonicalIncident {
-    return {
+    return makeDdrCanonicalIncident(resolverRow(), {
       incidentKey: "ddr2:readiness0000000000000000000000",
-      eventId: 42,
-      currentEventId: 42,
-      stablecoinId: "lane-b-test",
-      pegCurrency: "USD",
-      direction: "below",
-      startedAt: NOW_SEC - 12 * 3600,
       eligibleAt: NOW_SEC,
-      policyUniverseIncluded: true,
       rolloutActiveAtEnablement: false,
-      confirmedAt: null,
-      lockState: null,
       ...overrides,
-    };
+    });
   }
 
   function sealedFromInput(
@@ -322,7 +265,8 @@ describe("computeDepegResolver", () => {
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
 
-    const result = await computeDepegResolver({ db, storeContracts: null });
+    const { stores } = storesFor();
+    const result = await computeDepegResolver({ db, storeContracts: stores });
     const payload = readDdrSnapshotPayload(db);
 
     expect(result.itemCount).toBe(0);
@@ -392,7 +336,6 @@ describe("computeDepegResolver", () => {
         quarantinedCoins: 0,
       },
       nowSec: NOW_SEC - 600,
-      storageAvailable: true,
     });
     previousSnapshot.rows[0].live = {
       ...previousSnapshot.rows[0].live,

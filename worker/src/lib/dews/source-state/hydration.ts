@@ -10,6 +10,7 @@
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { decodeJsonString } from "../../cache-json";
+import type { BlacklistPersistedRow } from "../../blacklist/shared";
 import { isMissingTableError } from "../../db";
 import { toErrorMessage } from "../../error-utils";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
@@ -320,13 +321,9 @@ export interface BlacklistHydration {
   rowsRead: number;
 }
 
-interface BlacklistEventHydrationRow {
-  stablecoin: string;
-  chain_id: string;
-  config_key: string | null;
-  contract_address: string | null;
-  timestamp: number;
-}
+type BlacklistEventHydrationRow = Pick<BlacklistPersistedRow,
+  "stablecoin" | "chain_id" | "config_key" | "contract_address" | "timestamp"
+>;
 
 const BLACKLIST_SYMBOL_TO_TRACKED_ID = (() => {
   const bySymbol = new Map<string, Set<string>>();

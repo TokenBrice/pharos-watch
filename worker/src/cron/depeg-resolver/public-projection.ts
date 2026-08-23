@@ -457,7 +457,6 @@ function buildPublicRows(input: {
   manifest: DdrPublicationManifest | null;
   errata: DdrPredictionErratum[];
   nowSec: number;
-  storageAvailable: boolean;
 }): DdrResponse["rows"] {
   const sealedByKey = sealedByIncident(input.sealed);
   const errata = groupErrata(input.errata);
@@ -499,10 +498,7 @@ function buildPublicRows(input: {
           publicPredictionId: null,
           sealed: null,
           publication: null,
-          deferralReason:
-            lockEligible && !input.storageAvailable
-              ? "storage-contract-unavailable"
-              : (incident.lockState?.lastDeferralReason ?? null),
+          deferralReason: incident.lockState?.lastDeferralReason ?? null,
           modelAsOf: input.nowSec,
           readiness: pendingReadiness?.readiness ?? null,
           backstop: pendingReadiness?.backstop ?? null,
@@ -663,7 +659,6 @@ export function buildDdrResponse(input: {
   errata: DdrPredictionErratum[];
   lineage: DdrLineage;
   nowSec: number;
-  storageAvailable: boolean;
 }): DdrResponse {
   const publicPredictionRows = input.sealed
     .map((sealed) => [publicPredictionIdOf(sealed), sealed.rowHash] as const)
@@ -717,7 +712,6 @@ export function buildV2PublicationBasePayload(input: {
       manifest: null,
       errata: input.errata,
       nowSec: input.nowSec,
-      storageAvailable: true,
     }),
     methodology: input.snapshot.methodology,
   };

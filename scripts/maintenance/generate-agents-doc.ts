@@ -12,9 +12,10 @@
  * and `shared/data/stablecoins/` are hand-written and untouched by this script.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const SOURCE_REL = "CLAUDE.md";
@@ -25,15 +26,10 @@ const CHECK_MODE = process.argv.includes("--check");
 
 const contents = readFileSync(SOURCE_ABS, "utf8");
 
-if (CHECK_MODE) {
-  const current = existsSync(OUTPUT_ABS) ? readFileSync(OUTPUT_ABS, "utf8") : "";
-  if (current !== contents) {
-    console.error(`${OUTPUT_REL} is stale. Run \`node --import tsx scripts/maintenance/generate-agents-doc.ts\`.`);
-    process.exit(1);
-  }
-  console.log(`${OUTPUT_REL}: matches ${SOURCE_REL}`);
-  process.exit(0);
-}
-
-writeFileSync(OUTPUT_ABS, contents, "utf8");
-console.log(`${OUTPUT_REL}: republished from ${SOURCE_REL} (${contents.length} bytes)`);
+syncGeneratedArtifacts({
+  artifacts: [{ path: OUTPUT_ABS, contents }],
+  check: CHECK_MODE,
+  staleMessage: `${OUTPUT_REL} is stale. Run \`node --import tsx scripts/maintenance/generate-agents-doc.ts\`.`,
+  currentMessage: `${OUTPUT_REL}: matches ${SOURCE_REL}`,
+  writtenMessage: `${OUTPUT_REL}: republished from ${SOURCE_REL} (${contents.length} bytes)`,
+});

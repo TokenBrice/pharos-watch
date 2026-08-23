@@ -11,31 +11,30 @@ import {
   severityForFreezeBlocked,
   severityForFreezeDestroyed,
 } from "../tape-event-helpers";
-import {
-  insertTapeEvents,
-  setProjectorWatermark,
-} from "../tape-event-store";
 import { getBlacklistConfigByKey } from "../blacklist-contracts";
+import type { BlacklistPersistedRow } from "../blacklist/shared";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
+  finalizeProjectorBatch,
   fetchRowsWithTieExpansion,
   resolveProjectorOptions,
   type ProjectorOptions,
   type ProjectorResult,
 } from "./types";
 
-interface BlacklistSourceRow {
-  id: string;
-  stablecoin: string;
-  chain_id: string;
-  chain_name: string;
-  event_type: string;          // "blacklist" | "unblacklist" | "destroy"
-  amount_usd_at_event: number | null;
-  timestamp: number;           // epoch seconds
+type BlacklistSourceRow = Pick<BlacklistPersistedRow,
+  | "id"
+  | "stablecoin"
+  | "chain_id"
+  | "chain_name"
+  | "event_type"
+  | "amount_usd_at_event"
+  | "timestamp"
+  | "config_key"
+> & {
   methodology_version: string | null;
-  config_key: string | null;
   rowid: number;
-}
+};
 
 const BLACKLIST_VARIANTS = [
   { variant: "blocked",     eventType: "blacklist",   slug: "freeze.blocked",     transition: "opened"    },
@@ -51,7 +50,7 @@ async function projectFreezeVariant(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const cursorKey = spec.slug;
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchRowsWithTieExpansion<BlacklistSourceRow>(db, {
     selectSql: `SELECT id, stablecoin, chain_id, chain_name, event_type, amount_usd_at_event,
@@ -139,13 +138,7 @@ async function projectFreezeVariant(
     if (row.timestamp > maxCursor) maxCursor = row.timestamp;
   }
 
-  if (!dryRun) {
-    await insertTapeEvents(db, events);
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
 }
 
 export function projectFreezeBlocked(db: D1Database, options?: ProjectorOptions): Promise<ProjectorResult> {

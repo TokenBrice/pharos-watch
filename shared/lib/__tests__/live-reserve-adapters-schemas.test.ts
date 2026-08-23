@@ -5,8 +5,6 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import {
   LIVE_RESERVE_ADAPTER_DESCRIPTORS,
-  LIVE_RESERVE_ADAPTER_PROVENANCE,
-  LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "../live-reserve-adapters";
@@ -20,8 +18,7 @@ import {
   QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   adapterParamsSchemas,
   baseLiveReserveConfigSchema,
-  liveReserveAdapterSchemaMetadata,
-} from "../live-reserve-adapters-schemas";
+} from "../live-reserve-adapters";
 
 const LATE_MONTHLY_SOURCE_AGE_IDS = [
   "audm-mento",
@@ -308,26 +305,16 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
   it("derives every compatibility projection from the descriptor registry", () => {
     const keys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
     expect(Object.keys(LIVE_RESERVE_ADAPTER_DESCRIPTORS).sort()).toEqual(keys);
-    expect(Object.keys(liveReserveAdapterSchemaMetadata).sort()).toEqual(keys);
     expect(Object.keys(adapterParamsSchemas).sort()).toEqual(keys);
     expect(Object.keys(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS).sort()).toEqual(keys);
-    expect(Object.keys(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES).sort()).toEqual(keys);
     expect(Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort()).toEqual(keys);
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS).toBe(LIVE_RESERVE_ADAPTER_DESCRIPTORS);
 
     for (const adapterKey of LIVE_RESERVE_ADAPTER_KEYS) {
       const descriptor = LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey];
       expect(descriptor.key).toBe(adapterKey);
-      expect(descriptor.params).toBe(liveReserveAdapterSchemaMetadata[adapterKey].params);
-      expect(descriptor.primaryInputKinds).toBe(liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds);
-      expect(adapterParamsSchemas[adapterKey]).toBe(liveReserveAdapterSchemaMetadata[adapterKey].params);
-      expect(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[adapterKey]).toBe(
-        liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds,
-      );
-      expect(LIVE_RESERVE_ADAPTER_PROVENANCE[adapterKey]).toBe(descriptor.provenance);
-      expect(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES[adapterKey]).toBe(
-        descriptor.sourceOriginClass,
-      );
+      expect(adapterParamsSchemas[adapterKey]).toBe(descriptor.params);
+      expect(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[adapterKey]).toBe(descriptor.primaryInputKinds);
       expect(ReserveEvidenceSourceOriginClassSchema.safeParse(descriptor.sourceOriginClass).success).toBe(
         true,
       );
@@ -345,11 +332,11 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     ] as const;
 
     for (const adapterKey of issuerAdapters) {
-      expect(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES[adapterKey]).toBe("issuer-attested");
+      expect(LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey].sourceOriginClass).toBe("issuer-attested");
       expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].evidenceClass).toBe("independent");
       expect(getReserveDisplayBadgeKindForAdapter(adapterKey)).toBe("proof");
     }
-    expect(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES["3jane-usd3"]).toBe("unknown");
+    expect(LIVE_RESERVE_ADAPTER_DESCRIPTORS["3jane-usd3"].sourceOriginClass).toBe("unknown");
   });
 
   it("rejects unsupported adapter semantics", () => {

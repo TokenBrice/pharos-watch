@@ -1,9 +1,11 @@
 import type {
   V9AssetFactsBase,
   V9DeploymentControlFactV2,
+  V9EconomicControlReviewV2,
   V9FactStatusV2,
   V9FailureDomainRef,
 } from "../../types/safety-score-v9-facts";
+import type { BridgeRouteRiskTier, OracleRiskTier } from "../../types/core";
 import type {
   V9ReasonCode,
   V9Severity,
@@ -11,7 +13,6 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import {
-  V9_CANDIDATE_POLICY_V1,
   assertV9ReasonCodesRegistered,
   assertV9ValidatedPolicyEnvelope,
   getV9ScoreBearingGatesPolicy,
@@ -20,8 +21,8 @@ import {
 import { isV9UncanonicalizedChainPoolRoute } from "./facts";
 import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
 
-export type V9MintReconciliation = "continuous" | "periodic" | "none" | "not-applicable" | "unknown";
-export type V9MintSupervision = "prudential" | "attestation-only" | "none" | "unknown";
+export type V9MintReconciliation = V9EconomicControlReviewV2["mint"]["reconciliation"];
+export type V9MintSupervision = V9EconomicControlReviewV2["mint"]["supervision"];
 export type V9MintPosture =
   | "none-resolved"
   | "bounded-admin"
@@ -32,36 +33,17 @@ export type V9MintPosture =
   | "unbounded-reconciliation-unknown"
   | "unbounded-or-compromised"
   | "unknown";
-export type V9OracleTier =
-  | "oracleless"
-  | "privileged-internal-pricing"
-  | "redundant-with-failover"
-  | "medianized-with-delay"
-  | "standard-external"
-  | "single-source-or-laggy"
-  | "opaque-or-unknown";
-export type V9BridgeTier =
-  | "single-chain-or-native"
-  | "issuer-native-burn-mint"
-  | "canonical-rollup-bridge"
-  | "issuer-native-lock-mint"
-  | "external-validated-network"
-  | "liquidity-or-intent-route"
-  | "external-lock-mint"
-  | "opaque-or-unknown";
+export type V9OracleTier = OracleRiskTier;
+export type V9BridgeTier = BridgeRouteRiskTier;
 
-export type V9OracleBranchKind = "feed" | "collateral-parameter" | "liquidation" | "backstop" | "shutdown-bad-debt";
+export type V9OracleBranchKind = V9EconomicControlReviewV2["oracle"]["branches"][number]["branch"];
 
-export interface V9UpgradeControlReview {
-  state: "immutable" | "not-applicable" | "reviewed" | "unknown";
-  controlKey: string | null;
-}
+export type V9UpgradeControlReview = V9EconomicControlReviewV2["mint"]["upgrade"];
 
-export interface V9MintMechanismReview {
-  status: V9FactStatusV2;
-  controlKey: string | null;
-  reconciliation: V9MintReconciliation;
-  supervision: V9MintSupervision;
+export type V9MintMechanismReview = Omit<
+  V9EconomicControlReviewV2["mint"],
+  "latestResolvedIncidentAtSec"
+> & {
   /**
    * Epoch second of the most recent resolved mint incident, or null when the
    * review records none. Absolute rather than an age so the fact is stable
@@ -69,76 +51,19 @@ export interface V9MintMechanismReview {
    * clock (see {@link EvaluateV9EconomicControlArgs.resolvedIncidentAgeMonths}).
    */
   latestResolvedIncidentAtSec?: number | null;
-  upgrade: V9UpgradeControlReview;
-}
+};
 
-export interface V9MintControlPostureFacts {
-  supervision: V9MintSupervision;
-  reconciliation: V9MintReconciliation;
-  attestationCadence: "independent-periodic" | "self-reported" | "unknown";
-  custodyStructure: "segregated-diversified" | "concentrated-custodian" | "unknown";
-  openLegalEvents: "none" | "open" | "unknown";
-}
+export type V9OracleBranchReview = V9EconomicControlReviewV2["oracle"]["branches"][number];
 
-/**
- * Grade the full R4 control-posture tuple. The production review currently
- * carries only supervision and reconciliation, so its bounded proxy is
- * applied separately in evaluateV9EconomicControl; unknown richer facts keep
- * this full grader on the existing conservative posture value.
- */
-export function gradeV9MintControlPosture(
-  posture: V9MintPosture,
-  facts: V9MintControlPostureFacts,
-  envelope: V9ValidatedPolicyEnvelope = V9_CANDIDATE_POLICY_V1,
-): number {
-  assertV9ValidatedPolicyEnvelope(envelope);
-  const policy = envelope.policy.semantic.control;
-  const conservative = policy.mintPostureQuality[posture];
-  if (posture !== "concentrated-admin" && posture !== "unbounded-reconciled") return conservative;
-
-  const reconciled = facts.reconciliation === "continuous" || facts.reconciliation === "periodic";
-  const favorableSupportingFacts =
-    facts.attestationCadence === "independent-periodic" &&
-    facts.custodyStructure === "segregated-diversified" &&
-    facts.openLegalEvents === "none";
-  if (!reconciled || !favorableSupportingFacts) return conservative;
-  if (facts.supervision === "prudential") return policy.mintPostureGrading.prudentialReconciled;
-  if (facts.supervision === "attestation-only") return policy.mintPostureGrading.attestationOnlyReconciled;
-  return conservative;
-}
-
-export interface V9OracleBranchReview {
-  branch: V9OracleBranchKind;
-  status: V9FactStatusV2;
-  controlKey: string | null;
-  mechanismKey: string | null;
-  inheritedFromAssetId: string | null;
-}
-
-export interface V9OracleControlReview {
-  status: V9FactStatusV2;
-  tier: V9OracleTier | null;
-  liquidationBranchesApplicable?: boolean;
+export type V9OracleControlReview = Omit<V9EconomicControlReviewV2["oracle"], "branches"> & {
   branches: readonly V9OracleBranchReview[];
-  /**
-   * Worst severity band from weak market branches whose measured debt share is
-   * below the deployment-materiality threshold. Such branches do not drive the
-   * material-only top-level {@link tier}; this surfaces them as one non-binding
-   * oracle diagnostic. Absent when the branch-materiality lever is inactive or
-   * no sub-material weak branch exists. Derived in `adaptOracleReview`.
-   */
-  subMaterialWeakBand?: "moderate" | "low";
-}
+};
 
-export interface V9BridgeRouteControlReview {
-  controlKey: string;
-  tier: V9BridgeTier;
-}
+export type V9BridgeRouteControlReview = V9EconomicControlReviewV2["bridge"]["routes"][number];
 
-export interface V9BridgeControlReview {
-  status: V9FactStatusV2;
+export type V9BridgeControlReview = Omit<V9EconomicControlReviewV2["bridge"], "routes"> & {
   routes: readonly V9BridgeRouteControlReview[];
-}
+};
 
 export interface V9EconomicControlAssetFacts {
   assetId: V9AssetFactsBase["assetId"];

@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { relative } from "node:path";
 import { reportViolations } from "../lib/report-violations.mts";
-import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mts";
+import { scanSourceGate } from "../lib/source-gate.mts";
+import { runAsCli } from "../lib/source-files.mts";
 
 /**
  * Enforces the AGENTS.md polling rule: cron-backed hooks must derive
@@ -102,19 +101,13 @@ export function scanHookPollingWindow({
   cwd = process.cwd(),
 }: ScanHookPollingOptions = {}): HookPollingReport {
   const waiverFiles = new Set(waivers.map((w) => w.file));
-  const scannedFiles = [];
-  const violations: HookPollingViolation[] = [];
-
-  for (const root of roots) {
-    const resolvedRoot = resolveSourceRoot(root, cwd);
-    const files = collectSourceFiles(resolvedRoot, { extensions: HOOK_EXTENSIONS });
-    scannedFiles.push(...files);
-
-    for (const file of files) {
-      const relativeFile = relative(cwd, file);
-      if (waiverFiles.has(relativeFile)) continue;
-
-      const content = readFileSync(file, "utf8");
+  return scanSourceGate<HookPollingViolation>({
+    roots,
+    cwd,
+    extensions: HOOK_EXTENSIONS,
+    scanFile: ({ relativePath, content }) => {
+      if (waiverFiles.has(relativePath)) return [];
+      const violations: HookPollingViolation[] = [];
       for (const re of [STALE_TIME_RE, REFETCH_RE]) {
         re.lastIndex = 0;
         let match;
@@ -124,15 +117,14 @@ export function scanHookPollingWindow({
           if (result.ok) continue;
           const key = re === STALE_TIME_RE ? "staleTime" : "refetchInterval";
           violations.push({
-            file: relativeFile,
+            file: relativePath,
             reason: `${key} set inline (${result.reason}); use getPollingWindow(cronInterval) or createPollingQueryOptions(...)`,
           });
         }
       }
-    }
-  }
-
-  return { scannedFiles, violations };
+      return violations;
+    },
+  });
 }
 
 export function printHookPollingWindowReport(report: HookPollingReport): number {

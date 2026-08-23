@@ -44,11 +44,11 @@ The source-name registry is maintained in `worker/src/lib/constants.ts` under `C
 
 ### DefiLlama list vs detail API
 
-The **list** endpoint (`stablecoins.llama.fi/stablecoins`) returns `circulating` values **already in USD** for all peg types — `peggedRUB`, `peggedEUR`, `peggedJPY`, etc. are all denominated in USD despite their key names.
+The [DefiLlama list-supply invariant](./architecture.md#architectural-decision-records) governs these values: `circulating` is already USD-denominated for every peg type.
 
 The **detail** endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns values in **native currency** (e.g. RUB for A7A5, EUR for EURC). The worker's `stablecoin-detail.ts` handler multiplies by `parsed.price` to convert these to USD before caching.
 
-Do **not** multiply list endpoint values by price — that would double-convert and produce wildly wrong numbers (e.g. A7A5: $508M × 0.013 = $6.6M instead of $508M).
+Do not multiply list endpoint values by price; that would double-convert them.
 
 ## Price Enrichment Pipeline
 

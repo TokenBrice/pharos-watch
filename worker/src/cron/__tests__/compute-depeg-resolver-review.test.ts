@@ -118,16 +118,83 @@ function reviewDb(eventRows: Record<string, unknown>[], extra: MockTableConfig[]
 }
 
 function incident(overrides: Record<string, unknown> = {}) {
+  const eventId = typeof overrides.eventId === "number" ? overrides.eventId : 42;
+  const currentEventId = typeof overrides.currentEventId === "number" ? overrides.currentEventId : eventId;
   return {
     incidentKey: "ddr2:22222222222222222222222222222222",
-    eventId: 42,
-    currentEventId: 42,
+    eventId,
+    currentEventId,
     stablecoinId: "lusd-liquity",
     pegCurrency: "USD",
     direction: "below" as const,
     startedAt: STARTED_AT,
     eligibleAt: ELIGIBLE_AT,
     policyUniverseIncluded: true,
+    ...overrides,
+  };
+}
+
+type ReviewSealedPrediction = Awaited<ReturnType<DdrV2StoreContracts["loadSealedPublicPredictions"]>>[number];
+type ReviewFirstPublication = Awaited<ReturnType<DdrV2StoreContracts["loadFirstPublicationMembership"]>>[number];
+
+function sealedPrediction(overrides: Partial<ReviewSealedPrediction> = {}): ReviewSealedPrediction {
+  const { sealedPayload: payloadOverrides, ...recordOverrides } = overrides;
+  return {
+    id: 55,
+    publicPredictionId: 55,
+    incidentKey: incident().incidentKey,
+    eventId: 42,
+    assessmentId: 90,
+    outcomeKind: "prediction",
+    predictionPolicyVersion: "sticky-24h-v1",
+    predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+    policyDelaySec: 86_400,
+    eligibleAt: ELIGIBLE_AT,
+    lockedAt: ELIGIBLE_AT,
+    eventAgeAtLockSec: 86_400,
+    lockTiming: "on_time",
+    rowHash: "e".repeat(64),
+    ...recordOverrides,
+    sealedPayload: {
+      symbol: "LUSD",
+      name: "Liquity USD",
+      pegCurrency: "USD",
+      governance: "decentralized",
+      frozen: {
+        resolution: { tier: "recovery_likely", factors: [] },
+        duration: {
+          suppressed: false,
+          suppressedReason: null,
+          medianSec: 3_600,
+          iqrSec: [1_800, 7_200],
+          horizons: JSON.parse(assessmentRow().horizons_json as string),
+          stratum: "below - moderate - robust - USD",
+        },
+      },
+      ...payloadOverrides,
+    },
+  };
+}
+
+function firstPublication(overrides: Partial<ReviewFirstPublication> = {}): ReviewFirstPublication {
+  return {
+    publicPredictionId: 55,
+    incidentKey: incident().incidentKey,
+    snapshotToken: "ddr-public-55",
+    snapshotGeneration: 1,
+    publishedAt: ELIGIBLE_AT + 60,
+    firstPublished: true,
+    ...overrides,
+  };
+}
+
+function eventRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 42,
+    stablecoin_id: "lusd-liquity",
+    started_at: STARTED_AT,
+    ended_at: null,
+    recovery_price: null,
     ...overrides,
   };
 }
@@ -430,76 +497,14 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("reviews published durable v2 prediction payloads", async () => {
-    const incident = {
-      incidentKey: "ddr2:published-prediction",
-      eventId: 42,
-      currentEventId: 42,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      policyUniverseIncluded: true,
-    };
+    const reviewIncident = incident({ incidentKey: "ddr2:published-prediction" });
     const db = reviewDb([
-      {
-        id: 42,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: ELIGIBLE_AT + 3_600,
-        recovery_price: 1,
-      },
+      eventRow({ ended_at: ELIGIBLE_AT + 3_600, recovery_price: 1 }),
     ]);
     const stores = durableStores({
-      loadCanonicalIncidents: vi.fn(async () => [incident]),
-      loadSealedPublicPredictions: vi.fn(async () => [
-        {
-          id: 55,
-          publicPredictionId: 55,
-          incidentKey: incident.incidentKey,
-          eventId: 42,
-          assessmentId: 90,
-          outcomeKind: "prediction" as const,
-          predictionPolicyVersion: "sticky-24h-v1",
-          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-          policyDelaySec: 86_400,
-          eligibleAt: ELIGIBLE_AT,
-          lockedAt: ELIGIBLE_AT,
-          eventAgeAtLockSec: 86_400,
-          lockTiming: "on_time" as const,
-          rowHash: "e".repeat(64),
-          sealedPayload: {
-            symbol: "LUSD",
-            name: "Liquity USD",
-            pegCurrency: "USD",
-            governance: "decentralized",
-            frozen: {
-              resolution: {
-                tier: "recovery_likely",
-                factors: [],
-              },
-              duration: {
-                suppressed: false,
-                suppressedReason: null,
-                medianSec: 3_600,
-                iqrSec: [1_800, 7_200],
-                horizons: JSON.parse(assessmentRow().horizons_json as string),
-                stratum: "below - moderate - robust - USD",
-              },
-            },
-          },
-        },
-      ]),
-      loadFirstPublicationMembership: vi.fn(async () => [
-        {
-          publicPredictionId: 55,
-          incidentKey: incident.incidentKey,
-          snapshotToken: "ddr-public-55",
-          snapshotGeneration: 1,
-          publishedAt: ELIGIBLE_AT + 60,
-          firstPublished: true,
-        },
-      ]),
+      loadCanonicalIncidents: vi.fn(async () => [reviewIncident]),
+      loadSealedPublicPredictions: vi.fn(async () => [sealedPrediction({ incidentKey: reviewIncident.incidentKey })]),
+      loadFirstPublicationMembership: vi.fn(async () => [firstPublication({ incidentKey: reviewIncident.incidentKey })]),
     });
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 7_200, undefined, {
@@ -508,7 +513,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
     expect(snapshot.rows[0]).toMatchObject({
       kind: "prediction_review",
-      incidentKey: incident.incidentKey,
+      incidentKey: reviewIncident.incidentKey,
       publicPredictionId: 55,
       actual: { kind: "recovered" },
       verdictReview: "correct_recoverable",
@@ -664,85 +669,35 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const lockedAt = originalStartedAt + 86_400;
     const tailStartedAt = lockedAt + 3_600;
     const recoveredAt = lockedAt + 10_000;
-    const incident = {
+    const reviewIncident = incident({
       incidentKey: "ddr2:sealed-repaired-tail",
-      eventId: 42,
       currentEventId: 89,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
       startedAt: tailStartedAt,
       eligibleAt: tailStartedAt + 86_400,
-      policyUniverseIncluded: true,
-    };
+    });
     const db = reviewDb([
-      {
-        id: 42,
-        stablecoin_id: "lusd-liquity",
-        started_at: originalStartedAt,
-        ended_at: lockedAt + 60,
-        recovery_price: 1,
-      },
-      {
-        id: 89,
-        stablecoin_id: "lusd-liquity",
-        started_at: tailStartedAt,
-        ended_at: recoveredAt,
-        recovery_price: 1,
-      },
+      eventRow({ started_at: originalStartedAt, ended_at: lockedAt + 60, recovery_price: 1 }),
+      eventRow({ id: 89, started_at: tailStartedAt, ended_at: recoveredAt, recovery_price: 1 }),
     ]);
     const stores = durableStores({
-      loadCanonicalIncidents: vi.fn(async () => [incident]),
-      loadSealedPublicPredictions: vi.fn(async () => [
-        {
-          id: 56,
-          publicPredictionId: 56,
-          incidentKey: incident.incidentKey,
-          eventId: 42,
-          assessmentId: 91,
-          outcomeKind: "prediction" as const,
-          predictionPolicyVersion: "sticky-24h-v1",
-          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-          policyDelaySec: 86_400,
-          eligibleAt: lockedAt,
-          lockedAt,
-          eventAgeAtLockSec: lockedAt - originalStartedAt,
-          lockTiming: "on_time" as const,
-          rowHash: "f".repeat(64),
-          sealedPayload: {
-            eventId: 42,
-            startedAt: originalStartedAt,
-            symbol: "LUSD",
-            name: "Liquity USD",
-            pegCurrency: "USD",
-            governance: "decentralized",
-            frozen: {
-              resolution: {
-                tier: "recovery_likely",
-                factors: [],
-              },
-              duration: {
-                suppressed: false,
-                suppressedReason: null,
-                medianSec: 3_600,
-                iqrSec: [1_800, 7_200],
-                horizons: JSON.parse(assessmentRow().horizons_json as string),
-                stratum: "below - moderate - robust - USD",
-              },
-            },
-          },
-        },
-      ]),
-      loadFirstPublicationMembership: vi.fn(async () => [
-        {
-          publicPredictionId: 56,
-          incidentKey: incident.incidentKey,
-          snapshotToken: "ddr-public-56",
-          snapshotGeneration: 1,
-          publishedAt: lockedAt + 60,
-          firstPublished: true,
-        },
-      ]),
+      loadCanonicalIncidents: vi.fn(async () => [reviewIncident]),
+      loadSealedPublicPredictions: vi.fn(async () => [sealedPrediction({
+        id: 56,
+        publicPredictionId: 56,
+        incidentKey: reviewIncident.incidentKey,
+        assessmentId: 91,
+        eligibleAt: lockedAt,
+        lockedAt,
+        eventAgeAtLockSec: lockedAt - originalStartedAt,
+        rowHash: "f".repeat(64),
+        sealedPayload: { eventId: 42, startedAt: originalStartedAt },
+      })]),
+      loadFirstPublicationMembership: vi.fn(async () => [firstPublication({
+        publicPredictionId: 56,
+        incidentKey: reviewIncident.incidentKey,
+        snapshotToken: "ddr-public-56",
+        publishedAt: lockedAt + 60,
+      })]),
     });
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, recoveredAt + 1, undefined, {
@@ -753,7 +708,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       kind: "prediction_review",
       eventId: 89,
       currentEventId: 89,
-      incidentKey: incident.incidentKey,
+      incidentKey: reviewIncident.incidentKey,
       startedAt: originalStartedAt,
       eligibleAt: lockedAt,
       lockedAt,
@@ -768,86 +723,38 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const originalStartedAt = STARTED_AT;
     const lockedAt = originalStartedAt + 86_400;
     const tailStartedAt = lockedAt + 7_200;
-    const incident = {
+    const reviewIncident = incident({
       incidentKey: "ddr2:sealed-open-tail",
       eventId: 43,
       currentEventId: 90,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
       startedAt: tailStartedAt,
       eligibleAt: tailStartedAt + 86_400,
-      policyUniverseIncluded: true,
-    };
+    });
     const db = reviewDb([
-      {
-        id: 43,
-        stablecoin_id: "lusd-liquity",
-        started_at: originalStartedAt,
-        ended_at: lockedAt + 60,
-        recovery_price: 1,
-      },
-      {
-        id: 90,
-        stablecoin_id: "lusd-liquity",
-        started_at: tailStartedAt,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 43, started_at: originalStartedAt, ended_at: lockedAt + 60, recovery_price: 1 }),
+      eventRow({ id: 90, started_at: tailStartedAt }),
     ]);
     const stores = durableStores({
-      loadCanonicalIncidents: vi.fn(async () => [incident]),
-      loadSealedPublicPredictions: vi.fn(async () => [
-        {
-          id: 57,
-          publicPredictionId: 57,
-          incidentKey: incident.incidentKey,
-          eventId: 43,
-          assessmentId: 92,
-          outcomeKind: "prediction" as const,
-          predictionPolicyVersion: "sticky-24h-v1",
-          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-          policyDelaySec: 86_400,
-          eligibleAt: lockedAt,
-          lockedAt,
-          eventAgeAtLockSec: lockedAt - originalStartedAt,
-          lockTiming: "on_time" as const,
-          rowHash: "a".repeat(64),
-          sealedPayload: {
-            eventId: 43,
-            // Bad future payload start should fall back to lockedAt - eventAgeAtLockSec.
-            startedAt: tailStartedAt,
-            symbol: "LUSD",
-            name: "Liquity USD",
-            pegCurrency: "USD",
-            governance: "decentralized",
-            frozen: {
-              resolution: {
-                tier: "recovery_likely",
-                factors: [],
-              },
-              duration: {
-                suppressed: false,
-                suppressedReason: null,
-                medianSec: 3_600,
-                iqrSec: [1_800, 7_200],
-                horizons: JSON.parse(assessmentRow().horizons_json as string),
-                stratum: "below - moderate - robust - USD",
-              },
-            },
-          },
-        },
-      ]),
-      loadFirstPublicationMembership: vi.fn(async () => [
-        {
-          publicPredictionId: 57,
-          incidentKey: incident.incidentKey,
-          snapshotToken: "ddr-public-57",
-          snapshotGeneration: 1,
-          publishedAt: lockedAt + 60,
-          firstPublished: true,
-        },
-      ]),
+      loadCanonicalIncidents: vi.fn(async () => [reviewIncident]),
+      loadSealedPublicPredictions: vi.fn(async () => [sealedPrediction({
+        id: 57,
+        publicPredictionId: 57,
+        incidentKey: reviewIncident.incidentKey,
+        eventId: 43,
+        assessmentId: 92,
+        eligibleAt: lockedAt,
+        lockedAt,
+        eventAgeAtLockSec: lockedAt - originalStartedAt,
+        rowHash: "a".repeat(64),
+        // Bad future payload start should fall back to lockedAt - eventAgeAtLockSec.
+        sealedPayload: { eventId: 43, startedAt: tailStartedAt },
+      })]),
+      loadFirstPublicationMembership: vi.fn(async () => [firstPublication({
+        publicPredictionId: 57,
+        incidentKey: reviewIncident.incidentKey,
+        snapshotToken: "ddr-public-57",
+        publishedAt: lockedAt + 60,
+      })]),
     });
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, tailStartedAt + 3_600, undefined, {
@@ -873,100 +780,48 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const originalStartedAt = STARTED_AT;
     const lockedAt = originalStartedAt + 86_400;
     const tailStartedAt = lockedAt + 7_200;
-    const canonical = {
+    const canonical = incident({
       incidentKey: "ddr2:canonical-open-tail",
       eventId: 43,
       currentEventId: 43,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
       startedAt: originalStartedAt,
       eligibleAt: lockedAt,
-      policyUniverseIncluded: true,
-      incidentState: "active" as const,
+      incidentState: "active",
       supersededByIncidentKey: null,
-    };
-    const duplicateAlias = {
+    });
+    const duplicateAlias = incident({
       incidentKey: "ddr2:duplicate-open-tail",
       eventId: 90,
       currentEventId: 90,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
       startedAt: tailStartedAt,
       eligibleAt: tailStartedAt + 86_400,
-      policyUniverseIncluded: true,
-      incidentState: "superseded" as const,
+      incidentState: "superseded",
       supersededByIncidentKey: canonical.incidentKey,
-    };
+    });
     const db = reviewDb([
-      {
-        id: 43,
-        stablecoin_id: "lusd-liquity",
-        started_at: originalStartedAt,
-        ended_at: lockedAt + 60,
-        recovery_price: 1,
-      },
-      {
-        id: 90,
-        stablecoin_id: "lusd-liquity",
-        started_at: tailStartedAt,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 43, started_at: originalStartedAt, ended_at: lockedAt + 60, recovery_price: 1 }),
+      eventRow({ id: 90, started_at: tailStartedAt }),
     ]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [canonical, duplicateAlias]),
-      loadSealedPublicPredictions: vi.fn(async () => [
-        {
-          id: 58,
-          publicPredictionId: 58,
-          incidentKey: canonical.incidentKey,
-          eventId: 43,
-          assessmentId: 93,
-          outcomeKind: "prediction" as const,
-          predictionPolicyVersion: "sticky-24h-v1",
-          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-          policyDelaySec: 86_400,
-          eligibleAt: lockedAt,
-          lockedAt,
-          eventAgeAtLockSec: lockedAt - originalStartedAt,
-          lockTiming: "on_time" as const,
-          rowHash: "b".repeat(64),
-          sealedPayload: {
-            eventId: 43,
-            startedAt: originalStartedAt,
-            symbol: "LUSD",
-            name: "Liquity USD",
-            pegCurrency: "USD",
-            governance: "decentralized",
-            frozen: {
-              resolution: {
-                tier: "recovery_likely",
-                factors: [],
-              },
-              duration: {
-                suppressed: false,
-                suppressedReason: null,
-                medianSec: 3_600,
-                iqrSec: [1_800, 7_200],
-                horizons: JSON.parse(assessmentRow().horizons_json as string),
-                stratum: "below - moderate - robust - USD",
-              },
-            },
-          },
-        },
-      ]),
-      loadFirstPublicationMembership: vi.fn(async () => [
-        {
-          publicPredictionId: 58,
-          incidentKey: canonical.incidentKey,
-          snapshotToken: "ddr-public-58",
-          snapshotGeneration: 1,
-          publishedAt: lockedAt + 60,
-          firstPublished: true,
-        },
-      ]),
+      loadSealedPublicPredictions: vi.fn(async () => [sealedPrediction({
+        id: 58,
+        publicPredictionId: 58,
+        incidentKey: canonical.incidentKey,
+        eventId: 43,
+        assessmentId: 93,
+        eligibleAt: lockedAt,
+        lockedAt,
+        eventAgeAtLockSec: lockedAt - originalStartedAt,
+        rowHash: "b".repeat(64),
+        sealedPayload: { eventId: 43, startedAt: originalStartedAt },
+      })]),
+      loadFirstPublicationMembership: vi.fn(async () => [firstPublication({
+        publicPredictionId: 58,
+        incidentKey: canonical.incidentKey,
+        snapshotToken: "ddr-public-58",
+        publishedAt: lockedAt + 60,
+      })]),
     });
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, tailStartedAt + 3_600, undefined, {
@@ -988,56 +843,25 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("classifies v2 missed-lock coverage at lock boundaries and after deferrals close", async () => {
     const incidents = [
-      {
-        incidentKey: "ddr2:eq-recovered",
-        eventId: 1,
-        currentEventId: 1,
-        stablecoinId: "lusd-liquity",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
-      {
+      incident({ incidentKey: "ddr2:eq-recovered", eventId: 1, startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),
+      incident({
         incidentKey: "ddr2:deferral-closed",
         eventId: 2,
-        currentEventId: 2,
-        stablecoinId: "lusd-liquity",
-        pegCurrency: "USD",
-        direction: "below" as const,
         startedAt: STARTED_AT,
         eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
         lockState: {
           eligibleAt: ELIGIBLE_AT,
           deferralCount: 1,
           lastDeferralReason: "cache stale",
-          lastState: "lock_deferred" as const,
+          lastState: "lock_deferred",
         },
-      },
-      {
-        incidentKey: "ddr2:terminal-unknown-time",
-        eventId: 3,
-        currentEventId: 3,
-        stablecoinId: "usr-resolv",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
+      }),
+      incident({ incidentKey: "ddr2:terminal-unknown-time", eventId: 3, stablecoinId: "usr-resolv", startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),
     ];
     const db = reviewDb([
-      { id: 1, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT, recovery_price: 1 },
-      {
-        id: 2,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: ELIGIBLE_AT + 1,
-        recovery_price: 1,
-      },
-      { id: 3, stablecoin_id: "usr-resolv", started_at: STARTED_AT, ended_at: null, recovery_price: null },
+      eventRow({ id: 1, ended_at: ELIGIBLE_AT, recovery_price: 1 }),
+      eventRow({ id: 2, ended_at: ELIGIBLE_AT + 1, recovery_price: 1 }),
+      eventRow({ id: 3, stablecoin_id: "usr-resolv" }),
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
 
@@ -1053,37 +877,11 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("uses canonical dynamic eligibility when classifying DDRR coverage rows", async () => {
     const dynamicEligibleAt = STARTED_AT + 72 * 3600;
-    const activeIncident = {
-      incidentKey: "ddr2:dynamic-active-pending",
-      eventId: 11,
-      currentEventId: 11,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: dynamicEligibleAt,
-      policyUniverseIncluded: true,
-    };
-    const recoveredIncident = {
-      incidentKey: "ddr2:dynamic-recovered-before-backstop",
-      eventId: 12,
-      currentEventId: 12,
-      stablecoinId: "lusd-liquity",
-      pegCurrency: "USD",
-      direction: "below" as const,
-      startedAt: STARTED_AT,
-      eligibleAt: dynamicEligibleAt,
-      policyUniverseIncluded: true,
-    };
+    const activeIncident = incident({ incidentKey: "ddr2:dynamic-active-pending", eventId: 11, startedAt: STARTED_AT, eligibleAt: dynamicEligibleAt });
+    const recoveredIncident = incident({ incidentKey: "ddr2:dynamic-recovered-before-backstop", eventId: 12, startedAt: STARTED_AT, eligibleAt: dynamicEligibleAt });
     const db = reviewDb([
-      { id: 11, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
-      {
-        id: 12,
-        stablecoin_id: "lusd-liquity",
-        started_at: STARTED_AT,
-        ended_at: STARTED_AT + 48 * 3600,
-        recovery_price: 1,
-      },
+      eventRow({ id: 11 }),
+      eventRow({ id: 12, ended_at: STARTED_AT + 48 * 3600, recovery_price: 1 }),
     ]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [activeIncident, recoveredIncident]),
@@ -1119,187 +917,57 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const terminalBeforeAt = ELIGIBLE_AT - 900;
     const terminalAfterAt = ELIGIBLE_AT + 600;
     const incidents = [
-      {
-        incidentKey: "ddr2:matrix-missing-source",
-        eventId: 201,
-        currentEventId: 201,
-        stablecoinId: "matrix-missing-source",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
-      {
-        incidentKey: "ddr2:matrix-pre-lock-recovered",
-        eventId: 202,
-        currentEventId: 202,
-        stablecoinId: "matrix-pre-lock-recovered",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
-      {
-        incidentKey: "ddr2:matrix-terminal-before",
-        eventId: 203,
-        currentEventId: 203,
-        stablecoinId: "matrix-terminal-before",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
-      {
-        incidentKey: "ddr2:matrix-pending",
-        eventId: 204,
-        currentEventId: 204,
-        stablecoinId: "matrix-pending",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: pendingEligibleAt,
-        policyUniverseIncluded: true,
-      },
-      {
-        incidentKey: "ddr2:matrix-missed-recovered",
-        eventId: 205,
-        currentEventId: 205,
-        stablecoinId: "matrix-missed-recovered",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
-      {
-        incidentKey: "ddr2:matrix-orphan",
-        eventId: 206,
-        currentEventId: 206,
-        stablecoinId: "matrix-orphan",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
-      {
-        incidentKey: "ddr2:matrix-terminal-after",
-        eventId: 207,
-        currentEventId: 207,
-        stablecoinId: "matrix-terminal-after",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
-      {
-        incidentKey: "ddr2:matrix-system-deferral",
-        eventId: 208,
-        currentEventId: 208,
-        stablecoinId: "matrix-system-deferral",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
+      ["matrix-missing-source", 201],
+      ["matrix-pre-lock-recovered", 202],
+      ["matrix-terminal-before", 203],
+      ["matrix-pending", 204, pendingEligibleAt],
+      ["matrix-missed-recovered", 205],
+      ["matrix-orphan", 206],
+      ["matrix-terminal-after", 207],
+      ["matrix-system-deferral", 208],
+      ["matrix-cron-gap", 209],
+    ].map(([stablecoinId, eventId, eligibleAt]) => incident({
+      incidentKey: `ddr2:${stablecoinId}`,
+      eventId: eventId as number,
+      stablecoinId: stablecoinId as string,
+      startedAt: STARTED_AT,
+      eligibleAt: (eligibleAt as number | undefined) ?? ELIGIBLE_AT,
+      ...(eventId === 208 ? {
         lockState: {
           eligibleAt: ELIGIBLE_AT,
-          lastState: "lock_deferred" as const,
+          lastState: "lock_deferred",
           lastDeferralReason: "cache stale",
           deferralCount: 2,
         },
-      },
-      {
-        incidentKey: "ddr2:matrix-cron-gap",
-        eventId: 209,
-        currentEventId: 209,
-        stablecoinId: "matrix-cron-gap",
-        pegCurrency: "USD",
-        direction: "below" as const,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
-        policyUniverseIncluded: true,
-      },
-    ];
+      } : {}),
+    }));
     const db = reviewDb([
-      {
-        id: 202,
-        stablecoin_id: "matrix-pre-lock-recovered",
-        started_at: STARTED_AT,
-        ended_at: ELIGIBLE_AT - 60,
-        recovery_price: 1,
-      },
-      {
-        id: 203,
-        stablecoin_id: "matrix-terminal-before",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
-      {
-        id: 204,
-        stablecoin_id: "matrix-pending",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
-      {
-        id: 205,
-        stablecoin_id: "matrix-missed-recovered",
-        started_at: STARTED_AT,
-        ended_at: ELIGIBLE_AT + 60,
-        recovery_price: 1,
-      },
-      {
-        id: 206,
-        stablecoin_id: "matrix-orphan",
-        started_at: STARTED_AT,
-        ended_at: ELIGIBLE_AT + 60,
-        recovery_price: null,
-      },
-      {
-        id: 207,
-        stablecoin_id: "matrix-terminal-after",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
-      {
-        id: 208,
-        stablecoin_id: "matrix-system-deferral",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
-      {
-        id: 209,
-        stablecoin_id: "matrix-cron-gap",
-        started_at: STARTED_AT,
-        ended_at: null,
-        recovery_price: null,
-      },
+      eventRow({ id: 202, stablecoin_id: "matrix-pre-lock-recovered", ended_at: ELIGIBLE_AT - 60, recovery_price: 1 }),
+      eventRow({ id: 203, stablecoin_id: "matrix-terminal-before" }),
+      eventRow({ id: 204, stablecoin_id: "matrix-pending" }),
+      eventRow({ id: 205, stablecoin_id: "matrix-missed-recovered", ended_at: ELIGIBLE_AT + 60, recovery_price: 1 }),
+      eventRow({ id: 206, stablecoin_id: "matrix-orphan", ended_at: ELIGIBLE_AT + 60 }),
+      eventRow({ id: 207, stablecoin_id: "matrix-terminal-after" }),
+      eventRow({ id: 208, stablecoin_id: "matrix-system-deferral" }),
+      eventRow({ id: 209, stablecoin_id: "matrix-cron-gap" }),
     ], [
       {
-      match: "FROM tape_events",
-      rows: [
-        {
-          coin_id: "matrix-terminal-before",
-          type: "lifecycle.tracked.frozen",
-          ts: terminalBeforeAt * 1000,
-          payload_json: JSON.stringify({}),
-        },
-        {
-          coin_id: "matrix-terminal-after",
-          type: "lifecycle.tracked.frozen",
-          ts: terminalAfterAt * 1000,
-          payload_json: JSON.stringify({}),
-        },
-      ],
-    },
+        match: "FROM tape_events",
+        rows: [
+          {
+            coin_id: "matrix-terminal-before",
+            type: "lifecycle.tracked.frozen",
+            ts: terminalBeforeAt * 1000,
+            payload_json: JSON.stringify({}),
+          },
+          {
+            coin_id: "matrix-terminal-after",
+            type: "lifecycle.tracked.frozen",
+            ts: terminalAfterAt * 1000,
+            payload_json: JSON.stringify({}),
+          },
+        ],
+      },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
 

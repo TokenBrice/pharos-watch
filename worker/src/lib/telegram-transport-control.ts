@@ -151,20 +151,6 @@ export async function readTelegramTransportCircuit(db: D1Database): Promise<Tele
   return rowToCircuit(row);
 }
 
-export async function readTelegramDeliveryPauses(
-  db: D1Database,
-  nowSec: number,
-): Promise<TelegramDeliveryPauseSnapshot[]> {
-  const rows = await db
-    .prepare(
-      `SELECT mode, generation, expires_at, reason, actor, created_at, updated_at
-         FROM telegram_delivery_pauses
-        ORDER BY mode`,
-    )
-    .all<PauseRow>();
-  return (rows.results ?? []).map((row) => rowToPause(row, nowSec));
-}
-
 export async function readTelegramDeliveryPause(
   db: D1Database,
   mode: TelegramDeliveryMode,

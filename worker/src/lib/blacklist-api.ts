@@ -1,35 +1,18 @@
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
-import type {
-  BlacklistAmountSource,
-  BlacklistAmountStatus,
-  BlacklistEvent,
-  BlacklistEventType,
-  BlacklistStablecoin,
-} from "@shared/types/market";
+import type { BlacklistEvent } from "@shared/types/market";
+import type { BlacklistPersistedRow } from "./blacklist/shared";
 
-export interface BlacklistEventRow {
-  id: string;
-  stablecoin: BlacklistStablecoin;
-  chain_id: string;
-  chain_name: string;
-  event_type: BlacklistEventType;
-  address: string;
-  amount_native: number | null;
-  amount_usd_at_event: number | null;
-  amount_source: BlacklistAmountSource;
-  amount_status: BlacklistAmountStatus;
-  tx_hash: string;
-  block_number: number;
-  timestamp: number;
+export type BlacklistEventRow = Omit<BlacklistPersistedRow,
+  | "methodology_version"
+  | "suppression_reason"
+  | "amount_attempt_count"
+  | "amount_last_attempted_at"
+  | "amount_last_error_class"
+  | "amount_last_provider"
+> & {
   methodology_version: string | null;
-  contract_address: string | null;
-  config_key: string | null;
-  event_signature: string | null;
-  event_topic0: string | null;
   suppression_reason: string | null;
-  explorer_tx_url: string;
-  explorer_address_url: string;
-}
+};
 
 export function mapBlacklistEventRow(row: BlacklistEventRow): BlacklistEvent {
   return {

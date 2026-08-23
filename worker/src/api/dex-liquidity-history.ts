@@ -7,6 +7,7 @@ import {
   ExitRouteObservationSchema,
   MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
 } from "@shared/types/market";
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 
 interface LiquidityHistoryRow {
   total_tvl_usd: number;
@@ -36,12 +37,7 @@ function parseRouteSummary(json: string | null) {
 
 export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promise<Response> => {
     return handleStablecoinHistoryRequest(db, url, {
-      query: {
-        defaultDays: 90,
-        minDays: 1,
-        maxDays: 365,
-        rangePolicy: "reject",
-      },
+      query: STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity,
       cacheControl: CACHE_PROFILES.slow,
       fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
         const result = await database

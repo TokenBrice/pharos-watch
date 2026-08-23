@@ -1,13 +1,9 @@
 import { z } from "zod";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-keys";
 import type {
-  LiveReserveEvidenceClass,
-  LiveReserveFreshnessMode,
   LiveReserveInput,
   LiveReserveSemantics,
-  LiveReserveSourceModel,
   LiveReserveWarningEffect,
-  ReserveDisplayBadgeKind,
 } from "./live-reserve-core";
 import {
   LIVE_RESERVE_EVIDENCE_CLASS_VALUES,
@@ -15,11 +11,10 @@ import {
   LIVE_RESERVE_SOURCE_MODEL_VALUES,
   RESERVE_DISPLAY_BADGE_KIND_VALUES,
 } from "./live-reserve-core";
-import { ReserveSliceSchema, type ReserveSlice } from "./reserves";
+import { ReserveSliceSchema } from "./reserves";
 import { HttpUrlSchema } from "./validators";
 import {
   RedemptionHolderEligibilitySchema,
-  type RedemptionHolderEligibility,
   RedemptionLiveCapacityKindValues,
   RedemptionLiveFreshnessKindValues,
   RedemptionRouteStatusSchema,
@@ -50,65 +45,7 @@ export interface LiveReserveWarning {
   effect: LiveReserveWarningEffect;
 }
 
-export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
-  sourceTimestamp?: number;
-  freshnessMode?: LiveReserveFreshnessMode;
-  unknownExposurePct?: number;
-  yieldBasisCollateralUsd?: number;
-  yieldBasisCollateralPct?: number;
-  supplyUsd?: number;
-  totalReserveUsd?: number;
-  totalAssetsUsd?: number;
-  totalLiabilitiesUsd?: number;
-  shareholderEquityUsd?: number;
-  collateralizationRatio?: number;
-  liquidationCapacityRatio?: number;
-  immediateRedeemableUsd?: number;
-  immediateRedeemableRatio?: number;
-  redemptionFeeBps?: number;
-  buyFeeBpsMin?: number;
-  buyFeeBpsMax?: number;
-  redemption?: LiveReserveRedemptionTelemetry;
-  details?: Record<string, unknown>;
-}
-
-export interface LiveReserveRedemptionTelemetry extends Record<string, unknown> {
-  capacityUsd?: number;
-  capacityRatioOfSupply?: number;
-  capacityKind?: LiveReserveRedemptionCapacityKind;
-  freshnessKind?: LiveReserveRedemptionFreshnessKind;
-  sourceTimestamp?: number;
-  blockNumber?: number;
-  routeStatus?: LiveReserveRedemptionRouteStatus;
-  routeStatusSource?: LiveReserveRedemptionRouteStatusSource;
-  routeStatusReason?: string;
-  routeStatusReviewedAt?: string;
-  holderEligibility?: RedemptionHolderEligibility;
-  settlementDelaySec?: number;
-  queueDepthUsd?: number;
-  dailyLimitUsd?: number;
-  minRedeemUsd?: number;
-  feeBps?: number;
-  sourceUrls?: string[];
-  /**
-   * Optional producer-pinned value of a proportional redemption basket.
-   * This is only score-bearing after the consumer verifies the source-bound
-   * timestamp and complete normalized basket weights.
-   */
-  outputValuation?: LiveReserveRedemptionOutputValuation;
-}
-
-export interface LiveReserveRedemptionOutputValuation {
-  sourceId: string;
-  observedAt: number;
-  unitValueUsd: number;
-  basketWeights: Array<{
-    assetId: string;
-    weight: number;
-  }>;
-}
-
-export const LiveReserveRedemptionOutputValuationSchema: z.ZodType<LiveReserveRedemptionOutputValuation> = z
+export const LiveReserveRedemptionOutputValuationSchema = z
   .object({
     sourceId: z.string().trim().min(1),
     observedAt: z.number().int().nonnegative(),
@@ -136,6 +73,7 @@ export const LiveReserveRedemptionOutputValuationSchema: z.ZodType<LiveReserveRe
       }),
   })
   .strict();
+export type LiveReserveRedemptionOutputValuation = z.output<typeof LiveReserveRedemptionOutputValuationSchema>;
 
 export interface LiveReserveScoringPolicy {
   maxSourceAgeSec?: number;
@@ -173,48 +111,6 @@ export interface LiveReservesConfig {
     fallbacks?: LiveReserveInput[];
   };
   params?: Record<string, unknown>;
-}
-
-export type ReservePresentationMode = "live" | "live-stale" | "curated-fallback" | "template-fallback" | "unavailable";
-
-export interface ReserveSyncStateView {
-  enabled: boolean;
-  status: "ok" | "degraded" | "error" | "skipped";
-  stale: boolean;
-  bootstrap: boolean;
-  lastAttemptedAt?: number;
-  lastSuccessAt?: number;
-  warnings?: string[];
-  lastError?: string;
-  failureCategory?: string;
-  uncertainWrite?: boolean;
-}
-
-export interface ReserveProvenanceView {
-  evidenceClass: LiveReserveEvidenceClass;
-  sourceModel: LiveReserveSourceModel;
-  freshnessMode?: LiveReserveFreshnessMode;
-  scoringEligible: boolean;
-}
-
-export interface ReserveDisplayBadgeView {
-  kind: ReserveDisplayBadgeKind;
-  label: string;
-}
-
-export interface StablecoinReservesResponse {
-  stablecoinId: string;
-  mode: ReservePresentationMode;
-  reserves: ReserveSlice[];
-  estimated: boolean;
-  liveAt?: number;
-  source?: string;
-  displayUrl?: string;
-  evidenceUrls?: string[];
-  metadata?: LiveReserveSnapshotMetadata;
-  provenance?: ReserveProvenanceView;
-  displayBadge?: ReserveDisplayBadgeView;
-  sync?: ReserveSyncStateView;
 }
 
 const UnknownRecordSchema: z.ZodType<Record<string, unknown>> = z.record(z.string(), z.unknown());
@@ -267,7 +163,7 @@ export const ReserveCompositionOverviewSchema = z.object({
 });
 export type ReserveCompositionOverview = z.infer<typeof ReserveCompositionOverviewSchema>;
 
-export const LiveReserveRedemptionTelemetrySchema: z.ZodType<LiveReserveRedemptionTelemetry> = z
+export const LiveReserveRedemptionTelemetrySchema = z
   .object({
     capacityUsd: z.number().finite().optional(),
     capacityRatioOfSupply: z.number().finite().optional(),
@@ -289,8 +185,9 @@ export const LiveReserveRedemptionTelemetrySchema: z.ZodType<LiveReserveRedempti
     outputValuation: LiveReserveRedemptionOutputValuationSchema.optional(),
   })
   .passthrough();
+export type LiveReserveRedemptionTelemetry = z.output<typeof LiveReserveRedemptionTelemetrySchema>;
 
-export const LiveReserveSnapshotMetadataSchema: z.ZodType<LiveReserveSnapshotMetadata> = z
+export const LiveReserveSnapshotMetadataSchema = z
   .object({
     sourceTimestamp: z.number().finite().optional(),
     freshnessMode: z.enum(LIVE_RESERVE_FRESHNESS_MODE_VALUES).optional(),
@@ -313,8 +210,9 @@ export const LiveReserveSnapshotMetadataSchema: z.ZodType<LiveReserveSnapshotMet
     details: UnknownRecordSchema.optional(),
   })
   .passthrough();
+export type LiveReserveSnapshotMetadata = z.output<typeof LiveReserveSnapshotMetadataSchema>;
 
-export const ReserveProvenanceViewSchema: z.ZodType<ReserveProvenanceView> = z
+export const ReserveProvenanceViewSchema = z
   .object({
     evidenceClass: z.enum(LIVE_RESERVE_EVIDENCE_CLASS_VALUES),
     sourceModel: z.enum(LIVE_RESERVE_SOURCE_MODEL_VALUES),
@@ -322,15 +220,17 @@ export const ReserveProvenanceViewSchema: z.ZodType<ReserveProvenanceView> = z
     scoringEligible: z.boolean(),
   })
   .strict();
+export type ReserveProvenanceView = z.output<typeof ReserveProvenanceViewSchema>;
 
-export const ReserveDisplayBadgeViewSchema: z.ZodType<ReserveDisplayBadgeView> = z
+export const ReserveDisplayBadgeViewSchema = z
   .object({
     kind: z.enum(RESERVE_DISPLAY_BADGE_KIND_VALUES),
     label: z.string(),
   })
   .strict();
+export type ReserveDisplayBadgeView = z.output<typeof ReserveDisplayBadgeViewSchema>;
 
-export const ReserveSyncStateViewSchema: z.ZodType<ReserveSyncStateView> = z
+export const ReserveSyncStateViewSchema = z
   .object({
     enabled: z.boolean(),
     status: z.enum(["ok", "degraded", "error", "skipped"]),
@@ -344,8 +244,9 @@ export const ReserveSyncStateViewSchema: z.ZodType<ReserveSyncStateView> = z
     uncertainWrite: z.boolean().optional(),
   })
   .strict();
+export type ReserveSyncStateView = z.output<typeof ReserveSyncStateViewSchema>;
 
-export const StablecoinReservesResponseSchema: z.ZodType<StablecoinReservesResponse> = z
+export const StablecoinReservesResponseSchema = z
   .object({
     stablecoinId: z.string(),
     mode: z.enum(["live", "live-stale", "curated-fallback", "template-fallback", "unavailable"]),
@@ -361,3 +262,5 @@ export const StablecoinReservesResponseSchema: z.ZodType<StablecoinReservesRespo
     sync: ReserveSyncStateViewSchema.optional(),
   })
   .strict();
+export type StablecoinReservesResponse = z.output<typeof StablecoinReservesResponseSchema>;
+export type ReservePresentationMode = StablecoinReservesResponse["mode"];

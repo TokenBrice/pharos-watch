@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 
@@ -111,8 +111,11 @@ vi.mock("../../lib/telegram-digest-outbox", () => ({
   deliverTelegramDigestEdition: vi.fn(),
 }));
 
-vi.mock("../telegram-digest-transport", () => ({
-  runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
+vi.mock("../telegram-digest-transport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../telegram-digest-transport")>();
+  return {
+    ...actual,
+    runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
     creds: unknown;
     deliver: (creds: unknown) => Promise<{ status: string }>;
   }) => {
@@ -122,8 +125,9 @@ vi.mock("../telegram-digest-transport", () => ({
     } catch (error) {
       return `failed: ${String(error).slice(0, 100)}`;
     }
-  }),
-}));
+    }),
+  };
+});
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
@@ -136,23 +140,20 @@ import {
 } from "../daily-digest/response";
 
 import {
-  collectPsiContributors,
-  collectYieldAnomalies,
   collectLiquidityShifts,
-  collectCrossDayTrends,
-  collectDewsStress,
   collectActiveDepegs,
   collectResolvedDepegs,
   collectSupplyVelocity,
   collectMintBurnFlows,
-  type CollectorContext,
-} from "../daily-digest/collectors";
+} from "../daily-digest/collectors-market";
+import { collectDewsStress, collectYieldAnomalies } from "../daily-digest/collectors-risk";
+import { collectCrossDayTrends, collectPsiContributors } from "../daily-digest/collectors-history";
+import type { CollectorContext } from "../daily-digest/collectors-shared";
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
 
 import {
   loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
 } from "../../lib/safety-score-active-source";
 
 
@@ -162,36 +163,14 @@ import {
 
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
-  makeWorkerReportCardsV9Response,
-  makeWorkerV9Card,
-} from "../../test-helpers/report-cards-v9";
+  canonicalSafetySource,
+  makePublishedDewsTables,
+  PUBLISHED_GAUGE_SCORE,
+  publishedGaugeTable,
+  type TestDewsRow,
+} from "./daily-digest.test-support";
 
 const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
-
-function canonicalSafetySource(
-  cards: unknown[],
-): Extract<ActiveSafetyScoreSource, { kind: "v9" }> {
-  const snapshot = makeWorkerReportCardsV9Response({
-    cards: cards
-      .map((value) => value as {
-        id: string;
-        overallGrade: ReturnType<typeof makeWorkerV9Card>["grade"];
-        overallScore: number | null;
-      })
-      .sort((left, right) => left.id.localeCompare(right.id))
-      .map((card) =>
-        makeWorkerV9Card({
-          id: card.id,
-          grade: card.overallGrade,
-          score: card.overallScore,
-        }),
-      ),
-  });
-  return {
-    kind: "v9",
-    snapshot,
-  };
-}
 
 function makeParsedFixture(
   opts: {
@@ -218,38 +197,6 @@ function makeParsedFixture(
   };
 }
 
-const VALID_DAILY_EXTENDED = [
-  "PSI held at 91.2 BEDROCK with severity 2 and breadth 1, so the headline market still looks calm. USDT sat 150 bps off peg on a $100M float in the fixture, which gives the model a real candidate but not a systemic alarm. The point is selection, not volume.",
-  "USDT added $5M over the week while USDC lost $2M, a mixed flow pattern rather than a single-direction stampede. The candidate list marks the depeg by impact first, then leaves supply as supporting context, which is the behavior this test expects. A smaller signal can still appear without becoming the lead.",
-  "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. Next session will decide whether the USDT deviation widens; if it crosses 200 bps, the impact score moves the depeg from supporting context to lead.",
-].join("\n\n");
-
-JSON.stringify({
-  title: "Calm Drift",
-  extended: VALID_DAILY_EXTENDED,
-  text: "USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.",
-  meta: {
-    leadSignalId: "depeg:usdt-tether:active",
-    lead: "depeg",
-    tone: "dry",
-    coins: ["USDT", "USDC"],
-    usedCandidateIds: ["depeg:usdt-tether:active"],
-  },
-});
-
-JSON.stringify({
-  title: "Drift",
-  extended: VALID_DAILY_EXTENDED,
-  text: "USDT's fixture depeg led the queue while PSI stayed at 91.2 BEDROCK.",
-  meta: {
-    leadSignalId: "depeg:usdt-tether:active",
-    lead: "depeg",
-    tone: "dry",
-    coins: ["USDT", "USDC"],
-    usedCandidateIds: ["depeg:usdt-tether:active"],
-  },
-});
-
 /**
  * Build a canonical Anthropic SSE streaming Response body for `text` as a
  * single text-delta. Matches what Anthropic actually emits when we set
@@ -258,106 +205,6 @@ JSON.stringify({
  * `accumulateAnthropicStream` on the response body rather than `response.json()`.
  */
 
-
-vi.fn(async () => undefined);
-
-interface TestDewsRow {
-  stablecoin_id: string;
-  score: number;
-  band: string;
-  signals_json: string;
-  computed_at: number;
-}
-
-function makePublishedDewsTables(dewsRows: TestDewsRow[]): MockTableConfig[] {
-  const computedAt = dewsRows[0]!.computed_at;
-  return [
-    {
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: ["dews:published-generation"],
-      rows: [],
-      first: {
-        value: JSON.stringify({
-          updatedAt: computedAt,
-          source: "compute-dews",
-          publishStatus: "published",
-          coverageVersion: 2,
-          expectedRowCount: dewsRows.length,
-          stablecoinIdsDigest: buildDewsStablecoinIdsDigest(dewsRows.map((row) => row.stablecoin_id)),
-        }),
-        updated_at: computedAt,
-      },
-    },
-    {
-      match: "pharos:stress-signals:published-exact",
-      rows: dewsRows.map((row) => ({ ...row })),
-    },
-  ];
-}
-
-const PUBLISHED_GAUGE_SCORE = 37.5;
-
-/**
- * The published aggregate mint/burn flow payload the digest re-bins. Its coin
- * universe is the API's tracked-pair universe (PAXG included), which is wider
- * than the digest's core aggregate id set on purpose.
- */
-function publishedGaugePayload(
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
-  return {
-    gauge: {
-      score: PUBLISHED_GAUGE_SCORE,
-      band: "HEALTHY",
-      flightToQuality: false,
-      flightIntensity: 0,
-      classificationSource: "safety-score-v9-publication",
-    },
-    coins: [
-      {
-        stablecoinId: "usdt-tether",
-        symbol: "USDT",
-        flowIntensity: 100,
-        pressureShiftScore: 100,
-        netFlow24hUsd: 200_000_000,
-      },
-      {
-        stablecoinId: "usdc-circle",
-        symbol: "USDC",
-        flowIntensity: -83.33,
-        pressureShiftScore: -83.33,
-        netFlow24hUsd: -50_000_000,
-      },
-      {
-        stablecoinId: "paxg-paxos",
-        symbol: "PAXG",
-        flowIntensity: null,
-        pressureShiftScore: null,
-        netFlow24hUsd: -3_000_000,
-      },
-    ],
-    chains: [
-      { chainId: "ethereum", netFlow24hUsd: 150_000_000 },
-      { chainId: "arbitrum", netFlow24hUsd: -3_000_000 },
-    ],
-    ...overrides,
-  };
-}
-
-function publishedGaugeTable(
-  options: { value?: string; ageSec?: number } = {},
-): MockTableConfig {
-  const nowSec = Math.floor(Date.now() / 1000);
-  return {
-    match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v3:aggregate:24"],
-    rows: [],
-    first: {
-      value: options.value ?? JSON.stringify(publishedGaugePayload()),
-      updated_at: nowSec - (options.ageSec ?? 300),
-    },
-  };
-}
 
 
 

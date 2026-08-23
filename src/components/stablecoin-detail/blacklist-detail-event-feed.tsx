@@ -7,10 +7,14 @@ import { DataTableShell, type DataTableColumn } from "@/components/data-table-sh
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ShieldOff } from "lucide-react";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
-import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { formatAddress, formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
+import {
+  formatBlacklistNativeAmount,
+  getBlacklistAmountSourceLabel,
+  getBlacklistAmountStatusLabel,
+} from "@/lib/blacklist-event-presentation";
 
 const COLUMNS: readonly DataTableColumn[] = [
   { id: "time", label: "Time" },
@@ -33,41 +37,24 @@ function eventBadge(eventType: BlacklistEvent["eventType"]) {
   };
 }
 
-const AMOUNT_SOURCE_LABELS: Record<string, string> = {
-  event: "event",
-  historical_balance: "historical",
-  current_balance_snapshot: "snapshot",
-  derived: "derived",
-  legacy_migration: "legacy",
-  unavailable: "unavailable",
-};
-
-const AMOUNT_STATUS_LABELS: Record<string, string> = {
-  recoverable_pending: "pending recovery",
-  provider_failed: "provider failed",
-  ambiguous: "ambiguous",
-  permanently_unavailable: "unavailable",
-};
-
 function formatFeedAmount(evt: BlacklistEvent): { primary: string; detail: string } {
   if (evt.amountUsdAtEvent != null) {
     return {
       primary: formatCurrency(evt.amountUsdAtEvent),
-      detail: AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " "),
+      detail: getBlacklistAmountSourceLabel(evt),
     };
   }
 
   if (evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")) {
-    const digits = isGoldBlacklistStablecoin(evt.stablecoin) ? 4 : 2;
     return {
-      primary: `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: digits })} ${evt.stablecoin}`,
-      detail: AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " "),
+      primary: `${formatBlacklistNativeAmount(evt)} ${evt.stablecoin}`,
+      detail: getBlacklistAmountSourceLabel(evt),
     };
   }
 
   return {
-    primary: AMOUNT_STATUS_LABELS[evt.amountStatus] ?? evt.amountStatus.replace(/_/g, " "),
-    detail: AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " "),
+    primary: getBlacklistAmountStatusLabel(evt),
+    detail: getBlacklistAmountSourceLabel(evt),
   };
 }
 

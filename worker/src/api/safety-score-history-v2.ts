@@ -5,6 +5,7 @@ import {
   } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
 import {
   fetchSafetyScoreHistoryV2Rows,
@@ -16,12 +17,7 @@ import {
  * compatibility projection and intentionally omits these boundary rows.
  */
 export const handleSafetyScoreHistoryV2 = async (db: D1Database, url: URL): Promise<Response> => {
-    const query = parseStablecoinHistoryQuery(url, {
-      defaultDays: 365,
-      minDays: 1,
-      maxDays: 3650,
-      rangePolicy: "reject",
-    });
+    const query = parseStablecoinHistoryQuery(url, STABLECOIN_HISTORY_QUERY_CONTRACTS.safetyScore);
     if (query instanceof Response) return query;
 
     const rows = await fetchSafetyScoreHistoryV2Rows(db, query.stablecoinId, query.cutoff);

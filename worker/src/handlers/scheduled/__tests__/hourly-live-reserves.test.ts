@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import { runFourHourlyReserveSyncSlot } from "../hourly-live-reserves";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 vi.mock("../../../cron/sync-live-reserves", () => ({
   syncLiveReserves: vi.fn(),
@@ -129,22 +130,15 @@ describe("runFourHourlyReserveSyncSlot", () => {
   function buildRuntime(
     recoveryCheckpoint?: ScheduledRecoveryCheckpoint,
   ): ScheduledRuntimeContext {
-    return {
+    return makeScheduledRuntime({
       db: {} as D1Database,
-      env: {} as ScheduledRuntimeContext["env"],
-      ctx: {} as ExecutionContext,
       cron: "11 */4 * * *",
       scheduleKey: "fourHourlyReserveSync",
       scheduledTimeMs: null,
       slotStartedAt: 0,
-      mintBurnDisabledIds: [],
-      mintBurnDisabledSymbols: [],
-      mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-      coingeckoApiKey: null,
-      chainRpcs: new Map(),
       runLeasedCron: runLeasedCron as unknown as ScheduledRuntimeContext["runLeasedCron"],
       ...(recoveryCheckpoint ? { recoveryCheckpoint } : {}),
-    };
+    });
   }
 
   function recoveryCheckpoint(

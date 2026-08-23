@@ -6,7 +6,7 @@ import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
 import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
-import { LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS } from "../live-reserve-adapters-schemas";
+import { LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS } from "../live-reserve-adapters";
 import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
   ACTIVE_META_BY_ID,

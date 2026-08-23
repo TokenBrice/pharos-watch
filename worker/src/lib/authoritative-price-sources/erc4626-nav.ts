@@ -17,6 +17,7 @@ import {
 } from "./helpers";
 
 const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a"; // convertToAssets(uint256)
+const PREVIEW_REDEEM_SELECTOR = "0x4cdad506"; // previewRedeem(uint256)
 
 const USDT_TETHER_ID = "usdt-tether";
 const USDE_ETHENA_ID = "usde-ethena";
@@ -192,55 +193,75 @@ const ERC4626_NAV_VAULTS_BY_ID = new Map<string, Erc4626NavVaultConfig>(
   ERC4626_NAV_VAULTS.map((entry) => [entry.id, entry]),
 );
 
-async function fetchErc4626AssetsPerShare(
-  config: Erc4626NavVaultConfig,
-  blockNumberOrTag: number | "latest",
-  signal?: AbortSignal,
-): Promise<number | null> {
-  return fetchVaultAssetsPerShareViaSelector(
-    config,
-    ERC4626_CONVERT_TO_ASSETS_SELECTOR,
-    "convertToAssets",
-    blockNumberOrTag,
-    signal,
-    blockNumberOrTag === "latest" ? { throwOnNullQuote: true } : undefined,
-  );
+const PREVIEW_REDEEM_VAULTS_BY_ID = new Map<string, Erc4626NavVaultConfig>([
+  defineRegistryErc4626NavVault({
+    id: "sgho-aave",
+    parentId: GHO_AAVE_ID,
+    chain: ETHEREUM_CHAIN,
+  }),
+].map((entry) => [entry.id, entry]));
+
+function createVaultNavProvider(input: {
+  vaultsById: ReadonlyMap<string, Erc4626NavVaultConfig>;
+  selector: string;
+  methodLabel: string;
+  logLabel: string;
+  livePriority?: number;
+}): PriceSourceProvider {
+  return {
+    source: PROTOCOL_REDEEM_SOURCE,
+    liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+    ...(input.livePriority != null ? { livePriority: input.livePriority } : {}),
+    matches(stablecoinId: string): boolean {
+      return input.vaultsById.has(stablecoinId);
+    },
+    async fetchLivePrice(
+      asset: PeggedAsset,
+      context: LivePriceContext,
+      signal?: AbortSignal,
+    ): Promise<CurrentPriceOverride | null> {
+      const config = input.vaultsById.get(asset.id);
+      if (!config) return null;
+      const parent = resolveTrustedOverrideParent(
+        context,
+        config.parentId,
+        () =>
+          `[authoritative-price-sources] ${asset.id}: skipped ${input.logLabel} price because parent ${config.parentId} provenance is not trusted`,
+        {
+          allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent,
+          allowFreshReplaySafeSingleSourceParent: config.allowFreshReplaySafeSingleSourceParent,
+        },
+      );
+      if (!parent) return null;
+      const resolved = await resolveVaultAssetsPerShareWithCache(asset, context, () =>
+        fetchVaultAssetsPerShareViaSelector(
+          config,
+          input.selector,
+          input.methodLabel,
+          "latest",
+          signal,
+          { throwOnNullQuote: true },
+        ),
+      );
+      if (!resolved) return null;
+      return resolved.cachedObservedAt == null
+        ? buildParentDerivedLiveOverride(parent, resolved.rate)
+        : buildCachedRateLiveOverride(parent, resolved.rate, resolved.cachedObservedAt);
+    },
+  };
 }
 
-export const erc4626NavProvider: PriceSourceProvider = {
-  source: PROTOCOL_REDEEM_SOURCE,
-  liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+export const erc4626NavProvider = createVaultNavProvider({
+  vaultsById: ERC4626_NAV_VAULTS_BY_ID,
+  selector: ERC4626_CONVERT_TO_ASSETS_SELECTOR,
+  methodLabel: "convertToAssets",
+  logLabel: "ERC-4626 NAV",
   livePriority: 1,
-  matches(stablecoinId: string): boolean {
-    return ERC4626_NAV_VAULTS_BY_ID.has(stablecoinId);
-  },
-  async fetchLivePrice(
-    asset: PeggedAsset,
-    context: LivePriceContext,
-    signal?: AbortSignal,
-  ): Promise<CurrentPriceOverride | null> {
-    const config = ERC4626_NAV_VAULTS_BY_ID.get(asset.id);
-    if (!config) return null;
+});
 
-    const parent = resolveTrustedOverrideParent(
-      context,
-      config.parentId,
-      () =>
-        `[authoritative-price-sources] ${asset.id}: skipped ERC-4626 NAV price because parent ${config.parentId} provenance is not trusted`,
-      {
-        allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent,
-        allowFreshReplaySafeSingleSourceParent: config.allowFreshReplaySafeSingleSourceParent,
-      },
-    );
-    if (!parent) return null;
-
-    const resolved = await resolveVaultAssetsPerShareWithCache(asset, context, () =>
-      fetchErc4626AssetsPerShare(config, "latest", signal),
-    );
-    if (!resolved) return null;
-
-    return resolved.cachedObservedAt == null
-      ? buildParentDerivedLiveOverride(parent, resolved.rate)
-      : buildCachedRateLiveOverride(parent, resolved.rate, resolved.cachedObservedAt);
-  },
-};
+export const previewRedeemProvider = createVaultNavProvider({
+  vaultsById: PREVIEW_REDEEM_VAULTS_BY_ID,
+  selector: PREVIEW_REDEEM_SELECTOR,
+  methodLabel: "previewRedeem",
+  logLabel: "previewRedeem",
+});

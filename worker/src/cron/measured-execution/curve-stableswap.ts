@@ -32,7 +32,16 @@ import {
 } from "./profiles";
 import { usdToRawAmount } from "./fixed-point";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
-import { executeEvmQuotePlan } from "./evm-quote-plan";
+import {
+  canonicalEvmAddress,
+  canonicalEvmHash,
+  decodeAddressResult as decodeEvmAddressResult,
+} from "./evm-codecs";
+import {
+  createCurveGetDyQuoteAdapter,
+  makeCurveGetDyPlan,
+  type CurveGetDyPlan,
+} from "./curve-get-dy-quote-engine";
 
 const CURVE_STABLESWAP_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -45,7 +54,6 @@ const CURVE_MAIN_REGISTRY_ABI = parseAbi([
 const ERC20_METADATA_ABI = parseAbi(["function decimals() view returns (uint8)"]);
 const CURVE_MULTICALL_BATCH_SIZE = 8;
 const CURVE_MULTICALL_GAS = "0x1c9c380";
-const EVM_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/;
 
 export const CURVE_STABLESWAP_ADAPTER_PROFILE_ID =
   "curve-stableswap-main-registry-get-dy-v1" as const;
@@ -114,21 +122,9 @@ export type CurveStableSwapEligibility =
   | { ok: true }
   | { ok: false; reason: CurveStableSwapEligibilityFailure };
 
-function canonicalAddress(value: unknown): `0x${string}` | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return EVM_ADDRESS_PATTERN.test(normalized) ? (normalized as `0x${string}`) : null;
-}
-
-function canonicalHash(value: unknown): `0x${string}` | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return /^0x[0-9a-f]{64}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-}
-
 export function getCurveStableSwapPolicy(chain: string, poolAddress: string): CurveStableSwapPoolPolicy | null {
   return chain.trim().toLowerCase() === CURVE_3POOL_STABLESWAP_POLICY.chain &&
-    canonicalAddress(poolAddress) === CURVE_3POOL_STABLESWAP_POLICY.poolAddress
+    canonicalEvmAddress(poolAddress) === CURVE_3POOL_STABLESWAP_POLICY.poolAddress
     ? CURVE_3POOL_STABLESWAP_POLICY
     : null;
 }
@@ -142,7 +138,7 @@ export function evaluateCurveStableSwapEligibility(input: {
 }): CurveStableSwapEligibility {
   const policy = getCurveStableSwapPolicy(input.chain, input.endpointAddress);
   if (!policy) return { ok: false, reason: "pool-not-reviewed" };
-  if (canonicalAddress(input.endpointAddress) !== policy.poolAddress) {
+  if (canonicalEvmAddress(input.endpointAddress) !== policy.poolAddress) {
     return { ok: false, reason: "execution-endpoint-mismatch" };
   }
   if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
@@ -158,14 +154,14 @@ export function evaluateCurveStableSwapEligibility(input: {
   if (input.nowSec - evidence.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
     return { ok: false, reason: "stale-pinned-block" };
   }
-  if (canonicalHash(evidence.poolCodeHash) == null) {
+  if (canonicalEvmHash(evidence.poolCodeHash) == null) {
     return { ok: false, reason: "runtime-code-unavailable" };
   }
   if (evidence.poolCodeHash !== policy.expectedPoolCodeHash) {
     return { ok: false, reason: "runtime-code-hash-mismatch" };
   }
   const proof = evidence.registryBindingProof;
-  if (canonicalHash(proof.registryCodeHash) == null) {
+  if (canonicalEvmHash(proof.registryCodeHash) == null) {
     return { ok: false, reason: "registry-code-unavailable" };
   }
   if (proof.registryCodeHash !== policy.expectedRegistryCodeHash) {
@@ -346,7 +342,7 @@ export function createCurveStableSwapDeploymentVerifier(
     let lpTokenAddress: `0x${string}`;
     let registryCoins: readonly `0x${string}`[];
     try {
-      lpTokenAddress = canonicalAddress(decodeFunctionResult({
+      lpTokenAddress = canonicalEvmAddress(decodeFunctionResult({
         abi: CURVE_MAIN_REGISTRY_ABI,
         functionName: "get_lp_token",
         data: lpTokenReturnData,
@@ -355,7 +351,7 @@ export function createCurveStableSwapDeploymentVerifier(
         abi: CURVE_MAIN_REGISTRY_ABI,
         functionName: "get_coins",
         data: registryCoinsReturnData,
-      }) as readonly string[]).map((coin) => canonicalAddress(coin) ?? "0x0000000000000000000000000000000000000000");
+      }) as readonly string[]).map((coin) => canonicalEvmAddress(coin) ?? "0x0000000000000000000000000000000000000000");
     } catch {
       return { ok: false, reason: "registry-membership-mismatch" };
     }
@@ -385,7 +381,7 @@ export function createCurveStableSwapDeploymentVerifier(
       if (coinReturnData == null) return { ok: false, reason: "rpc-failure" };
       let poolCoinAddress: `0x${string}` | null = null;
       try {
-        poolCoinAddress = canonicalAddress(decodeFunctionResult({
+        poolCoinAddress = canonicalEvmAddress(decodeFunctionResult({
           abi: CURVE_STABLESWAP_ABI,
           functionName: "coins",
           data: coinReturnData,
@@ -665,56 +661,49 @@ interface CurveStableSwapQuoteDependencies {
 }
 
 export function createCurveStableSwapQuoteExecutor(dependencies: CurveStableSwapQuoteDependencies) {
-  return async function quoteCurveStableSwapRequests(input: {
-    requests: readonly CurveStableSwapRequest[];
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<CurveStableSwapBatchOutcome[]> {
-    const prepared = input.requests.map(prepareRequest);
-    const outcomes: CurveStableSwapBatchOutcome[] = input.requests.map((request, index) => ({
+  return createCurveGetDyQuoteAdapter<
+    CurveStableSwapRequest,
+    CurveGetDyPlan<EncodedCurveStableSwapRequest>,
+    CurveStableSwapEligibility,
+    CurveStableSwapBatchOutcome,
+    CurveStableSwapQuoteFailure
+  >({
+    batchSize: CURVE_MULTICALL_BATCH_SIZE,
+    prepare: (request, index) => {
+      const prepared = prepareRequest(request, index);
+      return {
+        eligibility: prepared.eligibility,
+        ...(prepared.failureReason ? { failureReason: prepared.failureReason } : {}),
+        ...(prepared.encoded
+          ? {
+              plan: makeCurveGetDyPlan(prepared.encoded),
+            }
+          : {}),
+      };
+    },
+    makeOutcome: (request, eligibility, failureReason) => ({
       targetId: request.target.targetId,
       inputUsd: request.inputUsd,
       blockNumber: request.blockNumber,
-      eligibility: prepared[index]!.eligibility,
-      ...(prepared[index]!.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
-    }));
-    const plans = prepared.flatMap((entry) => entry.encoded ? [{
-      ...entry.encoded,
-      chain: entry.encoded.policy.chain,
-      call: {
-        label: entry.encoded.label,
-        target: entry.encoded.endpointAddress,
-        callData: entry.encoded.callData,
-        allowFailure: true,
-      },
-    }] : []);
-    return executeEvmQuotePlan({
-      plans,
-      outcomes,
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      rpcBudget: input.rpcBudget,
-      spec: {
-        batchSize: CURVE_MULTICALL_BATCH_SIZE,
-        executeMulticall: dependencies.executeMulticall,
-        resolveResult: (request, result) => ({
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          blockNumber: request.blockNumber,
-          eligibility: request.eligibility,
-          ...decodeCurveStableSwapQuotePoint(request, result),
-        }),
-        materializeTransportFailure: (request, reason) => ({
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          blockNumber: request.blockNumber,
-          eligibility: request.eligibility,
-          failureReason: reason ?? "rpc-failure",
-        }),
-      },
-    });
-  };
+      eligibility,
+      ...(failureReason ? { failureReason } : {}),
+    }),
+    executeMulticall: dependencies.executeMulticall,
+    resolveResult: (request, result) => ({
+      targetId: request.target.targetId,
+      inputUsd: request.inputUsd,
+      blockNumber: request.blockNumber,
+      eligibility: request.eligibility,
+      ...decodeCurveStableSwapQuotePoint(request, result),
+    }),
+    materializeTransportFailure: (request, reason) => ({
+      targetId: request.target.targetId,
+      inputUsd: request.inputUsd,
+      blockNumber: request.blockNumber,
+      eligibility: request.eligibility,
+      failureReason: reason ?? "rpc-failure",
+    }),
+  });
 }
 
 export const quoteCurveStableSwapRequests = createCurveStableSwapQuoteExecutor({
@@ -730,22 +719,6 @@ export const quoteCurveStableSwapRequests = createCurveStableSwapQuoteExecutor({
       multicallBatchSize: Math.min(CURVE_MULTICALL_BATCH_SIZE, input.calls.length),
     }),
 });
-
-function decodeAddressResult(input: {
-  abi: typeof CURVE_MAIN_REGISTRY_ABI | typeof CURVE_STABLESWAP_ABI;
-  functionName: "get_lp_token" | "coins";
-  returnData: string;
-}): `0x${string}` | null {
-  try {
-    return canonicalAddress(decodeFunctionResult({
-      abi: input.abi,
-      functionName: input.functionName,
-      data: input.returnData as `0x${string}`,
-    } as never));
-  } catch {
-    return null;
-  }
-}
 
 /** Exact ABI and reviewed registry-binding validation at the consumer boundary. */
 export function validateCurveStableSwapProfileProof(profile: DexMeasuredExecutionProfile): string[] {
@@ -779,11 +752,13 @@ export function validateCurveStableSwapProfileProof(profile: DexMeasuredExecutio
       });
       if (
         decodedCall.functionName !== "get_lp_token" ||
-        canonicalAddress(decodedCall.args[0]) !== policy.poolAddress ||
-        decodeAddressResult({
-          abi: CURVE_MAIN_REGISTRY_ABI,
-          functionName: "get_lp_token",
-          returnData: proof.lpTokenReturnData,
+        canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
+        decodeEvmAddressResult({
+          decode: () => decodeFunctionResult({
+            abi: CURVE_MAIN_REGISTRY_ABI,
+            functionName: "get_lp_token",
+            data: proof.lpTokenReturnData as `0x${string}`,
+          } as never),
         }) !== policy.lpTokenAddress
       ) issues.add("lp-token-proof-mismatch");
     } catch {
@@ -801,10 +776,10 @@ export function validateCurveStableSwapProfileProof(profile: DexMeasuredExecutio
       }) as readonly string[];
       if (
         decodedCall.functionName !== "get_coins" ||
-        canonicalAddress(decodedCall.args[0]) !== policy.poolAddress ||
-        policy.poolTokens.some((token, index) => canonicalAddress(decodedCoins[index]) !== token.address) ||
+        canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
+        policy.poolTokens.some((token, index) => canonicalEvmAddress(decodedCoins[index]) !== token.address) ||
         decodedCoins.slice(policy.poolTokens.length).some((coin) =>
-          canonicalAddress(coin) !== "0x0000000000000000000000000000000000000000"
+          canonicalEvmAddress(coin) !== "0x0000000000000000000000000000000000000000"
         )
       ) issues.add("registry-coins-proof-mismatch");
     } catch {
@@ -822,10 +797,12 @@ export function validateCurveStableSwapProfileProof(profile: DexMeasuredExecutio
             entry.index !== index ||
             call.functionName !== "coins" ||
             call.args[0] !== BigInt(index) ||
-            decodeAddressResult({
-              abi: CURVE_STABLESWAP_ABI,
-              functionName: "coins",
-              returnData: entry.returnData,
+            decodeEvmAddressResult({
+              decode: () => decodeFunctionResult({
+                abi: CURVE_STABLESWAP_ABI,
+                functionName: "coins",
+                data: entry.returnData as `0x${string}`,
+              } as never),
             }) !== policy.poolTokens[index]!.address
           );
         } catch {

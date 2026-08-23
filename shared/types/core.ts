@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { DependencyType, V9DependencyEconomicRole } from "./dependency-types";
 import type { LiveReservesConfig } from "./live-reserves";
 import type { CauseOfDeath } from "./cause-of-death";
 import type { ReserveSlice } from "./reserves";
@@ -170,47 +169,10 @@ export const RESERVE_NON_LINK_DISPOSITION_VALUES = [
   "not-applicable",
 ] as const;
 export type ReserveNonLinkDisposition = (typeof RESERVE_NON_LINK_DISPOSITION_VALUES)[number];
-
-export interface ReserveNonLinkReview {
-  reserveIndex: number;
-  reserveName: string;
-  pct: number;
-  disposition: ReserveNonLinkDisposition;
-  rationale: string;
-  candidateCoinIds?: string[];
-}
-
-export interface ReserveReview {
-  reviewedAt: string;
-  reviewer: string;
-  confidence: ResearchReviewConfidence;
-  sources: StablecoinLink[];
-  rationale: string;
-  compositionBasis: string;
-  compositionAsOf?: string;
-  scope: ReserveReviewScope;
-  knownUnknownExposure: string;
-  knownUnknownExposurePct: number;
-  nonLinkDispositions?: ReserveNonLinkReview[];
-}
-
-export interface DependencyReviewRelationship {
-  id: string;
-  weight: number;
-  type: DependencyType;
-  /** Explicit V9 propagation role; absent retained reviews use the legacy topology default. */
-  economicRole?: V9DependencyEconomicRole;
-  reason: string;
-}
-
-export interface DependencyReview {
-  reviewedAt: string;
-  reviewer: string;
-  confidence: ResearchReviewConfidence;
-  sources: StablecoinLink[];
-  rationale: string;
-  relationships: DependencyReviewRelationship[];
-}
+export type ReserveNonLinkReview = import("./stablecoin-meta-schemas").ReserveNonLinkReview;
+export type ReserveReview = import("./stablecoin-meta-schemas").ReserveReview;
+export type DependencyReviewRelationship = import("./stablecoin-meta-schemas").DependencyReviewRelationship;
+export type DependencyReview = import("./stablecoin-meta-schemas").DependencyReview;
 
 export const CUSTODY_PROVIDER_ROLE_VALUES = ["custodian", "subcustodian", "bank", "prime-broker", "other"] as const;
 export type CustodyProviderRole = (typeof CUSTODY_PROVIDER_ROLE_VALUES)[number];
@@ -223,26 +185,8 @@ export type CustodyBankruptcyRemoteness = (typeof CUSTODY_BANKRUPTCY_REMOTENESS_
 
 export const CUSTODY_REHYPOTHECATION_VALUES = ["prohibited", "permitted", "conditional", "unknown"] as const;
 export type CustodyRehypothecation = (typeof CUSTODY_REHYPOTHECATION_VALUES)[number];
-
-export interface CustodyProviderReview {
-  name: string;
-  role: CustodyProviderRole;
-  sharePct?: number;
-  jurisdiction?: string;
-}
-
-export interface CustodyProfile {
-  providers: CustodyProviderReview[];
-  segregation: CustodySegregation;
-  bankruptcyRemoteness: CustodyBankruptcyRemoteness;
-  rehypothecation: CustodyRehypothecation;
-  reviewedAt: string;
-  reviewer: string;
-  confidence: ResearchReviewConfidence;
-  sources: StablecoinLink[];
-  uncertainty: string;
-  knownUnknownExposurePct?: number;
-}
+export type CustodyProviderReview = import("./stablecoin-meta-schemas").CustodyProviderReview;
+export type CustodyProfile = import("./stablecoin-meta-schemas").CustodyProfile;
 
 export const MINT_AUTHORITY_MINT_PATH_VALUES = [
   "immutable-user-collateralized",
@@ -386,20 +330,7 @@ export const MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES = [
   "not-applicable",
 ] as const;
 export type MintAuthorityModulesOrGuardsStatus = (typeof MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES)[number];
-
-export interface MintAuthoritySafeState {
-  version?: string;
-  owners?: string[];
-  threshold?: number;
-  enabledModules?: string[];
-  guard?: string | null;
-  moduleGuard?: string | null;
-  fallbackHandler?: string | null;
-  masterCopy?: string | null;
-  observedBlock?: number;
-  observedAt?: string;
-  source: MintAuthoritySafeSource;
-}
+export type MintAuthoritySafeState = import("./stablecoin-meta-schemas").MintAuthoritySafeState;
 
 export const MINT_AUTHORITY_UPGRADE_MODEL_VALUES = [
   "immutable",
@@ -411,113 +342,17 @@ export const MINT_AUTHORITY_UPGRADE_MODEL_VALUES = [
   "unknown",
 ] as const;
 export type MintAuthorityUpgradeModel = (typeof MINT_AUTHORITY_UPGRADE_MODEL_VALUES)[number];
-
-export interface MintAuthorityUpgradeability {
-  model: MintAuthorityUpgradeModel;
-  deploymentRefs?: string[];
-  proxyAddresses?: string[];
-  implementationAddresses?: string[];
-  adminAddresses?: string[];
-  canChangeMintLogic: boolean | "unknown";
-  delaySec?: number;
-  /** Exact label of the reviewed control that can change mint-critical logic. */
-  controlRef?: string;
-  observedAt?: string;
-  observedBlock?: number;
-  sources: StablecoinLink[];
-}
-
-export interface MintAuthorityRouteChecks {
-  lockboxOrEscrow?: string;
-  trustedPeerOrRemote?: string;
-  attestorQuorum?: string;
-  signingModel?: string;
-  rateLimits?: string;
-  caps?: string;
-  pausersAdminsUpgraders?: string;
-  onchainAmountBounds?: string;
-  unsupportedReason?: string;
-}
+export type MintAuthorityUpgradeability = import("./stablecoin-meta-schemas").MintAuthorityUpgradeability;
+export type MintAuthorityRouteChecks = import("./stablecoin-meta-schemas").MintAuthorityRouteChecks;
 
 export const MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES = ["mpc", "hsm"] as const;
 export type MintAuthorityKeyCustodyAttestationKind =
   (typeof MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES)[number];
-
-export interface MintAuthorityKeyCustodyAttestation {
-  kind: MintAuthorityKeyCustodyAttestationKind;
-  sources: StablecoinLink[];
-}
-
-export interface MintAuthorityControl {
-  chain?: string;
-  address?: string;
-  deploymentRefs?: string[];
-  /**
-   * Tracked native asset whose issuance system owns this controller.
-   *
-   * Use when another product reuses an upstream controller so dependency
-   * analysis can price the downstream reliance without creating a reverse
-   * dependency on the controller's native asset.
-   */
-  controllerAssetId?: string;
-  label: string;
-  role: MintAuthorityControlRole;
-  authorityType: MintAuthorityType;
-  directMintAbility: MintAuthorityDirectMintAbility;
-  threshold?: number;
-  signerCount?: number;
-  timelockDelaySec?: number;
-  capDescription?: string;
-  canRaiseCap?: boolean | "unknown";
-  modulesOrGuardsStatus?: MintAuthorityModulesOrGuardsStatus;
-  safe?: MintAuthoritySafeState;
-  routeChecks?: MintAuthorityRouteChecks;
-  keyCustodyAttestation?: MintAuthorityKeyCustodyAttestation;
-  observedAt?: string;
-  observedBlock?: number;
-  /** Reviewed non-address common modes such as issuer, custodian, or operator identity. */
-  failureDomainKeys?: string[];
-  bypassSurfaces?: string[];
-  sources?: StablecoinLink[];
-  evidence?: string;
-}
-
-export interface MintAuthorityReview {
-  sources?: StablecoinLink[];
-  sourceFreeRationale?: string;
-  evidence: string;
-  reviewer: string;
-  reviewedAt: string;
-  disposition?: "scoreable" | "unresolved";
-  unresolvedQuestions?: string[];
-  /**
-   * Reviewer-authored open questions scoped to one named control each. Unlike
-   * `unresolvedQuestions`, a scoped question does not void the review of the
-   * other controls: only the named control stays unresolved, and while the
-   * question is fresh it takes the bounded scoped-gap ceiling instead of the
-   * control-unverified ceiling.
-   */
-  scopedQuestions?: MintAuthorityScopedQuestion[];
-  noLocalIssuance?: MintAuthorityNoLocalIssuanceException;
-}
-
-export interface MintAuthorityScopedQuestion {
-  /** `chain:address` of the authored control this question is scoped to. */
-  controlRef: string;
-  question: string;
-  reviewedAt: string;
-  reviewer: string;
-  sources?: StablecoinLink[];
-}
-
-export interface MintAuthorityNoLocalIssuanceException {
-  kind: MintAuthorityNoLocalIssuanceKind;
-  reviewedAt: string;
-  reviewer: string;
-  rationale: string;
-  sources?: StablecoinLink[];
-}
-
+export type MintAuthorityKeyCustodyAttestation = import("./stablecoin-meta-schemas").MintAuthorityKeyCustodyAttestation;
+export type MintAuthorityControl = import("./stablecoin-meta-schemas").MintAuthorityControl;
+export type MintAuthorityReview = import("./stablecoin-meta-schemas").MintAuthorityReview;
+export type MintAuthorityScopedQuestion = import("./stablecoin-meta-schemas").MintAuthorityScopedQuestion;
+export type MintAuthorityNoLocalIssuanceException = import("./stablecoin-meta-schemas").MintAuthorityNoLocalIssuanceException;
 export interface MintAuthorityProfile {
   mintPath: MintAuthorityMintPath;
   authorityPosture: MintAuthorityPosture;
@@ -533,31 +368,15 @@ export interface MintAuthorityProfile {
     sources: StablecoinLink[];
   }>;
   controls?: MintAuthorityControl[];
-  /** Reviewed economic mint bound; supersedes the encoding-derived cap in v9. */
   economicCapSemantics?: MintAuthorityEconomicCapSemantics;
-  /** Reviewed supply-vs-reserve reconciliation cadence; supersedes v9 inference. */
   reconciliation?: MintAuthorityReconciliation;
-  /** Reviewed prudential-supervision regime; graduates the reconciled mint rung. */
   supervision?: MintAuthoritySupervision;
   review: MintAuthorityReview;
 }
 
 export type BlacklistabilityReviewStatus = boolean | "possible" | "inherited";
-
-export interface BlacklistabilityReview {
-  reviewedStatus: BlacklistabilityReviewStatus;
-  sources?: StablecoinLink[];
-  sourceFreeRationale?: string;
-  evidence: string;
-  reviewer: string;
-  reviewedAt: string;
-}
-
-export interface Jurisdiction {
-  country: string;
-  regulator?: string;
-  license?: string;
-}
+export type BlacklistabilityReview = import("./stablecoin-meta-schemas").BlacklistabilityReview;
+export type Jurisdiction = import("./stablecoin-meta-schemas").Jurisdiction;
 
 export const MICA_STATUS_VALUES = ["authorized", "pending", "transitional", "non-compliant", "out-of-scope"] as const;
 export type MicaStatus = (typeof MICA_STATUS_VALUES)[number];
@@ -567,16 +386,7 @@ export type MicaTokenType = (typeof MICA_TOKEN_TYPE_VALUES)[number];
 
 export const MICA_AUTHORIZATION_TYPE_VALUES = ["emi", "credit-institution"] as const;
 export type MicaAuthorizationType = (typeof MICA_AUTHORIZATION_TYPE_VALUES)[number];
-
-export interface MicaProfile {
-  status: MicaStatus;
-  tokenType?: MicaTokenType;
-  authorizationType?: MicaAuthorizationType;
-  competentAuthority?: string;
-  authorizedEntity?: string;
-  significant?: boolean;
-  references?: StablecoinLink[];
-}
+export type MicaProfile = import("./stablecoin-meta-schemas").MicaProfile;
 
 export const GENIUS_APPLICABILITY_VALUES = [
   "apparent-payment-stablecoin",
@@ -652,70 +462,13 @@ export const GENIUS_DASP_OFFER_SALE_STATUS_VALUES = [
   "unknown",
 ] as const;
 export type GeniusDaspOfferSaleStatus = (typeof GENIUS_DASP_OFFER_SALE_STATUS_VALUES)[number];
-
-export interface GeniusReference {
-  label: string;
-  url: string;
-  sourceKind: GeniusSourceKind;
-  sourceDate?: string;
-  accessedAt?: string;
-}
-
-export interface GeniusApplicabilityBasis {
-  summary: string;
-  references?: GeniusReference[];
-}
-
-export interface GeniusForeignExceptionEvidence {
-  summary: string;
-  references?: GeniusReference[];
-}
-
-export interface GeniusNegativeEvidenceReview {
-  sourcesChecked: string[];
-  summary: string;
-  reviewer: string;
-  reviewedAt: string;
-  references?: GeniusReference[];
-}
-
-export interface GeniusProfile {
-  applicability: GeniusApplicability;
-  applicabilityBasis?: GeniusApplicabilityBasis;
-  authorizationStatus: GeniusAuthorizationStatus;
-  issuerPathway: GeniusIssuerPathway;
-  issuerEntity?: string;
-  issuerDomicile?: string;
-  licensingRegulator?: string;
-  primaryFederalRegulator?: GeniusPrimaryFederalRegulator;
-  stateRegulator?: string;
-  foreignExceptionStatus?: GeniusForeignExceptionStatus;
-  foreignExceptionEvidence?: GeniusForeignExceptionEvidence;
-  enforcementStatus?: GeniusEnforcementStatus;
-  daspOfferSaleStatus?: GeniusDaspOfferSaleStatus;
-  reserveDisclosurePresent?: boolean;
-  reserveDisclosureUrl?: string;
-  redemptionPolicyPresent?: boolean;
-  monthlyAttestationPresent?: boolean;
-  latestReportDate?: string;
-  notes?: string;
-  references?: GeniusReference[];
-  negativeEvidenceReview?: GeniusNegativeEvidenceReview;
-  reviewer: string;
-  reviewedAt: string;
-}
-
-export interface ContractDeployment {
-  chain: string;
-  address: string;
-  decimals: number;
-}
-
-export interface DependencyWeight {
-  id: string;
-  weight: number;
-  type?: DependencyType;
-}
+export type GeniusReference = import("./stablecoin-meta-schemas").GeniusReference;
+export type GeniusApplicabilityBasis = import("./stablecoin-meta-schemas").GeniusApplicabilityBasis;
+export type GeniusForeignExceptionEvidence = import("./stablecoin-meta-schemas").GeniusForeignExceptionEvidence;
+export type GeniusNegativeEvidenceReview = import("./stablecoin-meta-schemas").GeniusNegativeEvidenceReview;
+export type GeniusProfile = import("./stablecoin-meta-schemas").GeniusProfile;
+export type ContractDeployment = import("./stablecoin-meta-schemas").ContractDeployment;
+export type DependencyWeight = import("./stablecoin-meta-schemas").DependencyWeight;
 
 export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
 export type CollateralQuality = (typeof COLLATERAL_QUALITY_VALUES)[number];
@@ -778,53 +531,12 @@ export const ORACLE_RISK_BRANCH_APPLICABILITY_VALUES = [
 export type OracleRiskBranchApplicability = (typeof ORACLE_RISK_BRANCH_APPLICABILITY_VALUES)[number];
 export const ORACLE_RISK_LIQUIDATION_STATE_VALUES = ["callable", "uncallable", "unknown"] as const;
 export type OracleRiskLiquidationState = (typeof ORACLE_RISK_LIQUIDATION_STATE_VALUES)[number];
-
-/** Reviewed scope of the price-authority review. `not-applicable` is neutral,
- * `top-level-only` scores a price-sensitive control without liquidation rows,
- * and `branches-required` activates market-specific liquidation evidence.
- */
-export interface OracleRiskBranchApplicabilityReview {
-  disposition: OracleRiskBranchApplicability;
-  reviewedAt: string;
-  reviewer: string;
-  rationale: string;
-  sources: StablecoinLink[];
-}
-
-export interface OracleRiskFeed {
-  provider: string;
-  path: string;
-  address?: string;
-  chain: string;
-  heartbeatSec?: number;
-  stalenessBoundSec?: number;
-  observedAt?: string;
-  observedBlock?: number;
-  failureDomainKeys?: string[];
-}
-
-export interface OracleRiskCollateralParameter {
-  asset: string;
-  maximumLtvPct?: number;
-  minimumCollateralRatioPct?: number;
-  shutdownCollateralRatioPct?: number;
-  note?: string;
-}
+export type OracleRiskBranchApplicabilityReview = import("./stablecoin-meta-schemas").OracleRiskBranchApplicabilityReview;
+export type OracleRiskFeed = import("./stablecoin-meta-schemas").OracleRiskFeed;
+export type OracleRiskCollateralParameter = import("./stablecoin-meta-schemas").OracleRiskCollateralParameter;
 
 export type OracleRiskBranch = import("./stablecoin-meta-schemas").OracleRiskBranch;
-
-export interface OracleRiskProfile {
-  tier: OracleRiskTier;
-  summary: string;
-  role?: OracleRiskRole;
-  branchModel?: OracleRiskBranchModel;
-  branchApplicability?: OracleRiskBranchApplicabilityReview;
-  reviewedAt?: string;
-  reviewer?: string;
-  confidence?: OracleRiskConfidence;
-  sources?: StablecoinLink[];
-  branches?: OracleRiskBranch[];
-}
+export type OracleRiskProfile = import("./stablecoin-meta-schemas").OracleRiskProfile;
 
 export const BRIDGE_ROUTE_RISK_TIER_VALUES = [
   "single-chain-or-native",
@@ -843,15 +555,7 @@ export type BridgeRouteRiskConfidence = (typeof BRIDGE_ROUTE_RISK_CONFIDENCE_VAL
 
 export const BRIDGE_ROUTE_RISK_SOURCE_VALUES = ["l2beat", "issuer", "docs", "explorer", "manual"] as const;
 export type BridgeRouteRiskSource = (typeof BRIDGE_ROUTE_RISK_SOURCE_VALUES)[number];
-
-export interface BridgeRouteProtocolEvidence {
-  source: BridgeRouteRiskSource;
-  name: string;
-  slug?: string;
-  url?: string;
-  bridgeTypes?: string[];
-  note?: string;
-}
+export type BridgeRouteProtocolEvidence = import("./stablecoin-meta-schemas").BridgeRouteProtocolEvidence;
 
 export const BRIDGE_ROUTE_CLASS_VALUES = ["native", "canonical", "third-party", "unknown"] as const;
 export type BridgeRouteClass = (typeof BRIDGE_ROUTE_CLASS_VALUES)[number];
@@ -894,88 +598,10 @@ export const BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES = [
   "peer-config",
 ] as const;
 export type BridgeRouteControlCapability = (typeof BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES)[number];
-
-export interface BridgeRouteControl {
-  id: string;
-  label: string;
-  routeRefs: string[];
-  capabilities: BridgeRouteControlCapability[];
-  controllerChain?: string;
-  controllerAddress?: string;
-  failureDomainKeys?: string[];
-  authorityType: MintAuthorityType;
-  threshold?: number;
-  signerCount?: number;
-  timelockDelaySec?: number;
-  safe?: MintAuthoritySafeState;
-  modulesOrGuardsStatus?: MintAuthorityModulesOrGuardsStatus;
-  keyCustodyAttestation?: MintAuthorityKeyCustodyAttestation;
-  routeChecks?: MintAuthorityRouteChecks;
-  capDescription?: string;
-  canRaiseCap?: boolean | "unknown";
-  bypassSurfaces?: string[];
-  observedAt?: string;
-  observedBlock?: number;
-  sources?: StablecoinLink[];
-  evidence?: string;
-}
-
-export interface BridgeRouteDeployment {
-  id: string;
-  sourceChain?: string;
-  destinationChain: string;
-  canonicalChain?: string;
-  contractAddress: string;
-  representationId?: string;
-  protocol: string;
-  issuanceModel: BridgeRouteIssuanceModel;
-  routeClass: BridgeRouteClass;
-  riskTier: BridgeRouteRiskTier;
-  semantics: BridgeRouteSemantics;
-  scope: BridgeRouteScope;
-  reviewDisposition: BridgeRouteReviewDisposition;
-  reviewNote?: string;
-  mappingVersion?: string;
-  controllerChain?: string;
-  controllerAddress?: string;
-  failureDomainKeys?: string[];
-  observedAt?: string;
-  observedBlock?: number;
-  sources?: StablecoinLink[];
-}
-
-export interface BridgeRouteRiskProfile {
-  tier: BridgeRouteRiskTier;
-  summary: string;
-  reviewedAt: string;
-  reviewer: string;
-  confidence: BridgeRouteRiskConfidence;
-  protocols?: BridgeRouteProtocolEvidence[];
-  sourceFreeRationale?: string;
-  sources?: StablecoinLink[];
-  routes?: BridgeRouteDeployment[];
-  controls?: BridgeRouteControl[];
-  /**
-   * Reviewer-authored open questions scoped to one structured bridge control
-   * each, mirroring `mintAuthority.review.scopedQuestions`. A scoped question
-   * does not void the review of the other controls: only the named control
-   * stays unresolved, and while the question is fresh it takes the bounded
-   * scoped-gap ceiling instead of the control-unverified ceiling.
-   */
-  scopedQuestions?: BridgeRouteScopedQuestion[];
-}
-
-export interface BridgeRouteScopedQuestion {
-  /**
-   * The authored structured control this question is scoped to: its `id`,
-   * its exact `label`, or its `controllerChain:controllerAddress` pair.
-   */
-  controlRef: string;
-  question: string;
-  reviewedAt: string;
-  reviewer: string;
-  sources?: StablecoinLink[];
-}
+export type BridgeRouteControl = import("./stablecoin-meta-schemas").BridgeRouteControl;
+export type BridgeRouteDeployment = import("./stablecoin-meta-schemas").BridgeRouteDeployment;
+export type BridgeRouteRiskProfile = import("./stablecoin-meta-schemas").BridgeRouteRiskProfile;
+export type BridgeRouteScopedQuestion = import("./stablecoin-meta-schemas").BridgeRouteScopedQuestion;
 
 export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;
 export type Infrastructure = (typeof INFRASTRUCTURE_VALUES)[number];
@@ -1009,12 +635,7 @@ export const BridgeRouteRiskSourceSchema = z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUE
 
 export const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
 export type CoinNoticeType = (typeof COIN_NOTICE_TYPE_VALUES)[number];
-
-export interface CoinNotice {
-  type: CoinNoticeType;
-  title: string;
-  message: string;
-}
+export type CoinNotice = import("./stablecoin-meta-schemas").CoinNotice;
 
 export const YIELD_TYPE_VALUES = [
   "lending-vault",
@@ -1031,12 +652,7 @@ export const YIELD_TYPE_VALUES = [
 export type YieldType = (typeof YIELD_TYPE_VALUES)[number];
 
 export const YieldTypeSchema = z.enum(YIELD_TYPE_VALUES);
-
-export interface YieldConfig {
-  defiLlamaPoolId?: string;
-  yieldSource: string;
-  yieldType: YieldType;
-}
+export type YieldConfig = import("./stablecoin-meta-schemas").YieldConfig;
 
 export const LAUNCH_PHASE_VALUES = ["announced", "testnet", "auditing", "beta", "launching-soon"] as const;
 export type LaunchPhase = (typeof LAUNCH_PHASE_VALUES)[number];
@@ -1051,31 +667,12 @@ export const LAUNCH_MILESTONE_TYPE_VALUES = [
   "testnet",
 ] as const;
 export type LaunchMilestoneType = (typeof LAUNCH_MILESTONE_TYPE_VALUES)[number];
-
-export interface LaunchMilestone {
-  date: string;
-  type: LaunchMilestoneType;
-  title: string;
-  description?: string;
-  sourceUrl?: string;
-}
-
-export interface DateHistoryEntry {
-  date: string;
-  setOn: string;
-}
+export type LaunchMilestone = import("./stablecoin-meta-schemas").LaunchMilestone;
+export type DateHistoryEntry = import("./stablecoin-meta-schemas").DateHistoryEntry;
 
 export const FEATURED_CONTENT_TYPE_VALUES = ["tweet", "blog", "video", "article"] as const;
 export type FeaturedContentType = (typeof FEATURED_CONTENT_TYPE_VALUES)[number];
-
-export interface FeaturedContent {
-  type: FeaturedContentType;
-  url: string;
-  title: string;
-  description?: string;
-  image?: string;
-  source?: string;
-}
+export type FeaturedContent = import("./stablecoin-meta-schemas").FeaturedContent;
 
 export const MARKET_AVAILABILITY_VALUES = [
   "market-traded",

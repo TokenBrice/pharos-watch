@@ -6,47 +6,7 @@ import {
   type V9AccessPostureAssetFacts,
 } from "../safety-score-v9/access-posture";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-
-function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState: "known",
-    evidenceRefIds: [`evidence:${rule}`],
-    gapIds: [],
-  };
-}
-
-function stale(rule = "fixture.stale"): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState: "stale",
-    evidenceRefIds: [`evidence:${rule}`],
-    gapIds: [`gap:${rule}`],
-  };
-}
-
-function missing(rule = "fixture.missing"): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState: "missing",
-    evidenceRefIds: [],
-    gapIds: [`gap:${rule}`],
-  };
-}
-
-function notApplicable(rule = "fixture.not-applicable"): V9FactStatusV2 {
-  return {
-    applicability: {
-      state: "not-applicable",
-      policyRuleId: rule,
-      rationale: "Reviewed as not applicable.",
-      gapId: null,
-    },
-    observationState: "known",
-    evidenceRefIds: [],
-    gapIds: [],
-  };
-}
+import { missing, notApplicable, requiredKnown, stale } from "./safety-score-v9-fixtures.test-support";
 
 function control(
   controlKey: string,

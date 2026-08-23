@@ -10,7 +10,7 @@ export interface ComputeDepegResolverV2Options {
   stablecoinsCacheSafe?: boolean;
   depegPipelineHealthy?: boolean;
   syncCapabilities?: Record<string, unknown>;
-  storeContracts?: DdrV2StoreContracts | null;
+  storeContracts?: DdrV2StoreContracts;
 }
 
 export type NormalizedComputeDepegResolverOptions =
@@ -20,7 +20,7 @@ export type NormalizedComputeDepegResolverOptions =
       "db" | "ddrRunId" | "runAt" | "slot" | "stablecoinsCacheSafe" | "depegPipelineHealthy" | "syncCapabilities"
     >
   > &
-  Pick<ComputeDepegResolverV2Options, "signal" | "storeContracts">;
+  Pick<ComputeDepegResolverV2Options, "signal"> & { storeContracts: DdrV2StoreContracts };
 
 export interface DdrEventDbRow {
   id: number;

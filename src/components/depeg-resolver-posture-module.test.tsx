@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { DepegResolverPostureModule } from "@/components/depeg-resolver-posture-module";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
@@ -12,6 +12,7 @@ import {
   type DdrRow,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
+import { DDR_TEST_META } from "./depeg-resolver-test-support";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverEnabled: () => true,
@@ -21,35 +22,7 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: () => <span data-testid="logo" />,
 }));
 
-afterEach(() => {
-  cleanup();
-});
-
-const meta: DdrResponse["_meta"] = {
-  schemaVersion: 2,
-  dataAsOf: 1,
-  modelAsOf: 1,
-  computedAt: 1,
-  expiresAt: 2,
-  snapshotToken: null,
-  snapshotGeneration: null,
-  publicPredictionIds: [],
-  publicPredictionRowHashes: {},
-  basePayloadHash: null,
-  readOverlay: {
-    degradedLockDeferralIncidentKeys: [],
-    closedPendingReviewIncidentKeys: [],
-    suppressedIncidentKeys: [],
-  },
-  degraded: false,
-  degradedReason: null,
-  publicWarning: "",
-  resolutionRubricVersion: "resolution-rubric-v1",
-  durationModelVersion: "duration-landmark-v1",
-  incidentGroupingVersion: "incident-group-v1",
-  supportRulesVersion: "support-rules-v1",
-  lineage: null,
-};
+const meta = DDR_TEST_META;
 
 function makeRow(
   overrides: Partial<DdrRow> & { stablecoinId: string; symbol: string; tier: DdrResolutionTier },

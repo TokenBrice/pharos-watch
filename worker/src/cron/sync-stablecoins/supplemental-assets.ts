@@ -20,8 +20,6 @@ export {
 } from "./supplemental-assets/shared";
 export {
   computeExcludedBalanceAdjustedSupplyRaw,
-  selectSingleOnChainSupplyContract,
-  selectSupplementalOnChainSupplyContract,
 } from "./supplemental-assets/onchain-supply";
 
 import type { CoinGeckoMcapData } from "./supplemental-assets/shared";

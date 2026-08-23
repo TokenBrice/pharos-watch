@@ -1,3 +1,9 @@
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "../api-query-history";
+
+const DEX_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity.defaultDays;
+const YIELD_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.defaultDays;
+const SAFETY_HISTORY_PATH_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.safetyScore.maxDays;
+
 type QueryParamValue = string | number | boolean | null | undefined;
 
 export function buildQueryPath(path: string, params?: Record<string, QueryParamValue>): string {
@@ -44,7 +50,7 @@ export const API_PATHS = {
   bluechipRatings: () => "/api/bluechip-ratings",
   dexLiquidity: () => "/api/dex-liquidity",
   dexLiquidityHistoryBase: () => "/api/dex-liquidity-history",
-  dexLiquidityHistory: (stablecoinId: string, days = 90) =>
+  dexLiquidityHistory: (stablecoinId: string, days: number = DEX_HISTORY_DEFAULT_DAYS) =>
     buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId, days }),
   dexLiquidityHistoryProbe: (stablecoinId: string) =>
     buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId }),
@@ -63,7 +69,7 @@ export const API_PATHS = {
   yieldRankingsSummary: () => buildQueryPath("/api/yield-rankings", { projection: "summary" }),
   yieldAdapterManifest: () => "/api/yield-adapter-manifest",
   yieldHistoryBase: () => "/api/yield-history",
-  yieldHistory: (stablecoinId: string, days = 90, mode?: string, sourceKey?: string) =>
+  yieldHistory: (stablecoinId: string, days: number = YIELD_HISTORY_DEFAULT_DAYS, mode?: string, sourceKey?: string) =>
     buildQueryPath("/api/yield-history", {
       stablecoin: stablecoinId,
       days,
@@ -72,12 +78,12 @@ export const API_PATHS = {
     }),
   yieldHistoryProbe: (stablecoinId: string) => buildQueryPath("/api/yield-history", { stablecoin: stablecoinId }),
   safetyScoreHistoryBase: () => "/api/safety-score-history",
-  safetyScoreHistory: (stablecoinId: string, days = 3650) =>
+  safetyScoreHistory: (stablecoinId: string, days: number = SAFETY_HISTORY_PATH_DAYS) =>
     buildQueryPath("/api/safety-score-history", { stablecoin: stablecoinId, days }),
   safetyScoreHistoryProbe: (stablecoinId: string) =>
     buildQueryPath("/api/safety-score-history", { stablecoin: stablecoinId }),
   safetyScoreHistoryV2Base: () => "/api/safety-score-history-v2",
-  safetyScoreHistoryV2: (stablecoinId: string, days = 3650) =>
+  safetyScoreHistoryV2: (stablecoinId: string, days: number = SAFETY_HISTORY_PATH_DAYS) =>
     buildQueryPath("/api/safety-score-history-v2", { stablecoin: stablecoinId, days }),
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
   reportCardsV9: () => "/api/report-cards/v9",

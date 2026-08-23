@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { relative } from "node:path";
 import { reportViolations } from "../lib/report-violations.mts";
-import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mts";
+import { scanSourceGate } from "../lib/source-gate.mts";
+import { runAsCli } from "../lib/source-files.mts";
 
 export const DEFAULT_SQL_SAFETY_ROOTS = ["worker/src", "worker/scripts", "scripts"];
 export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)[^`]*(?:FROM|INTO|UPDATE|JOIN)\s+\$\{|(?:SELECT|DELETE|UPDATE)[^`]*(?:WHERE|AND|OR|SET)\s+[\w.]+\s*=\s*['"]?\$\{)/i;
@@ -29,16 +28,12 @@ export function scanSqlInterpolationSafety(
   roots: readonly string[] = DEFAULT_SQL_SAFETY_ROOTS,
   cwd = process.cwd(),
 ): SqlSafetyReport {
-  const scannedFiles: string[] = [];
-  const violations: SqlSafetyViolation[] = [];
-
-  for (const root of roots) {
-    const resolvedRoot = resolveSourceRoot(root, cwd);
-    const files = collectSourceFiles(resolvedRoot, { extensions: SQL_SAFETY_EXTENSIONS });
-    scannedFiles.push(...files);
-
-    for (const file of files) {
-      const content = readFileSync(file, "utf8");
+  return scanSourceGate<SqlSafetyViolation>({
+    roots,
+    cwd,
+    extensions: SQL_SAFETY_EXTENSIONS,
+    scanFile: ({ relativePath, content, root }) => {
+      const violations: SqlSafetyViolation[] = [];
       const lines = content.split("\n");
       for (let index = 0; index < lines.length; index++) {
         const line = lines[index];
@@ -48,16 +43,15 @@ export function scanSqlInterpolationSafety(
         if (hasSqlSafetySignal(context)) continue;
 
         violations.push({
-          file: relative(cwd, file),
+          file: relativePath,
           line: index + 1,
           text: line.trim(),
           root,
         });
       }
-    }
-  }
-
-  return { scannedFiles, violations };
+      return violations;
+    },
+  });
 }
 
 export function printSqlInterpolationSafetyReport(report: SqlSafetyReport): number {

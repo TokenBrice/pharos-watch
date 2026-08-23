@@ -1,4 +1,6 @@
 import type { ScheduledRuntimeContext } from "./context";
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import {
   runBestEffortScheduledJobWithOutcome,
   type BestEffortScheduledJobOutcome,
@@ -41,6 +43,50 @@ export interface ScheduledSlotParallelSerialGroup {
 }
 
 export type ScheduledSlotGroupDefinition = ScheduledSlotGroup | ScheduledSlotParallelSerialGroup;
+
+interface ScheduledSlotPlanBindingOptions {
+  mode: ScheduledSlotGroupMode | "parallel-serial";
+  label: string;
+  implementations: Readonly<Record<string, ScheduledSlotTask["run"]>>;
+  chainLabels?: readonly string[];
+  stopOnFailure?: boolean;
+  stopOnNonNeutralSkip?: boolean;
+}
+
+export function bindScheduledSlotPlan(
+  scheduleKey: CronScheduleKey,
+  options: ScheduledSlotPlanBindingOptions,
+): ScheduledSlotGroupDefinition[] {
+  const plan = SCHEDULED_SLOT_PLANS[scheduleKey];
+  const chains = plan.jobChains.map((jobs, chainIndex) => ({
+    label: options.chainLabels?.[chainIndex] ?? jobs.join(" → "),
+    tasks: jobs.map((job) => {
+      const run = options.implementations[job];
+      if (!run) throw new Error(`Missing scheduled implementation for ${scheduleKey}/${job}`);
+      return { job, run };
+    }),
+    stopOnFailure: options.stopOnFailure,
+    stopOnNonNeutralSkip: options.stopOnNonNeutralSkip,
+  }));
+
+  if (options.mode === "serial") {
+    if (chains.length !== 1) {
+      throw new Error(`Serial scheduled slot ${scheduleKey} must have exactly one canonical chain`);
+    }
+    const [chain] = chains;
+    return [{
+      mode: "serial",
+      label: options.label,
+      tasks: chain.tasks,
+      stopOnFailure: chain.stopOnFailure,
+      stopOnNonNeutralSkip: chain.stopOnNonNeutralSkip,
+    }];
+  }
+  if (options.mode === "parallel-serial") {
+    return [{ mode: "parallel-serial", label: options.label, chains }];
+  }
+  throw new Error(`Unsupported scheduled slot mode for ${scheduleKey}`);
+}
 
 export async function runSingleScheduledJob(
   runtime: ScheduledRuntimeContext,

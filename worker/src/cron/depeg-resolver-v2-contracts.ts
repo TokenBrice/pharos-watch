@@ -1,11 +1,22 @@
 import type { DdrRow } from "@shared/types/depeg-resolver";
+import type {
+  DdrCanonicalIncident as StoreDdrCanonicalIncident,
+  DdrIncidentDirection,
+  DdrLockTrigger,
+} from "../lib/depeg-resolver-incident-store";
+import type {
+  DdrFirstPublicationMembership as StoreDdrFirstPublicationMembership,
+  DdrPublicationManifest as StoreDdrPublicationManifest,
+  DdrPublicPredictionLockTiming,
+  DdrPublicPredictionOutcomeKind,
+  DdrSealedPublicPrediction as StoreDdrSealedPublicPrediction,
+} from "../lib/depeg-resolver-publication-store";
 
 export const DDR_PUBLICATION_SNAPSHOT_KIND = "ddr_public";
 
-export type DdrDirection = "above" | "below";
-export type DdrOutcomeKind = "prediction" | "no_call";
-export type DdrLockTiming = "on_time" | "late_confirmation" | "late_freeze" | "deferred";
-export type DdrLockTrigger = "scheduled_24h" | "forecast_readiness" | "readiness_backstop";
+export type DdrDirection = DdrIncidentDirection;
+export type DdrOutcomeKind = DdrPublicPredictionOutcomeKind;
+export type DdrLockTiming = DdrPublicPredictionLockTiming;
 export type DdrLockAction =
   | "pending"
   | "deferred"
@@ -37,67 +48,28 @@ export interface DdrCanonicalIncidentInput {
   registrySnapshot: Record<string, unknown>;
 }
 
-export interface DdrPredictionLockState {
-  eligibleAt: number;
-  deferralCount: number;
-  lastDeferralReason: string | null;
-  lastState:
-    | "pending_lock"
-    | "lock_deferred"
-    | "frozen"
-    | "no_call"
-    | "publication_retry_pending"
-    | "publication_failed"
-    | "published";
-  lockTrigger?: DdrLockTrigger | null;
-  forecastReadinessScore?: number | null;
-  forecastReadinessVersion?: string | null;
-  readinessThreshold?: number | null;
-  backstopAt?: number | null;
-  backstopDelaySec?: number | null;
-}
+type StoreLockState = NonNullable<StoreDdrCanonicalIncident["lockState"]>;
+export type DdrPredictionLockState = Pick<StoreLockState, "eligibleAt" | "deferralCount" | "lastDeferralReason" | "lastState">
+  & Partial<Pick<StoreLockState, "lockTrigger" | "forecastReadinessScore" | "forecastReadinessVersion" | "readinessThreshold" | "backstopAt" | "backstopDelaySec">>;
 
-export interface DdrCanonicalIncident {
-  incidentKey: string;
-  eventId: number;
-  currentEventId: number;
-  stablecoinId: string;
-  pegCurrency: string;
-  direction: DdrDirection;
-  startedAt: number;
-  eligibleAt: number;
-  policyUniverseIncluded: boolean;
-  rolloutActiveAtEnablement?: boolean;
-  incidentState?: "active" | "closed_pre_lock" | "merged" | "superseded" | "split_source";
-  closedPreLockAt?: number | null;
-  supersededByIncidentKey?: string | null;
-  confirmedAt?: number | null;
+export type DdrCanonicalIncident = Pick<StoreDdrCanonicalIncident,
+  "incidentKey" | "eventId" | "currentEventId" | "stablecoinId" | "pegCurrency" | "direction" | "startedAt"
+  | "eligibleAt" | "policyUniverseIncluded"
+> & Partial<Pick<StoreDdrCanonicalIncident,
+  "incidentState" | "closedPreLockAt" | "supersededByIncidentKey" | "confirmedAt" | "rolloutActiveAtEnablement"
+>> & {
   lockState?: DdrPredictionLockState | null;
-}
+};
 
-export interface DdrSealedPublicPrediction {
-  id: number;
+export type DdrSealedPublicPrediction = Pick<StoreDdrSealedPublicPrediction,
+  "id" | "incidentKey" | "eventId" | "assessmentId" | "outcomeKind" | "predictionPolicyVersion"
+  | "predictionMethodologyVersion" | "policyDelaySec" | "eligibleAt" | "lockedAt" | "eventAgeAtLockSec"
+  | "lockTiming" | "rowHash" | "sealedPayload"
+> & Partial<Pick<StoreDdrSealedPublicPrediction,
+  "lockTrigger" | "forecastReadinessScore" | "forecastReadinessVersion" | "readinessThreshold" | "backstopAt" | "backstopDelaySec"
+>> & {
   publicPredictionId?: number;
-  incidentKey: string;
-  eventId: number;
-  assessmentId: number;
-  outcomeKind: DdrOutcomeKind;
-  predictionPolicyVersion: string;
-  predictionMethodologyVersion: string;
-  policyDelaySec: number;
-  eligibleAt: number;
-  lockedAt: number;
-  eventAgeAtLockSec: number;
-  lockTiming: DdrLockTiming;
-  lockTrigger?: DdrLockTrigger | null;
-  forecastReadinessScore?: number | null;
-  forecastReadinessVersion?: string | null;
-  readinessThreshold?: number | null;
-  backstopAt?: number | null;
-  backstopDelaySec?: number | null;
-  rowHash: string;
-  sealedPayload: Record<string, unknown>;
-}
+};
 
 export interface DdrSealIdentity {
   stablecoinId: string;
@@ -106,24 +78,14 @@ export interface DdrSealIdentity {
   startedAt: number;
 }
 
-export interface DdrFirstPublicationMembership {
-  publicPredictionId: number;
-  incidentKey: string;
-  snapshotToken: string;
-  snapshotGeneration: number;
-  publishedAt: number;
-  firstPublished: boolean;
-}
+export type DdrFirstPublicationMembership = Pick<StoreDdrFirstPublicationMembership,
+  "publicPredictionId" | "incidentKey" | "snapshotToken" | "snapshotGeneration" | "publishedAt" | "firstPublished"
+>;
 
-export interface DdrPublicationManifest {
-  snapshotToken: string;
-  snapshotGeneration: number;
-  snapshotSequence: number;
-  publishedAt: number;
-  basePayloadHash: string;
-  publicPredictionIds: number[];
-  firstPublishedPublicPredictionIds: number[];
-}
+export type DdrPublicationManifest = Pick<StoreDdrPublicationManifest,
+  "snapshotToken" | "snapshotGeneration" | "snapshotSequence" | "publishedAt" | "basePayloadHash"
+  | "publicPredictionIds" | "firstPublishedPublicPredictionIds"
+>;
 
 export interface DdrLockOpportunityInput {
   incidentKey: string;

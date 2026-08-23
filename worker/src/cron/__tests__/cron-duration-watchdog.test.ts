@@ -14,7 +14,9 @@ const STALE_SLOT_CHILD_ERROR = "scheduled slot heartbeat stale; child job progre
 const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 const STALE_SLOT_METADATA_REASON = "stale-slot-reconciled";
 
-function statsMatcher(stats: {
+function statsMatcher(
+  job: "sync-stablecoins" | "sync-live-reserves",
+  stats: {
   n: number;
   avg_ms: number;
   max_ms: number;
@@ -24,7 +26,9 @@ function statsMatcher(stats: {
   recent_budget_truncations?: number;
   latest_cap_hit_at?: number | null;
   latest_budget_truncation_at?: number | null;
-}): MockTableConfig {
+  },
+): MockTableConfig {
+  const timeoutMs = CRON_TIMEOUT_MS[job];
   const row = {
     budget_truncations: 0,
     latest_cap_hit_at: null,
@@ -37,50 +41,12 @@ function statsMatcher(stats: {
   return {
     match: "FROM cron_runs",
     matchBinds: [
-      SYNC_TIMEOUT_MS,
-      SYNC_TIMEOUT_MS,
+      timeoutMs,
+      timeoutMs,
       NOW_SEC - 24 * 3600,
-      SYNC_TIMEOUT_MS,
+      timeoutMs,
       NOW_SEC - 24 * 3600,
-      "sync-stablecoins",
-      SINCE_SEC,
-      STALE_SLOT_CHILD_ERROR,
-      STALE_SLOT_METADATA_REASON,
-    ],
-    rows: [row],
-    first: row,
-  };
-}
-
-function liveReservesStatsMatcher(stats: {
-  n: number;
-  avg_ms: number;
-  max_ms: number;
-  cap_hits: number;
-  recent_cap_hits?: number;
-  budget_truncations?: number;
-  recent_budget_truncations?: number;
-  latest_cap_hit_at?: number | null;
-  latest_budget_truncation_at?: number | null;
-}): MockTableConfig {
-  const row = {
-    budget_truncations: 0,
-    latest_cap_hit_at: null,
-    latest_budget_truncation_at: null,
-    recent_cap_hits: stats.recent_cap_hits ?? stats.cap_hits,
-    recent_budget_truncations:
-      stats.recent_budget_truncations ?? stats.budget_truncations ?? 0,
-    ...stats,
-  };
-  return {
-    match: "FROM cron_runs",
-    matchBinds: [
-      LIVE_RESERVES_TIMEOUT_MS,
-      LIVE_RESERVES_TIMEOUT_MS,
-      NOW_SEC - 24 * 3600,
-      LIVE_RESERVES_TIMEOUT_MS,
-      NOW_SEC - 24 * 3600,
-      "sync-live-reserves",
+      job,
       SINCE_SEC,
       STALE_SLOT_CHILD_ERROR,
       STALE_SLOT_METADATA_REASON,
@@ -147,7 +113,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("stays ok while averages sit under the 80% ceiling ratio", async () => {
     const db = watchdogDb([
-      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.7), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
+      statsMatcher("sync-stablecoins", { n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.7), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
     ]);
 
     const result = await runCronDurationWatchdog(db);
@@ -157,7 +123,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("degrades when the 7d average crosses 80% of the ceiling", async () => {
     const db = watchdogDb([
-      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
+      statsMatcher("sync-stablecoins", { n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
     ]);
 
     const result = await runCronDurationWatchdog(db);
@@ -170,7 +136,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("degrades on repeated at-cap runs even with a healthy average", async () => {
     const db = watchdogDb([
-      statsMatcher({
+      statsMatcher("sync-stablecoins", {
         n: 660,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
         max_ms: SYNC_TIMEOUT_MS,
@@ -187,7 +153,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("degrades on repeated at-cap runs for low-cadence jobs below the trend sample floor", async () => {
     const db = watchdogDb([
-      statsMatcher({
+      statsMatcher("sync-stablecoins", {
         n: 3,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
         max_ms: SYNC_TIMEOUT_MS,
@@ -207,7 +173,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("does not degrade when repeated at-cap history has fewer than three hits in the recent window", async () => {
     const db = watchdogDb([
-      statsMatcher({
+      statsMatcher("sync-stablecoins", {
         n: 660,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
         max_ms: SYNC_TIMEOUT_MS,
@@ -235,7 +201,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("degrades on repeated budget truncations below the trend sample floor", async () => {
     const db = watchdogDb([
-      statsMatcher({
+      statsMatcher("sync-stablecoins", {
         n: 3,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
         max_ms: SYNC_TIMEOUT_MS - 1,
@@ -256,7 +222,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("keeps recovered at-cap history visible without degrading", async () => {
     const db = watchdogDb([
-      statsMatcher({
+      statsMatcher("sync-stablecoins", {
         n: 660,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
         max_ms: SYNC_TIMEOUT_MS,
@@ -285,7 +251,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("includes stage diagnostics for cap-hit runtime breaches", async () => {
     const db = watchdogDb([
-      statsMatcher({
+      statsMatcher("sync-stablecoins", {
         n: 660,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
         max_ms: SYNC_TIMEOUT_MS,
@@ -365,7 +331,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("ignores jobs with too few runs for a trend", async () => {
     const db = watchdogDb([
-      statsMatcher({ n: 5, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.95), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
+      statsMatcher("sync-stablecoins", { n: 5, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.95), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
     ]);
 
     const result = await runCronDurationWatchdog(db);
@@ -375,7 +341,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("excludes stale-slot reconciled child rows from runtime averages", async () => {
     const db = watchdogDb([
-      statsMatcher({ n: 20, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.2), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
+      statsMatcher("sync-stablecoins", { n: 20, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.2), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
     ]);
 
     const result = await runCronDurationWatchdog(db);
@@ -390,7 +356,7 @@ describe("runCronDurationWatchdog", () => {
 
   it("keeps live reserve run-budget truncations as runtime pressure", async () => {
     const db = watchdogDb([
-      liveReservesStatsMatcher({
+      statsMatcher("sync-live-reserves", {
         n: 42,
         avg_ms: Math.round(LIVE_RESERVES_TIMEOUT_MS * 0.5),
         max_ms: LIVE_RESERVES_TIMEOUT_MS - 1,

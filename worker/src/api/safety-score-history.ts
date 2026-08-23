@@ -1,16 +1,12 @@
 import { handleStablecoinHistoryRequest, getLatestSuccessfulCronTimestamp } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { fetchSafetyScoreHistoryCompatibilityRows } from "../lib/safety-score-history-v2";
 
 export const handleSafetyScoreHistory = async (db: D1Database, url: URL): Promise<Response> => {
     return handleStablecoinHistoryRequest(db, url, {
-      query: {
-        defaultDays: 365,
-        minDays: 1,
-        maxDays: 3650,
-        rangePolicy: "reject",
-      },
+      query: STABLECOIN_HISTORY_QUERY_CONTRACTS.safetyScore,
       cacheControl: CACHE_PROFILES.slow,
       fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
         return fetchSafetyScoreHistoryCompatibilityRows(database, stablecoinId, cutoff);

@@ -14,10 +14,10 @@ import {
   unixNow,
 } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
-
-interface PendingAlertCountRow {
-  pending_count: number | string | null;
-}
+import {
+  loadTelegramPendingAlertCount,
+  loadTelegramRecapState,
+} from "../telegram-store/chat-state";
 
 interface RecentPendingFailureRow {
   last_error_class: string | null;
@@ -25,13 +25,6 @@ interface RecentPendingFailureRow {
 
 interface ExplicitActiveCountRow {
   active_count: number | string | null;
-}
-
-interface RecapHealthRow {
-  enabled: number | null;
-  next_due_at: number | null;
-  last_delivered_local_date: string | null;
-  last_outcome: string | null;
 }
 
 function formatAge(ts: number | null, nowSec: number): string {
@@ -62,14 +55,6 @@ function formatQuietHoursStatus(
   if (!enabled || start == null || end == null) return "Off";
   const base = formatQuietHours(start, end, timezone ?? null);
   return isQuietHoursActive(nowSec, true, start, end, timezone ?? null) ? `${base} (active now)` : base;
-}
-
-async function loadPendingAlertCount(db: D1Database, chatId: string): Promise<number> {
-  const row = await db
-    .prepare("SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts WHERE chat_id = ?")
-    .bind(chatId)
-    .first<PendingAlertCountRow>();
-  return coerceCount(row?.pending_count);
 }
 
 async function loadRecentPendingFailureClass(
@@ -114,19 +99,6 @@ async function loadExplicitActiveFollowCount(
   return coerceCount(row?.active_count);
 }
 
-async function loadRecapHealth(db: D1Database, chatId: string): Promise<RecapHealthRow | null> {
-  return db.prepare(`
-    SELECT p.enabled, p.next_due_at, p.last_delivered_local_date,
-           (SELECT target.status
-              FROM telegram_recap_targets target
-             WHERE target.chat_id = p.chat_id
-             ORDER BY target.created_at DESC, target.recap_key DESC
-             LIMIT 1) AS last_outcome
-      FROM telegram_recap_preferences p
-     WHERE p.chat_id = ? AND p.chat_kind = 'private'
-  `).bind(chatId).first<RecapHealthRow>();
-}
-
 export const handleHealth: WebhookCommandHandler = async (ctx) => {
   const { db, chatId } = ctx;
   const nowSec = unixNow();
@@ -142,10 +114,10 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     loadSubscriberByChat(db, chatId),
     loadPresetSubscriptions(db, chatId),
     loadExplicitActiveFollowCount(db, chatId),
-    loadPendingAlertCount(db, chatId),
+    loadTelegramPendingAlertCount(db, chatId),
     loadRecentPendingFailureClass(db, chatId),
     loadTelegramChatHealthDiagnostics(db, chatId),
-    loadRecapHealth(db, chatId),
+    loadTelegramRecapState(db, chatId),
   ]);
 
   const recentFailure =

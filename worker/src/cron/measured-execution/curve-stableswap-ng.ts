@@ -33,7 +33,16 @@ import {
 } from "./profiles";
 import { usdToRawAmount } from "./fixed-point";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
-import { executeEvmQuotePlan } from "./evm-quote-plan";
+import {
+  canonicalEvmAddress,
+  canonicalEvmHash,
+  decodeAddressResult as decodeEvmAddressResult,
+} from "./evm-codecs";
+import {
+  createCurveGetDyQuoteAdapter,
+  makeCurveGetDyPlan,
+  type CurveGetDyPlan,
+} from "./curve-get-dy-quote-engine";
 
 const CURVE_STABLESWAP_NG_POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -46,7 +55,6 @@ const CURVE_STABLESWAP_NG_FACTORY_ABI = parseAbi([
 const ERC20_METADATA_ABI = parseAbi(["function decimals() view returns (uint8)"]);
 const CURVE_STABLESWAP_NG_MULTICALL_BATCH_SIZE = 8;
 const CURVE_STABLESWAP_NG_MULTICALL_GAS = "0x1c9c380";
-const EVM_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/;
 
 export const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID =
   "curve-stableswap-ng-factory-get-dy-v2" as const;
@@ -168,24 +176,12 @@ export type CurveStableSwapNgEligibility =
   | { ok: true }
   | { ok: false; reason: CurveStableSwapNgEligibilityFailure };
 
-function canonicalAddress(value: unknown): `0x${string}` | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return EVM_ADDRESS_PATTERN.test(normalized) ? (normalized as `0x${string}`) : null;
-}
-
-function canonicalHash(value: unknown): `0x${string}` | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  return /^0x[0-9a-f]{64}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-}
-
 export function getCurveStableSwapNgPolicy(
   chain: string,
   poolAddress: string,
 ): CurveStableSwapNgPoolPolicy | null {
   const normalizedChain = chain.trim().toLowerCase();
-  const normalizedAddress = canonicalAddress(poolAddress);
+  const normalizedAddress = canonicalEvmAddress(poolAddress);
   return CURVE_STABLESWAP_NG_POLICIES.find(
     (policy) => policy.chain === normalizedChain && policy.poolAddress === normalizedAddress,
   ) ?? null;
@@ -200,7 +196,7 @@ export function evaluateCurveStableSwapNgEligibility(input: {
 }): CurveStableSwapNgEligibility {
   const policy = getCurveStableSwapNgPolicy(input.chain, input.endpointAddress);
   if (!policy) return { ok: false, reason: "pool-not-reviewed" };
-  if (canonicalAddress(input.endpointAddress) !== policy.poolAddress) {
+  if (canonicalEvmAddress(input.endpointAddress) !== policy.poolAddress) {
     return { ok: false, reason: "execution-endpoint-mismatch" };
   }
   if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
@@ -219,7 +215,7 @@ export function evaluateCurveStableSwapNgEligibility(input: {
   ) {
     return { ok: false, reason: "stale-pinned-block" };
   }
-  if (canonicalHash(evidence.poolCodeHash) == null) {
+  if (canonicalEvmHash(evidence.poolCodeHash) == null) {
     return { ok: false, reason: "runtime-code-unavailable" };
   }
   if (evidence.poolCodeHash !== policy.expectedPoolCodeHash) {
@@ -235,7 +231,7 @@ export function evaluateCurveStableSwapNgEligibility(input: {
   if (proof.blockCommitment !== "finalized") {
     return { ok: false, reason: "block-commitment-mismatch" };
   }
-  if (canonicalHash(proof.factoryCodeHash) == null) {
+  if (canonicalEvmHash(proof.factoryCodeHash) == null) {
     return { ok: false, reason: "factory-code-unavailable" };
   }
   if (proof.factoryCodeHash !== policy.expectedFactoryCodeHash) {
@@ -413,7 +409,7 @@ export function createCurveStableSwapNgDeploymentVerifier(
     let registeredPoolAddress: `0x${string}` | null;
     let factoryCoins: readonly (`0x${string}` | null)[];
     try {
-      registeredPoolAddress = canonicalAddress(decodeFunctionResult({
+      registeredPoolAddress = canonicalEvmAddress(decodeFunctionResult({
         abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
         functionName: "pool_list",
         data: poolListReturnData,
@@ -422,7 +418,7 @@ export function createCurveStableSwapNgDeploymentVerifier(
         abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
         functionName: "get_coins",
         data: factoryCoinsReturnData,
-      }) as readonly string[]).map((coin) => canonicalAddress(coin));
+      }) as readonly string[]).map((coin) => canonicalEvmAddress(coin));
     } catch {
       return { ok: false, reason: "factory-membership-mismatch" };
     }
@@ -452,7 +448,7 @@ export function createCurveStableSwapNgDeploymentVerifier(
       }
       let poolCoinAddress: `0x${string}` | null = null;
       try {
-        poolCoinAddress = canonicalAddress(decodeFunctionResult({
+        poolCoinAddress = canonicalEvmAddress(decodeFunctionResult({
           abi: CURVE_STABLESWAP_NG_POOL_ABI,
           functionName: "coins",
           data: coinReturnData,
@@ -774,56 +770,49 @@ interface CurveStableSwapNgQuoteDependencies {
 export function createCurveStableSwapNgQuoteExecutor(
   dependencies: CurveStableSwapNgQuoteDependencies,
 ) {
-  return async function quoteCurveStableSwapNgRequests(input: {
-    requests: readonly CurveStableSwapNgRequest[];
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<CurveStableSwapNgBatchOutcome[]> {
-    const prepared = input.requests.map(prepareRequest);
-    const outcomes: CurveStableSwapNgBatchOutcome[] = input.requests.map((request, index) => ({
+  return createCurveGetDyQuoteAdapter<
+    CurveStableSwapNgRequest,
+    CurveGetDyPlan<EncodedCurveStableSwapNgRequest>,
+    CurveStableSwapNgEligibility,
+    CurveStableSwapNgBatchOutcome,
+    CurveStableSwapNgQuoteFailure
+  >({
+    batchSize: CURVE_STABLESWAP_NG_MULTICALL_BATCH_SIZE,
+    prepare: (request, index) => {
+      const prepared = prepareRequest(request, index);
+      return {
+        eligibility: prepared.eligibility,
+        ...(prepared.failureReason ? { failureReason: prepared.failureReason } : {}),
+        ...(prepared.encoded
+          ? {
+              plan: makeCurveGetDyPlan(prepared.encoded),
+            }
+          : {}),
+      };
+    },
+    makeOutcome: (request, eligibility, failureReason) => ({
       targetId: request.target.targetId,
       inputUsd: request.inputUsd,
       blockNumber: request.blockNumber,
-      eligibility: prepared[index]!.eligibility,
-      ...(prepared[index]!.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
-    }));
-    const plans = prepared.flatMap((entry) => entry.encoded ? [{
-      ...entry.encoded,
-      chain: entry.encoded.policy.chain,
-      call: {
-          label: entry.encoded.label,
-          target: entry.encoded.endpointAddress,
-          callData: entry.encoded.callData,
-          allowFailure: true,
-      },
-    }] : []);
-    return executeEvmQuotePlan({
-      plans,
-      outcomes,
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      rpcBudget: input.rpcBudget,
-      spec: {
-        batchSize: CURVE_STABLESWAP_NG_MULTICALL_BATCH_SIZE,
-        executeMulticall: dependencies.executeMulticall,
-        resolveResult: (request, result) => ({
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          blockNumber: request.blockNumber,
-          eligibility: request.eligibility,
-          ...decodeCurveStableSwapNgQuotePoint(request, result),
-        }),
-        materializeTransportFailure: (request, reason) => ({
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          blockNumber: request.blockNumber,
-          eligibility: request.eligibility,
-          failureReason: reason ?? "rpc-failure",
-        }),
-      },
-    });
-  };
+      eligibility,
+      ...(failureReason ? { failureReason } : {}),
+    }),
+    executeMulticall: dependencies.executeMulticall,
+    resolveResult: (request, result) => ({
+      targetId: request.target.targetId,
+      inputUsd: request.inputUsd,
+      blockNumber: request.blockNumber,
+      eligibility: request.eligibility,
+      ...decodeCurveStableSwapNgQuotePoint(request, result),
+    }),
+    materializeTransportFailure: (request, reason) => ({
+      targetId: request.target.targetId,
+      inputUsd: request.inputUsd,
+      blockNumber: request.blockNumber,
+      eligibility: request.eligibility,
+      failureReason: reason ?? "rpc-failure",
+    }),
+  });
 }
 
 export const quoteCurveStableSwapNgRequests = createCurveStableSwapNgQuoteExecutor({
@@ -842,22 +831,6 @@ export const quoteCurveStableSwapNgRequests = createCurveStableSwapNgQuoteExecut
       ),
     }),
 });
-
-function decodeAddressResult(input: {
-  abi: typeof CURVE_STABLESWAP_NG_FACTORY_ABI | typeof CURVE_STABLESWAP_NG_POOL_ABI;
-  functionName: "pool_list" | "coins";
-  returnData: string;
-}): `0x${string}` | null {
-  try {
-    return canonicalAddress(decodeFunctionResult({
-      abi: input.abi,
-      functionName: input.functionName,
-      data: input.returnData as `0x${string}`,
-    } as never));
-  } catch {
-    return null;
-  }
-}
 
 /** Exact ABI and reviewed StableSwap-NG factory-binding validation at the consumer boundary. */
 export function validateCurveStableSwapNgProfileProof(
@@ -902,10 +875,12 @@ export function validateCurveStableSwapNgProfileProof(
       if (
         decodedCall.functionName !== "pool_list" ||
         decodedCall.args[0] !== BigInt(policy.factoryPoolIndex) ||
-        decodeAddressResult({
-          abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
-          functionName: "pool_list",
-          returnData: proof.poolListReturnData,
+        decodeEvmAddressResult({
+          decode: () => decodeFunctionResult({
+            abi: CURVE_STABLESWAP_NG_FACTORY_ABI,
+            functionName: "pool_list",
+            data: proof.poolListReturnData as `0x${string}`,
+          } as never),
         }) !== policy.poolAddress
       ) issues.add("factory-pool-list-proof-mismatch");
     } catch {
@@ -923,9 +898,9 @@ export function validateCurveStableSwapNgProfileProof(
       }) as readonly string[];
       if (
         decodedCall.functionName !== "get_coins" ||
-        canonicalAddress(decodedCall.args[0]) !== policy.poolAddress ||
+        canonicalEvmAddress(decodedCall.args[0]) !== policy.poolAddress ||
         decodedCoins.length !== policy.poolTokens.length ||
-        policy.poolTokens.some((token, index) => canonicalAddress(decodedCoins[index]) !== token.address)
+        policy.poolTokens.some((token, index) => canonicalEvmAddress(decodedCoins[index]) !== token.address)
       ) issues.add("factory-coins-proof-mismatch");
     } catch {
       issues.add("factory-coins-proof-mismatch");
@@ -942,10 +917,12 @@ export function validateCurveStableSwapNgProfileProof(
             entry.index !== index ||
             call.functionName !== "coins" ||
             call.args[0] !== BigInt(index) ||
-            decodeAddressResult({
-              abi: CURVE_STABLESWAP_NG_POOL_ABI,
-              functionName: "coins",
-              returnData: entry.returnData,
+            decodeEvmAddressResult({
+              decode: () => decodeFunctionResult({
+                abi: CURVE_STABLESWAP_NG_POOL_ABI,
+                functionName: "coins",
+                data: entry.returnData as `0x${string}`,
+              } as never),
             }) !== policy.poolTokens[index]!.address
           );
         } catch {

@@ -249,19 +249,11 @@ export async function syncMintBurn(
     recalcError = recalcResult.error;
   }
 
-  const {
-    rowsRead, rowsParsed, rowsInserted, rowsIgnored, rowsDropped,
-    contractsProcessed, contractsSkipped, contractsDeferredExtended,
-    apiErrors, effectiveBurns, bridgeBurns, reviewBurns,
-    atomicRoundtripsTotal, txContextShortfalls, bridgeClassificationDeferredRows,
-    criticalContractsSatisfied, criticalContractsUnsatisfied,
-    configBreakdown,
-  } = phaseResult;
   const attemptCoverage = await updateMintBurnAttemptState({
     db,
     jobName,
     enabledConfigKeys: enabledConfigs.map((config) => mintBurnConfigKey(config)),
-    configBreakdown,
+    configBreakdown: phaseResult.configBreakdown,
     activeProviderDeferrals: phaseResult.activeProviderDeferrals,
     nowSec: runTimestamp,
   });
@@ -269,9 +261,9 @@ export async function syncMintBurn(
     db,
     jobName,
     observedAt: runTimestamp,
-    configBreakdown: configBreakdown as unknown as ReadonlyArray<Record<string, unknown>>,
+    configBreakdown: phaseResult.configBreakdown as unknown as ReadonlyArray<Record<string, unknown>>,
   });
-  const resumeConfigKey = resolveMintBurnResumeConfigKey(configBreakdown);
+  const resumeConfigKey = resolveMintBurnResumeConfigKey(phaseResult.configBreakdown);
 
   await reportCronProgress(reportProgress, {
     stage: "recalc-hours",
@@ -301,25 +293,8 @@ export async function syncMintBurn(
     runStatePersistenceFailed: runStateSnapshot.persistenceFailed,
     degradeConsecutiveThreshold: DEGRADE_CONSECUTIVE_THRESHOLD,
     errorConsecutiveThreshold: ERROR_CONSECUTIVE_THRESHOLD,
-    rowsRead,
-    rowsParsed,
-    rowsInserted,
-    rowsIgnored,
-    rowsDropped,
-    contractsProcessed,
-    contractsSkipped,
-    contractsDeferredExtended,
-    apiErrors,
-    effectiveBurns,
-    bridgeBurns,
-    reviewBurns,
-    atomicRoundtripsTotal,
-    txContextShortfalls,
-    bridgeClassificationDeferredRows,
     criticalContractsEnabled,
-    criticalContractsSatisfied,
-    criticalContractsUnsatisfied,
-    configBreakdown, runtimeBudgetHit: phaseResult.runtimeBudgetHit,
+    phase: phaseResult,
     attemptCoverage,
     runDrilldown,
     signal,
@@ -352,8 +327,8 @@ export async function syncMintBurn(
       lane,
       jobName,
       status,
-      contractsProcessed,
-      contractsSkipped,
+      contractsProcessed: phaseResult.contractsProcessed,
+      contractsSkipped: phaseResult.contractsSkipped,
     },
   }, budget);
 
@@ -368,7 +343,7 @@ export async function syncMintBurn(
   }
 
   return {
-    itemCount: rowsInserted,
+    itemCount: phaseResult.rowsInserted,
     metadata,
     status,
     ...(completion.error !== null ? { error: completion.error } : {}),

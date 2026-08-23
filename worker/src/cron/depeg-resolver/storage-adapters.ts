@@ -259,23 +259,6 @@ function toStoreSealInput(input: DdrSealInput): StoreDdrPublicAssessmentSealInpu
   };
 }
 
-function mapStoreErratum(row: StoreDdrPredictionErratum): Record<string, unknown> {
-  return {
-    id: row.id,
-    publicPredictionId: row.publicPredictionId,
-    incidentKey: row.incidentKey,
-    eventId: row.eventId,
-    assessmentId: row.assessmentId,
-    reason: row.reason,
-    operatorNote: row.operatorNote,
-    replacementAssessmentId: row.replacementAssessmentId,
-    replacementRowHash: row.replacementRowHash,
-    rowHashBefore: row.rowHashBefore,
-    createdAt: row.createdAt,
-    createdBy: row.createdBy,
-  };
-}
-
 export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
   async closeRecoveredPreLockIncidents(db, input) {
     return closeRecoveredPreLockIncidentsStore(db, input.nowSec);
@@ -404,3 +387,19 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
     return rows.map(mapStoreErratum);
   },
 };
+function mapStoreErratum(row: StoreDdrPredictionErratum): Record<string, unknown> {
+  return {
+    id: row.id,
+    publicPredictionId: row.publicPredictionId,
+    incidentKey: row.incidentKey,
+    eventId: row.eventId,
+    assessmentId: row.assessmentId,
+    reason: row.reason,
+    operatorNote: row.operatorNote,
+    replacementAssessmentId: row.replacementAssessmentId,
+    replacementRowHash: row.replacementRowHash,
+    rowHashBefore: row.rowHashBefore,
+    createdAt: row.createdAt,
+    createdBy: row.createdBy,
+  };
+}

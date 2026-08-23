@@ -117,18 +117,6 @@ describe("ensureCanonicalIncidentsForEvents", () => {
     expect(byEventId.has(2)).toBe(false);
   });
 
-  it("falls back to pseudo-incidents for every event when stores are absent", async () => {
-    const events = [makeEventRow({ id: 7 })];
-    const { byEventId, quarantined } = await ensureCanonicalIncidentsForEvents(
-      null,
-      {} as D1Database,
-      events,
-      { ddrRunId: "run-2", runAt: 1_750_000_100 },
-    );
-
-    expect(quarantined).toEqual([]);
-    expect(byEventId.has(7)).toBe(true);
-  });
 });
 
 describe("applyConfirmationTimes", () => {

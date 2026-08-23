@@ -26,12 +26,9 @@ import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import { buildInClause, chunkArray } from "../db";
-import {
-  insertTapeEvents,
-  setProjectorWatermark,
-} from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
+  finalizeProjectorBatch,
   fetchRowsWithTieExpansion,
   resolveProjectorOptions,
   type ProjectorOptions,
@@ -158,7 +155,7 @@ export async function projectYieldWarningEmitted(
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   const cursorKey = "yield.warning_emitted";
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchYieldHistorySince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
@@ -241,13 +238,7 @@ export async function projectYieldWarningEmitted(
     prevSignals = currentSignals;
   }
 
-  if (!dryRun) {
-    if (events.length > 0) await insertTapeEvents(db, events);
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
 }
 
 // --- yield.pys_dropped ------------------------------------------------------
@@ -315,7 +306,7 @@ export async function projectYieldPysDropped(
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   const cursorKey = "yield.pys_dropped";
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchYieldDecisionsSince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
@@ -394,11 +385,5 @@ export async function projectYieldPysDropped(
     prevScore = newScore;
   }
 
-  if (!dryRun) {
-    if (events.length > 0) await insertTapeEvents(db, events);
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
 }

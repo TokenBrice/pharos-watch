@@ -20,6 +20,7 @@ import {
   type ProducerOutcome,
 } from "./producer-history";
 import { stripSensitive } from "./safe-error-message";
+import { sanitizeBoundedMetadata } from "./sensitive-metadata";
 import { compactCronMetadataForPersistence } from "./cron-metadata-persistence";
 import { parseJsonObject } from "./json-parse";
 
@@ -65,10 +66,10 @@ function classifyError(error: unknown): { name: string; message: string; stack?:
 
 function serializeTerminalCronMetadata(error: unknown): string | null {
   if (error instanceof CronJobAbandonedError) {
-    return JSON.stringify(boundCronEventMetadataValue(error.metadata, 0));
+    return JSON.stringify(sanitizeBoundedMetadata(error.metadata, CRON_EVENT_METADATA_OPTIONS));
   }
   if (error instanceof CronTimeoutError && error.metadata) {
-    return JSON.stringify(boundCronEventMetadataValue(error.metadata, 0));
+    return JSON.stringify(sanitizeBoundedMetadata(error.metadata, CRON_EVENT_METADATA_OPTIONS));
   }
   return null;
 }
@@ -140,6 +141,13 @@ const MAX_CRON_EVENT_METADATA_STRING_CHARS = 500;
 const MAX_CRON_EVENT_METADATA_KEYS = 30;
 const MAX_CRON_EVENT_METADATA_ARRAY_ITEMS = 20;
 const MAX_CRON_EVENT_METADATA_DEPTH = 4;
+const CRON_EVENT_METADATA_OPTIONS = {
+  maxStringChars: MAX_CRON_EVENT_METADATA_STRING_CHARS,
+  maxStackChars: MAX_CRON_EVENT_METADATA_STRING_CHARS,
+  maxKeys: MAX_CRON_EVENT_METADATA_KEYS,
+  maxArrayItems: MAX_CRON_EVENT_METADATA_ARRAY_ITEMS,
+  maxDepth: MAX_CRON_EVENT_METADATA_DEPTH,
+};
 
 function cacheKeySegment(value: string): string {
   const normalized = value
@@ -153,54 +161,9 @@ export function cronEventCacheKey(job: string, eventType: string): string {
   return `${CRON_EVENT_CACHE_PREFIX}:${cacheKeySegment(job)}:${cacheKeySegment(eventType)}`;
 }
 
-function boundCronEventMetadataValue(value: unknown, depth: number): unknown {
-  if (value == null || typeof value === "number" || typeof value === "boolean") {
-    return value;
-  }
-  if (typeof value === "string") {
-    const sanitized = stripSensitive(value);
-    return sanitized.length <= MAX_CRON_EVENT_METADATA_STRING_CHARS
-      ? sanitized
-      : `${sanitized.slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS)}...`;
-  }
-  if (value instanceof Error) {
-    return {
-      name: value.name,
-      message: stripSensitive(value.message).slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS),
-      ...(value.stack
-        ? { stack: stripSensitive(value.stack).slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS) }
-        : {}),
-    };
-  }
-  if (depth >= MAX_CRON_EVENT_METADATA_DEPTH) {
-    return "[truncated-depth]";
-  }
-  if (Array.isArray(value)) {
-    const items = value
-      .slice(0, MAX_CRON_EVENT_METADATA_ARRAY_ITEMS)
-      .map((item) => boundCronEventMetadataValue(item, depth + 1));
-    if (value.length > MAX_CRON_EVENT_METADATA_ARRAY_ITEMS) {
-      items.push(`[${value.length - MAX_CRON_EVENT_METADATA_ARRAY_ITEMS} more]`);
-    }
-    return items;
-  }
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    const bounded: Record<string, unknown> = {};
-    for (const [key, entryValue] of entries.slice(0, MAX_CRON_EVENT_METADATA_KEYS)) {
-      bounded[key] = boundCronEventMetadataValue(entryValue, depth + 1);
-    }
-    if (entries.length > MAX_CRON_EVENT_METADATA_KEYS) {
-      bounded.truncatedKeys = entries.length - MAX_CRON_EVENT_METADATA_KEYS;
-    }
-    return bounded;
-  }
-  return stripSensitive(String(value)).slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS);
-}
-
-function boundCronEventMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+function boundCronEventMetadata(metadata: object | undefined): Record<string, unknown> | undefined {
   if (!metadata || Object.keys(metadata).length === 0) return undefined;
-  return boundCronEventMetadataValue(metadata, 0) as Record<string, unknown>;
+  return sanitizeBoundedMetadata(metadata, CRON_EVENT_METADATA_OPTIONS) as Record<string, unknown>;
 }
 
 function writeCronEventConsole(record: CronEventRecord): void {

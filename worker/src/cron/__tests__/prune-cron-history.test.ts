@@ -1,177 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE, runPruneCronHistory } from "../prune-cron-history";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
-interface CronRunRow {
-  job: string;
-  started_at: number;
-}
-
-interface SlotExecRow {
-  slot_key: string;
-  slot_started_at: number;
-}
-
-interface RepairTaskRow {
-  updated_at: number;
-  state: string;
-}
-
-interface CanaryRunRow {
-  observed_at: number;
-}
-
-interface RecoveryCheckpointRow {
-  updated_at: number;
-  state: string;
-}
-
-interface SelectorSnapshotDailyQuotaRow {
-  quota_date: string;
-}
-
-interface BlockTimestampCacheRow {
-  updated_at: number;
-}
-
-/**
- * Minimal D1 stub that understands the DELETE statements issued by
- * runPruneCronHistory plus the SELECT COUNT(*) verification queries used
- * in this test. Mirrors the pattern in prune-status-probe-runs.test.ts.
- */
-function createStubDb(): {
-  db: D1Database;
-  preparedSqls: string[];
-  cronRuns: CronRunRow[];
-  repairTasks: RepairTaskRow[];
-  canaryRuns: CanaryRunRow[];
-  recoveryCheckpoints: RecoveryCheckpointRow[];
-  selectorSnapshotDailyQuotaRows: SelectorSnapshotDailyQuotaRow[];
-  blockTimestampCacheRows: BlockTimestampCacheRow[];
-  slotExecs: SlotExecRow[];
-} {
-  const cronRuns: CronRunRow[] = [];
-  const repairTasks: RepairTaskRow[] = [];
-  const canaryRuns: CanaryRunRow[] = [];
-  const recoveryCheckpoints: RecoveryCheckpointRow[] = [];
-  const selectorSnapshotDailyQuotaRows: SelectorSnapshotDailyQuotaRow[] = [];
-  const blockTimestampCacheRows: BlockTimestampCacheRow[] = [];
-  const slotExecs: SlotExecRow[] = [];
+function createTestDb() {
+  const { sqlite } = createLatestSchemaSqlite();
   const preparedSqls: string[] = [];
-
-  function prepare(sql: string): D1PreparedStatement {
-    preparedSqls.push(sql);
-    let bound: unknown[] = [];
-    const stmt = {
-      bind: (...args: unknown[]) => {
-        bound = args;
-        return stmt as unknown as D1PreparedStatement;
-      },
-      run: async () => {
-        if (sql.startsWith("DELETE FROM cron_runs WHERE started_at <")) {
-          const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = cronRuns.length - 1; i >= 0; i--) {
-            if (cronRuns[i].started_at < cutoff) {
-              cronRuns.splice(i, 1);
-              removed += 1;
-            }
-          }
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM cron_slot_executions WHERE slot_started_at <")) {
-          const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = slotExecs.length - 1; i >= 0; i--) {
-            if (slotExecs[i].slot_started_at < cutoff) {
-              slotExecs.splice(i, 1);
-              removed += 1;
-            }
-          }
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM selector_snapshot_daily_quota WHERE quota_date <")) {
-          const [cutoff] = bound as [string];
-          let removed = 0;
-          for (let i = selectorSnapshotDailyQuotaRows.length - 1; i >= 0; i--) {
-            if (selectorSnapshotDailyQuotaRows[i].quota_date < cutoff) {
-              selectorSnapshotDailyQuotaRows.splice(i, 1);
-              removed += 1;
-            }
-          }
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.startsWith("DELETE FROM block_timestamp_cache WHERE updated_at <")) {
-          const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = blockTimestampCacheRows.length - 1; i >= 0; i--) {
-            if (blockTimestampCacheRows[i].updated_at < cutoff) {
-              blockTimestampCacheRows.splice(i, 1);
-              removed += 1;
-            }
-          }
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.includes("DELETE FROM worker_repair_tasks")) {
-          const [cutoff] = bound as [number];
-          let removed = 0;
-          const terminalStates = new Set(bound.slice(1).map(String));
-          for (let i = repairTasks.length - 1; i >= 0; i--) {
-            if (repairTasks[i].updated_at < cutoff && terminalStates.has(repairTasks[i].state)) {
-              repairTasks.splice(i, 1);
-              removed += 1;
-            }
-          }
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.includes("DELETE FROM worker_canary_runs")) {
-          const [cutoff] = bound as [number];
-          let removed = 0;
-          for (let i = canaryRuns.length - 1; i >= 0; i--) {
-            if (canaryRuns[i].observed_at < cutoff) {
-              canaryRuns.splice(i, 1);
-              removed += 1;
-            }
-          }
-          return { success: true, meta: { changes: removed } };
-        }
-        if (sql.includes("DELETE FROM worker_scheduled_checkpoints")) {
-          const [cutoff] = bound as [number];
-          let removed = 0;
-          const terminalStates = new Set(["completed", "failed", "platform_abandoned"]);
-          for (let i = recoveryCheckpoints.length - 1; i >= 0; i--) {
-            if (recoveryCheckpoints[i].updated_at < cutoff && terminalStates.has(recoveryCheckpoints[i].state)) {
-              recoveryCheckpoints.splice(i, 1);
-              removed += 1;
-            }
-          }
-          return { success: true, meta: { changes: removed } };
-        }
-        return { success: true, meta: { changes: 0 } };
-      },
-      first: async () => null,
-      all: async () => ({ results: [], success: true, meta: {} }),
-    };
-    return stmt as unknown as D1PreparedStatement;
-  }
-
+  const sqliteDb = createSqliteD1(sqlite);
   const db = {
-    prepare,
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+    ...sqliteDb,
+    prepare: (sql: string) => {
+      preparedSqls.push(sql);
+      return sqliteDb.prepare(sql);
+    },
+  } as D1Database;
+  return { db, preparedSqls, sqlite };
+}
 
-  return {
-    db,
-    preparedSqls,
-    cronRuns,
-    repairTasks,
-    canaryRuns,
-    recoveryCheckpoints,
-    selectorSnapshotDailyQuotaRows,
-    blockTimestampCacheRows,
-    slotExecs,
-  };
+function insert(sqlite: import("node:sqlite").DatabaseSync, sql: string, ...values: unknown[]): void {
+  sqlite.prepare(sql).run(...(values as never[]));
+}
+
+function select<T>(sqlite: import("node:sqlite").DatabaseSync, sql: string): T[] {
+  return sqlite.prepare(sql).all() as T[];
 }
 
 const ONE_WEEK_SEC = 7 * 24 * 60 * 60;
@@ -185,7 +36,7 @@ function toUtcDateString(timestampSec: number): string {
 
 describe("runPruneCronHistory", () => {
   it("throws before D1 work when the cron signal is already aborted", async () => {
-    const { db } = createStubDb();
+    const { db } = createTestDb();
     const controller = new AbortController();
     controller.abort(new Error("cron history prune aborted"));
 
@@ -193,72 +44,71 @@ describe("runPruneCronHistory", () => {
   });
 
   it("removes cron_runs older than 7 days and keeps newer rows", async () => {
-    const { db, cronRuns } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    cronRuns.push({ job: "sync-stablecoins", started_at: now - ONE_WEEK_SEC - 3600 });
-    cronRuns.push({ job: "sync-stablecoins", started_at: now - 3600 });
+    insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 3600, 1, "ok");
+    insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - 3600, 1, "ok");
 
     const result = await runPruneCronHistory(db);
 
-    expect(cronRuns).toHaveLength(1);
-    expect(cronRuns[0].started_at).toBe(now - 3600);
+    expect(select<{ started_at: number }>(sqlite, "SELECT started_at FROM cron_runs")).toEqual([{ started_at: now - 3600 }]);
     expect(result.itemCount).toBe(1);
     expect(result.status).toBe("ok");
   });
 
   it("removes cron_slot_executions older than 14 days and keeps newer rows", async () => {
-    const { db, slotExecs } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - TWO_WEEKS_SEC - 3600 });
-    slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - 3600 });
+    insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - TWO_WEEKS_SEC - 3600, "finished", "test", now, now);
+    insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - 3600, "finished", "test", now, now);
 
     await runPruneCronHistory(db);
 
-    expect(slotExecs).toHaveLength(1);
-    expect(slotExecs[0].slot_started_at).toBe(now - 3600);
+    expect(select<{ slot_started_at: number }>(sqlite, "SELECT slot_started_at FROM cron_slot_executions")).toEqual([{ slot_started_at: now - 3600 }]);
   });
 
   it("removes terminal repair tasks older than 7 days and keeps active or newer rows", async () => {
-    const { db, repairTasks } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    repairTasks.push({ state: "closed", updated_at: now - ONE_WEEK_SEC - 3600 });
-    repairTasks.push({ state: "open", updated_at: now - ONE_WEEK_SEC - 3600 });
-    repairTasks.push({ state: "cancelled", updated_at: now - 3600 });
+    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "closed", "test", "closed", "closed", now, now - ONE_WEEK_SEC - 3600);
+    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "open", "test", "open", "open", now, now - ONE_WEEK_SEC - 3600);
+    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "cancelled", "test", "cancelled", "cancelled", now, now - 3600);
 
     const result = await runPruneCronHistory(db);
 
-    expect(repairTasks).toEqual([
-      { state: "open", updated_at: now - ONE_WEEK_SEC - 3600 },
+    expect(select<{ state: string; updated_at: number }>(sqlite, "SELECT state, updated_at FROM worker_repair_tasks ORDER BY task_id")).toEqual([
       { state: "cancelled", updated_at: now - 3600 },
+      { state: "open", updated_at: now - ONE_WEEK_SEC - 3600 },
     ]);
     const metadata = JSON.parse(result.metadata!) as { repairTasksDeleted: number };
     expect(metadata.repairTasksDeleted).toBe(1);
   });
 
   it("removes worker_canary_runs older than 90 days and keeps newer rows", async () => {
-    const { db, canaryRuns } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    canaryRuns.push({ observed_at: now - NINETY_DAYS_SEC - 3600 });
-    canaryRuns.push({ observed_at: now - 3600 });
+    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "old", "test", "old", "ok", "info", now - NINETY_DAYS_SEC - 3600);
+    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "new", "test", "new", "ok", "info", now - 3600);
 
     const result = await runPruneCronHistory(db);
 
-    expect(canaryRuns).toEqual([{ observed_at: now - 3600 }]);
+    expect(select<{ observed_at: number }>(sqlite, "SELECT observed_at FROM worker_canary_runs")).toEqual([{ observed_at: now - 3600 }]);
     const metadata = JSON.parse(result.metadata!) as { canaryRunsDeleted: number };
     expect(metadata.canaryRunsDeleted).toBe(1);
   });
 
   it("removes terminal recovery checkpoints older than 14 days without deleting recoverable work", async () => {
-    const { db, recoveryCheckpoints } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    recoveryCheckpoints.push({ state: "completed", updated_at: now - TWO_WEEKS_SEC - 3600 });
-    recoveryCheckpoints.push({ state: "platform_abandoned", updated_at: now - TWO_WEEKS_SEC - 3600 });
-    recoveryCheckpoints.push({ state: "ready", updated_at: now - TWO_WEEKS_SEC - 3600 });
-    recoveryCheckpoints.push({ state: "failed", updated_at: now - 3600 });
+    const checkpoint = "INSERT INTO worker_scheduled_checkpoints (schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    insert(sqlite, checkpoint, "test", now, "completed", 1, "completed", "hash", "completed", now, now - TWO_WEEKS_SEC - 3600);
+    insert(sqlite, checkpoint, "test", now + 1, "platform_abandoned", 1, "platform_abandoned", "hash", "platform_abandoned", now, now - TWO_WEEKS_SEC - 3600);
+    insert(sqlite, checkpoint, "test", now + 2, "ready", 1, "ready", "hash", "ready", now, now - TWO_WEEKS_SEC - 3600);
+    insert(sqlite, checkpoint, "test", now + 3, "failed", 1, "failed", "hash", "failed", now, now - 3600);
 
     const result = await runPruneCronHistory(db);
 
-    expect(recoveryCheckpoints).toEqual([
+    expect(select<{ state: string; updated_at: number }>(sqlite, "SELECT state, updated_at FROM worker_scheduled_checkpoints ORDER BY slot_started_at")).toEqual([
       { state: "ready", updated_at: now - TWO_WEEKS_SEC - 3600 },
       { state: "failed", updated_at: now - 3600 },
     ]);
@@ -267,33 +117,34 @@ describe("runPruneCronHistory", () => {
   });
 
   it("removes selector snapshot daily quota rows older than 2 days and keeps newer rows", async () => {
-    const { db, selectorSnapshotDailyQuotaRows } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    selectorSnapshotDailyQuotaRows.push({ quota_date: toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60) });
-    selectorSnapshotDailyQuotaRows.push({ quota_date: toUtcDateString(now - 3600) });
+    const quota = "INSERT INTO selector_snapshot_daily_quota (quota_date, ip_hash, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?)";
+    insert(sqlite, quota, toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60), "old", now, now);
+    insert(sqlite, quota, toUtcDateString(now - 3600), "new", now, now);
 
     const result = await runPruneCronHistory(db);
 
-    expect(selectorSnapshotDailyQuotaRows).toEqual([{ quota_date: toUtcDateString(now - 3600) }]);
+    expect(select<{ quota_date: string }>(sqlite, "SELECT quota_date FROM selector_snapshot_daily_quota")).toEqual([{ quota_date: toUtcDateString(now - 3600) }]);
     const metadata = JSON.parse(result.metadata!) as { selectorSnapshotDailyQuotaDeleted: number };
     expect(metadata.selectorSnapshotDailyQuotaDeleted).toBe(1);
   });
 
   it("removes block timestamp cache rows older than 14 days and keeps newer rows", async () => {
-    const { db, blockTimestampCacheRows } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    blockTimestampCacheRows.push({ updated_at: now - TWO_WEEKS_SEC - 3600 });
-    blockTimestampCacheRows.push({ updated_at: now - 3600 });
+    insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 1, now, now - TWO_WEEKS_SEC - 3600);
+    insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 2, now, now - 3600);
 
     const result = await runPruneCronHistory(db);
 
-    expect(blockTimestampCacheRows).toEqual([{ updated_at: now - 3600 }]);
+    expect(select<{ updated_at: number }>(sqlite, "SELECT updated_at FROM block_timestamp_cache")).toEqual([{ updated_at: now - 3600 }]);
     const metadata = JSON.parse(result.metadata!) as { blockTimestampCacheDeleted: number };
     expect(metadata.blockTimestampCacheDeleted).toBe(1);
   });
 
   it("does not prune explicit append-only archive tables", async () => {
-    const { db, preparedSqls } = createStubDb();
+    const { db, preparedSqls } = createTestDb();
 
     await runPruneCronHistory(db);
 
@@ -304,24 +155,16 @@ describe("runPruneCronHistory", () => {
   });
 
   it("reports all deleted counts in metadata", async () => {
-    const {
-      db,
-      cronRuns,
-        repairTasks,
-      canaryRuns,
-      recoveryCheckpoints,
-      selectorSnapshotDailyQuotaRows,
-      blockTimestampCacheRows,
-      slotExecs,
-    } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    cronRuns.push({ job: "sync-stablecoins", started_at: now - ONE_WEEK_SEC - 1 });
-    repairTasks.push({ state: "closed", updated_at: now - ONE_WEEK_SEC - 1 });
-    canaryRuns.push({ observed_at: now - NINETY_DAYS_SEC - 1 });
-    recoveryCheckpoints.push({ state: "completed", updated_at: now - TWO_WEEKS_SEC - 1 });
-    selectorSnapshotDailyQuotaRows.push({ quota_date: toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60) });
-    blockTimestampCacheRows.push({ updated_at: now - TWO_WEEKS_SEC - 1 });
-    slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - TWO_WEEKS_SEC - 1 });
+    insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 1, 1, "ok");
+    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "closed", "test", "closed", "closed", now, now - ONE_WEEK_SEC - 1);
+    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "old", "test", "old", "ok", "info", now - NINETY_DAYS_SEC - 1);
+    const checkpoint = "INSERT INTO worker_scheduled_checkpoints (schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    insert(sqlite, checkpoint, "test", now, "completed", 1, "completed", "hash", "completed", now, now - TWO_WEEKS_SEC - 1);
+    insert(sqlite, "INSERT INTO selector_snapshot_daily_quota (quota_date, ip_hash, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?)", toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60), "test", now, now);
+    insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 1, now, now - TWO_WEEKS_SEC - 1);
+    insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - TWO_WEEKS_SEC - 1, "finished", "test", now, now - TWO_WEEKS_SEC - 1);
 
     const result = await runPruneCronHistory(db);
     const metadata = JSON.parse(result.metadata!) as {
@@ -358,11 +201,11 @@ describe("runPruneCronHistory", () => {
   });
 
   it("returns ok with zero counts when no rows are past either cutoff", async () => {
-    const { db, cronRuns, slotExecs } = createStubDb();
+    const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
     // Only fresh rows — neither DELETE should match anything.
-    cronRuns.push({ job: "sync-stablecoins", started_at: now - 3600 });
-    slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - 3600 });
+    insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - 3600, 1, "ok");
+    insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - 3600, "finished", "test", now, now - 3600);
 
     const result = await runPruneCronHistory(db);
 
@@ -375,7 +218,7 @@ describe("runPruneCronHistory", () => {
     expect(metadata.cronRunsDeleted).toBe(0);
     expect(metadata.slotExecutionsDeleted).toBe(0);
     // Fresh rows must survive.
-    expect(cronRuns).toHaveLength(1);
-    expect(slotExecs).toHaveLength(1);
+    expect(select(sqlite, "SELECT * FROM cron_runs")).toHaveLength(1);
+    expect(select(sqlite, "SELECT * FROM cron_slot_executions")).toHaveLength(1);
   });
 });

@@ -107,9 +107,6 @@ export const SolanaSlotResponseSchema = z.object({
   result: z.number().int().positive(),
 });
 
-/** Cron metadata JSON stored in cron_runs.metadata */
-export const CronMetadataSchema = z.record(z.string(), z.unknown());
-
 /** LLM digest response JSON */
 export const DigestResponseSchema = z.object({
   title: z.string().min(1),

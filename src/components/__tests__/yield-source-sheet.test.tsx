@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
 import {
@@ -8,6 +8,7 @@ import {
   mergeSourceRiskGoldenFixtures,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldRanking } from "@shared/types";
+import { renderYieldSourceSheet } from "./yield-source-sheet-test-support";
 
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) => (open ? <div>{children}</div> : null),
@@ -82,38 +83,18 @@ describe("YieldSourceSheet", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.restoreAllMocks();
   });
 
   it("resets the selected source when the ranking changes", () => {
-    const onOpenChange = vi.fn();
     const usdc = makeRanking("usdc", "best-usdc", "alt-usdc");
     const usdt = makeRanking("usdt", "best-usdt", "alt-usdt");
-    const { rerender } = render(
-      <YieldSourceSheet
-        ranking={usdc}
-        logo={undefined}
-        riskFreeRate={0.02}
-        medianApy={0.03}
-        open
-        onOpenChange={onOpenChange}
-      />,
-    );
+    const { rerender } = renderYieldSourceSheet(usdc);
 
     fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");
 
-    rerender(
-      <YieldSourceSheet
-        ranking={usdt}
-        logo={undefined}
-        riskFreeRate={0.02}
-        medianApy={0.03}
-        open
-        onOpenChange={onOpenChange}
-      />,
-    );
+    rerender(<YieldSourceSheet ranking={usdt} logo={undefined} riskFreeRate={0.02} medianApy={0.03} open onOpenChange={vi.fn()} />);
 
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("best-usdt");
   });

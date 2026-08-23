@@ -36,14 +36,14 @@ import {
 import { fallbackIncidentForEvent, formatDdrrFailure, publicationSnapshotToken } from "./utils";
 
 export async function loadSealedAndPublicationState(input: {
-  stores: DdrV2StoreContracts | null | undefined;
+  stores: DdrV2StoreContracts;
   db: D1Database;
   incidentKeys: string[];
 }): Promise<{
   sealed: DdrSealedPublicPrediction[];
   firstPublication: DdrFirstPublicationMembership[];
 }> {
-  if (!input.stores || input.incidentKeys.length === 0) {
+  if (input.incidentKeys.length === 0) {
     return { sealed: [], firstPublication: [] };
   }
   const sealed = await input.stores.loadSealedPublicPredictions(input.db, {
@@ -112,7 +112,7 @@ function evaluateReadinessLock(row: DdrRow, nowSec: number): DdrReadinessLockDec
 }
 
 export async function sealEligibleLocks(input: {
-  stores: DdrV2StoreContracts | null | undefined;
+  stores: DdrV2StoreContracts;
   db: D1Database;
   rows: DdrRow[];
   activeEventById: Map<number, DdrEventDbRow>;
@@ -123,8 +123,6 @@ export async function sealEligibleLocks(input: {
   runAt: number;
   syncCapabilities: Record<string, unknown>;
 }): Promise<{ sealed: DdrSealedPublicPrediction[]; lockedCount: number; noCallCount: number; pendingCount: number }> {
-  if (!input.stores) return { sealed: input.existingSealed, lockedCount: 0, noCallCount: 0, pendingCount: 0 };
-
   const sealed = [...input.existingSealed];
   const sealedByKey = sealedByIncident(sealed);
   let lockedCount = 0;
@@ -204,11 +202,11 @@ export async function sealEligibleLocks(input: {
 }
 
 export async function loadErrataForSealedPredictions(input: {
-  stores: DdrV2StoreContracts | null | undefined;
+  stores: DdrV2StoreContracts;
   db: D1Database;
   sealed: DdrSealedPublicPrediction[];
 }): Promise<{ errata: DdrPredictionErratum[]; error: string | null }> {
-  if (!input.stores?.loadPredictionErrata || input.sealed.length === 0) return { errata: [], error: null };
+  if (!input.stores.loadPredictionErrata || input.sealed.length === 0) return { errata: [], error: null };
   try {
     const rows = await input.stores.loadPredictionErrata(input.db, {
       publicPredictionIds: input.sealed.map(publicPredictionIdOf),
@@ -224,7 +222,7 @@ export async function loadErrataForSealedPredictions(input: {
 }
 
 export async function writePublicationBeforeCache(input: {
-  stores: DdrV2StoreContracts | null | undefined;
+  stores: DdrV2StoreContracts;
   db: D1Database;
   snapshot: DdrDiagnosticResponse;
   incidentsByEventId: Map<number, DdrCanonicalIncident>;
@@ -240,9 +238,6 @@ export async function writePublicationBeforeCache(input: {
   firstPublication: DdrFirstPublicationMembership[];
   error: string | null;
 }> {
-  if (!input.stores) {
-    return { attempted: false, ok: true, manifest: null, firstPublication: input.firstPublication, error: null };
-  }
   const activeIncidentKeys = [...new Set([...input.incidentsByEventId.values()].map((incident) => incident.incidentKey))];
   const snapshotToken = publicationSnapshotToken(input.ddrRunId, input.nowSec);
   const existingFirstPublication = firstPublicationByPredictionId(input.firstPublication);

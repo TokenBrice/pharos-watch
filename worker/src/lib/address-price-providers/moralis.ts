@@ -4,16 +4,14 @@ import type {
   AddressPriceTarget,
 } from "./types";
 import { throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
 import { numberValue, stringValue } from "@shared/lib/type-guards";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
-  buildSkippedAddressPriceAttempts,
   chunk,
-  createProviderRunState,
+  createAddressProviderRunner,
   emptyProviderResult,
   fetchProviderJson,
-  finalizeAddressPriceDiagnosticAttempts,
   getTokenAddressFromRecord,
   groupTargetsByProviderChain,
   incrementReason,
@@ -35,18 +33,21 @@ export async function runMoralisAddressProvider(
 ): Promise<AddressPriceProviderRunResult> {
   const apiKey = config.moralisApiKey?.trim();
   if (!apiKey) return emptyProviderResult("moralis-address", targets, "missing-provider");
-  const state = createProviderRunState();
-  const { diagnostics, quotes, rejectedTargets } = state;
-  let { successfulRequests, attemptedRequests } = state;
-  let processedCount = 0;
-  const processedTargets = new Set<AddressPriceTarget>();
+  const runner = createAddressProviderRunner({
+    provider: "moralis-address",
+    label: "Moralis",
+    targets,
+    deadlineMs,
+    maxRequests: MORALIS_ADDRESS_MAX_REQUESTS,
+  });
+  const { quotes, rejectedTargets } = runner;
 
   for (const [providerChainId, chainTargets] of groupTargetsByProviderChain(targets)) {
     throwIfAborted(signal);
     for (const batch of chunk(chainTargets, MORALIS_ADDRESS_BATCH_SIZE)) {
       throwIfAborted(signal);
-      if (attemptedRequests >= MORALIS_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
-      attemptedRequests += 1;
+      if (!runner.canStartRequest()) break;
+      runner.beginRequest();
       const url = `https://deep-index.moralis.io/api/v2.2/erc20/prices?chain=${encodeURIComponent(providerChainId)}`;
       const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
         provider: "moralis-address",
@@ -120,35 +121,14 @@ export async function runMoralisAddressProvider(
         diagnostic.responseRowCount = rows.length;
         diagnostic.matchedCount = quotes.length - matchedCountBefore;
         diagnostic.success = true;
-        successfulRequests += 1;
+        runner.recordSuccess();
       } else if (json != null) {
         diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Moralis token price array");
       }
-      processedCount += batch.length;
-      for (const target of batch) processedTargets.add(target);
-      diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
+      runner.markProcessed(batch);
+      runner.recordDiagnostic(diagnostic);
     }
   }
 
-  const cappedTargets = Math.max(0, targets.length - processedCount);
-  if (cappedTargets > 0) {
-    const skippedTargets = targets.filter((target) => !processedTargets.has(target));
-    const diagnostic = buildCapSkipDiagnostic({ source: "moralis-address", label: "Moralis" }, cappedTargets);
-    const deadlineReached = Date.now() >= deadlineMs;
-    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
-      "moralis-address",
-      skippedTargets,
-      deadlineReached ? "deadline" : "request-cap",
-      deadlineReached ? "timeout" : "cap",
-    );
-    diagnostics.push(diagnostic);
-  }
-
-  return {
-    quotes,
-    diagnostics,
-    rejectedTargets,
-    successfulRequests,
-    attemptedRequests,
-  };
+  return runner.finish();
 }

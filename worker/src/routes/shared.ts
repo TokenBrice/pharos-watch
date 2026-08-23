@@ -175,6 +175,50 @@ export function defineLazyStaticRoute<K extends EndpointKey>(
   });
 }
 
+type LazyHandlerLoader<TArgs extends readonly unknown[]> = () => Promise<
+  (...args: TArgs) => Promise<Response>
+>;
+
+export function defineLazyDbRoute<K extends EndpointKey>(
+  key: K,
+  loadHandler: LazyHandlerLoader<readonly [D1Database]>,
+): StaticRouteDefinition {
+  return defineLazyStaticRoute(key, async () => {
+    const handler = await loadHandler();
+    return ({ db }) => handler(db);
+  });
+}
+
+export function defineLazyDbUrlRoute<K extends EndpointKey>(
+  key: K,
+  loadHandler: LazyHandlerLoader<readonly [D1Database, URL]>,
+): StaticRouteDefinition {
+  return defineLazyStaticRoute(key, async () => {
+    const handler = await loadHandler();
+    return ({ db, url }) => handler(db, url);
+  });
+}
+
+export function defineLazyDbRequestRoute<K extends EndpointKey>(
+  key: K,
+  loadHandler: LazyHandlerLoader<readonly [D1Database, Request]>,
+): StaticRouteDefinition {
+  return defineLazyStaticRoute(key, async () => {
+    const handler = await loadHandler();
+    return ({ db, request }) => handler(db, request);
+  });
+}
+
+export function defineLazyNoContextRoute<K extends EndpointKey>(
+  key: K,
+  loadHandler: LazyHandlerLoader<readonly []>,
+): StaticRouteDefinition {
+  return defineLazyStaticRoute(key, async () => {
+    const handler = await loadHandler();
+    return () => handler();
+  });
+}
+
 export function defineDynamicRoute<const Deps extends readonly RouteDependency[]>(
   pattern: RegExp,
   dependencies: Deps,

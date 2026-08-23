@@ -1,23 +1,14 @@
 import { logWorkerEventArgs } from "../structured-log";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
-import { CIRCUIT_SOURCE } from "../constants";
 import {
-  collectHistoricalBlockPrices,
   decodeUint256WordBigInt,
   encodeUint256,
   ETHEREUM_CHAIN,
   getUsdcQuotedRedeemConfig,
-  PROTOCOL_REDEEM_SOURCE,
   ratioToNumber,
-  type CurrentPriceOverride,
-  type HistoricalPriceContext,
-  type HistoricalPricePoint,
-  type LivePriceContext,
-  type PriceSourceProvider,
 } from "./helpers";
+import { createProtocolRedeemProvider } from "./protocol-redeem-provider";
 
 const IUSD_INFINIFI_ID = "iusd-infinifi";
 const IUSD_RECEIPT_TO_ASSET_SELECTOR = "0xf308cf65"; // receiptToAsset(uint256)
@@ -56,34 +47,12 @@ async function fetchInfiniFiRedeemQuote(
   return Number.isFinite(price) && price > 0 ? price : null;
 }
 
-export const iusdInfinifiProvider: PriceSourceProvider = {
-  source: PROTOCOL_REDEEM_SOURCE,
-  liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
-  recordNullLiveResultAsCircuitFailure: true,
-  matches(stablecoinId: string): boolean {
-    return stablecoinId === IUSD_INFINIFI_ID;
+export const iusdInfinifiProvider = createProtocolRedeemProvider({
+  stablecoinId: IUSD_INFINIFI_ID,
+  async fetchLiveQuote(_asset, signal): Promise<number | null> {
+    return fetchInfiniFiRedeemQuote("latest", signal);
   },
-  async fetchLivePrice(
-    _asset: PeggedAsset,
-    _context: LivePriceContext,
-    signal?: AbortSignal,
-  ): Promise<CurrentPriceOverride | null> {
-    const price = await fetchInfiniFiRedeemQuote("latest", signal);
-    if (price == null) return null;
-
-    return {
-      price,
-      source: PROTOCOL_REDEEM_SOURCE,
-      confidence: "high",
-    };
+  async fetchHistoricalQuote(_context, blockNumber, _timestamp, signal): Promise<number | null> {
+    return fetchInfiniFiRedeemQuote(blockNumber, signal);
   },
-  async fetchHistoricalPrices(
-    _meta: StablecoinMeta,
-    context: HistoricalPriceContext,
-  ): Promise<HistoricalPricePoint[] | null> {
-    return collectHistoricalBlockPrices(
-      context,
-      (blockNumber, _timestamp, signal) => fetchInfiniFiRedeemQuote(blockNumber, signal),
-    );
-  },
-};
+});

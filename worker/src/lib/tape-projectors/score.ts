@@ -11,9 +11,9 @@ import {
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL } from "../safety-score-history-v2";
 import { buildTapeEventId, deriveIssuerId, gradeRank, severityForScoreDowngrade } from "../tape-event-helpers";
-import { insertTapeEvents, setProjectorWatermark } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
+  finalizeProjectorBatch,
   fetchRowsWithTieExpansion,
   resolveProjectorOptions,
   type ProjectorOptions,
@@ -133,7 +133,7 @@ async function projectScoreByVariant(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const cursorKey = variant === "upgraded" ? "score.upgraded" : "score.downgraded";
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+  const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchGradeRowsSince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
@@ -193,15 +193,7 @@ async function projectScoreByVariant(
     });
   }
 
-  if (!dryRun) {
-    if (events.length > 0) await insertTapeEvents(db, events);
-    // Even if every row was filtered out (no transition), advance the watermark
-    // so we do not re-scan them next run.
-    if (options?.since == null && options?.until == null) {
-      await setProjectorWatermark(db, cursorKey, maxCursor);
-    }
-  }
-  return { projected: events.length, advanced: dryRun ? null : maxCursor };
+  return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
 }
 
 export function projectScoreUpgraded(db: D1Database, options?: ProjectorOptions): Promise<ProjectorResult> {

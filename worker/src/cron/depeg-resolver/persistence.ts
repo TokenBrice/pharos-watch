@@ -16,19 +16,14 @@ export async function persistDepegResolverSnapshot(
 export async function persistDepegResolverReviewArtifacts(
   db: D1Database,
   snapshot: DdrDiagnosticResponse,
+  storeContracts: DdrV2StoreContracts,
   signal?: AbortSignal,
-  storeContracts?: DdrV2StoreContracts | null,
 ): Promise<{ assessmentWriteCount: number; reviewRows: number; reviewError: string | null }> {
   let assessmentWriteCount = 0;
   let reviewRows = 0;
 
   try {
     assessmentWriteCount = await writeDepegResolverAssessments(db, snapshot);
-    if (!storeContracts) {
-      // The reviewer reads only durable v2 incident stores; without them there is nothing to
-      // review. Report it rather than publishing a snapshot built from a weaker source.
-      return { assessmentWriteCount, reviewRows, reviewError: "ddr-review-store-contracts-unavailable" };
-    }
     const reviewResult = await computeAndStoreDepegResolverReview(db, signal, { storeContracts });
     reviewRows = reviewResult.itemCount ?? 0;
   } catch (error) {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters-schemas";
+import { LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
 import { validateAdapterOutput } from "../reserve-adapters/validate";
 
 type AdapterKey = keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;

@@ -1,18 +1,18 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
-  DdrRowSchema,
   DdrV2ResponseRowSchema,
   type DdrPredictionMeta,
   type DdrResponse,
   type DdrRow,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
+import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "./depeg-resolver-test-support";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverEnabled: () => true,
@@ -22,78 +22,8 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: () => <span data-testid="logo" />,
 }));
 
-afterEach(() => {
-  cleanup();
-});
-
-const meta: DdrResponse["_meta"] = {
-  schemaVersion: 2,
-  dataAsOf: 1,
-  modelAsOf: 1,
-  computedAt: 1,
-  expiresAt: 2,
-  snapshotToken: null,
-  snapshotGeneration: null,
-  publicPredictionIds: [],
-  publicPredictionRowHashes: {},
-  basePayloadHash: null,
-  readOverlay: {
-    degradedLockDeferralIncidentKeys: [],
-    closedPendingReviewIncidentKeys: [],
-    suppressedIncidentKeys: [],
-  },
-  degraded: false,
-  degradedReason: null,
-  publicWarning: "",
-  resolutionRubricVersion: "resolution-rubric-v1",
-  durationModelVersion: "duration-landmark-v1",
-  incidentGroupingVersion: "incident-group-v1",
-  supportRulesVersion: "support-rules-v1",
-  lineage: null,
-};
-
-const relatedContext: DdrRow["relatedContext"] = {
-  dewsBand: null,
-  dewsScore: null,
-  liquidityScore: null,
-  safetyGrade: null,
-  safetyScore: null,
-  supplyChange7dPct: null,
-  supplyChange30dPct: null,
-  mintSurge: null,
-};
-
-function makeSourceRow(overrides: Partial<DdrRow> = {}): DdrRow {
-  return DdrRowSchema.parse({
-    stablecoinId: "lusd-liquity",
-    symbol: "LUSD",
-    name: "Liquity USD",
-    pegCurrency: "USD",
-    governance: "decentralized",
-    status: null,
-    eventId: 1,
-    startedAt: 1,
-    ageSec: 3600,
-    direction: "below",
-    peakDeviationBps: -300,
-    currentDeviationBps: -250,
-    resolution: {
-      tier: "at_risk",
-      factors: [],
-    },
-    duration: {
-      suppressed: true,
-      suppressedReason: "insufficient_support",
-      stratum: null,
-      medianSec: null,
-      iqrSec: null,
-      ageStatus: null,
-      horizons: [],
-    },
-    relatedContext,
-    ...overrides,
-  });
-}
+const meta = DDR_TEST_META;
+const makeSourceRow = makeDdrSourceRow;
 
 function predictionMeta(
   state: DdrPredictionMeta["state"],
@@ -185,26 +115,7 @@ function liveOverlay(source: DdrRow, overrides: Record<string, unknown> = {}) {
 }
 
 function makePredictionRow(source = makeSourceRow(), liveOverrides: Record<string, unknown> = {}): DdrV2ResponseRow {
-  return DdrV2ResponseRowSchema.parse({
-    ...baseV2Row(source),
-    kind: "prediction",
-    prediction: predictionMeta("frozen"),
-    frozen: {
-      resolution: source.resolution,
-      duration: {
-        ...source.duration,
-        remainingAsOf: 86_401,
-        medianResolveAt: source.duration.medianSec == null ? null : 86_401 + source.duration.medianSec,
-        iqrResolveAt:
-          source.duration.iqrSec == null
-            ? null
-            : [86_401 + source.duration.iqrSec[0], 86_401 + source.duration.iqrSec[1]],
-      },
-      relatedContext: source.relatedContext,
-      sourceRow: source,
-    },
-    live: liveOverlay(source, liveOverrides),
-  });
+  return makeFrozenDdrV2Row(source, { live: liveOverlay(source, liveOverrides) });
 }
 
 function makePendingRow(
@@ -231,7 +142,7 @@ function makeNoCallRow(): DdrV2ResponseRow {
       lockedAt: 86_401,
       eventAgeAtLockSec: 86_400,
       missingReasons: ["no usable live price"],
-      relatedContext,
+      relatedContext: makeSourceRow().relatedContext,
     },
     frozen: null,
     live: liveOverlay(source),

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 vi.mock("../../../cron/sync-yield-supplemental", () => ({
   syncYieldSupplemental: vi.fn(async () => ({ status: "ok" })),
@@ -31,21 +32,16 @@ function buildRuntime(env: Partial<ScheduledRuntimeContext["env"]> = {}): {
   ]);
   const runLeasedCron = vi.fn(async (_job: string, fn) => fn(signal, reportProgress));
   return {
-    runtime: {
+    runtime: makeScheduledRuntime({
       db,
       env: { ...env } as ScheduledRuntimeContext["env"],
-      ctx: {} as ExecutionContext,
       cron: "25 */4 * * *",
       scheduleKey: "fourHourlyYieldSupplemental",
       scheduledTimeMs: null,
       slotStartedAt: 0,
-      mintBurnDisabledIds: [],
-      mintBurnDisabledSymbols: [],
-      mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-      coingeckoApiKey: null,
       chainRpcs,
       runLeasedCron: runLeasedCron as ScheduledRuntimeContext["runLeasedCron"],
-    },
+    }),
     signal,
     reportProgress,
   };

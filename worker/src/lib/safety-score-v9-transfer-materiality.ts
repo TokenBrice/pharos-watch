@@ -3,9 +3,10 @@ import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ContractDeployment } from "@shared/types/core";
+import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v9-transfer-overlays";
 import { z } from "zod";
 import type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared";
-import { safetyScoreV9TransferDeploymentKey, type SafetyScoreV9TransferMaterialScope } from "./safety-score-v9-extension-transfer";
+import type { SafetyScoreV9TransferMaterialScope } from "./safety-score-v9-extension-transfer";
 import { reviewedDeploymentObservationTimingIssue } from "./safety-score-v9-supply-attribution-contract";
 
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY =

@@ -20,6 +20,6 @@ export function normalizeComputeOptions(
     stablecoinsCacheSafe: options.stablecoinsCacheSafe ?? true,
     depegPipelineHealthy: options.depegPipelineHealthy ?? true,
     syncCapabilities: options.syncCapabilities ?? {},
-    storeContracts: options.storeContracts === undefined ? DEFAULT_DDR_V2_STORE_CONTRACTS : options.storeContracts,
+    storeContracts: options.storeContracts ?? DEFAULT_DDR_V2_STORE_CONTRACTS,
   };
 }

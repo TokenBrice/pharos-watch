@@ -87,15 +87,10 @@ function DetailIdentity({
 }) {
   return (
     <>
-      <h1 className="sr-only">
-        {viewModel.coin.status === "frozen"
-          ? `${viewModel.coin.name} (${viewModel.coin.symbol}) frozen stablecoin archive`
-          : viewModel.coin.status === "delisted"
-            ? `${viewModel.coin.name} (${viewModel.coin.symbol}) delisted stablecoin record`
-            : viewModel.coin.status === "quarantined"
-              ? `${viewModel.coin.name} (${viewModel.coin.symbol}) quarantined stablecoin record`
-              : `${viewModel.coin.name} (${viewModel.coin.symbol}) stablecoin analytics`}
-      </h1>
+      {/* The page H1 is server-rendered permanently by StablecoinDetailSeoContent
+          (src/components/stablecoin-detail/static-seo-content.tsx) so it survives
+          with JavaScript disabled. Re-adding it here would produce two H1s after
+          hydration. */}
       <BackToSource className="mb-2" />
       <QueryFreshnessNotices
         error={viewModel.supplyError}

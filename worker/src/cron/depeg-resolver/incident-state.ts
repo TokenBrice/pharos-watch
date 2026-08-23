@@ -122,14 +122,14 @@ export interface EnsureCanonicalIncidentsResult {
 }
 
 export async function ensureCanonicalIncidentsForEvents(
-  stores: DdrV2StoreContracts | null | undefined,
+  stores: DdrV2StoreContracts,
   db: D1Database,
   events: DdrEventDbRow[],
   options: Required<Pick<ComputeDepegResolverV2Options, "ddrRunId" | "runAt">>,
 ): Promise<EnsureCanonicalIncidentsResult> {
-  if (!stores || events.length === 0) {
+  if (events.length === 0) {
     return {
-      byEventId: new Map(events.map((event) => [event.id, fallbackIncidentForEvent(event)])),
+      byEventId: new Map(),
       quarantined: [],
     };
   }
@@ -163,7 +163,7 @@ export async function ensureCanonicalIncidentsForEvents(
 }
 
 export async function recordSystemHealthDeferrals(input: {
-  stores: DdrV2StoreContracts | null | undefined;
+  stores: DdrV2StoreContracts;
   db: D1Database;
   incidentsByEventId: Map<number, DdrCanonicalIncident>;
   activeRows: DdrEventDbRow[];
@@ -173,7 +173,6 @@ export async function recordSystemHealthDeferrals(input: {
   syncCapabilities: Record<string, unknown>;
   reason: string;
 }): Promise<number> {
-  if (!input.stores) return 0;
   let count = 0;
   for (const row of input.activeRows) {
     const incident = input.incidentsByEventId.get(row.id) ?? fallbackIncidentForEvent(row);
@@ -205,7 +204,7 @@ export async function recordSystemHealthDeferrals(input: {
 }
 
 export async function recordConfirmedSeenOpportunities(input: {
-  stores: DdrV2StoreContracts | null | undefined;
+  stores: DdrV2StoreContracts;
   db: D1Database;
   activeRows: DdrEventDbRow[];
   incidentsByEventId: Map<number, DdrCanonicalIncident>;
@@ -214,7 +213,7 @@ export async function recordConfirmedSeenOpportunities(input: {
   runAt: number;
   syncCapabilities: Record<string, unknown>;
 }): Promise<number> {
-  if (!input.stores || input.confirmedAtByEventId.size === 0) return 0;
+  if (input.confirmedAtByEventId.size === 0) return 0;
 
   let count = 0;
   for (const row of input.activeRows) {

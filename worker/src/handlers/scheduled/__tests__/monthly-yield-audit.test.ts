@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 vi.mock("../../../cron/yield-coverage-audit", () => ({
   runYieldCoverageAudit: vi.fn(async () => ({ status: "ok" })),
@@ -27,21 +28,15 @@ describe("runMonthlyYieldAuditSlot", () => {
     ]);
     const signal = new AbortController().signal;
     const runLeasedCron = vi.fn(async (_job: string, fn) => fn(signal, async () => {}));
-    const runtime: ScheduledRuntimeContext = {
+    const runtime = makeScheduledRuntime({
       db,
-      env: {} as ScheduledRuntimeContext["env"],
-      ctx: {} as ExecutionContext,
       cron: "0 6 1 * *",
       scheduleKey: "monthlyYieldAudit",
       scheduledTimeMs: null,
       slotStartedAt: 0,
-      mintBurnDisabledIds: [],
-      mintBurnDisabledSymbols: [],
-      mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-      coingeckoApiKey: null,
       chainRpcs,
       runLeasedCron: runLeasedCron as ScheduledRuntimeContext["runLeasedCron"],
-    };
+    });
 
     await runMonthlyYieldAuditSlot(runtime);
 
