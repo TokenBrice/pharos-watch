@@ -8,11 +8,21 @@ const SOCIAL_LINK_CLASS =
 const PILL_CLASS =
   "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-[5px] border border-border/65 bg-muted/55 px-2 text-[11px] leading-none text-muted-foreground transition-colors hover:border-border hover:bg-muted/75 hover:text-foreground";
 
-// Lean footer per the Figma redesign: a disclaimer line, three reference links,
-// a compact about/legal row, and the monochrome social cluster. The previous
-// 15-link nav, RSS feed list, and category browse were retired with the redesign
-// (owner: "match Figma exactly", 2026-06-27) — restore from git if reinstating.
+// Lean footer per the Figma redesign: a disclaimer line, compact hub/reference
+// links, an about/legal row, and the monochrome social cluster. The 2026-06-27
+// redesign retired the previous 15-link nav, RSS feed list, and category browse
+// (owner: "match Figma exactly") — restore from git if reinstating those.
+// The six research hubs below were reinstated on 2026-08-23: the Search Console
+// audit found they existed only inside client-rendered Radix dropdowns, so no
+// hub had a persistent crawlable anchor and /sitemap-tree/ was carrying the
+// site's entire internal authority distribution. Keep this row compact.
 const FOOTER_NAV: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/stablecoins/", label: "Stablecoins" },
+  { href: "/chains/", label: "Chains" },
+  { href: "/learn/", label: "Learn" },
+  { href: "/compare/", label: "Compare" },
+  { href: "/depeg/", label: "Depeg" },
+  { href: "/digest/", label: "Digest" },
   { href: "/blog/", label: "Blog" },
   { href: "/changelog/", label: "Changelog" },
   { href: "/methodology/", label: "Methodology" },
@@ -36,7 +46,7 @@ export function Footer() {
             Pharos tracks stablecoin cap, peg stability, liquidity, and dependency risk. Not financial advice.
           </p>
           <nav
-            aria-label="Reference"
+            aria-label="Explore and reference"
             className="flex flex-wrap items-center gap-1 text-muted-foreground sm:shrink-0 sm:justify-end sm:gap-1.5 lg:flex-nowrap"
           >
             {FOOTER_NAV.map((link) => (
