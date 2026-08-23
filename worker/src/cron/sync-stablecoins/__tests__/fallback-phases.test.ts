@@ -4,6 +4,7 @@ import {
   buildFallbackAssetsFromCoinGecko,
   buildInsufficientFallbackResult,
   overlayFallbackCuratedAggregateSupply,
+  resolveFreshCoinGeckoFallbackEntry,
 } from "../fallback-intake";
 import { restoreFallbackCacheState, runFallbackStalenessGate } from "../fallback-cache";
 import { runFallbackDepegFollowThrough } from "../fallback-publish";
@@ -64,12 +65,12 @@ describe("CoinGecko fallback phases", () => {
     fallbackMocks.queueTrackedAdditionsNotice.mockClear();
   });
 
-  it("builds fallback intake assets from positive CoinGecko market caps", () => {
+  it("accepts fresh CoinGecko fallback data and rejects unverifiable timestamps", () => {
     const assets = buildFallbackAssetsFromCoinGecko({
       syncStartSec: NOW_SEC,
       cgData: {
-        "fixture-usd": { usd: 0.999, usd_market_cap: 12_000_000 },
-        "fixture-zero": { usd: 1, usd_market_cap: 0 },
+        "fixture-usd": { usd: 0.999, usd_market_cap: 12_000_000, last_updated_at: NOW_SEC - 60 },
+        "fixture-zero": { usd: 1, usd_market_cap: 0, last_updated_at: NOW_SEC - 60 },
       },
       stablecoins: [
         {
@@ -95,8 +96,9 @@ describe("CoinGecko fallback phases", () => {
       price: 0.999,
       priceSource: "coingecko",
       priceConfidence: "single-source",
-      priceObservedAt: NOW_SEC,
-      priceObservedAtMode: "local_fetch",
+      priceUpdatedAt: NOW_SEC - 60,
+      priceObservedAt: NOW_SEC - 60,
+      priceObservedAtMode: "upstream",
       priceSyncedAt: NOW_SEC,
       supplySource: "coingecko-fallback",
       circulating: { peggedUSD: 12_000_000 },
@@ -106,13 +108,21 @@ describe("CoinGecko fallback phases", () => {
       chains: [],
       chainCirculating: {},
     });
+
+    for (const entry of [
+      { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC - 901 },
+      { usd: 1, usd_market_cap: 5_000_000 },
+      { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC + 1 },
+    ]) {
+      expect(resolveFreshCoinGeckoFallbackEntry(entry, NOW_SEC)).toBeNull();
+    }
   });
 
   it("uses the canonical peggedREAL type for BRL fallback assets", () => {
     const assets = buildFallbackAssetsFromCoinGecko({
       syncStartSec: NOW_SEC,
       cgData: {
-        "fixture-brl": { usd: 0.18, usd_market_cap: 5_000_000 },
+        "fixture-brl": { usd: 0.18, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC },
       },
       stablecoins: [{
         id: "fixture-brl",

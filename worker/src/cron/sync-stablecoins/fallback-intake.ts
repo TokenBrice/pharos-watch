@@ -3,12 +3,13 @@ import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/r
 import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
+import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import type { CronResult } from "./shared";
 import { buildSyncMetadata } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
-import { buildSupplementalAsset, pegTypeKey, toPositiveFiniteNumber } from "./supplemental-assets/shared";
+import { buildSupplementalAsset, pegTypeKey, toPositiveFiniteNumber, type CoinGeckoMcapData } from "./supplemental-assets/shared";
 import type {
   FallbackIntakeInput,
   FallbackIntakeOutput,
@@ -33,6 +34,18 @@ export function buildInsufficientFallbackResult(assetCount: number): CronResult 
   };
 }
 
+export function resolveFreshCoinGeckoFallbackEntry(entry: CoinGeckoMcapData[string] | undefined, nowSec: number): { mcap: number; price: number | null; observedAt: number } | null {
+  const mcap = toPositiveFiniteNumber(entry?.usd_market_cap);
+  const observedAt = toPositiveFiniteNumber(entry?.last_updated_at);
+  if (mcap == null || observedAt == null) return null;
+  const freshness = validatePricingSourceFreshness({
+    source: "coingecko", observedAt, observedAtMode: "upstream", nowSec, requireObservedAt: true, maxFutureSkewSec: 0,
+  });
+  if (!freshness.accepted || freshness.observedAt == null) return null;
+
+  return { mcap, price: toPositiveFiniteNumber(entry?.usd), observedAt: freshness.observedAt };
+}
+
 export function buildFallbackAssetsFromCoinGecko(
   input: Pick<FallbackIntakeInput, "cgData" | "syncStartSec"> & {
     stablecoins?: readonly FallbackStablecoinMetadata[];
@@ -43,23 +56,22 @@ export function buildFallbackAssetsFromCoinGecko(
 
   for (const meta of stablecoins) {
     if (!meta.geckoId) continue;
-    const mcap = input.cgData[meta.geckoId]?.usd_market_cap;
-    if (!mcap || mcap <= 0) continue;
+    const entry = resolveFreshCoinGeckoFallbackEntry(input.cgData[meta.geckoId], input.syncStartSec);
+    if (!entry) continue;
 
-    const price = input.cgData[meta.geckoId]?.usd ?? null;
     assets.push(buildSupplementalAsset({
       meta,
-      priceResolution: price != null
-        ? { price, source: "coingecko", observedAt: null, observedAtMode: "local_fetch" }
+      priceResolution: entry.price != null
+        ? { price: entry.price, source: "coingecko", observedAt: entry.observedAt, observedAtMode: "upstream" }
         : null,
       priceSource: "coingecko",
       priceConfidence: "single-source",
-      priceUpdatedAt: input.syncStartSec,
-      priceObservedAt: input.syncStartSec,
-      priceObservedAtMode: "local_fetch",
+      priceUpdatedAt: entry.observedAt,
+      priceObservedAt: entry.observedAt,
+      priceObservedAtMode: "upstream",
       priceSyncedAt: input.syncStartSec,
       nowSec: input.syncStartSec,
-      mcap,
+      mcap: entry.mcap,
       supplySource: "coingecko-fallback",
       circulatingPrevDay: null,
       circulatingPrevWeek: null,
