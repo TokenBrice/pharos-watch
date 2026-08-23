@@ -16,6 +16,24 @@ import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 
 const signal = AbortSignal.timeout(5_000);
 
+function runAccountablePayload(config: LiveReservesConfig, data: Record<string, unknown>) {
+  const primary = config.inputs.primary;
+  if (primary.kind !== "http-json") {
+    throw new Error("expected Accountable primary input to be http-json");
+  }
+
+  return fetchAccountableReserves(
+    {} as never,
+    config,
+    signal,
+    {
+      requestCache: new Map([
+        [`json-get:${primary.url}:12000:null`, Promise.resolve({ res: "ok", data })],
+      ]),
+    },
+  );
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -172,10 +190,6 @@ describe("adaptAccountableDashboard", () => {
 
   it("retains every USN deployment bucket and the signed same-snapshot residual without changing classifications", async () => {
     const config = usn.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Noon Accountable primary input to be http-json");
-    }
 
     const dashboardTimestamp = "1785194915915";
     const totalReserves = 34_400_188.21;
@@ -188,28 +202,16 @@ describe("adaptAccountableDashboard", () => {
       "Funding Rate (BTC)": 0.9612150669,
     };
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${primary.url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.013786,
-              ts: dashboardTimestamp,
-              reserves: {
-                interval: "live",
-                verifiability: "100",
-                total_reserves: totalReserves,
-                deployment,
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.013786,
+      ts: dashboardTimestamp,
+      reserves: {
+        interval: "live",
+        verifiability: "100",
+        total_reserves: totalReserves,
+        deployment,
       },
-    );
+    });
 
     const bucketTotal = Object.values(deployment).reduce((sum, value) => sum + value, 0);
     expect(result.metadata?.deploymentSnapshot).toEqual({
@@ -421,28 +423,16 @@ describe("adaptAccountableDashboard", () => {
       },
     };
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          ["json-get:https://example.com:12000:null", Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.01,
-              ts: "2026-03-20T00:00:00Z",
-              reserves: {
-                type: {
-                  Stablecoin: 70,
-                  "New Bucket": 30,
-                },
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.01,
+      ts: "2026-03-20T00:00:00Z",
+      reserves: {
+        type: {
+          Stablecoin: 70,
+          "New Bucket": 30,
+        },
       },
-    );
+    });
 
     expect(result.slices).toEqual([
       { name: "Stablecoin", pct: 70, risk: "low" },
@@ -463,39 +453,22 @@ describe("adaptAccountableDashboard", () => {
 
   it("maps the reviewed Apyx Accountable reserves_split into STRC-heavy apxUSD slices", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Apyx Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 0.881615,
-              ts: "1784376607058",
-              reserves: {
-                interval: "live",
-                verifiability: "100",
-                total_reserves: { value: 1_000, name: "Total Reserves" },
-                reserves_split: [
-                  { value: 612, name: "STRC" },
-                  { value: 158, name: "Protocol Owned Liquidity" },
-                  { value: 100, name: "Cash & Equivalents" },
-                  { value: 130, name: "Inventory" },
-                ],
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 0.881615,
+      ts: "1784376607058",
+      reserves: {
+        interval: "live",
+        verifiability: "100",
+        total_reserves: { value: 1_000, name: "Total Reserves" },
+        reserves_split: [
+          { value: 612, name: "STRC" },
+          { value: 158, name: "Protocol Owned Liquidity" },
+          { value: 100, name: "Cash & Equivalents" },
+          { value: 130, name: "Inventory" },
+        ],
       },
-    );
+    });
 
     expect(result.warnings).toEqual([{
       code: "reserve-undercollateralized",
@@ -557,37 +530,21 @@ describe("adaptAccountableDashboard", () => {
 
   it("treats Unitas deployment buckets as the same high-risk strategy basket", async () => {
     const config = usdu.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Unitas Accountable primary input to be http-json");
-    }
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${primary.url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.059395,
-              ts: "1784376513803",
-              reserves: {
-                interval: "live",
-                verifiability: "100",
-                total_reserves: { value: 100, name: "Total Reserves" },
-                reserves_split: [
-                  { value: 50.6, name: "Binance" },
-                  { value: 48.3, name: "Solana" },
-                  { value: 1.1, name: "Bnb_smartchain" },
-                ],
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.059395,
+      ts: "1784376513803",
+      reserves: {
+        interval: "live",
+        verifiability: "100",
+        total_reserves: { value: 100, name: "Total Reserves" },
+        reserves_split: [
+          { value: 50.6, name: "Binance" },
+          { value: 48.3, name: "Solana" },
+          { value: 1.1, name: "Bnb_smartchain" },
+        ],
       },
-    );
+    });
 
     expect(result.slices).toEqual([
       { name: "Binance", pct: 50.6, risk: "high" },
@@ -598,72 +555,38 @@ describe("adaptAccountableDashboard", () => {
 
   it("rejects poisoned Apyx Accountable mapped buckets before reserve slice normalization", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Apyx Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    await expect(fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.001022,
-              ts: "1780583904415",
-              reserves: {
-                total_reserves: { value: 476_302_149.26, name: "Total Reserves" },
-                reserves_split: [
-                  { value: -296_181_048.36, name: "STRC" },
-                  { value: 180_040_870.38, name: "Cash & Equivalents" },
-                  { value: 0, name: "SATA" },
-                  { value: "not-a-number", name: "Other" },
-                ],
-              },
-            },
-          })],
-        ]),
+    await expect(runAccountablePayload(config, {
+      collateralization: 1.001022,
+      ts: "1780583904415",
+      reserves: {
+        total_reserves: { value: 476_302_149.26, name: "Total Reserves" },
+        reserves_split: [
+          { value: -296_181_048.36, name: "STRC" },
+          { value: 180_040_870.38, name: "Cash & Equivalents" },
+          { value: 0, name: "SATA" },
+          { value: "not-a-number", name: "Other" },
+        ],
       },
-    )).rejects.toThrow(/Accountable reserves_split bucket "STRC" has invalid value/);
+    })).rejects.toThrow(/Accountable reserves_split bucket "STRC" has invalid value/);
   });
 
   it("rejects Apyx Accountable mapped buckets that would be silently dropped as zero", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Apyx Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    await expect(fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.001022,
-              ts: "1780583904415",
-              reserves: {
-                total_reserves: { value: 180_040_870.38, name: "Total Reserves" },
-                reserves_split: [
-                  { value: 0, name: "STRC" },
-                  { value: 180_040_870.38, name: "Cash & Equivalents" },
-                  { value: 0, name: "SATA" },
-                  { value: 0, name: "Other" },
-                ],
-              },
-            },
-          })],
-        ]),
+    await expect(runAccountablePayload(config, {
+      collateralization: 1.001022,
+      ts: "1780583904415",
+      reserves: {
+        total_reserves: { value: 180_040_870.38, name: "Total Reserves" },
+        reserves_split: [
+          { value: 0, name: "STRC" },
+          { value: 180_040_870.38, name: "Cash & Equivalents" },
+          { value: 0, name: "SATA" },
+          { value: 0, name: "Other" },
+        ],
       },
-    )).rejects.toThrow(/non-positive value: Other, SATA, STRC/);
+    })).rejects.toThrow(/non-positive value: Other, SATA, STRC/);
   });
 
   it("rejects Accountable bucket totals that materially diverge from total_reserves", () => {
@@ -690,41 +613,24 @@ describe("adaptAccountableDashboard", () => {
 
   it("omits configured Accountable buckets from total_reserves reconciliation and reserve slices", async () => {
     const config = yusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Aegis Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.002841,
-              ts: "1781948757311",
-              reserves: {
-                interval: "live",
-                verifiability: "100",
-                total_reserves: { value: 36_193_106.94, name: "Total Reserves" },
-                reserves_split: [
-                  { value: 26_197_666.041081343, name: "Copper" },
-                  { value: 9_990_180.9994548, name: "Fireblocks" },
-                  { value: 591_806.76, name: "Insurance Fund" },
-                  { value: 5_130.378053203912, name: "Binance" },
-                  { value: 122.0547387685523, name: "Ethereum Chain" },
-                  { value: 7.46933060805061, name: "BNB Smart Chain" },
-                ],
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.002841,
+      ts: "1781948757311",
+      reserves: {
+        interval: "live",
+        verifiability: "100",
+        total_reserves: { value: 36_193_106.94, name: "Total Reserves" },
+        reserves_split: [
+          { value: 26_197_666.041081343, name: "Copper" },
+          { value: 9_990_180.9994548, name: "Fireblocks" },
+          { value: 591_806.76, name: "Insurance Fund" },
+          { value: 5_130.378053203912, name: "Binance" },
+          { value: 122.0547387685523, name: "Ethereum Chain" },
+          { value: 7.46933060805061, name: "BNB Smart Chain" },
+        ],
       },
-    );
+    });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -744,49 +650,32 @@ describe("adaptAccountableDashboard", () => {
 
   it("maps the current Yuzu Accountable exposure buckets without unknown exposure warnings", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Yuzu Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.101272,
-              ts: "2026-05-11T23:13:49.469Z",
-              reserves: {
-                exposure_split: {
-                  "[Securitize]_VBILL_Loop": { value: 10 },
-                  "[Superstate]_USTB_Loop": { value: 10 },
-                  "[Ethena]_USDe_Loop": { value: 10 },
-                  "[Ethena]_USDe": { value: 10 },
-                  "[Maple]_syrupUSDT_Loop": { value: 10 },
-                  "Liquidity_Buffer": { value: 10 },
-                  "[Paypal]_PYUSD_Loop": { value: 10 },
-                  "[Ethena]_sUSDe_Loop": { value: 10 },
-                  "[Aave]_USDT": { value: 10 },
-                  "[Aave]_Gho": { value: 10 },
-                  "[MegaEth]_USDm": { value: 10 },
-                  "[Maple]_syrupUSDC_Loop": { value: 10 },
-                  "[Maple]_syrupUSDT": { value: 10 },
-                  "[Sky]_SUSDS_Loop": { value: 10 },
-                  "Rest_of_Assets": { value: 10 },
-                  "[Aave]_Gho_Savings": { value: 10 },
-                  "[Paxos]_USDG": { value: 10 },
-                },
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.101272,
+      ts: "2026-05-11T23:13:49.469Z",
+      reserves: {
+        exposure_split: {
+          "[Securitize]_VBILL_Loop": { value: 10 },
+          "[Superstate]_USTB_Loop": { value: 10 },
+          "[Ethena]_USDe_Loop": { value: 10 },
+          "[Ethena]_USDe": { value: 10 },
+          "[Maple]_syrupUSDT_Loop": { value: 10 },
+          "Liquidity_Buffer": { value: 10 },
+          "[Paypal]_PYUSD_Loop": { value: 10 },
+          "[Ethena]_sUSDe_Loop": { value: 10 },
+          "[Aave]_USDT": { value: 10 },
+          "[Aave]_Gho": { value: 10 },
+          "[MegaEth]_USDm": { value: 10 },
+          "[Maple]_syrupUSDC_Loop": { value: 10 },
+          "[Maple]_syrupUSDT": { value: 10 },
+          "[Sky]_SUSDS_Loop": { value: 10 },
+          "Rest_of_Assets": { value: 10 },
+          "[Aave]_Gho_Savings": { value: 10 },
+          "[Paxos]_USDG": { value: 10 },
+        },
       },
-    );
+    });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -811,33 +700,17 @@ describe("adaptAccountableDashboard", () => {
 
   it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Yuzu Accountable primary input to be http-json");
-    }
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${primary.url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1,
-              ts: "2026-08-07T05:13:55.000Z",
-              reserves: {
-                exposure_split: {
-                  "[Fasanara]_mGLOBAL_Loop": { "": 60 },
-                  "[Fasanara]_mGLO_Loop": { "": 40 },
-                },
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "2026-08-07T05:13:55.000Z",
+      reserves: {
+        exposure_split: {
+          "[Fasanara]_mGLOBAL_Loop": { "": 60 },
+          "[Fasanara]_mGLO_Loop": { "": 40 },
+        },
       },
-    );
+    });
 
     expect(result.slices).toContainEqual(expect.objectContaining({
       name: "Fasanara mGLOBAL loop",
@@ -859,53 +732,36 @@ describe("adaptAccountableDashboard", () => {
 
   it("records signed Yuzu Accountable exposure buckets as degraded warnings instead of failing the adapter", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Yuzu Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.06701,
-              ts: "1781945117382",
-              reserves: {
-                interval: "live",
-                verifiability: "100",
-                total_reserves: {
-                  value_rwa: 5_753_096.84,
-                  name: "Total Backing Assets",
-                  value: 44_273_802.48,
-                },
-                exposure_split: {
-                  "[Securitize]_VBILL_Loop": { "": 123_923.977512 },
-                  "[Superstate]_USTB_Loop": { "": 4_458_036.0056144 },
-                  "[Ethena]_USDe_Loop": { "": 4_801_152.47906593 },
-                  "[Ethena]_USDe": { "": 0.0000000952939047370631 },
-                  "[Strata]_srUSDe_Pendle_PT_Loop": { "": -1_500_946.168294 },
-                  "[Maple]_syrupUSDT_Loop": { "": 6_580_976.92964618 },
-                  "Liquidity_Buffer": { "": 1_050_466.213873575 },
-                  "[Paypal]_PYUSD_Loop": { "": 8_563_449.832375925 },
-                  "[Ethena]_sUSDe_Loop": { "": 11_062_254.975953272 },
-                  "[Aave]_USDT": { "": 491_369.244057127 },
-                  "[Maple]_syrupUSDC_Loop": { "": 1_378_418.93199401 },
-                  "[Aave]_RLUSD": { "": 62.3113133180608 },
-                  "Rest_of_Assets": { "": 870_168.7445106531 },
-                  "[Yuzu]_yzPRIME": { "": 3_016_917.24160501 },
-                },
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.06701,
+      ts: "1781945117382",
+      reserves: {
+        interval: "live",
+        verifiability: "100",
+        total_reserves: {
+          value_rwa: 5_753_096.84,
+          name: "Total Backing Assets",
+          value: 44_273_802.48,
+        },
+        exposure_split: {
+          "[Securitize]_VBILL_Loop": { "": 123_923.977512 },
+          "[Superstate]_USTB_Loop": { "": 4_458_036.0056144 },
+          "[Ethena]_USDe_Loop": { "": 4_801_152.47906593 },
+          "[Ethena]_USDe": { "": 0.0000000952939047370631 },
+          "[Strata]_srUSDe_Pendle_PT_Loop": { "": -1_500_946.168294 },
+          "[Maple]_syrupUSDT_Loop": { "": 6_580_976.92964618 },
+          "Liquidity_Buffer": { "": 1_050_466.213873575 },
+          "[Paypal]_PYUSD_Loop": { "": 8_563_449.832375925 },
+          "[Ethena]_sUSDe_Loop": { "": 11_062_254.975953272 },
+          "[Aave]_USDT": { "": 491_369.244057127 },
+          "[Maple]_syrupUSDC_Loop": { "": 1_378_418.93199401 },
+          "[Aave]_RLUSD": { "": 62.3113133180608 },
+          "Rest_of_Assets": { "": 870_168.7445106531 },
+          "[Yuzu]_yzPRIME": { "": 3_016_917.24160501 },
+        },
       },
-    );
+    });
 
     expect(result.warnings?.map((warning) => warning.code).sort()).toEqual([
       "signed-negative-bucket",
@@ -949,38 +805,21 @@ describe("adaptAccountableDashboard", () => {
 
   it("maps the current Neutrl Accountable type_split buckets including JLP and Protocol Owned Liquidity without unknown exposure warnings", async () => {
     const config = nusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Neutrl Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.02,
-              ts: "1781945117382",
-              reserves: {
-                type_split: {
-                  Stablecoin: 800,
-                  ETH: 50,
-                  "OTC Aggregate": 34,
-                  Other: 31,
-                  JLP: 60,
-                  "Protocol Owned Liquidity": 25,
-                },
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.02,
+      ts: "1781945117382",
+      reserves: {
+        type_split: {
+          Stablecoin: 800,
+          ETH: 50,
+          "OTC Aggregate": 34,
+          Other: 31,
+          JLP: 60,
+          "Protocol Owned Liquidity": 25,
+        },
       },
-    );
+    });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -1006,34 +845,17 @@ describe("adaptAccountableDashboard", () => {
 
   it("maps the new Yuzu Accountable [Agora]_PT_AUSD Pendle PT bucket into a mapped reserve slice", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected Yuzu Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.101272,
-              ts: "1781945117382",
-              reserves: {
-                exposure_split: {
-                  "[Ethena]_USDe_Loop": { value: 80 },
-                  "[Agora]_PT_AUSD": { value: 20 },
-                },
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.101272,
+      ts: "1781945117382",
+      reserves: {
+        exposure_split: {
+          "[Ethena]_USDe_Loop": { value: 80 },
+          "[Agora]_PT_AUSD": { value: 20 },
+        },
       },
-    );
+    });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -1057,45 +879,28 @@ describe("adaptAccountableDashboard", () => {
 
   it("maps XSY Accountable chain-name buckets including the new Bnb_smartchain/Hyperevm/Hyperliquid/Megaeth deployments without unknown exposure warnings", async () => {
     const config = utyxsy.liveReservesConfig as LiveReservesConfig;
-    const primary = config.inputs.primary;
-    if (primary.kind !== "http-json") {
-      throw new Error("expected XSY Accountable primary input to be http-json");
-    }
-    const url = primary.url;
 
-    const result = await fetchAccountableReserves(
-      {} as never,
-      config,
-      signal,
-      {
-        requestCache: new Map([
-          [`json-get:${url}:12000:null`, Promise.resolve({
-            res: "ok",
-            data: {
-              collateralization: 1.03,
-              ts: "1781945117382",
-              reserves: {
-                reserves_split: [
-                  { name: "Avalanche", value: 35_000_000 },
-                  { name: "Copper", value: 5_000_000 },
-                  { name: "Katana", value: 3_000_000 },
-                  { name: "Ethereum", value: 2_000_000 },
-                  { name: "Base", value: 1_500_000 },
-                  { name: "Plasma", value: 900_000 },
-                  { name: "Arbitrum", value: 800_000 },
-                  { name: "Monad", value: 700_000 },
-                  { name: "Bybit", value: 600_000 },
-                  { name: "Bnb_smartchain", value: 12.5 },
-                  { name: "Hyperevm", value: 8.2 },
-                  { name: "Hyperliquid", value: 4.1 },
-                  { name: "Megaeth", value: 1.9 },
-                ],
-              },
-            },
-          })],
-        ]),
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.03,
+      ts: "1781945117382",
+      reserves: {
+        reserves_split: [
+          { name: "Avalanche", value: 35_000_000 },
+          { name: "Copper", value: 5_000_000 },
+          { name: "Katana", value: 3_000_000 },
+          { name: "Ethereum", value: 2_000_000 },
+          { name: "Base", value: 1_500_000 },
+          { name: "Plasma", value: 900_000 },
+          { name: "Arbitrum", value: 800_000 },
+          { name: "Monad", value: 700_000 },
+          { name: "Bybit", value: 600_000 },
+          { name: "Bnb_smartchain", value: 12.5 },
+          { name: "Hyperevm", value: 8.2 },
+          { name: "Hyperliquid", value: 4.1 },
+          { name: "Megaeth", value: 1.9 },
+        ],
       },
-    );
+    });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({

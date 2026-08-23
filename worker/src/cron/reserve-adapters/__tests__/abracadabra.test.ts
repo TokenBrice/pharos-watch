@@ -4,21 +4,12 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   return {
     ...actual,
     fetchOnchainUint256,
-    makeOnchainCallers: vi.fn((input, options) => ({
-      uint256: (contract: string, data: string) =>
-        fetchOnchainUint256({
-          ...options,
-          contract,
-          data,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-        }),
-      raw: vi.fn(),
-    })),
+    makeOnchainCallers: makeOnchainCallersMock({ uint256: fetchOnchainUint256 }),
     fetchDefiLlamaPrices: vi.fn(),
   };
 });

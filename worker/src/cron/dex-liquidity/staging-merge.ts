@@ -24,7 +24,7 @@ import {
 } from "./pool-identity";
 import { attachEvmV2CandidateToRetainedPool, buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 
-interface StagedPoolRow {
+export interface StagedPoolRow {
   pool_id: string;
   stablecoin_id: string;
   source: StagedPool["source"];

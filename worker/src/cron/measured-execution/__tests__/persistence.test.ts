@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import {
   DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE,
   getDexMeasuredHistoryFreshnessSec,
@@ -12,53 +12,10 @@ import {
   pruneDexMeasuredExecutionGenerations,
 } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
+import { makeUniswapV3Target } from "./measured-execution.test-support";
 
-function fixtureTarget(chain: string): DexMeasuredExecutionTarget {
-  const input = {
-    schemaVersion: "dex-measured-target-v1" as const,
-    stablecoinId: "usdc-circle",
-    adapterProfileId: "uniswap-v3-quoter-v2",
-    protocol: "uniswap-v3",
-    chain,
-    poolId: `${chain}:0x3333333333333333333333333333333333333333`,
-    poolTokenAddresses: [
-      "0x1111111111111111111111111111111111111111",
-      "0x2222222222222222222222222222222222222222",
-    ] as [`0x${string}`, `0x${string}`],
-    tokenIn: {
-      address: "0x1111111111111111111111111111111111111111" as const,
-      symbol: "USDC",
-      decimals: 6,
-      referencePriceUsd: 1,
-      trackedAssetId: "usdc-circle",
-    },
-    tokenOut: {
-      address: "0x2222222222222222222222222222222222222222" as const,
-      symbol: "USDT",
-      decimals: 6,
-      referencePriceUsd: 1,
-      trackedAssetId: "usdt-tether",
-    },
-    feePips: 100,
-    retainedTvlUsd: 100_000,
-    retainedPoolPriceUsd: 1,
-    capturedAt: 1_000,
-  };
-  return {
-    ...input,
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: input.adapterProfileId,
-      stablecoinId: input.stablecoinId,
-      chain: input.chain,
-      protocol: input.protocol,
-      poolId: input.poolId,
-      tokenInAddress: input.tokenIn.address,
-      tokenOutAddress: input.tokenOut.address,
-      poolTokenAddresses: input.poolTokenAddresses,
-      feePips: input.feePips,
-    }),
-  };
-}
+const fixtureTarget = (chain: string): DexMeasuredExecutionTarget =>
+  makeUniswapV3Target({ chain });
 
 function fixtureProfile(
   target: DexMeasuredExecutionTarget,

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
 import type { DepegRow } from "../../../lib/depeg-helpers";
+import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { decideDepegAsset } from "../decision-engine";
 
 const usdMeta: StablecoinMeta = {
@@ -49,23 +50,81 @@ function makeAsset(overrides: Partial<PegAssetBase> = {}): PegAssetBase {
 
 function makeExistingEvent(overrides: Partial<DepegRow> = {}): DepegRow {
   return {
-    id: 7,
-    stablecoin_id: "brz-transfero",
-    symbol: "BRZ",
-    peg_type: "peggedREAL",
-    direction: "above",
-    peak_deviation_bps: 180,
-    started_at: 1_750_000_000 - 3600,
-    ended_at: null,
-    start_price: 0.1909,
-    peak_price: 0.191,
-    recovery_price: null,
-    peg_reference: 0.18765951,
-    source: "live",
+    ...makeDepegRow({
+      id: 7,
+      stablecoin_id: "brz-transfero",
+      symbol: "BRZ",
+      peg_type: "peggedREAL",
+      direction: "above",
+      peak_deviation_bps: 180,
+      started_at: 1_750_000_000 - 3600,
+      start_price: 0.1909,
+      peak_price: 0.191,
+      peg_reference: 0.18765951,
+    }),
     confirmation_sources: null,
     pending_reason: null,
     ...overrides,
   };
+}
+
+function assertNativeOpening({
+  circulating,
+  nativePrice,
+  expectedBps,
+  expectedReason,
+  expectSeenEventIds = false,
+}: {
+  circulating: Record<string, number>;
+  nativePrice: number;
+  expectedBps: number;
+  expectedReason: string;
+  expectSeenEventIds?: boolean;
+}) {
+  const decision = decideDepegAsset({
+    now: 1_750_000_000,
+    asset: makeAsset({
+      id: "brz-transfero",
+      symbol: "BRZ",
+      price: 0.191187,
+      priceSource: "coingecko",
+      priceUpdatedAt: 1_750_000_000 - 60,
+      pegType: "peggedREAL",
+      circulating,
+    }),
+    meta: brlMeta,
+    pegRates: { peggedREAL: 0.191895 },
+    pegRateSources: { peggedREAL: "median" },
+    pegRateCounts: { peggedREAL: 3 },
+    nativePegQuote: {
+      stablecoinId: "brz-transfero",
+      geckoId: "brz",
+      pegCurrency: "BRL",
+      price: nativePrice,
+      updatedAt: 1_750_000_000 - 60,
+    },
+  });
+
+  expect(decision.trackedCoinId).toBe("brz-transfero");
+  if (expectSeenEventIds) expect(decision.seenEventIds).toEqual([]);
+  expect(decision.commands).toHaveLength(1);
+  expect(decision.commands[0]).toMatchObject({
+    type: "upsert-pending",
+    payload: {
+      stablecoinId: "brz-transfero",
+      direction: "below",
+      bps: expectedBps,
+      price: nativePrice,
+      pegReference: 1,
+      reason: expectedReason,
+    },
+  });
+  expect(decision.diagnostics).toEqual([
+    {
+      level: "log",
+      message: `[depeg] Pending native-peg confirmation for BRZ: ${expectedBps}bps against BRL quote`,
+    },
+  ]);
 }
 
 describe("decideDepegAsset", () => {
@@ -306,143 +365,32 @@ describe("decideDepegAsset", () => {
   });
 
   it("routes a supported native-peg depeg through pending confirmation", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.191187,
-        priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
-        pegType: "peggedREAL",
-        circulating: { gnosis: 22_000_000 },
-      }),
-      meta: brlMeta,
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.9758,
-        updatedAt: 1_750_000_000 - 60,
-      },
+    assertNativeOpening({
+      circulating: { gnosis: 22_000_000 },
+      nativePrice: 0.9758,
+      expectedBps: -242,
+      expectedReason: "confirmation-window+native-origin",
     });
-
-    expect(decision.trackedCoinId).toBe("brz-transfero");
-    expect(decision.commands).toHaveLength(1);
-    expect(decision.commands[0]).toMatchObject({
-      type: "upsert-pending",
-      payload: {
-        stablecoinId: "brz-transfero",
-        direction: "below",
-        bps: -242,
-        price: 0.9758,
-        pegReference: 1,
-        reason: "confirmation-window+native-origin",
-      },
-    });
-    expect(decision.diagnostics).toEqual([
-      {
-        level: "log",
-        message: "[depeg] Pending native-peg confirmation for BRZ: -242bps against BRL quote",
-      },
-    ]);
   });
 
   it("routes large-cap native-peg openings to pending confirmation", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.191187,
-        priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
-        pegType: "peggedREAL",
-        circulating: { gnosis: 2_000_000_000 },
-      }),
-      meta: brlMeta,
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.9758,
-        updatedAt: 1_750_000_000 - 60,
-      },
+    assertNativeOpening({
+      circulating: { gnosis: 2_000_000_000 },
+      nativePrice: 0.9758,
+      expectedBps: -242,
+      expectedReason: "confirmation-window+large-cap+native-origin",
+      expectSeenEventIds: true,
     });
-
-    expect(decision.trackedCoinId).toBe("brz-transfero");
-    expect(decision.seenEventIds).toEqual([]);
-    expect(decision.commands).toHaveLength(1);
-    expect(decision.commands[0]).toMatchObject({
-      type: "upsert-pending",
-      payload: {
-        stablecoinId: "brz-transfero",
-        direction: "below",
-        bps: -242,
-        price: 0.9758,
-        pegReference: 1,
-        reason: "confirmation-window+large-cap+native-origin",
-      },
-    });
-    expect(decision.diagnostics).toEqual([
-      {
-        level: "log",
-        message: "[depeg] Pending native-peg confirmation for BRZ: -242bps against BRL quote",
-      },
-    ]);
   });
 
   it("routes extreme native-peg openings to pending confirmation", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.191187,
-        priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
-        pegType: "peggedREAL",
-        circulating: { gnosis: 22_000_000 },
-      }),
-      meta: brlMeta,
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.2,
-        updatedAt: 1_750_000_000 - 60,
-      },
+    assertNativeOpening({
+      circulating: { gnosis: 22_000_000 },
+      nativePrice: 0.2,
+      expectedBps: -8000,
+      expectedReason: "confirmation-window+extreme-move+native-origin",
+      expectSeenEventIds: true,
     });
-
-    expect(decision.trackedCoinId).toBe("brz-transfero");
-    expect(decision.seenEventIds).toEqual([]);
-    expect(decision.commands).toHaveLength(1);
-    expect(decision.commands[0]).toMatchObject({
-      type: "upsert-pending",
-      payload: {
-        stablecoinId: "brz-transfero",
-        direction: "below",
-        bps: -8000,
-        price: 0.2,
-        pegReference: 1,
-        reason: "confirmation-window+extreme-move+native-origin",
-      },
-    });
-    expect(decision.diagnostics).toEqual([
-      {
-        level: "log",
-        message: "[depeg] Pending native-peg confirmation for BRZ: -8000bps against BRL quote",
-      },
-    ]);
   });
 
   it("keeps an existing event open when the native quote still supports it", () => {

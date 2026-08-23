@@ -5,28 +5,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   const fetchOnchainRawCall = vi.fn();
   return {
     ...actual,
     fetchOnchainUint256,
     fetchOnchainRawCall,
-    makeOnchainCallers: vi.fn((input: { chain: string; rpcMode: string }, options: Record<string, unknown>) => ({
-      uint256: (contract: string, data: string) => fetchOnchainUint256({
-        contract,
-        data,
-        chain: input.chain,
-        rpcMode: input.rpcMode,
-        ...options,
-      }),
-      raw: (contract: string, data: string) => fetchOnchainRawCall({
-        contract,
-        data,
-        chain: input.chain,
-        rpcMode: input.rpcMode,
-        ...options,
-      }),
-    })),
+    makeOnchainCallers: makeOnchainCallersMock({
+      uint256: fetchOnchainUint256,
+      raw: fetchOnchainRawCall,
+    }),
   };
 });
 

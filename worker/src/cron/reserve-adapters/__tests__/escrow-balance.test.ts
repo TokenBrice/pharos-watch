@@ -6,39 +6,17 @@ import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
   const fetchOnchainUint256 = vi.fn();
   const fetchOnchainRawCall = vi.fn();
   return {
     ...actual,
     fetchOnchainRawCall,
     fetchOnchainUint256,
-    makeOnchainCallers: vi.fn((
-      input: { chain?: string; rpcMode?: unknown },
-      options: { signal: AbortSignal; ctx?: unknown; rpcUrl?: string; fallbackRpcUrl?: string },
-    ) => ({
-      uint256: (contract: string, data: string) =>
-        fetchOnchainUint256({
-          contract,
-          data,
-          signal: options.signal,
-          ctx: options.ctx,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-          rpcUrl: options.rpcUrl,
-          fallbackRpcUrl: options.fallbackRpcUrl,
-        }),
-      raw: (contract: string, data: string) =>
-        fetchOnchainRawCall({
-          contract,
-          data,
-          signal: options.signal,
-          ctx: options.ctx,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-          rpcUrl: options.rpcUrl,
-          fallbackRpcUrl: options.fallbackRpcUrl,
-        }),
-    })),
+    makeOnchainCallers: makeOnchainCallersMock({
+      uint256: fetchOnchainUint256,
+      raw: fetchOnchainRawCall,
+    }),
   };
 });
 

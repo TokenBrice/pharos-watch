@@ -6,6 +6,54 @@ import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { initMetrics } from "../pool-helpers";
 import { buildChainAddressKey } from "../token-resolution";
 
+const SOLANA_POOL_ADDRESS = "11111111111111111111111111111111";
+const SOLANA_USDC_MINT = "UsdcMint";
+const SOLANA_USDT_MINT = "UsdtMint";
+
+function makeSolanaDirectPool(overrides: Partial<DexApiPool> = {}): DexApiPool {
+  return {
+    source: "raydium",
+    chain: "solana",
+    poolAddress: SOLANA_POOL_ADDRESS,
+    poolType: "raydium-amm",
+    tokens: [
+      { address: SOLANA_USDC_MINT, symbol: "USDC", decimals: 6 },
+      { address: SOLANA_USDT_MINT, symbol: "USDT", decimals: 6 },
+    ],
+    price: 1,
+    tvlUsd: 4_000_000,
+    volume24hUsd: 100_000,
+    feeRate: 0.0025,
+    balances: [2_000_000, 2_000_000],
+    balancesNormalized: true,
+    ...overrides,
+  };
+}
+
+type DirectApiScenarioOverrides = Partial<Parameters<typeof integrateDirectApiLiquidityPhase>[0]>;
+
+async function runDirectApiScenario(overrides: DirectApiScenarioOverrides = {}) {
+  return integrateDirectApiLiquidityPhase({
+    directApiPools: [makeSolanaDirectPool()],
+    knownPoolIndex: createKnownPoolIdentityIndex(),
+    contractMetaByChainAddress: new Map(),
+    metrics: new Map(),
+    priceObservations: new Map(),
+    chainAddressToId: new Map([
+      [`solana:${SOLANA_USDC_MINT}`, "usdc-circle"],
+      [`solana:${SOLANA_USDT_MINT}`, "usdt-tether"],
+    ]),
+    symbolToChainScopedIds: new Map(),
+    symbolToIds: new Map(),
+    validationReferences: {} as never,
+    stablecoinPriceById: new Map([
+      ["usdc-circle", 1],
+      ["usdt-tether", 1],
+    ]),
+    ...overrides,
+  });
+}
+
 describe("integrateDirectApiLiquidityPhase", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -358,14 +406,13 @@ describe("integrateDirectApiLiquidityPhase", () => {
   });
 
   it("enriches an exact primary duplicate with supported execution evidence without double counting", async () => {
-    const poolAddress = "11111111111111111111111111111111";
     const knownPoolIndex = createKnownPoolIdentityIndex();
-    knownPoolIndex.exactKeys.add(`solana:${poolAddress}`);
+    knownPoolIndex.exactKeys.add(`solana:${SOLANA_POOL_ADDRESS}`);
     const usdcMetrics = initMetrics("usdc-circle", "USDC");
     usdcMetrics.totalTvlUsd = 4_000_000;
     usdcMetrics.poolCount = 1;
     usdcMetrics.topPools.push({
-      poolId: `solana:${poolAddress}`,
+      poolId: `solana:${SOLANA_POOL_ADDRESS}`,
       project: "raydium",
       chain: "Solana",
       tvlUsd: 4_000_000,
@@ -376,42 +423,10 @@ describe("integrateDirectApiLiquidityPhase", () => {
     });
     const metrics = new Map([["usdc-circle", usdcMetrics]]);
     const priceObservations = new Map();
-    const directApiPools: DexApiPool[] = [
-      {
-        source: "raydium",
-        chain: "solana",
-        poolAddress,
-        poolType: "raydium-amm",
-        tokens: [
-          { address: "UsdcMint", symbol: "USDC", decimals: 6 },
-          { address: "UsdtMint", symbol: "USDT", decimals: 6 },
-        ],
-        price: 1,
-        tvlUsd: 4_000_000,
-        volume24hUsd: 100_000,
-        feeRate: 0.0025,
-        balances: [2_000_000, 2_000_000],
-        balancesNormalized: true,
-      },
-    ];
-
-    const result = await integrateDirectApiLiquidityPhase({
-      directApiPools,
+    const result = await runDirectApiScenario({
       knownPoolIndex,
-      contractMetaByChainAddress: new Map(),
       metrics,
       priceObservations,
-      chainAddressToId: new Map([
-        ["solana:UsdcMint", "usdc-circle"],
-        ["solana:UsdtMint", "usdt-tether"],
-      ]),
-      symbolToChainScopedIds: new Map(),
-      symbolToIds: new Map(),
-      validationReferences: {} as never,
-      stablecoinPriceById: new Map([
-        ["usdc-circle", 1],
-        ["usdt-tether", 1],
-      ]),
     });
 
     expect(result.directApiDedupSkippedByAddress).toBe(1);
@@ -426,7 +441,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       expect.objectContaining({
         price: 1,
         tvl: 4_000_000,
-        poolKey: `solana:${poolAddress}`,
+        poolKey: `solana:${SOLANA_POOL_ADDRESS}`,
         identityConfidence: "exact",
         sourceFamily: "direct_api",
       }),
@@ -434,53 +449,22 @@ describe("integrateDirectApiLiquidityPhase", () => {
   });
 
   it("drops exact duplicate evidence when no matching primary top-pool row was counted", async () => {
-    const poolAddress = "11111111111111111111111111111111";
     const knownPoolIndex = createKnownPoolIdentityIndex();
-    knownPoolIndex.exactKeys.add(`solana:${poolAddress}`);
+    knownPoolIndex.exactKeys.add(`solana:${SOLANA_POOL_ADDRESS}`);
     const metrics = new Map();
     const priceObservations = new Map();
 
-    const result = await integrateDirectApiLiquidityPhase({
-      directApiPools: [
-        {
-          source: "raydium",
-          chain: "solana",
-          poolAddress,
-          poolType: "raydium-amm",
-          tokens: [
-            { address: "UsdcMint", symbol: "USDC", decimals: 6 },
-            { address: "UsdtMint", symbol: "USDT", decimals: 6 },
-          ],
-          price: 1,
-          tvlUsd: 4_000_000,
-          volume24hUsd: 100_000,
-          feeRate: 0.0025,
-          balances: [2_000_000, 2_000_000],
-          balancesNormalized: true,
-        },
-      ],
+    const result = await runDirectApiScenario({
       knownPoolIndex,
-      contractMetaByChainAddress: new Map(),
       metrics,
       priceObservations,
-      chainAddressToId: new Map([
-        ["solana:UsdcMint", "usdc-circle"],
-        ["solana:UsdtMint", "usdt-tether"],
-      ]),
-      symbolToChainScopedIds: new Map(),
-      symbolToIds: new Map(),
-      validationReferences: {} as never,
-      stablecoinPriceById: new Map([
-        ["usdc-circle", 1],
-        ["usdt-tether", 1],
-      ]),
     });
 
     expect(result.directApiDedupSkippedByAddress).toBe(1);
     expect(metrics.size).toBe(0);
     expect(priceObservations.get("usdc-circle")).toEqual([
       expect.objectContaining({
-        poolKey: `solana:${poolAddress}`,
+        poolKey: `solana:${SOLANA_POOL_ADDRESS}`,
         identityConfidence: "exact",
         sourceFamily: "direct_api",
       }),
@@ -488,14 +472,13 @@ describe("integrateDirectApiLiquidityPhase", () => {
   });
 
   it("does not overwrite retained exact-pool evidence when protocol compatibility fails", async () => {
-    const poolAddress = "11111111111111111111111111111111";
     const knownPoolIndex = createKnownPoolIdentityIndex();
-    knownPoolIndex.exactKeys.add(`solana:${poolAddress}`);
+    knownPoolIndex.exactKeys.add(`solana:${SOLANA_POOL_ADDRESS}`);
     const usdcMetrics = initMetrics("usdc-circle", "USDC");
     usdcMetrics.totalTvlUsd = 4_000_000;
     usdcMetrics.poolCount = 1;
     usdcMetrics.topPools.push({
-      poolId: `solana:${poolAddress}`,
+      poolId: `solana:${SOLANA_POOL_ADDRESS}`,
       project: "retained-primary-protocol",
       chain: "Solana",
       tvlUsd: 4_000_000,
@@ -532,40 +515,10 @@ describe("integrateDirectApiLiquidityPhase", () => {
     });
     const metrics = new Map([["usdc-circle", usdcMetrics]]);
 
-    await integrateDirectApiLiquidityPhase({
-      directApiPools: [
-        {
-          source: "raydium",
-          chain: "solana",
-          poolAddress,
-          poolType: "raydium-amm",
-          tokens: [
-            { address: "UsdcMint", symbol: "USDC", decimals: 6 },
-            { address: "UsdtMint", symbol: "USDT", decimals: 6 },
-          ],
-          price: 1,
-          tvlUsd: 4_000_000,
-          volume24hUsd: 100_000,
-          feeRate: 0.0025,
-          balances: [2_000_000, 2_000_000],
-          balancesNormalized: true,
-        },
-      ],
+    await runDirectApiScenario({
       knownPoolIndex,
-      contractMetaByChainAddress: new Map(),
       metrics,
       priceObservations: new Map(),
-      chainAddressToId: new Map([
-        ["solana:UsdcMint", "usdc-circle"],
-        ["solana:UsdtMint", "usdt-tether"],
-      ]),
-      symbolToChainScopedIds: new Map(),
-      symbolToIds: new Map(),
-      validationReferences: {} as never,
-      stablecoinPriceById: new Map([
-        ["usdc-circle", 1],
-        ["usdt-tether", 1],
-      ]),
     });
 
     expect(usdcMetrics.totalTvlUsd).toBe(4_000_000);

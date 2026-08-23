@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { type BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
+import type { BlacklistRow } from "../../../lib/blacklist/shared";
+import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
@@ -75,6 +77,20 @@ function makePriceDb(price: number | null, updatedAt = Math.floor(Date.now() / 1
   } as unknown as D1Database;
 }
 
+type BlacklistRowOverrides = NonNullable<Parameters<typeof makeBlacklistRow>[0]>;
+
+function makeCacheRow(overrides: BlacklistRowOverrides = {}): BlacklistRow {
+  const row = makeBlacklistRow(overrides);
+  return {
+    ...row,
+    methodology_version: row.methodology_version ?? "3.1",
+    amount_attempt_count: row.amount_attempt_count ?? 0,
+    amount_last_attempted_at: row.amount_last_attempted_at ?? null,
+    amount_last_error_class: row.amount_last_error_class ?? null,
+    amount_last_provider: row.amount_last_provider ?? null,
+  };
+}
+
 describe("syncCurrentBalanceCacheForRows", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -85,11 +101,8 @@ describe("syncCurrentBalanceCacheForRows", () => {
       {} as D1Database,
       ethereumConfig,
       [
-        {
+        makeCacheRow({
           id: "1",
-          stablecoin: "USDT",
-          chain_id: "ethereum",
-          chain_name: "Ethereum",
           event_type: "unblacklist",
           address: "0x111",
           amount_native: null,
@@ -104,13 +117,9 @@ describe("syncCurrentBalanceCacheForRows", () => {
           config_key: ethereumConfig.configKey,
           event_signature: "RemovedBlackList(address)",
           event_topic0: "0xtopic",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
           explorer_tx_url: "https://etherscan.io/tx/0xtx",
           explorer_address_url: "https://etherscan.io/address/0x111",
-        },
+        }),
       ],
       makeContext(),
     );
@@ -129,11 +138,8 @@ describe("syncCurrentBalanceCacheForRows", () => {
       {} as D1Database,
       ethereumConfig,
       [
-        {
+        makeCacheRow({
           id: "2",
-          stablecoin: "USDT",
-          chain_id: "ethereum",
-          chain_name: "Ethereum",
           event_type: "destroy",
           address: "0x222",
           amount_native: 500,
@@ -148,13 +154,9 @@ describe("syncCurrentBalanceCacheForRows", () => {
           config_key: ethereumConfig.configKey,
           event_signature: "DestroyedBlackFunds(address,uint256)",
           event_topic0: "0xtopic",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
           explorer_tx_url: "https://etherscan.io/tx/0xdestroy",
           explorer_address_url: "https://etherscan.io/address/0x222",
-        },
+        }),
       ],
       makeContext(),
     );
@@ -188,12 +190,8 @@ describe("syncCurrentBalanceCacheForRows", () => {
       {} as D1Database,
       ethereumConfig,
       [
-        {
+        makeCacheRow({
           id: "3",
-          stablecoin: "USDT",
-          chain_id: "ethereum",
-          chain_name: "Ethereum",
-          event_type: "blacklist",
           address: "0x333",
           amount_native: null,
           amount_usd_at_event: null,
@@ -207,13 +205,9 @@ describe("syncCurrentBalanceCacheForRows", () => {
           config_key: ethereumConfig.configKey,
           event_signature: "AddedBlackList(address)",
           event_topic0: "0xtopic",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
           explorer_tx_url: "https://etherscan.io/tx/0xblacklist",
           explorer_address_url: "https://etherscan.io/address/0x333",
-        },
+        }),
       ],
       makeContext(),
     );
@@ -242,17 +236,13 @@ describe("syncCurrentBalanceCacheForRows", () => {
   it("captures a same-batch blacklist snapshot before a later release", async () => {
     vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(875);
 
-    const blacklistRow = {
+    const blacklistRow = makeCacheRow({
       id: "3c-blacklist",
-      stablecoin: "USDT" as const,
-      chain_id: "ethereum",
-      chain_name: "Ethereum",
-      event_type: "blacklist" as const,
       address: "0x333c",
       amount_native: null,
       amount_usd_at_event: null,
-      amount_source: "unavailable" as const,
-      amount_status: "recoverable_pending" as const,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
       tx_hash: "0xblacklist-transient",
       block_number: 3,
       timestamp: 12,
@@ -261,13 +251,9 @@ describe("syncCurrentBalanceCacheForRows", () => {
       config_key: ethereumConfig.configKey,
       event_signature: "AddedBlackList(address)",
       event_topic0: "0xtopic",
-      amount_attempt_count: 0,
-      amount_last_attempted_at: null,
-      amount_last_error_class: null,
-      amount_last_provider: null,
       explorer_tx_url: "https://etherscan.io/tx/0xblacklist-transient",
       explorer_address_url: "https://etherscan.io/address/0x333c",
-    };
+    });
     const releaseRow = {
       ...blacklistRow,
       id: "3c-unblacklist",
@@ -311,12 +297,8 @@ describe("syncCurrentBalanceCacheForRows", () => {
       {} as D1Database,
       ethereumConfig,
       [
-        {
+        makeCacheRow({
           id: "3b",
-          stablecoin: "USDT",
-          chain_id: "ethereum",
-          chain_name: "Ethereum",
-          event_type: "blacklist",
           address: "0x333",
           amount_native: 1250,
           amount_usd_at_event: 1250,
@@ -330,13 +312,9 @@ describe("syncCurrentBalanceCacheForRows", () => {
           config_key: ethereumConfig.configKey,
           event_signature: "AddedBlackList(address)",
           event_topic0: "0xtopic",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
           explorer_tx_url: "https://etherscan.io/tx/0xblacklist-fail",
           explorer_address_url: "https://etherscan.io/address/0x333",
-        },
+        }),
       ],
       makeContext(),
     );
@@ -407,12 +385,8 @@ describe("syncCurrentBalanceCacheForRows", () => {
       {} as D1Database,
       ethereumConfig, // USDT — not gold
       [
-        {
+        makeCacheRow({
           id: "4",
-          stablecoin: "USDT",
-          chain_id: "ethereum",
-          chain_name: "Ethereum",
-          event_type: "blacklist",
           address: "0x444",
           amount_native: 5000,
           amount_usd_at_event: 5000,
@@ -426,13 +400,9 @@ describe("syncCurrentBalanceCacheForRows", () => {
           config_key: ethereumConfig.configKey,
           event_signature: "AddedBlackList(address)",
           event_topic0: "0xtopic",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
           explorer_tx_url: "https://etherscan.io/tx/0xblacklist2",
           explorer_address_url: "https://etherscan.io/address/0x444",
-        },
+        }),
       ],
       makeContext(),
     );
@@ -460,12 +430,10 @@ describe("syncCurrentBalanceCacheForRows", () => {
       makePriceDb(0.0125),
       a7a5Config,
       [
-        {
+        makeCacheRow({
           id: "5",
           stablecoin: "A7A5",
           chain_id: "ethereum",
-          chain_name: "Ethereum",
-          event_type: "blacklist",
           address: "0x555",
           amount_native: null,
           amount_usd_at_event: null,
@@ -479,13 +447,9 @@ describe("syncCurrentBalanceCacheForRows", () => {
           config_key: a7a5Config.configKey,
           event_signature: "Blacklisted(address)",
           event_topic0: "0xtopic",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
           explorer_tx_url: "https://etherscan.io/tx/0xa7a5",
           explorer_address_url: "https://etherscan.io/address/0x555",
-        },
+        }),
       ],
       makeContext(),
     );
@@ -516,12 +480,10 @@ describe("syncCurrentBalanceCacheForRows", () => {
       makePriceDb(0.0125, staleUpdatedAt),
       a7a5Config,
       [
-        {
+        makeCacheRow({
           id: "6",
           stablecoin: "A7A5",
           chain_id: "ethereum",
-          chain_name: "Ethereum",
-          event_type: "blacklist",
           address: "0x666",
           amount_native: null,
           amount_usd_at_event: null,
@@ -535,13 +497,9 @@ describe("syncCurrentBalanceCacheForRows", () => {
           config_key: a7a5Config.configKey,
           event_signature: "Blacklisted(address)",
           event_topic0: "0xtopic",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
           explorer_tx_url: "https://etherscan.io/tx/0xa7a5-stale",
           explorer_address_url: "https://etherscan.io/address/0x666",
-        },
+        }),
       ],
       makeContext(),
     );
