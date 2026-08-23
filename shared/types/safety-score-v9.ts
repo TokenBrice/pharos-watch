@@ -192,6 +192,19 @@ export const V9StructuralSignalSchema = z
     pricedInPillar: V9QualityPillarSchema.optional(),
     failureDomainKeys: z.array(z.string().min(1)).default([]),
     evidence: z.array(V9EvidenceReferenceSchema).default([]),
+    /**
+     * A signal already priced inside a pillar normally needs no second charge:
+     * the pillar result IS the causal account. This marker is the reviewed
+     * assertion that the ceiling covers a residual the pillar does not measure,
+     * so the same fact may legitimately both lower a pillar and impose a hard
+     * cap. It is required for a pillar-priced signal to reach the cap ladder
+     * (`structuralSignalNeedsHardCap`), which makes every surviving double
+     * charge explicit and reviewable instead of implicit.
+     */
+    additionalHardCapRisk: z
+      .object({ reviewed: z.literal(true), reason: z.string().min(1) })
+      .strict()
+      .optional(),
   })
   .strict()
   .superRefine((signal, ctx) => {

@@ -312,6 +312,24 @@ function structuralSignalFromControl(
     ...(economicLossScope === "deployment" && failure.materialSharePct !== null
       ? {}
       : { pricedInPillar: "control" as const }),
+    // A control failure that can impair the whole claim is priced twice today:
+    // once inside the control pillar, and again as a hard ceiling. The pillar is
+    // compensable by construction, so a strong backing and exit result can lift
+    // an asset with an unbounded mint well above the ceiling; the cap asserts the
+    // residual that compensation cannot reach. That residual is real, but it has
+    // never been stated per asset, so `structuralSignalNeedsHardCap` now requires
+    // it explicitly and this marker grandfathers the existing global-claim
+    // control ceilings unchanged while recording that each one is still owed a
+    // review. Dropping a marker is the deliberate act that releases its cap.
+    ...(economicLossScope === "global-claim" && responsibility === "measured-adverse"
+      ? {
+          additionalHardCapRisk: {
+            reviewed: true as const,
+            reason:
+              "Provisional: a global-claim control failure is compensable inside the control pillar but not at the whole-asset level. Grandfathered pending per-asset review of the residual.",
+          },
+        }
+      : {}),
     failureDomainKeys,
     evidence: [],
   };

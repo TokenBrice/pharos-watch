@@ -299,6 +299,14 @@ function structuralSignalNeedsHardCap(signal: V9StructuralSignal): boolean {
     return signal.responsibility === undefined || signal.responsibility === "measured-adverse";
   }
   if (signal.responsibility !== "measured-adverse") return false;
+  // A signal already priced inside a pillar has its causal account there. Letting
+  // it also impose a whole-asset ceiling charges one fact twice, so the second
+  // charge must be an explicit reviewed assertion that the ceiling covers a
+  // residual the pillar cannot express. Without the marker a pillar-priced signal
+  // shapes its pillar and stops there.
+  if (signal.pricedInPillar !== undefined && signal.additionalHardCapRisk === undefined) {
+    return false;
+  }
   // Reserve and access facts are already owned by backing/exit. A reserve
   // condition that can impair the whole claim must be emitted as global-claim;
   // treating every reserve slice as global charges the same exposure twice.
