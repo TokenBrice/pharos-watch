@@ -57,6 +57,8 @@ Exit selects the strongest eligible route as primary. An independent secondary r
 
 Serial dependencies remain binding because the child cannot diversify away the parent claim. Basket dependencies contribute at their live exposure weights. Wrapper-local risks are evaluated separately from the parent asset so a wrapper cannot inherit safety it does not possess. Parent-cap form follows the wrapper relationship rather than the product label: a reviewed third-party risk-absorption wrapper uses the existing strategy-vault treatment, while a wrapper operated by the parent protocol uses the existing native-staked treatment.
 
+Wrapper allocation reviews are fixed-block, expiry-bounded facts rather than live compilation reads. The curated row records the allocation calls and factual posture (fully on-chain custody, local leverage band, and capital-use class); the fact producer maps those fields onto the existing wrapper ladder. Fully on-chain allocators have no applicable off-chain custody/escrow fact, while their lending, strategy reuse, or loss-absorption exposure remains independently assessed. Direct serial wrappers keep parent custody and reuse in the parent dependency instead of duplicating it locally.
+
 ### Cap limits and scope gates
 
 The `signalLimits` table is not a table of whole-score ceilings. Each rung has one of three roles, selected by the signal's `economicLossScope` and pillar pricing:
