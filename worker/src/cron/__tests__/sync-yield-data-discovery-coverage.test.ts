@@ -26,6 +26,7 @@ import {
   fixturePublicationModule,
   type ChainRpcConfig,
 } from "./sync-yield-data.test-support";
+import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -34,10 +35,8 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield:supplemental-sources:v1") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -63,11 +62,7 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+          }, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -91,10 +86,8 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield:supplemental-sources:v1:morpho") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -120,23 +113,9 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "yield:supplemental-sources:v1:beefy") {
-        return {
-          value: "{bad json",
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "yield:supplemental-sources:v1") {
-        return {
-          value: "{bad aggregate",
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+          }, nowSec),
+      "yield:supplemental-sources:v1:beefy": cacheRow("{bad json", nowSec),
+      "yield:supplemental-sources:v1": cacheRow("{bad aggregate", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -156,10 +135,8 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield:supplemental-sources:v1:morpho") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -185,13 +162,8 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "yield:supplemental-sources:v1") {
-        return {
-          value: JSON.stringify({
+          }, nowSec),
+      "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -236,11 +208,7 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+          }, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -269,10 +237,8 @@ describe("syncYieldData", () => {
     const poolMap = fixtureYieldConfigModule.YIELD_POOL_MAP as typeof fixtureYieldConfigModule.YIELD_POOL_MAP;
     poolMap["100"] = "pool-sdai-native";
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-native",
               chain: "Ethereum",
@@ -287,13 +253,8 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "yield:supplemental-sources:v1") {
-        return {
-          value: JSON.stringify({
+          ], nowSec),
+      "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -319,17 +280,8 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "stablecoins") {
-        return {
-          value: JSON.stringify([{ id: "100", circulating: { peggedUSD: 5_000_000_000 } }]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      }, nowSec),
+      stablecoins: cacheRow([{ id: "100", circulating: { peggedUSD: 5_000_000_000 } }], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -360,10 +312,8 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield:supplemental-sources:v1") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -408,17 +358,8 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "stablecoins") {
-        return {
-          value: JSON.stringify([{ id: "usdc-circle", circulating: { peggedUSD: 10_000_000_000 } }]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      }, nowSec),
+      stablecoins: cacheRow([{ id: "usdc-circle", circulating: { peggedUSD: 10_000_000_000 } }], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -444,10 +385,8 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield:supplemental-sources:v1") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -473,11 +412,7 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      }, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -497,10 +432,8 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "stablecoins") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      stablecoins: cacheRow({
             peggedAssets: [
               {
                 id: "usdc-circle",
@@ -510,13 +443,8 @@ describe("syncYieldData", () => {
                 circulating: { peggedUSD: 20_000_000_000 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "yield:supplemental-sources:v1") {
-        return {
-          value: JSON.stringify({
+      }, nowSec),
+      "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -542,11 +470,7 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      }, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -575,10 +499,8 @@ describe("syncYieldData", () => {
       scale: 1e18,
     } as never);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield:supplemental-sources:v1") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
@@ -604,13 +526,8 @@ describe("syncYieldData", () => {
                 },
               },
             ],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "yield:onchain-health:v1") {
-        return {
-          value: JSON.stringify({
+      }, nowSec),
+      "yield:onchain-health:v1": cacheRow({
             version: 1,
             consecutiveAllFailRuns: 2,
             consecutiveMaskedAllFailRuns: 2,
@@ -620,11 +537,7 @@ describe("syncYieldData", () => {
             lastSuccessAt: null,
             lastSkippedAt: null,
             lastFailureMissingIds: [],
-          }),
-          updatedAt: nowSec - 60,
-        };
-      }
-      return null;
+      }, nowSec - 60),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     const fetchSpy = fixtureMockFetch([]);
@@ -660,10 +573,8 @@ describe("syncYieldData", () => {
       scale: 1e18,
     } as never);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-placeholder",
               chain: "Ethereum",
@@ -677,26 +588,16 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec - 60,
-        };
-      }
-      if (key === "risk_free_rate") {
-        return {
-          value: JSON.stringify({
+      ], nowSec - 60),
+      risk_free_rate: cacheRow({
             rate: 4.0,
             source: "fred",
             fetchedAt: nowSec - 3600,
             recordDate: "2025-06-15",
             isFallback: false,
             fallbackMode: null,
-          }),
-          updatedAt: nowSec - 3600,
-        };
-      }
-      if (key === "yield:onchain-health:v1") {
-        return {
-          value: JSON.stringify({
+      }, nowSec - 3600),
+      "yield:onchain-health:v1": cacheRow({
             version: 1,
             consecutiveAllFailRuns: 2,
             consecutiveMaskedAllFailRuns: 2,
@@ -706,11 +607,7 @@ describe("syncYieldData", () => {
             lastSuccessAt: null,
             lastSkippedAt: null,
             lastFailureMissingIds: [],
-          }),
-          updatedAt: nowSec - 60,
-        };
-      }
-      return null;
+      }, nowSec - 60),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     const fetchSpy = fixtureMockFetch([]);
@@ -738,10 +635,8 @@ describe("syncYieldData", () => {
   it("applies deterministic auto-discovery override for U (id 336)", async () => {
     const db = makeDb();
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-u-venus",
               chain: "BSC",
@@ -756,11 +651,7 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: Math.floor(Date.now() / 1000),
-        };
-      }
-      return null;
+      ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -835,10 +726,8 @@ describe("syncYieldData", () => {
       ]),
     } as never);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-xaut-yo",
               chain: "Ethereum",
@@ -853,17 +742,8 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: ["0x68749665ff8d2d112fa859aa293f07a622782f38"],
             },
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      if (key === "stablecoins") {
-        return {
-          value: JSON.stringify([{ id: "xaut-tether", circulating: { peggedGOLD: 1_000_000_000 } }]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      ], nowSec),
+      stablecoins: cacheRow([{ id: "xaut-tether", circulating: { peggedGOLD: 1_000_000_000 } }], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -887,10 +767,8 @@ describe("syncYieldData", () => {
   it("keeps deterministic override quality-gated (min TVL/APY/allowlist still apply)", async () => {
     const db = makeDb();
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-u-venus",
               chain: "BSC",
@@ -905,11 +783,7 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: Math.floor(Date.now() / 1000),
-        };
-      }
-      return null;
+      ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -1070,7 +944,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
 
     // No cached pools
-    vi.mocked(fixtureGetCache).mockResolvedValue(null);
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {});
 
     // DL yields API returns 500
     fixtureMockFetch([{ match: "yields.llama.fi", body: { error: "Internal Server Error" }, status: 500 }]);
@@ -1087,7 +961,7 @@ describe("syncYieldData", () => {
   it("marks the run degraded when the direct DL yields fetch returns an invalid payload", async () => {
     const db = makeDb();
 
-    vi.mocked(fixtureGetCache).mockResolvedValue(null);
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {});
     fixtureMockFetch([{ match: "yields.llama.fi", body: { nope: [] }, status: 200 }]);
 
     const result = await fixtureSyncYieldData(db);
@@ -1138,16 +1012,10 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield-rankings") {
-        return {
-          value: JSON.stringify({
-            rankings: Array.from({ length: 10 }, () => ({ id: "100" })),
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield-rankings": cacheRow({
+        rankings: Array.from({ length: 10 }, () => ({ id: "100" })),
+      }, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -1170,16 +1038,10 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield-rankings") {
-        return {
-          value: JSON.stringify({
-            rankings: [{ id: "100" }, ...Array.from({ length: 10 }, () => ({ id: "usdc-circle" }))],
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield-rankings": cacheRow({
+        rankings: [{ id: "100" }, ...Array.from({ length: 10 }, () => ({ id: "usdc-circle" }))],
+      }, nowSec),
     });
     fixtureMockFetch([
       {
@@ -1227,16 +1089,10 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield-rankings") {
-        return {
-          value: JSON.stringify({
-            rankings: Array.from({ length: 10 }, (_, index) => ({ id: `legacy-opportunity-${index}` })),
-          }),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield-rankings": cacheRow({
+        rankings: Array.from({ length: 10 }, (_, index) => ({ id: `legacy-opportunity-${index}` })),
+      }, nowSec),
     });
     fixtureMockFetch([
       {
@@ -1280,14 +1136,8 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield-rankings") {
-        return {
-          value: "{not-json",
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield-rankings": cacheRow("{not-json", nowSec),
     });
     fixtureMockFetch([
       {
@@ -1389,7 +1239,7 @@ describe("syncYieldData", () => {
 
   it("skips yield-rankings cache write when response payload fails schema validation", async () => {
     const db = makeBrokenYieldRankingsDb();
-    vi.mocked(fixtureGetCache).mockResolvedValue(null);
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {});
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.spyOn(fixturePublicationModule, "validateYieldRankingsPayloadForPublish").mockResolvedValue({
       ok: false,

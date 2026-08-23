@@ -191,6 +191,7 @@ import * as yieldHelpersModule from "../yield-helpers";
 import * as publicationModule from "../yield-sync/publication";
 import * as evmRpcModule from "../../lib/evm-rpc";
 import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../../lib/yield-history-cleanup";
+import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 
 const mutableActiveStablecoins = ACTIVE_STABLECOINS as typeof ACTIVE_STABLECOINS extends readonly (infer T)[]
   ? T[]
@@ -346,21 +347,17 @@ function makeBrokenYieldRankingsDb() {
 
 function mockHealthyRiskFreeRateCache() {
   const nowSec = Math.floor(Date.now() / 1000);
-  vi.mocked(getCache).mockImplementation(async (_db, key) => {
-    if (key === "risk_free_rate") {
-      return {
-        value: JSON.stringify({
+  installYieldCacheReader(vi.mocked(getCache), {}, {
+    fallback: (key) => key === "risk_free_rate"
+      ? cacheRow({
           rate: 4.0,
           source: "fred",
           fetchedAt: nowSec - 3600,
           recordDate: "2025-06-15",
           isFallback: false,
           fallbackMode: null,
-        }),
-        updatedAt: nowSec - 3600,
-      };
-    }
-    return null;
+        }, nowSec - 3600)
+      : null,
   });
 }
 function resetSyncYieldDataTest() {

@@ -22,6 +22,7 @@ import {
   fixtureYIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
   type CronProgressUpdate,
 } from "./sync-yield-data.test-support";
+import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 
 function makePublicationCacheDb(existingIds: Record<string, unknown>[] = []) {
   return fixtureMockD1([
@@ -87,11 +88,8 @@ describe("syncYieldData", () => {
   it("loads stablecoin supply once and requests the published safety generation", async () => {
     const db = makePublicationCacheDb();
     const updatedAt = Math.floor(Date.now() / 1000);
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "stablecoins") {
-        return { value: makeStablecoinsCacheValue(), updatedAt };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      stablecoins: cacheRow(makeStablecoinsCacheValue(), updatedAt),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -204,18 +202,12 @@ describe("syncYieldData", () => {
     const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
       progressUpdates.push(update);
     });
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === fixtureYIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY) {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      [fixtureYIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY]: cacheRow({
             reason: "history-cleanup",
             operator: "ops",
             pausedAt: Math.floor(Date.now() / 1000) - 60,
-          }),
-          updatedAt: Math.floor(Date.now() / 1000) - 60,
-        };
-      }
-      return null;
+          }, Math.floor(Date.now() / 1000) - 60),
     });
 
     const result = await fixtureSyncYieldData(db, undefined, undefined, undefined, undefined, reportProgress);
@@ -327,18 +319,12 @@ describe("syncYieldData", () => {
   it("returns a degraded no-op result while the cleanup writer pause is armed", async () => {
     const db = makePublicationCacheDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "yield-history-cleanup:writer-pause") {
-        return {
-          value: JSON.stringify({
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "yield-history-cleanup:writer-pause": cacheRow({
             reason: "yield-history-cleanup",
             pausedAt: nowSec - 60,
             operator: "tester",
-          }),
-          updatedAt: nowSec - 60,
-        };
-      }
-      return null;
+          }, nowSec - 60),
     });
 
     const result = await fixtureSyncYieldData(db);
@@ -513,10 +499,8 @@ describe("syncYieldData", () => {
     const db = makePublicationCacheDb();
 
     // Simulate cached pools from DEX sync
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-cached",
               chain: "Ethereum",
@@ -531,11 +515,7 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: Math.floor(Date.now() / 1000),
-        };
-      }
-      return null;
+          ], Math.floor(Date.now() / 1000)),
     });
 
     // No DL yields API call should happen (pools already cached)

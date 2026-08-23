@@ -1,16 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
+import {
+  buildChainSupplySnapshotCompletionMarker,
+  makeChainSupplySnapshotDb,
+  makeSnapshotAsset,
+} from "./snapshot-cron.test-support";
 
-function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
-  return createMockD1([
-    ...tables,
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "DELETE FROM chain_supply_history", rows: [] },
-    { match: "INSERT OR REPLACE INTO chain_supply_history", rows: [] },
-  ]);
-}
+const mockD1 = makeChainSupplySnapshotDb;
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
   stablecoins: [{ id: "usdt-tether" }, { id: "usdc-circle" }],
@@ -28,35 +24,16 @@ vi.mock("@shared/lib/supply", () => ({
 }));
 
 import { snapshotChainSupply } from "../snapshot-chain-supply";
-import { buildSupplySnapshotCoverageExpectation } from "../../lib/supply-snapshot-completion";
 import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
 
 const DEFAULT_REQUIRED_IDS = ["usdt-tether", "usdc-circle"] as const;
 
-function completionMarker(params: {
-  snapshotDate: number;
-  requiredIds?: readonly string[];
-  appliedWaivers?: readonly StablecoinPublicationWaiver[];
-  ownedRowIds?: readonly string[];
-  writtenChains?: number;
-}): string {
-  const requiredIds = params.requiredIds ?? DEFAULT_REQUIRED_IDS;
-  const expectation = buildSupplySnapshotCoverageExpectation(requiredIds, params.appliedWaivers ?? []);
-  return JSON.stringify({
-    snapshotDate: params.snapshotDate,
-    coverageVersion: 2,
-    expectedActiveCount: expectation.expectedActiveCount,
-    accountedActiveCount: expectation.expectedActiveCount,
-    coverageDigest: expectation.coverageDigest,
-    ownedRowIds: [...(params.ownedRowIds ?? ["bsc", "citrea", "ethereum"])].sort(),
-    writtenChains: params.writtenChains ?? 3,
-  });
-}
+const completionMarker = buildChainSupplySnapshotCompletionMarker;
 
 function completePayload() {
   return {
     peggedAssets: [
-      {
+      makeSnapshotAsset({
         id: "usdt-tether",
         symbol: "USDT",
         name: "Tether",
@@ -84,8 +61,8 @@ function completePayload() {
           },
         },
         chains: ["ethereum", "bsc", "citrea"],
-      },
-      {
+      }),
+      makeSnapshotAsset({
         id: "usdc-circle",
         symbol: "USDC",
         name: "USD Coin",
@@ -94,7 +71,7 @@ function completePayload() {
         circulating: { peggedUSD: 50 },
         chainCirculating: {},
         chains: [],
-      },
+      }),
     ],
   };
 }
@@ -116,14 +93,7 @@ describe("snapshotChainSupply", () => {
   it("normalizes chain display names through the canonical resolver before snapshotting", async () => {
     const payload = completePayload();
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const db = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-      },
-    ]);
+    const db = mockD1({ stablecoins: { assets: payload, updatedAt: freshUpdatedAt } });
     const result = await snapshotChainSupply(db);
     expect(result.itemCount).toBe(3);
 
@@ -139,7 +109,7 @@ describe("snapshotChainSupply", () => {
   it("returns degraded when the stablecoins cache produces no valid chain rows", async () => {
     const payload = {
       peggedAssets: [
-        {
+        makeSnapshotAsset({
           id: "usdt-tether",
           symbol: "USDT",
           name: "Tether",
@@ -148,8 +118,8 @@ describe("snapshotChainSupply", () => {
           circulating: { peggedUSD: 100 },
           chainCirculating: {},
           chains: [],
-        },
-        {
+        }),
+        makeSnapshotAsset({
           id: "usdc-circle",
           symbol: "USDC",
           name: "USD Coin",
@@ -158,18 +128,11 @@ describe("snapshotChainSupply", () => {
           circulating: { peggedUSD: 50 },
           chainCirculating: {},
           chains: [],
-        },
+        }),
       ],
     };
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const db = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-      },
-    ]);
+    const db = mockD1({ stablecoins: { assets: payload, updatedAt: freshUpdatedAt } });
 
     const result = await snapshotChainSupply(db);
 
@@ -182,14 +145,7 @@ describe("snapshotChainSupply", () => {
     const payload = completePayload();
     payload.peggedAssets.pop();
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const db = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-      },
-    ]);
+    const db = mockD1({ stablecoins: { assets: payload, updatedAt: freshUpdatedAt } });
 
     const result = await snapshotChainSupply(db);
 
@@ -214,14 +170,7 @@ describe("snapshotChainSupply", () => {
       expiresAt: Math.floor(Date.now() / 1000) + 600,
     };
     const buildDb = () =>
-      mockD1([
-        {
-          match: "cache",
-          matchBinds: ["stablecoins"],
-          rows: [],
-          first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-        },
-      ]);
+      mockD1({ stablecoins: { assets: payload, updatedAt: freshUpdatedAt } });
 
     const beforeExpiry = await snapshotChainSupply(buildDb(), undefined, {
       nowSec: waiver.expiresAt - 1,
@@ -244,33 +193,15 @@ describe("snapshotChainSupply", () => {
   it("invalidates a same-count active-ID replacement", async () => {
     const snapshotDate = Date.UTC(2026, 2, 16) / 1000;
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const db = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [
-          {
-            key: "stablecoins",
-            value: JSON.stringify(completePayload()),
-            updated_at: freshUpdatedAt,
-          },
-        ],
-      },
-      {
-        match: "cache",
-        matchBinds: ["snapshot-chain-supply:last-write"],
-        rows: [
-          {
-            key: "snapshot-chain-supply:last-write",
-            value: completionMarker({
-              snapshotDate,
-              requiredIds: ["usdt-tether", "eurt-test"],
-            }),
-            updated_at: freshUpdatedAt,
-          },
-        ],
-      },
-    ]);
+    const db = mockD1({
+      stablecoins: { assets: completePayload(), updatedAt: freshUpdatedAt, first: false },
+      cacheRows: [{
+        key: "snapshot-chain-supply:last-write",
+        value: completionMarker({ snapshotDate, requiredIds: ["usdt-tether", "eurt-test"] }),
+        updatedAt: freshUpdatedAt,
+        first: false,
+      }],
+    });
 
     const result = await snapshotChainSupply(db, undefined, { requiredActiveIds: DEFAULT_REQUIRED_IDS });
 
@@ -282,7 +213,7 @@ describe("snapshotChainSupply", () => {
     const snapshotDate = Date.UTC(2026, 2, 16) / 1000;
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const payload = completePayload();
-    payload.peggedAssets.push({
+    payload.peggedAssets.push(makeSnapshotAsset({
       id: "eurt-test",
       symbol: "EURT",
       name: "Euro Test",
@@ -310,25 +241,16 @@ describe("snapshotChainSupply", () => {
         },
       },
       chains: ["ethereum"],
+    }));
+    const db = mockD1({
+      stablecoins: { assets: payload, updatedAt: freshUpdatedAt, first: false },
+      cacheRows: [{
+        key: "snapshot-chain-supply:last-write",
+        value: completionMarker({ snapshotDate }),
+        updatedAt: freshUpdatedAt,
+        first: false,
+      }],
     });
-    const db = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [{ key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt }],
-      },
-      {
-        match: "cache",
-        matchBinds: ["snapshot-chain-supply:last-write"],
-        rows: [
-          {
-            key: "snapshot-chain-supply:last-write",
-            value: completionMarker({ snapshotDate }),
-            updated_at: freshUpdatedAt,
-          },
-        ],
-      },
-    ]);
 
     const result = await snapshotChainSupply(db, undefined, {
       requiredActiveIds: [...DEFAULT_REQUIRED_IDS, "eurt-test"],
@@ -345,7 +267,7 @@ describe("snapshotChainSupply", () => {
     const snapshotDate = Date.UTC(2026, 2, 16) / 1000;
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const payload = completePayload();
-    payload.peggedAssets.push({
+    payload.peggedAssets.push(makeSnapshotAsset({
       id: "eurt-test",
       symbol: "EURT",
       name: "Euro Test",
@@ -354,31 +276,22 @@ describe("snapshotChainSupply", () => {
       circulating: { peggedUSD: 25 },
       chainCirculating: {},
       chains: [],
-    });
+    }));
     const previousIds = [...DEFAULT_REQUIRED_IDS, "eurt-test"];
-    const db = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [{ key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt }],
-      },
-      {
-        match: "cache",
-        matchBinds: ["snapshot-chain-supply:last-write"],
-        rows: [
-          {
-            key: "snapshot-chain-supply:last-write",
-            value: completionMarker({
-              snapshotDate,
-              requiredIds: previousIds,
-              ownedRowIds: ["bsc", "citrea", "ethereum", "polygon"],
-              writtenChains: 4,
-            }),
-            updated_at: freshUpdatedAt,
-          },
-        ],
-      },
-    ]);
+    const db = mockD1({
+      stablecoins: { assets: payload, updatedAt: freshUpdatedAt, first: false },
+      cacheRows: [{
+        key: "snapshot-chain-supply:last-write",
+        value: completionMarker({
+          snapshotDate,
+          requiredIds: previousIds,
+          ownedRowIds: ["bsc", "citrea", "ethereum", "polygon"],
+          writtenChains: 4,
+        }),
+        updatedAt: freshUpdatedAt,
+        first: false,
+      }],
+    });
 
     const result = await snapshotChainSupply(db, undefined, { requiredActiveIds: DEFAULT_REQUIRED_IDS });
 
@@ -413,27 +326,15 @@ describe("snapshotChainSupply", () => {
     ];
 
     for (const currentWaiver of variants) {
-      const db = mockD1([
-        {
-          match: "cache",
-          matchBinds: ["stablecoins"],
-          rows: [{ key: "stablecoins", value: JSON.stringify(payload), updated_at: nowSec - 60 }],
-        },
-        {
-          match: "cache",
-          matchBinds: ["snapshot-chain-supply:last-write"],
-          rows: [
-            {
-              key: "snapshot-chain-supply:last-write",
-              value: completionMarker({
-                snapshotDate,
-                appliedWaivers: [originalWaiver],
-              }),
-              updated_at: nowSec - 60,
-            },
-          ],
-        },
-      ]);
+      const db = mockD1({
+        stablecoins: { assets: payload, updatedAt: nowSec - 60, first: false },
+        cacheRows: [{
+          key: "snapshot-chain-supply:last-write",
+          value: completionMarker({ snapshotDate, appliedWaivers: [originalWaiver] }),
+          updatedAt: nowSec - 60,
+          first: false,
+        }],
+      });
 
       const result = await snapshotChainSupply(db, undefined, {
         nowSec,
@@ -448,29 +349,14 @@ describe("snapshotChainSupply", () => {
     const snapshotDate = Date.UTC(2026, 2, 16) / 1000;
     const payload = completePayload();
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const legacyDb = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-      },
-      {
-        match: "cache",
-        matchBinds: ["snapshot-chain-supply:last-write"],
-        rows: [],
-        first: {
-          key: "snapshot-chain-supply:last-write",
-          value: JSON.stringify({
-            snapshotDate,
-            coverageVersion: 1,
-            expectedActiveCount: 2,
-            accountedActiveCount: 2,
-          }),
-          updated_at: freshUpdatedAt,
-        },
-      },
-    ]);
+    const legacyDb = mockD1({
+      stablecoins: { assets: payload, updatedAt: freshUpdatedAt },
+      cacheRows: [{
+        key: "snapshot-chain-supply:last-write",
+        value: JSON.stringify({ snapshotDate, coverageVersion: 1, expectedActiveCount: 2, accountedActiveCount: 2 }),
+        updatedAt: freshUpdatedAt,
+      }],
+    });
 
     const retried = await snapshotChainSupply(legacyDb);
     expect(retried.itemCount).toBe(3);
@@ -490,24 +376,14 @@ describe("snapshotChainSupply", () => {
       writtenChains: 3,
     });
 
-    const exactDb = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-      },
-      {
-        match: "cache",
-        matchBinds: ["snapshot-chain-supply:last-write"],
-        rows: [],
-        first: {
-          key: "snapshot-chain-supply:last-write",
-          value: completionMarker({ snapshotDate }),
-          updated_at: freshUpdatedAt,
-        },
-      },
-    ]);
+    const exactDb = mockD1({
+      stablecoins: { assets: payload, updatedAt: freshUpdatedAt },
+      cacheRows: [{
+        key: "snapshot-chain-supply:last-write",
+        value: completionMarker({ snapshotDate }),
+        updatedAt: freshUpdatedAt,
+      }],
+    });
     const skipped = await snapshotChainSupply(exactDb);
     expect(JSON.parse(skipped.metadata ?? "{}")).toMatchObject({ reason: "already_written_today" });
     expect(exactDb.getHistory().some((entry) => entry.sql.includes("chain_supply_history"))).toBe(false);
@@ -516,19 +392,14 @@ describe("snapshotChainSupply", () => {
   it("leaves the completion marker retryable when a chain batch write fails", async () => {
     const payload = completePayload();
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const db = mockD1([
-      {
-        match: "cache",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-      },
-      {
+    const db = mockD1({
+      stablecoins: { assets: payload, updatedAt: freshUpdatedAt },
+      tables: [{
         match: "INSERT OR REPLACE INTO chain_supply_history",
         rows: [],
         throwError: new Error("chain write failed"),
-      },
-    ]);
+      }],
+    });
     const batches: D1PreparedStatement[][] = [];
     const originalBatch = db.batch.bind(db);
     db.batch = (async (statements: D1PreparedStatement[]) => {

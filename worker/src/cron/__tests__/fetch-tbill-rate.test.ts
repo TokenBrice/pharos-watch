@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { mockCircuitOutcomeRecord, mockFetchRetry } from "../../test-helpers/cron";
+import {
+  installCacheByKey,
+  installBenchmarkFetch,
+  makeBenchmarkCacheEntry,
+  makeNewCurrencyFetchRoutes,
+  makeRiskFreeRatesCacheRow,
+  makeTbillFetchRoutes,
+  makeUnavailableTbillFetchRoutes,
+  type BenchmarkFetchRoutes,
+} from "./rates-cron.test-support";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
@@ -50,32 +60,7 @@ const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
 </LIST_G_NEW_DATE></G_WEEK_OF_MONTH>
 </LIST_G_WEEK_OF_MONTH></QR_BC_CM>`;
 
-const ECB_ESTR_3M_CSV_SNIPPET = `KEY,FREQ,BENCHMARK_ITEM,DATA_TYPE_EST,TIME_PERIOD,OBS_VALUE,OBS_STATUS,CONF_STATUS,PRE_BREAK_VALUE,COMMENT_OBS,CALCUL_START_DATE,CALCUL_END_DATE,TIME_FORMAT,BREAKS,COMMENT_TS,COMPILING_ORG,COVERAGE,DATA_COMP,DECIMALS,DISS_ORG,PUBL_ECB,PUBL_MU,PUBL_PUBLIC,TIME_PER_COLLECT,TITLE,TITLE_COMPL,UNIT_INDEX_BASE,UNIT_MEASURE,UNIT_MULT
-EST.B.EU000A2QQF32.CR,B,EU000A2QQF32,CR,2026-03-25,1.93576,A,F,,,,,P1D,,,,"ESA 2010 Sectors: S.121, S.122, S.123, S.124, S.125, S.126, S.127, S.128, S.129",,5,,,,,V,"Compounded euro short-term average rate, 3 months tenor","Compounded euro short-term average rate, 3 months tenor",,PC,0
-EST.B.EU000A2QQF32.CR,B,EU000A2QQF32,CR,2026-03-26,1.9358,A,F,,,,,P1D,,,,"ESA 2010 Sectors: S.121, S.122, S.123, S.124, S.125, S.126, S.127, S.128, S.129",,5,,,,,V,"Compounded euro short-term average rate, 3 months tenor","Compounded euro short-term average rate, 3 months tenor",,PC,0
-`;
-
-const SIX_GUEST_TOKEN_RESPONSE = JSON.stringify({
-  token_type: "Bearer",
-  expires_in: 3000,
-  access_token: "guest-token",
-});
-
-const SIX_SAR3MC_CSV_SNIPPET = `date;end_date;start_date;symbol;value;day_count;dcc
-25.03.2026;26.03.2026;24.12.2025;SAR3MC;-0.0539;92;360
-24.03.2026;25.03.2026;24.12.2025;SAR3MC;-0.0539;91;360
-23.03.2026;24.03.2026;24.12.2025;SAR3MC;-0.0540;90;360
-`;
-
-const FRED_DFF_CSV_SNIPPET = "DATE,DFF\n2026-03-02,4.33\n";
-const NYFED_EFFR_JSON_SNIPPET = JSON.stringify({
-  refRates: [
-    { effectiveDate: "2026-03-02", type: "EFFR", percentRate: 4.33 },
-  ],
-});
 const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
-// FRED mirror of the same IUDZOS2 series, ISO dates — derives to the same rate.
-const FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2\n2026-01-01,100\n2026-04-01,101\n";
 // ALFRED graph CSV uses the same observation shape with a date-stamped series column.
 const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-01-01,100\n2026-04-01,101\n";
 const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
@@ -85,79 +70,16 @@ const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
     { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
   ],
 });
-const CBR_KEY_RATE_XML_SNIPPET = `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <KeyRateXMLResponse xmlns="http://web.cbr.ru/">
-      <KeyRateXMLResult>
-        <KR><DT>2026-06-09T00:00:00+03:00</DT><Rate>18.00</Rate></KR>
-        <KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR>
-      </KeyRateXMLResult>
-    </KeyRateXMLResponse>
-  </soap:Body>
-</soap:Envelope>`;
-
-
-
-type MockUrlResponse = Response | null | ((url: string, opts?: RequestInit) => Response | null);
-
-function cloneResponse(response: Response | null): Response | null {
-  if (!response) return null;
-  return response.clone();
+function mockTbillByUrl(overrides: BenchmarkFetchRoutes = {}, calls?: string[]) {
+  installBenchmarkFetch(vi.mocked(fetchWithRetry), makeTbillFetchRoutes(overrides), calls);
 }
 
-function mockByUrl(mapping: Record<string, MockUrlResponse>, calls?: string[]) {
-  vi.mocked(fetchWithRetry).mockImplementation(async (url: string, opts?: RequestInit) => {
-    calls?.push(url);
-    for (const [pattern, response] of Object.entries(mapping)) {
-      if (url.includes(pattern)) {
-        const resolved = typeof response === "function" ? response(url, opts) : response;
-        return cloneResponse(resolved);
-      }
-    }
-    return null;
-  });
+function mockNewCurrencyByUrl(overrides: BenchmarkFetchRoutes = {}, calls?: string[]) {
+  installBenchmarkFetch(vi.mocked(fetchWithRetry), makeNewCurrencyFetchRoutes(overrides), calls);
 }
 
-/** Mocks every extended benchmark endpoint with a successful response. Used to
- *  isolate provider-specific test cases from added benchmark coverage. */
-function okExtendedBenchmarkMocks(): Record<string, MockUrlResponse> {
-  return {
-    "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
-    "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
-    "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": (_url, opts) => {
-      expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
-        .toBe("Pharos/1.0 (+https://pharos.watch)");
-      return new Response(FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 });
-    },
-    "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
-    "stat-search.boj.or.jp": new Response(JSON.stringify({
-      RESULTSET: [{
-        SERIES_CODE: "STRDCLUCON",
-        VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
-      }],
-    }), { status: 200 }),
-    "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
-      "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
-      + "02-Mar-2026,4.30,,4.31\n",
-      { status: 200 },
-    ),
-    "banxico.org.mx": new Response(
-      JSON.stringify({
-        bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] },
-      }),
-      { status: 200 },
-    ),
-    "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
-    "bankofcanada.ca/valet": new Response(
-      JSON.stringify({
-        observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
-      }),
-      { status: 200 },
-    ),
-    "DailyInfoWebServ": new Response(CBR_KEY_RATE_XML_SNIPPET, { status: 200, headers: { "Content-Type": "text/xml" } }),
-    "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
-  };
+function mockUnavailableTbillByUrl(calls?: string[]) {
+  installBenchmarkFetch(vi.mocked(fetchWithRetry), makeUnavailableTbillFetchRoutes(), calls);
 }
 
 /** Banxico requires a token; pass via env. */
@@ -213,46 +135,23 @@ describe("fetchTbillRate", () => {
   }
 
   function previousRiskFreeRatesCacheWithGbp() {
-    return {
-      value: JSON.stringify({
-        version: 1,
-        benchmarks: {
-          USD: {
-            key: "USD",
-            label: "USD 3M T-Bill",
-            currency: "USD",
-            rate: 3.72,
-            recordDate: "2026-03-02",
-            fetchedAt: 1773100800,
-            source: "fred-dgs3mo",
-            isFallback: false,
-            fallbackMode: null,
-            isProxy: false,
-            lastMarketRate: 3.72,
-            lastMarketRecordDate: "2026-03-02",
-            lastMarketFetchedAt: 1773100800,
-            lastMarketSource: "fred-dgs3mo",
-          },
-          GBP: {
-            key: "GBP",
-            label: "GBP 3M compounded SONIA",
-            currency: "GBP",
-            rate: 4.05,
-            recordDate: "2026-03-25",
-            fetchedAt: 1774479600,
-            source: "fred-sonia-compounded-index",
-            isFallback: false,
-            fallbackMode: null,
-            isProxy: false,
-            lastMarketRate: 4.05,
-            lastMarketRecordDate: "2026-03-25",
-            lastMarketFetchedAt: 1774479600,
-            lastMarketSource: "fred-sonia-compounded-index",
-          },
-        },
+    return makeRiskFreeRatesCacheRow({
+      USD: makeBenchmarkCacheEntry({
+        key: "USD",
+        label: "USD 3M T-Bill",
+        rate: 3.72,
+        recordDate: "2026-03-02",
+        fetchedAt: 1773100800,
+        source: "fred-dgs3mo",
       }),
-      updatedAt: 1774479600,
-    } as never;
+      GBP: makeBenchmarkCacheEntry({
+        key: "GBP",
+        label: "GBP 3M compounded SONIA",
+        rate: 4.05,
+        recordDate: "2026-03-25",
+        source: "fred-sonia-compounded-index",
+      }),
+    }, 1774479600);
   }
 
   function cacheWritePayload(key: string) {
@@ -277,12 +176,7 @@ describe("fetchTbillRate", () => {
   it("returns degraded when circuit is already open", async () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     const calls: string[] = [];
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
-    }, calls);
+    mockTbillByUrl({}, calls);
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -305,16 +199,12 @@ describe("fetchTbillRate", () => {
   });
 
   it("returns ok from benchmark feeds", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+    mockTbillByUrl({
       "id=DGS3MO": (_url, opts) => {
         expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
           .toBe("Pharos/1.0 (+https://pharos.watch)");
         return new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 });
       },
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -380,12 +270,7 @@ describe("fetchTbillRate", () => {
   });
 
   it("falls back to the ALFRED SONIA index when the FRED mirror is unreachable", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl({
       "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
       "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": (_url, opts) => {
         expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
@@ -418,12 +303,7 @@ describe("fetchTbillRate", () => {
   });
 
   it("falls back to ALFRED when the FRED SONIA index is stale", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl({
       "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
         "observation_date,IUDZOS2\n2000-01-01,100\n2000-04-01,101\n",
         { status: 200 },
@@ -444,12 +324,7 @@ describe("fetchTbillRate", () => {
   });
 
   it("falls back to the BoE SONIA index when St. Louis Fed SONIA observations are future dated", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl({
       "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
         "observation_date,IUDZOS2\n2099-01-01,100\n2099-04-01,101\n",
         { status: 200 },
@@ -476,12 +351,7 @@ describe("fetchTbillRate", () => {
   });
 
   it("falls back to the BoE SONIA index when the St. Louis Fed mirrors are unreachable", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl({
       "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
       "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": null,
     });
@@ -495,21 +365,13 @@ describe("fetchTbillRate", () => {
   });
 
   it("surfaces a retained GBP SONIA fallback as structured metadata", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl({
       "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
       "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": null,
       "bankofengland.co.uk": null,
     });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") {
-        return previousRiskFreeRatesCacheWithGbp();
-      }
-      return null as never;
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: previousRiskFreeRatesCacheWithGbp(),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -551,34 +413,26 @@ describe("fetchTbillRate", () => {
 
   it("logs a structured warning when the retained GBP SONIA fallback repeats", async () => {
     const legacyLastAlertedAt = Math.floor(Date.now() / 1000) - 3600;
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl({
       "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
       "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": null,
       "bankofengland.co.uk": null,
     });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") return previousRiskFreeRatesCacheWithGbp();
-      if (key === GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY) {
-        return {
-          value: JSON.stringify({
-            consecutiveRetainedRuns: 1,
-            firstRetainedAt: 1774479600,
-            lastRetainedAt: 1774479600,
-            lastAlertedAt: legacyLastAlertedAt,
-            lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
-            lastMarketSource: "fred-sonia-compounded-index",
-            lastMarketRecordDate: "2026-03-25",
-            lastMarketFetchedAt: 1774479600,
-          }),
-          updatedAt: 1774479600,
-        } as never;
-      }
-      return null as never;
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: previousRiskFreeRatesCacheWithGbp(),
+      [GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]: {
+        value: JSON.stringify({
+          consecutiveRetainedRuns: 1,
+          firstRetainedAt: 1774479600,
+          lastRetainedAt: 1774479600,
+          lastAlertedAt: legacyLastAlertedAt,
+          lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
+          lastMarketSource: "fred-sonia-compounded-index",
+          lastMarketRecordDate: "2026-03-25",
+          lastMarketFetchedAt: 1774479600,
+        }),
+        updatedAt: 1774479600,
+      },
     });
 
     const result = await fetchTbillRate(db, undefined, {
@@ -616,30 +470,21 @@ describe("fetchTbillRate", () => {
   });
 
   it("resets the retained GBP SONIA fallback monitor after source recovery", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
-    });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY) {
-        return {
-          value: JSON.stringify({
-            consecutiveRetainedRuns: 2,
-            firstRetainedAt: 1774479600,
-            lastRetainedAt: 1774566000,
-            lastAlertedAt: 1774566000,
-            lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
-            lastMarketSource: "fred-sonia-compounded-index",
-            lastMarketRecordDate: "2026-03-25",
-            lastMarketFetchedAt: 1774479600,
-          }),
-          updatedAt: 1774566000,
-        } as never;
-      }
-      return null as never;
+    mockTbillByUrl();
+    installCacheByKey(vi.mocked(getCache), {
+      [GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]: {
+        value: JSON.stringify({
+          consecutiveRetainedRuns: 2,
+          firstRetainedAt: 1774479600,
+          lastRetainedAt: 1774566000,
+          lastAlertedAt: 1774566000,
+          lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
+          lastMarketSource: "fred-sonia-compounded-index",
+          lastMarketRecordDate: "2026-03-25",
+          lastMarketFetchedAt: 1774479600,
+        }),
+        updatedAt: 1774566000,
+      },
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -673,25 +518,19 @@ describe("fetchTbillRate", () => {
   });
 
   it("verifies GBP delivery after two consecutive fresh publications", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl();
+    installCacheByKey(vi.mocked(getCache), {
+      [GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]: {
+        value: JSON.stringify({
+          consecutiveRetainedRuns: 0,
+          consecutiveFreshRuns: 1,
+          lastFreshAt: 1774479600,
+          lastFreshSource: "fred-sonia-compounded-index",
+          lastFreshRecordDate: "2026-03-25",
+        }),
+        updatedAt: 1774479600,
+      },
     });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => key === GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY
-      ? {
-          value: JSON.stringify({
-            consecutiveRetainedRuns: 0,
-            consecutiveFreshRuns: 1,
-            lastFreshAt: 1774479600,
-            lastFreshSource: "fred-sonia-compounded-index",
-            lastFreshRecordDate: "2026-03-25",
-          }),
-          updatedAt: 1774479600,
-        } as never
-      : null as never);
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -707,13 +546,9 @@ describe("fetchTbillRate", () => {
   });
 
   it("falls back to Treasury XML when FRED fails", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+    mockTbillByUrl({
       "id=DGS3MO": null,
       "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -734,13 +569,8 @@ describe("fetchTbillRate", () => {
   });
 
   it("falls back to FRED DFF when the NY Fed EFFR feed fails", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl({
       "markets.newyorkfed.org": null,
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -760,13 +590,9 @@ describe("fetchTbillRate", () => {
   });
 
   it("falls back to Treasury XML when FRED returns invalid data", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+    mockTbillByUrl({
       "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,.\n", { status: 200 }),
       "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -779,58 +605,29 @@ describe("fetchTbillRate", () => {
   });
 
   it("retains the last EUR benchmark when the ECB feed fails", async () => {
-    mockByUrl({
+    mockTbillByUrl({
       "data-api.ecb.europa.eu": null,
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
     });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") {
-        return {
-          value: JSON.stringify({
-            version: 1,
-            benchmarks: {
-              USD: {
-                key: "USD",
-                label: "USD 3M T-Bill",
-                currency: "USD",
-                rate: 3.72,
-                recordDate: "2026-03-02",
-                fetchedAt: 1773100800,
-                source: "fred-dgs3mo",
-                isFallback: false,
-                fallbackMode: null,
-                isProxy: false,
-                lastMarketRate: 3.72,
-                lastMarketRecordDate: "2026-03-02",
-                lastMarketFetchedAt: 1773100800,
-                lastMarketSource: "fred-dgs3mo",
-              },
-              EUR: {
-                key: "EUR",
-                label: "EUR 3M compounded €STR",
-                currency: "EUR",
-                rate: 1.94,
-                recordDate: "2026-03-24",
-                fetchedAt: 1774393200,
-                source: "ecb-estr-3m",
-                isFallback: false,
-                fallbackMode: null,
-                isProxy: false,
-                lastMarketRate: 1.94,
-                lastMarketRecordDate: "2026-03-24",
-                lastMarketFetchedAt: 1774393200,
-                lastMarketSource: "ecb-estr-3m",
-              },
-              CHF: null,
-            },
-          }),
-          updatedAt: 1774393200,
-        } as never;
-      }
-      return null as never;
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          label: "USD 3M T-Bill",
+          rate: 3.72,
+          recordDate: "2026-03-02",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
+        }),
+        EUR: makeBenchmarkCacheEntry({
+          key: "EUR",
+          label: "EUR 3M compounded €STR",
+          rate: 1.94,
+          recordDate: "2026-03-24",
+          fetchedAt: 1774393200,
+          source: "ecb-estr-3m",
+        }),
+        CHF: null,
+      }, 1774393200),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -843,58 +640,29 @@ describe("fetchTbillRate", () => {
   });
 
   it("retains the last CHF benchmark when the SIX SARON fetch fails", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+    mockTbillByUrl({
       "oauth/token": null,
       "report-download": null,
-      ...okExtendedBenchmarkMocks(),
     });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") {
-        return {
-          value: JSON.stringify({
-            version: 1,
-            benchmarks: {
-              USD: {
-                key: "USD",
-                label: "USD 3M T-Bill",
-                currency: "USD",
-                rate: 3.72,
-                recordDate: "2026-03-02",
-                fetchedAt: 1773100800,
-                source: "fred-dgs3mo",
-                isFallback: false,
-                fallbackMode: null,
-                isProxy: false,
-                lastMarketRate: 3.72,
-                lastMarketRecordDate: "2026-03-02",
-                lastMarketFetchedAt: 1773100800,
-                lastMarketSource: "fred-dgs3mo",
-              },
-              EUR: null,
-              CHF: {
-                key: "CHF",
-                label: "CHF 3M compounded SARON",
-                currency: "CHF",
-                rate: -0.0539,
-                recordDate: "2026-03-25",
-                fetchedAt: 1774479600,
-                source: "six-sar3mc",
-                isFallback: false,
-                fallbackMode: null,
-                isProxy: false,
-                lastMarketRate: -0.0539,
-                lastMarketRecordDate: "2026-03-25",
-                lastMarketFetchedAt: 1774479600,
-                lastMarketSource: "six-sar3mc",
-              },
-            },
-          }),
-          updatedAt: 1774479600,
-        } as never;
-      }
-      return null as never;
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          label: "USD 3M T-Bill",
+          rate: 3.72,
+          recordDate: "2026-03-02",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
+        }),
+        EUR: null,
+        CHF: makeBenchmarkCacheEntry({
+          key: "CHF",
+          label: "CHF 3M compounded SARON",
+          rate: -0.0539,
+          recordDate: "2026-03-25",
+          source: "six-sar3mc",
+        }),
+      }, 1774479600),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -907,64 +675,38 @@ describe("fetchTbillRate", () => {
   });
 
   it("retains the last USD EFFR benchmark when both EFFR feeds fail", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      ...okExtendedBenchmarkMocks(),
+    mockTbillByUrl({
       "markets.newyorkfed.org": null,
       "id=DFF": null,
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
     });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") {
-        return {
-          value: JSON.stringify({
-            version: 1,
-            benchmarks: {
-              USD: {
-                key: "USD",
-                rate: 3.72,
-                recordDate: "2026-03-02",
-                fetchedAt: 1773100800,
-                source: "fred-dgs3mo",
-                isFallback: false,
-                fallbackMode: null,
-                lastMarketRate: 3.72,
-                lastMarketRecordDate: "2026-03-02",
-                lastMarketFetchedAt: 1773100800,
-                lastMarketSource: "fred-dgs3mo",
-              },
-              USD_EFFR: {
-                key: "USD_EFFR",
-                rate: 4.31,
-                recordDate: "2026-03-01",
-                fetchedAt: 1773014400,
-                source: "fred-dff",
-                isFallback: false,
-                fallbackMode: null,
-                lastMarketRate: 4.31,
-                lastMarketRecordDate: "2026-03-01",
-                lastMarketFetchedAt: 1773014400,
-                lastMarketSource: "fred-dff",
-              },
-              EUR: null,
-              CHF: null,
-              GBP: null,
-              JPY: null,
-              MXN: null,
-              BRL: null,
-              AUD: null,
-              CAD: null,
-              RUB: null,
-              TRY: null,
-              SGD: null,
-            },
-          }),
-          updatedAt: 1774479600,
-        } as never;
-      }
-      return null as never;
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          rate: 3.72,
+          recordDate: "2026-03-02",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
+        }),
+        USD_EFFR: makeBenchmarkCacheEntry({
+          key: "USD_EFFR",
+          rate: 4.31,
+          recordDate: "2026-03-01",
+          fetchedAt: 1773014400,
+          source: "fred-dff",
+        }),
+        EUR: null,
+        CHF: null,
+        GBP: null,
+        JPY: null,
+        MXN: null,
+        BRL: null,
+        AUD: null,
+        CAD: null,
+        RUB: null,
+        TRY: null,
+        SGD: null,
+      }, 1774479600),
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -984,17 +726,7 @@ describe("fetchTbillRate", () => {
   });
 
   it("returns degraded when both sources fail", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": null,
-      "fred.stlouisfed.org": null,
-      "home.treasury.gov": null,
-      "oauth/token": null,
-      "report-download": null,
-      "banxico.org.mx": null,
-      "api.bcb.gov.br": null,
-      "bankofcanada.ca/valet": null,
-      "DailyInfoWebServ": null,
-    });
+    mockUnavailableTbillByUrl();
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -1024,22 +756,10 @@ describe("fetchTbillRate", () => {
   });
 
   it("retains last known good rate when both sources fail", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": null,
-      "fred.stlouisfed.org": null,
-      "home.treasury.gov": null,
-      "oauth/token": null,
-      "report-download": null,
-      "banxico.org.mx": null,
-      "api.bcb.gov.br": null,
-      "bankofcanada.ca/valet": null,
-      "DailyInfoWebServ": null,
-    });
+    mockUnavailableTbillByUrl();
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") return null as never;
-      if (key === "risk_free_rate") {
-        return {
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rate: {
           value: JSON.stringify({
             rate: 3.91,
             recordDate: "2026-03-07",
@@ -1049,9 +769,7 @@ describe("fetchTbillRate", () => {
             fallbackMode: null,
           }),
           updatedAt: 1773100800,
-        } as never;
-      }
-      return null as never;
+      },
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -1071,22 +789,10 @@ describe("fetchTbillRate", () => {
   });
 
   it("retains the last market-derived rate across consecutive degraded fallback days", async () => {
-    mockByUrl({
-      "data-api.ecb.europa.eu": null,
-      "fred.stlouisfed.org": null,
-      "home.treasury.gov": null,
-      "oauth/token": null,
-      "report-download": null,
-      "banxico.org.mx": null,
-      "api.bcb.gov.br": null,
-      "bankofcanada.ca/valet": null,
-      "DailyInfoWebServ": null,
-    });
+    mockUnavailableTbillByUrl();
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") return null as never;
-      if (key === "risk_free_rate") {
-        return {
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rate: {
           value: JSON.stringify({
             rate: 3.91,
             recordDate: "2026-03-07",
@@ -1100,9 +806,7 @@ describe("fetchTbillRate", () => {
             lastMarketSource: "fred-dgs3mo",
           }),
           updatedAt: 1773104400,
-        } as never;
-      }
-      return null as never;
+      },
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
@@ -1138,63 +842,29 @@ describe("fetchTbillRate — new currency fetchers", () => {
 
   it("hits each new endpoint URL and parses its native shape", async () => {
     const calls: string[] = [];
-    mockByUrl(
-      {
-        "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-        "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
-        "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
-        "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-        "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-        "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, {
-          status: 200,
-          headers: { "Content-Type": "text/csv" },
-        }),
-        "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
-        "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
-        "stat-search.boj.or.jp": new Response(JSON.stringify({
-          RESULTSET: [{
-            SERIES_CODE: "STRDCLUCON",
-            VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
-          }],
-        }), { status: 200 }),
-        "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
-          "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
-          + "02-Mar-2026,4.30,,4.31\n",
+    mockNewCurrencyByUrl({
+      "banxico.org.mx": (_url, opts) => {
+        const header = (opts?.headers as Record<string, string> | undefined)?.["Bmx-Token"];
+        expect(header).toBe("test-token");
+        return new Response(
+          JSON.stringify({ bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] } }),
           { status: 200 },
-        ),
-        "banxico.org.mx": (_url, opts) => {
-          const header = (opts?.headers as Record<string, string> | undefined)?.["Bmx-Token"];
-          expect(header).toBe("test-token");
-          return new Response(
-            JSON.stringify({
-              bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] },
-            }),
-            { status: 200 },
-          );
-        },
-        "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
-        "bankofcanada.ca/valet": new Response(
-          JSON.stringify({
-            observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
-          }),
-          { status: 200 },
-        ),
-        "cbr.ru/DailyInfoWebServ/DailyInfo.asmx": (_url, opts) => {
-          expect(opts?.method).toBe("POST");
-          expect(String(opts?.body ?? "")).toContain("KeyRateXML");
-          return new Response(
-            "<KeyRate><KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR></KeyRate>",
-            { status: 200 },
-          );
-        },
-        "evds3.tcmb.gov.tr/igmevdsms-dis/fe": (_url, opts) => {
-          expect(opts?.method).toBe("POST");
-          expect(String(opts?.body ?? "")).toContain('"series":"TP.BISTTLREF.ORAN"');
-          return new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 });
-        },
+        );
       },
-      calls,
-    );
+      "DailyInfoWebServ": (_url, opts) => {
+        expect(opts?.method).toBe("POST");
+        expect(String(opts?.body ?? "")).toContain("KeyRateXML");
+        return new Response(
+          "<KeyRate><KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR></KeyRate>",
+          { status: 200 },
+        );
+      },
+      "evds3.tcmb.gov.tr/igmevdsms-dis/fe": (_url, opts) => {
+        expect(opts?.method).toBe("POST");
+        expect(String(opts?.body ?? "")).toContain('"series":"TP.BISTTLREF.ORAN"');
+        return new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 });
+      },
+    }, calls);
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: "test-token" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -1225,44 +895,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
 
   it("skips Banxico when BANXICO_TOKEN is missing", async () => {
     const calls: string[] = [];
-    mockByUrl(
-      {
-        "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-        "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
-        "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
-        "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-        "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-        "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, {
-          status: 200,
-          headers: { "Content-Type": "text/csv" },
-        }),
-        "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
-        "stat-search.boj.or.jp": new Response(JSON.stringify({
-          RESULTSET: [{
-            SERIES_CODE: "STRDCLUCON",
-            VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
-          }],
-        }), { status: 200 }),
-        "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
-          "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
-          + "02-Mar-2026,4.30,,4.31\n",
-          { status: 200 },
-        ),
-        "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
-        "bankofcanada.ca/valet": new Response(
-          JSON.stringify({
-            observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
-          }),
-          { status: 200 },
-        ),
-        "cbr.ru/DailyInfoWebServ/DailyInfo.asmx": new Response(
-          "<KeyRate><KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR></KeyRate>",
-          { status: 200 },
-        ),
-        "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
-      },
-      calls,
-    );
+    mockNewCurrencyByUrl({}, calls);
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: undefined });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -1277,87 +910,34 @@ describe("fetchTbillRate — new currency fetchers", () => {
   });
 
   it("retains the last MXN benchmark when the Banxico fetch fails", async () => {
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") {
-        return {
-          value: JSON.stringify({
-            version: 1,
-            benchmarks: {
-              USD: {
-                key: "USD",
-                rate: 3.72,
-                recordDate: "2026-03-02",
-                fetchedAt: 1773100800,
-                source: "fred-dgs3mo",
-                isFallback: false,
-                fallbackMode: null,
-                lastMarketRate: 3.72,
-                lastMarketRecordDate: "2026-03-02",
-                lastMarketFetchedAt: 1773100800,
-                lastMarketSource: "fred-dgs3mo",
-              },
-              EUR: null,
-              CHF: null,
-              GBP: null,
-              JPY: null,
-              MXN: {
-                key: "MXN",
-                rate: 10.45,
-                recordDate: "2026-03-26",
-                fetchedAt: 1774479600,
-                source: "banxico-cetes-28d",
-                isFallback: false,
-                fallbackMode: null,
-                lastMarketRate: 10.45,
-                lastMarketRecordDate: "2026-03-26",
-                lastMarketFetchedAt: 1774479600,
-                lastMarketSource: "banxico-cetes-28d",
-              },
-              BRL: null,
-              AUD: null,
-              CAD: null,
-              RUB: null,
-              TRY: null,
-              SGD: null,
-            },
-          }),
-          updatedAt: 1774479600,
-        } as never;
-      }
-      return null as never;
-    });
-    mockByUrl({
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
-      "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, {
-        status: 200,
-        headers: { "Content-Type": "text/csv" },
-      }),
-      "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
-      "stat-search.boj.or.jp": new Response(JSON.stringify({
-        RESULTSET: [{
-          SERIES_CODE: "STRDCLUCON",
-          VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
-        }],
-      }), { status: 200 }),
-      "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
-        "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
-        + "02-Mar-2026,4.30,,4.31\n",
-        { status: 200 },
-      ),
-      "banxico.org.mx": null,
-      "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
-      "bankofcanada.ca/valet": new Response(
-        JSON.stringify({
-          observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          rate: 3.72,
+          recordDate: "2026-03-02",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
         }),
-        { status: 200 },
-      ),
-      "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
+        EUR: null,
+        CHF: null,
+        GBP: null,
+        JPY: null,
+        MXN: makeBenchmarkCacheEntry({
+          key: "MXN",
+          rate: 10.45,
+          recordDate: "2026-03-26",
+          source: "banxico-cetes-28d",
+        }),
+        BRL: null,
+        AUD: null,
+        CAD: null,
+        RUB: null,
+        TRY: null,
+        SGD: null,
+      }, 1774479600),
     });
+    mockNewCurrencyByUrl({ "banxico.org.mx": null });
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: "test-token" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;

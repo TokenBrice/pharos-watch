@@ -15,6 +15,7 @@ import {
   fixtureEvmRpcModule,
   type ChainRpcConfig,
 } from "./sync-yield-data.test-support";
+import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 
 function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
   return createFixtureMockD1([
@@ -69,10 +70,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-zero",
               chain: "Ethereum",
@@ -87,11 +86,7 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: Math.floor(Date.now() / 1000),
-        };
-      }
-      return null;
+      ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -151,14 +146,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -230,10 +219,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-zero",
               chain: "Ethereum",
@@ -248,11 +235,7 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      ], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -295,11 +278,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -330,11 +310,8 @@ describe("syncYieldData", () => {
     ]);
 
     // Return a risk_free_rate of 4.0% from cache
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.0", Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -371,11 +348,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.25", updatedAt: Math.floor(Date.now() / 1000) };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.25", Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -431,11 +405,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.0", Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
 
@@ -642,11 +613,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fixtureGetChainRpc).mockReturnValue({
@@ -758,11 +726,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fixtureGetChainRpc).mockReturnValue({
@@ -866,11 +831,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fixtureGetChainRpc).mockReturnValue({
@@ -959,11 +921,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fixtureGetChainRpc).mockReturnValue({
@@ -1048,11 +1007,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fixtureGetChainRpc).mockReturnValue({
@@ -1179,10 +1135,8 @@ describe("syncYieldData", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-native",
               chain: "Ethereum",
@@ -1197,14 +1151,8 @@ describe("syncYieldData", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec - 60,
-        };
-      }
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+      ], nowSec - 60),
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fixtureGetChainRpc).mockReturnValue({

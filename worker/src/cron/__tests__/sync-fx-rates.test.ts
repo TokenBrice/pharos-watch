@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { mockFetchRetry } from "../../test-helpers/cron";
+import {
+  findCacheWrite,
+  makeChainlinkFxRoutes,
+  makeCacheRow,
+  makeCompleteFxRates,
+  makeCommodityStablecoinsCacheRow,
+  makeFxRatesMeta,
+  makeUniformFxRatesProvenance,
+  frankfurterBody,
+  makeFxRatesDb,
+  makeFxRatesFetchRoutes as fxMirrors,
+  secondaryBody,
+} from "./rates-cron.test-support";
 
 // The raw wrapper is deliberately its own spy rather than the JSON wrapper's
 // base: one test asserts the JSON path never falls through to it.
@@ -24,98 +36,6 @@ function resetFetchRetryMocks(): void {
 }
 
 import { syncFxRates } from "../sync-fx-rates";
-
-function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
-  return createMockD1([
-    ...tables,
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT OR IGNORE INTO cache", rows: [] },
-    { match: "INSERT INTO cache", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "UPDATE cache", rows: [] },
-  ]);
-}
-
-type FxRoutes = NonNullable<Parameters<typeof mockFetch>[0]>;
-type FxRoute = FxRoutes[number];
-type FxRouteSpec = Omit<FxRoute, "match"> | "unavailable" | "omit";
-
-/** The 503 body every upstream-down fx test uses. */
-const FX_UNAVAILABLE = { body: { error: "Service unavailable" }, status: 503 } as const;
-
-/** frankfurter.dev's baseline symbol set; HKD/INR are the only per-test additions. */
-const FX_FRANKFURTER_RATES = {
-  EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36,
-  AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2,
-};
-
-/** The secondary mirror's baseline USD leg. */
-const FX_SECONDARY_USD = { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 };
-
-function frankfurterBody(extraRates: Record<string, number> = {}) {
-  return { base: "USD", date: "2025-06-15", rates: { ...FX_FRANKFURTER_RATES, ...extraRates } };
-}
-
-function secondaryBody(
-  extraUsd: Record<string, number> = {},
-  options: { date?: string | null } = {},
-) {
-  const { date = "2025-06-15" } = options;
-  return {
-    ...(date == null ? {} : { date }),
-    usd: { ...FX_SECONDARY_USD, ...extraUsd },
-  };
-}
-
-/**
- * Route list for the fx mirror ladder, ordered the way `mockFetch` resolves it
- * (first substring hit wins, so the dated jsDelivr path must precede the generic
- * jsDelivr match). Each axis defaults to the healthy baseline; pass a body to
- * change one, `"unavailable"` for the shared 503, or `"omit"` to drop the route
- * entirely (an omitted route is an unmatched fetch, which is how the
- * "everything is down" tests express a dead endpoint).
- */
-function fxMirrors(axes: {
-  frankfurter?: FxRouteSpec;
-  datedCdn?: FxRouteSpec;
-  cdn?: FxRouteSpec;
-  pages?: FxRouteSpec;
-  secondary?: FxRouteSpec;
-  exchangeRate?: FxRouteSpec;
-  openExchange?: FxRouteSpec;
-  gold?: FxRouteSpec;
-  silver?: FxRouteSpec;
-} = {}): FxRoutes {
-  const defaults: Record<string, { match: string; spec: FxRouteSpec }> = {
-    frankfurter: { match: "frankfurter.dev", spec: { body: frankfurterBody() } },
-    datedCdn: { match: "@2025.6.15/", spec: "omit" },
-    cdn: { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", spec: "omit" },
-    pages: { match: "latest.currency-api.pages.dev", spec: "omit" },
-    secondary: { match: "currency-api", spec: { body: secondaryBody() } },
-    exchangeRate: { match: "open.er-api.com/v6/latest/USD", spec: "omit" },
-    openExchange: { match: "openexchangerates.org", spec: "omit" },
-    gold: { match: "gold-api.com/price/XAU", spec: { body: { price: 2900 } } },
-    silver: { match: "gold-api.com/price/XAG", spec: { body: { price: 32 } } },
-  };
-  const routes: FxRoutes = [];
-  for (const [axis, { match, spec: fallback }] of Object.entries(defaults)) {
-    const spec = axes[axis as keyof typeof axes] ?? fallback;
-    if (spec === "omit") continue;
-    routes.push({ match, ...(spec === "unavailable" ? FX_UNAVAILABLE : spec) } as FxRoute);
-  }
-  return routes;
-}
-
-function findCacheWrite(
-  db: ReturnType<typeof mockD1>,
-  key: string,
-): { sql: string; binds: unknown[] } | undefined {
-  return db.getHistory().find(
-    (entry) => entry.sql.includes("INTO cache") && entry.binds[0] === key,
-  );
-}
-
 describe("syncFxRates", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -134,20 +54,7 @@ describe("syncFxRates", () => {
       secondary: { body: secondaryBody({ vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 }) },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = makeFxRatesDb();
 
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await syncFxRates(db);
@@ -196,68 +103,7 @@ describe("syncFxRates", () => {
     }));
 
     const stablecoinsUpdatedAt = Math.floor(Date.now() / 1000) - 90;
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            peggedAssets: [
-              {
-                id: "xaut-tether",
-                name: "Tether Gold",
-                symbol: "XAUT",
-                pegType: "peggedGOLD",
-                pegMechanism: "rwa-backed",
-                price: 2910,
-                priceSource: "defillama",
-                circulating: { peggedGOLD: 100_000_000 },
-                chainCirculating: {},
-                chains: ["Ethereum"],
-              },
-              {
-                id: "paxg-paxos",
-                name: "Pax Gold",
-                symbol: "PAXG",
-                pegType: "peggedGOLD",
-                pegMechanism: "rwa-backed",
-                price: 2900,
-                priceSource: "defillama",
-                circulating: { peggedGOLD: 80_000_000 },
-                chainCirculating: {},
-                chains: ["Ethereum"],
-              },
-              {
-                id: "kag-kinesis",
-                name: "Kinesis Silver",
-                symbol: "KAG",
-                pegType: "peggedSILVER",
-                pegMechanism: "rwa-backed",
-                price: 31.5,
-                priceSource: "defillama",
-                circulating: { peggedSILVER: 2_000_000 },
-                chainCirculating: {},
-                chains: ["Ethereum"],
-              },
-            ],
-          }),
-          updated_at: stablecoinsUpdatedAt,
-        },
-      },
-    ]);
+    const db = makeFxRatesDb({ stablecoins: makeCommodityStablecoinsCacheRow(stablecoinsUpdatedAt) });
 
     const result = await syncFxRates(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -289,68 +135,7 @@ describe("syncFxRates", () => {
     mockFetch(fxMirrors({ gold: { body: { price: 3100 } } }));
 
     const stablecoinsUpdatedAt = Math.floor(Date.now() / 1000) - 120;
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            peggedAssets: [
-              {
-                id: "xaut-tether",
-                name: "Tether Gold",
-                symbol: "XAUT",
-                pegType: "peggedGOLD",
-                pegMechanism: "rwa-backed",
-                price: 2910,
-                priceSource: "defillama",
-                circulating: { peggedGOLD: 100_000_000 },
-                chainCirculating: {},
-                chains: ["Ethereum"],
-              },
-              {
-                id: "paxg-paxos",
-                name: "Pax Gold",
-                symbol: "PAXG",
-                pegType: "peggedGOLD",
-                pegMechanism: "rwa-backed",
-                price: 2900,
-                priceSource: "defillama",
-                circulating: { peggedGOLD: 80_000_000 },
-                chainCirculating: {},
-                chains: ["Ethereum"],
-              },
-              {
-                id: "kag-kinesis",
-                name: "Kinesis Silver",
-                symbol: "KAG",
-                pegType: "peggedSILVER",
-                pegMechanism: "rwa-backed",
-                price: 31.5,
-                priceSource: "defillama",
-                circulating: { peggedSILVER: 2_000_000 },
-                chainCirculating: {},
-                chains: ["Ethereum"],
-              },
-            ],
-          }),
-          updated_at: stablecoinsUpdatedAt,
-        },
-      },
-    ]);
+    const db = makeFxRatesDb({ stablecoins: makeCommodityStablecoinsCacheRow(stablecoinsUpdatedAt) });
 
     const result = await syncFxRates(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -380,46 +165,19 @@ describe("syncFxRates", () => {
       silver: "omit",
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify({ peggedEUR: 1.08, peggedRUB: 0.011 }),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
-            mode: "live",
-            sourceUpdatedAtByPeg: {
-              peggedEUR: Math.floor(Date.now() / 1000) - 3600,
-              peggedRUB: Math.floor(Date.now() / 1000) - 7200,
-            },
-            sourceModeByPeg: {
-              peggedEUR: "live",
-              peggedRUB: "live",
-            },
-            sourceCadenceByPeg: {
-              peggedEUR: "business-daily",
-              peggedRUB: "calendar-daily",
-            },
-            sourceDateByPeg: {
-              peggedEUR: "2025-06-14",
-              peggedRUB: "2025-06-15",
-            },
-            consecutiveFallbackRuns: 0,
-          }),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-    ]);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow({ peggedEUR: 1.08, peggedRUB: 0.011 }, nowSec - 60),
+      previousMeta: makeCacheRow({
+        usableSyncAt: nowSec - 60,
+        mode: "live",
+        sourceUpdatedAtByPeg: { peggedEUR: nowSec - 3600, peggedRUB: nowSec - 7200 },
+        sourceModeByPeg: { peggedEUR: "live", peggedRUB: "live" },
+        sourceCadenceByPeg: { peggedEUR: "business-daily", peggedRUB: "calendar-daily" },
+        sourceDateByPeg: { peggedEUR: "2025-06-14", peggedRUB: "2025-06-15" },
+        consecutiveFallbackRuns: 0,
+      }, nowSec - 60),
+    });
 
     const result = await syncFxRates(db);
     expect(result.itemCount).toBe(2);
@@ -476,20 +234,7 @@ describe("syncFxRates", () => {
       },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = makeFxRatesDb();
 
     const result = await syncFxRates(db);
     expect(result.status).toBeUndefined();
@@ -537,20 +282,7 @@ describe("syncFxRates", () => {
       },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = makeFxRatesDb();
 
     const result = await syncFxRates(db);
     expect(result.status).toBeUndefined();
@@ -585,39 +317,7 @@ describe("syncFxRates", () => {
       exchangeRate: "unavailable",
     }));
 
-    const fullPrevRates: Record<string, number> = {
-      peggedEUR: 1 / 0.925,
-      peggedGBP: 1 / 0.79,
-      peggedCHF: 1 / 0.88,
-      peggedREAL: 1 / 5.0,
-      peggedJPY: 1 / 149.5,
-      peggedIDR: 1 / 15800,
-      peggedSGD: 1 / 1.35,
-      peggedTRY: 1 / 36,
-      peggedAUD: 1 / 1.55,
-      peggedZAR: 1 / 18.3,
-      peggedCAD: 1 / 1.37,
-      peggedCNY: 1 / 7.25,
-      peggedPHP: 1 / 56,
-      peggedMXN: 1 / 17.2,
-      peggedCNH: 1 / 7.28,
-      peggedRUB: 1 / 90,
-      peggedUAH: 1 / 41,
-      peggedARS: 1 / 1400,
-      peggedKGS: 1 / 87,
-      peggedNGN: 1 / 1370,
-      peggedXOF: 1 / 560,
-      peggedMYR: 1 / 4.5,
-      peggedKRW: 1 / 1380,
-      peggedHKD: 1 / 7.81,
-      peggedINR: 1 / 85.5,
-      peggedVND: 1 / 25000,
-      peggedKES: 1 / 129,
-      peggedGHS: 1 / 11.6,
-      peggedCOP: 1 / 3200,
-      peggedCLP: 1 / 950,
-      peggedPEN: 1 / 3.4,
-    };
+    const fullPrevRates = makeCompleteFxRates();
     const calendarDailyPegs = new Set(["peggedCNH", "peggedRUB", "peggedUAH", "peggedARS", "peggedKGS", "peggedNGN", "peggedXOF", "peggedVND", "peggedKES", "peggedGHS", "peggedCOP", "peggedCLP", "peggedPEN"]);
     const sourceUpdatedAtByPeg = Object.fromEntries(
       Object.keys(fullPrevRates).map((pegKey) => [
@@ -643,34 +343,19 @@ describe("syncFxRates", () => {
       Object.keys(fullPrevRates).map((pegKey) => [pegKey, "live"]),
     );
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify(fullPrevRates),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
-            mode: "live",
-            sourceUpdatedAtByPeg,
-            sourceModeByPeg,
-            sourceCadenceByPeg,
-            sourceDateByPeg,
-            consecutiveFallbackRuns: 14,
-          }),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-    ]);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(fullPrevRates, nowSec - 60),
+      previousMeta: makeCacheRow({
+        usableSyncAt: nowSec - 60,
+        mode: "live",
+        sourceUpdatedAtByPeg,
+        sourceModeByPeg,
+        sourceCadenceByPeg,
+        sourceDateByPeg,
+        consecutiveFallbackRuns: 14,
+      }, nowSec - 60),
+    });
 
     const result = await syncFxRates(db);
     expect(result.status).toBeUndefined();
@@ -699,20 +384,7 @@ describe("syncFxRates", () => {
       },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = makeFxRatesDb();
 
     const result = await syncFxRates(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -730,20 +402,7 @@ describe("syncFxRates", () => {
       pages: { body: secondaryBody() },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = makeFxRatesDb();
 
     await syncFxRates(db);
 
@@ -770,38 +429,14 @@ describe("syncFxRates", () => {
       toHexWord(BigInt(nowSec)) +
       toHexWord(1n);
 
-    mockFetch([
-      { match: "frankfurter.dev", body: frankfurterBody() },
-      { match: "currency-api", body: secondaryBody() },
-      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
-      { match: "gold-api.com/price/XAG", body: { price: 32 } },
-      {
-        match: "https://rpc.base.test",
-        matchBody: '"to":"0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F","data":"0x313ce567"',
-        body: { jsonrpc: "2.0", id: 1, result: decimalsHex },
-      },
-      {
-        match: "https://rpc.base.test",
-        matchBody: '"to":"0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F","data":"0xfeaf968c"',
-        body: { jsonrpc: "2.0", id: 1, result: latestRoundDataHex },
-      },
-    ], { requireMatch: true });
+    mockFetch(makeChainlinkFxRoutes({
+      rpcUrl: "https://rpc.base.test",
+      feedAddress: "0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F",
+      decimalsHex,
+      latestRoundDataHex,
+    }), { requireMatch: true });
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
-    ]);
+    const db = makeFxRatesDb();
     const chainRpcs = new Map([
       ["base", {
         chainId: "base",
@@ -842,38 +477,14 @@ describe("syncFxRates", () => {
       toHexWord(BigInt(olderUpdatedAt)) +
       toHexWord(1n);
 
-    mockFetch([
-      { match: "frankfurter.dev", body: frankfurterBody() },
-      { match: "currency-api", body: secondaryBody() },
-      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
-      { match: "gold-api.com/price/XAG", body: { price: 32 } },
-      {
-        match: "https://rpc.ethereum.test",
-        matchBody: '"to":"0x379589227b15F1a12195D3f2d90bBc9F31f95235","data":"0x313ce567"',
-        body: { jsonrpc: "2.0", id: 1, result: decimalsHex },
-      },
-      {
-        match: "https://rpc.ethereum.test",
-        matchBody: '"to":"0x379589227b15F1a12195D3f2d90bBc9F31f95235","data":"0xfeaf968c"',
-        body: { jsonrpc: "2.0", id: 1, result: latestRoundDataHex },
-      },
-    ], { requireMatch: true });
+    mockFetch(makeChainlinkFxRoutes({
+      rpcUrl: "https://rpc.ethereum.test",
+      feedAddress: "0x379589227b15F1a12195D3f2d90bBc9F31f95235",
+      decimalsHex,
+      latestRoundDataHex,
+    }), { requireMatch: true });
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
-    ]);
+    const db = makeFxRatesDb();
     const chainRpcs = new Map([
       ["ethereum", {
         chainId: "ethereum",
@@ -916,38 +527,14 @@ describe("syncFxRates", () => {
       toHexWord(BigInt(olderUpdatedAt)) +
       toHexWord(1n);
 
-    mockFetch([
-      { match: "frankfurter.dev", body: frankfurterBody() },
-      { match: "currency-api", body: secondaryBody() },
-      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
-      { match: "gold-api.com/price/XAG", body: { price: 32 } },
-      {
-        match: "https://rpc.ethereum.test",
-        matchBody: '"to":"0x379589227b15F1a12195D3f2d90bBc9F31f95235","data":"0x313ce567"',
-        body: { jsonrpc: "2.0", id: 1, result: decimalsHex },
-      },
-      {
-        match: "https://rpc.ethereum.test",
-        matchBody: '"to":"0x379589227b15F1a12195D3f2d90bBc9F31f95235","data":"0xfeaf968c"',
-        body: { jsonrpc: "2.0", id: 1, result: latestRoundDataHex },
-      },
-    ], { requireMatch: true });
+    mockFetch(makeChainlinkFxRoutes({
+      rpcUrl: "https://rpc.ethereum.test",
+      feedAddress: "0x379589227b15F1a12195D3f2d90bBc9F31f95235",
+      decimalsHex,
+      latestRoundDataHex,
+    }), { requireMatch: true });
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
-    ]);
+    const db = makeFxRatesDb();
     const chainRpcs = new Map([
       ["ethereum", {
         chainId: "ethereum",
@@ -983,82 +570,28 @@ describe("syncFxRates", () => {
       exchangeRate: "unavailable",
     }));
 
-    const fullPrevRates: Record<string, number> = {
-      peggedEUR: 1 / 0.925,
-      peggedGBP: 1 / 0.79,
-      peggedCHF: 1 / 0.88,
-      peggedREAL: 1 / 5.0,
-      peggedJPY: 1 / 149.5,
-      peggedIDR: 1 / 15800,
-      peggedSGD: 1 / 1.35,
-      peggedTRY: 1 / 36,
-      peggedAUD: 1 / 1.55,
-      peggedZAR: 1 / 18.3,
-      peggedCAD: 1 / 1.37,
-      peggedCNY: 1 / 7.25,
-      peggedPHP: 1 / 56,
-      peggedMXN: 1 / 17.2,
-      peggedCNH: 1 / 7.28,
-      peggedRUB: 1 / 90,
-      peggedUAH: 1 / 41,
-      peggedARS: 1 / 1400,
-      peggedKGS: 1 / 87,
-      peggedNGN: 1 / 1370,
-      peggedXOF: 1 / 560,
-      peggedMYR: 1 / 4.5,
-      peggedKRW: 1 / 1380,
-      peggedHKD: 1 / 7.81,
-      peggedINR: 1 / 85.5,
-      peggedVND: 1 / 25000,
-      peggedKES: 1 / 129,
-      peggedGHS: 1 / 11.6,
-      peggedCOP: 1 / 3200,
-      peggedCLP: 1 / 950,
-      peggedPEN: 1 / 3.4,
-    };
+    const fullPrevRates = makeCompleteFxRates();
     const sameDayUpdatedAt = Math.floor(Date.parse("2025-06-15T05:02:23Z") / 1000);
-    const sourceUpdatedAtByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, sameDayUpdatedAt]),
-    );
-    const sourceModeByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "live"]),
-    );
-    const sourceCadenceByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "intraday"]),
-    );
-    const sourceDateByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, null]),
-    );
+    const {
+      sourceUpdatedAtByPeg,
+      sourceModeByPeg,
+      sourceCadenceByPeg,
+      sourceDateByPeg,
+    } = makeUniformFxRatesProvenance(fullPrevRates, { updatedAt: sameDayUpdatedAt });
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify(fullPrevRates),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
-            mode: "cached-fallback",
-            sourceUpdatedAtByPeg,
-            sourceModeByPeg,
-            sourceCadenceByPeg,
-            sourceDateByPeg,
-            consecutiveFallbackRuns: 12,
-          }),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-      { match: "circuit", rows: [] },
-    ]);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(fullPrevRates, nowSec - 60),
+      previousMeta: makeCacheRow({
+        usableSyncAt: nowSec - 60,
+        mode: "cached-fallback",
+        sourceUpdatedAtByPeg,
+        sourceModeByPeg,
+        sourceCadenceByPeg,
+        sourceDateByPeg,
+        consecutiveFallbackRuns: 12,
+      }, nowSec - 60),
+    });
 
     const result = await syncFxRates(db);
     expect(result.status).toBeUndefined();
@@ -1084,53 +617,8 @@ describe("syncFxRates", () => {
   });
 
   it("promotes cached fallback back to live when OXR restores fresh full-set FX coverage", async () => {
-    const fullPrevRates: Record<string, number> = {
-      peggedEUR: 1 / 0.925,
-      peggedGBP: 1 / 0.79,
-      peggedCHF: 1 / 0.88,
-      peggedREAL: 1 / 5.0,
-      peggedJPY: 1 / 149.5,
-      peggedIDR: 1 / 15800,
-      peggedSGD: 1 / 1.35,
-      peggedTRY: 1 / 36,
-      peggedAUD: 1 / 1.55,
-      peggedZAR: 1 / 18.3,
-      peggedCAD: 1 / 1.37,
-      peggedCNY: 1 / 7.25,
-      peggedPHP: 1 / 56,
-      peggedMXN: 1 / 17.2,
-      peggedCNH: 1 / 7.28,
-      peggedRUB: 1 / 90,
-      peggedUAH: 1 / 41,
-      peggedARS: 1 / 1400,
-      peggedKGS: 1 / 87,
-      peggedNGN: 1 / 1370,
-      peggedXOF: 1 / 560,
-      peggedMYR: 1 / 4.5,
-      peggedKRW: 1 / 1380,
-      peggedHKD: 1 / 7.81,
-      peggedINR: 1 / 85.5,
-      peggedVND: 1 / 25000,
-      peggedKES: 1 / 129,
-      peggedGHS: 1 / 11.6,
-      peggedCOP: 1 / 3200,
-      peggedCLP: 1 / 950,
-      peggedPEN: 1 / 3.4,
-    };
+    const fullPrevRates = makeCompleteFxRates();
     const staleUpdatedAt = Math.floor(Date.parse("2025-06-12T12:00:00Z") / 1000);
-    const sourceUpdatedAtByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, staleUpdatedAt]),
-    );
-    const sourceModeByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "live"]),
-    );
-    const sourceCadenceByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "intraday"]),
-    );
-    const sourceDateByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, null]),
-    );
-
     mockFetch(fxMirrors({
       frankfurter: "unavailable",
       secondary: "omit",
@@ -1148,47 +636,17 @@ describe("syncFxRates", () => {
       },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify(fullPrevRates),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
-            mode: "cached-fallback",
-            sourceUpdatedAtByPeg,
-            sourceModeByPeg,
-            sourceCadenceByPeg,
-            sourceDateByPeg,
-            consecutiveFallbackRuns: 6,
-          }),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-attempt"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [], first: null },
-    ]);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(fullPrevRates, nowSec - 60),
+      previousMeta: makeCacheRow(makeFxRatesMeta(fullPrevRates, {
+        usableSyncAt: nowSec - 60,
+        mode: "cached-fallback",
+        updatedAt: staleUpdatedAt,
+        consecutiveFallbackRuns: 6,
+      }), nowSec - 60),
+      extraTables: [{ match: "circuit", rows: [], first: null }],
+    });
 
     const result = await syncFxRates(db, undefined, "oxr-key");
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -1213,45 +671,11 @@ describe("syncFxRates", () => {
   });
 
   it("preserves refreshed per-peg source metadata during cached fallback when recovery is only partial", async () => {
-    const fullPrevRates: Record<string, number> = {
-      peggedEUR: 1 / 0.925,
-      peggedGBP: 1 / 0.79,
-      peggedCHF: 1 / 0.88,
-      peggedREAL: 1 / 5.0,
-      peggedJPY: 1 / 149.5,
-      peggedIDR: 1 / 15800,
-      peggedSGD: 1 / 1.35,
-      peggedTRY: 1 / 36,
-      peggedAUD: 1 / 1.55,
-      peggedZAR: 1 / 18.3,
-      peggedCAD: 1 / 1.37,
-      peggedCNY: 1 / 7.25,
-      peggedPHP: 1 / 56,
-      peggedMXN: 1 / 17.2,
-      peggedCNH: 1 / 7.28,
-      peggedRUB: 1 / 90,
-      peggedUAH: 1 / 41,
-      peggedARS: 1 / 1400,
-      peggedKGS: 1 / 87,
-      peggedNGN: 1 / 1370,
-      peggedXOF: 1 / 560,
-      peggedMYR: 1 / 4.5,
-      peggedKRW: 1 / 1380,
-    };
+    const fullPrevRates = makeCompleteFxRates({}, [
+      "peggedMYR", "peggedKRW", "peggedHKD", "peggedINR", "peggedVND",
+      "peggedKES", "peggedGHS", "peggedCOP", "peggedCLP", "peggedPEN",
+    ]);
     const staleUpdatedAt = Math.floor(Date.parse("2025-06-12T12:00:00Z") / 1000);
-    const sourceUpdatedAtByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, staleUpdatedAt]),
-    );
-    const sourceModeByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "live"]),
-    );
-    const sourceCadenceByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "intraday"]),
-    );
-    const sourceDateByPeg = Object.fromEntries(
-      Object.keys(fullPrevRates).map((pegKey) => [pegKey, null]),
-    );
-
     mockFetch(fxMirrors({
       frankfurter: "unavailable",
       secondary: "omit",
@@ -1261,47 +685,17 @@ describe("syncFxRates", () => {
       openExchange: { body: { rates: { EUR: 0.925 } } },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: {
-          value: JSON.stringify(fullPrevRates),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
-            mode: "cached-fallback",
-            sourceUpdatedAtByPeg,
-            sourceModeByPeg,
-            sourceCadenceByPeg,
-            sourceDateByPeg,
-            consecutiveFallbackRuns: 2,
-          }),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-attempt"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [], first: null },
-    ]);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(fullPrevRates, nowSec - 60),
+      previousMeta: makeCacheRow(makeFxRatesMeta(fullPrevRates, {
+        usableSyncAt: nowSec - 60,
+        mode: "cached-fallback",
+        updatedAt: staleUpdatedAt,
+        consecutiveFallbackRuns: 2,
+      }), nowSec - 60),
+      extraTables: [{ match: "circuit", rows: [], first: null }],
+    });
 
     const result = await syncFxRates(db, undefined, "oxr-key");
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -1325,39 +719,18 @@ describe("syncFxRates", () => {
   it("keeps syncing when the OXR telemetry write fails", async () => {
     mockFetch(fxMirrors({ secondary: { body: secondaryBody({}, { date: null }) } }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-attempt"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-fetch"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-        matchBinds: ["fx-oxr-last-attempt", String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000)],
-        rows: [],
-        throwError: new Error("telemetry write failed"),
-      },
-      { match: "circuit", rows: [] },
-    ]);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeFxRatesDb({
+      extraTables: [
+        {
+          match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+          matchBinds: ["fx-oxr-last-attempt", String(nowSec), nowSec],
+          rows: [],
+          throwError: new Error("telemetry write failed"),
+        },
+        { match: "circuit", rows: [] },
+      ],
+    });
 
     const result = await syncFxRates(db, undefined, "oxr-key");
     expect(result.itemCount).toBeGreaterThan(0);
@@ -1371,33 +744,7 @@ describe("syncFxRates", () => {
       openExchange: { body: { rates: { EUR: 0.01, GBP: 0.01 } } },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-attempt"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
-    ]);
+    const db = makeFxRatesDb();
 
     const result = await syncFxRates(db, undefined, "oxr-key");
     expect(result.itemCount).toBeGreaterThan(0);
@@ -1415,24 +762,9 @@ describe("syncFxRates", () => {
       openExchange: { body: { error: "should not be called" }, status: 500 },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.FX_REALTIME}`],
-        rows: [],
-        first: {
+    const db = makeFxRatesDb({
+      cacheRows: {
+        [`circuit:${CIRCUIT_SOURCE.FX_REALTIME}`]: {
           value: JSON.stringify({
             state: "open",
             consecutiveFailures: 3,
@@ -1440,11 +772,13 @@ describe("syncFxRates", () => {
             lastSuccessAt: null,
             openedAt: nowSec - 60,
           }),
-          updated_at: nowSec - 60,
+          updatedAt: nowSec - 60,
         },
       },
-      { match: "circuit", rows: [] },
-    ]);
+      extraTables: [
+        { match: "circuit", rows: [] },
+      ],
+    });
 
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await syncFxRates(db, undefined, "oxr-key");
@@ -1468,33 +802,7 @@ describe("syncFxRates", () => {
       openExchange: { body: { rates: { EUR: 0.01, GBP: 0.01 } } },
     }));
 
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-rates-meta"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-attempt"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value FROM cache WHERE key = ?",
-        matchBinds: ["fx-oxr-last-fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
-    ]);
+    const db = makeFxRatesDb();
 
     await syncFxRates(db, undefined, "oxr-key");
 
@@ -1518,24 +826,16 @@ describe("syncFxRates", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const bucket = Math.floor(nowSec / (30 * 60));
     const fetchMock = mockFetch([], { requireMatch: true });
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["sync-fx-rates:cadence"],
-        rows: [{
-          key: "sync-fx-rates:cadence",
-          value: JSON.stringify({
-            version: 1,
-            bucket,
-            state: "completed",
-            generation: "completed-test",
-            claimedAt: nowSec - 60,
-            completedAt: nowSec - 30,
-          }),
-          updated_at: nowSec - 30,
-        }],
-      },
-    ]);
+    const db = makeFxRatesDb({
+      cadence: makeCacheRow({
+        version: 1,
+        bucket,
+        state: "completed",
+        generation: "completed-test",
+        claimedAt: nowSec - 60,
+        completedAt: nowSec - 30,
+      }, nowSec - 30),
+    });
 
     const result = await syncFxRates(db, undefined, undefined, undefined, undefined, undefined, {
       scheduledAtSec: nowSec,

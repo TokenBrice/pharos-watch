@@ -30,6 +30,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
+import type { MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;
 const staleObservedAtSec = () => Math.floor(Date.now() / 1000) - 2 * 3600;
@@ -87,6 +88,164 @@ const fixtureMockD1 = mockD1;
 const fixtureMockFetch = mockFetch;
 const fixtureCIRCUIT_SOURCE = CIRCUIT_SOURCE;
 
+type PoolObservation = {
+  price: number;
+  tvlUsd: number;
+  protocol: string;
+  chain: string;
+  observedAt?: number;
+};
+
+function makePeggedAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
+  return {
+    id: "test-asset",
+    name: "Test Stablecoin",
+    symbol: "TEST",
+    pegType: "peggedUSD",
+    circulating: {},
+    ...overrides,
+  };
+}
+
+function makePrimaryPriceResult(overrides: Partial<PrimaryPriceResult> = {}): PrimaryPriceResult {
+  return {
+    price: 1,
+    source: "test-source",
+    confidence: "high",
+    dlPrice: null,
+    cgPrice: null,
+    candidateSources: ["test-source"],
+    agreeSources: ["test-source"],
+    ...overrides,
+  };
+}
+
+function makePrimaryPriceResults(
+  assetId: string,
+  overrides: Partial<PrimaryPriceResult> = {},
+): Map<string, PrimaryPriceResult> {
+  return new Map([[assetId, makePrimaryPriceResult(overrides)]]);
+}
+
+function makePriceConsensusResult(overrides: Partial<PrimaryPriceResult> = {}): PrimaryPriceResult {
+  return makePrimaryPriceResult({
+    price: 1,
+    source: "coingecko+defillama-list",
+    confidence: "high",
+    dlPrice: 1,
+    cgPrice: 1,
+    candidateSources: ["coingecko", "defillama-list"],
+    agreeSources: ["coingecko", "defillama-list"],
+    ...overrides,
+  });
+}
+
+function makePoolObservation(overrides: Partial<PoolObservation> = {}): PoolObservation {
+  return {
+    price: 1,
+    tvlUsd: 500_000,
+    protocol: "curve",
+    chain: "ethereum",
+    ...overrides,
+  };
+}
+
+function makePoolChallengeInputs({
+  assetId,
+  pegType = "peggedUSD",
+  result = {},
+  pools = [],
+  stats = {},
+}: {
+  assetId: string;
+  pegType?: string;
+  result?: Partial<PrimaryPriceResult>;
+  pools?: Array<Partial<PoolObservation>>;
+  stats?: Partial<PriceValidationStats>;
+}): {
+  results: Map<string, PrimaryPriceResult>;
+  pools: Map<string, PoolObservation[]>;
+  pegTypes: Map<string, string | undefined>;
+  stats: PriceValidationStats;
+} {
+  return {
+    results: new Map([[assetId, makePrimaryPriceResult(result)]]),
+    pools: new Map([[assetId, pools.map((pool) => makePoolObservation(pool))]]),
+    pegTypes: new Map([[assetId, pegType]]),
+    stats: {
+      attempted: 1,
+      high: 1,
+      singleSource: 0,
+      cgOnly: 0,
+      low: 0,
+      ...stats,
+    },
+  };
+}
+
+function makePriceValidationStats(overrides: Partial<PriceValidationStats> = {}): PriceValidationStats {
+  return {
+    attempted: 1,
+    high: 1,
+    singleSource: 0,
+    cgOnly: 0,
+    low: 0,
+    ...overrides,
+  };
+}
+
+type PrimaryPricingDbOptions = {
+  dexRows?: MockTableConfig["rows"];
+  poolSources?: MockTableConfig["rows"];
+  reserveRows?: MockTableConfig["rows"];
+  extraTables?: MockTableConfig[];
+};
+
+function makePrimaryPricingDb(options: PrimaryPricingDbOptions | MockTableConfig[] = {}) {
+  const {
+    dexRows,
+    poolSources,
+    reserveRows,
+    extraTables = [],
+  } = Array.isArray(options) ? { extraTables: options } : options;
+  return fixtureMockD1([
+    ...extraTables,
+    { match: "circuit", rows: [] },
+    ...(dexRows ? [{ match: "dex_price_usd", rows: dexRows }] : []),
+    ...(poolSources ? [{ match: "price_sources_json", rows: poolSources }] : []),
+    ...(reserveRows ? [{ match: "FROM reserve_composition c", rows: reserveRows }] : []),
+    { match: "FROM dex_prices", rows: [] },
+    { match: "FROM dex_price_challenger_snapshots", rows: [] },
+    { match: "FROM dex_price_challengers", rows: [] },
+    { match: "FROM dex_liquidity", rows: [] },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  ]);
+}
+
+export type PrimaryPriceRouteValue =
+  | Response
+  | { body: unknown; status?: number; headers?: Record<string, string> }
+  | ((url: string) => Response | { body: unknown; status?: number; headers?: Record<string, string> });
+
+function installPrimaryPriceRoutes(
+  routesOrImplementation:
+    | ((url: string) => Response | Promise<Response>)
+    | Readonly<Record<string, PrimaryPriceRouteValue>>,
+) {
+  if (typeof routesOrImplementation === "function") {
+    return fixtureMockFetch([{ match: () => true, respond: (request) => routesOrImplementation(request.url) }]);
+  }
+  return fixtureMockFetch(Object.entries(routesOrImplementation).map(([match, value]) => ({
+    match,
+    ...(typeof value === "function"
+      ? { respond: (request: Request) => value(request.url) }
+      : value instanceof Response
+        ? { respond: () => value.clone() }
+        : value),
+  })));
+}
+
 export {
   freshObservedAtSec,
   staleObservedAtSec,
@@ -118,4 +277,15 @@ export {
   fixtureMockD1,
   fixtureMockFetch,
   fixtureCIRCUIT_SOURCE,
+  makePeggedAsset,
+  makePrimaryPriceResult,
+  makePrimaryPriceResults,
+  makePriceConsensusResult,
+  makePoolObservation,
+  makePoolChallengeInputs,
+  makePriceValidationStats,
+  makePrimaryPricingDb,
+  installPrimaryPriceRoutes,
+  type PoolObservation,
+  type PrimaryPricingDbOptions,
 };

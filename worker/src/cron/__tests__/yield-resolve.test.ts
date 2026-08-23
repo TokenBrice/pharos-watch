@@ -276,6 +276,7 @@ import { loadTier1PrevRateRows } from "../yield-sync/resolve-tracked-sources";
 import { loadOndoOracleAnchorRow } from "../yield-sync/tracked-optional-source-registry";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 
 // --- Helpers ---
 
@@ -291,7 +292,8 @@ function makeDb() {
 }
 
 function setupDefaultMocks() {
-  vi.mocked(getCache).mockReset().mockResolvedValue(null);
+  vi.mocked(getCache).mockReset();
+  installYieldCacheReader(vi.mocked(getCache), {});
   vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
   vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue({ written: true, skippedBecauseNewer: false });
   vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
@@ -333,17 +335,11 @@ async function runYieldScenario(input: {
 }) {
   const nowSec = Math.floor(Date.now() / 1000);
   const db = input.db ?? makeDb();
-  vi.mocked(getCache).mockImplementation(async (_db, key) => {
-    if (key === "risk_free_rate" && input.riskFreeRate != null) {
-      return { value: String(input.riskFreeRate), updatedAt: nowSec };
-    }
-    if (key === "dl-stablecoin-pools") {
-      return {
-        value: JSON.stringify(input.pools ?? [makeDlYieldPool()]),
-        updatedAt: nowSec,
-      };
-    }
-    return null;
+  installYieldCacheReader(vi.mocked(getCache), {
+    "dl-stablecoin-pools": cacheRow(input.pools ?? [makeDlYieldPool()], nowSec),
+    ...(input.riskFreeRate != null
+      ? { risk_free_rate: cacheRow(String(input.riskFreeRate), nowSec) }
+      : {}),
   });
   vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
   mockFetch([]);
@@ -447,16 +443,10 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
   it("selects DeFiLlama curated source (Layer 1) as best when it has positive APY", async () => {
     const db = makeDb();
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
-          ]),
-          updatedAt: Math.floor(Date.now() / 1000),
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
+        makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
+      ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -497,19 +487,11 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "5.0", updatedAt: nowSec };
-      }
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool({ apy: 4.5, apyBase: 4.5, apyMean30d: 4.5 }),
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("5.0", nowSec),
+      "dl-stablecoin-pools": cacheRow([
+        makeDlYieldPool({ apy: 4.5, apyBase: 4.5, apyMean30d: 4.5 }),
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -535,10 +517,8 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     const db = makeDb();
 
     // Provide a curated DL pool and an auto-discovered lending pool with divergent APY
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-native",
               chain: "Ethereum",
@@ -568,11 +548,7 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: Math.floor(Date.now() / 1000),
-        };
-      }
-      return null;
+      ], Math.floor(Date.now() / 1000)),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -604,19 +580,11 @@ describe("T-bill excess yield calculation", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     // Provide a cached T-bill rate of 4.0%
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool({ apy: 6.0, apyBase: 6.0, apyMean30d: 6.0 }),
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("4.0", nowSec),
+      "dl-stablecoin-pools": cacheRow([
+        makeDlYieldPool({ apy: 6.0, apyBase: 6.0, apyMean30d: 6.0 }),
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -638,19 +606,11 @@ describe("T-bill excess yield calculation", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "5.0", updatedAt: nowSec };
-      }
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool({ apy: 3.0, apyBase: 3.0, apyMean30d: 3.0 }),
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("5.0", nowSec),
+      "dl-stablecoin-pools": cacheRow([
+        makeDlYieldPool({ apy: 3.0, apyBase: 3.0, apyMean30d: 3.0 }),
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -671,16 +631,10 @@ describe("T-bill excess yield calculation", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     // No risk_free_rate cache at all
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool({ apy: 8.0, apyBase: 8.0, apyMean30d: 8.0 }),
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
+        makeDlYieldPool({ apy: 8.0, apyBase: 8.0, apyMean30d: 8.0 }),
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -815,17 +769,11 @@ describe("warning signal generation in yield sync", () => {
     ]);
 
     // Current APY jumps to 10% (>2x average of ~3%)
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") return { value: "4.25", updatedAt: nowSec };
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool({ apy: 10.0, apyBase: 10.0, apyMean30d: 3.0 }),
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("4.25", nowSec),
+      "dl-stablecoin-pools": cacheRow([
+        makeDlYieldPool({ apy: 10.0, apyBase: 10.0, apyMean30d: 3.0 }),
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -872,16 +820,10 @@ describe("warning signal generation in yield sync", () => {
     ]);
 
     // Current TVL dropped significantly (from 3B to 1B = -67%)
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool({ tvlUsd: 1_000_000_000 }),
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
+        makeDlYieldPool({ tvlUsd: 1_000_000_000 }),
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -903,17 +845,9 @@ describe("warning signal generation in yield sync", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") return { value: "4.25", updatedAt: nowSec };
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool(),
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("4.25", nowSec),
+      "dl-stablecoin-pools": cacheRow([makeDlYieldPool()], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -947,11 +881,9 @@ describe("Pharos Yield Score (PYS) computation through sync", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") return { value: "4.25", updatedAt: nowSec };
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("4.25", nowSec),
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-native",
               chain: "Ethereum",
@@ -966,11 +898,7 @@ describe("Pharos Yield Score (PYS) computation through sync", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -991,16 +919,10 @@ describe("Pharos Yield Score (PYS) computation through sync", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
-            makeDlYieldPool({ apy: 0, apyBase: 0, apyMean30d: 0 }),
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
+        makeDlYieldPool({ apy: 0, apyBase: 0, apyMean30d: 0 }),
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -1053,11 +975,8 @@ describe("price-derived and auto-discovery yield paths", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("4.0", Math.floor(Date.now() / 1000)),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -1094,11 +1013,8 @@ describe("price-derived and auto-discovery yield paths", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
-      }
-      return null;
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("4.0", Math.floor(Date.now() / 1000)),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -1117,10 +1033,8 @@ describe("price-derived and auto-discovery yield paths", () => {
     setupDefaultMocks();
 
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-u-venus",
               chain: "BSC",
@@ -1135,14 +1049,8 @@ describe("price-derived and auto-discovery yield paths", () => {
               stablecoin: true,
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec - 300,
-        };
-      }
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+      ], nowSec - 300),
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -1159,10 +1067,8 @@ describe("price-derived and auto-discovery yield paths", () => {
     setupDefaultMocks();
 
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-u-venus",
               chain: "BSC",
@@ -1178,14 +1084,8 @@ describe("price-derived and auto-discovery yield paths", () => {
               stablecoin: true,
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec - 300,
-        };
-      }
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: nowSec };
-      }
-      return null;
+      ], nowSec - 300),
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -1232,10 +1132,8 @@ describe("on-chain rate bootstrapping seed", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     // DL pool for usde-ethena with 0% APY (simulating the USN-like scenario)
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-usde-native",
               chain: "Ethereum",
@@ -1250,11 +1148,7 @@ describe("on-chain rate bootstrapping seed", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -1335,13 +1229,9 @@ describe("on-chain rate bootstrapping seed", () => {
       { match: "dex_liquidity", rows: [] },
     ]);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rate") {
-        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
-      }
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(getCache), {
+      risk_free_rate: cacheRow("4.0", Math.floor(Date.now() / 1000)),
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-susde-fallback",
               chain: "Ethereum",
@@ -1356,11 +1246,7 @@ describe("on-chain rate bootstrapping seed", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -1547,10 +1433,8 @@ describe("optional source budgets", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "dl-stablecoin-pools") {
-        return {
-          value: JSON.stringify([
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": cacheRow([
             {
               pool: "pool-sdai-native",
               chain: "Ethereum",
@@ -1565,11 +1449,7 @@ describe("optional source budgets", () => {
               exposure: "single",
               underlyingTokens: null,
             },
-          ]),
-          updatedAt: nowSec,
-        };
-      }
-      return null;
+      ], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
