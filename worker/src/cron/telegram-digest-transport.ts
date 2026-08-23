@@ -7,10 +7,43 @@ import {
   type TelegramTransportPermit,
 } from "../lib/telegram-transport-control";
 import { recordCronFailure } from "../lib/cron-logger";
+import { parseTelegramTransportErrorClass } from "../lib/telegram-transport-errors";
 
 export interface TelegramDigestPermittedDelivery {
   status: string;
   transportOutcome: TelegramTransportOutcome["result"] | null;
+}
+
+export function mapTelegramDigestPermittedDelivery(delivery: {
+  outcome: "sent" | "pending" | "execution_unknown" | "failed_permanent" | "skipped";
+  state: string;
+  errorClass: string | null;
+  retryAfterSec: number | null;
+}, labels: {
+  success: string;
+  alreadySent: string;
+}): TelegramDigestPermittedDelivery {
+  if (delivery.outcome === "sent") {
+    return {
+      status: labels.success,
+      transportOutcome: { ok: true, errorClass: null, retryAfterSec: null },
+    };
+  }
+  if (delivery.outcome === "skipped" && delivery.state === "sent") {
+    return { status: labels.alreadySent, transportOutcome: null };
+  }
+  if (delivery.outcome === "skipped") {
+    return { status: `queued: ${delivery.state}`, transportOutcome: null };
+  }
+  const errorClass = parseTelegramTransportErrorClass(delivery.errorClass);
+  return {
+    status: `failed: Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
+    transportOutcome: {
+      ok: false,
+      errorClass,
+      retryAfterSec: errorClass == null ? null : delivery.retryAfterSec,
+    },
+  };
 }
 
 /**

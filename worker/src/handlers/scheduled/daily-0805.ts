@@ -11,46 +11,29 @@ import { syncBluechip } from "../../cron/sync-bluechip";
 import { generateDailyDigest } from "../../cron/daily-digest";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroupDefinition } from "./slot-groups";
+import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
 const SLOT_LABEL = "daily 08:05 slot";
 
-function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroupDefinition[] {
-  return [
-    {
-      mode: "parallel-serial",
-      label: "daily-0805-chains",
-      chains: [
-        {
-          label: "sync-bluechip",
-          tasks: [
-            {
-              job: "sync-bluechip",
-              run: (signal) => syncBluechip(runtime.db, signal),
-            },
-          ],
-        },
-        {
-          label: "daily-digest",
-          tasks: [
-            {
-              job: "daily-digest",
-              run: (signal, reportProgress) =>
-                generateDailyDigest(
-                  runtime.db,
-                  runtime.env.ANTHROPIC_API_KEY ?? null,
-                  buildTwitterCreds(runtime.env),
-                  false,
-                  buildTelegramCreds(runtime.env),
-                  signal,
-                  reportProgress,
-                ),
-            },
-          ],
-        },
-      ],
+function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext) {
+  return bindScheduledSlotPlan("daily0805Utc", {
+    mode: "parallel-serial",
+    label: "daily-0805-chains",
+    chainLabels: ["sync-bluechip", "daily-digest"],
+    implementations: {
+      "sync-bluechip": (signal) => syncBluechip(runtime.db, signal),
+      "daily-digest": (signal, reportProgress) =>
+        generateDailyDigest(
+          runtime.db,
+          runtime.env.ANTHROPIC_API_KEY ?? null,
+          buildTwitterCreds(runtime.env),
+          false,
+          buildTelegramCreds(runtime.env),
+          signal,
+          reportProgress,
+        ),
     },
-  ];
+  });
 }
 
 export async function runDaily0805Slot(runtime: ScheduledRuntimeContext) {

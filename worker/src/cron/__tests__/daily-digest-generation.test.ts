@@ -112,8 +112,11 @@ vi.mock("../../lib/telegram-digest-outbox", () => ({
   deliverTelegramDigestEdition: vi.fn(),
 }));
 
-vi.mock("../telegram-digest-transport", () => ({
-  runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
+vi.mock("../telegram-digest-transport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../telegram-digest-transport")>();
+  return {
+    ...actual,
+    runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
     creds: unknown;
     deliver: (creds: unknown) => Promise<{ status: string }>;
   }) => {
@@ -123,8 +126,9 @@ vi.mock("../telegram-digest-transport", () => ({
     } catch (error) {
       return `failed: ${String(error).slice(0, 100)}`;
     }
-  }),
-}));
+    }),
+  };
+});
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 

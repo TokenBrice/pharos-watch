@@ -1,7 +1,6 @@
 import type { ScheduledRuntimeContext } from "./context";
 import { runPruneStatusProbeRuns } from "../../cron/prune-status-probe-runs";
 import { runPruneCronHistory } from "../../cron/prune-cron-history";
-import { runRepairTaskRunner } from "../../cron/repair-task-runner";
 import { runPruneDetailCache } from "../../cron/prune-detail-cache";
 import { runTelegramInactiveCleanup } from "../../cron/telegram-inactive-cleanup";
 import { runTelegramRetentionCleanup } from "../../cron/telegram-retention-cleanup";
@@ -9,9 +8,10 @@ import { runMintBurnGrowthWatchdog } from "../../cron/mint-burn-growth-watchdog"
 import { runCronDurationWatchdog } from "../../cron/cron-duration-watchdog";
 import { resolveDdrRepairTaskRunnerConfig } from "../../lib/env";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
+import { runWorkerRepairTaskRunner } from "../../lib/repair-tasks";
 
-function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext) {
   const ddrRepairTaskRunner = resolveDdrRepairTaskRunnerConfig(runtime.env);
   if (ddrRepairTaskRunner.warning) {
     logWorkerEvent({
@@ -28,50 +28,23 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
     });
   }
 
-  return [
-    {
-      mode: "serial",
-      label: "retention-and-telegram-housekeeping",
-      tasks: [
-        {
-          job: "mint-burn-growth-watchdog",
-          run: (signal) => runMintBurnGrowthWatchdog(runtime.db, signal),
-        },
-        {
-          job: "cron-duration-watchdog",
-          run: (signal) => runCronDurationWatchdog(runtime.db, signal),
-        },
-        {
-          job: "prune-status-probe-runs",
-          run: (signal) => runPruneStatusProbeRuns(runtime.db, signal),
-        },
-        {
-          job: "prune-cron-history",
-          run: (signal) => runPruneCronHistory(runtime.db, signal),
-        },
-        {
-          job: "worker-repair-runner",
-          run: (signal) => runRepairTaskRunner(
-            runtime.db,
-            signal,
-            ddrRepairTaskRunner.enabled,
-          ),
-        },
-        {
-          job: "prune-detail-cache",
-          run: (signal) => runPruneDetailCache(runtime.db, signal),
-        },
-        {
-          job: "telegram-inactive-cleanup",
-          run: (signal) => runTelegramInactiveCleanup(runtime.db, signal),
-        },
-        {
-          job: "telegram-retention-cleanup",
-          run: (signal) => runTelegramRetentionCleanup(runtime.db, signal),
-        },
-      ],
+  return bindScheduledSlotPlan("daily0300Utc", {
+    mode: "serial",
+    label: "retention-and-telegram-housekeeping",
+    implementations: {
+      "mint-burn-growth-watchdog": (signal) => runMintBurnGrowthWatchdog(runtime.db, signal),
+      "cron-duration-watchdog": (signal) => runCronDurationWatchdog(runtime.db, signal),
+      "prune-status-probe-runs": (signal) => runPruneStatusProbeRuns(runtime.db, signal),
+      "prune-cron-history": (signal) => runPruneCronHistory(runtime.db, signal),
+      "worker-repair-runner": (signal) => runWorkerRepairTaskRunner(runtime.db, {
+        signal,
+        enabled: ddrRepairTaskRunner.enabled,
+      }),
+      "prune-detail-cache": (signal) => runPruneDetailCache(runtime.db, signal),
+      "telegram-inactive-cleanup": (signal) => runTelegramInactiveCleanup(runtime.db, signal),
+      "telegram-retention-cleanup": (signal) => runTelegramRetentionCleanup(runtime.db, signal),
     },
-  ];
+  });
 }
 
 export async function runDaily0300Slot(runtime: ScheduledRuntimeContext) {

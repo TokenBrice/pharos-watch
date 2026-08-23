@@ -83,7 +83,7 @@ const cronMocks = vi.hoisted(() => ({
   generateWeeklyRecap: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runPruneStatusProbeRuns: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runPruneCronHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runRepairTaskRunner: vi.fn(async () => ({ status: "ok", itemCount: 0, metadata: "{}" })),
+  runWorkerRepairTaskRunner: vi.fn(async () => ({ status: "ok", itemCount: 0, metadata: "{}" })),
   runPruneDetailCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramInactiveCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramRetentionCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -307,7 +307,7 @@ vi.mock("../cron/daily-digest", () => ({ generateDailyDigest: cronMocks.generate
 vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
 vi.mock("../cron/prune-status-probe-runs", () => ({ runPruneStatusProbeRuns: cronMocks.runPruneStatusProbeRuns }));
 vi.mock("../cron/prune-cron-history", () => ({ runPruneCronHistory: cronMocks.runPruneCronHistory }));
-vi.mock("../cron/repair-task-runner", () => ({ runRepairTaskRunner: cronMocks.runRepairTaskRunner }));
+vi.mock("../lib/repair-tasks", () => ({ runWorkerRepairTaskRunner: cronMocks.runWorkerRepairTaskRunner }));
 vi.mock("../cron/prune-detail-cache", () => ({ runPruneDetailCache: cronMocks.runPruneDetailCache }));
 vi.mock("../cron/telegram-inactive-cleanup", () => ({
   runTelegramInactiveCleanup: cronMocks.runTelegramInactiveCleanup,
@@ -1203,7 +1203,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.runPruneStatusProbeRuns).toHaveBeenCalledTimes(1);
     expect(cronMocks.runPruneCronHistory).toHaveBeenCalledTimes(1);
-    expect(cronMocks.runRepairTaskRunner).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runWorkerRepairTaskRunner).toHaveBeenCalledTimes(1);
     expect(cronMocks.runTelegramInactiveCleanup).toHaveBeenCalledTimes(1);
     expect(cronMocks.runTelegramRetentionCleanup).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();

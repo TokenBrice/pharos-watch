@@ -127,6 +127,3 @@ const CONDITION_BANDS: readonly { min: number; band: ConditionBand }[] = [
 export function getConditionBand(score: number): ConditionBand {
   return bandFromThresholds(score, CONDITION_BANDS, { min: 0, band: "MELTDOWN" as const }).band;
 }
-
-/** Re-export hex colors from shared module. */
-export { PSI_HEX_COLORS as BAND_COLORS } from "@shared/lib/psi-colors";

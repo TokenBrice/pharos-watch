@@ -185,10 +185,6 @@ const _fxCalendar = new IsolateLocalState(() => ({
   targetClosingDaysByYear: new Map<number, Set<string>>(),
 }));
 
-export function resetFxRateStateForTests(): void {
-  _fxCalendar.reset();
-}
-
 function computeEasterSundayDayStartSec(year: number): number {
   // Meeus/Jones/Butcher Gregorian computus.
   const a = year % 19;

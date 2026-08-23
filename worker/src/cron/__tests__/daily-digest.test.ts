@@ -111,8 +111,11 @@ vi.mock("../../lib/telegram-digest-outbox", () => ({
   deliverTelegramDigestEdition: vi.fn(),
 }));
 
-vi.mock("../telegram-digest-transport", () => ({
-  runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
+vi.mock("../telegram-digest-transport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../telegram-digest-transport")>();
+  return {
+    ...actual,
+    runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
     creds: unknown;
     deliver: (creds: unknown) => Promise<{ status: string }>;
   }) => {
@@ -122,8 +125,9 @@ vi.mock("../telegram-digest-transport", () => ({
     } catch (error) {
       return `failed: ${String(error).slice(0, 100)}`;
     }
-  }),
-}));
+    }),
+  };
+});
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
@@ -136,17 +140,15 @@ import {
 } from "../daily-digest/response";
 
 import {
-  collectPsiContributors,
-  collectYieldAnomalies,
   collectLiquidityShifts,
-  collectCrossDayTrends,
-  collectDewsStress,
   collectActiveDepegs,
   collectResolvedDepegs,
   collectSupplyVelocity,
   collectMintBurnFlows,
-  type CollectorContext,
-} from "../daily-digest/collectors";
+} from "../daily-digest/collectors-market";
+import { collectDewsStress, collectYieldAnomalies } from "../daily-digest/collectors-risk";
+import { collectCrossDayTrends, collectPsiContributors } from "../daily-digest/collectors-history";
+import type { CollectorContext } from "../daily-digest/collectors-shared";
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
 

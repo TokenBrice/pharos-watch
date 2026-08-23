@@ -35,8 +35,6 @@ export const SNAPSHOT_KEYS = {
 
 export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
 
-export const SAFETY_GRADE_RANK: Readonly<Record<string, number>> = REPORT_CARD_GRADE_RANK;
-
 // ---------- Types ----------
 
 export type DewsSnapshot = Record<string, string>;

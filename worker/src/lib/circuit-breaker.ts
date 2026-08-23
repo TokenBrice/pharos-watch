@@ -361,10 +361,6 @@ function getActiveCircuitSources(): Set<string> {
   return _activeCircuitSources;
 }
 
-export function isActiveCircuitSource(source: string): boolean {
-  return getActiveCircuitSources().has(source);
-}
-
 export function listActiveCircuitSources(): string[] {
   return [...getActiveCircuitSources()].sort();
 }

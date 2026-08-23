@@ -6,7 +6,7 @@ import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/
 const mocks = vi.hoisted(() => ({
   runPruneStatusProbeRuns: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runPruneCronHistory: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
-  runRepairTaskRunner: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
+  runWorkerRepairTaskRunner: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runPruneDetailCache: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runTelegramInactiveCleanup: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
   runTelegramRetentionCleanup: vi.fn(async () => ({ status: "ok" as const, itemCount: 0 })),
@@ -18,7 +18,7 @@ vi.mock("../../../cron/prune-status-probe-runs", () => ({
   runPruneStatusProbeRuns: mocks.runPruneStatusProbeRuns,
 }));
 vi.mock("../../../cron/prune-cron-history", () => ({ runPruneCronHistory: mocks.runPruneCronHistory }));
-vi.mock("../../../cron/repair-task-runner", () => ({ runRepairTaskRunner: mocks.runRepairTaskRunner }));
+vi.mock("../../../lib/repair-tasks", () => ({ runWorkerRepairTaskRunner: mocks.runWorkerRepairTaskRunner }));
 vi.mock("../../../cron/prune-detail-cache", () => ({ runPruneDetailCache: mocks.runPruneDetailCache }));
 vi.mock("../../../cron/telegram-inactive-cleanup", () => ({
   runTelegramInactiveCleanup: mocks.runTelegramInactiveCleanup,

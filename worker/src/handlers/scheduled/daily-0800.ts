@@ -17,11 +17,11 @@ import {
 } from "../../lib/public-dataset-snapshot-budget";
 import { syncUsdsStatus } from "../../cron/sync-usds-status";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroupDefinition } from "./slot-groups";
+import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
 const SLOT_LABEL = "daily 08:00 slot";
 
-function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroupDefinition[] {
+function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext) {
   const stablecoinsCacheFreshnessGate = {
     minStablecoinsCacheUpdatedAtSec: runtime.slotStartedAt,
     freshnessGateLabel: "daily0800Utc",
@@ -32,54 +32,20 @@ function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
     stablecoinsCacheRetryDelayMs: PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
   };
 
-  return [
-    {
-      mode: "parallel-serial",
-      label: "daily-0800-chains",
-      chains: [
-        {
-          label: "snapshot-supply",
-          tasks: [
-            {
-              job: "snapshot-supply",
-              run: (signal) => snapshotSupply(runtime.db, signal, stablecoinsCacheFreshnessGate),
-            },
-          ],
-        },
-        {
-          label: "safety-psi-public",
-          tasks: [
-            {
-              job: "snapshot-safety-grade-history",
-              run: (signal) => snapshotSafetyGradeHistory(runtime.db, signal),
-            },
-            {
-              job: "snapshot-psi",
-              run: (signal) => snapshotPsiDaily(runtime.db, signal),
-            },
-            {
-              job: "snapshot-public-dataset",
-              run: (signal) => snapshotPublicDataset(runtime.db, signal, publicSnapshotFreshnessGate),
-            },
-          ],
-        },
-        {
-          label: "tbill-usds",
-          tasks: [
-            {
-              job: "fetch-tbill-rate",
-              run: (signal) => fetchTbillRate(runtime.db, signal, runtime.env),
-            },
-            {
-              job: "sync-usds-status",
-              run: (signal) =>
-                syncUsdsStatus(runtime.db, runtime.env.ETHERSCAN_API_KEY ?? null, signal),
-            },
-          ],
-        },
-      ],
+  return bindScheduledSlotPlan("daily0800Utc", {
+    mode: "parallel-serial",
+    label: "daily-0800-chains",
+    chainLabels: ["snapshot-supply", "safety-psi-public", "tbill-usds"],
+    implementations: {
+      "snapshot-supply": (signal) => snapshotSupply(runtime.db, signal, stablecoinsCacheFreshnessGate),
+      "snapshot-safety-grade-history": (signal) => snapshotSafetyGradeHistory(runtime.db, signal),
+      "snapshot-psi": (signal) => snapshotPsiDaily(runtime.db, signal),
+      "snapshot-public-dataset": (signal) => snapshotPublicDataset(runtime.db, signal, publicSnapshotFreshnessGate),
+      "fetch-tbill-rate": (signal) => fetchTbillRate(runtime.db, signal, runtime.env),
+      "sync-usds-status": (signal) =>
+        syncUsdsStatus(runtime.db, runtime.env.ETHERSCAN_API_KEY ?? null, signal),
     },
-  ];
+  });
 }
 
 export async function runDaily0800Slot(runtime: ScheduledRuntimeContext) {

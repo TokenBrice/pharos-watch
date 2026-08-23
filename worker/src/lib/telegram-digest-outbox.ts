@@ -11,7 +11,7 @@ import {
   recordTelegramTransportOutcomes,
   type TelegramTransportOutcome,
 } from "./telegram-transport-control";
-import type { TelegramTransportErrorClass } from "./telegram-transport-errors";
+import { parseTelegramTransportErrorClass } from "./telegram-transport-errors";
 import { logWorkerEvent } from "./structured-log";
 import {
   DigestSafetyContextSchema,
@@ -115,26 +115,6 @@ export interface TelegramDigestOutboxDrainSummary {
   prunedSent: number;
 }
 
-function telegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
-  switch (value) {
-    case "blocked":
-    case "chat_not_found":
-    case "chat_migrated":
-    case "formatting_error":
-    case "payload_too_large":
-    case "rate_limit":
-    case "server_error":
-    case "bad_request":
-    case "auth_error":
-    case "timeout":
-    case "network":
-    case "unknown":
-      return value;
-    default:
-      return null;
-  }
-}
-
 function digestTransportOutcome(
   chatId: string,
   delivery: TelegramDigestDeliveryResult,
@@ -145,7 +125,7 @@ function digestTransportOutcome(
       result: { ok: true, errorClass: null, retryAfterSec: null },
     };
   }
-  const errorClass = telegramTransportErrorClass(delivery.errorClass);
+  const errorClass = parseTelegramTransportErrorClass(delivery.errorClass);
   if (errorClass == null || delivery.outcome === "skipped") return null;
   return {
     chatId,
@@ -393,33 +373,47 @@ async function claimEdition(
   };
 }
 
-async function markExecutionUnknown(
+type ClaimedDigestTransition =
+  | { state: "execution_unknown"; transitionAt: number; updatedAt: number; confirmation: "ambiguity" }
+  | { state: "pending"; transitionAt: number; updatedAt: number; confirmation: "retry" }
+  | { state: "failed_permanent"; transitionAt: number; updatedAt: number; confirmation: "permanent failure" };
+
+async function transitionClaimedDigestEdition(
   db: D1Database,
   claim: TelegramDigestOutboxClaim,
-  nowSec: number,
+  transition: ClaimedDigestTransition,
   errorClass: string,
   statusCode: number | null,
 ): Promise<void> {
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `UPDATE telegram_digest_outbox
-            SET state = 'execution_unknown',
+  const transitionSql = transition.state === "pending"
+    ? `state = 'pending',
+                next_attempt_at = ?,
+                delivery_owner = NULL,
+                delivery_claim_expires_at = NULL,
+                last_error_class = ?,
+                last_status_code = ?,
+                updated_at = ?`
+    : `state = '${transition.state}',
                 delivery_completed_at = ?,
                 delivery_claim_expires_at = NULL,
                 last_error_class = ?,
                 last_status_code = ?,
-                updated_at = ?
+                updated_at = ?`;
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE telegram_digest_outbox
+            SET ${transitionSql}
           WHERE edition_key = ?
             AND state = 'sending'
             AND delivery_owner = ?
             AND delivery_generation = ?`,
       )
       .bind(
-        nowSec,
+        transition.transitionAt,
         errorClass,
         statusCode,
-        nowSec,
+        transition.updatedAt,
         claim.row.edition_key,
         claim.owner,
         claim.generation,
@@ -427,8 +421,24 @@ async function markExecutionUnknown(
       .run(),
   );
   if (Number(result.meta?.changes ?? 0) !== 1) {
-    throw new Error(`Telegram digest ambiguity state was not confirmed (${claim.row.edition_key})`);
+    throw new Error(`Telegram digest ${transition.confirmation} state was not confirmed (${claim.row.edition_key})`);
   }
+}
+
+async function markExecutionUnknown(
+  db: D1Database,
+  claim: TelegramDigestOutboxClaim,
+  nowSec: number,
+  errorClass: string,
+  statusCode: number | null,
+): Promise<void> {
+  return transitionClaimedDigestEdition(
+    db,
+    claim,
+    { state: "execution_unknown", transitionAt: nowSec, updatedAt: nowSec, confirmation: "ambiguity" },
+    errorClass,
+    statusCode,
+  );
 }
 
 async function bestEffortMarkExecutionUnknown(
@@ -477,36 +487,13 @@ async function returnToPending(
   retryAfterSec: number | null,
 ): Promise<void> {
   const delaySec = retryDelaySec(claim.row.attempts, retryAfterSec);
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `UPDATE telegram_digest_outbox
-            SET state = 'pending',
-                next_attempt_at = ?,
-                delivery_owner = NULL,
-                delivery_claim_expires_at = NULL,
-                last_error_class = ?,
-                last_status_code = ?,
-                updated_at = ?
-          WHERE edition_key = ?
-            AND state = 'sending'
-            AND delivery_owner = ?
-            AND delivery_generation = ?`,
-      )
-      .bind(
-        nowSec + delaySec,
-        errorClass,
-        statusCode,
-        nowSec,
-        claim.row.edition_key,
-        claim.owner,
-        claim.generation,
-      )
-      .run(),
+  return transitionClaimedDigestEdition(
+    db,
+    claim,
+    { state: "pending", transitionAt: nowSec + delaySec, updatedAt: nowSec, confirmation: "retry" },
+    errorClass,
+    statusCode,
   );
-  if (Number(result.meta?.changes ?? 0) !== 1) {
-    throw new Error(`Telegram digest retry state was not confirmed (${claim.row.edition_key})`);
-  }
 }
 
 async function markPermanentFailure(
@@ -516,35 +503,13 @@ async function markPermanentFailure(
   errorClass: string,
   statusCode: number | null,
 ): Promise<void> {
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `UPDATE telegram_digest_outbox
-            SET state = 'failed_permanent',
-                delivery_completed_at = ?,
-                delivery_claim_expires_at = NULL,
-                last_error_class = ?,
-                last_status_code = ?,
-                updated_at = ?
-          WHERE edition_key = ?
-            AND state = 'sending'
-            AND delivery_owner = ?
-            AND delivery_generation = ?`,
-      )
-      .bind(
-        nowSec,
-        errorClass,
-        statusCode,
-        nowSec,
-        claim.row.edition_key,
-        claim.owner,
-        claim.generation,
-      )
-      .run(),
+  return transitionClaimedDigestEdition(
+    db,
+    claim,
+    { state: "failed_permanent", transitionAt: nowSec, updatedAt: nowSec, confirmation: "permanent failure" },
+    errorClass,
+    statusCode,
   );
-  if (Number(result.meta?.changes ?? 0) !== 1) {
-    throw new Error(`Telegram digest permanent failure was not confirmed (${claim.row.edition_key})`);
-  }
 }
 
 async function advanceAcceptedChunk(
