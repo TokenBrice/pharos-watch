@@ -309,6 +309,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
   const summaryUpdatedAt = summary?.updatedAt ? formatAiSummaryDate(summary.updatedAt) : null;
   const compareHref = getPrimaryStaticComparisonLinkForCoin(coin.id)?.href ?? buildLiveCompareUrl([coin.id]);
   const alertCommand = buildAlertCommand(coin);
+  const [identityAnswer, safetyAnswer] = buildStablecoinFaqItems(coin);
 
   return (
     <div className="mb-6 space-y-4">
@@ -324,7 +325,17 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
 
       <ListingStateBanner coin={coin} />
 
-      {coin.oneLiner ? <p className="text-base italic leading-relaxed text-muted-foreground">{coin.oneLiner}</p> : null}
+      <section aria-labelledby="stablecoin-identity-answer-title" className="pharos-card-shell px-4 py-4 sm:px-5">
+        <p className="pharos-kicker mb-2">Answer First</p>
+        <h2 id="stablecoin-identity-answer-title" className="text-lg font-semibold tracking-tight text-foreground">
+          {identityAnswer.question}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{identityAnswer.answer}</p>
+        <div className="mt-4 border-t border-border/50 pt-4">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">{safetyAnswer.question}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{safetyAnswer.answer}</p>
+        </div>
+      </section>
 
       <section
         aria-labelledby="stablecoin-static-profile-title"
@@ -382,7 +393,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summary.text)}</p>
+                <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summary.text, 520)}</p>
                 {(() => {
                   const disclosure = buildAiDisclosureLine(summary);
                   return disclosure ? (
@@ -430,13 +441,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
           </dl>
         </div>
 
-        <div className="mt-4 grid gap-3 border-t border-border/50 pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.72fr)]">
-          <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
-            <p className="pharos-kicker">Snippet Answer</p>
-            <h3 className="mt-1 text-base font-semibold tracking-tight text-foreground">Is {coin.symbol} safe?</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{buildSafetyAnswer(coin)}</p>
-          </div>
-
+        <div className="mt-4 border-t border-border/50 pt-4">
           <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
             <p className="pharos-kicker">Next Actions</p>
             <div className="mt-3 flex flex-wrap gap-2">

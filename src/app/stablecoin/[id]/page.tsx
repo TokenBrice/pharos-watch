@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -65,71 +65,89 @@ function buildCollateralUsageEntries(stablecoinId: string): CollateralUsageEntry
 function DetailPageShellFallback({
   coin,
   logoSrc,
-  staticProfileContent,
-  staticComparisonLinks,
 }: {
   coin: StablecoinStaticMeta;
   logoSrc?: string;
-  staticProfileContent?: ReactNode;
-  staticComparisonLinks?: Array<{ href: string; shortTitle: string }>;
 }) {
   return (
-    <div className="space-y-6">
-      <div className="space-y-6" aria-hidden="true">
-        <StablecoinDetailLoadingShell
-          coin={coin}
-          logoSrc={logoSrc}
-          description="Loading the full research dossier: price, safety, liquidity, flows, and historical context."
-          statusLabel="Research dossier loading"
-        />
+    <div className="space-y-6" aria-hidden="true">
+      <StablecoinDetailLoadingShell
+        coin={coin}
+        logoSrc={logoSrc}
+        description="Loading the full research dossier: price, safety, liquidity, flows, and historical context."
+        statusLabel="Research dossier loading"
+      />
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
-          <div className="space-y-6">
-            <div className="pharos-card-shell p-4">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="mt-4 h-[320px] w-full rounded-xl" />
-            </div>
-            <div className="pharos-card-shell p-4">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="mt-4 h-[260px] w-full rounded-xl" />
-            </div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
+        <div className="space-y-6">
+          <div className="pharos-card-shell p-4">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="mt-4 h-[320px] w-full rounded-xl" />
           </div>
+          <div className="pharos-card-shell p-4">
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="mt-4 h-[260px] w-full rounded-xl" />
+          </div>
+        </div>
 
-          <div className="space-y-6">
-            <div className="pharos-card-shell p-4">
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="mt-4 h-[220px] w-full rounded-xl" />
-            </div>
-            <div className="pharos-card-shell p-4">
-              <Skeleton className="h-5 w-36" />
-              <Skeleton className="mt-4 h-[180px] w-full rounded-xl" />
-            </div>
+        <div className="space-y-6">
+          <div className="pharos-card-shell p-4">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="mt-4 h-[220px] w-full rounded-xl" />
+          </div>
+          <div className="pharos-card-shell p-4">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="mt-4 h-[180px] w-full rounded-xl" />
           </div>
         </div>
       </div>
-
-      {staticProfileContent}
-
-      {staticComparisonLinks && staticComparisonLinks.length > 0 ? (
-        <nav aria-label="Peer comparisons" className="pharos-card-shell px-4 py-3 sm:px-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Peer comparisons
-          </p>
-          <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-2 text-sm">
-            {staticComparisonLinks.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
-                >
-                  {link.shortTitle}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      ) : null}
     </div>
+  );
+}
+
+function StablecoinResearchContext({
+  symbol,
+  staticComparisonLinks,
+}: {
+  symbol: string;
+  staticComparisonLinks: Array<{ href: string; shortTitle: string }>;
+}) {
+  const researchLinks = [
+    { href: "/depeg/", label: "Depeg tracker" },
+    { href: "/digest/", label: "Research digest" },
+    { href: "/safety-scores/", label: "Safety Scores" },
+    { href: "/liquidity/", label: "Liquidity monitor" },
+    { href: "/flows/", label: "Mint and burn flows" },
+  ];
+
+  return (
+    <nav aria-labelledby="stablecoin-research-context-title" className="pharos-card-shell px-4 py-3 sm:px-5">
+      <h2 id="stablecoin-research-context-title" className="text-sm font-semibold tracking-tight text-foreground">
+        Research context for {symbol}
+      </h2>
+      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-2 text-sm">
+        {researchLinks.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+        {staticComparisonLinks.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+            >
+              {link.shortTitle}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 
@@ -190,6 +208,8 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     );
   }
 
+  const staticComparisonPages = getStaticComparisonPagesForCoin(id);
+
   if (coin.status === "quarantined" || coin.status === "delisted") {
     const faqItems = buildStablecoinFaqItems(coin);
     return (
@@ -197,6 +217,13 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         <div className="space-y-6">
           <StablecoinDetailSeoContent coin={coin} summary={summary} />
           <FaqSection items={faqItems} title={`${coin.symbol} quick answers`} includeJsonLd />
+          <StablecoinResearchContext
+            symbol={coin.symbol}
+            staticComparisonLinks={staticComparisonPages.map((page) => ({
+              href: page.href,
+              shortTitle: page.shortTitle,
+            }))}
+          />
         </div>
         <BreadcrumbJsonLd
           items={[
@@ -215,72 +242,62 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   }
 
   const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
-  const staticComparisonPages = getStaticComparisonPagesForCoin(id);
   const collateralUsageEntries = buildCollateralUsageEntries(id);
   const staticCoin = buildStablecoinStaticMeta(coin, {
     hasCollateralUsage: collateralUsageEntries.length > 0,
   });
   const clientCoin = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
-  // Server-rendered in both the crawl-state fallback and the hydrated dossier
-  // so the FAQPage JSON-LD content stays visible in every render state.
+  // Permanent server content keeps the FAQPage JSON-LD and visible answers
+  // outside the interactive dossier's loading lifecycle.
   const faqContent = (
     <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd />
   );
+  const staticComparisonLinks = staticComparisonPages.map((page) => ({
+    href: page.href,
+    shortTitle: page.shortTitle,
+  }));
 
   return (
     <>
-      <Suspense
-        fallback={
-          <DetailPageShellFallback
-            coin={staticCoin}
+      <div className="space-y-6">
+        <StablecoinDetailSeoContent coin={coin} summary={summary} />
+        {faqContent}
+        <StablecoinResearchContext symbol={coin.symbol} staticComparisonLinks={staticComparisonLinks} />
+        <Suspense fallback={<DetailPageShellFallback coin={staticCoin} logoSrc={logosById[coin.id]} />}>
+          <StablecoinDetailClient
+            id={id}
+            coin={clientCoin}
+            summary={summary}
+            staticCoin={staticCoin}
             logoSrc={logosById[coin.id]}
-            staticProfileContent={
-              <>
-                <StablecoinDetailSeoContent coin={coin} summary={summary} />
-                {faqContent}
-              </>
+            collateralUsageEntries={collateralUsageEntries}
+            mechanismBacking={buildMechanismBackingView(id)}
+            mechanismCollateralization={buildMechanismCollateralizationView(id)}
+            mechanismReview={buildMechanismReviewView(id)}
+            transferReview={buildTransferReviewView(id)}
+            exploreNextContent={
+              <ExploreNextSection
+                coin={coin}
+                related={related}
+                staticComparisonPages={staticComparisonPages.map((page) => {
+                  const counterpart = page.left.id === coin.id ? page.right : page.left;
+                  return {
+                    href: page.href,
+                    shortTitle: page.shortTitle,
+                    leftId: page.left.id,
+                    rightId: page.right.id,
+                    counterpartId: counterpart.id,
+                    counterpartSymbol: counterpart.symbol,
+                    counterpartName: counterpart.name,
+                  };
+                })}
+                logos={logosById}
+              />
             }
-            staticComparisonLinks={staticComparisonPages.map((page) => ({
-              href: page.href,
-              shortTitle: page.shortTitle,
-            }))}
           />
-        }
-      >
-        <StablecoinDetailClient
-          id={id}
-          coin={clientCoin}
-          summary={summary}
-          staticCoin={staticCoin}
-          logoSrc={logosById[coin.id]}
-          collateralUsageEntries={collateralUsageEntries}
-          mechanismBacking={buildMechanismBackingView(id)}
-          mechanismCollateralization={buildMechanismCollateralizationView(id)}
-          mechanismReview={buildMechanismReviewView(id)}
-          transferReview={buildTransferReviewView(id)}
-          exploreNextContent={
-            <ExploreNextSection
-              coin={coin}
-              related={related}
-              staticComparisonPages={staticComparisonPages.map((page) => {
-                const counterpart = page.left.id === coin.id ? page.right : page.left;
-                return {
-                  href: page.href,
-                  shortTitle: page.shortTitle,
-                  leftId: page.left.id,
-                  rightId: page.right.id,
-                  counterpartId: counterpart.id,
-                  counterpartSymbol: counterpart.symbol,
-                  counterpartName: counterpart.name,
-                };
-              })}
-              logos={logosById}
-            />
-          }
-          faqContent={faqContent}
-        />
-      </Suspense>
+        </Suspense>
+      </div>
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: "/" },
