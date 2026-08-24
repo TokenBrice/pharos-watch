@@ -6,6 +6,7 @@ import type {
 } from "../safety-score-v9/dependencies";
 import {
   buildV9DependencyEvaluationPlan,
+  distinctV9RootLiabilityIds,
   projectV9RoleDependencyPillarLimits,
   resolveV9DependencyInputs,
 } from "../safety-score-v9/dependencies";
@@ -103,6 +104,24 @@ describe("buildV9DependencyEvaluationPlan", () => {
     expect(plan.topologicalOrder.indexOf("root")).toBeLessThan(plan.topologicalOrder.indexOf("left"));
     expect(plan.topologicalOrder.indexOf("root")).toBeLessThan(plan.topologicalOrder.indexOf("right"));
     expect(plan.topologicalOrder.indexOf("left")).toBeLessThan(plan.topologicalOrder.indexOf("diamond"));
+  });
+
+  it("does not count a serial derivative as a second independent root liability", () => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["derivative", "root"],
+      assets: [asset("root"), asset("derivative", [edge("root", "wrapper")])],
+    });
+
+    expect(distinctV9RootLiabilityIds(["root", "derivative"], plan.serialPaths)).toEqual(["root"]);
+  });
+
+  it("keeps genuinely independent liabilities distinct for the common-control census", () => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["alpha", "beta"],
+      assets: [asset("alpha"), asset("beta")],
+    });
+
+    expect(distinctV9RootLiabilityIds(["alpha", "beta"], plan.serialPaths)).toEqual(["alpha", "beta"]);
   });
 
   it("suppresses a duplicate basket role when the same upstream is serial", () => {

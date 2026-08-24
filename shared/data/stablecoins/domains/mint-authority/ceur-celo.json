@@ -74,6 +74,9 @@
         "signerCount": 6,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+        ],
         "safe": {
           "version": "1.4.1+L2",
           "threshold": 4,
