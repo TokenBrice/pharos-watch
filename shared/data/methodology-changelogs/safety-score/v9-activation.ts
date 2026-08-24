@@ -1,5 +1,37 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_EVIDENCE_SCOPE_AND_FRESHNESS: MethodologyChangelogEntry = {
+  version: "9.4",
+  title: "Evidence, scope, freshness, and incidents become explicit",
+  date: "2026-08-24",
+  effectiveAt: 1787594024,
+  summary:
+    "Safety Score V9 replaces several broad assumptions with reviewed, scope-aware evidence. Exit terms must be established for the scored request, reserve classification and composition age independently, chain maturity follows a dated five-gate review, local controls are charged to the liabilities they can reach, and reviewed incidents enter their owning risk domain. The release also corrects stale oracle-applicability dispositions and distinguishes expired published evidence from issuer non-disclosure. Scores move in both directions because better evidence can remove a conservative penalty while adverse or missing evidence can lower or withhold a rating.",
+  impact: [
+    "A favorable faster-settlement term can replace the conservative default only when the exact delay has a review date and source; a conservative correction can still lower credit without asserting a favorable promise. A route whose stress capacity, settlement, or cost is not established receives the explicit bounded-terms-gap disposition: valid partial facts remain visible, but the route is excluded from primary and diversification credit and ordinary uncertainty cannot manufacture a measured-danger F",
+    "Reserve classification remains admissible for 365 days, while reserve composition uses a 31-day window plus a fixed 7-day reporting grace. The clocks apply to live overlays as well as curated fallback rows, so an expired classification cannot remain score-bearing merely because a live adapter supplied percentages",
+    "Chain maturity is now a dated quarterly review with five fail-closed gates: 36 months of continuous production history; a 365-day liveness record; permissionless participation or at least 21 independently operated block producers or finality members; no unilateral instant change path, with L2s at Stage 1 or later and at least a 7-day holder exit; and documented bridge or data-availability dependencies with a holder exit. Cardano, Gnosis, Hedera, Rootstock, Sui, Conflux, and Kaia are admitted; Celo remains excluded after its security-model migration and failed continuity, change-control, and dependency/exit gates",
+    "Oracle applicability now preserves the V9 distinction between a top-level price authority and a genuinely non-applicable path. Stale pre-9.17 dispositions were reviewed asset by asset: a mint, redemption, NAV, or exchange-rate authority is scoreable without fabricated borrower-liquidation branches, while verified adverse evidence and bounded uncertainty retain different cap treatment",
+    "A reviewed control that reaches only one deployment is charged proportionally when its liability partition is complete and reconciled; unresolved or root-reaching controls remain global. Common-control thresholds now count independent root liabilities rather than wrappers or derivatives, same-issuer controls remain diagnostic, and corrected Mento issuer attribution removes a manufactured cross-issuer failure domain",
+    "The evidence-responsibility vocabulary adds `published-evidence-expired` for stale issuer- or parent-published material that Pharos has not kept current. Unknown provenance continues to fail closed under the existing fallback, and the new responsibility changes attribution and public copy without directly changing a score",
+    "Reviewed incidents are typed as control, wrapper-local, operational, or peg events and enter the existing component that owns the risk rather than creating another scoring dimension. Scope distinguishes root-claim, deployment, integration-only, and holder-exit consequences, and remediation evidence preserves active, mitigated, and resolved treatment",
+    "On the fixed-input release replay, 87 assets move and 67 change grade. The mover set contains upgrades, downgrades, newly rated cards, and newly withheld cards, so the release is explicitly not score-neutral",
+  ],
+  commits: [
+    "2f510a8d7",
+    "68714f9e2",
+    "392d3187c",
+    "ca437e069",
+    "f07597c45",
+    "29839cff9",
+    "78a765eb9",
+    "bfe391a51",
+    "fd62fe2f9",
+    "b6735756e",
+  ],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_CAP_REASON_PRECEDENCE: MethodologyChangelogEntry = {
   version: "9.35",
   title: "Deterministic cap reasons and locale-independent canonical ordering",

@@ -20,6 +20,14 @@ export function SafetyScoresOverview() {
         score and redemption route score describe their own modules; neither is the V9 Exit score.
       </p>
       <p>
+        Since methodology v9.4, a favorable faster-settlement term receives credit only when the exact delay has a
+        review date and source; a conservative correction can still lower credit without asserting a favorable
+        promise. Curated settlement and cost terms can therefore move Exit in either direction. A route whose
+        same-notional capacity, settlement, or cost is not established publishes a bounded terms gap: supported
+        partial evidence remains visible, but generated fallback values receive no primary or backup credit, and
+        ordinary uncertainty does not become measured danger.
+      </p>
+      <p>
         Equal-score route ties and every other canonical V9 array use locale-independent JavaScript code-unit order.
         The same facts therefore select the same primary and backup routes, dependency paths, ordered traces, and
         digest inputs on every runtime host. This ordering can rotate identity or provenance where an older locale
@@ -36,6 +44,12 @@ export function SafetyScoresOverview() {
         an adapter-owned reserve category to reviewed classification and dependency metadata across rebalancing or
         label changes. Explicit keys must match uniquely and otherwise fail closed; historical unkeyed captures retain
         a unique normalized-name compatibility join.
+      </p>
+      <p>
+        Since methodology v9.4, reserve classification remains current for 365 days while composition uses a 31-day
+        window plus a fixed 7-day reporting grace. Both gates apply before reviewed facts reach live adapter rows, so
+        current percentages cannot preserve an expired classification and a durable classification cannot extend stale
+        percentages.
       </p>
       <p>
         Since methodology v9.31, curated collateral links share the reserve-envelope admission gate. When no live
@@ -71,6 +85,12 @@ export function SafetyScoresOverview() {
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
       </p>
       <p>
+        Since methodology v9.4, stale issuer- or parent-published evidence is attributed as
+        {" "}<code className="text-xs">published-evidence-expired</code> when its publisher provenance is explicit,
+        rather than being described as issuer non-disclosure. Unknown provenance still fails closed under the existing
+        responsibility. The new value changes attribution and public explanation, not score arithmetic.
+      </p>
+      <p>
         Governance access posture treats a reviewed global mint-domain contract as immutable when it has no privileged
         capabilities, no applicable cap, no claim-impairment path, and access-only scope. A contract address alone
         identifies protocol machinery rather than a concentrated administrator; deployment-scoped bridge controls
@@ -83,6 +103,31 @@ export function SafetyScoresOverview() {
         A genuinely oracleless mechanism scores 95, while privileged internal pricing scores 45; a top-level mint,
         redemption, NAV, or exchange-rate authority can therefore be evaluated without inventing borrower liquidation
         branches. External oracle tiers keep their existing scores.
+      </p>
+      <p>
+        Methodology v9.4 applies that distinction to stale pre-v9.17 reviews: the absence of borrower liquidation
+        branches does not make a top-level mint, redemption, NAV, or exchange-rate authority non-applicable. Verified
+        adverse oracle evidence remains measured adverse, unresolved applicability remains bounded, and a genuinely
+        price-insensitive mechanism remains neutral.
+      </p>
+      <p>
+        Methodology v9.4 also makes control scope follow the liability a control can reach. A proved deployment-local
+        control contributes a proportional exposure adjustment only with a complete reconciled liability partition;
+        root-reaching, contradictory, or unresolved controls retain global hard-cap treatment. A control that still
+        binds Economic Control retains its causal attribution, and a scope correction alone cannot turn an unchanged
+        measured D or F into NR. Common-control thresholds count independent root liabilities, so wrappers and
+        derivatives do not manufacture another affected asset and same-issuer controllers remain diagnostic. Chain
+        maturity is a dated five-gate review requiring 36 months of continuous production history,
+        a 365-day liveness record, permissionless participation or at least 21 independently operated block producers
+        or finality members, no unilateral instant change path (with L2s at Stage 1 or later and at least a 7-day holder
+        exit), and documented bridge or data-availability dependencies with a holder exit. Cardano, Gnosis, Hedera,
+        Rootstock, Sui, Conflux, and Kaia are the seven newly admitted chains; Celo remains excluded.
+      </p>
+      <p>
+        Reviewed incidents are routed into the control, wrapper-local, operational, or peg component that owns the
+        risk, with root-claim, deployment, integration-only, or holder-exit scope. Active, mitigated, and resolved
+        evidence therefore changes an existing component without creating a fourth pillar or charging an event beyond
+        the affected liability.
       </p>
       <p>
         Publication is fail-closed. Global, stale, or identity failures retain the last accepted V9 ratings and expose

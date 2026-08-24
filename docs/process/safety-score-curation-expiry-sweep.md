@@ -1,9 +1,10 @@
 # Safety Score V9 Curation-Expiry Sweep
 
 Run this sweep weekly to refresh the Safety Score V9 evidence-curation queue before
-reviewed curated reserve compositions cross their 31-day freshness bound
-(`reviewedCuratedReserveMaxAgeSec`). The pre-expiry queue starts at 21 days, leaving a
-ten-day research and review window.
+reviewed curated reserve compositions cross their 31-day freshness window plus the
+fixed 7-day reporting grace. With the default 10-day lookahead, the pre-expiry queue
+starts surfacing admitted compositions as they approach the 38-day effective bound,
+normally around age 28 days.
 
 Run every command from the repository root. Use one fresh production capture for the
 entire sweep; do not combine worklists or dates from different producer cycles.
@@ -77,8 +78,9 @@ composition, or hide an unresolved evidence gap by changing confidence.
 
 The worklist reports gaps that already affect the replay. It does not list every still
 admitted composition approaching expiry. Run this extraction against the same replay;
-it lists 31-day curated compositions older than 21 days for assets with no live reserve
-snapshot in that capture, sorted by descending supply:
+it lists compositions that remain admitted at the capture clock but will cross the
+31-day composition window plus 7-day reporting grace within the requested lookahead,
+for assets with no live reserve snapshot in that capture, sorted by descending supply:
 
 ```bash
 npm run safety-score-v9:expiry-queue -- --replay "${replay}"
@@ -88,7 +90,8 @@ The queue is derived with the same admission gates production scoring uses
 (`buildSafetyScoreV9ReviewedCuratedFallbackReserveRows` /
 `buildSafetyScoreV9ReviewedStandaloneReserveRows`), re-evaluated at the capture clock
 plus the lookahead (`--days`, default 10), so it cannot drift from the 31-day window,
-the zero-known-unknown gate, or the separate 365-day prudential/audit path. Only
+the 7-day reporting grace, the zero-known-unknown gate, or the separate 365-day
+classification path. Only
 compositions that are admitted today and stop being admitted within the lookahead are
 listed — currently-inadmissible compositions already surface in the worklist's `RESV`
 and `DEP` streams and are deliberately excluded here.
@@ -110,7 +113,7 @@ production capture and repeat the replay, worklist, and pre-expiry extraction.
 | Check | Done when |
 | --- | --- |
 | `DEP` / `RESV` drain | Each supply-prioritized item disappeared or has a current, evidence-backed blocker. |
-| Pre-expiry review | Every listed composition was refreshed, received a live snapshot, or has a documented blocker before day 31. |
+| Pre-expiry review | Every listed composition was refreshed, received a live snapshot, or has a documented blocker before the 31-day window plus 7-day reporting grace closes. |
 | Measurement | The closing worklist and pre-expiry list come from one fresh capture replayed with its own `clockSec`. |
 
 ## Artifact hygiene
