@@ -17,7 +17,7 @@ import {
   PositiveNumberSchema,
 } from "../../types";
 import type { RedemptionDocSource } from "../../types";
-import { isRedemptionSettlementAtLeastAsConservative } from "./settlement";
+import { isRedemptionSettlementFaster } from "./settlement";
 
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
@@ -108,6 +108,9 @@ const RedemptionCostTermsSchema = z.strictObject(RedemptionCostShapeSchema);
 const RedemptionV9RouteReviewTermsSchema = z.strictObject({
   minRedeemUsd: NonNegativeNumberSchema.optional(),
   settlementModel: RedemptionSettlementModelSchema.optional(),
+  settlementDelaySec: z.number().int().nonnegative().optional(),
+  reviewedAt: ReviewedAtSchema.optional(),
+  docs: z.array(RedemptionDocSourceSchema).min(1).optional(),
 });
 const RedemptionV9ComposedDexExitSchema = z.strictObject({
   intermediateAssetId: z.string().min(1),
@@ -160,9 +163,10 @@ export const RedemptionBackstopConfigSchema = z
     /**
      * Reviewed route constraints projected only by the Safety Score V9 adapter.
      *
-     * Validation permits only settlement semantics that are at least as
-     * conservative as the frozen V8 config. Runtime projection also preserves
-     * any stricter constraint carried by the captured redemption row.
+     * Conservative corrections need no citation because they can only lower a
+     * score. Faster settlement semantics require an explicit cited SLA and a
+     * dated review; runtime projection also preserves any stricter constraint
+     * carried by the captured redemption row.
      */
     v9RouteReviewTerms: RedemptionV9RouteReviewTermsSchema.optional(),
     /**
@@ -215,15 +219,33 @@ export const RedemptionBackstopConfigSchema = z
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
-    const reviewedSettlement = config.v9RouteReviewTerms?.settlementModel;
+    const reviewedSettlement = config.v9RouteReviewTerms;
+    const fasterSettlementModel =
+      reviewedSettlement?.settlementModel !== undefined &&
+      isRedemptionSettlementFaster(reviewedSettlement.settlementModel, config.settlementModel);
     if (
-      reviewedSettlement &&
-      !isRedemptionSettlementAtLeastAsConservative(reviewedSettlement, config.settlementModel)
+      fasterSettlementModel &&
+      (reviewedSettlement.settlementDelaySec === undefined ||
+        reviewedSettlement.reviewedAt === undefined ||
+        reviewedSettlement.docs === undefined)
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["v9RouteReviewTerms", "settlementModel"],
-        message: "V9 reviewed settlement cannot be faster than the frozen settlement model",
+        message:
+          "Faster V9 reviewed settlement requires settlementDelaySec, reviewedAt, and at least one docs source",
+      });
+    }
+    if (
+      !fasterSettlementModel &&
+      reviewedSettlement?.settlementDelaySec !== undefined &&
+      (reviewedSettlement.reviewedAt === undefined || reviewedSettlement.docs === undefined)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["v9RouteReviewTerms", "settlementDelaySec"],
+        message:
+          "Explicit V9 reviewed settlement SLA requires reviewedAt and at least one docs source",
       });
     }
     if (config.outputAssets) {

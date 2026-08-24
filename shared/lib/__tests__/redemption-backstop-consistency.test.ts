@@ -16,6 +16,22 @@ import type {
 const entries = Object.entries(REDEMPTION_BACKSTOP_CONFIGS);
 const familyModules = REDEMPTION_BACKSTOP_CONFIG_MANIFEST;
 
+function settlementReviewConfig(
+  settlementModel: RedemptionSettlementModel,
+  v9RouteReviewTerms: unknown,
+): unknown {
+  return {
+    routeFamily: "queue-redeem",
+    accessModel: "issuer-api",
+    settlementModel,
+    executionModel: "rules-based-nav",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-full" },
+    costModel: { kind: "fee-bps", feeBps: 0 },
+    v9RouteReviewTerms,
+  };
+}
+
 describe("redemption backstop config consistency", () => {
   it("every config parses through the shared schema", () => {
     const violations = entries.flatMap(([id, config]) => {
@@ -28,6 +44,60 @@ describe("redemption backstop config consistency", () => {
     });
 
     expect(violations).toEqual([]);
+  });
+
+  it("allows a more conservative reviewed settlement without evidence", () => {
+    expect(
+      RedemptionBackstopConfigSchema.safeParse(
+        settlementReviewConfig("same-day", { settlementModel: "days" }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it("rejects a faster reviewed model without an explicit cited SLA", () => {
+    const result = RedemptionBackstopConfigSchema.safeParse(
+      settlementReviewConfig("days", { settlementModel: "same-day" }),
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("Expected faster reviewed settlement to fail validation");
+    expect(result.error.issues.map((issue) => issue.message)).toContain(
+      "Faster V9 reviewed settlement requires settlementDelaySec, reviewedAt, and at least one docs source",
+    );
+  });
+
+  it("rejects an uncited explicit reviewed settlement SLA", () => {
+    const result = RedemptionBackstopConfigSchema.safeParse(
+      settlementReviewConfig("days", {
+        settlementModel: "days",
+        settlementDelaySec: 2 * 86_400,
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("Expected uncited reviewed settlement SLA to fail validation");
+    expect(result.error.issues.map((issue) => issue.message)).toContain(
+      "Explicit V9 reviewed settlement SLA requires reviewedAt and at least one docs source",
+    );
+  });
+
+  it("admits a faster reviewed settlement with an explicit cited SLA", () => {
+    expect(
+      RedemptionBackstopConfigSchema.safeParse(
+        settlementReviewConfig("days", {
+          settlementModel: "days",
+          settlementDelaySec: 2 * 86_400,
+          reviewedAt: "2026-07-29",
+          docs: [
+            {
+              label: "Issuer redemption terms",
+              url: "https://example.com/redemption-terms",
+              supports: ["settlement"],
+            },
+          ],
+        }),
+      ).success,
+    ).toBe(true);
   });
 
   it("every config ID exists in TRACKED_META_BY_ID", () => {

@@ -18,6 +18,13 @@ export function isRedemptionSettlementAtLeastAsConservative(
   );
 }
 
+export function isRedemptionSettlementFaster(
+  candidate: RedemptionSettlementModel,
+  baseline: RedemptionSettlementModel,
+): boolean {
+  return !isRedemptionSettlementAtLeastAsConservative(candidate, baseline);
+}
+
 export function resolveMoreConservativeRedemptionSettlement(
   left: RedemptionSettlementModel,
   right: RedemptionSettlementModel,

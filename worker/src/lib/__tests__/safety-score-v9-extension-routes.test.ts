@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import {
+  getRedemptionBackstopConfig,
+  type RedemptionBackstopConfig,
+} from "@shared/lib/redemption-backstops";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { createReportCardsFixedInput, type ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -72,6 +76,36 @@ function fixedInputStub(
     pegDataById: {},
   } as unknown as ReportCardsFixedInput;
 }
+
+function withV9RouteReviewTerms<T>(
+  stablecoinId: string,
+  terms: NonNullable<RedemptionBackstopConfig["v9RouteReviewTerms"]>,
+  run: () => T,
+): T {
+  const config = getRedemptionBackstopConfig(stablecoinId);
+  if (!config) throw new Error(`Missing redemption config fixture for ${stablecoinId}`);
+  const previous = config.v9RouteReviewTerms;
+  config.v9RouteReviewTerms = terms;
+  try {
+    return run();
+  } finally {
+    if (previous === undefined) delete config.v9RouteReviewTerms;
+    else config.v9RouteReviewTerms = previous;
+  }
+}
+
+const FASTER_REVIEWED_SETTLEMENT = {
+  settlementModel: "days",
+  settlementDelaySec: 2 * 86_400,
+  reviewedAt: "2026-07-01",
+  docs: [
+    {
+      label: "Issuer redemption terms",
+      url: "https://example.com/redemption-terms",
+      supports: ["settlement"],
+    },
+  ],
+} satisfies NonNullable<RedemptionBackstopConfig["v9RouteReviewTerms"]>;
 
 function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput {
   const route: ExitRouteObservation = {
@@ -264,6 +298,57 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       settlementSlaSec: null,
       settlementHorizonSec: 14 * 86_400,
       minRedeemUsd: 100_000,
+    });
+  });
+
+  it("projects an evidence-backed faster settlement into the scored SLA", () => {
+    const row = supplyFullRow({
+      stablecoinId: "msusd-main-street",
+      settlementModel: "days",
+      settlementDelaySec: undefined,
+    });
+
+    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+        settlementModel: "bounded-delay",
+        settlementSlaSec: 2 * 86_400,
+      });
+    });
+  });
+
+  it("does not re-widen an evidence-backed faster settlement horizon", () => {
+    const row = supplyFullRow({
+      stablecoinId: "msusd-main-street",
+      settlementModel: "days",
+      settlementDelaySec: undefined,
+    });
+    const fixedInput = fixedInputStub(row);
+
+    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
+      expect(
+        buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]?.observation
+          .settlementHorizonSec,
+      ).toBe(14 * 86_400);
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.settlementHorizonSec).toBe(
+        2 * 86_400,
+      );
+    });
+  });
+
+  it("expires a faster reviewed settlement back to the conservative captured horizon", () => {
+    const row = supplyFullRow({
+      stablecoinId: "msusd-main-street",
+      settlementModel: "days",
+      settlementDelaySec: undefined,
+    });
+    const staleClock = Date.UTC(2027, 6, 2) / 1_000;
+
+    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row, staleClock), row.stablecoinId)[0]).toMatchObject({
+        settlementModel: "bounded-delay",
+        settlementSlaSec: null,
+        settlementHorizonSec: 14 * 86_400,
+      });
     });
   });
 
