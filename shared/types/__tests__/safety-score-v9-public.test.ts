@@ -330,7 +330,7 @@ function adjustedResponse(): MutableAdjustedResponseFixture {
 }
 
 describe("SafetyScoreV9ResponseSchema", () => {
-  it("accepts pre-9.19 snapshots without per-fact disclosure paths", () => {
+  it("accepts stored snapshots that predate the sixth responsibility owner", () => {
     const legacy = currentResponse();
     const trace = legacy.cards[0]!.scoreTrace!;
     delete trace.evidenceResponsibility.facts;
@@ -339,10 +339,21 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.facts).toBeUndefined();
     expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.summaries).toHaveLength(5);
 
-    const incompleteCurrent = currentResponse();
-    incompleteCurrent.cards[0]!.scoreTrace!.evidenceResponsibility.summaries.pop();
-    expect(() => SafetyScoreV9CurrentResponseSchema.parse(incompleteCurrent)).toThrow(
-      /must cover every owner in canonical order/,
+    // Per-fact paths (9.19) and the sixth owner (9.4) arrived separately, so a
+    // stored publication can carry `facts` and still predate the owner. Reading
+    // that shape is what the 9.4 release initially got wrong.
+    const factsWithLegacyOwners = currentResponse();
+    factsWithLegacyOwners.cards[0]!.scoreTrace!.evidenceResponsibility.summaries.pop();
+    const parsedWithFacts = SafetyScoreV9CurrentResponseSchema.parse(factsWithLegacyOwners);
+    expect(parsedWithFacts.cards[0]?.scoreTrace.evidenceResponsibility.facts).toBeDefined();
+    expect(parsedWithFacts.cards[0]?.scoreTrace.evidenceResponsibility.summaries).toHaveLength(5);
+
+    // A non-canonical owner set is still refused: dropping an interior owner is
+    // corruption, not an older writer.
+    const nonCanonical = currentResponse();
+    nonCanonical.cards[0]!.scoreTrace!.evidenceResponsibility.summaries.splice(1, 1);
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(nonCanonical)).toThrow(
+      /must preserve a supported canonical owner order/,
     );
   });
 

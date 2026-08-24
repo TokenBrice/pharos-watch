@@ -15,6 +15,7 @@ import { parseJson } from "./json-parse";
 const PUBLICATION_STORAGE_KIND = "safety-score-v9-publication";
 const STORAGE_SCHEMA_VERSION = 1;
 const EVIDENCE_RESPONSIBILITY_FACTS_POLICY_VERSION = "9.19";
+const PUBLISHED_EVIDENCE_EXPIRED_POLICY_VERSION = "9.4";
 
 const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
@@ -216,6 +217,22 @@ export async function serializeSafetyScoreV9Publication(
   ) {
     throw new Error(
       "Safety Score v9.19+ publications require per-fact disclosure paths",
+    );
+  }
+  if (
+    compareMethodologyVersions(
+      publication.policyVersion,
+      PUBLISHED_EVIDENCE_EXPIRED_POLICY_VERSION,
+    ) >= 0 &&
+    publication.cards.some(
+      (card) =>
+        !card.scoreTrace.evidenceResponsibility.summaries.some(
+          (summary) => summary.responsibility === "published-evidence-expired",
+        ),
+    )
+  ) {
+    throw new Error(
+      "Safety Score v9.4+ publications require every evidence responsibility owner",
     );
   }
   const canonical = stableJsonStringifyV1(publication);
