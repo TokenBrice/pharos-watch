@@ -38,7 +38,7 @@ const POSTER_WIDTH = 3200;
 const POSTER_HEIGHT = 1800;
 
 const POSTER_ALT =
-  "The Pharos Stablecoin Safety Map: every graded stablecoin drawn as its own logo, sized by circulating supply, and grouped into five horizontal bands running from the A tier at the top down to the F tier at the bottom. A footer records the methodology version, the data-as-of date, and how many tracked coins are not rated. The same figures are available as a sortable table on the Safety Scores page.";
+  "The Pharos Stablecoin Safety Map: every graded stablecoin drawn as its own logo, sized by circulating supply, with USDT and USDC anchoring a line-free spiral A-grade core and B, C, D, and F connected in supply-rank order around wide paths outward. A footer records the methodology version, data date, graded count, mapped supply, and visual encodings. The same figures are available as a sortable table on the Safety Scores page.";
 
 function PosterUnavailable() {
   return (
@@ -92,7 +92,7 @@ export function SafetyMapPoster() {
           alt={POSTER_ALT}
           width={POSTER_WIDTH}
           height={POSTER_HEIGHT}
-          className="aspect-[16/9] w-full bg-white object-contain"
+          className="aspect-[16/9] w-full bg-[#05070d] object-contain"
           onError={() => setUnavailable(true)}
         />
       </figure>

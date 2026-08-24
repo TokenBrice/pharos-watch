@@ -1,6 +1,6 @@
 # Safety Score Map
 
-The Safety Score map is a landscape poster of the graded stablecoin universe: every graded coin drawn as its logo, sized by circulating supply, packed into the five V9 grade strata (A, B, C, D, F). It is published at `/safety-scores/map/`, and the image itself is served from KV at `/safety-scores/map.png` on a daily cadence that is deliberately decoupled from Pages deploys.
+The Safety Score map is a landscape poster of the graded stablecoin universe: every graded coin drawn as its logo, sized by circulating supply, arranged around a line-free spiral A-grade core with B, C, D, and F each completing a wide V9 grade orbit connected in supply-rank order. It is published at `/safety-scores/map/`, and the image itself is served from KV at `/safety-scores/map.png` on a daily cadence that is deliberately decoupled from Pages deploys.
 
 Grades, scores, and the methodology behind them are owned by [report-cards.md](./report-cards.md). This document owns the map as a *surface*: its two editions, its publication path, its serving contract, and its operational levers.
 
@@ -18,12 +18,12 @@ One generator, one composition, two editions selected by `--edition`.
 | --- | --- | --- |
 | Purpose | Living reference, always current | The campaign artifact a human posts |
 | Trigger | Unattended, by the refresh workflow | Deliberate, by an operator |
-| Stamp | `DATA AS OF <date>` | Month plus issue lockup |
+| Date treatment | Once in the footer | Month/issue lockup plus footer provenance |
 | Default basename | `safety-score-map-latest` | `safety-score-map-<YYYY-MM>` |
 | Movers window | Since the previous snapshot | Month-boundary snapshots |
 | Published to | KV, and therefore the live route | Not published by any automation |
 
-The monthly edition is never inferred from the data clock. Archive and output naming use the **UTC run date**; the visible stamp uses the report-card capture clock (`asOfSec`). Without that split, a run on the first of a month over the previous month's data would file itself under the wrong month and collide with the existing monthly archive.
+The monthly edition is never inferred from the data clock. Archive and output naming use the **UTC run date**; visible date provenance uses the report-card capture clock (`asOfSec`). Without that split, a run on the first of a month over the previous month's data would file itself under the wrong month and collide with the existing monthly archive.
 
 `--issue <n>` supplies the monthly issue number; it is a positive integer and applies to the monthly lockup only.
 
@@ -37,6 +37,8 @@ Beside the PNG, sharing its basename, the run writes `.svg` and `.html` (the ren
 
 Every figure on the poster is computed from the fetched data. No headline number is a literal — under an unattended daily cadence a hardcoded figure becomes a published falsehood within days.
 
+Bubble area tracks circulating supply above a legibility floor. Assets below that floor share a minimum radius so their logos remain recognizable at posting size; the generator computes and discloses the corresponding supply threshold in the footer on every render. Two successive 25% increases make the minimum radii 56.25% larger than the original poster floor, while larger assets retain their proportional sizing. The floor is fail-closed: large bubbles may shrink during fitting, but the renderer will not silently reduce the minimum logo size.
+
 ### Guards
 
 The generator exits non-zero rather than publishing something wrong. All of these are unconditional:
@@ -46,7 +48,7 @@ The generator exits non-zero rather than publishing something wrong. All of thes
 - **Grade vocabulary.** An unrecognized grade letter fails; a silently dropped tier is worse than no map.
 - **Finite geometry.** A non-finite bubble scale or radius fails, as does an empty graded set.
 - **Composition.** A layout linter rejects overlapping or out-of-band geometry.
-- **Fonts.** Each family is checked explicitly; `document.fonts.ready` resolves even when a face fails, and fallback metrics silently break the chip geometry.
+- **Fonts.** Each family is checked explicitly; `document.fonts.ready` resolves even when a face fails, and fallback metrics visibly change the publication typography.
 - **Raster size.** The screenshot must come back at exactly 3200x1800 (1600x900 at `deviceScaleFactor: 2`).
 
 One guard is skippable: the **day-over-day delta guard**, armed by `--previous-snapshot <path>`. It fails the run when the graded count falls more than 2% or the not-rated count moves more than 5 against the prior snapshot — the guard against a half-broken scoring producer reclassifying most of the universe. An absent or unreadable snapshot skips it with a warning, so a first run can bootstrap.
@@ -76,7 +78,7 @@ Failure surfaces as a red run and a GitHub notification. It does **not** page an
 
 `vars.SAFETY_MAP_KV_NAMESPACE_ID` and `secrets.SAFETY_MAP_KV_TOKEN` are provisioned. The token is scoped to *Workers KV Storage: Edit* on that one namespace and is deliberately **not** `CLOUDFLARE_API_TOKEN`, which deploys production Pages and is used only from workflows running under the `production` environment protection that this unattended job does not have.
 
-The workflow runs daily at 07:20 UTC and also supports `workflow_dispatch`. That leaves roughly 45 minutes of headroom before the 08:05 UTC digest cron — deliberately wide, because Actions schedules are routinely delayed 5-20 minutes at peak.
+The workflow runs daily at 06:20 UTC and also supports `workflow_dispatch`. That leaves roughly 105 minutes of headroom before the 08:05 UTC digest cron. The original 07:20 slot left only 45 minutes and missed the 2026-08-24 digest when GitHub did not start the job until 08:07; the earlier slot absorbs that observed scheduler delay while still rendering from the current day's half-hourly Safety Score publication.
 
 ## Serving
 
