@@ -569,6 +569,85 @@ describe("buildReviewedReserveClassifications", () => {
     });
   });
 
+  it("strips an inferred dependency link when the review dispositions the slice as a non-link", () => {
+    const reviewed = reviewedMeta(
+      [
+        {
+          sourceKey: "fixture:alpha:beta-exposure",
+          name: "Beta stablecoin",
+          pct: 100,
+          risk: "low",
+          coinId: "beta",
+          depType: "collateral",
+        },
+      ],
+      {
+        nonLinkDispositions: [
+          {
+            reserveIndex: 0,
+            reserveName: "Beta stablecoin",
+            pct: 100,
+            disposition: "untracked-exogenous-asset",
+            rationale: "The exposure is a price reference, not a redemption claim on beta.",
+          },
+        ],
+      },
+    );
+    const live: ReserveSlice[] = [
+      {
+        sourceKey: "fixture:alpha:beta-exposure",
+        name: "Beta exposure",
+        pct: 100,
+        risk: "low",
+        coinId: "beta",
+        depType: "collateral",
+      },
+    ];
+
+    const [slice] = dependencyReserveSlices(live, reviewed, CLOCK_SEC);
+    expect(slice).toMatchObject({ name: "Beta exposure", pct: 100 });
+    expect(slice!.coinId).toBeUndefined();
+    expect(slice!.depType).toBeUndefined();
+  });
+
+  it("keeps a reviewed dependency link when no disposition covers the slice", () => {
+    const reviewed = reviewedMeta([
+      {
+        sourceKey: "fixture:alpha:beta-exposure",
+        name: "Beta stablecoin",
+        pct: 100,
+        risk: "low",
+        coinId: "beta",
+        depType: "collateral",
+      },
+    ]);
+    const live: ReserveSlice[] = [
+      { sourceKey: "fixture:alpha:beta-exposure", name: "Beta exposure", pct: 100, risk: "low" },
+    ];
+
+    expect(dependencyReserveSlices(live, reviewed, CLOCK_SEC)[0]).toMatchObject({
+      coinId: "beta",
+      depType: "collateral",
+    });
+  });
+
+  it("refuses the curated fallback composition for an asset with no live-reserve producer", () => {
+    const withoutLiveProducer = reviewedMeta([
+      { name: "Cash", pct: 100, risk: "very-low", assetClass: "cash", issuerOrObligor: "issuer:alpha" },
+    ]);
+    expect(withoutLiveProducer.liveReservesConfig).toBeUndefined();
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(withoutLiveProducer, CLOCK_SEC)).toBeNull();
+
+    const withLiveProducer: V9ExtensionRegistryMeta = {
+      ...withoutLiveProducer,
+      liveReservesConfig: LIVE_RESERVES_CONFIG,
+    };
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(withLiveProducer, CLOCK_SEC)).toMatchObject({
+      provenance: "curated-fallback",
+      evidenceClass: "static-validated",
+    });
+  });
+
   it("keeps the current USDC reserve repartition classified by stable source key", () => {
     const live: ReserveSlice[] = [
       { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 65.7, risk: "very-low" },
