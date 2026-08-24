@@ -320,7 +320,7 @@ interface MintControlDeploymentScope {
  * complete, every authored deployment ref joins exactly once, and at least one
  * other liability deployment sits outside the authority's reach.
  */
-export function resolveMintControlDeploymentScopes(
+function resolveMintControlDeploymentScopes(
   control: Pick<MintAuthorityControl, "deploymentRefs">,
   supplyReview: ExtensionAsset["supplyReview"],
   reviewComplete: boolean,

@@ -13,7 +13,7 @@ const CanonicalKeySchema = CanonicalTextSchema.refine(
   "Value must be a canonical lowercase identifier",
 );
 
-export const V9IncidentDomainSchema = z.enum([
+const V9IncidentDomainSchema = z.enum([
   "control",
   "wrapper-local",
   "operational",
@@ -30,7 +30,7 @@ const V9IncidentSourceSchema = z
   .strict();
 export type V9IncidentSource = z.infer<typeof V9IncidentSourceSchema>;
 
-export const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
+const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("root-claim") }).strict(),
   z
     .object({

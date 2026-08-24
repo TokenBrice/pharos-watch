@@ -103,7 +103,7 @@ export interface V9DependencyEvaluationPlan {
  * the presentation asset so an unresolved graph cannot relax a common-mode
  * census.
  */
-export function resolveV9RootLiabilityId(
+function resolveV9RootLiabilityId(
   assetId: string,
   serialPaths: readonly V9DependencyPathPlan[],
 ): string {

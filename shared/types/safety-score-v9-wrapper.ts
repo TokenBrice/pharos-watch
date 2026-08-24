@@ -49,7 +49,7 @@ const V9WrapperIncidentScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("holder-exit") }).strict(),
 ]);
 
-export const V9WrapperIncidentPostureSchema = z
+const V9WrapperIncidentPostureSchema = z
   .object({
     incidentId: CanonicalTextSchema,
     scope: V9WrapperIncidentScopeSchema,

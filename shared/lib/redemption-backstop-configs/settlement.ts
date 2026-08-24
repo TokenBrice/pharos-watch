@@ -8,7 +8,7 @@ const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] =
   "queued",
 ];
 
-export function isRedemptionSettlementAtLeastAsConservative(
+function isRedemptionSettlementAtLeastAsConservative(
   candidate: RedemptionSettlementModel,
   baseline: RedemptionSettlementModel,
 ): boolean {
