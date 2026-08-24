@@ -248,56 +248,49 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   });
   const clientCoin = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
-  // Permanent server content keeps the FAQPage JSON-LD and visible answers
-  // outside the interactive dossier's loading lifecycle.
+  // Keep the FAQ visible and its FAQPage JSON-LD attached to the hydrated
+  // dossier without placing it ahead of the primary coin identity.
   const faqContent = (
     <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd />
   );
-  const staticComparisonLinks = staticComparisonPages.map((page) => ({
-    href: page.href,
-    shortTitle: page.shortTitle,
-  }));
 
   return (
     <>
-      <div className="space-y-6">
-        <StablecoinDetailSeoContent coin={coin} summary={summary} />
-        {faqContent}
-        <StablecoinResearchContext symbol={coin.symbol} staticComparisonLinks={staticComparisonLinks} />
-        <Suspense fallback={<DetailPageShellFallback coin={staticCoin} logoSrc={logosById[coin.id]} />}>
-          <StablecoinDetailClient
-            id={id}
-            coin={clientCoin}
-            summary={summary}
-            staticCoin={staticCoin}
-            logoSrc={logosById[coin.id]}
-            collateralUsageEntries={collateralUsageEntries}
-            mechanismBacking={buildMechanismBackingView(id)}
-            mechanismCollateralization={buildMechanismCollateralizationView(id)}
-            mechanismReview={buildMechanismReviewView(id)}
-            transferReview={buildTransferReviewView(id)}
-            exploreNextContent={
-              <ExploreNextSection
-                coin={coin}
-                related={related}
-                staticComparisonPages={staticComparisonPages.map((page) => {
-                  const counterpart = page.left.id === coin.id ? page.right : page.left;
-                  return {
-                    href: page.href,
-                    shortTitle: page.shortTitle,
-                    leftId: page.left.id,
-                    rightId: page.right.id,
-                    counterpartId: counterpart.id,
-                    counterpartSymbol: counterpart.symbol,
-                    counterpartName: counterpart.name,
-                  };
-                })}
-                logos={logosById}
-              />
-            }
-          />
-        </Suspense>
-      </div>
+      <h1 className="sr-only">{coin.name} ({coin.symbol}) stablecoin analytics</h1>
+      <Suspense fallback={<DetailPageShellFallback coin={staticCoin} logoSrc={logosById[coin.id]} />}>
+        <StablecoinDetailClient
+          id={id}
+          coin={clientCoin}
+          summary={summary}
+          staticCoin={staticCoin}
+          logoSrc={logosById[coin.id]}
+          collateralUsageEntries={collateralUsageEntries}
+          mechanismBacking={buildMechanismBackingView(id)}
+          mechanismCollateralization={buildMechanismCollateralizationView(id)}
+          mechanismReview={buildMechanismReviewView(id)}
+          transferReview={buildTransferReviewView(id)}
+          exploreNextContent={
+            <ExploreNextSection
+              coin={coin}
+              related={related}
+              staticComparisonPages={staticComparisonPages.map((page) => {
+                const counterpart = page.left.id === coin.id ? page.right : page.left;
+                return {
+                  href: page.href,
+                  shortTitle: page.shortTitle,
+                  leftId: page.left.id,
+                  rightId: page.right.id,
+                  counterpartId: counterpart.id,
+                  counterpartSymbol: counterpart.symbol,
+                  counterpartName: counterpart.name,
+                };
+              })}
+              logos={logosById}
+            />
+          }
+          faqContent={faqContent}
+        />
+      </Suspense>
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: "/" },
