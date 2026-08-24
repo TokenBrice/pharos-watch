@@ -233,6 +233,10 @@ jobs:
               process.exit(0);
             }
             const prev = JSON.parse(raw.slice(start, end + 1));
+            if (typeof prev === "object" && prev !== null && !("publicationStatus" in prev)) {
+              console.log("::warning title=Legacy previous snapshot::safety-map:snapshot:latest predates the current publication-status contract. The delta guard will be skipped once while a current-schema snapshot is published.");
+              process.exit(0);
+            }
             writeFileSync("previous-snapshot.json", JSON.stringify(prev));
             console.log(`Previous snapshot: date=${prev.date} graded=${prev.counts?.graded} notRated=${prev.counts?.notRated}`);
           '
