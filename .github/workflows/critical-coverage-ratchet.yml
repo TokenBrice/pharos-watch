@@ -21,6 +21,4 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
-        with:
-          tooling-cache: "true"
       - run: npm run coverage:critical

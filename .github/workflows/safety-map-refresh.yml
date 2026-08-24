@@ -118,7 +118,7 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
         with:
-          tooling-cache: "true"
+          browser-cache: "true"
           install-playwright-firefox: "true"
 
       # ── Preflight: everything that can fail before a single byte is written ──

@@ -1,5 +1,7 @@
 import fs from "node:fs";
+import { availableParallelism } from "node:os";
 import path from "node:path";
+import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
 
 import {
   collectStructuredDataNodes,
@@ -673,15 +675,7 @@ function pageHasSchemaType(record, type) {
 }
 
 function analyzeStaticRichness(record) {
-  const visibleText = extractVisibleText(record.html);
-  const words = wordCount(visibleText);
-  const loadingWords = visibleText.match(LOADING_SHELL_PATTERN)?.length ?? 0;
-  return {
-    visibleText,
-    words,
-    loadingWords,
-    loadingWordRatio: words > 0 ? loadingWords / words : 0,
-  };
+  return record.richness ?? { words: 0, loadingWords: 0, loadingWordRatio: 0 };
 }
 
 function selectRichnessRecords(pageRecords, check) {
@@ -735,7 +729,7 @@ function validateStructuredDataRouteMatrix(pageRecords, errors, matrix) {
     }
 
     if (expectation.requireVisibleFaq) {
-      const visibleText = normalizeTextForSearch(extractVisibleText(record.html));
+      const visibleText = record.normalizedVisibleText ?? "";
       for (const entry of getFaqEntries(record)) {
         const question = normalizeTextForSearch(entry.question);
         const answer = normalizeTextForSearch(entry.answer);
@@ -805,12 +799,86 @@ function localOgImagePath(value) {
   return parsed.pathname;
 }
 
+export function buildSeoPageRecord(
+  filePath,
+  outDir,
+  structuredDataRouteMatrix = STRUCTURED_DATA_ROUTE_MATRIX,
+) {
+  const html = fs.readFileSync(filePath, "utf8");
+  const robotsTags = getMetaContents(html, "name", "robots");
+  const route = routeFromFile(filePath, outDir);
+  const retired = isRetiredInternalRoute(route);
+  const indexable = !retired && isIndexable(robotsTags);
+  const structuredData = [];
+  const structuredDataNodes = [];
+  const structuredDataErrors = [];
+  const structuredDataSiteDataUrlGroups = [];
+
+  extractJsonLdBlocks(html).forEach((block, index) => {
+    let parsed;
+    try {
+      parsed = JSON.parse(block.trim());
+    } catch (error) {
+      structuredDataErrors.push(`invalid JSON-LD block #${index + 1}: ${error.message}`);
+      return;
+    }
+    structuredData.push(parsed);
+    structuredDataNodes.push(...collectStructuredDataNodes(parsed));
+    if (indexable) {
+      structuredDataSiteDataUrlGroups.push(findStructuredDataSiteDataUrls(parsed));
+    }
+  });
+
+  const richnessCheck = RICHNESS_CHECKS.find((check) => check.pattern.test(route));
+  const visibleFaqRequired = structuredDataRouteMatrix.some(
+    (expectation) =>
+      expectation.requireVisibleFaq
+      && (expectation.route === route || expectation.pattern?.test(route)),
+  );
+  const visibleText = richnessCheck || visibleFaqRequired ? extractVisibleText(html) : "";
+  const words = richnessCheck ? wordCount(visibleText) : 0;
+  const loadingWords = richnessCheck ? (visibleText.match(LOADING_SHELL_PATTERN)?.length ?? 0) : 0;
+
+  return {
+    filePath,
+    route,
+    title: decodeHtml(extractAttr(html, /<title>([^<]*)<\/title>/i)),
+    description: getMetaContents(html, "name", "description")[0] ?? "",
+    canonical: getCanonical(html),
+    ogTitle: getMetaContents(html, "property", "og:title")[0] ?? "",
+    ogDescription: getMetaContents(html, "property", "og:description")[0] ?? "",
+    ogType: getMetaContents(html, "property", "og:type")[0] ?? "",
+    ogImage: getMetaContents(html, "property", "og:image")[0] ?? "",
+    twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
+    twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
+    robotsTags,
+    retired,
+    googleBotTags: getMetaContents(html, "name", "googlebot"),
+    h1Count: (html.match(/<h1\b/gi) ?? []).length,
+    hasFatalCsrBailout: hasFatalCsrBailoutMarker(html),
+    hrefs: getAnchorHrefs(html),
+    structuredData,
+    structuredDataNodes,
+    structuredDataErrors,
+    structuredDataSiteDataUrlGroups,
+    normalizedVisibleText: visibleFaqRequired ? normalizeTextForSearch(visibleText) : "",
+    richness: richnessCheck
+      ? {
+          words,
+          loadingWords,
+          loadingWordRatio: words > 0 ? loadingWords / words : 0,
+        }
+      : null,
+  };
+}
+
 export function collectSeoStaticCheckResult({
   outDir = DEFAULT_OUT_DIR,
   enforceGooglePreviewDirectives = true,
   enforceSnippetQuality = true,
   enforceStructuredDataMatrix = true,
   structuredDataRouteMatrix = STRUCTURED_DATA_ROUTE_MATRIX,
+  pageRecords: suppliedPageRecords,
 } = {}) {
   const errors = [];
   const warnings = [];
@@ -823,38 +891,14 @@ export function collectSeoStaticCheckResult({
     };
   }
 
-  const indexFiles = [...walkOutFiles(outDir, (name) => name === "index.html")];
-  const pageRecords = indexFiles.map((filePath) => {
-    const html = fs.readFileSync(filePath, "utf8");
-    const robotsTags = getMetaContents(html, "name", "robots");
-    const route = routeFromFile(filePath, outDir);
-    return {
-      filePath,
-      route,
-      html,
-      title: decodeHtml(extractAttr(html, /<title>([^<]*)<\/title>/i)),
-      description: getMetaContents(html, "name", "description")[0] ?? "",
-      canonical: getCanonical(html),
-      ogTitle: getMetaContents(html, "property", "og:title")[0] ?? "",
-      ogDescription: getMetaContents(html, "property", "og:description")[0] ?? "",
-      ogType: getMetaContents(html, "property", "og:type")[0] ?? "",
-      ogImage: getMetaContents(html, "property", "og:image")[0] ?? "",
-      twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
-      twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
-      robotsTags,
-      retired: isRetiredInternalRoute(route),
-      googleBotTags: getMetaContents(html, "name", "googlebot"),
-      h1Count: (html.match(/<h1\b/gi) ?? []).length,
-      structuredData: [],
-      structuredDataNodes: [],
-    };
-  });
+  const pageRecords = suppliedPageRecords ?? [...walkOutFiles(outDir, (name) => name === "index.html")]
+    .map((filePath) => buildSeoPageRecord(filePath, outDir, structuredDataRouteMatrix));
 
   validateStaticHeaders(outDir, errors);
   validateStaticRedirects(outDir, errors);
 
   for (const record of pageRecords) {
-    if (hasFatalCsrBailoutMarker(record.html)) {
+    if (record.hasFatalCsrBailout) {
       errors.push(`${record.route}: CSR bailout marker found in HTML`);
     }
 
@@ -914,21 +958,11 @@ export function collectSeoStaticCheckResult({
       errors.push(`${record.route}: missing og:type`);
     }
 
-    const jsonLdBlocks = extractJsonLdBlocks(record.html);
-    jsonLdBlocks.forEach((block, index) => {
-      let parsed;
-      try {
-        parsed = JSON.parse(block.trim());
-      } catch (error) {
-        errors.push(`${record.route}: invalid JSON-LD block #${index + 1}: ${error.message}`);
-        return;
-      }
-
-      record.structuredData.push(parsed);
-      record.structuredDataNodes.push(...collectStructuredDataNodes(parsed));
-
-      if (indexable) {
-        const siteDataUrls = findStructuredDataSiteDataUrls(parsed);
+    for (const error of record.structuredDataErrors) {
+      errors.push(`${record.route}: ${error}`);
+    }
+    if (indexable) {
+      for (const siteDataUrls of record.structuredDataSiteDataUrlGroups) {
         for (const entry of siteDataUrls.slice(0, 5)) {
           errors.push(
             `${record.route}: structured data URL points under /_site-data/ at ${entry.path}: ${entry.value}`,
@@ -938,7 +972,7 @@ export function collectSeoStaticCheckResult({
           errors.push(`${record.route}: structured data has ${siteDataUrls.length - 5} additional /_site-data/ URLs`);
         }
       }
-    });
+    }
 
     if (indexable && record.h1Count !== 1) {
       errors.push(`${record.route}: expected exactly one <h1> on indexable page, got ${record.h1Count}`);
@@ -978,7 +1012,7 @@ export function collectSeoStaticCheckResult({
   }
 
   for (const record of pageRecords) {
-    for (const href of getAnchorHrefs(record.html)) {
+    for (const href of record.hrefs) {
       const slashlessRoute = slashlessInternalRouteMatch(href, routeSet);
       if (slashlessRoute) {
         errors.push(
@@ -1137,6 +1171,63 @@ export function collectSeoStaticCheckResult({
   return { errors, warnings, pageRecords };
 }
 
+function parsePageRecordChunk(files, outDir, structuredDataRouteMatrix) {
+  return files.map((filePath) => buildSeoPageRecord(filePath, outDir, structuredDataRouteMatrix));
+}
+
+function runPageRecordWorker(files, outDir, structuredDataRouteMatrix) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL(import.meta.url), {
+      workerData: {
+        kind: "pharos-seo-page-records",
+        files,
+        outDir,
+        structuredDataRouteMatrix,
+      },
+    });
+    worker.once("message", resolve);
+    worker.once("error", reject);
+    worker.once("exit", (code) => {
+      if (code !== 0) reject(new Error(`SEO page-record worker exited ${code}.`));
+    });
+  });
+}
+
+export async function collectSeoStaticCheckResultParallel(options = {}) {
+  const outDir = options.outDir ?? DEFAULT_OUT_DIR;
+  if (!fs.existsSync(outDir)) return collectSeoStaticCheckResult(options);
+  const indexFiles = [...walkOutFiles(outDir, (name) => name === "index.html")];
+  const configuredWorkers = Number.parseInt(process.env.SEO_CHECK_WORKERS ?? "", 10);
+  const defaultWorkers = Math.max(1, Math.min(3, availableParallelism() - 1));
+  const workerCount = Math.max(
+    1,
+    Math.min(
+      indexFiles.length,
+      Number.isFinite(configuredWorkers) && configuredWorkers > 0 ? configuredWorkers : defaultWorkers,
+    ),
+  );
+  if (workerCount === 1 || indexFiles.length < 20) {
+    return collectSeoStaticCheckResult(options);
+  }
+
+  const chunkSize = Math.ceil(indexFiles.length / workerCount);
+  const chunks = Array.from({ length: workerCount }, (_, index) =>
+    indexFiles.slice(index * chunkSize, (index + 1) * chunkSize),
+  ).filter((chunk) => chunk.length > 0);
+  const pageRecords = (
+    await Promise.all(
+      chunks.map((files) =>
+        runPageRecordWorker(
+          files,
+          outDir,
+          options.structuredDataRouteMatrix ?? STRUCTURED_DATA_ROUTE_MATRIX,
+        ),
+      ),
+    )
+  ).flat();
+  return collectSeoStaticCheckResult({ ...options, outDir, pageRecords });
+}
+
 function fail(errors, warning = []) {
   for (const w of warning) {
     console.warn(`WARN: ${w}`);
@@ -1148,7 +1239,7 @@ function fail(errors, warning = []) {
 }
 
 async function main() {
-  const { errors, warnings } = collectSeoStaticCheckResult();
+  const { errors, warnings } = await collectSeoStaticCheckResultParallel();
 
   const previousSitemapUrl = process.env.SEO_PREVIOUS_SITEMAP_URL?.trim();
   if (previousSitemapUrl) {
@@ -1186,6 +1277,14 @@ async function main() {
   console.log("OK: SEO static checks passed");
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
+if (!isMainThread && workerData?.kind === "pharos-seo-page-records") {
+  parentPort?.postMessage(
+    parsePageRecordChunk(
+      workerData.files,
+      workerData.outDir,
+      workerData.structuredDataRouteMatrix,
+    ),
+  );
+} else if (isDirectRun(import.meta.url, process.argv[1])) {
   void main();
 }

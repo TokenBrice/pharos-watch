@@ -43,11 +43,12 @@ jobs:
           # timestamps from commit history during prebuild. A shallow checkout
           # makes their guard fail rather than publish wrong lastmod values.
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
-          tooling-cache: "true"
-          tooling-cache-save: "true"
+          next-cache: "true"
+          next-cache-save: "true"
       - name: Refresh API-backed release data
         if: ${{ inputs.refresh_data }}
         env:
@@ -56,43 +57,67 @@ jobs:
           PUBLIC_DATASETS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           PUBLIC_DATASETS_REQUIRE_API: "1"
         run: |
-          # Refresh each snapshot independently. A failed surface falls back to
-          # its committed data without discarding successful archive refreshes.
-          committed_digest_count="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync("data/digests.json","utf8")).length)')"
-          digest_refresh_ok=true
-          npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json \
-            || digest_refresh_ok=false
-          if [ "$digest_refresh_ok" = "true" ]; then
-            refreshed_digest_count="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync("data/digests.json","utf8")).length)' 2>/dev/null || echo 0)"
-            if [ "$refreshed_digest_count" -lt "$committed_digest_count" ]; then
-              echo "::warning::digest archive shrank (${refreshed_digest_count} < ${committed_digest_count}); using committed snapshot"
-              digest_refresh_ok=false
+          # The three refreshers have disjoint outputs. Run them concurrently,
+          # retaining the existing per-surface fail-open fallback contract.
+          refresh_dir="${RUNNER_TEMP}/pages-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "${refresh_dir}"
+          cp data/digests.json "${refresh_dir}/digests.json"
+          cp data/depeg-events.json "${refresh_dir}/depeg-events.json"
+
+          refresh_digests() {
+            local committed_count refreshed_count refresh_ok
+            committed_count="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync("data/digests.json","utf8")).length)')"
+            refresh_ok=true
+            npx tsx scripts/maintenance/sync-digests.ts --output "${refresh_dir}/digests.json" \
+              || refresh_ok=false
+            refreshed_count="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")).length)' "${refresh_dir}/digests.json" 2>/dev/null || echo 0)"
+            if [ "${refresh_ok}" = "true" ] && [ "${refreshed_count}" -lt "${committed_count}" ]; then
+              echo "::warning::digest archive shrank (${refreshed_count} < ${committed_count}); using committed snapshot"
+              refresh_ok=false
             fi
-          fi
-          if [ "$digest_refresh_ok" != "true" ]; then
-            echo "::warning::digest refresh failed; using committed digest snapshot"
-            git checkout -- data/digests.json
-          fi
+            if [ "${refresh_ok}" = "true" ]; then
+              mv "${refresh_dir}/digests.json" data/digests.json
+            else
+              echo "::warning::digest refresh failed; using committed digest snapshot"
+            fi
+            echo "- Digest refresh: ${refresh_ok} (${refreshed_count:-${committed_count}} entries)" > "${refresh_dir}/digest-summary.md"
+            return 0
+          }
 
-          depeg_refresh_ok=true
-          npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json \
-            || depeg_refresh_ok=false
-          if [ "$depeg_refresh_ok" != "true" ]; then
-            echo "::warning::depeg-event refresh failed; using committed depeg snapshot"
-            git checkout -- data/depeg-events.json
-          fi
+          refresh_depegs() {
+            local refresh_ok=true
+            npx tsx scripts/maintenance/sync-depeg-events.ts --output "${refresh_dir}/depeg-events.json" \
+              || refresh_ok=false
+            if [ "${refresh_ok}" = "true" ]; then
+              mv "${refresh_dir}/depeg-events.json" data/depeg-events.json
+            else
+              echo "::warning::depeg-event refresh failed; using committed depeg snapshot"
+            fi
+            echo "- Depeg-event refresh: ${refresh_ok}" > "${refresh_dir}/depeg-summary.md"
+            return 0
+          }
 
-          public_datasets_refresh_ok=true
-          npm run generate:public-datasets || public_datasets_refresh_ok=false
-          if [ "$public_datasets_refresh_ok" != "true" ]; then
-            echo "::warning::public-dataset refresh failed; using committed public datasets"
-            git checkout -- public/datasets
-            git clean -fd -- public/datasets
-          fi
+          refresh_public_datasets() {
+            local refresh_ok=true
+            npm run generate:public-datasets || refresh_ok=false
+            if [ "${refresh_ok}" != "true" ]; then
+              echo "::warning::public-dataset refresh failed; using committed public datasets"
+              git checkout -- public/datasets
+              git clean -fd -- public/datasets
+            fi
+            echo "- Public-dataset refresh: ${refresh_ok}" > "${refresh_dir}/datasets-summary.md"
+            return 0
+          }
 
-          echo "- Digest refresh: ${digest_refresh_ok} (${refreshed_digest_count:-$committed_digest_count} entries)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Depeg-event refresh: ${depeg_refresh_ok}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Public-dataset refresh: ${public_datasets_refresh_ok}" >> "$GITHUB_STEP_SUMMARY"
+          refresh_digests > "${refresh_dir}/digest.log" 2>&1 & digest_pid=$!
+          refresh_depegs > "${refresh_dir}/depeg.log" 2>&1 & depeg_pid=$!
+          refresh_public_datasets > "${refresh_dir}/datasets.log" 2>&1 & datasets_pid=$!
+          wait "${digest_pid}"
+          wait "${depeg_pid}"
+          wait "${datasets_pid}"
+          cat "${refresh_dir}/digest.log" "${refresh_dir}/depeg.log" "${refresh_dir}/datasets.log"
+          cat "${refresh_dir}/digest-summary.md" "${refresh_dir}/depeg-summary.md" \
+            "${refresh_dir}/datasets-summary.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Build clean production export
         env:
           GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,case-study-client-index,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,report-card-registry-fingerprint,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
@@ -101,20 +126,15 @@ jobs:
           PUBLIC_DATASETS_REQUIRE_API: ""
           SMOKE_API_BASE: ""
           API_BASE_URL: ""
+          PHAROS_RELEASE_PR_TYPECHECKED: "1"
         run: |
-          rm -rf .next
           npm run build
-      - run: npm run check:feature-flag-inlining
-      # Blocking: the Cloudflare 20,000-file direct-upload limit. Byte budgets
-      # are reported as non-blocking deltas in the step summary.
-      - run: npm run check:build-size
-      # Blocking security gate: scans the built HTML for inline-script
-      # credential-harvesting shapes that get pharos.watch flagged by Safe Browsing.
-      - run: npm run check:phishing-signatures
       - name: Validate static SEO and published archive continuity
         env:
           SEO_PREVIOUS_SITEMAP_URL: https://stablecoin-dashboard.pages.dev/sitemap.xml
-        run: npm run seo:check
+        # Includes feature-flag, direct-upload size, phishing-signature, and
+        # static SEO gates over the exact release artifact.
+        run: npm run check:pages-release
       - name: Write release marker
         run: |
           cat > out/__pharos_release.json <<EOF

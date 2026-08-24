@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
@@ -10,21 +10,22 @@ const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared/", "src/", "worker/"];
 
-interface RunNpmScriptOptions {
-  env?: NodeJS.ProcessEnv;
-  spawn?: typeof spawnSync;
-}
-
 interface PrStaticCheckOptions {
   argv?: readonly string[];
   env?: NodeJS.ProcessEnv;
-  spawn?: typeof spawnSync;
 }
 
 interface PrStaticCheckCommand {
   name: string;
   args?: string[];
 }
+
+const PARALLEL_STATIC_CHECKS = new Set([
+  "typecheck",
+  "typecheck:worker",
+  "check:structural",
+  "check:generated-artifacts",
+]);
 
 function hasStructuralCheckImpact(changedFiles: readonly string[]): boolean {
   return changedFiles.some(
@@ -37,15 +38,47 @@ function hasStructuralCheckImpact(changedFiles: readonly string[]): boolean {
 function runNpmScript(
   name: string,
   args: readonly string[] = [],
-  { env = process.env, spawn = spawnSync }: RunNpmScriptOptions = {},
-): void {
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<void> {
   console.log(`[check:pr:static] npm run ${name}${args.length > 0 ? ` -- ${args.join(" ")}` : ""}`);
-  const result = spawn("npm", ["run", name, ...(args.length > 0 ? ["--", ...args] : [])], {
-    env,
-    stdio: "inherit",
+  return new Promise((resolve, reject) => {
+    const child = spawn("npm", ["run", name, ...(args.length > 0 ? ["--", ...args] : [])], {
+      env,
+      stdio: "inherit",
+    });
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(`npm run ${name} failed (${signal ? `signal ${signal}` : `exit ${code ?? 1}`}).`));
+    });
   });
-  if (result.error) throw result.error;
-  if (result.status !== 0) process.exit(result.status ?? 1);
+}
+
+export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
+  return {
+    sequential: commands.filter((command) => !PARALLEL_STATIC_CHECKS.has(command.name)),
+    parallel: commands.filter((command) => PARALLEL_STATIC_CHECKS.has(command.name)),
+  };
+}
+
+async function runBounded(
+  commands: readonly PrStaticCheckCommand[],
+  maxParallel: number,
+  env: NodeJS.ProcessEnv,
+): Promise<void> {
+  let cursor = 0;
+  async function worker(): Promise<void> {
+    while (cursor < commands.length) {
+      const command = commands[cursor++];
+      await runNpmScript(command.name, command.args ?? [], env);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(maxParallel, commands.length) }, () => worker()),
+  );
 }
 
 export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
@@ -106,11 +139,10 @@ export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
   return { classification, commands };
 }
 
-export function runPrStaticChecks({
+export async function runPrStaticChecks({
   argv = process.argv.slice(2),
   env = process.env,
-  spawn = spawnSync,
-}: PrStaticCheckOptions = {}): number {
+}: PrStaticCheckOptions = {}): Promise<number> {
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   if (rest.length > 0) throw new Error(`Unknown option(s): ${rest.join(", ")}`);
   const changedFiles = collectChangedFiles({ base, head });
@@ -120,16 +152,32 @@ export function runPrStaticChecks({
     `[check:pr:static] ${changedFiles.length} changed file(s); ` +
       `pages=${classification.pagesChanged}, worker=${classification.workerChanged}.`,
   );
-  for (const command of commands) {
-    const args =
+  const runnableCommands = commands.map((command) => ({
+    ...command,
+    args:
       command.name === "lint:changed"
         ? [`--base=${base}`, `--head=${head}`]
-        : (command.args ?? []);
-    runNpmScript(command.name, args, { env, spawn });
-  }
+        : (command.args ?? []),
+  }));
+  const { sequential, parallel } = partitionPrStaticCheckPlan(runnableCommands);
+  const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);
+  const maxParallel = Number.isFinite(configuredParallel) && configuredParallel > 0 ? configuredParallel : 3;
+  await Promise.all([
+    (async () => {
+      for (const command of sequential) {
+        await runNpmScript(command.name, command.args ?? [], env);
+      }
+    })(),
+    runBounded(parallel, maxParallel, env),
+  ]);
   return 0;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  process.exit(runPrStaticChecks());
+  runPrStaticChecks()
+    .then((code) => process.exit(code))
+    .catch((error) => {
+      console.error(`[check:pr:static] ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    });
 }
