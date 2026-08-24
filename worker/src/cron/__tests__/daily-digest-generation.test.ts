@@ -89,19 +89,10 @@ vi.mock("../../lib/twitter", () => ({
   postDigestTweet: vi.fn(),
 }));
 
-vi.mock("../../lib/digest-safety-map", () => ({
-  resolveDigestSafetyMap: vi.fn(async (date: string) => ({
-    kind: "available",
-    imageUrl: `https://pharos.watch/safety-scores/map.png?date=${date}`,
-    manifest: {
-      date,
-      asOfSec: 1_772_796_000,
-      renderedAtSec: 1_772_798_400,
-      edition: "daily",
-      bytes: { png: 1_000_000 },
-    },
-  })),
-}));
+vi.mock("../../lib/digest-safety-map", async (importOriginal) => {
+  const { mockDigestSafetyMapModule } = await import("./daily-digest.test-support");
+  return mockDigestSafetyMapModule(await importOriginal<typeof import("../../lib/digest-safety-map")>());
+});
 
 vi.mock("../../lib/telegram-digest-appendices", () => ({
   prepareTelegramDigestAppendices: vi.fn(),
@@ -181,6 +172,36 @@ const ANTHROPIC_OK_TEXT = JSON.stringify({
     usedCandidateIds: ["depeg:usdt-tether:active"],
   },
 });
+
+const VALID_MAP_SUMMARY = {
+  date: "2026-03-06",
+  asOfSec: 1_772_796_000,
+  methodologyVersion: "v9.1",
+  gradedCount: 318,
+  notRatedCount: 7,
+  totalMcapUsd: 100_000_000_000,
+  floorMcapByTier: { a: 4_700_000_000, other: 2_400_000_000 },
+  tiers: [
+    { tier: "A" as const, range: "80-100", count: 13, mcapUsd: 81_800_000_000, sharePct: 81.8, leaders: [] },
+    { tier: "B" as const, range: "60-79", count: 41, mcapUsd: 7_000_000_000, sharePct: 7, leaders: [] },
+    { tier: "C" as const, range: "40-59", count: 133, mcapUsd: 3_000_000_000, sharePct: 3, leaders: [] },
+    { tier: "D" as const, range: "20-39", count: 75, mcapUsd: 5_000_000_000, sharePct: 5, leaders: [] },
+    { tier: "F" as const, range: "0-19", count: 56, mcapUsd: 3_200_000_000, sharePct: 3.2, leaders: [] },
+  ],
+};
+
+const VALID_MAP_TWEET_HOOK = "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.";
+const VALID_MAP_TELEGRAM_APPENDIX = [
+  "<b>Today’s map</b>",
+  "Mapped supply: $100B across 318 coins",
+  "A tier: 13 coins · 81.8%",
+  "C/D/F tiers: 264 coins · 11.2%",
+].join("\n");
+
+const SAFETY_FREE_ANTHROPIC_TEXT = ANTHROPIC_OK_TEXT.replace(
+  "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read.",
+  "Capital stayed concentrated in USDT and USDC, leaving the daily note with a dry but restrained read.",
+);
 
 const ANTHROPIC_SOFT_WARNING_TEXT = JSON.stringify({
   title: "Drift",
@@ -537,6 +558,18 @@ describe("generateDailyDigest", () => {
   });
 
   it("stores digest on happy path and posts to social channels", async () => {
+    vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({
+      kind: "available",
+      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+      manifest: {
+        date: "2026-03-06",
+        asOfSec: 1_772_796_000,
+        renderedAtSec: 1_772_798_400,
+        edition: "daily",
+        bytes: { png: 1_000_000 },
+        mapSummary: VALID_MAP_SUMMARY,
+      },
+    });
     const db = mockD1(makeBaseTables());
 
     const result = await generateDailyDigest(
@@ -593,12 +626,14 @@ describe("generateDailyDigest", () => {
       expect.any(Object),
       expect.any(Number),
       "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+      VALID_MAP_TWEET_HOOK,
     );
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
       db,
       expect.objectContaining({
         imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+        mapAppendixHtml: VALID_MAP_TELEGRAM_APPENDIX,
       }),
       undefined,
     );
@@ -1395,10 +1430,62 @@ describe("generateDailyDigest", () => {
       expect.any(Object),
       expect.any(Number),
       null,
+      undefined,
     );
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
       db,
       expect.objectContaining({ imageUrl: null }),
+      undefined,
+    );
+  });
+
+  it("omits map prose but keeps the valid attachment when Safety Score context is unavailable", async () => {
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce({
+      kind: "error",
+      reason: "v9-snapshot-unavailable",
+      detail: "identity mismatch",
+      snapshot: null,
+    });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => mockAnthropicStreamResponse(SAFETY_FREE_ANTHROPIC_TEXT));
+    vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({
+      kind: "available",
+      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+      manifest: {
+        date: "2026-03-06",
+        asOfSec: 1_772_796_000,
+        renderedAtSec: 1_772_798_400,
+        edition: "daily",
+        bytes: { png: 1_000_000 },
+        mapSummary: VALID_MAP_SUMMARY,
+      },
+    });
+    const db = mockD1(makeBaseTables());
+
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" },
+      false,
+      { botToken: "tg-token", chatId: "tg-chat" },
+    );
+
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).not.toContain("unbound-safety-copy");
+    expect(postDigestTweet).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(Object),
+      expect.any(Number),
+      "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+      undefined,
+    );
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-06",
+        mapAppendixHtml: undefined,
+        safetyContext: expect.objectContaining({ status: "unavailable" }),
+      }),
       undefined,
     );
   });

@@ -106,7 +106,14 @@ describe("Telegram digest outbox", () => {
   it("persists the dated map link and requests a large preview during delivery", async () => {
     const { db } = createHarness();
     const imageUrl = "https://pharos.watch/safety-scores/map.png?date=2026-07-10";
-    await enqueueDaily(db, { imageUrl });
+    const mapAppendixHtml = [
+      "<b>Today’s map</b>",
+      "Mapped supply: $100B across 318 coins",
+      "A tier: 13 coins · 81.8%",
+      "C/D/F tiers: 264 coins · 11.2%",
+    ].join("\n");
+    const enqueued = await enqueueDaily(db, { imageUrl, mapAppendixHtml });
+    expect(enqueued.chunks.join("\n")).toContain(mapAppendixHtml);
     const fetchSpy = mockFetch([{
       match: () => true,
       respond: () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
@@ -117,6 +124,7 @@ describe("Telegram digest outbox", () => {
     expect(result).toMatchObject({ outcome: "sent", chunksSent: 1 });
     const body = JSON.parse(String(fetchSpy.getHistory()[0]!.body));
     expect(body.text).toContain(imageUrl);
+    expect(body.text.indexOf(mapAppendixHtml)).toBeLessThan(body.text.indexOf(imageUrl));
     expect(body.link_preview_options).toEqual({
       url: imageUrl,
       prefer_large_media: true,

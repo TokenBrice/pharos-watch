@@ -12,7 +12,7 @@ import { SafetyMapPoster } from "./poster";
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Safety Map: All Graded Coins by Tier",
   description:
-    "A downloadable poster of every stablecoin Pharos grades, drawn as supply-sized logos across concentric A-to-F Safety Score orbits and rebuilt daily.",
+    "A downloadable poster of every stablecoin Pharos grades, drawn across five discrete A-to-F grade bands with supply-proportional area above per-tier minimum markers and fixed presence markers below.",
   canonical: "/safety-scores/map/",
   // The poster itself is served from KV by a Pages Function, so it is not a file
   // in `out/` and cannot be a same-origin og:image. Use the dynamic Safety
@@ -22,19 +22,19 @@ export const metadata: Metadata = buildPageMetadata({
 
 const HOW_TO_READ = [
   {
-    term: "Each circle is one stablecoin",
+    term: "Five discrete grade bands",
     detail:
-      "Coins are drawn as their own logo with a thin rim in their Safety Score colour, so the map reads as a census of the market rather than an abstract chart. Every actively graded stablecoin appears exactly once.",
+      "five discrete grade bands: A at the centre, then B, C, D, and F outward. Each graded stablecoin is drawn as its own logo with a thin rim in its Safety Score colour, so the map reads as a census of the market rather than an abstract chart.",
   },
   {
-    term: "Circle area tracks circulating supply",
+    term: "Bubble area",
     detail:
-      "Above the disclosed legibility floor, sizing is proportional by area rather than diameter. Smaller assets share a minimum logo size so every stablecoin remains recognizable; the footer states the corresponding supply threshold for each render.",
+      "bubble area tracks circulating supply above a per-tier minimum marker; assets below their tier's threshold share a fixed presence marker. The footer states the corresponding thresholds for each render.",
   },
   {
-    term: "Orbits are Safety Score tiers",
+    term: "Orbit",
     detail:
-      "USDT and USDC anchor the line-free spiral A-grade core. B, C, D, and F each complete a wide path whose line connects its stablecoins in supply-rank order. Small markers identify every path, so classification never depends on reading colour alone.",
+      "orbit = grade band, not a continuous score. The bands are identified by their letter and colour, so classification never depends on reading colour alone.",
   },
   {
     term: "The footer carries the provenance",
@@ -60,11 +60,29 @@ export default function SafetyScoreMapPage() {
         changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
       }}
       leadParagraphs={[
-        "The whole graded stablecoin universe on one page: every coin Pharos rates, sized by circulating supply and arranged around a spiral A-grade core in concentric Safety Score orbits.",
+        "The whole graded stablecoin universe on one page: five discrete grade bands: A at the centre, then B, C, D, and F outward; orbit = grade band, not a continuous score; bubble area tracks circulating supply above a per-tier minimum marker; assets below their tier's threshold share a fixed presence marker.",
       ]}
     >
       <div className="space-y-10">
-        <SafetyMapPoster />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+          <SafetyMapPoster />
+          <aside className="pharos-card-shell space-y-3 p-5">
+            <div className="space-y-1">
+              <p className="pharos-kicker">Live lookup</p>
+              <h2 className="pharos-section-title">Find your coin</h2>
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              See the current grade, score, supply, and report card for a stablecoin from the live
+              Safety Scores data.
+            </p>
+            <Link
+              href="/safety-scores/?coin="
+              className="pharos-focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-border/60 px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
+            >
+              Find your coin by symbol or name &rarr;
+            </Link>
+          </aside>
+        </div>
 
         <section aria-labelledby="safety-map-how-to-read" className="space-y-4">
           <h2 id="safety-map-how-to-read" className="pharos-section-title">

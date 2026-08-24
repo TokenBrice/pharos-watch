@@ -93,7 +93,12 @@ function truncateToFit(text: string, maxLen: number): string {
 /** Build final tweet text: title + digest with inline cashtags injected on first ticker mention.
  *  The LLM prompt targets 270 combined chars for title+text, leaving ~10 chars headroom
  *  for cashtag `$` prefixes injected below. truncateToFit is a safety net for overflow. */
-export function buildTweetText(digestTitle: string, digestText: string, editionNumber?: number | null): string {
+export function buildTweetText(
+  digestTitle: string,
+  digestText: string,
+  editionNumber?: number | null,
+  mapHook?: string | null,
+): string {
   const MAX = 270;
   const editionTag = editionNumber ? ` (#${editionNumber})` : "";
   const titlePrefix = digestTitle ? `${digestTitle}${editionTag}\n\n` : "";
@@ -105,13 +110,14 @@ export function buildTweetText(digestTitle: string, digestText: string, editionN
       .replace(/^[\s\n:–—-]+/, "")
       .trim();
   }
-  const available = MAX - titlePrefix.length;
   const tagged = injectCashtags(text);
+  const mapSuffix = mapHook ? `\n\n${mapHook}` : "";
+  const available = MAX - titlePrefix.length - mapSuffix.length;
   const fittedText = truncateToFit(tagged, available);
   if (fittedText !== tagged) {
     logWorkerEventArgs("lib", "warn", `[twitter] Tweet truncated: ${tagged.length} chars -> ${fittedText.length} chars (limit ${available})`);
   }
-  return `${titlePrefix}${fittedText}`;
+  return `${titlePrefix}${fittedText}${mapSuffix}`;
 }
 
 /** Post a single tweet using OAuth 1.0a. Throws with delivery ambiguity attached on API error. */
@@ -233,8 +239,8 @@ export async function postDigestTweet(
   creds: TwitterCreds,
   editionNumber?: number | null,
   imageUrl?: string | null,
+  mapHook?: string | null,
 ): Promise<{ tweetId: string; mediaAttached: boolean; mediaError: string | null }> {
-  const tweetText = buildTweetText(digestTitle, digestText, editionNumber);
   let mediaId: string | undefined;
   let mediaError: string | null = null;
   if (imageUrl) {
@@ -245,6 +251,7 @@ export async function postDigestTweet(
       logWorkerEventArgs("lib", "warn", `[twitter] Safety map attachment omitted: ${mediaError}`);
     }
   }
+  const tweetText = buildTweetText(digestTitle, digestText, editionNumber, mediaId ? mapHook : null);
   const tweetId = await postTweet(tweetText, creds, mediaId);
   logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars${mediaId ? ", safety map attached" : ""})`);
   return { tweetId, mediaAttached: Boolean(mediaId), mediaError };

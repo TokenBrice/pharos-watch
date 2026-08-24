@@ -215,7 +215,7 @@ An idle `digestTriggerPoll` with no pending force-run intent is a neutral condit
 
 ## Distribution
 
-After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. Before either channel send, the worker reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old enables the attachment; every unavailable or stale state omits it and records degraded ops telemetry without blocking the digest. Twitter/X persists a same-day delivery ledger in the D1 `cache` table; Telegram first persists the exact rendered edition in `telegram_digest_outbox`, then sends only that stored payload.
+After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. Before either channel send, the worker reads `/safety-scores/map.json` and HEAD-probes today's dated PNG. A same-day manifest with data under 24 hours old enables the attachment; every unavailable or stale state omits it and records degraded ops telemetry without blocking the digest. The manifest's optional `mapSummary` enables deterministic channel prose only when its complete typed shape is valid and the digest has an available canonical Safety Score context. An absent, partial, malformed, or capture-mismatched summary still permits the image attachment but emits no map prose. Twitter/X persists a same-day delivery ledger in the D1 `cache` table; Telegram first persists the exact rendered edition in `telegram_digest_outbox`, then sends only that stored payload.
 
 ### Web archive and sitemap policy
 
@@ -226,7 +226,7 @@ After the digest is stored in D1, it is posted to configured Twitter/X and Teleg
 **File:** `worker/src/lib/twitter.ts`
 
 - Auth: **OAuth 1.0a** signed with `crypto.subtle.HMAC-SHA1` (no third-party library)
-- Format: `{title} (#N)\n\n{text}` — an edition-number suffix `(#N)` is appended to the title (N = running count of non-weekly digests, present on every post); a `$` cashtag prefix auto-injected on the single earliest tracked-ticker mention in the text (only one cashtag per tweet; Twitter rejects multiple); truncated to 270 chars if needed
+- Format: `{title} (#N)\n\n{text}` — an edition-number suffix `(#N)` is appended to the title (N = running count of non-weekly digests, present on every post); a `$` cashtag prefix auto-injected on the single earliest tracked-ticker mention in the text (only one cashtag per tweet; Twitter rejects multiple); truncated to 270 chars if needed. When map media upload succeeds with a valid summary and Safety Score context, the full computed hook `Of {total} USD in mapped supply, A tier’s {count} coins hold {share}%; C/D/F’s {count} hold {share}%. Find yours on today’s map.` is reserved inside that budget, and the digest text is word-boundary truncated first.
 - Endpoints: `POST https://upload.twitter.com/1.1/media/upload.json` for the PNG, then `POST https://api.twitter.com/2/tweets` with its media id
 
 **Required secrets:**
@@ -253,13 +253,18 @@ If any of the four are absent, Twitter posting is skipped silently. Twitter/X de
 
   {extended}
 
+  <b>Today’s map</b>
+  Mapped supply: ${total} across {gradedCount} coins
+  A tier: {count} coins · {share}%
+  C/D/F tiers: {count} coins · {share}%
+
   <a href="https://pharos.watch/safety-scores/map.png?date=YYYY-MM-DD">View today’s map →</a>
 
   <a href="https://pharos.watch/digest/YYYY-MM-DD/">Read on Pharos →</a>
   ```
 - Endpoint: `POST https://api.telegram.org/bot{token}/sendMessage`
 
-The `extended` field is used instead of `text`. When today's map passes the readiness contract, the canonical dated URL is persisted in the rendered HTML and the matching chunk is sent with `link_preview_options` selecting a large preview above the text. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
+The `extended` field is used instead of `text`. The four-line map block shown above is present only when the optional map summary and canonical Safety Score context are both available; every count, supply total, and share is computed from the summary's tier market caps. When today's map passes the readiness contract, the canonical dated URL and any map block are persisted together in the rendered HTML at enqueue time, and the matching chunk is sent with `link_preview_options` selecting a large preview above the text. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
 
 Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram-digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body:
 

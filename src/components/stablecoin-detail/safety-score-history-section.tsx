@@ -15,12 +15,17 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { useSafetyScoreHistory } from "@/hooks/api-hooks";
+import { useSafetyScoreHistory, useSafetyScoreHistoryV2 } from "@/hooks/api-hooks";
 import { CRON_24H } from "@/lib/cron-intervals";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { formatChartDate, formatDuration, formatTrackingSpanDays } from "@shared/lib/format";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
-import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
+import type {
+  ReportCardGrade,
+  SafetyScoreHistoryPoint,
+  SafetyScoreHistoryV2Point,
+  SafetyScoreHistoryV2TransitionKind,
+} from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
 // ---------------------------------------------------------------------------
@@ -29,11 +34,47 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 
 const VISIBLE_CAP = 3;
 
+type DisplayHistoryPoint = SafetyScoreHistoryPoint & {
+  transitionKind?: SafetyScoreHistoryV2TransitionKind;
+};
+
 /** Lower value = better grade. NR and unknown grades → Infinity (treated as worst for sort comparisons). */
 function gradeRank(grade: ReportCardGrade): number {
   if (grade === "NR") return Infinity;
   const rank = getReportCardGradeRank(grade);
   return rank == null ? Infinity : -rank;
+}
+
+function mergeGradeHistory(
+  legacyHistory: readonly SafetyScoreHistoryPoint[],
+  identityAwareHistory: readonly SafetyScoreHistoryV2Point[],
+): DisplayHistoryPoint[] {
+  const combined: DisplayHistoryPoint[] = [
+    ...legacyHistory,
+    ...identityAwareHistory.map((point) => ({
+      date: point.date,
+      grade: point.grade,
+      score: point.score,
+      prevGrade: point.prevGrade,
+      prevScore: point.prevScore,
+      methodologyVersion: point.safetyScoreIdentity.methodologyVersion,
+      transitionKind: point.transitionKind,
+    })),
+  ].sort((left, right) => left.date - right.date);
+
+  const merged: DisplayHistoryPoint[] = [];
+  for (const point of combined) {
+    const previous = merged[merged.length - 1];
+    if (previous?.grade === point.grade) {
+      // Prefer the identity-aware copy when both endpoints expose the same row.
+      if (previous.date === point.date && previous.transitionKind == null && point.transitionKind != null) {
+        merged[merged.length - 1] = point;
+      }
+      continue;
+    }
+    merged.push(point);
+  }
+  return merged;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +90,17 @@ function StatBox({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function TransitionIndicator({ point }: { point: SafetyScoreHistoryPoint }) {
+function TransitionIndicator({ point }: { point: DisplayHistoryPoint }) {
+  if (point.transitionKind === "methodology-boundary-baseline") {
+    return <span className="text-xs text-muted-foreground">Methodology baseline</span>;
+  }
+  if (point.transitionKind === "rollback-baseline") {
+    return <span className="text-xs text-muted-foreground">Rollback baseline</span>;
+  }
+  if (point.transitionKind === "restoration-baseline") {
+    return <span className="text-xs text-muted-foreground">Restoration baseline</span>;
+  }
+
   if (point.prevGrade == null) {
     return <span className="text-xs text-muted-foreground">Initial grade</span>;
   }
@@ -91,7 +142,8 @@ interface SafetyScoreHistorySectionProps {
 }
 
 export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySectionProps) {
-  const { data, meta, isLoading, error } = useSafetyScoreHistory(stablecoinId, 3650);
+  const legacyQuery = useSafetyScoreHistory(stablecoinId, 3650);
+  const identityAwareQuery = useSafetyScoreHistoryV2(stablecoinId, 3650);
   const [expanded, setExpanded] = useState(false);
 
   // --- derived data --------------------------------------------------------
@@ -99,7 +151,12 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
   // Computed once per mount — fresh on each page navigation, avoids module-level staleness
   const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
 
-  const history = useMemo(() => data ?? [], [data]);
+  const history = useMemo(
+    () => mergeGradeHistory(legacyQuery.data ?? [], identityAwareQuery.data?.history ?? []),
+    [identityAwareQuery.data, legacyQuery.data],
+  );
+  const updatedAt = Math.max(legacyQuery.meta?.updatedAt ?? 0, identityAwareQuery.meta?.updatedAt ?? 0);
+  const error = legacyQuery.error ?? identityAwareQuery.error;
 
   const stats = useMemo(() => {
     if (history.length === 0) return null;
@@ -141,7 +198,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
 
   // --- early returns -------------------------------------------------------
 
-  if (isLoading) return null;
+  if (legacyQuery.isLoading || identityAwareQuery.isLoading) return null;
   if (error) return <QueryErrorNotice error={error} />;
   if (history.length === 0) return null;
 
@@ -153,10 +210,10 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
           <MethodologyLabel topic="safetyScore">Grade History</MethodologyLabel>
         </StablecoinModuleTitle>
-        {meta?.updatedAt != null && meta.updatedAt > 0 ? (
+        {updatedAt > 0 ? (
           <FreshnessIndicator
             compact
-            updatedAtMs={meta.updatedAt * 1000}
+            updatedAtMs={updatedAt * 1000}
             staleAfterMs={CRON_24H}
             labelPrefix="Updated"
           />

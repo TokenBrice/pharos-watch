@@ -161,6 +161,8 @@ The writer compares *publication* identities. The capture's `v9-input` identity 
 
 `GET /api/safety-score-history` remains the public per-asset timeline. Historical V8 and activation-boundary rows remain readable as archive data; they are never live publication inputs.
 
+The stablecoin detail Grade History module combines that legacy archive with `GET /api/safety-score-history-v2`. It collapses consecutive same-grade baselines, while retaining a boundary row when the published grade changes and labelling it as a methodology baseline rather than implying an organic upgrade or downgrade. This keeps the current V9 grade and the date it first appeared visible without comparing non-comparable publication identities.
+
 ## Frontend
 
 - `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, and sorting. Its grade filter composes with an inline peg filter that groups the stablecoin-list `pegType` values into USD, non-USD fiat, and commodities (gold or silver); selecting the active peg pill again clears that peg constraint.

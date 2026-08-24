@@ -53,8 +53,8 @@ describe("clock discipline — structural pin on the generator source", () => {
   it("stamps every emitted artifact with the same runDate value", () => {
     const tail = source.slice(source.indexOf("const renderedAtSec ="));
     const dateFields = tail.match(/\bdate: [A-Za-z.]+/g) ?? [];
-    // alt.json, snapshot.json, manifest.json — one each, all runDate.
-    expect(dateFields).toEqual(["date: runDate", "date: runDate", "date: runDate"]);
+    // alt.json, snapshot.json, manifest.json, and snapshot.mapSummary — one each, all runDate.
+    expect(dateFields).toEqual(["date: runDate", "date: runDate", "date: runDate", "date: runDate"]);
     expect(tail).toMatch(/renderedAt: new Date\(renderedAtSec \* 1000\)\.toISOString\(\)/);
   });
 });
@@ -75,15 +75,38 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
   // Deliberately on an earlier UTC day than the run: the archive must key off
   // the run date while the poster stamp keeps the capture date.
   const capturedAtSec = Math.floor(Date.now() / 1000) - 30 * HOUR;
-  const cards = Array.from({ length: 12 }, (_, i) => ({
-    id: `coin-${String(i).padStart(2, "0")}`,
-    score: 92 - i * 3,
-    grade: (["A+", "A", "B+", "B", "C+", "C", "D+", "D", "F", "F", "B", "C"] as const)[i],
-  }));
+  const fixtureIds = [
+    "usdt-tether",
+    "usdc-circle",
+    "dai-makerdao",
+    "frax-frax",
+    "tusd-trueusd",
+    "lusd-liquity",
+    "fei-fei",
+    "usdp-paxos",
+    "gusd-gemini",
+    "usde-ethena",
+    "usd1-world-liberty-financial",
+    "coin-11",
+  ];
+  const cards = [
+    ["A+", 90],
+    ["A", 84],
+    ["A-", 81],
+    ["F", 20],
+    ["F", 25],
+    ["F", 30],
+    ["F", 35],
+    ["F", 10],
+    ["F", 15],
+    ["F", 18],
+    ["F", 22],
+    ["F", 28],
+  ].map(([grade, score], i) => ({ id: fixtureIds[i], score, grade }));
   const peggedAssets = cards.map((card, i) => ({
     id: card.id,
     symbol: `C${i}`,
-    circulating: { peggedUSD: 1e11 * 0.4 ** i },
+    circulating: { peggedUSD: 1e11 * 0.2 ** i },
   }));
 
   beforeAll(async () => {
@@ -94,11 +117,22 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
           ? { cards, methodology: { version: "9.19" }, asOfSec: capturedAtSec }
           : path === "/api/stablecoins"
             ? { peggedAssets }
+            : path === "/api/stability-index"
+              ? {
+                  current: {
+                    score: 94.3,
+                    band: "BEDROCK",
+                    avg24h: 93.8,
+                    avg24hBand: "BEDROCK",
+                    computedAt: Math.floor(Date.now() / 1000) - 5 * 60,
+                  },
+                }
             : null;
       if (!body) {
         res.writeHead(404).end("{}");
         return;
       }
+      if (path === "/api/report-cards/v9") res.setHeader("X-Safety-Score-Status", "current");
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify(body));
     });
@@ -130,13 +164,14 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
 
       // The bootstrap path: a missing delta baseline warns, it does not fail.
       expect(`${stdout}${stderr}`).toMatch(/No --previous-snapshot supplied — day-over-day delta guard skipped/);
-      expect(status).toBe(0);
+      expect(status, `${stdout}\n${stderr}`).toBe(0);
       expect(existsSync(pngPath)).toBe(true);
 
       const read = (suffix: string) => JSON.parse(readFileSync(join(outDir, `map${suffix}`), "utf8"));
       const snapshot = read(".snapshot.json");
       const manifest = read(".manifest.json");
       const alt = read(".alt.json");
+      const svg = readFileSync(join(outDir, "map.svg"), "utf8");
 
       // Rule 7: `date` is the UTC date of `renderedAtSec`, in every artifact.
       expect(snapshot.date).toBe(utcDate(snapshot.renderedAtSec));
@@ -152,10 +187,52 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
       expect(alt.asOfSec).toBe(capturedAtSec);
       expect(utcDate(capturedAtSec)).not.toBe(snapshot.date);
       expect(alt.altText).toContain(`data as of ${utcDate(capturedAtSec)}`);
+      expect(alt.psi).toEqual({ score: 93.8, band: "BEDROCK", basis: "24H AVG", computedAt: expect.any(Number) });
+      expect(alt.altText).toContain("PSI 93.8 · BEDROCK · 24H AVG at render time");
 
       // The census the next run's delta guard will read back.
       expect(snapshot.counts.graded).toBe(cards.length);
       expect(snapshot.coins).toHaveLength(cards.length);
+      expect(snapshot.publicationStatus).toBe("current");
+      expect(snapshot.mapSummary.floorMcapByTier.a).toBeGreaterThan(snapshot.mapSummary.floorMcapByTier.other);
+      expect(snapshot.mapSummary.tiers).toHaveLength(5);
+      expect(alt.altText).toContain("five discrete grade bands: A at the centre, then B, C, D, and F outward");
+      expect(alt.altText).toContain("orbit = grade band, not a continuous score");
+      expect(alt.altText).toContain("assets below those thresholds share a fixed presence marker");
+      expect(svg.match(/<polygon\b/g)).toHaveLength(1); // masthead cap only; no rank polygon
+      expect(svg).toContain('data-masthead-lockup="true" data-lockup-x="64" data-lockup-y="4" data-lockup-w="714" data-lockup-h="78" data-mark-size="72"');
+      expect(svg.match(/data-band-zone="[ABCDF]"/g)).toHaveLength(new Set(cards.map((card) => String(card.grade).charAt(0))).size);
+      expect(svg).toContain('stroke-width="7" stroke-opacity="0.045"');
+      expect(svg).toContain('stroke-width="1.15" stroke-opacity="0.24"');
+      expect(svg).not.toContain('stroke-dasharray="2.2 1.8"');
+      expect(svg.match(/<image /g)).toHaveLength(cards.length); // 11 coin logos + the brand mark
+      expect(svg.match(/fill="#07111f"\/>/g)).toHaveLength(1); // one high-contrast missing-logo plate
+      expect(svg.match(/data-annotation-id=/g)).toHaveLength(3);
+      expect(svg).toContain('data-annotation-id="grade-key"');
+      expect(svg).toContain('data-annotation-id="supply-mass-rail"');
+      expect(svg).toContain('data-annotation-id="footer-encoding"');
+      expect(svg).toContain("inner -&gt; safer");
+      expect(svg).toContain('data-psi-status="true" data-psi-band="BEDROCK" data-psi-score="93.8" data-psi-basis="24H AVG" data-psi-color="#22c55e"');
+      expect(svg).toContain('data-psi-band-marker="true"');
+      expect(svg).not.toContain("SAFETY GRAVITATES INWARD");
+      expect(svg).not.toContain("SIZE FLOOR");
+      expect(svg).not.toContain("LANES ");
+      expect(svg).toContain('data-logo-id="usdt-tether" data-plate="none"');
+      expect(svg).not.toContain('data-logo-plate="usdt-tether"');
+      expect(svg).not.toContain('data-grade-rim="usdt-tether"');
+      expect(svg).toContain('data-logo-plate="usdc-circle"');
+      expect(svg).toContain('data-grade-rim="usdc-circle"');
+      expect(svg).toContain('data-grade-rim="coin-11"');
+      expect(svg.match(/data-mass-tier=/g)).toHaveLength(5);
+      expect(svg).toContain('stroke-dasharray="9 5"');
+      expect(svg).toContain('stroke-dasharray="2 4"');
+      expect(svg).toContain('stroke-dasharray="12 4 2 4"');
+      const massBars = [...svg.matchAll(/data-mass-tier="[A-F]" data-track-width="([^"]+)" data-tier-mcap="([^"]+)" data-total-mcap="([^"]+)" x="[^"]+" y="[^"]+" width="([^"]+)"/g)];
+      expect(massBars).toHaveLength(5);
+      for (const match of massBars) {
+        const [, track, tierMcap, allMcap, width] = match.map(Number);
+        expect(width).toBeCloseTo((tierMcap / allMcap) * track, 12);
+      }
     },
   );
 });

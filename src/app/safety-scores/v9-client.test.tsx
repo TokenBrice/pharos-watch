@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 const mocks = vi.hoisted(() => ({
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/hooks/api-hooks", () => ({ useReportCardsV9: mocks.useReportCardsV9 }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: mocks.useStablecoins }));
 vi.mock("@/hooks/use-logos", () => ({ useLogos: mocks.useLogos }));
+vi.mock("next/link", async () => createNextLinkMock());
 vi.mock("@/components/report-card-mini-v9", () => ({
   ReportCardMiniV9: ({ card }: { card: { id: string } }) => <div data-testid="v9-card">{card.id}</div>,
 }));
@@ -35,6 +37,7 @@ function query(data: unknown) {
 
 describe("ReportCardsV9Client", () => {
   beforeEach(() => {
+    window.history.replaceState(null, "", "/safety-scores/");
     mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
       cards: [
         makeV9Card({ id: "asset-a", grade: "A", score: 90 }),
@@ -48,7 +51,7 @@ describe("ReportCardsV9Client", () => {
     mocks.useLogos.mockReturnValue({ data: {} });
   });
 
-  afterEach(cleanup);
+  afterEach(cleanupFrontendTest);
 
   it("keeps the production grade-grouped card grid and V9 controls", () => {
     render(<ReportCardsV9Client />);
@@ -91,6 +94,26 @@ describe("ReportCardsV9Client", () => {
 
     expect(screen.getByRole("alert").textContent).toContain(
       "V8 ratings are not used as a fallback",
+    );
+    expect(screen.getByRole("status").textContent).toContain("live Safety Score lookup is temporarily unavailable");
+  });
+
+  it("resolves a stable-ID deep link, focuses its card, and shows current lookup facts", async () => {
+    window.history.replaceState(null, "", "/safety-scores/?coin=usdt-tether");
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "usdt-tether", grade: "A", score: 91 })],
+    })));
+    mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [
+      { id: "usdt-tether", pegType: "peggedUSD", circulating: { peggedUSD: 123_000_000 } },
+    ] }));
+
+    render(<ReportCardsV9Client />);
+
+    await waitFor(() => expect(document.activeElement?.id).toBe("safety-score-card-usdt-tether"));
+    expect(screen.getByText("Tether")).toBeTruthy();
+    expect(screen.getByText("Current live V9 publication", { exact: false })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Open report card/i }).getAttribute("href")).toBe(
+      "/stablecoin/usdt-tether/",
     );
   });
 });
