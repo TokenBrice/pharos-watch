@@ -158,13 +158,26 @@ function response() {
   } as const;
 }
 
+/** The mutable slice these tests reshape; the schema validates the rest. */
+interface MutableEvidenceResponsibility extends Record<string, unknown> {
+  facts?: unknown;
+  summaries: unknown[];
+}
+interface MutableCard extends Record<string, unknown> {
+  scoreTrace?: {
+    evidenceResponsibility: MutableEvidenceResponsibility;
+    stages: { preCapScore: number } & Record<string, unknown>;
+  } & Record<string, unknown>;
+  breakdowns?: unknown;
+}
+
 function currentResponse() {
   const current = structuredClone(response()) as unknown as {
     schemaVersion: number;
     lifecycle: string;
     policyVersion: string;
     policy: { id: string; semanticDigest: string };
-    cards: Array<{ scoreTrace?: unknown; breakdowns?: unknown }>;
+    cards: MutableCard[];
   };
   current.schemaVersion = 5;
   current.lifecycle = "active";
@@ -319,17 +332,15 @@ function adjustedResponse(): MutableAdjustedResponseFixture {
 describe("SafetyScoreV9ResponseSchema", () => {
   it("accepts pre-9.19 snapshots without per-fact disclosure paths", () => {
     const legacy = currentResponse();
-    const trace = legacy.cards[0]!.scoreTrace as {
-      evidenceResponsibility?: { facts?: unknown; summaries: unknown[] };
-    };
-    delete trace.evidenceResponsibility?.facts;
-    trace.evidenceResponsibility?.summaries.pop();
+    const trace = legacy.cards[0]!.scoreTrace!;
+    delete trace.evidenceResponsibility.facts;
+    trace.evidenceResponsibility.summaries.pop();
     const parsed = SafetyScoreV9CurrentResponseSchema.parse(legacy);
     expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.facts).toBeUndefined();
     expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.summaries).toHaveLength(5);
 
     const incompleteCurrent = currentResponse();
-    incompleteCurrent.cards[0]!.scoreTrace.evidenceResponsibility.summaries.pop();
+    incompleteCurrent.cards[0]!.scoreTrace!.evidenceResponsibility.summaries.pop();
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(incompleteCurrent)).toThrow(
       /must cover every owner in canonical order/,
     );
@@ -349,9 +360,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(missingTrace)).toThrow();
 
     const inconsistentTrace = currentResponse();
-    const scoreTrace = inconsistentTrace.cards[0]!.scoreTrace as {
-      stages: { preCapScore: number };
-    };
+    const scoreTrace = inconsistentTrace.cards[0]!.scoreTrace!;
     scoreTrace.stages.preCapScore = 91;
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(inconsistentTrace)).toThrow(
       /explicit preCapScore must match/,

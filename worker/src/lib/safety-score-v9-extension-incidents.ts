@@ -333,10 +333,13 @@ export function routeSafetyScoreV9OperationalIncidents(
     ...(existingReview.state === "reviewed" ? [existingReview.windowStart] : []),
     ...operationalIncidents.map((incident) => incident.occurredAt),
   ].sort(compareText)[0]!;
-  const windowEnd = [
+  // `Array.prototype.at` is outside the Worker tsconfig's lib target; index the
+  // sorted tail directly.
+  const windowEndCandidates = [
     ...(existingReview.state === "reviewed" ? [existingReview.windowEnd] : []),
     ...operationalIncidents.map((incident) => incident.reviewedAt),
-  ].sort(compareText).at(-1)!;
+  ].sort(compareText);
+  const windowEnd = windowEndCandidates[windowEndCandidates.length - 1]!;
   return {
     ...overlay,
     sources: [...new Map(sources.map((source) => [source.sourceId, source])).values()].sort(
