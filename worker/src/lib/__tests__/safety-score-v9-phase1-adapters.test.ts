@@ -23,92 +23,15 @@ import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9-ex
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
 import { addReviewedStaticReserveEvidence } from "../safety-score-v9-extension-reserves";
 import { ReviewEvidenceBuilder } from "../safety-score-v9-extension-shared";
+import {
+  LIVE_RESERVES_CONFIG,
+  eligibleReserveMeta,
+  mintMeta,
+} from "./safety-score-v9-reserve-admission.test-support";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
 const CURATION_CLOCK_SEC = Date.UTC(2026, 7, 9, 12) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
-const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
-  adapter: "curated-validated",
-  version: 1,
-  semantics: "collateral-mix",
-  inputs: { primary: { kind: "onchain-solana" } },
-};
-
-function mintMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
-  return {
-    id,
-    mintAuthority: {
-      mintPath: "centralized",
-      authorityPosture: "issuer-controlled",
-      confidence: "verified",
-      summary: "Fixture mint profile",
-      review: {
-        evidence: "Fixture evidence",
-        reviewer: "fixture",
-        reviewedAt: "2026-07-16",
-      },
-      supervision: "prudential",
-    },
-    ...overrides,
-  } as V9ExtensionRegistryMeta;
-}
-
-function eligibleReserveMeta(overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
-  const rows: ReserveSlice[] = [
-    {
-      name: "Treasury repo",
-      pct: 90,
-      risk: "very-low",
-      assetClass: "repo",
-      issuerOrObligor: "Regulated counterparties",
-      riskFactors: ["counterparty", "custody"],
-      liquidityHorizon: "one-day",
-      maturityDaysMax: 1,
-    },
-    {
-      name: "Cash",
-      pct: 10,
-      risk: "very-low",
-      assetClass: "bank-deposit",
-      issuerOrObligor: "Commercial banks",
-      riskFactors: ["counterparty", "custody"],
-      liquidityHorizon: "immediate",
-    },
-  ];
-  return mintMeta("pyusd-paypal", {
-    reserves: rows,
-    reserveReview: {
-      reviewedAt: "2026-07-16",
-      reviewer: "fixture",
-      confidence: "verified",
-      sources: [{ label: "Composition", url: "https://example.com/composition" }],
-      rationale: "Complete fixture composition",
-      compositionBasis: "Signed report",
-      compositionAsOf: "2026-06-30",
-      scope: "full-composition",
-      knownUnknownExposure: "None",
-      knownUnknownExposurePct: 0,
-    },
-    proofOfReserves: {
-      type: "independent-audit",
-      url: "https://example.com/transparency",
-      provider: "Independent LLP",
-      attestorTier: "regional",
-      cadence: "monthly",
-      latestReport: {
-        periodEnd: "2026-06-30",
-        publishedAt: "2026-07-10",
-        assuranceMethod: "examination",
-        scope: "assets-and-liabilities",
-        liabilityReconciliation: "full",
-        reviewer: "fixture",
-        confidence: "verified",
-        sources: [{ label: "Signed report", url: "https://example.com/report.pdf" }],
-      },
-    },
-    ...overrides,
-  });
-}
 
 function usdgReserveRows(): ReserveSlice[] {
   return [
