@@ -20,6 +20,7 @@ export const RESPONSIBILITIES = [
   "measured-adverse",
   "method-unsupported",
   "producer-failed",
+  "published-evidence-expired",
 ] as const;
 export const SCORE_TOLERANCE = 0.0002;
 export const EXIT_SCORE_TOLERANCE = 0.03;

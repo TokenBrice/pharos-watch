@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
+import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "@/lib/safety-score-v9-labels";
 import {
   buildStablecoinSafetyScoreV9Presentation,
   describeSafetyScoreV9Components,
@@ -13,6 +15,11 @@ import {
 const BREAKDOWN_PILLARS = makeV9Pillars({ backing: 88, exit: 84, control: 86 });
 
 describe("stablecoin V9 safety presentation", () => {
+  it("has public copy for every evidence-responsibility value", () => {
+    expect(Object.keys(SAFETY_SCORE_V9_RESPONSIBILITY_LABELS).sort())
+      .toEqual([...V9EvidenceResponsibilitySchema.options].sort());
+  });
+
   /**
    * Full three-pillar breakdown; tests override the pillar they exercise.
    * Published scores must equal the card's pillar scores (88 / 84 / 86) and
@@ -196,6 +203,13 @@ describe("stablecoin V9 safety presentation", () => {
         message: "No reserve composition is present in the exact fixed input.",
         responsibility: "issuer-undisclosed",
       },
+      {
+        source: "reason",
+        code: "missing-latest-assurance-report",
+        path: "backing:assurance-report",
+        message: "The published assurance report is outside our freshness window.",
+        responsibility: "published-evidence-expired",
+      },
     ];
 
     const presentation = buildStablecoinSafetyScoreV9Presentation(card);
@@ -208,6 +222,11 @@ describe("stablecoin V9 safety presentation", () => {
         key: "issuer-undisclosed",
         label: "The issuer has not disclosed this",
         messages: ["No reserve composition is present in the exact fixed input."],
+      },
+      {
+        key: "published-evidence-expired",
+        label: "This was published, but our copy is out of date",
+        messages: ["The published assurance report is outside our freshness window."],
       },
       {
         key: "integration-missing",

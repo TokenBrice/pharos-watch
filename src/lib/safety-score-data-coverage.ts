@@ -119,6 +119,12 @@ const GAP_OWNERS = [
     label: "No supported method",
     detail: "No method can measure this input for this asset yet. Nothing upstream failed.",
   },
+  {
+    responsibility: "published-evidence-expired",
+    label: "Pharos copy is out of date",
+    detail:
+      "The issuer or its parent published this evidence, but our copy is outside its freshness window.",
+  },
 ] as const satisfies ReadonlyArray<{
   responsibility: V9EvidenceResponsibility;
   label: string;
@@ -229,7 +235,7 @@ export function buildDataCoverageModel(
   const gapCountByOwner = new Map<V9EvidenceResponsibility, number>();
   const assetCountByCode = new Map<V9ReasonCode, number>();
 
-  // The headline counts MISSING data: only the four gap-owner classes shown
+  // The headline counts MISSING data: only the five gap-owner classes shown
   // in the module's own attribution bar. Measured classifications (adverse or
   // structural findings) are facts we hold, not absences, so they stay out of
   // the count, out of the bar, and out of the reason-code inventory the bar

@@ -11,10 +11,11 @@ const OWNER_SWATCHES: Record<string, string> = {
   "integration-missing": "bg-frost-blue",
   "producer-failed": "bg-rose-500",
   "method-unsupported": "bg-muted-foreground",
+  "published-evidence-expired": "bg-sky-500",
 };
 
 /**
- * Compact labels for the collapsed rail below `lg`, where four full labels no
+ * Compact labels for the collapsed rail below `lg`, where five full labels no
  * longer fit on one line. Desktop keeps the view model's full labels. Each one
  * names the limit's owner, so `method-unsupported` shortens to the method
  * rather than to "Unsupported", which would read as a claim about the asset.
@@ -24,6 +25,7 @@ const OWNER_SHORT_LABELS: Record<string, string> = {
   "integration-missing": "Pharos",
   "producer-failed": "Feed",
   "method-unsupported": "Method",
+  "published-evidence-expired": "Pharos",
 };
 
 function formatCount(value: number): string {
@@ -102,7 +104,7 @@ function GapOwnerLegend({ model }: { model: DataCoverageModel }) {
   );
 }
 
-/** The same four owners spelled out, shown once the rail is expanded. */
+/** The same five owners spelled out, shown once the rail is expanded. */
 function GapOwnerDetail({ model }: { model: DataCoverageModel }) {
   return (
     <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">

@@ -564,6 +564,7 @@ describe("Safety Score v9 public projection", () => {
         criticalFactCount: 0,
         reasonCodes: ["historical-critical-input"],
       },
+      { responsibility: "published-evidence-expired", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
     ]);
     expect(card.scoreTrace.evidenceResponsibility.facts).toContainEqual({
       reasonCode: "unresolved-control-identity",

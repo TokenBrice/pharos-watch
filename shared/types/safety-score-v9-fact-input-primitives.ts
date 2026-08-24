@@ -85,4 +85,5 @@ export const V9MechanismExitDispositionSchema = z.enum([
   "issuer-undisclosed",
   "integration-missing",
   "method-unsupported",
+  "published-evidence-expired",
 ]);

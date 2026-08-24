@@ -2,6 +2,7 @@ import {
   V9EvidenceReferenceV2Schema,
   V9FactStatusV2Schema,
   type V9EvidenceReferenceV2,
+  type V9EvidenceResponsibility,
   type V9FactApplicability,
   type V9FactStatusV2,
   type V9ObservationState,
@@ -67,6 +68,28 @@ export function createV9EvidenceReference(args: CreateV9EvidenceReferenceArgs, a
     freshness,
     rejection: args.rejection ?? null,
   });
+}
+
+export type V9PublishedEvidenceAttribution = "issuer" | "parent" | "other" | "unknown";
+
+/**
+ * Reclassifies only causally attributable published evidence whose freshness
+ * window has expired. Missing publication history and unknown publishers stay
+ * on the explicit fallback owner rather than guessing that Pharos is at fault.
+ */
+export function resolveV9EvidenceResponsibility(args: {
+  observationState: Exclude<V9ObservationState, "known">;
+  fallbackResponsibility: V9EvidenceResponsibility;
+  evidenceReferences: readonly V9EvidenceReferenceV2[];
+  publishedBy: V9PublishedEvidenceAttribution;
+}): V9EvidenceResponsibility {
+  const attributablePublisher = args.publishedBy === "issuer" || args.publishedBy === "parent";
+  const hasExpiredPublishedEvidence = args.evidenceReferences.some(
+    (reference) => reference.disposition === "published" && reference.freshness.state === "stale",
+  );
+  return args.observationState === "stale" && attributablePublisher && hasExpiredPublishedEvidence
+    ? "published-evidence-expired"
+    : args.fallbackResponsibility;
 }
 
 export function createV9FactStatus(args: {

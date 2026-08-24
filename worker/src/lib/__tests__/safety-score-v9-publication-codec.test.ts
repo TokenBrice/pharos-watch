@@ -120,6 +120,10 @@ describe("Safety Score V9 publication codec", () => {
     ) as typeof publication;
     for (const card of legacyPublication.cards) {
       delete (card.scoreTrace.evidenceResponsibility as { facts?: unknown }).facts;
+      card.scoreTrace.evidenceResponsibility.summaries =
+        card.scoreTrace.evidenceResponsibility.summaries.filter(
+          (summary) => summary.responsibility !== "published-evidence-expired",
+        );
     }
     const legacyPayload = stableJsonStringifyV1(legacyPublication);
     const compressed = gzipSync(Buffer.from(legacyPayload));

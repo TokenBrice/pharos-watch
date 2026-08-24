@@ -219,6 +219,7 @@ function currentResponse() {
         { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
         { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
         { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "published-evidence-expired", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
       ],
     },
     scoreAdjustments: [],
@@ -319,11 +320,19 @@ describe("SafetyScoreV9ResponseSchema", () => {
   it("accepts pre-9.19 snapshots without per-fact disclosure paths", () => {
     const legacy = currentResponse();
     const trace = legacy.cards[0]!.scoreTrace as {
-      evidenceResponsibility?: { facts?: unknown };
+      evidenceResponsibility?: { facts?: unknown; summaries: unknown[] };
     };
     delete trace.evidenceResponsibility?.facts;
+    trace.evidenceResponsibility?.summaries.pop();
     const parsed = SafetyScoreV9CurrentResponseSchema.parse(legacy);
     expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.facts).toBeUndefined();
+    expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.summaries).toHaveLength(5);
+
+    const incompleteCurrent = currentResponse();
+    incompleteCurrent.cards[0]!.scoreTrace.evidenceResponsibility.summaries.pop();
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(incompleteCurrent)).toThrow(
+      /must cover every owner in canonical order/,
+    );
   });
 
   it("requires the self-describing score trace on every current V9 card", () => {
@@ -444,6 +453,25 @@ describe("SafetyScoreV9ResponseSchema", () => {
       reasonCodes: ["bounded-mechanism-review"],
     };
     expect(SafetyScoreV9CurrentResponseSchema.parse(bounded).cards[0]?.grade).toBe("D");
+
+    const expiredPublication = structuredClone(bounded);
+    expiredPublication.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items[0]!.responsibility =
+      "published-evidence-expired";
+    expiredPublication.cards[0]!.scoreTrace.evidenceResponsibility.summaries[0] = {
+      responsibility: "integration-missing",
+      factCount: 0,
+      criticalFactCount: 0,
+      reasonCodes: [],
+    };
+    expiredPublication.cards[0]!.scoreTrace.evidenceResponsibility.summaries[5] = {
+      responsibility: "published-evidence-expired",
+      factCount: 1,
+      criticalFactCount: 0,
+      reasonCodes: ["bounded-mechanism-review"],
+    };
+    const parsedExpiredPublication = SafetyScoreV9CurrentResponseSchema.parse(expiredPublication);
+    expect(parsedExpiredPublication.cards[0]?.scoreTrace.boundedUncertaintyAttribution.items[0]?.responsibility)
+      .toBe("published-evidence-expired");
 
     const unownedBoundedTrace = structuredClone(bounded);
     unownedBoundedTrace.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = 0;
