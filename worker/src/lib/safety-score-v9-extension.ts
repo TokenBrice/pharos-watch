@@ -1464,7 +1464,12 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
         });
       }
-      const reserveClassifications = buildReviewedReserveClassifications(reserveRows, meta, clockSec);
+      const reserveClassifications = buildReviewedReserveClassifications(
+        reserveRows,
+        meta,
+        clockSec,
+        V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveClassificationMaxAgeSec,
+      );
       addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
       addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence);
       addDependencyEvidence(meta, reviewEvidence);

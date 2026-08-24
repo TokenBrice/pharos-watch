@@ -44,7 +44,9 @@ const V9ScoreBearingGatesPolicySchema = z
         researchOverlayMaxAgeSec: z.number().int().positive(),
         mechanismOverlayMaxAgeSec: z.number().int().positive(),
         issuerAttestedReserveMaxAgeSec: z.number().int().positive(),
-        reviewedCuratedReserveMaxAgeSec: z.number().int().positive(),
+        reviewedReserveClassificationMaxAgeSec: z.number().int().positive(),
+        reviewedReserveCompositionMaxAgeSec: z.number().int().positive(),
+        reviewedReserveCompositionGraceSec: z.number().int().positive(),
       })
       .strict(),
   })
@@ -53,14 +55,12 @@ const V9ScoreBearingGatesPolicySchema = z
 export type V9ScoreBearingGatesPolicy = z.infer<typeof V9ScoreBearingGatesPolicySchema>;
 
 /**
- * Safety Score methodology 9.32: digest-bound gates formerly held as code literals.
+ * Safety Score V9 digest-bound gates formerly held as code literals.
  *
- * The gate values are unchanged from 9.22; only the label moves with each
- * release. `methodologyVersion` is deliberately digest-neutral (see "keeps a
- * gate policy version relabel digest-neutral"), so this label republishes
- * provenance under the active version without itself rotating the policy
- * semantic digest. The 9.3 digest rotation comes from the policy asset's
- * mintPostureQuality change, not from this projection.
+ * Every gate below except `methodologyVersion` binds the policy semantic
+ * digest. `methodologyVersion` is deliberately digest-neutral (see "keeps a
+ * gate policy version relabel digest-neutral"), while adding, removing,
+ * renaming, or changing a score-bearing gate rotates the digest.
  */
 export const V9_SCORE_BEARING_GATES_POLICY_V923 = V9ScoreBearingGatesPolicySchema.parse({
   methodologyVersion: "9.35",
@@ -89,7 +89,9 @@ export const V9_SCORE_BEARING_GATES_POLICY_V923 = V9ScoreBearingGatesPolicySchem
     researchOverlayMaxAgeSec: 31_536_000,
     mechanismOverlayMaxAgeSec: 31_536_000,
     issuerAttestedReserveMaxAgeSec: 31_536_000,
-    reviewedCuratedReserveMaxAgeSec: 31 * 86_400,
+    reviewedReserveClassificationMaxAgeSec: 31_536_000,
+    reviewedReserveCompositionMaxAgeSec: 31 * 86_400,
+    reviewedReserveCompositionGraceSec: 7 * 86_400,
   },
 });
 

@@ -164,6 +164,39 @@ describe("reviewed curated reserve admission", () => {
       rows,
     });
   });
+
+  it("admits reserve composition inside the 31-day base window", () => {
+    const rows = [{ name: "Treasury bills", pct: 100, risk: "very-low" as const }];
+    const clockSec = Date.UTC(2026, 7, 31) / 1_000;
+    const meta = reviewedMeta(rows, {
+      reviewedAt: "2026-08-31",
+      compositionAsOf: "2026-07-31",
+    });
+
+    expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec)).not.toBeNull();
+  });
+
+  it("admits reserve composition past 31 days but inside the seven-day reporting grace", () => {
+    const rows = [{ name: "Treasury bills", pct: 100, risk: "very-low" as const }];
+    const clockSec = Date.UTC(2026, 8, 7) / 1_000;
+    const meta = reviewedMeta(rows, {
+      reviewedAt: "2026-09-07",
+      compositionAsOf: "2026-07-31",
+    });
+
+    expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec)).not.toBeNull();
+  });
+
+  it("rejects reserve composition past the 31-day window and seven-day reporting grace", () => {
+    const rows = [{ name: "Treasury bills", pct: 100, risk: "very-low" as const }];
+    const clockSec = Date.UTC(2026, 8, 8) / 1_000;
+    const meta = reviewedMeta(rows, {
+      reviewedAt: "2026-09-08",
+      compositionAsOf: "2026-07-31",
+    });
+
+    expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec)).toBeNull();
+  });
 });
 
 describe("curated reserve dependency admission", () => {
@@ -238,6 +271,60 @@ describe("curated reserve dependency admission", () => {
 });
 
 describe("buildReviewedReserveClassifications", () => {
+  const classifiedCash: ReserveSlice = {
+    name: "Cash",
+    pct: 100,
+    risk: "very-low",
+    assetClass: "bank-deposit",
+    issuerOrObligor: "Reserve bank",
+  };
+
+  it("admits a reviewed reserve classification inside 365 days", () => {
+    const clockSec = Date.UTC(2026, 7, 20) / 1_000;
+    const classifications = buildReviewedReserveClassifications(
+      [{ name: "Cash", pct: 100, risk: "very-low" }],
+      reviewedMeta([classifiedCash], { reviewedAt: "2025-08-21", compositionAsOf: "2025-08-21" }),
+      clockSec,
+    );
+
+    expect(classifications[0]).toMatchObject({
+      classificationKey: expect.stringMatching(/^registry-reviewed:/),
+      assetClass: "bank-deposit",
+    });
+  });
+
+  it("rejects a reviewed reserve classification past 365 days", () => {
+    const clockSec = Date.UTC(2026, 7, 20) / 1_000;
+    const classifications = buildReviewedReserveClassifications(
+      [{ name: "Cash", pct: 100, risk: "very-low" }],
+      reviewedMeta([classifiedCash], { reviewedAt: "2025-08-19", compositionAsOf: "2025-08-19" }),
+      clockSec,
+    );
+
+    expect(classifications[0]).toMatchObject({
+      classificationKey: expect.stringMatching(/^source-native:/),
+      assetClass: null,
+    });
+  });
+
+  it("does not let a live adapter mask an expired reviewed classification", () => {
+    const clockSec = Date.UTC(2026, 7, 20) / 1_000;
+    const classifications = buildReviewedReserveClassifications(
+      [{ sourceKey: "fixture:cash", name: "Current cash", pct: 100, risk: "very-low" }],
+      reviewedMeta(
+        [{ ...classifiedCash, sourceKey: "fixture:cash" }],
+        { reviewedAt: "2025-08-19", compositionAsOf: "2025-08-19" },
+      ),
+      clockSec,
+    );
+
+    expect(classifications[0]).toMatchObject({
+      classificationKey: expect.stringMatching(/^source-native:/),
+      assetClass: null,
+      issuerOrObligorKey: null,
+    });
+  });
+
   it("classifies exact tracked-asset slices without guessing from vague labels", () => {
     const classifications = buildSafetyScoreV9ReserveClassifications([
       { name: "Parent shares", pct: 80, risk: "low", coinId: "parent-stablecoin", depType: "wrapper" },

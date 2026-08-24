@@ -95,8 +95,11 @@ describe("Safety Score v9 methodology policy", () => {
     // the same credit as other low-confidence evidence instead of leaving the
     // capacity denominator outright. No other exit weight, factor, or ceiling
     // moves; the digest rotates with the added key.
+    // Reserve evidence expiry now separates a 365-day classification review
+    // from a 31-day composition window plus seven-day reporting grace. These
+    // score-bearing gate names and values rotate the semantic digest.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "68fa3395909504621c4b40f86402b4f5d2989dbf6ec661df67f5b65d3c221324",
+      "eb2114366810391f4183f3354d10ee4a204e47fbd5aedd48eab3ab0088a0e79d",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,
@@ -119,6 +122,14 @@ describe("Safety Score v9 methodology policy", () => {
     expect(resolved.ceiling!.limit).toBeGreaterThan(
       V9_CANDIDATE_POLICY_V1.policy.semantic.structural.namedReasonCeilings["control-unverified"],
     );
+  });
+
+  it("separates annual reserve-classification review from monthly composition freshness and grace", () => {
+    expect(V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry).toMatchObject({
+      reviewedReserveClassificationMaxAgeSec: 365 * 86_400,
+      reviewedReserveCompositionMaxAgeSec: 31 * 86_400,
+      reviewedReserveCompositionGraceSec: 7 * 86_400,
+    });
   });
 
   it("changes the semantic digest for every formerly external score-bearing gate family", () => {
