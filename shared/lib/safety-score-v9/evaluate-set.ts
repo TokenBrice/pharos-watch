@@ -577,8 +577,8 @@ function buildCommonModeContext(
 
 /**
  * Grades proportional common-mode domains from reviewed asset-local exposure.
- * Mature ecosystem domains are diagnostic; otherwise proven exposure below 5%
- * is diagnostic, 5%-<10% is moderate, and >=10% or unknown is high. Serial
+ * Mature ecosystem domains are diagnostic; otherwise proven exposure below 10%
+ * is diagnostic, 10%-<25% is moderate, and >=25% or unknown is high. Serial
  * control domains do not enter this proportional path and remain fail-closed.
  */
 function venueFamilyKey(key: string): string {

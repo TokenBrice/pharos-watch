@@ -98,8 +98,11 @@ describe("Safety Score v9 methodology policy", () => {
     // Reserve evidence expiry now separates a 365-day classification review
     // from a 31-day composition window plus seven-day reporting grace. These
     // score-bearing gate names and values rotate the semantic digest.
+    // 2026-08-24 chain-maturity adjudication: matureChains is derived from the
+    // dated five-gate registry and adds cardano, conflux, gnosis, hedera,
+    // klaytn (Kaia), rootstock, and sui. The digest rotates with that set.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "eb2114366810391f4183f3354d10ee4a204e47fbd5aedd48eab3ab0088a0e79d",
+      "c10342b0d35780de7f9d5fa571443db683505e5a4da1b54ee64b869623c0a1bc",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,

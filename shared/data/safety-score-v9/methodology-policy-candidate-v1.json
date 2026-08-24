@@ -255,19 +255,6 @@
         "kind": "critical-dependency",
         "severity": "high"
       },
-      "matureChains": [
-        "arbitrum",
-        "avalanche",
-        "base",
-        "bsc",
-        "ethereum",
-        "hyperliquid",
-        "optimism",
-        "polygon",
-        "solana",
-        "tron",
-        "xrpl"
-      ],
       "commonModeShareThreshold": 0.1,
       "commonModeHighShareThreshold": 0.25,
       "matureVenues": [
