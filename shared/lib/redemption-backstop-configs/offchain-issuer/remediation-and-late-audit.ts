@@ -161,6 +161,21 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     costModel: undisclosedReviewedFee(
       "Avenia (formerly BRLA Digital) documents 1:1 BRLA mint and redemption against BRL after KYC; public docs reviewed do not publish a fixed numeric redemption fee",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Avenia establishes a KYC-gated BRLA redemption mechanism, but no dated BRLA-to-BRL terms establish the scored notional's executable limit, bank settlement SLA, or all-in fee.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef("Avenia documentation", "https://docs.avenia.io/", ["route", "access"]),
+        sourceRef(
+          "Avenia quotes and tickets",
+          "https://integration-guide.avenia.io/docs/Operations/quotesAndTickets/",
+          ["route", "capacity", "fees"],
+        ),
+      ],
+    },
     docs: [
       sourceRef("BRLA Digital", "https://brla.digital/", ["route", "capacity"]),
       sourceRef("Avenia documentation", "https://docs.avenia.io/", ["route", "access"]),
@@ -186,6 +201,20 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       0,
       "MoonPay currently charges no fee for stablecoin redemption; bank, wallet, processing, network, ecosystem, or pass-through banking fees may still apply",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale:
+        "MoonPay's dated terms verify the current 0 bps issuer redemption fee, but refer to an unpublished redemption schedule, so no settlement SLA can receive score credit.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef("MoonPay Stablecoin Terms", "https://www.moonpay.com/legal/stablecoin_terms", [
+          "route",
+          "fees",
+          "settlement",
+        ]),
+      ],
+    },
     docs: [
       sourceRef("Exodus Pay", "https://www.exodus.com/exodus-pay", ["route", "capacity"]),
       sourceRef("MoonPay Stablecoin Terms", "https://www.moonpay.com/legal/stablecoin_terms", ["route", "fees"]),

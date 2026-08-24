@@ -5,6 +5,25 @@ import { reviewedDirectRedemptionSupplyFull, REVIEWED_NON_USD_BATCH_AT, REVIEWED
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts";
 
 type RedemptionDocs = NonNullable<RedemptionBackstopRegistryEntry["config"]["docs"]>;
+type RedemptionV9RouteReviewTerms = NonNullable<
+  RedemptionBackstopRegistryEntry["config"]["v9RouteReviewTerms"]
+>;
+
+const WARS_BOUNDED_TERMS_GAP: RedemptionV9RouteReviewTerms = {
+  scoringDisposition: "bounded-terms-gap",
+  missingScoringFields: ["capacity", "settlement", "cost"],
+  rationale:
+    "Ripio establishes a 1:1 local-currency redemption mechanism, but reviewed public materials do not establish executable capacity, bank settlement SLA, or all-in redemption cost.",
+  reviewedAt: "2026-08-24",
+  docs: [
+    sourceRef("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins", [
+      "route",
+      "capacity",
+      "fees",
+      "access",
+    ]),
+  ],
+};
 
 const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
   "a7a5-old-vector": [
@@ -272,7 +291,12 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
             costModel: fixedFee(100, "AUDX Terms of Token Sale specify a 1% redemption fee"),
             v9RouteReviewTerms: { settlementModel: "days" as const },
           }
-        : entry.config,
+        : entry.id === "wars-argentine-peso"
+          ? {
+              ...entry.config,
+              v9RouteReviewTerms: WARS_BOUNDED_TERMS_GAP,
+            }
+          : entry.config,
     overrideReason: "Non-USD review cohort upgrades issuer defaults to documented-bound capacity.",
   })),
   ...addDocumentedBoundSourceRefs(

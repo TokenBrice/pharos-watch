@@ -88,7 +88,7 @@ describe("validateRedemptionBackstopRegistry", () => {
     ).toContain("lower-bound redemption capacity");
   });
 
-  it("allows V9 route reviews to preserve or worsen settlement but never improve it", () => {
+  it("allows conservative V9 route reviews and requires cited evidence for a faster settlement", () => {
     expect(
       RedemptionBackstopConfigSchema.safeParse({
         ...baseConfig,
@@ -106,7 +106,7 @@ describe("validateRedemptionBackstopRegistry", () => {
       expect(faster.error.issues).toContainEqual(
         expect.objectContaining({
           path: ["v9RouteReviewTerms", "settlementModel"],
-          message: "V9 reviewed settlement cannot be faster than the frozen settlement model",
+          message: "Faster V9 reviewed settlement requires settlementDelaySec, reviewedAt, and at least one docs source",
         }),
       );
     }
@@ -115,6 +115,53 @@ describe("validateRedemptionBackstopRegistry", () => {
       RedemptionBackstopConfigSchema.safeParse({
         ...baseConfig,
         v9RouteReviewTerms: { minRedeemUsd: -1 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires reviewed, field-specific rationale for bounded V9 route-terms gaps", () => {
+    const reviewedGap = {
+      scoringDisposition: "bounded-terms-gap" as const,
+      missingScoringFields: ["settlement"] as const,
+      rationale: "The reviewed documents establish the mechanism but not its settlement SLA.",
+      reviewedAt: "2026-08-24",
+      docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["route"] }],
+    };
+
+    expect(
+      RedemptionBackstopConfigSchema.safeParse({
+        ...baseConfig,
+        v9RouteReviewTerms: reviewedGap,
+      }).success,
+    ).toBe(true);
+    expect(
+      RedemptionBackstopConfigSchema.safeParse({
+        ...baseConfig,
+        v9RouteReviewTerms: {
+          scoringDisposition: "bounded-terms-gap",
+          missingScoringFields: ["settlement"],
+          reviewedAt: "2026-08-24",
+          docs: reviewedGap.docs,
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      RedemptionBackstopConfigSchema.safeParse({
+        ...baseConfig,
+        v9RouteReviewTerms: {
+          scoringDisposition: "bounded-terms-gap",
+          missingScoringFields: ["capacity"],
+          rationale: "The executable capacity bound is not established.",
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      RedemptionBackstopConfigSchema.safeParse({
+        ...baseConfig,
+        v9RouteReviewTerms: {
+          missingScoringFields: ["cost"],
+          rationale: "A cost term is absent.",
+        },
       }).success,
     ).toBe(false);
   });

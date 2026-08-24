@@ -336,12 +336,17 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     v9RouteReviewTerms: {
       settlementModel: "days",
+      settlementDelaySec: 172_800,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale:
+        "BitGo's dated terms establish processing within two business days when required information is complete, but executable capacity remains discretionary and the client-platform fee is not publicly quantified.",
       reviewedAt: "2026-03-25",
       docs: [
         sourceRef(
           "BitGo coin minting and redemption services terms",
           "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
-          ["route"],
+          ["route", "capacity", "fees", "settlement"],
         ),
       ],
     },

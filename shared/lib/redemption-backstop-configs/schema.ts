@@ -105,10 +105,14 @@ const RedemptionCostShapeSchema = {
 };
 
 const RedemptionCostTermsSchema = z.strictObject(RedemptionCostShapeSchema);
+const RedemptionV9RouteScoringFieldSchema = z.enum(["capacity", "settlement", "cost"]);
 const RedemptionV9RouteReviewTermsSchema = z.strictObject({
   minRedeemUsd: NonNegativeNumberSchema.optional(),
   settlementModel: RedemptionSettlementModelSchema.optional(),
   settlementDelaySec: z.number().int().nonnegative().optional(),
+  scoringDisposition: z.literal("bounded-terms-gap").optional(),
+  missingScoringFields: z.array(RedemptionV9RouteScoringFieldSchema).min(1).optional(),
+  rationale: z.string().min(1).optional(),
   reviewedAt: ReviewedAtSchema.optional(),
   docs: z.array(RedemptionDocSourceSchema).min(1).optional(),
 });
@@ -164,9 +168,10 @@ export const RedemptionBackstopConfigSchema = z
      * Reviewed route constraints projected only by the Safety Score V9 adapter.
      *
      * Conservative corrections need no citation because they can only lower a
-     * score. Faster settlement semantics require an explicit cited SLA and a
-     * dated review; runtime projection also preserves any stricter constraint
-     * carried by the captured redemption row.
+     * score. Faster settlement semantics require an explicit cited SLA. A
+     * bounded scoring gap requires dated review documents and a field-specific
+     * withholding rationale. Runtime projection also preserves any stricter
+     * constraint carried by the captured redemption row.
      */
     v9RouteReviewTerms: RedemptionV9RouteReviewTermsSchema.optional(),
     /**
@@ -220,6 +225,47 @@ export const RedemptionBackstopConfigSchema = z
   })
   .superRefine((config, ctx) => {
     const reviewedSettlement = config.v9RouteReviewTerms;
+    if (reviewedSettlement?.scoringDisposition === "bounded-terms-gap") {
+      if (reviewedSettlement.missingScoringFields === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["v9RouteReviewTerms", "missingScoringFields"],
+          message: "A bounded V9 route-terms gap requires at least one missing scoring field",
+        });
+      } else if (
+        new Set(reviewedSettlement.missingScoringFields).size !==
+        reviewedSettlement.missingScoringFields.length
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["v9RouteReviewTerms", "missingScoringFields"],
+          message: "V9 route missingScoringFields cannot contain duplicates",
+        });
+      }
+      if (reviewedSettlement.rationale === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["v9RouteReviewTerms", "rationale"],
+          message: "A bounded V9 route-terms gap requires a score-withholding rationale",
+        });
+      }
+      if (reviewedSettlement.reviewedAt === undefined || reviewedSettlement.docs === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["v9RouteReviewTerms", "scoringDisposition"],
+          message: "A bounded V9 route-terms gap requires reviewedAt and at least one docs source",
+        });
+      }
+    } else if (
+      reviewedSettlement?.missingScoringFields !== undefined ||
+      reviewedSettlement?.rationale !== undefined
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["v9RouteReviewTerms", "scoringDisposition"],
+        message: "V9 route gap fields require scoringDisposition=bounded-terms-gap",
+      });
+    }
     const fasterSettlementModel =
       reviewedSettlement?.settlementModel !== undefined &&
       isRedemptionSettlementFaster(reviewedSettlement.settlementModel, config.settlementModel);

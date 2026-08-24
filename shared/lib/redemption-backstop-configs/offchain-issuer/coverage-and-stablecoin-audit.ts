@@ -62,6 +62,33 @@ const MIDAS_LYT_FEE_DISCLOSURES: Partial<
   },
 };
 
+type MidasLytTermsGap = Required<
+  Pick<RedemptionV9RouteReviewTerms, "missingScoringFields" | "rationale">
+>;
+
+const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
+  "mf-one-midas": {
+    missingScoringFields: ["capacity", "settlement"],
+    rationale:
+      "The reviewed standard-redemption fee is retained, but no dated terms establish mF-ONE executable capacity, the holdback share, or its release SLA at the scoring notional.",
+  },
+  "mhyper-midas": {
+    missingScoringFields: ["capacity", "settlement"],
+    rationale:
+      "The reviewed mHYPER fee is retained, but generic Midas liquidity materials do not establish product-level executable capacity or a binding calendar-day settlement SLA.",
+  },
+  "mmev-midas": {
+    missingScoringFields: ["capacity", "settlement", "cost"],
+    rationale:
+      "The product was discontinued, and the reviewed materials do not establish which residual mMEV route remains executable or its post-retirement capacity, settlement SLA, and all-in cost.",
+  },
+  "mapollo-midas": {
+    missingScoringFields: ["capacity", "settlement", "cost"],
+    rationale:
+      "The shared Midas liquidity architecture establishes a redemption mechanism, but no dated mAPOLLO terms establish current executable capacity, a binding calendar-day fallback SLA, or all-in cost.",
+  },
+};
+
 const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
   MIDAS_LYT_VAULTS.map(([id, ticker, productUrl]) => {
     const config = cloneRedemptionBackstopConfig(midasLytBase);
@@ -79,6 +106,16 @@ const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromE
       ...(feeDisclosure ? [sourceRef(feeDisclosure.label, feeDisclosure.url, ["fees"])] : []),
       ...config.docs!,
     ];
+    const termsGap = MIDAS_LYT_TERMS_GAPS[id];
+    if (termsGap) {
+      config.v9RouteReviewTerms = {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: termsGap.missingScoringFields,
+        rationale: termsGap.rationale,
+        reviewedAt: "2026-08-24",
+        docs: [...config.docs],
+      };
+    }
     config.notes = [
       `${ticker} is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.`,
     ];
@@ -236,7 +273,25 @@ const SPIKO_FUNDS: readonly [
     "non-eur",
     sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
     "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    null,
+    () => ({
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "The governing documents establish the ordinary D+1 schedule and no exit charge, but the stress request crosses the 25%-of-NAV gate and no terms establish completion timing, executable capacity, or the resulting swing adjustment.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef(
+          "Spiko SICAV prospectus",
+          "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          ["route", "capacity", "settlement", "fees"],
+        ),
+        sourceRef(
+          "Spiko GBPSAFO KID",
+          "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf",
+          ["fees", "settlement"],
+        ),
+      ],
+    }),
   ],
   [
     "eutbl-spiko",
@@ -402,6 +457,17 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     costModel: undisclosedReviewedFee(
       "Stablecorp/authorized-partner redemption terms govern QCAD redemption; public materials reviewed do not publish one fixed redemption fee",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Stablecorp documents a qualified-holder redemption mechanism, but no reviewed public terms establish an executable limit, accepted-request-to-bank-credit SLA, or all-in redemption cost.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef("Stablecorp", "https://stablecorp.ca/", ["route", "access"]),
+        sourceRef("Stablecorp transparency", "https://stablecorp.ca/transparency", ["route", "capacity"]),
+      ],
+    },
     docs: [
       sourceRef("Stablecorp transparency", "https://stablecorp.ca/transparency", [
         "route",
@@ -523,6 +589,20 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     costModel: undisclosedReviewedFee(
       "Securitize materials describe VBILL subscription and redemption at fund NAV; public materials reviewed do not publish one fixed redemption fee",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Public primary materials establish a daily-liquidity redemption mechanism, but not a guaranteed executable amount, maximum settlement SLA, or operative fee schedule.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill", [
+          "route",
+          "access",
+          "settlement",
+        ]),
+      ],
+    },
     docs: [
       sourceRef("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill", [
         "route",
@@ -581,6 +661,22 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     costModel: undisclosedReviewedFee(
       "Anemoy materials describe subscriptions and redemptions in stablecoins; public materials reviewed do not publish one fixed JAAA redemption fee",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Anemoy describes daily access and settlement, but no dated public governing terms establish the scored notional's executable capacity, maximum settlement SLA, gates, or holder-paid charges.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa", [
+          "route",
+          "capacity",
+          "fees",
+          "access",
+          "settlement",
+        ]),
+      ],
+    },
     docs: [
       sourceRef("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa", [
         "route",

@@ -456,6 +456,16 @@ function redemptionCoverageClass(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
 ): RouteReview["coverageClass"] {
+  // A reviewed bounded-terms gap keeps the captured mechanism and capacity
+  // curve visible, but it cannot lend score credit to settlement/cost values
+  // that the review did not establish. This is V9-only static disposition;
+  // the frozen redemption observation and stored row remain untouched.
+  if (
+    getRedemptionBackstopConfig(entry.stablecoinId)?.v9RouteReviewTerms
+      ?.scoringDisposition === "bounded-terms-gap"
+  ) {
+    return "diagnostic";
+  }
   const requiresCurrentOpenAttribution =
     observation.scoreEligible &&
     entry.sourceMode === "dynamic" &&

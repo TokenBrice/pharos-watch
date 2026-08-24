@@ -92,6 +92,81 @@ describe("evaluateV9Exit", () => {
     expect(result.score).toBeGreaterThanOrEqual(90);
   });
 
+  it("withholds diagnostic documented terms at the bounded producer-evidence floor", () => {
+    const result = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [
+          route({
+            routeKey: "redemption:bounded-terms-gap",
+            scoreEligible: false,
+            coverageClass: "diagnostic",
+            evidenceKind: "documented-terms",
+            capacityCurve: [
+              {
+                requestedNotionalUsd: 1_000_000,
+                maxCostBps: 200,
+                executableUsd: 1_000_000,
+                completionRatio: 1,
+                executionCostBps: 0,
+              },
+            ],
+          }),
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.diversificationRouteKey).toBeNull();
+    expect(result.reasons).toEqual(["missing-same-notional-route"]);
+    expect(result.routes[0]).toMatchObject({
+      routeKey: "redemption:bounded-terms-gap",
+      included: false,
+      score: null,
+      exclusionReason: "missing-same-notional-route",
+      capacityPoint: null,
+      components: null,
+    });
+  });
+
+  it("does not let a measured-zero DEX erase a bounded issuer-route uncertainty floor", () => {
+    const measuredZeroDex = route({
+      routeKey: "dex:measured-zero",
+      lane: "dex",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      capacityCurve: route().capacityCurve.map((point) => ({
+        ...point,
+        executableUsd: 1_000,
+        completionRatio: 1_000 / point.requestedNotionalUsd,
+        executionCostBps: 100,
+      })),
+    });
+    const boundedIssuer = route({
+      routeKey: "redemption:bounded-terms-gap",
+      scoreEligible: false,
+      coverageClass: "diagnostic",
+      evidenceKind: "documented-terms",
+    });
+
+    const result = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        portfolioStatus: "reviewed-complete",
+        routes: [measuredZeroDex, boundedIssuer],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.routes.find((candidate) => candidate.routeKey === "dex:measured-zero")?.score).toBe(0);
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.reasons).toContain("missing-same-notional-route");
+    expect(result.reasons).not.toContain("no-viable-exit-path");
+  });
+
   it("keeps immediate, near-term, and queued capacity in explicit horizon lanes", () => {
     const immediate = route({ routeKey: "redemption:immediate" });
     const nearTerm = route({
