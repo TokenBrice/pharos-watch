@@ -25,8 +25,8 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-          tooling-cache: "true"
-          tooling-cache-save: "true"
+          static-cache: "true"
+          static-cache-save: "true"
       - run: npm run lint
       - run: npm run lint:typed
       - run: npm run typecheck
@@ -66,6 +66,6 @@ jobs:
         with:
           bootstrap-history: "true"
           node-version: "26"
-          tooling-cache: "true"
+          static-cache: "true"
       - run: npm run typecheck
       - run: npm run typecheck:worker

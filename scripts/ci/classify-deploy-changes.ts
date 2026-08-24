@@ -14,8 +14,19 @@ import {
 import { splitNullDelimited } from "../lib/changed-files.mts";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 
 const ZERO_SHA: RegExp = /^0+$/;
+const CRITICAL_COVERAGE_INFRA_PATHS = new Set([
+  ".github/workflows/pull-request-checks.yml",
+  "scripts/ci/check-critical-coverage.ts",
+  "scripts/lib/critical-coverage.mjs",
+  "scripts/lib/critical-test-files.mts",
+  "scripts/maintenance/merge-critical-coverage.ts",
+  "scripts/maintenance/run-critical-coverage-shard.ts",
+  "scripts/maintenance/run-critical-coverage.ts",
+  "vitest.config.ts",
+]);
 
 type GitExec = (
   file: string,
@@ -30,6 +41,7 @@ interface DeployClassification {
   docsOnly: boolean;
   pagesChanged: boolean;
   pagesDeployRequired: boolean;
+  playwrightFirefoxRequired: boolean;
   reason: string;
   workerChanged: boolean;
   workerDeployRequired: boolean;
@@ -69,13 +81,19 @@ export function classifyChangedFiles(
   const pagesDeployRequired = hasPagesPublishImpact(normalizedFiles);
   const workerChanged = hasWorkerDeployImpact(normalizedFiles);
   const workerDeployRequired = hasWorkerReleaseImpact(normalizedFiles);
+  const generatedArtifactIds = selectChangedGeneratedArtifactIds(normalizedFiles);
   return {
     changedFiles: normalizedFiles,
-    criticalCoverageChanged: normalizedFiles.some((file) => CRITICAL_FILES.includes(file)),
+    criticalCoverageChanged: normalizedFiles.some(
+      (file) => CRITICAL_FILES.includes(file) || CRITICAL_COVERAGE_INFRA_PATHS.has(file),
+    ),
     deployRequired: hasDeployImpact(normalizedFiles),
     docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
     pagesChanged,
     pagesDeployRequired,
+    playwrightFirefoxRequired: generatedArtifactIds.some(
+      (id) => id === "og-editorial" || id === "og-case-studies",
+    ),
     reason:
       reason ??
       (normalizedFiles.length > 0
@@ -100,6 +118,7 @@ export function classifyDeployChanges({
       docsOnly: false,
       pagesChanged: true,
       pagesDeployRequired: true,
+      playwrightFirefoxRequired: true,
       reason: `Non-push event (${eventName ?? "unknown"}) runs the full deploy workflow`,
       workerChanged: true,
       workerDeployRequired: true,
@@ -114,6 +133,7 @@ export function classifyDeployChanges({
       docsOnly: false,
       pagesChanged: true,
       pagesDeployRequired: true,
+      playwrightFirefoxRequired: true,
       reason: "Missing push diff base/head; falling back to full deploy path",
       workerChanged: true,
       workerDeployRequired: true,
@@ -134,6 +154,7 @@ export function classifyDeployChanges({
       docsOnly: false,
       pagesChanged: true,
       pagesDeployRequired: true,
+      playwrightFirefoxRequired: true,
       reason: `Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`,
       workerChanged: true,
       workerDeployRequired: true,
@@ -158,6 +179,10 @@ export function emitGithubOutputs(classification: DeployClassification): void {
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
   writeGithubOutputLine("pages_deploy_required", classification.pagesDeployRequired ? "true" : "false");
+  writeGithubOutputLine(
+    "playwright_firefox_required",
+    classification.playwrightFirefoxRequired ? "true" : "false",
+  );
   writeGithubOutputLine("worker_changed", classification.workerChanged ? "true" : "false");
   writeGithubOutputLine("worker_deploy_required", classification.workerDeployRequired ? "true" : "false");
 }
@@ -178,6 +203,7 @@ export function runCli(env: NodeJS.ProcessEnv = process.env): void {
   console.error(`[deploy-changes] critical_coverage_changed=${classification.criticalCoverageChanged}`);
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
   console.error(`[deploy-changes] pages_deploy_required=${classification.pagesDeployRequired}`);
+  console.error(`[deploy-changes] playwright_firefox_required=${classification.playwrightFirefoxRequired}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);
   console.error(`[deploy-changes] worker_deploy_required=${classification.workerDeployRequired}`);
   console.error(`[deploy-changes] deploy_required=${classification.deployRequired}`);

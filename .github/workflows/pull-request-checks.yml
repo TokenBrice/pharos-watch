@@ -13,28 +13,58 @@ permissions:
   contents: read
 
 jobs:
-  detect-changes:
+  preflight:
     runs-on: ubuntu-latest
     outputs:
       critical_coverage_changed: ${{ steps.classify.outputs.critical_coverage_changed }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
+      playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-          fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
+          fetch-depth: 50
+      - name: Ensure the PR merge base is available
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if ! git cat-file -e "${PR_BASE_SHA}^{commit}" 2>/dev/null \
+            || ! git cat-file -e "${PR_HEAD_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=50 origin "${PR_BASE_SHA}" "${PR_HEAD_SHA}"
+          fi
+
+          if ! git merge-base "${PR_BASE_SHA}" "${PR_HEAD_SHA}" >/dev/null; then
+            git fetch --no-tags --deepen=200 origin "${PR_BASE_SHA}" "${PR_HEAD_SHA}"
+          fi
+
+          if ! git merge-base "${PR_BASE_SHA}" "${PR_HEAD_SHA}" >/dev/null \
+            && [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            git fetch --no-tags --unshallow origin
+          fi
+
+          git merge-base "${PR_BASE_SHA}" "${PR_HEAD_SHA}" >/dev/null
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24.16.0"
       - id: classify
         env:
           DEPLOY_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DEPLOY_EVENT_NAME: push
           DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node --import tsx scripts/ci/classify-deploy-changes.ts >> "$GITHUB_OUTPUT"
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/classify-deploy-changes.ts >> "$GITHUB_OUTPUT"
+      # The classifier and pinned downloader are dependency-free on Node 24, so
+      # change detection and secret scanning share one checkout without npm ci.
+      - name: Scan PR commit range for secrets
+        env:
+          GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
+          GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range
 
   static:
     name: Adaptive static checks
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.docs_only != 'true' }}
+    needs: preflight
+    if: ${{ needs.preflight.outputs.docs_only != 'true' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
@@ -42,12 +72,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-          tooling-cache: "true"
-          tooling-cache-save: "true"
-          install-playwright-firefox: "true"
+          static-cache: "true"
+          static-cache-save: "true"
+          browser-cache: ${{ needs.preflight.outputs.playwright_firefox_required }}
+          install-playwright-firefox: ${{ needs.preflight.outputs.playwright_firefox_required }}
       - name: Run surface-aware static checks
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -55,58 +87,97 @@ jobs:
         run: npm run check:pr:static
 
   tests:
-    name: Critical and changed tests (${{ matrix.shard }}/2)
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.docs_only != 'true' }}
+    name: Critical and changed tests (${{ matrix.shard }}/4)
+    needs: preflight
+    if: ${{ needs.preflight.outputs.docs_only != 'true' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
       - name: Run critical contracts and tests affected by the PR
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: npm run test:pr -- --shard=${{ matrix.shard }}/2
+        run: npm run test:pr -- --shard=${{ matrix.shard }}/4
 
-  critical-coverage:
-    name: Touched critical coverage
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.critical_coverage_changed == 'true' }}
+  critical-coverage-shards:
+    name: Touched critical coverage (${{ matrix.shard }}/4)
+    needs: preflight
+    if: ${{ needs.preflight.outputs.critical_coverage_changed == 'true' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-          tooling-cache: "true"
-      - name: Enforce touched critical-file coverage ratchet
+      - name: Collect critical coverage shard
+        run: npm run coverage:critical:shard -- --shard=${{ matrix.shard }}/4
+      - name: Upload critical coverage blob
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: critical-coverage-${{ matrix.shard }}
+          path: .vitest-reports/*.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  critical-coverage:
+    name: Touched critical coverage
+    needs: [preflight, critical-coverage-shards]
+    if: ${{ needs.preflight.outputs.critical_coverage_changed == 'true' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+      - uses: ./.github/actions/setup-workspace
+        with:
+          bootstrap-generated: "false"
+      - name: Download critical coverage blobs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: critical-coverage-*
+          path: .vitest-reports
+          merge-multiple: true
+      - name: Merge and enforce touched critical-file coverage ratchet
         env:
           CRITICAL_COVERAGE_COMPARE_REF: ${{ github.event.pull_request.base.sha }}
-        run: npm run coverage:critical
+        run: npm run coverage:critical:merge
 
   docs:
     name: Documentation checks
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.docs_only == 'true' }}
+    needs: preflight
+    if: ${{ needs.preflight.outputs.docs_only == 'true' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
       - run: npm run check:verified-doc-links
@@ -114,46 +185,24 @@ jobs:
       - run: npm run check:doc-sync
       - run: npm run check:generated-artifacts -- --only=agents-doc
 
-  gitleaks:
-    name: Gitleaks PR scan
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
-        with:
-          bootstrap-generated: "false"
-      # The gitleaks version + tarball SHA-256 pin lives only in
-      # scripts/ci/run-gitleaks.ts, which downloads and checksum-verifies the
-      # pinned binary before scanning. Blocking gate (see the pr-gate job).
-      - name: Scan PR commit range for secrets
-        env:
-          GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
-          GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
-        run: node --import tsx scripts/ci/run-gitleaks.ts --range
-
   pr-gate:
     name: PR gate
     if: ${{ always() }}
-    needs: [detect-changes, static, tests, critical-coverage, docs, gitleaks]
+    needs: [preflight, static, tests, critical-coverage, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      DETECT_RESULT: ${{ needs.detect-changes.result }}
-      CRITICAL_COVERAGE_CHANGED: ${{ needs.detect-changes.outputs.critical_coverage_changed }}
+      PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+      CRITICAL_COVERAGE_CHANGED: ${{ needs.preflight.outputs.critical_coverage_changed }}
       CRITICAL_COVERAGE_RESULT: ${{ needs.critical-coverage.result }}
       DOCS_RESULT: ${{ needs.docs.result }}
-      GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
       STATIC_RESULT: ${{ needs.static.result }}
       TEST_RESULT: ${{ needs.tests.result }}
     steps:
       - name: Require the selected validation path and secret scan
         run: |
-          if [ "${DETECT_RESULT}" != "success" ] || [ "${GITLEAKS_RESULT}" != "success" ]; then
-            echo "Required PR setup failed: detect=${DETECT_RESULT}, gitleaks=${GITLEAKS_RESULT}."
+          if [ "${PREFLIGHT_RESULT}" != "success" ]; then
+            echo "Required PR preflight failed: ${PREFLIGHT_RESULT}."
             exit 1
           fi
 

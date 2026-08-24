@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   collectSeoStaticCheckResult,
+  collectSeoStaticCheckResultParallel,
   findPublishedArchiveContinuityErrors,
 } from "../ci/check-seo-static.mjs";
 
@@ -44,7 +45,27 @@ const BASELINE_HEADERS = `/*
 `;
 
 afterEach(async () => {
+  delete process.env.SEO_CHECK_WORKERS;
   await Promise.all(roots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
+});
+
+it("keeps parallel page parsing equivalent to the synchronous SEO gate", async () => {
+  const root = await makeOutDir();
+  process.env.SEO_CHECK_WORKERS = "2";
+  await Promise.all(
+    Array.from({ length: 20 }, (_, index) =>
+      writePage(root, index === 0 ? "/" : `/parallel-${index}/`),
+    ),
+  );
+
+  const synchronous = collectSeoStaticCheckResult({ outDir: root });
+  const parallel = await collectSeoStaticCheckResultParallel({ outDir: root });
+
+  expect(parallel.errors).toEqual(synchronous.errors);
+  expect(parallel.warnings).toEqual(synchronous.warnings);
+  expect(parallel.pageRecords.map((record: { route: string }) => record.route)).toEqual(
+    synchronous.pageRecords.map((record: { route: string }) => record.route),
+  );
 });
 
 async function makeOutDir() {

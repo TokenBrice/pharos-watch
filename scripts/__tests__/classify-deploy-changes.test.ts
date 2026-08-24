@@ -230,6 +230,16 @@ describe("classifyDeployChanges", () => {
     expect(classifyChangedFiles(["worker/src/lib/auth.test.ts"]).criticalCoverageChanged).toBe(false);
   });
 
+  it("self-tests changes to the critical coverage workflow and manifests", () => {
+    expect(classifyChangedFiles(["scripts/lib/critical-test-files.mts"]).criticalCoverageChanged).toBe(true);
+    expect(classifyChangedFiles([".github/workflows/pull-request-checks.yml"]).criticalCoverageChanged).toBe(true);
+  });
+
+  it("requests Firefox only when changed sources select a browser-rendered artifact", () => {
+    expect(classifyChangedFiles(["src/app/page.tsx"]).playwrightFirefoxRequired).toBe(true);
+    expect(classifyChangedFiles(["worker/src/lib/auth.ts"]).playwrightFirefoxRequired).toBe(false);
+  });
+
   it("runs the full worker deploy path for non-push events", () => {
     const result = classifyDeployChanges({ eventName: "workflow_dispatch" });
     expect(result.deployRequired).toBe(true);

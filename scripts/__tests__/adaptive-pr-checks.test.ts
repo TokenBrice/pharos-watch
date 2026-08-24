@@ -4,7 +4,10 @@ import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
-import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.ts";
+import {
+  buildPrStaticCheckPlan,
+  partitionPrStaticCheckPlan,
+} from "../maintenance/run-pr-static-checks.ts";
 
 describe("adaptive PR checks", () => {
   it("parses diff arguments without swallowing downstream options", () => {
@@ -86,6 +89,21 @@ describe("adaptive PR checks", () => {
     expect(buildPrStaticCheckPlan(["worker/src/lib/auth.ts"]).commands.map((command) => command.name)).toContain(
       "check:critical-coverage-completeness",
     );
+  });
+
+  it("runs typechecks, structural checks, and generated verification in the bounded parallel phase", () => {
+    const { commands } = buildPrStaticCheckPlan(["worker/src/lib/safety-score-v9-extension.ts"]);
+    const partition = partitionPrStaticCheckPlan(commands);
+
+    expect(partition.parallel.map((command) => command.name)).toEqual(
+      expect.arrayContaining([
+        "typecheck",
+        "typecheck:worker",
+        "check:structural",
+        "check:generated-artifacts",
+      ]),
+    );
+    expect(partition.sequential.map((command) => command.name)).toContain("check:worker-package");
   });
 
   it("packages Worker changes in the adaptive PR lane", () => {

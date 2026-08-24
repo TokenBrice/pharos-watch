@@ -1,5 +1,5 @@
 name: Setup Workspace
-description: Shared Node, optional tooling cache, and optional npm install scaffolding for GitHub Actions jobs.
+description: Shared Node, scoped CI caches, and optional npm install scaffolding for GitHub Actions jobs.
 
 inputs:
   node-version:
@@ -10,18 +10,24 @@ inputs:
     description: Whether to enable setup-node npm cache.
     required: false
     default: "true"
-  tooling-cache:
-    description: >-
-      Whether to restore the shared build, lint, typecheck, and browser cache.
-      Enable only for jobs that consume those artifacts.
+  static-cache:
+    description: Whether to restore ESLint and TypeScript incremental state.
     required: false
     default: "false"
-  tooling-cache-save:
-    description: >-
-      Whether this job should also upload a fresh tooling cache at job end.
-      Only jobs that produce new tooling state (builds, lint/typecheck caches,
-      browser installs) should save; restore-only jobs use a deterministic key
-      so the post-job save is skipped on the exact hit.
+  static-cache-save:
+    description: Whether this job should upload fresh ESLint and TypeScript state.
+    required: false
+    default: "false"
+  next-cache:
+    description: Whether to restore the Next.js compiler cache.
+    required: false
+    default: "false"
+  next-cache-save:
+    description: Whether this job should upload a fresh Next.js compiler cache.
+    required: false
+    default: "false"
+  browser-cache:
+    description: Whether to restore the Playwright browser download cache.
     required: false
     default: "false"
   install-deps:
@@ -63,8 +69,8 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - if: ${{ inputs.tooling-cache == 'true' }}
-      id: tooling-cache-key
+    - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' }}
+      id: cache-key
       shell: bash
       env:
         RAW_NODE_VERSION: ${{ inputs.node-version }}
@@ -79,25 +85,34 @@ runs:
         node_key="${node_key//[^A-Za-z0-9_.-]/-}"
         echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"
 
-    - if: ${{ inputs.tooling-cache == 'true' }}
+    - if: ${{ inputs.static-cache == 'true' }}
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: |
-          .next/cache
           .cache/eslint
-          ~/.cache/ms-playwright
           *.tsbuildinfo
           worker/*.tsbuildinfo
-        # Saving jobs get a per-run unique key so the post-job save always
-        # uploads fresh state; restore-only jobs get a deterministic key whose
-        # exact hit suppresses the save, keeping ~6 near-identical multi-hundred
-        # MB uploads per run from churning the repo's 10 GB cache (and LRU-
-        # evicting the entries the restore-keys below depend on).
-        key: tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}${{ inputs.tooling-cache-save == 'true' && format('-{0}-{1}', github.run_id, github.run_attempt) || '' }}
+        key: static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}${{ inputs.static-cache-save == 'true' && format('-{0}-{1}', github.run_id, github.run_attempt) || '' }}
         restore-keys: |
-          tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-
-          tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-
-          tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-
+          static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-
+          static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-
+          static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-
+
+    - if: ${{ inputs.next-cache == 'true' }}
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: .next/cache
+        key: next-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts') }}-${{ github.job }}${{ inputs.next-cache-save == 'true' && format('-{0}-{1}', github.run_id, github.run_attempt) || '' }}
+        restore-keys: |
+          next-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts') }}-${{ github.job }}-
+          next-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts') }}-
+          next-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-
+
+    - if: ${{ inputs.browser-cache == 'true' }}
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ~/.cache/ms-playwright
+        key: browser-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json') }}
 
     - if: ${{ inputs.install-deps == 'true' }}
       shell: bash
