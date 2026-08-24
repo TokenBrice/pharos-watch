@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -65,42 +65,48 @@ function buildCollateralUsageEntries(stablecoinId: string): CollateralUsageEntry
 function DetailPageShellFallback({
   coin,
   logoSrc,
+  staticProfileContent,
 }: {
   coin: StablecoinStaticMeta;
   logoSrc?: string;
+  staticProfileContent?: ReactNode;
 }) {
   return (
-    <div className="space-y-6" aria-hidden="true">
-      <StablecoinDetailLoadingShell
-        coin={coin}
-        logoSrc={logoSrc}
-        description="Loading the full research dossier: price, safety, liquidity, flows, and historical context."
-        statusLabel="Research dossier loading"
-      />
+    <div className="space-y-6">
+      <div className="space-y-6" aria-hidden="true">
+        <StablecoinDetailLoadingShell
+          coin={coin}
+          logoSrc={logoSrc}
+          description="Loading the full research dossier: price, safety, liquidity, flows, and historical context."
+          statusLabel="Research dossier loading"
+        />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
-        <div className="space-y-6">
-          <div className="pharos-card-shell p-4">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="mt-4 h-[320px] w-full rounded-xl" />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
+          <div className="space-y-6">
+            <div className="pharos-card-shell p-4">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="mt-4 h-[320px] w-full rounded-xl" />
+            </div>
+            <div className="pharos-card-shell p-4">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="mt-4 h-[260px] w-full rounded-xl" />
+            </div>
           </div>
-          <div className="pharos-card-shell p-4">
-            <Skeleton className="h-5 w-28" />
-            <Skeleton className="mt-4 h-[260px] w-full rounded-xl" />
-          </div>
-        </div>
 
-        <div className="space-y-6">
-          <div className="pharos-card-shell p-4">
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="mt-4 h-[220px] w-full rounded-xl" />
-          </div>
-          <div className="pharos-card-shell p-4">
-            <Skeleton className="h-5 w-36" />
-            <Skeleton className="mt-4 h-[180px] w-full rounded-xl" />
+          <div className="space-y-6">
+            <div className="pharos-card-shell p-4">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="mt-4 h-[220px] w-full rounded-xl" />
+            </div>
+            <div className="pharos-card-shell p-4">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="mt-4 h-[180px] w-full rounded-xl" />
+            </div>
           </div>
         </div>
       </div>
+
+      {staticProfileContent}
     </div>
   );
 }
@@ -257,7 +263,20 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   return (
     <>
       <h1 className="sr-only">{coin.name} ({coin.symbol}) stablecoin analytics</h1>
-      <Suspense fallback={<DetailPageShellFallback coin={staticCoin} logoSrc={logosById[coin.id]} />}>
+      <Suspense
+        fallback={
+          <DetailPageShellFallback
+            coin={staticCoin}
+            logoSrc={logosById[coin.id]}
+            staticProfileContent={
+              <>
+                <StablecoinDetailSeoContent coin={coin} summary={summary} includeHeading={false} />
+                {faqContent}
+              </>
+            }
+          />
+        }
+      >
         <StablecoinDetailClient
           id={id}
           coin={clientCoin}
