@@ -46,6 +46,13 @@ import {
   getSafetyScoreV9OperationalResilienceOverlay,
   SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
 } from "./safety-score-v9-extension-operational-resilience";
+import {
+  addSafetyScoreV9IncidentEvidence,
+  getSafetyScoreV9ReviewedIncidents,
+  routeSafetyScoreV9ControlIncidents,
+  routeSafetyScoreV9OperationalIncidents,
+  SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
+} from "./safety-score-v9-extension-incidents";
 import { getSafetyScoreV9WrapperAllocationReview } from "./safety-score-v9-extension-wrapper-allocation";
 import {
   computeSafetyScoreV9ReviewedTransferFactsDigest,
@@ -300,6 +307,57 @@ function controlFailureDomains(
   return [...new Set(exactKeys)].sort(compareText).map((key) => ({ kind, key: key || `asset:${assetId}` }));
 }
 
+const MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE = 0.000001;
+
+interface MintControlDeploymentScope {
+  deploymentKey: string;
+  materialSupplyShare: number;
+}
+
+/**
+ * Resolve a reviewed mint/upgrade authority onto the already-compiled bridge
+ * materiality partition. The control remains global unless the partition is
+ * complete, every authored deployment ref joins exactly once, and at least one
+ * other liability deployment sits outside the authority's reach.
+ */
+export function resolveMintControlDeploymentScopes(
+  control: Pick<MintAuthorityControl, "deploymentRefs">,
+  supplyReview: ExtensionAsset["supplyReview"],
+  reviewComplete: boolean,
+): MintControlDeploymentScope[] | null {
+  const deploymentRefs = [...new Set((control.deploymentRefs ?? []).map(normalizeDeploymentId))].sort(compareText);
+  if (!reviewComplete || deploymentRefs.length === 0 || deploymentRefs.some((ref) => ref.length === 0)) return null;
+  if (supplyReview === null || supplyReview.selectedBridgeRoutes.length === 0) return null;
+
+  const rows = supplyReview.selectedBridgeRoutes;
+  const totalShare = rows.reduce((sum, row) => sum + row.supplyShare, 0);
+  const completePartition =
+    rows.every(
+      (row) =>
+        row.reviewState === "selected-reviewed" &&
+        Number.isFinite(row.supplyShare) &&
+        row.supplyShare >= 0 &&
+        row.supplyShare <= 1,
+    ) &&
+    Math.abs(totalShare - 1) <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE &&
+    Math.abs(supplyReview.selectedRouteSupplyShare - 1) <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE &&
+    supplyReview.unknownRouteSupplyShare <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE &&
+    supplyReview.unreviewedRouteSupplyShare <= MINT_CONTROL_SUPPLY_RECONCILIATION_TOLERANCE;
+  if (!completePartition) return null;
+
+  const rowByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
+  const matched = deploymentRefs.map((deploymentKey) => rowByDeployment.get(deploymentKey));
+  if (matched.some((row) => row === undefined)) return null;
+  // Reaching every reconciled deployment is economically asset-wide even when
+  // the review happens to enumerate those deployments one by one.
+  if (deploymentRefs.length === rows.length) return null;
+
+  return matched.map((row) => ({
+    deploymentKey: row!.deploymentRouteKey,
+    materialSupplyShare: row!.supplyShare,
+  }));
+}
+
 function adaptMintControl(
   assetId: string,
   control: MintAuthorityControl,
@@ -309,7 +367,8 @@ function adaptMintControl(
   hasSeparateCapRaiser: boolean,
   reviewedEconomicCapSemantics: MintAuthorityEconomicCapSemantics | undefined,
   scopedQuestionFresh: boolean,
-): ControlOverlay {
+  supplyReview: ExtensionAsset["supplyReview"],
+): ControlOverlay[] {
   const controlKind = mintControlKind(control);
   const capabilities = mintCapabilities(control, upgradeCapable);
   const hasMint = capabilities.includes("mint");
@@ -361,8 +420,7 @@ function adaptMintControl(
     if (capabilities.includes("parameter-change")) return "bounded";
     return "none";
   })();
-  const economicLossScope: ControlOverlay["economicLossScope"] =
-    claimImpairment === "none" ? "access-only" : "global-claim";
+  const deploymentScopes = resolveMintControlDeploymentScopes(control, supplyReview, reviewComplete);
   const incidentState: ControlOverlay["incidentState"] = incidents?.some((incident) => incident.status === "active")
     ? "active"
     : incidents?.some((incident) => incident.status === "resolved")
@@ -381,7 +439,7 @@ function adaptMintControl(
       .map(normalizeDeploymentId)
       .sort(compareText),
   }).slice(0, 20)}`;
-  return {
+  const globalControl: ControlOverlay = {
     controlKey,
     deploymentKey: `asset:${assetId}`,
     ...(control.controllerAssetId ? { controllerAssetId: control.controllerAssetId } : {}),
@@ -390,7 +448,7 @@ function adaptMintControl(
     capabilities,
     capSemantics,
     claimImpairment,
-    economicLossScope,
+    economicLossScope: claimImpairment === "none" ? "access-only" : "global-claim",
     authority: canonicalAuthorityType(assetId, control),
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
@@ -400,6 +458,21 @@ function adaptMintControl(
     incidentState,
     failureDomains: controlFailureDomains(assetId, control, controlKind),
   };
+  if (deploymentScopes === null) return [globalControl];
+  return deploymentScopes.map((deployment, index) => ({
+    ...globalControl,
+    controlKey:
+      index === 0
+        ? controlKey
+        : `${controlKey}:deployment:${domainDigest(
+            "safety-score-v9.mint-control-deployment-key.v1",
+            deployment.deploymentKey,
+          ).slice(0, 12)}`,
+    deploymentKey: deployment.deploymentKey,
+    scope: "deployment",
+    economicLossScope: claimImpairment === "none" ? "access-only" : "deployment",
+    materialSupplyShare: deployment.materialSupplyShare,
+  }));
 }
 
 function assertMintBridgeOwnership(meta: V9ExtensionRegistryMeta): void {
@@ -635,6 +708,7 @@ function addDependencyEvidence(meta: V9ExtensionRegistryMeta, evidence: ReviewEv
     componentKeys: ["dependencies"],
     sourceId: "stablecoin-meta.dependency-review",
     reviewedAt: review.reviewedAt,
+    publishedBy: "unknown",
     confidence: confidenceForResearch(review.confidence),
     sources: review.sources,
     payload: review,
@@ -651,6 +725,7 @@ function addWrapperCustodyEvidence(meta: V9ExtensionRegistryMeta, evidence: Revi
     ],
     sourceId: "stablecoin-meta.custody-profile",
     reviewedAt: review.reviewedAt,
+    publishedBy: "unknown",
     confidence: confidenceForResearch(review.confidence),
     sources: review.sources,
     payload: review,
@@ -670,6 +745,7 @@ function addWrapperAllocationEvidence(
     ],
     sourceId: "safety-score-v9.wrapper-allocation-review",
     reviewedAt: review.reviewedAt,
+    publishedBy: "unknown",
     confidence: "verified",
     sources: review.sources,
     payload: review,
@@ -810,6 +886,7 @@ function adaptAccessReview(
         componentKeys: ["access:transfer"],
         sourceId: "safety-score-v9.reviewed-transfer-overlay",
         reviewedAt: transferReview.reviewedAt,
+        publishedBy: "unknown",
         confidence: "manual-review",
         sources: transferReview.deployments.flatMap((deployment) => deployment.sources),
         payload: transferReview,
@@ -829,6 +906,7 @@ function adaptAccessReview(
         ],
         sourceId: "stablecoin-meta.blacklistability-review",
         reviewedAt: review.reviewedAt,
+        publishedBy: "unknown",
         confidence: "manual-review",
         sources: review.sources,
         payload: review,
@@ -1071,6 +1149,7 @@ export function hasPublishedReserveReconciliationEvidence(
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
   dependencies: PreparedDependency["dependency"],
+  supplyReview: ExtensionAsset["supplyReview"],
   evidence: ReviewEvidenceBuilder,
   clockSec: number,
 ): {
@@ -1099,6 +1178,7 @@ function adaptMintReview(
     componentKeys: reviewStale ? ["economic-control:mint"] : ["economic-control:mint", "control"],
     sourceId: "stablecoin-meta.mint-authority",
     reviewedAt: profile.review.reviewedAt,
+    publishedBy: "unknown",
     confidence,
     sources: profile.review.sources,
     payload: profile,
@@ -1136,7 +1216,7 @@ function adaptMintReview(
   // An unresolved aggregate inventory does not erase controls that were
   // individually identified. Retain those controls in a partial review while
   // the unresolved deployment surfaces remain bounded and fail closed.
-  const controls = (profile.controls ?? []).map((control, index, allControls) =>
+  const controls = (profile.controls ?? []).flatMap((control, index, allControls) =>
     adaptMintControl(
       meta.id,
       control,
@@ -1153,6 +1233,7 @@ function adaptMintReview(
       (control.address != null &&
         freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
         freshScopedQuestionRefs.has(control.label.toLowerCase()),
+      supplyReview,
     ),
   );
   const directMintControl =
@@ -1383,6 +1464,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   });
   const researchOverlaysGenerationDigest = domainDigest("safety-score-v9.research-overlays.v3", {
     registryRevision: fixedInput.registryRevision,
+    incidentReviewsDigest: SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
     operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
     reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(reviewedTransferFacts.values()),
@@ -1448,6 +1530,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           : null;
       const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+      const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
+      addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
       const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
       const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
       const mechanismReviewGapDisposition =
@@ -1458,6 +1542,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           componentKeys: ["mechanism-risk-review"],
           sourceId: "safety-score-v9.mechanism-review-overlay",
           reviewedAt: mechanismOverlayEvidence.reviewedAt,
+          publishedBy: "unknown",
           confidence: "manual-review",
           sources: mechanismOverlayEvidence.sources,
           payload: mechanismOverlayEvidence.payload,
@@ -1471,7 +1556,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveClassificationMaxAgeSec,
       );
       addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
-      addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence);
+      addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence, clockSec);
       addDependencyEvidence(meta, reviewEvidence);
       addWrapperCustodyEvidence(meta, reviewEvidence);
       addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence);
@@ -1486,10 +1571,15 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       );
       const deployedChainCount = Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length;
       const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
-      const mint = adaptMintReview(meta, prepared.dependency, reviewEvidence, clockSec);
+      const mint = adaptMintReview(meta, prepared.dependency, supplyReview, reviewEvidence, clockSec);
       const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);
       const bridge = adaptBridgeReview(meta, supplyReview, deployedChainCount, reviewEvidence, clockSec);
-      const controls = [...mint.controls, ...bridge.controls].sort((left, right) =>
+      const incidentControlRoute = routeSafetyScoreV9ControlIncidents(
+        mint.controls,
+        mint.review,
+        reviewedIncidents,
+      );
+      const controls = [...incidentControlRoute.controls, ...bridge.controls].sort((left, right) =>
         compareText(left.controlKey, right.controlKey),
       );
       const accessReview = adaptAccessReview(
@@ -1561,7 +1651,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         economicControlReview:
           meta.mintAuthority || meta.oracleRisk || meta.bridgeRouteRisk
             ? {
-                mint: mint.review,
+                mint: incidentControlRoute.mintReview,
                 oracle,
                 bridge: bridge.review,
               }
@@ -1569,7 +1659,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         accessReview,
         pegReference: buildPegReference(meta, metaById),
         supplyReview,
-        operationalResilience: getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec),
+        operationalResilience: routeSafetyScoreV9OperationalIncidents(
+          getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec),
+          reviewedIncidents,
+        ),
         wrapperAllocationReview,
         wrapperCustodyReview:
           (meta.variantKind === "savings-passthrough" ||

@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "incidents": [
+    {
+      "incidentId": "parallel-2026-failed-exploit-attempt",
+      "assetId": "usdp-parallel",
+      "domain": "control",
+      "kind": "mint-control-failure",
+      "occurredAt": "2026-05-11",
+      "status": "mitigated",
+      "scope": {
+        "kind": "root-claim"
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "mint",
+          "upgrade"
+        ],
+        "incidentState": "resolved"
+      },
+      "reviewedAt": "2026-08-24",
+      "reviewer": "Safety Score V9 C-grade remediation review",
+      "primarySources": [
+        {
+          "label": "Parallel governance PIP-69",
+          "url": "https://gov.parallel.best/t/pip-69-usdp-parallelizer-bridging-modules-parameters-updates/541",
+          "publishedAt": "2026-05-11"
+        },
+        {
+          "label": "Parallel governance PGP-43",
+          "url": "https://gov.parallel.best/t/pgp-43-l-additional-parallel-v3-2-security-audit/542",
+          "publishedAt": "2026-07-02"
+        }
+      ],
+      "finding": "A failed exploit attempt exposed a critical Parallelizer bug. Governance tightened mint, burn, and bridge limits; the July follow-up reported fix audits 95% complete.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-07-02",
+        "summary": "The exploit attempt failed, limits were tightened, affected collateral was being phased out, and audits of the deployed fix were reported 95% complete.",
+        "sources": [
+          {
+            "label": "Parallel governance PIP-69",
+            "url": "https://gov.parallel.best/t/pip-69-usdp-parallelizer-bridging-modules-parameters-updates/541",
+            "publishedAt": "2026-05-11"
+          },
+          {
+            "label": "Parallel governance PGP-43",
+            "url": "https://gov.parallel.best/t/pgp-43-l-additional-parallel-v3-2-security-audit/542",
+            "publishedAt": "2026-07-02"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "zephyr-2025-supply-integrity-reconciliation",
+      "assetId": "zsd-zephyr-protocol",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2025-06-11",
+      "resolvedAt": "2025-08-27",
+      "status": "resolved",
+      "scope": {
+        "kind": "root-claim"
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "mint"
+        ],
+        "incidentState": "resolved"
+      },
+      "reviewedAt": "2026-08-24",
+      "reviewer": "Safety Score V9 C-grade remediation review",
+      "primarySources": [
+        {
+          "label": "Zephyr audit postmortem",
+          "url": "https://zephyrprotocol.com/blog/2025-08-27-Zephyr-Audit-Postmortem",
+          "publishedAt": "2025-08-27"
+        },
+        {
+          "label": "Zephyr v2.3.0 release",
+          "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.3.0",
+          "publishedAt": "2025-06-11"
+        }
+      ],
+      "finding": "Zephyr disclosed cross-asset morphing, range-proof anomalies, invalidated balances, and a 1,921,650 ZEPH reconciliation mint, establishing a resolved supply-integrity failure.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2025-08-27",
+        "summary": "Zephyr completed the audit response, invalidated unaudited asset types and balances, and disclosed the reconciliation mint in its postmortem.",
+        "sources": [
+          {
+            "label": "Zephyr audit postmortem",
+            "url": "https://zephyrprotocol.com/blog/2025-08-27-Zephyr-Audit-Postmortem",
+            "publishedAt": "2025-08-27"
+          },
+          {
+            "label": "Zephyr v2.3.0 release",
+            "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.3.0",
+            "publishedAt": "2025-06-11"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "sdola-2026-llamalend-donation-oracle",
+      "assetId": "sdola-inverse-finance",
+      "domain": "wrapper-local",
+      "kind": "share-accounting-integration-failure",
+      "occurredAt": "2026-03-02",
+      "resolvedAt": "2026-03-13",
+      "status": "resolved",
+      "scope": {
+        "kind": "integration-only",
+        "integrationKey": "llamalend-sdola-long2"
+      },
+      "posture": {
+        "shareAccountingNavOracle": "high",
+        "measuredUnwind": "high"
+      },
+      "reviewedAt": "2026-08-24",
+      "reviewer": "Safety Score V9 C-grade remediation review",
+      "primarySources": [
+        {
+          "label": "LlamaRisk LlamaLend sDOLA-long2 postmortem",
+          "url": "https://www.llamarisk.com/research/llamalend-sdola-long2-post-mortem",
+          "publishedAt": "2026-03-13"
+        }
+      ],
+      "finding": "A donation-sensitive ERC-4626 share price combined with LlamaLend's unsmoothed convertToAssets oracle and LLAMMA state to liquidate external borrowers; the event did not impair the sDOLA root claim or its holders.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2026-03-13",
+        "summary": "The integration was unwound with 10.6 million sDOLA shares redeemed successfully; sDOLA holders gained 13.79%, while measured loss remained with external leveraged borrowers.",
+        "sources": [
+          {
+            "label": "LlamaRisk LlamaLend sDOLA-long2 postmortem",
+            "url": "https://www.llamarisk.com/research/llamalend-sdola-long2-post-mortem",
+            "publishedAt": "2026-03-13"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -121,6 +121,7 @@ export function adaptOracleReview(
     componentKeys,
     sourceId: "stablecoin-meta.oracle-risk",
     reviewedAt: profile.reviewedAt,
+    publishedBy: "unknown",
     confidence,
     sources: profile.sources,
     payload: profile,

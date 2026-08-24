@@ -106,6 +106,23 @@ describe("Safety Score v9 wrapper-local risk", () => {
     expect(result.limit).toBe(79.1);
   });
 
+  it("keeps integration-only unwind evidence out of root-holder loss", () => {
+    const localFacts = facts({ shareAccountingNavOracle: "moderate", measuredUnwind: "none" }, "native-staked");
+    localFacts.facts.measuredUnwind.incidentPostures = [
+      {
+        incidentId: "integration-unwind",
+        scope: { kind: "integration-only", integrationKey: "external-lending-market" },
+        assessment: "high",
+        evidenceRefIds: ["integration-postmortem"],
+      },
+    ];
+    const result = resolveV9WrapperParentLimit(input({ localFacts }));
+    expect(result.adjustments.find((adjustment) => adjustment.factKey === "measuredUnwind")).toMatchObject({
+      assessment: "none",
+      discountPoints: 0,
+    });
+  });
+
   it("keeps an incomplete complex wrapper materially below a safe parent", () => {
     const localFacts = facts(
       {

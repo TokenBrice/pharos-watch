@@ -119,6 +119,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/safety-score-v9-consumer-freshness.ts",
   "worker/src/lib/safety-score-v9-extension.ts",
   "worker/src/lib/safety-score-v9-extension-bridge.ts",
+  "worker/src/lib/safety-score-v9-extension-incidents.ts",
   "worker/src/lib/safety-score-v9-extension-mechanism.ts",
   "worker/src/lib/safety-score-v9-extension-oracle.ts",
   "worker/src/lib/safety-score-v9-extension-operational-resilience.ts",

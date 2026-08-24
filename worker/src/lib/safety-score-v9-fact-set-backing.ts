@@ -35,6 +35,7 @@ import {
   addGap,
   assertKnownComponentEvidenceCurrent,
   componentResearchEvidence,
+  evidenceHistoryFor,
   missingLocalFact,
   researchEvidence,
   reviewedGapResponsibility,
@@ -130,6 +131,7 @@ function normalizeMechanismReview(
             : `The ${componentKey} mechanism review is not a current known fact.`,
         evidenceRefIds:
           original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
+        evidenceHistory: evidenceHistoryFor(context, evidenceIds),
       }),
     );
     const applicability =
@@ -430,6 +432,15 @@ export function buildReserves(context: AssetBuildContext): {
   const reviewedStatic = liveSlices.length === 0 ? (context.asset.reviewedStaticReserveRows ?? null) : null;
   const slices = reviewedStatic?.rows ?? liveSlices;
   if (slices.length === 0) {
+    const hasReserveHistory = context.asset.componentEvidence.some(
+      (binding) => binding.componentKey === "reserve-composition-history",
+    );
+    const reserveHistoryEvidenceIds = hasReserveHistory
+      ? componentResearchEvidence(context, "reserve-composition-history")
+      : [];
+    const expiredPublishedHistory = reserveHistoryEvidenceIds.some(
+      (evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale",
+    );
     return {
       reserveStatus: missingLocalFact(context, {
         componentKey: "reserve-composition",
@@ -437,7 +448,12 @@ export function buildReserves(context: AssetBuildContext): {
         ownerDomain: "backing",
         responsibility: "issuer-undisclosed",
         policyRuleId: "v9.backing.reserve-composition",
-        message: "No reserve composition is present in the exact fixed input.",
+        message: expiredPublishedHistory
+          ? "The last published reserve composition is older than the v9 freshness bound."
+          : "No reserve composition is present in the exact fixed input.",
+        ...(expiredPublishedHistory
+          ? { observationState: "stale" as const, evidenceRefIds: reserveHistoryEvidenceIds }
+          : {}),
       }).status,
       reserveExposures: [],
     };
@@ -510,6 +526,7 @@ export function buildReserves(context: AssetBuildContext): {
           path: collateralExposureV9Path(exposureKey),
           message: "The captured reserve slice lacks a complete v9 classification or failure-domain identity.",
           evidenceRefIds: evidenceIds,
+          evidenceHistory: evidenceHistoryFor(context, evidenceIds),
         }),
       );
       envelopeGapIds.push(gapId);
@@ -532,6 +549,7 @@ export function buildReserves(context: AssetBuildContext): {
           path: collateralExposureV9Path(exposureKey),
           message: "The last-known reserve exposure is older than the v9 freshness bound.",
           evidenceRefIds: evidenceIds,
+          evidenceHistory: evidenceHistoryFor(context, evidenceIds),
         }),
       );
       envelopeGapIds.push(gapId);

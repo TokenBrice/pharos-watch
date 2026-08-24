@@ -844,9 +844,19 @@ function commonModeSignalsByAsset(
           })
         : unpricedMembers;
     const assetIds = uniqueSorted(effectiveMembers.map((member) => member.assetId));
-    const rootLiabilityIds = distinctV9RootLiabilityIds(assetIds, plan.serialPaths);
+    // Root-liability collapse is a control-census rule: a wrapper must not make
+    // its own parent look like a second independent asset sharing one mint or
+    // upgrade authority. Other common modes (DEX, bridge, chain, reserve,
+    // oracle) count distinct affected assets/paths; collapsing them erased real
+    // shared-resource signals and was broader than the approved methodology.
+    const controlCensus =
+      group.failureDomain.kind === "mint-control" ||
+      group.failureDomain.kind === "upgrade-control";
+    const censusAssetIds = controlCensus
+      ? distinctV9RootLiabilityIds(assetIds, plan.serialPaths)
+      : assetIds;
     if (
-      rootLiabilityIds.length < materiality.commonControlMinAssets ||
+      censusAssetIds.length < materiality.commonControlMinAssets ||
       effectiveMembers.length < materiality.commonControlMinPaths
     ) {
       continue;
@@ -938,7 +948,8 @@ function commonModeSignalsByAsset(
         controlDomainScope.economicLossScope === "deployment"
           ? controlDomainScope.materialShare
           : null;
-      const severity = parentControlled || controllerOwned
+      const sameIssuerControl = mintControlSeverity === "low";
+      const severity = parentControlled || controllerOwned || sameIssuerControl
         ? "low"
         : localControlShare !== null
           ? deploymentControlDomainSeverity(controlDomainScope, materiality)
@@ -947,22 +958,24 @@ function commonModeSignalsByAsset(
       // domains carry a per-asset measured share. All unresolved control scope
       // keeps the existing group-first, fail-closed phrasing below.
       const shareInfo =
-        parentControlled || controllerOwned || mintControlSeverity !== null
-          ? localControlShare === null
-            ? null
-            : { share: localControlShare, mature: false }
-          : commonModeShareForDomain(group.failureDomain, context, materiality);
+        parentControlled || controllerOwned || sameIssuerControl
+          ? null
+          : localControlShare !== null
+            ? { share: localControlShare, mature: false }
+            : commonModeShareForDomain(group.failureDomain, context, materiality);
       const shareUnavailable = severity === "high" && shareInfo !== null && shareInfo.share === null;
       const qualifier = parentControlled || controllerOwned
         ? assetId === mintControlAssessment?.controllerAssetId
           ? "own controller, downstream reuse creates no reverse dependency, diagnostic only"
           : "own required parent's controller, priced by the parent cap, diagnostic only"
-        : localControlShare !== null
-          ? commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, false)
-          : mintControlSeverity === "low"
-            ? "same-issuer controller, diagnostic only"
+        : sameIssuerControl
+          ? "same-issuer controller, diagnostic only"
+          : localControlShare !== null
+            ? commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, false)
             : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
-      const groupClause = `${effectiveMembers.length} reviewed paths across ${rootLiabilityIds.length} independent root liabilities share ${key}`;
+      const groupClause = controlCensus
+        ? `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} independent root liabilities share ${key}`
+        : `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} assets share ${key}`;
       // Where the coin's own measured share drives the severity (moderate, or
       // high with a measured — not unavailable — share), lead the reason with
       // that share and demote the cross-asset group trigger to secondary

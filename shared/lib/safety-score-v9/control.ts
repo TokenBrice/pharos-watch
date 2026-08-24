@@ -485,7 +485,15 @@ function applyMergedMintSignals(
   resolvedIncidentAgeMonths: number | undefined,
   controlPolicy: V9ControlPolicy,
 ): number {
-  if (mintControl === null) return base;
+  // A native/immutable supply mechanism can have a measured historical
+  // integrity incident without exposing a live privileged mint controller.
+  // The dated review is enough to reuse the existing resolved-incident ladder;
+  // it must not require manufacturing a synthetic authority row.
+  if (mintControl === null) {
+    return resolvedIncidentAgeMonths === undefined
+      ? base
+      : Math.min(base, resolvedIncidentQualityCap(resolvedIncidentAgeMonths, controlPolicy));
+  }
   const signals = controlPolicy.mintMergedSignals;
   let adjustment = 0;
   if (mintControl.authority?.model === "multisig") {
@@ -757,11 +765,17 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
 
   const mint = args.mint;
   if (mint.status.applicability.state === "not-applicable") {
+    const noneResolvedScore = policy.control.mintPostureQuality["none-resolved"];
     components.push({
       componentKey: "mint",
       kind: "mint",
       posture: "none-resolved",
-      score: policy.control.mintPostureQuality["none-resolved"],
+      score: applyMergedMintSignals(
+        noneResolvedScore,
+        null,
+        args.resolvedIncidentAgeMonths,
+        policy.control,
+      ),
       binding: true,
       controlKeys: [],
       failureDomains: [],
@@ -1349,7 +1363,20 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     (left, right) =>
       compareText(left.kind, right.kind) || compareText(left.controlKeys.join("+"), right.controlKeys.join("+")),
   );
-  const scopedDeploymentControlKeys = new Set(
+  // A deployment-scoped control leaves the whole-asset pillar in exactly two
+  // cases, and component binding must agree with attribution in both:
+  //
+  //  1. Its loss is already priced proportionally, i.e. a binding structural
+  //     failure carries its known share. Deployment risk owns it from there.
+  //  2. Its reconciled share is below the deployment-materiality threshold, so
+  //     it cannot bind the global claim at all.
+  //
+  // Case 2 was missing. An immaterial deployment-local control stayed binding at
+  // its adverse component score while its scoped adjustment computed zero
+  // points, so the card kept an adverse pillar with no causal attribution and
+  // the D/F gate withheld it — turning unchanged cards into NR. Material,
+  // non-adverse deployment controls still bind.
+  const pricedDeploymentControlKeys = new Set(
     normalizedStructuralFailures
       .filter((failure) => failure.binding && failure.materialSharePct !== null)
       .flatMap((failure) =>
@@ -1359,6 +1386,16 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         }),
       ),
   );
+  const scopedDeploymentControlKeys = new Set([
+    ...pricedDeploymentControlKeys,
+    ...controls
+      .filter(
+        (control) =>
+          control.economicLossScope === "deployment" &&
+          !bindingByMateriality(control, materialShareThreshold),
+      )
+      .map((control) => control.controlKey),
+  ]);
   const normalizedComponents = components
     .map((component) =>
       component.binding &&

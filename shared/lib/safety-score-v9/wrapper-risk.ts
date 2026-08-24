@@ -71,6 +71,26 @@ const ASSESSMENT_MULTIPLIER = {
   critical: 1,
 } as const satisfies Readonly<Record<V9WrapperRiskAssessment, number>>;
 
+function effectiveAssessment(
+  factKey: V9WrapperLocalFactKey,
+  fact: V9ApplicableWrapperLocalFacts["facts"][V9WrapperLocalFactKey],
+): V9WrapperRiskAssessment | null {
+  const assessments: V9WrapperRiskAssessment[] =
+    fact.disposition === "reviewed" && fact.assessment !== null ? [fact.assessment] : [];
+  for (const posture of fact.incidentPostures ?? []) {
+    // `measuredUnwind` is the wrapper holder's unwind dimension. A loss or
+    // forced unwind confined to an external integration remains reviewed
+    // evidence, but cannot be relabelled as root-holder impairment. The
+    // share-accounting dimension remains eligible because integration misuse
+    // can still measure the wrapper's composability posture.
+    if (factKey === "measuredUnwind" && posture.scope.kind === "integration-only") continue;
+    assessments.push(posture.assessment);
+  }
+  return assessments.sort(
+    (left, right) => ASSESSMENT_MULTIPLIER[right] - ASSESSMENT_MULTIPLIER[left],
+  )[0] ?? null;
+}
+
 function roundPoints(value: number): number {
   return Math.round(value * 10_000) / 10_000;
 }
@@ -107,14 +127,15 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
   const adjustments = V9_WRAPPER_LOCAL_FACT_KEYS.map((factKey): V9WrapperLocalRiskAdjustment => {
     const fact = input.localFacts.facts[factKey];
     const maximumDiscountPoints = MAXIMUM_DISCOUNT_POINTS[factKey];
+    const assessment = effectiveAssessment(factKey, fact);
     const discountPoints =
-      fact.disposition === "reviewed" && fact.assessment !== null
-        ? roundPoints(maximumDiscountPoints * ASSESSMENT_MULTIPLIER[fact.assessment])
+      assessment !== null
+        ? roundPoints(maximumDiscountPoints * ASSESSMENT_MULTIPLIER[assessment])
         : 0;
     return {
       factKey,
       disposition: fact.disposition,
-      assessment: fact.assessment,
+      assessment,
       maximumDiscountPoints,
       discountPoints,
     };

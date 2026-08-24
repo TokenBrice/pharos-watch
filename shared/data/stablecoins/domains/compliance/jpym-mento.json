@@ -2,5 +2,28 @@
   "id": "jpym-mento",
   "mica": {
     "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "unclear",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Mento Labs GmbH",
+    "notes": "Reviewed issuer-family attribution for JPYm. This identifies the Mento operating entity for cross-asset control-domain attribution; it does not resolve whether decentralized Mento governance is the statutory issuer.",
+    "references": [
+      {
+        "label": "Mento stablecoins product directory",
+        "url": "https://www.mento.org/stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-24"
+      },
+      {
+        "label": "Mento StableToken documentation",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-24"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-24"
   }
 }

@@ -231,6 +231,7 @@ function structuralSignalFromBacking(reason: V9BackingResult["structuralReasons"
 function structuralSignalFromControl(
   asset: V9AssetFactsV3,
   failure: V9EconomicControlResult["structuralFailures"][number],
+  bindingComponentControlKeys: ReadonlySet<string>,
 ): V9StructuralSignal {
   const controls = failure.controlKeys.flatMap((key) => {
     const control = asset.controls.find((candidate) => candidate.controlKey === key);
@@ -309,7 +310,15 @@ function structuralSignalFromControl(
       )
         ? "high"
         : "low",
-    ...(economicLossScope === "deployment" && failure.materialSharePct !== null
+    // A deployment-scoped failure with a known share is normally priced by
+    // proportional deployment risk, so it carries no pillar marker. But when a
+    // still-binding control component covers the same controls, the fact IS
+    // priced in the pillar: dropping the marker there left the adverse pillar
+    // score with no causal attribution, and the D/F gates then withheld an
+    // otherwise unchanged card as NR.
+    ...(economicLossScope === "deployment" &&
+    failure.materialSharePct !== null &&
+    !failure.controlKeys.some((controlKey) => bindingComponentControlKeys.has(controlKey))
       ? {}
       : { pricedInPillar: "control" as const }),
     // A control failure that can impair the whole claim is priced twice today:
@@ -698,9 +707,16 @@ function controlPillar(
         );
       }),
     ),
-    structuralSignals: result.structuralFailures
-      .filter((failure) => failure.binding)
-      .map((failure) => structuralSignalFromControl(asset, failure)),
+    structuralSignals: (() => {
+      const bindingComponentControlKeys = new Set(
+        result.components
+          .filter((component) => component.binding)
+          .flatMap((component) => component.controlKeys),
+      );
+      return result.structuralFailures
+        .filter((failure) => failure.binding)
+        .map((failure) => structuralSignalFromControl(asset, failure, bindingComponentControlKeys));
+    })(),
   };
 }
 

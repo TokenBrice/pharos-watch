@@ -64,12 +64,13 @@ function replayFixture(options: {
 describe("buildCurationExpiryQueue", () => {
   it("lists only admitted compositions expiring within the lookahead, sorted by evaluated-set supply", () => {
     const metaById = new Map<string, StablecoinMeta>([
-      // Admitted today, crosses the 31-day bound within the 10-day lookahead.
-      ["small-expiring", curatedMeta("small-expiring", isoDaysAgo(25))],
-      ["big-expiring", curatedMeta("big-expiring", isoDaysAgo(25))],
+      // Admitted today, crosses the 31-day + 7-day grace bound within
+      // the 10-day lookahead.
+      ["small-expiring", curatedMeta("small-expiring", isoDaysAgo(30))],
+      ["big-expiring", curatedMeta("big-expiring", isoDaysAgo(30))],
       // Inadmissible today (non-zero known unknown): the worklist owns it.
       ["gap-inadmissible", curatedMeta("gap-inadmissible", isoDaysAgo(5), { knownUnknownExposurePct: 1.3 })],
-      // Already past the 31-day bound: also worklist territory, not preventive.
+      // Already past the 38-day effective bound: also worklist territory, not preventive.
       ["expired-out", curatedMeta("expired-out", isoDaysAgo(40))],
       // Fresh composition: admitted now and at the lookahead — excluded.
       ["fresh-ok", curatedMeta("fresh-ok", isoDaysAgo(2))],
@@ -99,7 +100,7 @@ describe("buildCurationExpiryQueue", () => {
       buildCurationExpiryQueue(
         replayFixture({ supplyById: { solo: 1_234 } }),
         10,
-        new Map([["solo", curatedMeta("solo", isoDaysAgo(28))]]),
+        new Map([["solo", curatedMeta("solo", isoDaysAgo(29))]]),
       ),
       10,
     );

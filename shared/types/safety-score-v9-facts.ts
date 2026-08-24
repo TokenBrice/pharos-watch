@@ -1627,6 +1627,13 @@ function validateAssetReferences(
       [keyof V9ApplicableWrapperLocalFacts["facts"], V9ApplicableWrapperLocalFacts["facts"][keyof V9ApplicableWrapperLocalFacts["facts"]]]
     >) {
       captureRefs(`wrapper-local:${factKey}`, fact.evidenceRefIds, []);
+      for (const posture of fact.incidentPostures ?? []) {
+        captureRefs(
+          `wrapper-local:${factKey}:incident:${posture.incidentId}`,
+          posture.evidenceRefIds,
+          [],
+        );
+      }
     }
     captureRefs("wrapper-local:risk-transfer", wrapperLocalFacts.riskTransfer.evidenceRefIds, []);
   }

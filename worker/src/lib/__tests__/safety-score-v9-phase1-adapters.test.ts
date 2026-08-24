@@ -5,6 +5,11 @@ import brlvReserveSource from "@shared/data/stablecoins/domains/reserves/brlv-cr
 import xsgdReserveSource from "@shared/data/stablecoins/domains/reserves/xsgd-straitsx.json";
 import brlvMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/brlv-crown.json";
 import xsgdMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/xsgd-straitsx.json";
+import ceurComplianceSource from "@shared/data/stablecoins/domains/compliance/ceur-celo.json";
+import chfmComplianceSource from "@shared/data/stablecoins/domains/compliance/chfm-mento.json";
+import cusdComplianceSource from "@shared/data/stablecoins/domains/compliance/cusd-celo.json";
+import gbpmComplianceSource from "@shared/data/stablecoins/domains/compliance/gbpm-mento.json";
+import jpymComplianceSource from "@shared/data/stablecoins/domains/compliance/jpym-mento.json";
 import type { ReserveSlice } from "@shared/types/reserves";
 import {
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
@@ -16,6 +21,8 @@ import {
 import { deriveSafetyScoreV9PegScore } from "../safety-score-v9-fact-set";
 import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9-extension";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
+import { addReviewedStaticReserveEvidence } from "../safety-score-v9-extension-reserves";
+import { ReviewEvidenceBuilder } from "../safety-score-v9-extension-shared";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
 const CURATION_CLOCK_SEC = Date.UTC(2026, 7, 9, 12) / 1_000;
@@ -190,6 +197,41 @@ describe("Phase 1 D2 issuer identity adapter", () => {
     expect(resolveSafetyScoreV9AssetIssuerKey("a-one", byId)).toBeNull();
     expect(resolveSafetyScoreV9AssetIssuerKey("d0-zero", byId)).toBeNull();
   });
+
+  it("resolves the reviewed Mento issuer instead of inferring issuer keys from id suffixes", () => {
+    const reviewedMentoAssets = [
+      ceurComplianceSource,
+      chfmComplianceSource,
+      cusdComplianceSource,
+      gbpmComplianceSource,
+      jpymComplianceSource,
+    ];
+    const byId = new Map<string, V9ExtensionRegistryMeta>(
+      reviewedMentoAssets.map((source) => [
+        source.id,
+        mintMeta(source.id, {
+          genius: source.genius as V9ExtensionRegistryMeta["genius"],
+        }),
+      ]),
+    );
+    const issuerKeys = reviewedMentoAssets.map((source) =>
+      resolveSafetyScoreV9AssetIssuerKey(source.id, byId),
+    );
+
+    expect(issuerKeys).toEqual(["mento", "mento", "mento", "mento", "mento"]);
+    expect(resolveSafetyScoreV9AssetIssuerKey("ceur-celo", byId)).not.toBe("celo");
+    const members = reviewedMentoAssets.map((source) => ({
+      assetId: source.id,
+      pathKey: "mint-control:safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+      assetIssuerKey: resolveSafetyScoreV9AssetIssuerKey(source.id, byId),
+    }));
+    expect(
+      resolveV9MintControlGroupSeverity({
+        controllerIssuerKey: "mento",
+        members,
+      }),
+    ).toBe("low");
+  });
 });
 
 describe("Phase 1 D2 curated issuer-identity alias (MakerDAO / Sky)", () => {
@@ -286,6 +328,29 @@ const POR_BASE = {
 } as const;
 
 describe("Phase 1 D6 issuer-attested reserve admission", () => {
+  it("retains issuer publisher and publication dates for an otherwise-admissible expired reserve report", () => {
+    const clockSec = Date.UTC(2027, 7, 1) / 1_000;
+    const metadata = eligibleReserveMeta();
+    const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(metadata, clockSec);
+    const evidence = new ReviewEvidenceBuilder(metadata.id, clockSec);
+
+    expect(admitted).toBeNull();
+    addReviewedStaticReserveEvidence(metadata, admitted, evidence, clockSec);
+    const compiled = evidence.finish();
+    const issuerReport = compiled.researchEvidence.find(
+      (entry) => entry.publishedAtSec === Date.parse("2026-07-10T00:00:00.000Z") / 1_000,
+    );
+    expect(issuerReport).toMatchObject({
+      observedAtSec: Date.parse("2026-06-30T00:00:00.000Z") / 1_000,
+      publishedAtSec: Date.parse("2026-07-10T00:00:00.000Z") / 1_000,
+      publishedBy: "issuer",
+    });
+    expect(compiled.componentEvidence).toContainEqual({
+      componentKey: "reserve-composition-history",
+      evidenceKeys: expect.arrayContaining([issuerReport!.evidenceKey]),
+    });
+  });
+
   it("admits a signed independent report for a prudential issuer at the owner-ratify 0.8 confidence", () => {
     const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(eligibleReserveMeta(), CLOCK_SEC);
     expect(admitted).toMatchObject({ evidenceClass: "issuer-attested" });

@@ -398,9 +398,63 @@ export function addReviewedStaticReserveEvidence(
   meta: V9ExtensionRegistryMeta,
   admitted: ReviewedStaticReserveRows | null,
   evidence: ReviewEvidenceBuilder,
+  clockSec: number,
 ): void {
   const review = meta.reserveReview;
-  if (!admitted || !review) return;
+  if (!review) return;
+  const report = meta.proofOfReserves?.latestReport;
+  if (!admitted) {
+    const rows = meta.reserves ?? [];
+    const proof = meta.proofOfReserves;
+    const attestorIndependent =
+      proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
+    const reviewAtSec = conservativeDateEndSec(review.reviewedAt, clockSec);
+    const compositionAtSec = conservativeDateEndSec(review.compositionAsOf, clockSec);
+    const reportAtSec = report ? conservativeDateEndSec(report.publishedAt, clockSec) : null;
+    const periodEndSec = report ? conservativeDateEndSec(report.periodEnd, clockSec) : null;
+    const expiredButOtherwiseAdmissible =
+      rows.length > 0 &&
+      review.scope === "full-composition" &&
+      review.confidence !== "unknown" &&
+      review.sources.length > 0 &&
+      reviewAtSec !== null &&
+      compositionAtSec !== null &&
+      validateReserveCompositionTotal(rows, "full") &&
+      meta.mintAuthority?.supervision === "prudential" &&
+      proof?.type === "independent-audit" &&
+      attestorIndependent &&
+      Boolean(proof?.provider?.trim()) &&
+      report !== undefined &&
+      report.confidence !== "unknown" &&
+      report.sources.length > 0 &&
+      reportAtSec !== null &&
+      periodEndSec !== null &&
+      compositionAtSec === periodEndSec &&
+      reportAtSec >= periodEndSec &&
+      clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC &&
+      CORROBORATING_ASSURANCE_METHODS.has(report.assuranceMethod);
+    if (!expiredButOtherwiseAdmissible || !report) return;
+    const sources = [...review.sources, ...report.sources].filter(
+      (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
+    );
+    evidence.add({
+      componentKeys: ["reserve-composition-history"],
+      sourceId: "stablecoin-meta.expired-reviewed-static-reserves",
+      reviewedAt: review.reviewedAt,
+      observedAt: report.periodEnd,
+      publishedAt: report.publishedAt,
+      publishedBy: "issuer",
+      confidence: confidenceForResearch(report.confidence),
+      sources,
+      payload: {
+        reserveReview: review,
+        reserves: rows,
+        proofOfReserves: proof,
+      },
+      maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
+    });
+    return;
+  }
   if (admitted.evidenceClass === "static-validated") {
     evidence.add({
       componentKeys: [
@@ -412,6 +466,7 @@ export function addReviewedStaticReserveEvidence(
           ? "stablecoin-meta.reviewed-curated-fallback-reserves"
           : "stablecoin-meta.reviewed-standalone-reserves",
       reviewedAt: review.compositionAsOf!,
+      publishedBy: "unknown",
       confidence: confidenceForResearch(review.confidence),
       sources: review.sources,
       payload: {
@@ -424,7 +479,6 @@ export function addReviewedStaticReserveEvidence(
     });
     return;
   }
-  const report = meta.proofOfReserves?.latestReport;
   if (!report) return;
   const sources = [...review.sources, ...report.sources].filter(
     (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
@@ -435,7 +489,10 @@ export function addReviewedStaticReserveEvidence(
       ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
     ],
     sourceId: "stablecoin-meta.reviewed-static-reserves",
-    reviewedAt: report.periodEnd,
+    reviewedAt: review.reviewedAt,
+    observedAt: report.periodEnd,
+    publishedAt: report.publishedAt,
+    publishedBy: "issuer",
     confidence: confidenceForResearch(report.confidence),
     sources,
     payload: {
@@ -463,6 +520,7 @@ export function addReserveClassificationEvidence(
     componentKeys: reviewed.map((classification) => `reserve-classification:${classification.exposureKey}`),
     sourceId: "stablecoin-meta.reserve-review",
     reviewedAt: review.reviewedAt,
+    publishedBy: "unknown",
     confidence: confidenceForResearch(review.confidence),
     sources: review.sources,
     payload: { reserveReview: review, reserves: meta.reserves ?? [] },

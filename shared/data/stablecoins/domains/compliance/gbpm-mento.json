@@ -20,5 +20,28 @@
         "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
       }
     ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Mento Labs GmbH",
+    "notes": "Reviewed issuer-family attribution for GBPm. This identifies the Mento operating entity for cross-asset control-domain attribution; it does not resolve whether decentralized Mento governance is the statutory issuer.",
+    "references": [
+      {
+        "label": "Mento stablecoins — GBPm product page",
+        "url": "https://www.mento.org/stablecoins?8f925f5c_page=2",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-24"
+      },
+      {
+        "label": "Mento StableToken documentation",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-24"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-24"
   }
 }

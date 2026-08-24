@@ -38,6 +38,7 @@ import {
   type AssetBuildContext,
 } from "./safety-score-v9-fact-set-context";
 import { buildOperationalResilienceFact } from "./safety-score-v9-fact-set-operational-resilience";
+import { applySafetyScoreV9WrapperIncidentRoutes } from "./safety-score-v9-extension-incidents";
 import {
   buildCdpStressCoverage,
   buildDependencies,
@@ -108,19 +109,22 @@ function buildAssetFacts(
   const peg = buildPeg(context);
   const supply = buildSupply(context);
   const operationalResilience = buildOperationalResilienceFact(context);
-  const wrapperLocalFacts = buildWrapperLocalFacts(context, {
-    implementation,
-    dependencies,
-    reserveStatus: reserves.reserveStatus,
-    reserveExposures: reserves.reserveExposures,
-    exitStatus: routes.exitStatus,
-    exitRoutes: routes.exitRoutes,
-    controlStatus: controls.controlStatus,
-    controls: controls.controls,
-    economicControlReview,
-    peg,
-    supply,
-  });
+  const wrapperLocalFacts = applySafetyScoreV9WrapperIncidentRoutes(
+    context,
+    buildWrapperLocalFacts(context, {
+      implementation,
+      dependencies,
+      reserveStatus: reserves.reserveStatus,
+      reserveExposures: reserves.reserveExposures,
+      exitStatus: routes.exitStatus,
+      exitRoutes: routes.exitRoutes,
+      controlStatus: controls.controlStatus,
+      controls: controls.controls,
+      economicControlReview,
+      peg,
+      supply,
+    }),
+  );
   const compiledAsset: V9AssetFactsV3 = {
     assetId: context.asset.assetId,
     assetIssuerKey: context.asset.assetIssuerKey ?? null,

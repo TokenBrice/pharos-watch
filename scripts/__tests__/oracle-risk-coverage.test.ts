@@ -62,11 +62,16 @@ describe("analyzeOracleRiskCoverage", () => {
           oracleRisk: {
             tier: "medianized-with-delay",
             summary: "Medianized feeds with delay are documented.",
+            branchModel: "single-path",
             branchApplicability: {
-              disposition: "not-applicable",
+              // Post-9.17 semantics: "no separately parameterized borrower
+              // markets" is `top-level-only`, not `not-applicable`. Pairing that
+              // rationale with `not-applicable` is the stale pre-9.17 pattern
+              // this release migrated away from, so the fixture must not bless it.
+              disposition: "top-level-only",
               reviewedAt: "2026-06-01",
               reviewer: "Codex data review",
-              rationale: "The reviewed system has one shared collateral path rather than separately parameterized markets.",
+              rationale: "The reviewed system prices one shared collateral path rather than separately parameterized markets, so its top-level authority is scoreable without borrower branches.",
               sources: [{ label: "Docs", url: "https://example.com/docs" }],
             },
             reviewedAt: "2026-06-01",

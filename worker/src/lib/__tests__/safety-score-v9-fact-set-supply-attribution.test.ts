@@ -313,10 +313,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         ),
       ),
     ).toBe(false);
-    // The reviewed global authority stays partitioned away from the XAUt0
-    // group: the onlyOwner mint path on the canonical proxy and the separate
-    // upgrade-only ProxyAdmin owner (3-of-6 legacy multisig, the exact
-    // `upgradeability.controlRef` target) are the only non-bridge controls.
+    // The reviewed canonical authority stays partitioned away from the XAUt0
+    // group: the onlyOwner mint path on the canonical Ethereum deployment and
+    // the separate upgrade-only ProxyAdmin owner (3-of-6 legacy multisig, the
+    // exact `upgradeability.controlRef` target) are the only non-bridge controls.
+    // Both are deployment-scoped; neither is a global root-claim authority.
     expect(
       xaut.controls
         .filter((control) => control.controlKind !== "bridge")
@@ -332,9 +333,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     ).toEqual([
       {
         controlKind: "mint",
-        scope: "global",
+        scope: "deployment",
         capabilities: ["mint"],
-        deploymentKey: "asset:xaut-tether",
+        deploymentKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
         authority: {
           authorityKey:
             "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
@@ -344,9 +345,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       },
       {
         controlKind: "upgrade",
-        scope: "global",
+        scope: "deployment",
         capabilities: ["mint", "upgrade"],
-        deploymentKey: "asset:xaut-tether",
+        deploymentKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
         authority: {
           authorityKey:
             "ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",

@@ -5,8 +5,8 @@
 // gates production scoring uses (`buildSafetyScoreV9ReviewedStandaloneReserveRows`
 // / `buildSafetyScoreV9ReviewedCuratedFallbackReserveRows`), re-run at
 // `clockSec + lookahead`: composition age is the only time-dependent input, so
-// the queue cannot drift from the 31-day window, the zero-known-unknown gate,
-// or the D6 prudential/audit path.
+// the queue cannot drift from the 31-day composition window plus its 7-day
+// reporting grace, the zero-known-unknown gate, or the D6 prudential/audit path.
 //
 // Usage:
 //   npm run safety-score-v9:expiry-queue -- \
