@@ -12,7 +12,7 @@ import { SafetyMapPoster } from "./poster";
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Safety Map: All Graded Coins by Tier",
   description:
-    "A downloadable poster of every stablecoin Pharos grades, drawn across five discrete A-to-F grade bands with supply-proportional area above per-tier minimum markers and fixed presence markers below.",
+    "A downloadable poster of every stablecoin Pharos grades, arranged across five A-to-F bands with bubble area tracking circulating supply and fixed markers for smaller assets.",
   canonical: "/safety-scores/map/",
   // The poster itself is served from KV by a Pages Function, so it is not a file
   // in `out/` and cannot be a same-origin og:image. Use the dynamic Safety
