@@ -107,10 +107,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
-      KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
-      WRANGLER_SEND_METRICS: "false"
       # Gitignored scratch tree, inside the workspace so upload-artifact can
       # take a workspace-relative path.
       MAP_OUT_DIR: agents/safety-score-map/ci
@@ -133,9 +129,6 @@ jobs:
         run: |
           set -euo pipefail
           missing=()
-          [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || missing+=("secrets.CLOUDFLARE_ACCOUNT_ID")
-          [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || missing+=("secrets.SAFETY_MAP_KV_TOKEN")
-          [ -n "${KV_NAMESPACE_ID:-}" ] || missing+=("vars.SAFETY_MAP_KV_NAMESPACE_ID")
           [ -n "${PHAROS_API_KEY:-}" ] || missing+=("secrets.PHAROS_API_KEY")
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::error title=Safety map refresh is not provisioned::Missing ${missing[*]}. See the owner-actions block at the top of .github/workflows/safety-map-refresh.yml."
@@ -146,6 +139,11 @@ jobs:
       # namespace id, fails here rather than mid-publish.
       - name: Probe namespace for the live manifest and snapshot pointer
         id: probe
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
           set -euo pipefail
           ./node_modules/.bin/wrangler kv key list \
@@ -179,6 +177,11 @@ jobs:
 
       - name: Read the existing manifest
         if: steps.probe.outputs.has_manifest == 'true'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
           set -euo pipefail
           ./node_modules/.bin/wrangler kv key get \
@@ -205,6 +208,11 @@ jobs:
       # compare against and must still be able to bootstrap.
       - name: Fetch the previous snapshot
         if: steps.probe.outputs.has_prev_snapshot == 'true'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
           set -euo pipefail
           if ! ./node_modules/.bin/wrangler kv key get \
@@ -295,6 +303,7 @@ jobs:
               edition: meta.edition,
               methodologyVersion: meta.methodologyVersion ?? null,
               counts: meta.counts,
+              ...(meta.mapSummary === undefined ? {} : { mapSummary: meta.mapSummary }),
               bytes: {
                 png: statSync(png).size,
                 alt: statSync(alt).size,
@@ -306,7 +315,13 @@ jobs:
             // NOTE: no apostrophes anywhere in this node -e block. It is
             // wrapped in single quotes by the shell, so one would end the
             // string and the rest would be parsed as shell.
-            require("node:fs").writeFileSync("kv-manifest.json", `${JSON.stringify(manifest, null, 2)}\n`);
+            const manifestText = `${JSON.stringify(manifest, null, 2)}\n`;
+            const manifestBytes = Buffer.byteLength(manifestText, "utf8");
+            if (manifestBytes >= 16384) {
+              console.error(`::error title=Manifest too large::kv-manifest.json is ${manifestBytes} bytes; it must stay under 16384 bytes.`);
+              process.exit(1);
+            }
+            require("node:fs").writeFileSync("kv-manifest.json", manifestText);
 
             const out = process.env.GITHUB_OUTPUT;
             appendFileSync(out, `date=${manifest.date}\n`);
@@ -357,12 +372,19 @@ jobs:
           '
 
       # ── Publish. Order is load-bearing: the manifest is the commit marker and
-      #    therefore goes LAST. A consumer that requires the manifest can never
-      #    observe a half-published key set; a failure part-way leaves the
-      #    previous manifest — and so the previous complete set — live.
+      #    therefore goes LAST. The dated PNG is read back before the stable
+      #    image pointer is touched.
+      # This is a narrowing guard, not an atomic publication: KV has no
+      # cross-key transaction and the image route deliberately ignores the
+      # manifest so kill-switch lever 2 remains available. The brief window in
+      # which latest.png is new while the manifest is old is accepted.
 
       - name: Publish the snapshot
         env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
           ARCHIVE_DATE: ${{ steps.meta.outputs.date }}
         run: |
           set -euo pipefail
@@ -375,6 +397,11 @@ jobs:
       # The rolling pointer the next run reads. Written after the dated key so
       # the archive entry always exists before anything points at that day.
       - name: Publish the snapshot pointer
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
           set -euo pipefail
           ./node_modules/.bin/wrangler kv key put \
@@ -384,6 +411,11 @@ jobs:
             --path="${MAP_OUT_DIR}/latest.snapshot.json"
 
       - name: Publish the alt text
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
           set -euo pipefail
           ./node_modules/.bin/wrangler kv key put \
@@ -397,6 +429,10 @@ jobs:
       # This is the key the digest embeds — see the §11.5 note in the header.
       - name: Publish the dated PNG
         env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
           ARCHIVE_DATE: ${{ steps.meta.outputs.date }}
         run: |
           set -euo pipefail
@@ -406,7 +442,34 @@ jobs:
             "safety-map:${ARCHIVE_DATE}.png" \
             --path="${MAP_OUT_DIR}/latest.png"
 
+      - name: Verify the dated PNG readback
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
+          ARCHIVE_DATE: ${{ steps.meta.outputs.date }}
+        run: |
+          set -euo pipefail
+          key="safety-map:${ARCHIVE_DATE}.png"
+          expected=$(sha256sum "${MAP_OUT_DIR}/latest.png" | awk '{print $1}')
+          ./node_modules/.bin/wrangler kv key get \
+            --remote \
+            --namespace-id="${KV_NAMESPACE_ID}" \
+            "${key}" > readback.png
+          actual=$(sha256sum readback.png | awk '{print $1}')
+          if [ "${actual}" != "${expected}" ]; then
+            echo "::error title=PNG readback mismatch::${key} failed SHA-256 comparison with the locally rendered PNG. The stable latest image remains untouched and the manifest was NOT written. Re-run; if it repeats, check whether the wrangler CLI is prefixing stdout."
+            exit 1
+          fi
+          echo "Readback OK: ${key} = sha256:${actual}."
+
       - name: Publish the PNG
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
           set -euo pipefail
           ./node_modules/.bin/wrangler kv key put \
@@ -415,30 +478,14 @@ jobs:
             "safety-map:latest.png" \
             --path="${MAP_OUT_DIR}/latest.png"
 
-      - name: Verify the published PNGs
-        env:
-          ARCHIVE_DATE: ${{ steps.meta.outputs.date }}
-          EXPECTED_BYTES: ${{ steps.meta.outputs.png_bytes }}
-        run: |
-          set -euo pipefail
-          # Both keys carry the same bytes and both are read back: an unverified
-          # dated key is the one the digest would publish to Telegram and X.
-          for key in "safety-map:${ARCHIVE_DATE}.png" "safety-map:latest.png"; do
-            ./node_modules/.bin/wrangler kv key get \
-              --remote \
-              --namespace-id="${KV_NAMESPACE_ID}" \
-              "${key}" > readback.png
-            actual=$(stat -c %s readback.png)
-            if [ "${actual}" -ne "${EXPECTED_BYTES}" ]; then
-              echo "::error title=PNG readback mismatch::${key} published ${EXPECTED_BYTES} bytes, read back ${actual}. The manifest was NOT written, so consumers still see the previous complete key set. Re-run; if it repeats, check whether the wrangler CLI is prefixing stdout."
-              exit 1
-            fi
-            echo "Readback OK: ${key} = ${actual} bytes."
-          done
-
-      # The commit marker. Nothing after this point may fail in a way that
-      # matters, because the set is now complete and consistent.
+      # The commit marker. After this succeeds, the manifest points at the
+      # edition whose intended keys have all been written.
       - name: Publish the manifest
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.SAFETY_MAP_KV_TOKEN }}
+          KV_NAMESPACE_ID: ${{ vars.SAFETY_MAP_KV_NAMESPACE_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
           set -euo pipefail
           ./node_modules/.bin/wrangler kv key put \

@@ -5,6 +5,8 @@ import {
   buildV9HeadlineStats,
   filterAndSortV9Cards,
   groupV9CardsByGrade,
+  parseSafetyScoreCoinQuery,
+  searchV9CardsByCoin,
 } from "./v9-view-model";
 
 describe("Safety Scores V9 view model", () => {
@@ -80,5 +82,35 @@ describe("Safety Scores V9 view model", () => {
     expect(stats[0]).toMatchObject({ label: "Ecosystem avg.", value: "77" });
     expect(stats[1]).toMatchObject({ label: "Supply in A/B", value: "90%" });
     expect(stats[2]).toMatchObject({ label: "Weakest pillar", value: "Exit" });
+  });
+
+  it("accepts known stable IDs and rejects unknown or malformed coin query values", () => {
+    expect(parseSafetyScoreCoinQuery("?coin=usdt-tether")).toEqual({
+      raw: "usdt-tether",
+      id: "usdt-tether",
+      status: "valid",
+    });
+    expect(parseSafetyScoreCoinQuery("?coin=not-a-tracked-coin")).toMatchObject({
+      id: "not-a-tracked-coin",
+      status: "unknown",
+    });
+    expect(parseSafetyScoreCoinQuery("?coin=USDT")).toMatchObject({
+      id: null,
+      status: "malformed",
+    });
+  });
+
+  it("finds V9 cards by stablecoin name or symbol", () => {
+    const searchableCards = [
+      makeV9Card({ id: "usdt-tether" }),
+      makeV9Card({ id: "usdc-circle" }),
+    ];
+
+    expect(searchV9CardsByCoin(searchableCards, "tether").map((card) => card.id)).toEqual([
+      "usdt-tether",
+    ]);
+    expect(searchV9CardsByCoin(searchableCards, "USDC").map((card) => card.id)).toEqual([
+      "usdc-circle",
+    ]);
   });
 });

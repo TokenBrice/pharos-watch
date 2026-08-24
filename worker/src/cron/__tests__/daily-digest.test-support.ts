@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import type { MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import type { ActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
@@ -5,6 +6,25 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
+
+export function mockDigestSafetyMapModule(
+  actual: typeof import("../../lib/digest-safety-map"),
+) {
+  return {
+    ...actual,
+    resolveDigestSafetyMap: vi.fn(async (date: string) => ({
+      kind: "available" as const,
+      imageUrl: `https://pharos.watch/safety-scores/map.png?date=${date}`,
+      manifest: {
+        date,
+        asOfSec: 1_772_796_000,
+        renderedAtSec: 1_772_798_400,
+        edition: "daily" as const,
+        bytes: { png: 1_000_000 },
+      },
+    })),
+  };
+}
 
 export function canonicalSafetySource(
   cards: unknown[],

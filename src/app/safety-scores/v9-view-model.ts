@@ -1,6 +1,8 @@
 import { formatCurrency } from "@shared/lib/format";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { isCanonicalStablecoinId } from "@shared/lib/stablecoin-id";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";
@@ -21,6 +23,62 @@ const PILLAR_LABELS = {
   exit: "Exit",
   control: "Economic Control",
 } as const;
+
+export type SafetyScoreCoinQueryStatus = "empty" | "valid" | "unknown" | "malformed";
+
+export interface SafetyScoreCoinQueryState {
+  raw: string | null;
+  id: string | null;
+  status: SafetyScoreCoinQueryStatus;
+}
+
+/**
+ * Parse the stable-ID deep link without treating a ticker as an identifier.
+ * The registry check lets the route give a useful answer for a well-formed
+ * but unknown ID while keeping symbols such as `USDT` out of the URL contract.
+ */
+export function parseSafetyScoreCoinQuery(search: string): SafetyScoreCoinQueryState {
+  const raw = new URLSearchParams(search).get("coin");
+  if (raw === null || raw.trim() === "") {
+    return { raw, id: null, status: "empty" };
+  }
+
+  const id = raw.trim();
+  if (!isCanonicalStablecoinId(id)) {
+    return { raw, id: null, status: "malformed" };
+  }
+  if (!CLIENT_TRACKED_META_BY_ID.has(id)) {
+    return { raw, id, status: "unknown" };
+  }
+  return { raw, id, status: "valid" };
+}
+
+export function buildSafetyScoreCoinCardId(id: string): string {
+  return `safety-score-card-${id}`;
+}
+
+/** Search the live V9 card set by the stablecoin's display name or symbol. */
+export function searchV9CardsByCoin(
+  cards: readonly V9ConsumerCard[],
+  query: string,
+): V9ConsumerCard[] {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (!normalized) return [];
+
+  return cards
+    .filter((card) => {
+      const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
+      if (!meta) return false;
+      return meta.name.toLocaleLowerCase().includes(normalized) ||
+        meta.symbol.toLocaleLowerCase().includes(normalized);
+    })
+    .sort((left, right) => {
+      const leftMeta = CLIENT_TRACKED_META_BY_ID.get(left.id);
+      const rightMeta = CLIENT_TRACKED_META_BY_ID.get(right.id);
+      return (leftMeta?.name ?? left.id).localeCompare(rightMeta?.name ?? right.id) ||
+        left.id.localeCompare(right.id);
+    });
+}
 
 export function buildV9GradeCounts(
   cards: readonly V9ConsumerCard[] | undefined,

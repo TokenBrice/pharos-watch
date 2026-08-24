@@ -34,7 +34,11 @@ import {
   checkDigestSafetyContextForDelivery,
   findUnboundDigestSafetyClaimMarkers,
 } from "../lib/digest-safety-context";
-import { resolveDigestSafetyMap, type DigestSafetyMapResolution } from "../lib/digest-safety-map";
+import {
+  buildDigestSafetyMapCaptions,
+  resolveDigestSafetyMap,
+  type DigestSafetyMapResolution,
+} from "../lib/digest-safety-map";
 import {
   deliverTwitterDigestWithLedger,
   TwitterDigestLedgerPersistenceError,
@@ -322,6 +326,9 @@ export async function generateDailyDigest(
     }
   }
   const safetyMapImageUrl = safetyMap?.kind === "available" ? safetyMap.imageUrl : null;
+  const safetyMapCaptions = safetyMap?.kind === "available" && inputData.safetyContext?.status === "available"
+    ? buildDigestSafetyMapCaptions(safetyMap.manifest.mapSummary)
+    : null;
   throwIfAborted(signal);
   await reportCronProgress(reportProgress, {
     stage: "twitter-delivery",
@@ -363,6 +370,7 @@ export async function generateDailyDigest(
             creds,
             editionNumber,
             safetyMapImageUrl,
+            safetyMapCaptions?.tweetHook,
           ),
           signal,
         );
@@ -419,6 +427,7 @@ export async function generateDailyDigest(
         editionNumber,
         appendixHtml: telegramAppendices?.appendixHtml ?? null,
         imageUrl: safetyMapImageUrl,
+        mapAppendixHtml: safetyMapCaptions?.telegramAppendixHtml,
         successActions: telegramAppendices?.successActions ?? [],
         safetyContext: inputData.safetyContext ?? {
           status: "unavailable",

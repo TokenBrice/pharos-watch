@@ -5,8 +5,8 @@ import {
   type CompositionRect,
 } from "../maintenance/build-safety-score-map";
 
-const FOOTER_RULE_Y = 864;
-const BODY_TOP = 128;
+const FOOTER_RULE_Y = 880;
+const BODY_TOP = 98;
 const CHIP_FLOOR = FOOTER_RULE_Y - 4;
 const LEFT_BOUND = 56;
 const RIGHT_BOUND = 1544;
@@ -90,6 +90,16 @@ describe("validateComposition — chip collisions", () => {
 });
 
 describe("validateComposition — bounds", () => {
+  it("keeps planet edges below the protected header clearance", () => {
+    const violations = validateComposition({
+      orbits: [orbit("F", { innerRx: 0, innerRy: 0, outerRx: 744, outerRy: 388 }, [
+        { id: "header-rider", cx: 800, cy: BODY_TOP + 5, r: 6 },
+      ])],
+      chips: [],
+    });
+    expect(violations).toContain("bubble header-rider: crosses the 12px header clearance");
+  });
+
   it("reports a chip whose bottom crosses the footer rule", () => {
     const violations = validateComposition({
       orbits: [],
@@ -172,6 +182,22 @@ describe("validateComposition — orbit integrity", () => {
       chips: [],
     });
     expect(violations).toContain("bubble overlap: one / two");
+  });
+
+  it("rejects a band whose bubbles leave a large angular dead zone", () => {
+    const zone = { innerRx: 220, innerRy: 140, outerRx: 260, outerRy: 180 };
+    const guideRx = (zone.innerRx + zone.outerRx) / 2;
+    const guideRy = (zone.innerRy + zone.outerRy) / 2;
+    const bubbles = [0, 0.08, 0.16, 0.24, 0.32].map((angle, index) => ({
+      id: `coin-${index}`,
+      cx: 800 + guideRx * Math.cos(angle),
+      cy: 482 + guideRy * Math.sin(angle),
+      r: 2,
+    }));
+
+    expect(validateComposition({ orbits: [orbit("C", zone, bubbles)], chips: [] })).toContain(
+      "orbit C: angular gap 341.7deg exceeds 3x mean 72.0deg",
+    );
   });
 });
 

@@ -38,7 +38,7 @@ const POSTER_WIDTH = 3200;
 const POSTER_HEIGHT = 1800;
 
 const POSTER_ALT =
-  "The Pharos Stablecoin Safety Map: every graded stablecoin drawn as its own logo, sized by circulating supply, with USDT and USDC anchoring a line-free spiral A-grade core and B, C, D, and F connected in supply-rank order around wide paths outward. A footer records the methodology version, data date, graded count, mapped supply, and visual encodings. The same figures are available as a sortable table on the Safety Scores page.";
+  "The Pharos Stablecoin Safety Map: five discrete grade bands: A at the centre, then B, C, D, and F outward; orbit = grade band, not a continuous score; bubble area tracks circulating supply above a per-tier minimum marker; assets below their tier's threshold share a fixed presence marker. A footer records the exact thresholds for this render, methodology version, data date, graded count, mapped supply, and visual encodings. The same figures are available as a sortable table on the Safety Scores page.";
 
 function PosterUnavailable() {
   return (

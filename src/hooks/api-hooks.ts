@@ -15,6 +15,7 @@ import {
   type ReportCardsV9CurrentResponse,
   type RedemptionBackstopsResponse,
   type SafetyScoreHistoryResponse,
+  type SafetyScoreHistoryV2Response,
   type StabilityContributor,
   type StabilityIndexResponse,
   type StablecoinChartPoint,
@@ -204,6 +205,13 @@ export function useRedemptionBackstops() {
 export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
   return useRegisteredApiQuery<SafetyScoreHistoryResponse>(
     FRONTEND_API_QUERY_DESCRIPTORS.safetyScoreHistory(stablecoinId, days),
+    { enabled: !!stablecoinId },
+  );
+}
+
+export function useSafetyScoreHistoryV2(stablecoinId: string, days = 3650) {
+  return useRegisteredApiQuery<SafetyScoreHistoryV2Response>(
+    FRONTEND_API_QUERY_DESCRIPTORS.safetyScoreHistoryV2(stablecoinId, days),
     { enabled: !!stablecoinId },
   );
 }

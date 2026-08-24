@@ -36,6 +36,8 @@ let cards: Card[] = [];
 let assets: Asset[] = [];
 let methodologyVersion = "9.19";
 let asOfSec = 0;
+let psiComputedAt = 0;
+let publicationStatus = "current";
 let server: Server;
 let baseUrl = "";
 
@@ -47,11 +49,22 @@ beforeAll(async () => {
         ? { cards, methodology: { version: methodologyVersion }, asOfSec }
         : path === "/api/stablecoins"
           ? { peggedAssets: assets }
+          : path === "/api/stability-index"
+            ? {
+                current: {
+                  score: 94.3,
+                  band: "BEDROCK",
+                  avg24h: 93.8,
+                  avg24hBand: "BEDROCK",
+                  computedAt: psiComputedAt,
+                },
+              }
           : null;
     if (!body) {
       res.writeHead(404).end("{}");
       return;
     }
+    if (path === "/api/report-cards/v9") res.setHeader("X-Safety-Score-Status", publicationStatus);
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(body));
   });
@@ -81,12 +94,19 @@ function universe(options: { count?: number; unjoined?: number; notRated?: numbe
   const count = options.count ?? 20;
   const unjoined = options.unjoined ?? 0;
   const tiers = ["A", "A", "A", "B", "B", "B", "B", "C", "C", "C", "C", "D", "D", "D", "F", "F"];
+  const gradeByTier: Record<string, { grade: string; score: number }> = {
+    A: { grade: "A+", score: 90 },
+    B: { grade: "B+", score: 77 },
+    C: { grade: "C+", score: 62 },
+    D: { grade: "D", score: 45 },
+    F: { grade: "F", score: 20 },
+  };
   const built: Card[] = [];
   const rows: Asset[] = [];
   for (let i = 0; i < count; i++) {
     const tier = tiers[i % tiers.length];
     const id = `coin-${String(i).padStart(2, "0")}`;
-    built.push({ id, score: 90 - i, grade: `${tier}${i % 3 === 0 ? "+" : ""}` });
+    built.push({ id, ...gradeByTier[tier] });
     // Supply decays steeply, as it really does: two giants anchor the bubble
     // scale and the tail is gravel. The unjoined coins are the smallest ones,
     // which is where a real supply-join gap lands.
@@ -117,12 +137,14 @@ interface RunResult {
  */
 async function runGenerator(
   fixture: { cards: Card[]; assets: Asset[]; asOfSec?: number; methodologyVersion?: string },
-  options: { args?: string[]; stopBeforeRender?: boolean } = {},
+  options: { args?: string[]; stopBeforeRender?: boolean; publicationStatus?: string; psiComputedAt?: number } = {},
 ): Promise<RunResult> {
   cards = fixture.cards;
   assets = fixture.assets;
   asOfSec = fixture.asOfSec ?? Math.floor(Date.now() / 1000) - HOUR;
+  psiComputedAt = options.psiComputedAt ?? Math.floor(Date.now() / 1000) - 5 * 60;
   methodologyVersion = fixture.methodologyVersion ?? "9.19";
+  publicationStatus = options.publicationStatus ?? "current";
 
   const outDir = scratchDir("pharos-safety-map-test-");
   const pngPath = join(outDir, "map.png");
@@ -152,7 +174,7 @@ describe("safety-score map — freshness guard (§11.2b rule 1)", () => {
   it("refuses to render a report-card capture older than 48h", async () => {
     const run = await runGenerator({ ...universe(), asOfSec: Math.floor(Date.now() / 1000) - 49 * HOUR });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Report-card capture is 49\.\dh old \(max 48h\) — refusing to render stale scores/);
+    expect(run.stderr).toMatch(/Report-card capture is 49\.\dh old \(must be under 48h\) — refusing to render stale scores/);
     expect(existsSync(run.pngPath)).toBe(false);
   });
 
@@ -165,10 +187,44 @@ describe("safety-score map — freshness guard (§11.2b rule 1)", () => {
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });
 
+  it("refuses a future-dated capture", async () => {
+    const run = await runGenerator({ ...universe(), asOfSec: Math.floor(Date.now() / 1000) + HOUR });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/future-dated capture/);
+  });
+
+  it("refuses a capture at the 48h boundary", async () => {
+    const run = await runGenerator({ ...universe(), asOfSec: Math.floor(Date.now() / 1000) - 48 * HOUR });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/must be under 48h/);
+  });
+
+  it("refuses a held publication even when the capture is fresh", async () => {
+    const run = await runGenerator({ ...universe() }, { publicationStatus: "held" });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/publication status is "held".*non-current/);
+  });
+
   it("rejects a non-numeric capture clock rather than rendering an epoch-stamped poster", async () => {
     const run = await runGenerator({ ...universe(), asOfSec: Number.NaN });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/refusing to render stale scores/);
+    expect(run.stderr).toMatch(/asOfSec must be a finite integer/);
+  });
+
+  it("refuses a stale PSI reading instead of publishing an old regime", async () => {
+    const run = await runGenerator(universe(), {
+      psiComputedAt: Math.floor(Date.now() / 1000) - 61 * 60,
+    });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/PSI reading is 61\.\dm old \(must be under 60m\) — refusing to render a stale level/);
+  });
+
+  it("refuses a future-dated PSI reading", async () => {
+    const run = await runGenerator(universe(), {
+      psiComputedAt: Math.floor(Date.now() / 1000) + 5 * 60,
+    });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/refusing to render a future-dated level/);
   });
 });
 
@@ -220,6 +276,15 @@ describe("safety-score map — join coverage guard", () => {
     expect(run.stderr).toMatch(/\(2\/20 unjoined\)/);
     expect(run.stderr).toMatch(/coin-18: no list row/);
   });
+
+  it("fails closed on a negative finite circulating bucket", async () => {
+    const { cards: c, assets: a } = universe();
+    a[0] = { ...a[0], circulating: { peggedUSD: -1 } };
+    const run = await runGenerator({ cards: c, assets: a });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Negative circulating supply for coin-00\.peggedUSD/);
+    expect(existsSync(run.pngPath)).toBe(false);
+  });
 });
 
 describe("safety-score map — grade-letter integrity", () => {
@@ -239,12 +304,33 @@ describe("safety-score map — grade-letter integrity", () => {
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });
 
-  it("routes a scored card whose grade is NR into the not-rated slice, not tier N", async () => {
+  it("rejects an NR card with a non-null score before classification", async () => {
     const { cards: c, assets: a } = universe();
     c.push({ id: "coin-nr-scored", score: 71, grade: "NR" });
     const run = await runGenerator({ cards: c, assets: a }, { stopBeforeRender: true });
-    expect(run.stderr).not.toMatch(/Unknown grade/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Score\/grade disagreement for coin-nr-scored/);
+  });
+
+  it("rejects an out-of-range score and a score-grade disagreement", async () => {
+    const { cards: c, assets: a } = universe();
+    c[0] = { id: c[0].id, score: 101, grade: "A+" };
+    const run = await runGenerator({ cards: c, assets: a });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Invalid score for coin-00/);
+
+    c[0] = { id: c[0].id, score: 20, grade: "A+" };
+    const disagreement = await runGenerator({ cards: c, assets: a });
+    expect(disagreement.status).toBe(1);
+    expect(disagreement.stderr).toMatch(/Score\/grade disagreement for coin-00/);
+  });
+
+  it("rejects duplicate report-card ids before the supply join", async () => {
+    const { cards: c, assets: a } = universe();
+    c.push({ ...c[0] });
+    const run = await runGenerator({ cards: c, assets: a });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Duplicate report-card id "coin-00"/);
   });
 });
 
@@ -255,10 +341,63 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     return path;
   }
 
+  function validSnapshot(fixture: { cards: Card[]; assets: Asset[] }): unknown {
+    const byAsset = new Map(fixture.assets.map((asset) => [asset.id, asset]));
+    const rated = fixture.cards.filter((card) => card.grade !== "NR");
+    const tierOrder = ["A", "B", "C", "D", "F"] as const;
+    const byTier = Object.fromEntries(tierOrder.map((tier) => [tier, rated.filter((card) => card.grade.charAt(0) === tier)]));
+    const mcapOf = (id: string) => {
+      const value = byAsset.get(id)?.circulating?.peggedUSD ?? 0;
+      return Math.max(0, value);
+    };
+    const totalMcap = rated.reduce((sum, card) => sum + mcapOf(card.id), 0);
+    return {
+      publicationStatus: "current",
+      counts: {
+        graded: rated.length,
+        notRated: fixture.cards.length - rated.length,
+        unjoined: rated.filter((card) => mcapOf(card.id) <= 0).length,
+        missingLogos: rated.length,
+        byTier: Object.fromEntries(tierOrder.map((tier) => [tier, byTier[tier].length])),
+      },
+      mapSummary: {
+        date: "2026-08-24",
+        asOfSec: Math.floor(Date.now() / 1000) - HOUR,
+        methodologyVersion: "9.19",
+        gradedCount: rated.length,
+        notRatedCount: fixture.cards.length - rated.length,
+        totalMcapUsd: totalMcap,
+        floorMcapByTier: { a: 1, other: 1 },
+        tiers: tierOrder.map((tier) => {
+          const cards = byTier[tier];
+          const tierMcap = cards.reduce((sum, card) => sum + mcapOf(card.id), 0);
+          return {
+            tier,
+            range: "0-100",
+            count: cards.length,
+            mcapUsd: tierMcap,
+            sharePct: totalMcap > 0 ? (tierMcap / totalMcap) * 100 : 0,
+            leaders: [...cards]
+              .sort((a, b) => mcapOf(b.id) - mcapOf(a.id))
+              .slice(0, 3)
+              .map((card) => ({ symbol: byAsset.get(card.id)?.symbol ?? card.id, score: card.score as number, mcapUsd: mcapOf(card.id) })),
+          };
+        }),
+      },
+      coins: rated.map((card) => ({
+        id: card.id,
+        symbol: byAsset.get(card.id)?.symbol ?? card.id,
+        score: card.score as number,
+        grade: card.grade,
+        mcap: mcapOf(card.id),
+      })),
+    };
+  }
+
   const scratch = scratchDir("pharos-safety-map-snapshots-");
 
   it("refuses to publish a census that shrank more than 2% overnight", async () => {
-    const path = snapshot(scratch, { counts: { graded: 100, notRated: 0 } });
+    const path = snapshot(scratch, validSnapshot(universe({ count: 100 })));
     const run = await runGenerator(universe({ count: 20 }), { args: ["--previous-snapshot", path] });
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/Graded count fell from 100 to 20 \(>2%\) since the previous snapshot/);
@@ -266,7 +405,7 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
   });
 
   it("refuses when the not-rated count moves more than 5 overnight", async () => {
-    const path = snapshot(scratch, { counts: { graded: 20, notRated: 0 } });
+    const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
     const run = await runGenerator(universe({ count: 20, notRated: 6 }), { args: ["--previous-snapshot", path] });
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/Not-rated count moved from 0 to 6 \(>5\) since the previous snapshot/);
@@ -277,11 +416,11 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
     const path = snapshot(scratch, { coins: Array.from({ length: 100 }, (_, i) => ({ id: `c${i}` })) });
     const run = await runGenerator(universe({ count: 20 }), { args: ["--previous-snapshot", path] });
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/Graded count fell from 100 to 20/);
+    expect(run.stderr).toMatch(/is malformed/);
   });
 
   it("passes a census that held steady, and says so", async () => {
-    const path = snapshot(scratch, { counts: { graded: 20, notRated: 2 } });
+    const path = snapshot(scratch, validSnapshot(universe({ count: 20, notRated: 2 })));
     const run = await runGenerator(universe({ count: 20, notRated: 2 }), {
       args: ["--previous-snapshot", path],
       stopBeforeRender: true,
@@ -291,13 +430,29 @@ describe("safety-score map — day-over-day delta guard (§11.2b rule 2)", () =>
   });
 
   it("tolerates a drop inside the 2% band and a not-rated move of exactly 5", async () => {
-    const path = snapshot(scratch, { counts: { graded: 20, notRated: 0 } });
+    const path = snapshot(scratch, validSnapshot(universe({ count: 20 })));
     const run = await runGenerator(universe({ count: 20, notRated: 5 }), {
       args: ["--previous-snapshot", path],
       stopBeforeRender: true,
     });
     expect(run.stderr).not.toMatch(/Not-rated count moved/);
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it("rejects a malformed baseline instead of treating it as a first run", async () => {
+    const path = snapshot(scratch, { counts: { graded: 0, notRated: 0 } });
+    const run = await runGenerator(universe({ count: 20 }), { args: ["--previous-snapshot", path] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/is malformed/);
+  });
+
+  it("rejects a large per-tier reclassification even when the total census is unchanged", async () => {
+    const prior = universe({ count: 20 });
+    const nextCards = prior.cards.map((card) => card.grade.startsWith("A") ? { ...card, grade: "B+", score: 77 } : card);
+    const path = snapshot(scratch, validSnapshot(prior));
+    const run = await runGenerator({ cards: nextCards, assets: prior.assets }, { args: ["--previous-snapshot", path] });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/Tier A count moved/);
   });
 });
 
@@ -323,20 +478,20 @@ describe("safety-score map — delta guard skips are never fatal (bootstrap path
     expect(run.stderr).toMatch(REACHED_RENDER_GATE);
   });
 
-  it("skips with a warning when the previous snapshot is unparseable", async () => {
+  it("rejects an unparseable previous snapshot", async () => {
     const path = join(scratch, "corrupt.json");
     writeFileSync(path, "{ not json");
     const run = await runGenerator(universe(), { args: ["--previous-snapshot", path], stopBeforeRender: true });
-    expect(`${run.stdout}${run.stderr}`).toMatch(/Could not read --previous-snapshot .*corrupt\.json/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/is malformed/);
   });
 
-  it("skips with a warning when the previous snapshot carries no graded count", async () => {
+  it("rejects a previous snapshot with no graded count", async () => {
     const path = join(scratch, "countless.json");
     writeFileSync(path, JSON.stringify({ edition: "daily", date: "2026-08-20" }));
     const run = await runGenerator(universe(), { args: ["--previous-snapshot", path], stopBeforeRender: true });
-    expect(`${run.stdout}${run.stderr}`).toMatch(/carries no graded count — delta guard skipped/);
-    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/is malformed/);
   });
 });
 

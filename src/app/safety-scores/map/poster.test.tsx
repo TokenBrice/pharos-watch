@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { cleanupFrontendTest } from "@/test-utils/frontend";
 
 import { SafetyMapPoster } from "./poster";
 
@@ -68,7 +69,7 @@ function fallbackText(): HTMLElement | null {
 }
 
 describe("SafetyMapPoster", () => {
-  afterEach(cleanup);
+  afterEach(cleanupFrontendTest);
 
   it("shows the explanatory panel when the poster already failed before hydration", () => {
     withImageState(FAILED_BEFORE_HYDRATION, () => {
@@ -98,6 +99,14 @@ describe("SafetyMapPoster", () => {
       render(<SafetyMapPoster />);
 
       expect(poster()).not.toBeNull();
+      expect(poster()?.getAttribute("alt")).toContain(
+        "five discrete grade bands: A at the centre, then B, C, D, and F outward",
+      );
+      expect(poster()?.getAttribute("alt")).toContain("orbit = grade band, not a continuous score");
+      expect(poster()?.getAttribute("alt")).toContain(
+        "bubble area tracks circulating supply above a per-tier minimum marker; assets below their tier's threshold share a fixed presence marker",
+      );
+      expect(poster()?.getAttribute("alt")).not.toContain("connected");
       expect(downloadLink()?.getAttribute("href")).toBe("/safety-scores/map.png");
       expect(fallbackText()).toBeNull();
     });

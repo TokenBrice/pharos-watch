@@ -43,6 +43,22 @@ describe("twitter helpers", () => {
     expect(result).toBe("Calm Drift (#22)\n\nPSI held firm at 94.1.");
   });
 
+  it("keeps the complete map hook inside the 270-character boundary", () => {
+    const hook = "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.";
+    const result = buildTweetText(
+      "Calm Drift",
+      "USDT moved through a deliberately long digest sentence ".repeat(8),
+      22,
+      hook,
+    );
+
+    expect(result.length).toBeLessThanOrEqual(270);
+    expect(result.endsWith(hook)).toBe(true);
+    expect(result).toContain("$USDT");
+    expect(result.match(/\$/g)).toHaveLength(1);
+    expect(result.slice(0, -hook.length).trimEnd()).toMatch(/\w…$/u);
+  });
+
   it("omits edition number when null or undefined", () => {
     expect(buildTweetText("Calm Drift", "PSI held firm.", null)).toBe("Calm Drift\n\nPSI held firm.");
     expect(buildTweetText("Calm Drift", "PSI held firm.")).toBe("Calm Drift\n\nPSI held firm.");
@@ -90,6 +106,7 @@ describe("twitter helpers", () => {
       }
       const payload = JSON.parse(String(init?.body));
       expect(payload.media).toEqual({ media_ids: ["1234567890123456789"] });
+      expect(payload.text).toContain("Find yours on today’s map.");
       return new Response(JSON.stringify({ data: { id: "1" } }), { status: 201 });
     });
     vi.stubGlobal("fetch", fetchSpy);
@@ -100,6 +117,7 @@ describe("twitter helpers", () => {
       creds,
       42,
       "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
+      "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.",
     )).resolves.toEqual({ tweetId: "1", mediaAttached: true, mediaError: null });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
@@ -122,6 +140,7 @@ describe("twitter helpers", () => {
       creds,
       null,
       "https://pharos.watch/safety-scores/map.png?date=2026-08-21",
+      "Of 100B USD in mapped supply, A tier’s 13 coins hold 81.8%; C/D/F’s 264 hold 11.2%. Find yours on today’s map.",
     );
     expect(result.mediaAttached).toBe(false);
     expect(result.mediaError).toContain("HTTP 404");

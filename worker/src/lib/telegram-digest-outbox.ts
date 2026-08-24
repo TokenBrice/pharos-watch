@@ -78,6 +78,7 @@ export interface EnqueueTelegramDigestEditionInput {
   editionNumber?: number | null;
   appendixHtml?: string | null;
   imageUrl?: string | null;
+  mapAppendixHtml?: string | null;
   successActions?: readonly TelegramDigestSuccessAction[];
   safetyContext: DigestSafetyContext;
 }
@@ -229,6 +230,7 @@ export async function enqueueTelegramDigestEdition(
     input.editionNumber,
     input.appendixHtml,
     input.imageUrl,
+    input.mapAppendixHtml,
   );
   const chunks = splitMessage(rendered);
   const payloadJson = JSON.stringify(chunks);

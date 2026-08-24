@@ -38,6 +38,12 @@ describe("query option builders", () => {
       producerIntervalMs: 24 * 60 * 60 * 1000,
       metaMaxAgeSec: 24 * 60 * 60,
     });
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.safetyScoreHistoryV2("usdc-circle", 3650)).toMatchObject({
+      queryKey: ["safety-score-history-v2", "usdc-circle", 3650],
+      path: "/api/safety-score-history-v2?stablecoin=usdc-circle&days=3650",
+      producerIntervalMs: 24 * 60 * 60 * 1000,
+      metaMaxAgeSec: 24 * 60 * 60,
+    });
   });
 
   it("builds canonical supply-history options", async () => {

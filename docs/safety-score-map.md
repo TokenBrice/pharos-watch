@@ -1,6 +1,6 @@
 # Safety Score Map
 
-The Safety Score map is a landscape poster of the graded stablecoin universe: every graded coin drawn as its logo, sized by circulating supply, arranged around a line-free spiral A-grade core with B, C, D, and F each completing a wide V9 grade orbit connected in supply-rank order. It is published at `/safety-scores/map/`, and the image itself is served from KV at `/safety-scores/map.png` on a daily cadence that is deliberately decoupled from Pages deploys.
+The Safety Score map is a landscape poster of the graded stablecoin universe: every graded coin appears in one of five discrete grade bands, with bubble area tracking circulating supply only above a per-tier minimum and smaller assets shown as fixed-size logo presence markers. The A-grade core is line-free; B, C, D, and F use quiet grade-colored, pattern-redundant band guides with no data-point path. The single-line footer records the PSI level, corresponding condition band, and calculation basis fetched for that render alongside the size encoding, capture time, methodology version, and graded count. A small marker uses the canonical PSI band colour while the text stays neutral and legible across every band; the frost-blue brand treatment and Safety Score grade palette do not change with PSI. A compact key in the header gives every letter, computed score range, guide pattern and the direction cue `inner -> safer`, followed by one computed A-tier count/share signal and an exact-width segmented supply-mass bar. Both computed size floors are disclosed in the footer instead of repeated in the key. It is published at `/safety-scores/map/`, and the image itself is served from KV at `/safety-scores/map.png` on a daily cadence that is deliberately decoupled from Pages deploys.
 
 Grades, scores, and the methodology behind them are owned by [report-cards.md](./report-cards.md). This document owns the map as a *surface*: its two editions, its publication path, its serving contract, and its operational levers.
 
@@ -23,7 +23,7 @@ One generator, one composition, two editions selected by `--edition`.
 | Movers window | Since the previous snapshot | Month-boundary snapshots |
 | Published to | KV, and therefore the live route | Not published by any automation |
 
-The monthly edition is never inferred from the data clock. Archive and output naming use the **UTC run date**; visible date provenance uses the report-card capture clock (`asOfSec`). Without that split, a run on the first of a month over the previous month's data would file itself under the wrong month and collide with the existing monthly archive.
+The monthly edition is never inferred from the data clock. Archive and output naming use the **UTC run date**; visible date provenance uses the report-card capture clock (`asOfSec`). Without that split, a run on the first of a month over the previous month's data would file itself under the wrong month and collide with the existing monthly archive. The Movers window names the snapshot comparison baseline; that comparison currently feeds the delta guard and is not yet rendered on the poster.
 
 `--issue <n>` supplies the monthly issue number; it is a positive integer and applies to the monthly lockup only.
 
@@ -31,27 +31,33 @@ The monthly edition is never inferred from the data clock. Archive and output na
 
 `scripts/maintenance/build-safety-score-map.ts`, run through `npm run build:safety-score-map` (daily) or `npm run build:safety-score-map:monthly`.
 
-Data comes from the keyed maintenance API — the V9 report cards and the stablecoin list — so `PHAROS_API_KEY` is required (env or `.env.local`), with `PHAROS_API_BASE` as an optional origin override. Supply is read through `getCirculatingRaw()` and treated as already USD-denominated.
+Data comes from the keyed maintenance API — the V9 report cards, stablecoin list, and current Stability Index response — so `PHAROS_API_KEY` is required (env or `.env.local`), with `PHAROS_API_BASE` as an optional origin override. Supply is read through `getCirculatingRaw()` and treated as already USD-denominated. The PSI footer follows the same display rule as the Stability Index page: the rolling 24-hour level and band when both are available, labeled `24H AVG`; otherwise the raw current sample is labeled `RAW`. A missing, malformed, future-dated, or stale PSI reading fails the render instead of publishing an old regime.
 
-Beside the PNG, sharing its basename, the run writes `.svg` and `.html` (the rendered scene and its screenshot host), `.alt.json` (alt text plus the per-tier table), `.snapshot.json` (per-coin `{id, score, grade}` under a header of `{edition, date, asOfSec, renderedAtSec, methodologyVersion, counts}`), and `.manifest.json`. The snapshot is both the movers baseline and the next run's delta-guard input.
+Beside the PNG, sharing its basename, the run writes `.svg` and `.html` (the rendered scene and its screenshot host), `.alt.json` (alt text plus the per-tier table), `.snapshot.json` (per-coin `{id, symbol, score, grade, mcap}` under a header of `{edition, date, publicationStatus, asOfSec, renderedAtSec, methodologyVersion, counts, mapSummary}`), and `.manifest.json`. The snapshot is both the movers baseline and the next run's delta-guard input.
 
 Every figure on the poster is computed from the fetched data. No headline number is a literal — under an unattended daily cadence a hardcoded figure becomes a published falsehood within days.
 
-Bubble area tracks circulating supply above a legibility floor. Assets below that floor share a minimum radius so their logos remain recognizable at posting size; the generator computes and discloses the corresponding supply threshold in the footer on every render. Two successive 25% increases make the minimum radii 56.25% larger than the original poster floor, while larger assets retain their proportional sizing. The floor is fail-closed: large bubbles may shrink during fitting, but the renderer will not silently reduce the minimum logo size.
+Bubble area tracks circulating supply above a per-tier minimum marker. The generator derives and discloses both thresholds after fitting — one for A and one for B-F — at readable size on every render. Assets below those thresholds share a fixed-size logo presence marker rather than a fake proportional bubble; every asset retains its circle-clipped, `sharp`-transcoded PNG logo, with a high-contrast initial used only when no logo asset exists. Logo plates are selected deterministically from that raster's alpha and luminance: recognizable transparent marks sit as bare silhouettes on the field without a redundant grade rim, predominantly light marks receive a dark plate, and opaque full-bleed tiles retain a light plate behind their own background. Floor-sized marks retain the grade rim because the logo alone is too small to carry the tier signal. Larger assets retain proportional sizing, and the floor is fail-closed: large bubbles may shrink during fitting, but the renderer will not silently reduce either minimum logo size.
+
+The line-free A core is deliberately compact, and B begins immediately outside it so the two read as a dense centre. Outer-band thickness is recomputed for each render from the required bubble footprint plus a fixed semantic minimum, then the B-F stack is allocated sequentially toward the bounded map edge. C receives any remaining radial thickness because its census and modifier lanes carry the greatest placement demand; D and F remain distinct outer tiers. Within B-F, the published grade modifier selects one of three materially separated bounded radial lanes: plus inward, unmodified on the guide, and minus outward. This is discrete label placement, never continuous score-to-radius placement; A keeps its line-free core, and a tier with only unmodified grades collapses to its guide. Every lane retains its full distributed angular slack and therefore completes the ellipse. When separated lanes collide, their offset shrinks through a deterministic fixed-step search; if zero separation is required, the band collapses onto its single evenly packed guide before the whole-layout fitting retries. The compact header does not reserve body space, so the orbital field uses the reclaimed vertical canvas. If the demand cannot retain the minimum thickness, inter-band gap, bubble clearance, and fixed floor together, fitting fails rather than compressing a grade boundary. The segmented supply-mass rail uses `tier supply / total mapped supply * track width` exactly, with no minimum visible segment width; its single printed count/share calls out the dominant A-tier supply concentration.
+
+The two largest A-tier circles form one tangent hero pair whose area-weighted visual centroid is fixed to the map centre; this keeps unequal USDT/USDC-sized leaders from making the core read off-axis. The orbital field starts below a protected 12px gutter after the header separator. The centre is biased slightly downward so that extra top clearance does not unnecessarily consume the footer-side plotting space.
 
 ### Guards
 
 The generator exits non-zero rather than publishing something wrong. All of these are unconditional:
 
-- **Freshness.** The report-card capture must be under 48 hours old. A stalled producer must fail the job, not publish week-old scores under today's date.
+- **Freshness and publication status.** The report-card capture must be future-free and under 48 hours old (the exact 48-hour boundary fails), and the API must label it `current`. The PSI sample must also be future-free and stay within the shared Stability Index endpoint freshness budget. A stalled or held producer must fail the job, not publish old scores or an old PSI regime under today's date.
+- **Input hygiene.** The response must have unique card IDs, finite scores in range, exact grade vocabulary, and score/grade agreement. Negative finite supply buckets fail closed before the supply join.
 - **Join coverage.** At least 95% of graded cards must join a list row with real supply, or the map is drawing legibility floors instead of data.
 - **Grade vocabulary.** An unrecognized grade letter fails; a silently dropped tier is worse than no map.
 - **Finite geometry.** A non-finite bubble scale or radius fails, as does an empty graded set.
-- **Composition.** A layout linter rejects overlapping or out-of-band geometry.
+- **Composition and annotations.** The header chart-key panel, masthead lockup and publication footer participate in the annotation scene without claiming body space. The annotation planner treats the grade key, supply-mass rail and combined footer disclosure/provenance run as required, rejects collisions between the header lockup and annotations or between annotations, and fails the render if any cannot be placed. The unconditional composition linter also rejects an outer band when its largest normalized angular gap exceeds three times that band's mean gap. Firefox `getBBox()` measurements of the final SVG groups are revalidated before the screenshot.
+- **Header clearance.** Every planet edge must remain below the protected 12px gutter beneath the header rule; the render fails if a future layout crosses it.
 - **Fonts.** Each family is checked explicitly; `document.fonts.ready` resolves even when a face fails, and fallback metrics visibly change the publication typography.
 - **Raster size.** The screenshot must come back at exactly 3200x1800 (1600x900 at `deviceScaleFactor: 2`).
 
-One guard is skippable: the **day-over-day delta guard**, armed by `--previous-snapshot <path>`. It fails the run when the graded count falls more than 2% or the not-rated count moves more than 5 against the prior snapshot — the guard against a half-broken scoring producer reclassifying most of the universe. An absent or unreadable snapshot skips it with a warning, so a first run can bootstrap.
+One guard is skippable: the **day-over-day delta guard**, armed by `--previous-snapshot <path>`. It fails the run when the graded count falls more than 2% or the not-rated count moves more than 5 against the prior snapshot, and also checks per-tier counts, per-coin grade transitions, tier and leader supply, join identity, and missing-logo count. A missing path or no supplied baseline skips it with a warning, so a first run can bootstrap; a present but malformed baseline fails closed rather than being treated as absent.
 
 ## Publication
 
@@ -68,7 +74,7 @@ The workflow reads `safety-map:snapshot:latest` to arm the delta guard, renders 
 | `safety-map:latest.png` | Same bytes, stable URL for the site |
 | `safety-map:latest.json` | Manifest — **written last, the commit marker** |
 
-Because the manifest is written last, a consumer that requires it can never observe a half-published set, and a failure part-way leaves the previous complete set live and untouched. Both PNG keys are read back and byte-compared before the manifest is written. A publish that would land behind the live manifest's render time is refused outright.
+Because the manifest is written last, a consumer that requires it can never observe a half-published set. The dated PNG is read back and hash-compared immediately after it is written, before the latest PNG is promoted; a verification failure at that point leaves the previous complete image live, while the manifest-last sequence still leaves a tolerated cross-key window in which the image and manifest can describe different editions. Both PNG keys are hash-compared before the manifest is written. A publish that would land behind the live manifest's render time is refused outright.
 
 Keys live under the single-purpose `safety-map:` prefix inside the existing `SELECTOR_SNAPSHOTS` namespace — the same namespace `functions/selector-snapshot/[[path]].ts` uses. Reusing it changes account state not at all, so the weekly Cloudflare account-state drift check needs no manifest update. (R2 was rejected for this reason among others: that check normalizes `d1` and `kv_namespace` bindings only, so an R2 bucket would be unmonitored surface.)
 
@@ -96,7 +102,7 @@ The page at `src/app/safety-scores/map/page.tsx` embeds the image with a downloa
 
 ## Digest Degradation Contract
 
-The digest includes the map **iff all three hold**:
+The digest includes the map **iff all four hold**:
 
 1. `safety-map:latest.json` exists,
 2. `manifest.date` is today (UTC), and

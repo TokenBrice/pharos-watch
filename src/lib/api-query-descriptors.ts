@@ -20,7 +20,10 @@ import type {
 } from "@shared/types/market";
 import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
-import type { SafetyScoreHistoryResponse } from "@shared/types/safety-score-history";
+import type {
+  SafetyScoreHistoryResponse,
+  SafetyScoreHistoryV2Response,
+} from "@shared/types/safety-score-history";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type { HealthResponse } from "@shared/types/status/public-health";
 import type { TelegramPulse } from "@shared/types/status/telegram";
@@ -320,6 +323,18 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     (stablecoinId: string, days: number = 3650) => ({
       queryKey: ["safety-score-history", stablecoinId, days] as const,
       path: API_PATHS.safetyScoreHistory(stablecoinId, days),
+      producerIntervalMs: CRON_SAFETY_GRADE_HISTORY,
+      metaMaxAgeSec: CRON_SAFETY_GRADE_HISTORY / 1000,
+    }),
+  ),
+  safetyScoreHistoryV2: defineParameterizedApiQuery(
+    "meta",
+    createLazySchema<SafetyScoreHistoryV2Response>(
+      async () => (await import("@shared/types/safety-score-history")).SafetyScoreHistoryV2ResponseSchema,
+    ),
+    (stablecoinId: string, days: number = 3650) => ({
+      queryKey: ["safety-score-history-v2", stablecoinId, days] as const,
+      path: API_PATHS.safetyScoreHistoryV2(stablecoinId, days),
       producerIntervalMs: CRON_SAFETY_GRADE_HISTORY,
       metaMaxAgeSec: CRON_SAFETY_GRADE_HISTORY / 1000,
     }),

@@ -10,7 +10,7 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 import { CRON_24H } from "@/lib/cron-intervals";
-import { useSafetyScoreHistory } from "../api-hooks";
+import { useSafetyScoreHistory, useSafetyScoreHistoryV2 } from "../api-hooks";
 
 describe("useSafetyScoreHistory", () => {
   beforeEach(() => {
@@ -44,6 +44,19 @@ describe("useSafetyScoreHistory", () => {
       expect.objectContaining({
         queryKey: ["safety-score-history", "", 3650],
         enabled: false,
+      }),
+    );
+  });
+
+  it("uses the identity-aware history endpoint with the same polling policy", () => {
+    useSafetyScoreHistoryV2("usdt-tether");
+
+    expect(useQueryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ["safety-score-history-v2", "usdt-tether", 3650],
+        staleTime: CRON_24H,
+        refetchInterval: 2 * CRON_24H,
+        enabled: true,
       }),
     );
   });
