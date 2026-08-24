@@ -26,6 +26,7 @@ import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state
 
 interface StablecoinDetailSeoContentProps {
   coin: StablecoinMeta;
+  includeHeading?: boolean;
   summary?: StablecoinAiSummary | null;
 }
 
@@ -301,7 +302,11 @@ function ProofOfReservesValue({ coin }: { coin: StablecoinMeta }) {
   );
 }
 
-export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinDetailSeoContentProps) {
+export function StablecoinDetailSeoContent({
+  coin,
+  includeHeading = true,
+  summary = null,
+}: StablecoinDetailSeoContentProps) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
@@ -313,15 +318,17 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
 
   return (
     <div className="mb-6 space-y-4">
-      <h1 className="sr-only">
-        {coin.status === "frozen"
-          ? `${coin.name} (${coin.symbol}) frozen stablecoin archive`
-          : coin.status === "delisted"
-            ? `${coin.name} (${coin.symbol}) delisted stablecoin record`
-            : coin.status === "quarantined"
-              ? `${coin.name} (${coin.symbol}) quarantined stablecoin record`
-              : `${coin.name} (${coin.symbol}) stablecoin analytics`}
-      </h1>
+      {includeHeading ? (
+        <h1 className="sr-only">
+          {coin.status === "frozen"
+            ? `${coin.name} (${coin.symbol}) frozen stablecoin archive`
+            : coin.status === "delisted"
+              ? `${coin.name} (${coin.symbol}) delisted stablecoin record`
+              : coin.status === "quarantined"
+                ? `${coin.name} (${coin.symbol}) quarantined stablecoin record`
+                : `${coin.name} (${coin.symbol}) stablecoin analytics`}
+        </h1>
+      ) : null}
 
       <ListingStateBanner coin={coin} />
 
