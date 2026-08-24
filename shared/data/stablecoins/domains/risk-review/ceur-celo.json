@@ -35,14 +35,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Mento documents EURm as a reserve-backed FPMM asset whose swaps use an OracleAdapter rate and whose reserve flows are governed by trading limits and circuit breakers. The reviewed EURm product does not expose borrower-owned collateral debt positions or token-level liquidation branches; the oracle governs pool pricing and trading validity instead.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Mento's OracleAdapter rate is a price-sensitive top-level authority used to quote EURm FPMM swaps, with BreakerBox validating feed freshness and bounds before trading. EURm exposes no borrower-owned collateral debt positions or token-level liquidation markets, so the oracle is scored without branch rows.",
       "sources": [
         {
-          "label": "Mento V3 oracle and circuit-breaker documentation",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+          "label": "Mento V3 oracle and circuit-breaker documentation (document revision 2026-04-17)",
+          "url": "https://github.com/mento-protocol/docs/blob/ccd5f142a994de719315ad019f43f42ac7f47d98/dive-deeper/fpmm/oracles-and-circuit-breakers.md"
         },
         {
           "label": "Mento V3 deployment addresses",

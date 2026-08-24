@@ -6,6 +6,7 @@ import {
   resolveV9RedemptionRouteCostBpsAtNotional,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
+import { isRedemptionSettlementFaster } from "@shared/lib/redemption-backstop-configs/settlement";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
@@ -455,6 +456,16 @@ function redemptionCoverageClass(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
 ): RouteReview["coverageClass"] {
+  // A reviewed bounded-terms gap keeps the captured mechanism and capacity
+  // curve visible, but it cannot lend score credit to settlement/cost values
+  // that the review did not establish. This is V9-only static disposition;
+  // the frozen redemption observation and stored row remain untouched.
+  if (
+    getRedemptionBackstopConfig(entry.stablecoinId)?.v9RouteReviewTerms
+      ?.scoringDisposition === "bounded-terms-gap"
+  ) {
+    return "diagnostic";
+  }
   const requiresCurrentOpenAttribution =
     observation.scoreEligible &&
     entry.sourceMode === "dynamic" &&
@@ -466,28 +477,76 @@ function redemptionCoverageClass(
   return requiresCurrentOpenAttribution && !hasCurrentOpenAttribution ? "diagnostic" : "exact-lower-bound";
 }
 
-function redemptionReviewTerms(entry: RedemptionBackstopEntry): {
+function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number): {
   settlementModel: RedemptionSettlementModel;
   settlementDelaySec: number | undefined;
   settlementHorizonSec: number;
+  overridesCapturedSettlementHorizon: boolean;
   minRedeemUsd: number | null;
 } {
   const reviewed = getRedemptionBackstopConfig(entry.stablecoinId)?.v9RouteReviewTerms;
-  const settlementModel = reviewed?.settlementModel
-    ? resolveMoreConservativeRedemptionSettlement(entry.settlementModel, reviewed.settlementModel)
-    : entry.settlementModel;
-  const settlementDelaySec =
-    settlementModel === entry.settlementModel ? entry.settlementDelaySec : undefined;
+  const reviewedSettlementDelaySec = reviewed?.settlementDelaySec;
+  const reviewedSettlementModel = reviewed?.settlementModel ?? entry.settlementModel;
+  const capturedSettlementHorizonSec = Math.max(
+    REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[entry.settlementModel],
+    entry.settlementDelaySec ?? 0,
+  );
+  // A numeric SLA can improve the score even when the coarse model label is
+  // unchanged, so direction is checked against both the model and the exact
+  // captured horizon.
+  const reviewedSettlementIsFaster =
+    isRedemptionSettlementFaster(reviewedSettlementModel, entry.settlementModel) ||
+    (reviewedSettlementDelaySec !== undefined &&
+      reviewedSettlementDelaySec < capturedSettlementHorizonSec);
+  const reviewedAtSec = reviewed?.reviewedAt
+    ? Date.parse(`${reviewed.reviewedAt}T00:00:00.000Z`) / 1_000
+    : Number.NaN;
+  const reviewedSettlementEvidenceIsCurrent =
+    reviewedSettlementDelaySec !== undefined &&
+    (reviewed?.docs?.length ?? 0) > 0 &&
+    Number.isFinite(reviewedAtSec) &&
+    reviewedAtSec <= clockSec &&
+    clockSec - reviewedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC;
+  // Score-improving settlement research shares V9's existing reviewed-evidence
+  // expiry window. Conservative overlays remain admissible without evidence.
+  const admitsReviewedFasterSettlement =
+    reviewedSettlementIsFaster && reviewedSettlementEvidenceIsCurrent;
+  const reviewedFasterSettlementDelaySec = admitsReviewedFasterSettlement
+    ? reviewedSettlementDelaySec
+    : undefined;
+  const settlementModel = reviewedSettlementIsFaster
+    ? admitsReviewedFasterSettlement
+      ? reviewedSettlementModel
+      : reviewed?.settlementModel
+        ? resolveMoreConservativeRedemptionSettlement(entry.settlementModel, reviewed.settlementModel)
+        : entry.settlementModel
+    : reviewedSettlementModel;
+  // An expired or uncited faster SLA must not survive here: the reviewed model
+  // can equal the captured model (e.g. `days` 14d -> a cited `days` 2d), so
+  // without the direction guard an inadmissible improvement would leak straight
+  // back in and never expire. A conservative reviewed SLA is always safe.
+  const settlementDelaySec = reviewedFasterSettlementDelaySec !== undefined
+    ? reviewedFasterSettlementDelaySec
+    : !reviewedSettlementIsFaster &&
+        settlementModel === reviewedSettlementModel &&
+        reviewedSettlementDelaySec !== undefined
+      ? reviewedSettlementDelaySec
+      : settlementModel === entry.settlementModel
+        ? entry.settlementDelaySec
+        : undefined;
   const minimums = [entry.minRedeemUsd, reviewed?.minRedeemUsd].filter(
     (value): value is number => value != null,
   );
   return {
     settlementModel,
     settlementDelaySec,
-    settlementHorizonSec: Math.max(
-      REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[settlementModel],
-      settlementDelaySec ?? 0,
-    ),
+    settlementHorizonSec: reviewedFasterSettlementDelaySec !== undefined
+      ? reviewedFasterSettlementDelaySec
+      : Math.max(
+          REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[settlementModel],
+          settlementDelaySec ?? 0,
+        ),
+    overridesCapturedSettlementHorizon: reviewedFasterSettlementDelaySec !== undefined,
     minRedeemUsd: minimums.length > 0 ? Math.max(...minimums) : null,
   };
 }
@@ -570,7 +629,7 @@ function buildRedemptionRouteReview(
         : ("producer-failed" as const);
   const scope = observation.scope;
   const modelConfidence = observation.modelConfidence ?? entry.modelConfidence;
-  const reviewedTerms = redemptionReviewTerms(entry);
+  const reviewedTerms = redemptionReviewTerms(entry, fixedInput.clockSec);
   const physicalResourceKeys =
     scope.kind === "issuer"
       ? [`issuer:${scope.issuerId}`]
@@ -587,7 +646,9 @@ function buildRedemptionRouteReview(
     coverageClass: redemptionCoverageClass(entry, observation),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
-    settlementHorizonSec: Math.max(observation.settlementHorizonSec, reviewedTerms.settlementHorizonSec),
+    settlementHorizonSec: reviewedTerms.overridesCapturedSettlementHorizon
+      ? reviewedTerms.settlementHorizonSec
+      : Math.max(observation.settlementHorizonSec, reviewedTerms.settlementHorizonSec),
     queueDepthUsd: entry.queueDepthUsd ?? null,
     dailyLimitUsd: entry.dailyLimitUsd ?? null,
     minRedeemUsd: reviewedTerms.minRedeemUsd,

@@ -165,14 +165,14 @@ function supplyByRoute(routes: readonly BridgeRouteDeployment[]) {
 
 function compileFixture(
   metadata: V9ExtensionRegistryMeta,
-  options: { clockSec?: number } = {},
+  options: { clockSec?: number; chainSupplyByChain?: ReturnType<typeof supplyByRoute> } = {},
 ) {
   const routes = metadata.bridgeRouteRisk?.routes ?? [];
   const clockSec = options.clockSec ?? 10_000;
   const fixed = makeV9FixedInput({
     assetId: metadata.id,
     clockSec,
-    chainSupplyByChain: supplyByRoute(routes),
+    chainSupplyByChain: options.chainSupplyByChain ?? supplyByRoute(routes),
   });
   const extension = buildSafetyScoreV9BaselineExtension(fixed, {
     metaById: new Map([[metadata.id, metadata]]),
@@ -304,12 +304,22 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       const satelliteRoutes = metadata.bridgeRouteRisk.routes.filter(
         (route) => route.issuanceModel !== "native-issuance",
       );
+      const nativeDeploymentKeys = new Set(
+        metadata.bridgeRouteRisk.routes
+          .filter((route) => route.issuanceModel === "native-issuance")
+          .map((route) => route.id),
+      );
       const satelliteAuthorityKeys = satelliteRoutes.map(
         (route) => `${route.controllerChain}:${route.controllerAddress!.toLowerCase()}`,
       );
 
       expect(mintControls).toHaveLength(metadata.mintAuthority.controls?.length ?? 0);
-      expect(mintControls.every((control) => control.deploymentKey === `asset:${assetId}`)).toBe(true);
+      expect(
+        mintControls.every(
+          (control) =>
+            control.deploymentKey === `asset:${assetId}` || nativeDeploymentKeys.has(control.deploymentKey),
+        ),
+      ).toBe(true);
       expect(mintControls.every((control) => !satelliteAuthorityKeys.includes(control.authority?.authorityKey ?? ""))).toBe(
         true,
       );
@@ -323,7 +333,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     },
   );
 
-  it("keeps issuer-native mint and transfer-pool overlays distinct", () => {
+  it("emits a deployment-bound authority with its real key, non-root reach, and reconciled share", () => {
     const routes = [route(ARBITRUM_ROUTE), route(BASE_ROUTE)];
     const metadata = meta("fixture-issuer-native", {
       mintAuthority: mintProfile({
@@ -345,7 +355,10 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     const bridge = controls.find((control) => control.controlKey.startsWith("bridge-meta:"));
 
     expect(mint).toMatchObject({
-      deploymentKey: `asset:${metadata.id}`,
+      deploymentKey: ARBITRUM_ROUTE,
+      scope: "deployment",
+      economicLossScope: "deployment",
+      materialSupplyShare: 0.5,
       capabilities: ["mint"],
     });
     expect(bridge).toMatchObject({
@@ -354,6 +367,96 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
     expect(controls).toHaveLength(2);
     expect(bridge!.capabilities).not.toContain("mint");
+  });
+
+  it("keeps a deployment-bound authority global when the supply partition does not reconcile", () => {
+    const routes = [route(ARBITRUM_ROUTE), route(BASE_ROUTE)];
+    const metadata = meta("fixture-unreconciled-native-control", {
+      mintAuthority: mintProfile({
+        controls: [mintControl({ deploymentRefs: [ARBITRUM_ROUTE] })],
+      }),
+      bridgeRouteRisk: bridgeProfile(routes),
+    });
+    const { compiled } = compileFixture(metadata, {
+      chainSupplyByChain: {
+        ...supplyByRoute(routes),
+        optimism: {
+          current: 10_000_000,
+          circulatingPrevDay: 10_000_000,
+          circulatingPrevWeek: 10_000_000,
+          circulatingPrevMonth: 10_000_000,
+        },
+      },
+    });
+    const mint = controlsFor(compiled, metadata.id).find((control) =>
+      control.controlKey.startsWith("mint-meta:"),
+    );
+
+    expect(mint).toMatchObject({
+      deploymentKey: `asset:${metadata.id}`,
+      scope: "global",
+      economicLossScope: "global-claim",
+      materialSupplyShare: null,
+    });
+  });
+
+  it("keeps an authority reaching every reconciled deployment global", () => {
+    const routes = [route(ARBITRUM_ROUTE), route(BASE_ROUTE)];
+    const metadata = meta("fixture-root-reaching-native-control", {
+      mintAuthority: mintProfile({
+        controls: [mintControl({ deploymentRefs: [ARBITRUM_ROUTE, BASE_ROUTE] })],
+      }),
+      bridgeRouteRisk: bridgeProfile(routes),
+    });
+    const { compiled } = compileFixture(metadata);
+    const mint = controlsFor(compiled, metadata.id).find((control) =>
+      control.controlKey.startsWith("mint-meta:"),
+    );
+
+    expect(mint).toMatchObject({
+      deploymentKey: `asset:${metadata.id}`,
+      scope: "global",
+      economicLossScope: "global-claim",
+      materialSupplyShare: null,
+    });
+  });
+
+
+  it("scopes the USDP Token-2022 upgrade authority to its 5.81% Solana deployment", () => {
+    const metadata = ACTIVE_META_BY_ID.get("usdp-paxos");
+    if (!metadata?.bridgeRouteRisk?.routes) throw new Error("expected reviewed USDP route metadata");
+    const chainSupplyByChain = Object.fromEntries(
+      metadata.bridgeRouteRisk.routes.map((candidate) => [
+        candidate.destinationChain,
+        {
+          current:
+            candidate.destinationChain === "solana"
+              ? 5_810_000
+              : candidate.destinationChain === "ethereum"
+                ? 94_190_000
+                : 0,
+          circulatingPrevDay: 0,
+          circulatingPrevWeek: 0,
+          circulatingPrevMonth: 0,
+        },
+      ]),
+    );
+    const { compiled } = compileFixture(metadata, {
+      clockSec: v9TestClockSec(),
+      chainSupplyByChain,
+    });
+    const token2022Upgrade = compiled.assets[0]!.controls.find((control) =>
+      control.failureDomains.some(
+        (domain) => domain.key === "platform:solana-token-2022-program",
+      ),
+    );
+
+    expect(token2022Upgrade).toMatchObject({
+      deploymentKey: "solana:HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM",
+      scope: "deployment",
+      economicLossScope: "deployment",
+      materialSupplyShare: 0.0581,
+    });
   });
 
   it("fails closed on disagreement between structured bridge cap bounds while matching bounds stay bounded", () => {

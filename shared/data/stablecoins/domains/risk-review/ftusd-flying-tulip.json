@@ -22,13 +22,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 oracle review",
-      "rationale": "Flying Tulip describes an oracleless ftUSD mint/redeem token path rather than a borrower-owned collateral market. Its live lending strategies are a separate reserve layer with venue oracle and liquidation exposure, so this disposition is limited to the token-level branch model.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Flying Tulip's ftUSD rail has no borrower-owned liquidation market, but the asset's own reserve strategy uses collateral health factors, venue prices, and rebalancing controls for its Aave-compatible lending positions. Those strategy-level price inputs are a top-level authority for ftUSD backing and rebalancing; they do not require token-level borrower branch rows.",
       "sources": [
         {
-          "label": "Flying Tulip ftUSD product documentation",
+          "label": "Flying Tulip ftUSD product documentation (updated 2026-07-15)",
           "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
         }
       ]

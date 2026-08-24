@@ -95,7 +95,19 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
     capacityModel: { ...config.capacityModel },
     costModel: { ...config.costModel },
     ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms } } : {}),
-    ...(config.v9RouteReviewTerms ? { v9RouteReviewTerms: { ...config.v9RouteReviewTerms } } : {}),
+    ...(config.v9RouteReviewTerms
+      ? {
+          v9RouteReviewTerms: {
+            ...config.v9RouteReviewTerms,
+            ...(config.v9RouteReviewTerms.missingScoringFields
+              ? { missingScoringFields: [...config.v9RouteReviewTerms.missingScoringFields] }
+              : {}),
+            ...(config.v9RouteReviewTerms.docs
+              ? { docs: config.v9RouteReviewTerms.docs.map(cloneRedemptionDocSource) }
+              : {}),
+          },
+        }
+      : {}),
     ...(config.v9ComposedDexExit
       ? {
           v9ComposedDexExit: {

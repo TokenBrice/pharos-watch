@@ -38,14 +38,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "JPYT is issued through fully collateralized USDT or USDC deposits and redeemed by burning JPYT for the deposited asset. The documented flow has no borrower-specific undercollateralized position or liquidation branch to enumerate.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-a oracle applicability review",
+      "rationale": "JPYT has no borrower-specific undercollateralized positions or liquidation branches. Its deposit manager nevertheless reads Chainlink USD prices for the deposit token and JPY to calculate the JPYT amount minted, while redemptions use the accumulated deposit-token/JPYT conversion rate; these are price-sensitive top-level issuance and redemption authorities.",
       "sources": [
         {
-          "label": "DePhaser money flow",
-          "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+          "label": "DePhaser USDT DepositManager source (document commit 2024-10-10)",
+          "url": "https://github.com/0xDephaser/contracts/blob/4f504039350f68cce5fa038e2f27e4ba71cbc480/src/UsdtDepositManager.sol"
         },
         {
           "label": "DePhaser terms of service",

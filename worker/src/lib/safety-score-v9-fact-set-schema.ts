@@ -83,6 +83,7 @@ const ResearchEvidenceSchema = z
     sourceId: CanonicalTextSchema,
     observedAtSec: UnixSecondsSchema,
     publishedAtSec: UnixSecondsSchema.nullable(),
+    publishedBy: z.enum(["issuer", "parent", "other", "unknown"]).optional(),
     url: z.string().url().nullable(),
     contentSha256: Sha256Schema,
     confidence: z.enum(["verified", "probable", "manual-review", "limited", "unknown"]),

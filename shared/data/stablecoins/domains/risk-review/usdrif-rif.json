@@ -22,17 +22,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "USDRIF is minted and redeemed against the single C0 RIF reserve bucket, whose global coverage and system states use one RIF/USD price path. The protocol has no borrower-specific collateral positions or market-specific oracle and liquidation branches; below its final coverage threshold it enters one irreversible system-wide liquidation state.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-b oracle applicability review",
+      "rationale": "RIF on Chain documents that its replaceable RIF/USD PriceProvider supplies the rate used to calculate locked RIF, global reserve coverage, and the RIF amount returned for USDRIF convertibility. That system-wide mint, redemption, and coverage valuation is price-sensitive. The protocol has no borrower-specific collateral positions or market-specific branches, so the authority is scored at the top level without collateral-liquidation rows.",
       "sources": [
         {
-          "label": "RIF on Chain main concepts",
+          "label": "RIF on Chain main concepts (document last updated 2023-09-27)",
           "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/main-concepts"
         },
         {
-          "label": "RIF on Chain system states",
+          "label": "RIF on Chain system states (same primary documentation set, dated 2023-09-27 above)",
           "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states"
         }
       ]

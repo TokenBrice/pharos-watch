@@ -1,6 +1,6 @@
 # Safety Score V9 Equivalence Harness
 
-Operational procedure for proving that a code change does not move published Safety Score V9 numbers.
+Operational procedure for proving that a code change either leaves published Safety Score V9 output unchanged or moves only a reviewed, declared set of grades.
 
 The harness freezes one production compiler input, replays it through the V9 pipeline at two commits, and diffs the two replay artifacts. A refactor that is genuinely score-neutral produces an empty diff; anything else names the asset and the field that moved.
 
@@ -8,12 +8,13 @@ Every later task that says "verified against the harness runbook" means the proc
 
 ## When to use it
 
-| Situation                                                     | Gate                    | Expected result                                  |
-| ------------------------------------------------------------- | ----------------------- | ------------------------------------------------ |
-| Score-neutral refactor, dedup, or extraction                   | `--assert-empty`        | `EMPTY DIFF — bit-identical`                      |
-| Intentional methodology or policy change                       | `--assert-grade-stable` | Reported drift entries, zero grade flips          |
-| Before activating a candidate stack in production              | Pre-activation sweep    | Both captures empty at both commits               |
-| Immediately after the cutover deploy                           | Post-deploy check       | Replay at the pre-cutover commit matches the live publication |
+| Situation                                                     | Gate                                      | Expected result                                  |
+| ------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------ |
+| Score-neutral refactor, dedup, or extraction                   | `--assert-empty`                          | `EMPTY DIFF — bit-identical`                      |
+| Intentional score change that must not change a grade          | `--assert-grade-stable`                   | Reported drift entries, zero grade flips          |
+| Intentional release with reviewed grade changes                | `safety-score-v9:movers --assert-declared` | Every grade flip is declared with the observed direction |
+| Before activating a score-neutral candidate stack in production | Pre-activation sweep                    | Both captures empty at both commits               |
+| Immediately after a score-neutral cutover deploy               | Post-deploy check                         | Replay at the pre-cutover commit matches the live publication |
 
 ## Why the replay is a fair test
 
@@ -150,7 +151,41 @@ npm run safety-score-v9:diff -- \
 | `--assert-grade-stable` | A card changed grade or disappeared            | the same counts, plus one `FLIP <id>` line per card (stderr) | 1 |
 | neither flag            | always                                         | the full JSON diff                             | 0 / 1 |
 
-The two assertion flags are mutually exclusive. Use `--assert-empty` for Wave 1 (score-neutral) work and `--assert-grade-stable` for Wave 2 (intentional scoring change), where drift is expected but grade flips are not.
+The two diff assertion flags are mutually exclusive. Use `--assert-empty` for score-neutral work and `--assert-grade-stable` when score drift is intentional but grade flips are not.
+
+### Expected-movers gate for an intentional multi-grade release
+
+When a reviewed release intentionally changes grades, neither diff assertion is the right contract. Run the same baseline and candidate replays, then compare their card sets with the mover gate:
+
+```sh
+npm run safety-score-v9:movers -- \
+  --before agents/v9-captures/replay-<baseline-commit>-<stamp>.json \
+  --after agents/v9-captures/replay-<candidate-commit>-<stamp>.json \
+  --manifest agents/v9-captures/expected-movers-<stamp>.json \
+  --json agents/v9-captures/movers-<stamp>.json \
+  --markdown \
+  --assert-declared
+```
+
+The manifest declares grade transitions, not score targets:
+
+```json
+{
+  "movers": [
+    {
+      "id": "<asset-id>",
+      "from": "<baseline-grade>",
+      "to": "<candidate-grade>",
+      "reason": "<reviewed causal reason>",
+      "workstream": "<release workstream>"
+    }
+  ]
+}
+```
+
+`--assert-declared` fails when an observed grade flip has no manifest row or when its observed `from`/`to` direction differs from the declaration. The report also shows same-grade score moves, pillar deltas, binding-cap changes, assets present on only one side, and manifest rows that did not flip. Those remain review findings, but the gate itself is deliberately limited to undeclared or misdirected grade flips; a declared-but-absent transition does not fail automatically and must be resolved before release.
+
+Use this mode only after the expected set is derived from reviewed behavior and before looking at the candidate output. Do not turn an unexpected flip into a declaration merely to make the gate green. Multi-grade releases keep the same capture identity, fixed-clock replay, two-capture sampling, and artifact-hygiene rules as the equivalence harness; replace the empty-diff assertion with the declared-movers gate for each capture.
 
 ## (d) Pre-activation sweep
 

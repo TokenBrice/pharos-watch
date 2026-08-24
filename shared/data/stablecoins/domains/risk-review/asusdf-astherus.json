@@ -30,18 +30,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "Aster documents asUSDF as the yield-bearing wrapper received by staking USDF. Minting and withdrawal change wrapper shares and return the upstream USDF asset; asUSDF does not create collateralized borrower positions or expose collateral-health liquidation branches of its own.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Aster documents asUSDF as a yield-bearing wrapper whose APY is reflected in its net asset value. Staking mints shares and withdrawal converts those shares back to USDF through a queue; there are no borrower-specific collateral or liquidation branches, but the wrapper NAV is a price-sensitive top-level redemption and valuation authority.",
       "sources": [
         {
-          "label": "Aster: mint asUSDF",
+          "label": "Aster: Mint asUSDF (last updated 2025-06-10)",
           "url": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
-        },
-        {
-          "label": "Aster USDF and asUSDF tutorials",
-          "url": "https://docs.asterdex.com/product/usdf-stablecoin/tutorials"
         }
       ]
     },

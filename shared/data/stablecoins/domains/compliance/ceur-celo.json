@@ -36,6 +36,7 @@
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
+    "issuerEntity": "Mento Labs GmbH",
     "foreignExceptionStatus": "unknown",
     "notes": "Mento's own regulatory discussion describes cEUR/EURm as fully decentralized and says there is no central entity pressing the minting button or identifiable issuer. EURm is nevertheless kept in apparent-payment-stablecoin scope because Mento markets it as a euro stablecoin for payments and FX. No token-specific GENIUS approval, official application, state-qualified authorization, or foreign-issuer registration was located.",
     "references": [

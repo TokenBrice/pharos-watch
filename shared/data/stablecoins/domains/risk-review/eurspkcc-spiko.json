@@ -22,11 +22,15 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "EURSPKCC represents shares in one professionally managed cash-and-carry fund. Investors submit fund-share redemption requests that an authorized operator executes by burning the shares; they do not open borrower-specific collateral positions, and the reviewed contracts expose no permissionless liquidation markets to split into branches.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
+      "rationale": "EURSPKCC represents shares in one professionally managed cash-and-carry fund. Investors do not open borrower-specific collateral positions, and the reviewed contracts expose no permissionless liquidation markets to split into branches. However, Spiko's permissioned Oracle publishes the fund share's euro-denominated NAV and the operator executes redemptions by burning shares, so that administrative NAV is a price-sensitive top-level valuation and redemption authority that must be scored.",
       "sources": [
+        {
+          "label": "Spiko Oracle.sol source (commit dated 2023-12-19)",
+          "url": "https://github.com/spiko-tech/contracts/blob/2ccf1eb66ef3646cc24bf39059beda2ea3d5aaa1/contracts/oracle/Oracle.sol"
+        },
         {
           "label": "Spiko Cash & Carry product page",
           "url": "https://www.spiko.io/spiko-cash-and-carry"

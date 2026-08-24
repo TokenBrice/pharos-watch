@@ -38,18 +38,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "f(x) documents fxSAVE as a tokenized ERC-4626 Stability Pool vault that compounds rewards into fxUSD and USDC. Holders mint and redeem vault shares; fxSAVE does not create borrower debt positions or collateral-ratio-triggered liquidation markets. The variantOf relationship preserves the complete fxUSD parent branch review.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "fxSAVE's ERC-4626 share accounting values the underlying Stability Pool position when users mint or redeem vault shares, making that exchange-rate calculation a price-sensitive top-level authority. fxSAVE creates no borrower debt positions or local collateral-ratio liquidation markets, so no branch rows are required.",
       "sources": [
         {
           "label": "f(x) Stability Pool documentation",
           "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"
         },
         {
-          "label": "f(x) fxSAVE integration documentation",
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave"
+          "label": "f(x) SavingFxUSD implementation (source revision 2025-02-24)",
+          "url": "https://github.com/AladdinDAO/fx-protocol-contracts/blob/59551dba909da826f54d090c552cc8dceaa29bd9/contracts/core/SavingFxUSD.sol"
         }
       ]
     },

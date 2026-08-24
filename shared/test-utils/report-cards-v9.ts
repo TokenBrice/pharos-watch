@@ -3,6 +3,7 @@ import {
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
+import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
@@ -265,13 +266,14 @@ export function makeReportCardsV9Card(
         semantics: "limiting-fact-owner-v1",
         totalFactCount: 0,
         facts: [],
-        summaries: [
-          { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-          { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-          { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-          { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-          { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-        ],
+        summaries: [...V9EvidenceResponsibilitySchema.options]
+          .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
+          .map((responsibility) => ({
+            responsibility,
+            factCount: 0,
+            criticalFactCount: 0,
+            reasonCodes: [],
+          })),
       },
       scoreAdjustments: [],
       wrapperParentLimit: null,

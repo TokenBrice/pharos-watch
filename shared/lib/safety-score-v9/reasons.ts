@@ -2,6 +2,7 @@ import {
   V9FactGapV2Schema,
   V9FactGapV3Schema,
   V9TypedFactPathSchema,
+  type V9EvidenceReferenceV2,
   type V9EvidenceResponsibility,
   type V9FactGapV2,
   type V9FactGapV3,
@@ -11,6 +12,10 @@ import {
 import type { V9ReasonCode, V9ReasonOwnerDomain } from "../../types/safety-score-v9";
 import type { DependencyType } from "../../types/dependency-types";
 import { compareText } from "./primitives";
+import {
+  resolveV9EvidenceResponsibility,
+  type V9PublishedEvidenceAttribution,
+} from "./evidence";
 
 export interface V9PublicReason {
   code: V9ReasonCode;
@@ -110,9 +115,24 @@ export function createV9FactGapV3(args: {
   path: V9TypedFactPath;
   message: string;
   evidenceRefIds?: readonly string[];
+  evidenceHistory?: {
+    publishedBy: V9PublishedEvidenceAttribution;
+    references: readonly V9EvidenceReferenceV2[];
+  };
 }): V9FactGapV3 {
+  const { evidenceHistory, responsibility, ...gap } = args;
+  const evidenceRefIds = [...(args.evidenceRefIds ?? [])];
   return V9FactGapV3Schema.parse({
-    ...args,
-    evidenceRefIds: [...(args.evidenceRefIds ?? [])],
+    ...gap,
+    responsibility: evidenceHistory === undefined
+      ? responsibility
+      : resolveV9EvidenceResponsibility({
+          observationState: args.observationState,
+          fallbackResponsibility: responsibility,
+          evidenceReferences: evidenceHistory.references.filter((reference) =>
+            evidenceRefIds.includes(reference.evidenceId)),
+          publishedBy: evidenceHistory.publishedBy,
+        }),
+    evidenceRefIds,
   });
 }

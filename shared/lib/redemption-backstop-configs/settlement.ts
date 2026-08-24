@@ -8,7 +8,7 @@ const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] =
   "queued",
 ];
 
-export function isRedemptionSettlementAtLeastAsConservative(
+function isRedemptionSettlementAtLeastAsConservative(
   candidate: RedemptionSettlementModel,
   baseline: RedemptionSettlementModel,
 ): boolean {
@@ -16,6 +16,13 @@ export function isRedemptionSettlementAtLeastAsConservative(
     REDEMPTION_SETTLEMENT_CONSERVATISM.indexOf(candidate) >=
     REDEMPTION_SETTLEMENT_CONSERVATISM.indexOf(baseline)
   );
+}
+
+export function isRedemptionSettlementFaster(
+  candidate: RedemptionSettlementModel,
+  baseline: RedemptionSettlementModel,
+): boolean {
+  return !isRedemptionSettlementAtLeastAsConservative(candidate, baseline);
 }
 
 export function resolveMoreConservativeRedemptionSettlement(

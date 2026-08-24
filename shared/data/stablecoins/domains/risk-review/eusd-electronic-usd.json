@@ -34,14 +34,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "EUSD is issued and redeemed 1:1 against a shared RToken basket. Reserve Protocol responds to collateral default by switching the basket, rebalancing through auctions, and using staked RSR as overcollateralization; users do not open borrower-specific debt positions with liquidatable collateral branches.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-a oracle applicability review",
+      "rationale": "EUSD has no borrower-owned debt positions or borrower-specific liquidation branches. Its shared RToken basket still consumes collateral-plugin price feeds for default status, basket valuation, issuance/redemption accounting, and auction rebalancing, so that system-wide basket authority is price-sensitive and scoreable at the top level.",
       "sources": [
         {
-          "label": "Reserve Protocol overview",
-          "url": "https://github.com/reserve-protocol/protocol"
+          "label": "Reserve Protocol collateral-plugin documentation (document commit 2025-11-21)",
+          "url": "https://github.com/reserve-protocol/protocol/blob/e27227b2919bc2c35655ab649cbf06cc583dc94d/docs/collateral.md"
         },
         {
           "label": "Reserve Protocol collateral plugin documentation",

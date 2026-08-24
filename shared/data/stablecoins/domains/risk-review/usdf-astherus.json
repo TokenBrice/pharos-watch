@@ -18,21 +18,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "USDF mints and redeems against USDT while Aster manages backing and hedge positions through Ceffu and Binance. Holders do not open permissionless collateralized debt positions with onchain per-collateral liquidation thresholds, auctions, backstops, or shutdown branches, so the V9 CDP branch inventory does not apply.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "USDF mints and redeems at a fixed one-to-one USDT unit, but its backing mechanism then opens and balances spot and short positions on Binance to keep the reserve delta-neutral. That price-sensitive system-wide valuation and rebalancing authority is scoreable even though holders do not maintain borrower-specific liquidation branches.",
       "sources": [
         {
-          "label": "Aster USDF FAQ",
-          "url": "https://docs.asterdex.com/product/usdf-stablecoin/faqs"
-        },
-        {
-          "label": "Aster USDF fund custody and risk management",
-          "url": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
-        },
-        {
-          "label": "Aster USDF capital flows",
+          "label": "Aster USDF capital flows and delta-neutral position balancing (last updated 2026-03-26)",
           "url": "https://docs.asterdex.com/product/usdf-stablecoin/how-usdf-works"
         }
       ]

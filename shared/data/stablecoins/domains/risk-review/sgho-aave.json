@@ -38,17 +38,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Aave documents sGHO as a savings vault where users deposit GHO and withdraw GHO against an accruing share value. sGHO holders do not open Aave borrower positions, so there are no sGHO collateral-market or liquidation branches to inventory; the underlying GHO parent carries the separate Aave oracle profile.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-b oracle applicability review",
+      "rationale": "Aave's dated launch configuration defines sGHO as an ERC-4626 vault whose internal yield index accrues at a governance-configured rate and is reflected in the share-to-GHO conversion rate. That price-sensitive exchange-rate authority is used to value mint, withdrawal, and redemption amounts. sGHO holders do not open borrower positions, so the applicable authority is scored at the top level without collateral-liquidation branch rows; the underlying GHO parent carries its separate Aave reserve-oracle exposure.",
       "sources": [
         {
-          "label": "Aave sGHO guide",
-          "url": "https://aave.com/docs/aave-v3/guides/sgho"
+          "label": "Aave sGHO Launch Configuration ARFC (created 2026-03-25)",
+          "url": "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346"
         },
         {
-          "label": "Aave Oracle docs",
+          "label": "Aave Oracle docs (current protocol documentation; sGHO launch authority dated above)",
           "url": "https://aave.com/docs/ecosystem/oracle"
         }
       ]

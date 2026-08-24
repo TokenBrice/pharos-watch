@@ -396,6 +396,7 @@ const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
       "issuer-undisclosed",
       "method-unsupported",
       "producer-failed",
+      "published-evidence-expired",
     ]),
   })
   .strict()
@@ -501,16 +502,29 @@ const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
     // already-authenticated last-known-good snapshots; newly generated
     // publications always include this field.
     facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema).optional(),
-    summaries: z.array(SafetyScoreV9EvidenceResponsibilityItemSchema).length(RESPONSIBILITIES.length),
+    summaries: z
+      .array(SafetyScoreV9EvidenceResponsibilityItemSchema)
+      .min(RESPONSIBILITIES.length - 1)
+      .max(RESPONSIBILITIES.length),
   })
   .strict()
   .superRefine((evidence, ctx) => {
     const actualResponsibilities = evidence.summaries.map((summary) => summary.responsibility);
-    if (JSON.stringify(actualResponsibilities) !== JSON.stringify(RESPONSIBILITIES)) {
+    const legacyResponsibilities = RESPONSIBILITIES.slice(0, -1);
+    const supportedResponsibilities = evidence.facts === undefined
+      ? [legacyResponsibilities, RESPONSIBILITIES]
+      : [RESPONSIBILITIES];
+    if (
+      !supportedResponsibilities.some(
+        (expected) => JSON.stringify(actualResponsibilities) === JSON.stringify(expected),
+      )
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["summaries"],
-        message: "V9 evidence responsibility summaries must cover every owner in canonical order",
+        message: evidence.facts === undefined
+          ? "V9 evidence responsibility summaries without per-fact paths must preserve a supported canonical owner order"
+          : "V9 evidence responsibility summaries must cover every owner in canonical order",
       });
     }
     const expectedTotal = evidence.summaries.reduce((sum, summary) => sum + summary.factCount, 0);

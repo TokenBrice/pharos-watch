@@ -420,6 +420,19 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
   if (route.observationState !== "known" && route.observationState !== "stale") {
     return "unsupported-same-notional-route";
   }
+  // A documented redemption mechanism can remain useful diagnostic evidence
+  // even when its reviewed scoring terms are incomplete. The V9 adapter marks
+  // that bounded-gap disposition diagnostic while preserving its modeled
+  // capacity curve. Classify the absent scoreable terms as Pharos-side missing
+  // same-notional evidence (globally bounded / producer-failed), not as an
+  // unsupported method or an adverse issuer fact.
+  if (
+    route.lane === "redemption" &&
+    route.coverageClass === "diagnostic" &&
+    route.evidenceKind === "documented-terms"
+  ) {
+    return "missing-same-notional-route";
+  }
   const creditableNonAtomic = isCreditableNonAtomicRedemption(route, envelope);
   if ((!route.scoreEligible || route.coverageClass === "diagnostic") && !creditableNonAtomic) {
     return "unsupported-same-notional-route";
@@ -961,16 +974,25 @@ export function evaluateV9Exit(
   ) as Record<V9ExitHorizon, V9ExitHorizonTrace>;
   if (evaluated.length === 0) {
     const portfolioReviewed = args.portfolioStatus === "reviewed-complete";
+    const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route");
     const onlyUnsupportedDiagnostics =
       diagnosticReasons.length > 0 &&
       diagnosticReasons.every((reason) => reason === "unsupported-same-notional-route");
-    const defaultReason = portfolioReviewed
-      ? "no-viable-exit-path"
-      : onlyUnsupportedDiagnostics
-        ? null
-        : "missing-same-notional-route";
+    // A complete route inventory proves "no viable exit" only when the reviewed
+    // route facts themselves are complete. A diagnostic route carrying
+    // `missing-same-notional-route` is explicit bounded uncertainty (for example,
+    // a known issuer mechanism whose stress capacity/SLA/cost is not established),
+    // not measured zero exit. Preserve the policy's bounded-unknown floor so
+    // ordinary uncertainty cannot manufacture an F grade.
+    const defaultReason = hasBoundedMissingRoute
+      ? "missing-same-notional-route"
+      : portfolioReviewed
+        ? "no-viable-exit-path"
+        : onlyUnsupportedDiagnostics
+          ? null
+          : "missing-same-notional-route";
     return {
-      score: portfolioReviewed ? 0 : boundedFloor,
+      score: hasBoundedMissingRoute ? boundedFloor : portfolioReviewed ? 0 : boundedFloor,
       stressRequest,
       primaryRouteKey: null,
       diversificationRouteKey: null,
@@ -1010,17 +1032,24 @@ export function evaluateV9Exit(
       ? redundancyHeadroom * (independent.score / 100)
       : 0;
   const hasOtherIncludedRoute = evaluated.length > 1;
+  const boundedGapFloorApplies =
+    boundedFloor !== null &&
+    diagnosticReasons.includes("missing-same-notional-route") &&
+    primary.score + diversificationBonus < boundedFloor;
   return {
-    score: roundTraceScore(primary.score + diversificationBonus),
+    score: boundedGapFloorApplies
+      ? boundedFloor
+      : roundTraceScore(primary.score + diversificationBonus),
     stressRequest,
-    primaryRouteKey: primary.route.routeKey,
-    diversificationRouteKey: independent?.route.routeKey ?? null,
-    diversificationBonus: roundTraceScore(diversificationBonus),
+    primaryRouteKey: boundedGapFloorApplies ? null : primary.route.routeKey,
+    diversificationRouteKey: boundedGapFloorApplies ? null : independent?.route.routeKey ?? null,
+    diversificationBonus: boundedGapFloorApplies ? 0 : roundTraceScore(diversificationBonus),
     horizons,
     // Excluded optional routes stay visible on their per-route traces; a weak
     // or unreviewed alternative cannot impose a critical reason once a
     // score-eligible route carries the exit claim.
     reasons: sortedUnique([
+      ...(boundedGapFloorApplies ? ["missing-same-notional-route"] : []),
       ...(hasOtherIncludedRoute && !independent ? ["correlated-exit-routes"] : []),
     ]) as V9ReasonCode[],
     routes: traces,

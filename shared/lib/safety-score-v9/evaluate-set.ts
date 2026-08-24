@@ -20,6 +20,7 @@ import { isV9MaterialShare } from "./backing";
 import { assertV9FactSetCompiledInProcess } from "./compile";
 import {
   buildV9DependencyEvaluationPlan,
+  distinctV9RootLiabilityIds,
   projectV9RoleDependencyPillarLimits,
   resolveV9DependencyInputs,
   type V9CommonModeMember,
@@ -331,6 +332,75 @@ function isKnownRequiredStatus(status: V9FactStatusV2): boolean {
   return status.applicability.state === "required" && status.observationState === "known";
 }
 
+export interface V9ControlDomainScopeAssessment {
+  economicLossScope: "deployment" | "global-claim";
+  deploymentKeys: readonly string[];
+  materialShare: number | null;
+}
+
+/**
+ * A shared mint/upgrade authority is deployment-scoped only when every local
+ * member explicitly says that its reach is deployment-local and a complete
+ * liability partition supplies the affected share. Any unresolved reach,
+ * presentation-level deployment key, or incomplete partition remains a
+ * whole-claim common mode.
+ */
+export function assessV9ControlDomainScope(
+  failureDomain: V9FailureDomainRef,
+  members: readonly V9CommonModeMember[],
+  asset: V9AssetFactsBase | undefined,
+  supplyExposure: V9SupplyChainExposure,
+): V9ControlDomainScopeAssessment {
+  const globalClaim = (): V9ControlDomainScopeAssessment => ({
+    economicLossScope: "global-claim",
+    deploymentKeys: [],
+    materialShare: null,
+  });
+  if (
+    (failureDomain.kind !== "mint-control" && failureDomain.kind !== "upgrade-control") ||
+    asset === undefined ||
+    members.length === 0 ||
+    !members.every((member) => member.owner === "control") ||
+    !supplyExposure.complete ||
+    supplyExposure.unattributedShare > SHARE_RECONCILIATION_TOLERANCE
+  ) {
+    return globalClaim();
+  }
+
+  const shareByDeployment = new Map<string, number>();
+  for (const member of members) {
+    const control = asset.controls.find((candidate) => candidate.controlKey === member.pathKey);
+    if (
+      control === undefined ||
+      !isKnownRequiredStatus(control.status) ||
+      control.scope !== "deployment" ||
+      control.economicLossScope !== "deployment" ||
+      control.claimImpairment === "unknown" ||
+      control.deploymentKey.startsWith("asset:")
+    ) {
+      return globalClaim();
+    }
+    const deploymentKey = control.deploymentKey;
+    const separatorIndex = deploymentKey.indexOf(":");
+    if (separatorIndex <= 0) return globalClaim();
+    const chainKey = deploymentKey.slice(0, separatorIndex);
+    const chainId = resolveChainId(chainKey) ?? chainKey.toLowerCase();
+    const materialShare = control.materialSupplyShare ?? supplyExposure.shareBySlug.get(chainId) ?? null;
+    if (materialShare === null) return globalClaim();
+    const previous = shareByDeployment.get(deploymentKey);
+    if (previous !== undefined && !sharesReconcile(previous, materialShare)) return globalClaim();
+    shareByDeployment.set(deploymentKey, materialShare);
+  }
+
+  const materialShare = [...shareByDeployment.values()].reduce((sum, share) => sum + share, 0);
+  if (materialShare > 1 + SHARE_RECONCILIATION_TOLERANCE) return globalClaim();
+  return {
+    economicLossScope: "deployment",
+    deploymentKeys: [...shareByDeployment.keys()].sort(compareText),
+    materialShare: clampShare(materialShare),
+  };
+}
+
 function commonModeMemberStatus(
   member: V9CommonModeMember,
   assetsById: ReadonlyMap<string, V9AssetFactsV3>,
@@ -577,9 +647,10 @@ function buildCommonModeContext(
 
 /**
  * Grades proportional common-mode domains from reviewed asset-local exposure.
- * Mature ecosystem domains are diagnostic; otherwise proven exposure below 5%
- * is diagnostic, 5%-<10% is moderate, and >=10% or unknown is high. Serial
- * control domains do not enter this proportional path and remain fail-closed.
+ * Mature ecosystem domains are diagnostic; otherwise proven exposure below 10%
+ * is diagnostic, 10%-<25% is moderate, and >=25% or unknown is high. Control
+ * domains enter this path only after their deployment reach and complete
+ * liability share are proved; unresolved control reach remains fail-closed.
  */
 function venueFamilyKey(key: string): string {
   return key.toLowerCase().replace(/-v\d+$/u, "");
@@ -595,6 +666,16 @@ function proportionalCommonModeSeverity(
   if (share === null) return high;
   if (!isV9MaterialShare(share, materiality.commonModeShareThreshold)) return "low";
   return isV9MaterialShare(share, materiality.commonModeHighShareThreshold) ? high : "moderate";
+}
+
+export function deploymentControlDomainSeverity(
+  assessment: V9ControlDomainScopeAssessment,
+  materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
+): V9Severity {
+  if (assessment.economicLossScope !== "deployment" || assessment.materialShare === null) {
+    return materiality.commonModeSignal.severity;
+  }
+  return proportionalCommonModeSeverity(assessment.materialShare, false, materiality);
 }
 
 interface V9CommonModeShareInfo {
@@ -712,6 +793,11 @@ function commonModeReasonQualifier(
   if (kind === "reserve-issuer") {
     return "single-obligor exposure priced in backing, diagnostic only";
   }
+  if (kind === "mint-control" || kind === "upgrade-control") {
+    if (severity === "low") return `proven deployment exposure below ${lowPct}, diagnostic only`;
+    if (severity === "moderate") return `proven deployment exposure from ${lowPct} to below ${highPct}`;
+    return shareUnavailable ? "control reach or deployment exposure unresolved" : `deployment exposure at or above ${highPct}`;
+  }
   return severity === "high" ? "shared critical control identity" : "diagnostic";
 }
 
@@ -758,8 +844,19 @@ function commonModeSignalsByAsset(
           })
         : unpricedMembers;
     const assetIds = uniqueSorted(effectiveMembers.map((member) => member.assetId));
+    // Root-liability collapse is a control-census rule: a wrapper must not make
+    // its own parent look like a second independent asset sharing one mint or
+    // upgrade authority. Other common modes (DEX, bridge, chain, reserve,
+    // oracle) count distinct affected assets/paths; collapsing them erased real
+    // shared-resource signals and was broader than the approved methodology.
+    const controlCensus =
+      group.failureDomain.kind === "mint-control" ||
+      group.failureDomain.kind === "upgrade-control";
+    const censusAssetIds = controlCensus
+      ? distinctV9RootLiabilityIds(assetIds, plan.serialPaths)
+      : assetIds;
     if (
-      assetIds.length < materiality.commonControlMinAssets ||
+      censusAssetIds.length < materiality.commonControlMinAssets ||
       effectiveMembers.length < materiality.commonControlMinPaths
     ) {
       continue;
@@ -841,25 +938,44 @@ function commonModeSignalsByAsset(
         plan.serialPaths,
       );
       const context = contextFor(assetId);
-      const severity = parentControlled || controllerOwned
+      const controlDomainScope = assessV9ControlDomainScope(
+        group.failureDomain,
+        ownMembers,
+        assetsById.get(assetId),
+        context.supplyExposure,
+      );
+      const localControlShare =
+        controlDomainScope.economicLossScope === "deployment"
+          ? controlDomainScope.materialShare
+          : null;
+      const sameIssuerControl = mintControlSeverity === "low";
+      const severity = parentControlled || controllerOwned || sameIssuerControl
         ? "low"
-        : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, context, materiality));
-      // Only the proportional (chain/dex-protocol/bridge-route) domains carry
-      // a per-asset measured share; parent-controlled and mint/upgrade-control
-      // groups keep their existing group-first phrasing below.
+        : localControlShare !== null
+          ? deploymentControlDomainSeverity(controlDomainScope, materiality)
+          : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, context, materiality));
+      // Proportional chain, DEX, bridge, and proven deployment-local control
+      // domains carry a per-asset measured share. All unresolved control scope
+      // keeps the existing group-first, fail-closed phrasing below.
       const shareInfo =
-        parentControlled || controllerOwned || mintControlSeverity !== null
+        parentControlled || controllerOwned || sameIssuerControl
           ? null
-          : commonModeShareForDomain(group.failureDomain, context, materiality);
+          : localControlShare !== null
+            ? { share: localControlShare, mature: false }
+            : commonModeShareForDomain(group.failureDomain, context, materiality);
       const shareUnavailable = severity === "high" && shareInfo !== null && shareInfo.share === null;
       const qualifier = parentControlled || controllerOwned
         ? assetId === mintControlAssessment?.controllerAssetId
           ? "own controller, downstream reuse creates no reverse dependency, diagnostic only"
           : "own required parent's controller, priced by the parent cap, diagnostic only"
-        : mintControlSeverity === "low"
+        : sameIssuerControl
           ? "same-issuer controller, diagnostic only"
-          : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
-      const groupClause = `${effectiveMembers.length} reviewed paths across ${assetIds.length} assets share ${key}`;
+          : localControlShare !== null
+            ? commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, false)
+            : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
+      const groupClause = controlCensus
+        ? `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} independent root liabilities share ${key}`
+        : `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} assets share ${key}`;
       // Where the coin's own measured share drives the severity (moderate, or
       // high with a measured — not unavailable — share), lead the reason with
       // that share and demote the cross-asset group trigger to secondary
@@ -885,17 +1001,12 @@ function commonModeSignalsByAsset(
         ownShare !== null
           ? `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier} (also ${groupClause}${memberQualityClause}).`
           : `${groupClause}${memberQualityClause}, ${qualifier}.`;
-      const economicLossScope = commonModeEconomicScope(group.failureDomain.kind);
-      const localDeploymentKeys = uniqueSorted(
-        effectiveMembers
-          .filter((member) => member.assetId === assetId && member.owner === "control")
-          .flatMap((member) => {
-            const control = assetsById
-              .get(assetId)
-              ?.controls.find((candidate) => candidate.controlKey === member.pathKey);
-            return control === undefined ? [] : [control.deploymentKey];
-          }),
-      );
+      const defaultEconomicLossScope = commonModeEconomicScope(group.failureDomain.kind);
+      const economicLossScope =
+        controlDomainScope.economicLossScope === "deployment"
+          ? "deployment"
+          : defaultEconomicLossScope;
+      const localDeploymentKeys = controlDomainScope.deploymentKeys;
       const signal: V9StructuralSignal = {
         ...materiality.commonModeSignal,
         severity,
@@ -916,7 +1027,7 @@ function commonModeSignalsByAsset(
         recoveryPath:
           group.failureDomain.kind === "dex-protocol"
             ? "market-substitution"
-            : group.failureDomain.kind === "chain" || group.failureDomain.kind === "bridge-route"
+            : economicLossScope === "deployment"
               ? "deployment-migration"
               : group.failureDomain.kind === "reserve-issuer" || group.failureDomain.kind === "reserve-custodian"
                 ? "unknown"

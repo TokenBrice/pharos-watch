@@ -26,14 +26,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "Curve's repository describes scrvUSD as an unmodified Yearn V3 vault accepting crvUSD, with deposited funds left in the vault and no strategies. Minting and redemption are share accounting rather than borrower debt creation, so scrvUSD has no local collateral-oracle or liquidation branches. The variantOf relationship keeps the unresolved crvUSD parent branch review visible rather than treating it as cleared.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-a oracle applicability review",
+      "rationale": "scrvUSD has no local borrower debt positions, collateral oracles, or liquidation branches, and its crvUSD parent retains its separate branch review. The Yearn V3 vault nevertheless computes a price-per-share from total assets and total supply to convert crvUSD into scrvUSD shares and redeem shares back to crvUSD, so its local NAV/exchange-rate accounting is a price-sensitive top-level authority.",
       "sources": [
         {
-          "label": "Savings crvUSD repository",
-          "url": "https://github.com/curvefi/scrvusd"
+          "label": "Savings crvUSD Yearn V3 vault source (document commit 2024-11-01)",
+          "url": "https://github.com/curvefi/scrvusd/blob/cb0217e0ca8de9997567c6e50f024c0d8101fe87/contracts/yearn/VaultV3.vy"
         },
         {
           "label": "Curve crvUSD risk documentation",

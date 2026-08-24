@@ -89,6 +89,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * reason: they feed version *labels* rather than scoring behaviour.
  */
 export const V9_FACT_PRODUCER_SOURCE_PATHS = [
+  "shared/data/safety-score-v9/incident-reviews-v1.json",
   "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
   "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
   "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
@@ -148,6 +149,7 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/types/safety-schema-primitives.ts",
   "shared/types/safety-score-history.ts",
   "shared/types/safety-score-v9-mechanism-overlays.ts",
+  "shared/types/safety-score-v9-incidents.ts",
   "shared/types/safety-score-v9-mechanism-profile.ts",
   "shared/types/safety-score-v9-operational-resilience-overlays.ts",
   "shared/types/safety-score-v9-transfer-overlays.ts",
@@ -158,6 +160,7 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "worker/src/lib/report-cards-fixed-input.ts",
   "worker/src/lib/safety-score-v9-extension.ts",
   "worker/src/lib/safety-score-v9-extension-bridge.ts",
+  "worker/src/lib/safety-score-v9-extension-incidents.ts",
   "worker/src/lib/safety-score-v9-extension-mechanism.ts",
   "worker/src/lib/safety-score-v9-extension-oracle.ts",
   "worker/src/lib/safety-score-v9-extension-operational-resilience.ts",

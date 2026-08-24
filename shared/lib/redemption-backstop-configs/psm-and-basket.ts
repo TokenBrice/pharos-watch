@@ -171,8 +171,9 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
     outputAssetType: "mixed-collateral",
     outputAssets: ["asset:eutbl"],
-    costModel: undisclosedReviewedFee(
-      "Usual docs describe EUR0 redemption into eligible euro RWA collateral through the dApp; public materials reviewed do not publish one fixed EUR0 redemption fee",
+    costModel: fixedFee(
+      3,
+      "Usual documents a 3 bps fee for the permissioned direct EUR0 redemption into euTBL",
     ),
     docs: [
       sourceRef("Usual EUR0 docs", "https://tech.usual.money/overview/features/eur0", ["route", "capacity", "access"]),
@@ -182,11 +183,14 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ]),
       sourceRef("Usual EUR0 product docs", "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin", [
         "route",
+        "fees",
+        "settlement",
       ]),
     ],
     notes: [
       "Modeled as the Usual dApp basket redemption route into eligible euro-denominated RWA collateral, primarily Spiko EUTBL, rather than a direct fiat EUR issuer rail.",
       "Output declared 2026-07-19: the Usual EUR0 product docs state redemption burns EUR0 to receive euTBL (Spiko EU T-Bills MMF) at par on the permissioned route, and the tech docs list EUTBL by Spiko as the sole EUR0 collateral entry; the permissionless Swapper Engine leg settles in EURC subject to liquidity and is not the modeled route.",
+      "Fee bound declared 2026-08-24 from the Usual EUR0 page updated 2026-02-16: the modeled permissioned direct route burns EUR0 for euTBL at par minus 3 bps. The separate permissionless EURC route can queue for T+1 to T+5 when buffers are empty and is not used for this cost bound.",
     ],
   },
   "gho-aave": {

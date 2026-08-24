@@ -30,21 +30,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex ORCL curation batch 24",
-      "rationale": "Monetrix documents USDM minting by depositing USDC, redemption by burning USDM and claiming USDC after a configured cooldown, and a protocol-managed long-spot/short-perpetual delta-neutral strategy. The reviewed product does not expose borrower-specific collateral positions, collateral ratios, liquidation auctions, backstops, or shutdown branches for USDM; the remaining strategy valuation and operational feed details are retained as opaque rather than invented.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "USDM has no borrower-specific collateral or liquidation branches, but Monetrix's protocol-wide strategy buys an equivalent dollar amount of spot assets, opens equal short perpetual positions, and actively reallocates among yield sources. Those dollar-valued hedge construction and rebalancing decisions require a price-sensitive top-level authority, whose feed topology and failover remain unpublished.",
       "sources": [
         {
-          "label": "Monetrix mint USDM documentation",
-          "url": "https://doc.monetrix.xyz/guide/mint"
-        },
-        {
-          "label": "Monetrix redeem USDM documentation",
-          "url": "https://doc.monetrix.xyz/guide/redeem"
-        },
-        {
-          "label": "Monetrix delta-neutral strategy documentation",
+          "label": "Monetrix delta-neutral strategy documentation (last updated 2026-05-30)",
           "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy"
         }
       ]

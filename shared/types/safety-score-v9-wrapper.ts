@@ -31,6 +31,34 @@ export type V9WrapperFactDisposition = z.infer<typeof V9WrapperFactDispositionSc
 export const V9WrapperRiskAssessmentSchema = z.enum(["none", "low", "moderate", "high", "critical"]);
 export type V9WrapperRiskAssessment = z.infer<typeof V9WrapperRiskAssessmentSchema>;
 
+const V9WrapperIncidentScopeSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("root-claim") }).strict(),
+  z
+    .object({
+      kind: z.literal("deployment"),
+      deploymentKey: CanonicalTextSchema,
+      exposureShare: z.number().finite().min(0).max(1),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("integration-only"),
+      integrationKey: CanonicalTextSchema,
+    })
+    .strict(),
+  z.object({ kind: z.literal("holder-exit") }).strict(),
+]);
+
+const V9WrapperIncidentPostureSchema = z
+  .object({
+    incidentId: CanonicalTextSchema,
+    scope: V9WrapperIncidentScopeSchema,
+    assessment: V9WrapperRiskAssessmentSchema,
+    evidenceRefIds: canonicalTextArray(1),
+  })
+  .strict();
+export type V9WrapperIncidentPosture = z.infer<typeof V9WrapperIncidentPostureSchema>;
+
 export const V9_WRAPPER_LOCAL_FACT_KEYS = [
   "contractMutability",
   "custodyEscrow",
@@ -51,6 +79,24 @@ const V9WrapperLocalDimensionFactSchema = z
     assessment: V9WrapperRiskAssessmentSchema.nullable(),
     signals: canonicalTextArray(1),
     evidenceRefIds: canonicalTextArray(),
+    incidentPostures: z
+      .array(V9WrapperIncidentPostureSchema)
+      .superRefine((postures, ctx) => {
+        const duplicate = postures.find(
+          (posture, index) =>
+            postures.findIndex((candidate) => candidate.incidentId === posture.incidentId) !== index,
+        );
+        if (duplicate !== undefined) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Duplicate wrapper incident posture: ${duplicate.incidentId}`,
+          });
+        }
+      })
+      .transform((postures) =>
+        [...postures].sort((left, right) => compareText(left.incidentId, right.incidentId)),
+      )
+      .optional(),
   })
   .strict()
   .superRefine((fact, ctx) => {

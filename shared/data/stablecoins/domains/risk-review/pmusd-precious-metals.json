@@ -13,14 +13,22 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "RAAC documents pmUSD as a manager-only RWf(x) fToken where xPM absorbs collateral-price volatility, the treasury reads an Instruxi/Chainlink-linked RWA price, and all liquidation and self-liquidation mechanisms are disabled. Under-collateralization instead blocks operations and permits pro-rata fToken redemption, so collateral liquidation branches are not applicable.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "RAAC's RWf(x) Treasury reads the Instruxi/Chainlink gold price to value fGOLD, calculate the system collateral ratio, determine pmUSD issuance, and rebalance the stable/leverage split. RAAC disables liquidation and self-liquidation, so pmUSD has no borrower-specific liquidation branches; the gold-price authority is top-level-only.",
       "sources": [
         {
-          "label": "RAAC RWf(x) documentation",
+          "label": "RAAC RWf(x) whitepaper (Final 2025-12-10)",
+          "url": "https://docs.raac.io/whitepaper-q1.pdf"
+        },
+        {
+          "label": "RAAC RWf(x) documentation (Instruxi/Chainlink price and rebalancing)",
           "url": "https://docs.raac.io/rw-fx/"
+        },
+        {
+          "label": "RAAC Market Report — July 2026 (2026-08-06)",
+          "url": "https://blog.raac.io/research/market-report-july-2026"
         }
       ]
     },

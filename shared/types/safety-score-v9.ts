@@ -1240,9 +1240,10 @@ const V9MaterialityPolicySchema = z
     commonControlMinAssets: z.number().int().positive(),
     commonControlMinPaths: z.number().int().positive(),
     commonModeSignal: z.object({ kind: z.literal("critical-dependency"), severity: V9SeveritySchema }).strict(),
-    // Reviewed mature chains whose shared common-mode concentration is
-    // diagnostic rather than a coin-specific ceiling.
-    matureChains: z.array(z.string().min(1)),
+    // Populated by loadV9MethodologyPolicy() from the dated chain-maturity
+    // registry. The default keeps schema-only consumers compatible with the
+    // source JSON, which deliberately does not author a second copy.
+    matureChains: z.array(z.string().min(1)).default([]),
     // Proven exposure below this threshold is diagnostic. Exposure between this
     // threshold and commonModeHighShareThreshold is moderate.
     commonModeShareThreshold: z.number().finite().min(0).max(1),

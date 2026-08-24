@@ -21,6 +21,7 @@ import {
 } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 import {
+  makeV9BoundedUnknownFeeRedemptionFixedInput,
   makeV9FixedInput,
   v9NotApplicableStatus as notApplicableStatus,
   v9Status as status,
@@ -448,6 +449,39 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       notRatedCount: 0,
       notRatedIds: [],
     });
+  });
+
+  it("keeps a diagnostic bounded route-terms gap rateable and producer-attributed", () => {
+    const fixedInput = makeV9BoundedUnknownFeeRedemptionFixedInput({ clockSec: AS_OF_SEC });
+    const extension = structuredClone(buildSafetyScoreV9BaselineExtension(fixedInput));
+    for (const review of extension.assets[0]!.routeReviews) {
+      review.coverageClass = "diagnostic";
+    }
+    const result = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension,
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+    const card = result.candidate.cards[0]!;
+
+    expect(card.grade).not.toBe("NR");
+    expect(card.score).not.toBeNull();
+    expect(card.nrReasons).toEqual([]);
+    expect(card.reasonCodes).toContain("missing-same-notional-route");
+    expect(card.scoreTrace.boundedUncertaintyAttribution.items).toContainEqual(
+      expect.objectContaining({
+        source: "reason",
+        code: "missing-same-notional-route",
+        responsibility: "producer-failed",
+      }),
+    );
+    expect(card.scoreTrace.evidenceResponsibility.facts).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "missing-same-notional-route",
+        responsibility: "producer-failed",
+        critical: false,
+      }),
+    );
   });
 
   it("reaches A+ through the normal candidate compiler and evaluator from ideal reviewed facts", () => {

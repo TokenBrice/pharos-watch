@@ -22,21 +22,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Midas describes its mTokens as NAV-based investment products rather than fixed-price stablecoins, and its mAPOLLO documentation identifies an issuer token, issuance vault, redemption vault, and NAV oracle. The reviewed product materials do not describe borrower-owned debt positions, collateral thresholds, liquidation auctions, or a token-level liquidation backstop for mAPOLLO, so the V9 collateral-liquidation branch inventory does not apply.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Midas identifies mAPOLLO as a NAV-based liquid-yield investment product with issuer minting and redemption rails and a NAV oracle. The NAV is a price-sensitive top-level valuation and conversion authority; no borrower-owned debt, collateral threshold, liquidation auction, or token-level liquidation backstop exists for mAPOLLO.",
       "sources": [
         {
-          "label": "Midas mAPOLLO smart contracts",
-          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
-        },
-        {
-          "label": "Midas Liquid Yield Token overview",
-          "url": "https://docs.midas.app/liquid-yield-token"
-        },
-        {
-          "label": "Midas mToken pricing",
+          "label": "Midas mToken pricing (last updated 2026-08-21)",
           "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
         }
       ]

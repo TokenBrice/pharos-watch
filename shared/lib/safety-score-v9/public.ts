@@ -15,6 +15,7 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
+import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
 import type { V9AccessPostureResult } from "./access-posture";
 import type { V9BackingResult } from "./backing";
@@ -79,13 +80,14 @@ const EVIDENCE_RANK: Readonly<Record<V9EvidenceLevel, number>> = {
   limited: 2,
   insufficient: 3,
 };
-const RESPONSIBILITIES = [
-  "integration-missing",
-  "issuer-undisclosed",
-  "measured-adverse",
-  "method-unsupported",
-  "producer-failed",
-] as const satisfies readonly V9EvidenceResponsibility[];
+// Derived from the canonical enum, not restated. This list was hand-mirrored and
+// silently lost `published-evidence-expired` when that value was added: the
+// `satisfies` clause only checks assignability, so an omission never failed. The
+// published projection must enumerate every responsibility, so sort the enum
+// itself and keep exactly one source of truth.
+const RESPONSIBILITIES: readonly V9EvidenceResponsibility[] = [
+  ...V9EvidenceResponsibilitySchema.options,
+].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
 const EXIT_COMPONENTS = [
   ["access", "Access"],
   ["settlement", "Settlement"],

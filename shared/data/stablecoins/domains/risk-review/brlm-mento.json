@@ -58,13 +58,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "At Celo block 72138428, BRLm used the Mento v2 Broker/BiPoolManager constant-sum USDm/BRLm exchange with minimumReports 1 and a 360-second reset/expiry window. The current deployment registry has no BRLm CDP contracts, Mento's backing config classifies BRLm as reserve-backed, and the reserve API lists active troves only for GBPm, JPYm, and CHFm. BRLm therefore has no borrower-specific oracle or liquidation branch; its oracle governs swap pricing and trading validity.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
+      "rationale": "At Celo block 72138428 (2026-07-14T14:26:26Z), BRLm used the Mento v2 Broker/BiPoolManager USDm/BRLm mint/burn exchange with minimumReports 1 and a 360-second reset/expiry window. The pinned deployment registry (2026-06-17) has no BRLm CDP contracts, Mento's backing config classifies BRLm as reserve-backed, and the reviewed reserve API listed active troves only for GBPm, JPYm, and CHFm. BRLm therefore has no borrower-specific liquidation branch, but its price-sensitive Broker conversion rate is a top-level mint/redemption authority that must be scored.",
       "sources": [
         {
-          "label": "Pinned Mento Celo deployment registry",
+          "label": "Celo block 72138428 (2026-07-14T14:26:26Z)",
+          "url": "https://celo.blockscout.com/block/72138428"
+        },
+        {
+          "label": "Pinned Mento Celo deployment registry (commit dated 2026-06-17)",
           "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
         },
         {

@@ -16,6 +16,9 @@ import {
   type V9ExtensionRegistryMeta,
 } from "./safety-score-v9-extension-shared";
 
+const REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC =
+  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveClassificationMaxAgeSec;
+
 export function buildSafetyScoreV9ReserveClassifications(slices: readonly ReserveSlice[]) {
   const byKey = new Map<string, ReserveSlice>();
   for (const slice of slices) {
@@ -106,6 +109,7 @@ function reviewedReserveMatches(
   liveReserves: readonly ReserveSlice[],
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  classificationMaxAgeSec = REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC,
 ): ReviewedReserveMatch[] {
   const reviewedReserves = meta.reserves ?? [];
   const review = meta.reserveReview;
@@ -119,6 +123,7 @@ function reviewedReserveMatches(
     review.confidence === "unknown" ||
     !Number.isFinite(reviewedAtSec) ||
     reviewedAtSec > clockSec ||
+    clockSec - reviewedAtSec > classificationMaxAgeSec ||
     (compositionAsOfSec !== null && (!Number.isFinite(compositionAsOfSec) || compositionAsOfSec > clockSec))
   ) {
     return [];
@@ -181,6 +186,7 @@ export function buildReviewedReserveClassifications(
   liveReserves: readonly ReserveSlice[],
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  classificationMaxAgeSec = REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC,
 ): ReserveClassification[] {
   const classifications = buildSafetyScoreV9ReserveClassifications(liveReserves);
   const review = meta.reserveReview;
@@ -191,7 +197,7 @@ export function buildReviewedReserveClassifications(
   const reviewedByExposureKey = new Map<string, { reviewed: ReserveSlice; reviewedNonLink: boolean }>();
   const liveByExposureKey = new Map(liveReserves.map((live) => [computeSafetyScoreV9ReserveExposureKey(live), live]));
 
-  for (const match of reviewedReserveMatches(liveReserves, meta, clockSec)) {
+  for (const match of reviewedReserveMatches(liveReserves, meta, clockSec, classificationMaxAgeSec)) {
     const exposureKey = computeSafetyScoreV9ReserveExposureKey(liveReserves[match.liveIndex]!);
     reviewedByExposureKey.set(exposureKey, {
       reviewed: match.reviewed,
@@ -227,8 +233,14 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC =
   V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.issuerAttestedReserveMaxAgeSec;
-const REVIEWED_CURATED_RESERVE_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedCuratedReserveMaxAgeSec;
+const REVIEWED_RESERVE_COMPOSITION_MAX_AGE_SEC =
+  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveCompositionMaxAgeSec;
+const REVIEWED_RESERVE_COMPOSITION_GRACE_SEC =
+  V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry.reviewedReserveCompositionGraceSec;
+// Monthly reports commonly land in the first week after month-end. The grace
+// covers that publication lag without extending composition into a second cycle.
+const REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC =
+  REVIEWED_RESERVE_COMPOSITION_MAX_AGE_SEC + REVIEWED_RESERVE_COMPOSITION_GRACE_SEC;
 const UNRESOLVED_CURATED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
 
 function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
@@ -349,7 +361,7 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     reviewedAtSec === null ||
     compositionAtSec === null ||
     reviewedAtSec < compositionAtSec ||
-    clockSec - compositionAtSec > REVIEWED_CURATED_RESERVE_MAX_AGE_SEC ||
+    clockSec - compositionAtSec > REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC ||
     !validateReserveCompositionTotal(rows, "full")
   ) {
     return null;
@@ -386,9 +398,63 @@ export function addReviewedStaticReserveEvidence(
   meta: V9ExtensionRegistryMeta,
   admitted: ReviewedStaticReserveRows | null,
   evidence: ReviewEvidenceBuilder,
+  clockSec: number,
 ): void {
   const review = meta.reserveReview;
-  if (!admitted || !review) return;
+  if (!review) return;
+  const report = meta.proofOfReserves?.latestReport;
+  if (!admitted) {
+    const rows = meta.reserves ?? [];
+    const proof = meta.proofOfReserves;
+    const attestorIndependent =
+      proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
+    const reviewAtSec = conservativeDateEndSec(review.reviewedAt, clockSec);
+    const compositionAtSec = conservativeDateEndSec(review.compositionAsOf, clockSec);
+    const reportAtSec = report ? conservativeDateEndSec(report.publishedAt, clockSec) : null;
+    const periodEndSec = report ? conservativeDateEndSec(report.periodEnd, clockSec) : null;
+    const expiredButOtherwiseAdmissible =
+      rows.length > 0 &&
+      review.scope === "full-composition" &&
+      review.confidence !== "unknown" &&
+      review.sources.length > 0 &&
+      reviewAtSec !== null &&
+      compositionAtSec !== null &&
+      validateReserveCompositionTotal(rows, "full") &&
+      meta.mintAuthority?.supervision === "prudential" &&
+      proof?.type === "independent-audit" &&
+      attestorIndependent &&
+      Boolean(proof?.provider?.trim()) &&
+      report !== undefined &&
+      report.confidence !== "unknown" &&
+      report.sources.length > 0 &&
+      reportAtSec !== null &&
+      periodEndSec !== null &&
+      compositionAtSec === periodEndSec &&
+      reportAtSec >= periodEndSec &&
+      clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC &&
+      CORROBORATING_ASSURANCE_METHODS.has(report.assuranceMethod);
+    if (!expiredButOtherwiseAdmissible || !report) return;
+    const sources = [...review.sources, ...report.sources].filter(
+      (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
+    );
+    evidence.add({
+      componentKeys: ["reserve-composition-history"],
+      sourceId: "stablecoin-meta.expired-reviewed-static-reserves",
+      reviewedAt: review.reviewedAt,
+      observedAt: report.periodEnd,
+      publishedAt: report.publishedAt,
+      publishedBy: "issuer",
+      confidence: confidenceForResearch(report.confidence),
+      sources,
+      payload: {
+        reserveReview: review,
+        reserves: rows,
+        proofOfReserves: proof,
+      },
+      maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
+    });
+    return;
+  }
   if (admitted.evidenceClass === "static-validated") {
     evidence.add({
       componentKeys: [
@@ -400,6 +466,7 @@ export function addReviewedStaticReserveEvidence(
           ? "stablecoin-meta.reviewed-curated-fallback-reserves"
           : "stablecoin-meta.reviewed-standalone-reserves",
       reviewedAt: review.compositionAsOf!,
+      publishedBy: "unknown",
       confidence: confidenceForResearch(review.confidence),
       sources: review.sources,
       payload: {
@@ -408,11 +475,10 @@ export function addReviewedStaticReserveEvidence(
         evidenceClass: admitted.evidenceClass,
         provenance: admitted.provenance,
       },
-      maxAgeSec: REVIEWED_CURATED_RESERVE_MAX_AGE_SEC,
+      maxAgeSec: REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
     });
     return;
   }
-  const report = meta.proofOfReserves?.latestReport;
   if (!report) return;
   const sources = [...review.sources, ...report.sources].filter(
     (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
@@ -423,7 +489,10 @@ export function addReviewedStaticReserveEvidence(
       ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
     ],
     sourceId: "stablecoin-meta.reviewed-static-reserves",
-    reviewedAt: report.periodEnd,
+    reviewedAt: review.reviewedAt,
+    observedAt: report.periodEnd,
+    publishedAt: report.publishedAt,
+    publishedBy: "issuer",
     confidence: confidenceForResearch(report.confidence),
     sources,
     payload: {
@@ -451,8 +520,10 @@ export function addReserveClassificationEvidence(
     componentKeys: reviewed.map((classification) => `reserve-classification:${classification.exposureKey}`),
     sourceId: "stablecoin-meta.reserve-review",
     reviewedAt: review.reviewedAt,
+    publishedBy: "unknown",
     confidence: confidenceForResearch(review.confidence),
     sources: review.sources,
     payload: { reserveReview: review, reserves: meta.reserves ?? [] },
+    maxAgeSec: REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC,
   });
 }

@@ -30,26 +30,22 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "owner-triage",
-      "rationale": "Both the observable V1 pool and the documented V2 per-asset pools issue protocol-level synthetic claims rather than borrower-specific collateralized debt positions. The V2 design isolates collateral ratios by pool, but users still do not maintain individually liquidatable borrower branches. Production activation of the documented V2 pools remains unresolved.",
+      "disposition": "unresolved",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Hylo unquestionably consumes price and value inputs: the observable V1 design uses Pyth EMA SOL/USD and Sanctum LST accounting to calculate hyUSD NAV and the reserve ratio. However, current documentation also specifies isolated per-asset V2 oracle paths while the published address directory still identifies only the V1 deployment, so the production single-path versus market-specific branch topology cannot be resolved from the reviewed sources.",
       "sources": [
         {
-          "label": "Hylo hyUSD and xSOL design",
-          "url": "https://docs.hylo.so/protocol-overview/xassets"
+          "label": "Hylo equations: Pyth SOL/USD, Sanctum LST valuation, NAV, and reserve ratio (modified 2026-07-13)",
+          "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
         },
         {
           "label": "Hylo V2 multi-asset architecture",
           "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
         },
         {
-          "label": "Hylo risk management",
-          "url": "https://docs.hylo.so/protocol-overview/risk-management"
-        },
-        {
-          "label": "Hylo equations",
-          "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
+          "label": "Hylo on-chain address directory",
+          "url": "https://docs.hylo.so/security/onchain-addresses"
         }
       ]
     },

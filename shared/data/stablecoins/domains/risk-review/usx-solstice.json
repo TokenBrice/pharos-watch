@@ -22,18 +22,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-27",
-      "reviewer": "Kimi data review",
-      "rationale": "USX is minted and redeemed only by KYC'd institutional partners depositing USDC, USDG, or USDT and redeeming primarily for USDG, with no spread and no borrower-owned collateral positions. The Solstice Oracle validates collateral value at the permissioned mint/redeem step (price agreement with Pyth, USDC/USDT peg bounds, staleness halts), and the delta-neutral hedge book is managed by Solstice at the entity level rather than through user positions with collateral-ratio thresholds, liquidation auctions, or shutdown branches, so the V9 collateral-liquidation branch families do not apply.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "The Solstice Oracle validates collateral value at the permissioned USX mint and redemption step by checking its aggregate price against Pyth, stablecoin peg bounds, and staleness limits. This is a price-sensitive top-level authority; the entity-managed hedge book does not create borrower-specific collateral positions or liquidation branches.",
       "sources": [
         {
-          "label": "Solstice smart contracts (USX Program oracle integration and Solstice Oracle guardrails)",
-          "url": "https://docs.solstice.finance/solstice-for-builders/smart-contracts.md"
+          "label": "Solstice smart contracts — USX Program oracle integration and guardrails (page updated 2026-06-12)",
+          "url": "https://docs.solstice.finance/solstice-for-builders/smart-contracts"
         },
         {
-          "label": "Solstice USX documentation (minting and redemption)",
-          "url": "https://docs.solstice.finance/solstice-for-users/usx.md"
+          "label": "Solstice USX documentation — minting and redemption (page updated 2026-07-15)",
+          "url": "https://docs.solstice.finance/solstice-for-users/usx"
         },
         {
           "label": "Solstice attestations and proof-of-solvency documentation",

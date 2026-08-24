@@ -74,14 +74,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "The sDAI contract is an ERC-4626 wrapper whose shares are minted against deposited DAI and redeemed back to DAI as the savings rate accrues. It does not originate borrower debt or liquidate collateral. The variantOf relationship preserves the complete DAI parent branch review.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "sDAI's ERC-4626 conversion functions use the savings accumulator to value DAI assets per share for minting and redemption, making the share exchange rate a price-sensitive top-level authority. The wrapper originates no borrower debt and has no local liquidation markets; its DAI dependency preserves the parent exposure without requiring local branch rows.",
       "sources": [
         {
-          "label": "Spark sDAI token documentation",
-          "url": "https://docs.spark.fi/dev/savings/sdai-token"
+          "label": "Sky SavingsDai implementation (source revision 2023-11-02)",
+          "url": "https://github.com/sky-ecosystem/sdai/blob/2b7acb95289a9eb3a8844206d5712eabfa206efc/src/SavingsDai.sol"
         },
         {
           "label": "Sky Oracle Security Module documentation",

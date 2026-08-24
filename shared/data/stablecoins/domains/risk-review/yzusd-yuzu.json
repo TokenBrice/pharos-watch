@@ -42,17 +42,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Yuzu describes yzUSD as a senior pool tranche minted against pooled backing assets and protected by the separate yzPP first-loss pool. Minting, redemption, and loss absorption are pool-level operations rather than borrower-specific debt positions with collateral-ratio liquidations, so no liquidation-oracle branch applies to yzUSD.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Yuzu's yzPP documentation defines a system-wide collateralization ratio as backing assets divided by yzUSD TVL, requires the ratio to remain above 110% for redemption, and uses the pool-level ratio for first-loss absorption. That reserve/value authority is price-sensitive at the top level, while yzUSD has no borrower-specific debt or liquidation branches; the disposition is top-level-only.",
       "sources": [
         {
-          "label": "Yuzu Money overview",
-          "url": "https://yuzu-money.gitbook.io/yuzu-money"
+          "label": "Yuzu yzUSD documentation (last updated 2026-08-07)",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
         },
         {
-          "label": "Yuzu Protection Pool",
+          "label": "Yuzu yzPP first-loss and collateral-ratio documentation (Yuzu docs revision 2026-08-07)",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
         },
         {

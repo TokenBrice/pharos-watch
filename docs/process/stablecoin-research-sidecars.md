@@ -33,6 +33,8 @@ Research review envelopes, including `reserveReview` and `custodyProfile`, remai
 
 `mintAuthority` remains mint-authority-domain evidence for native issuance only. Controls may record canonical deployment references, observation points, and reviewed failure-domain keys; mutable `upgradeability` records the native deployments it can replace, proxy model, implementation/admin path, delay, and the exact control that can change mint logic. Incidents have explicit `active` or `resolved` state, with `resolvedAt` only for resolved incidents. A deliberately unscoreable review uses `review.disposition: "unresolved"` and retains its unresolved questions instead of being mistaken for an accidental coverage gap. Shared controller analysis joins normalized onchain addresses and reviewed failure-domain keys across mint, upgrade, bridge, and oracle paths without merging their capabilities.
 
+The Safety Score V9 cross-domain incident registry is deliberately outside the sidecar split. `shared/data/safety-score-v9/incident-reviews-v1.json` stores reviewed events that need a typed control, wrapper-local, operational, or peg destination and an explicit root-claim, deployment, integration-only, or holder-exit scope. The compiler routes each record into the existing domain fact and applies the worst applicable posture once; it does not create a generic incident dimension. Continue to use domain-native sidecar fields, including `mintAuthority.mintIncidents`, when they already express the event, and never duplicate one incident across both sources.
+
 ### Deciding which sidecar owns a control
 
 Ask what capability the control exercises, not where the controller is deployed or whether the same Safe appears elsewhere:

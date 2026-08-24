@@ -66,18 +66,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "owner-triage",
-      "rationale": "Re Protocol documents reUSD as a senior NAV-based tranche minted against accepted stablecoin deposits, with capital split between onchain liquidity and offchain Regulation 114 trust collateral. It does not create borrower-specific debt positions, collateral ratios, or oracle-triggered collateral liquidations, so CDP collateral branches are not applicable.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Re Protocol recalculates reUSD's NAV and token price daily at UTC 00:00 from the reviewed yield references and publishes the accepted price through an onchain JSON/Chainlink feed. This is a price-sensitive top-level redemption and valuation authority, but reUSD has no borrower-specific debt or liquidation branches, so the disposition is top-level-only.",
       "sources": [
         {
-          "label": "Re Protocol About reUSD",
-          "url": "https://docs.re.xyz/products/about-reusd.md"
+          "label": "Re Protocol — How the Re Protocol Works (last updated 2026-06-25)",
+          "url": "https://docs.re.xyz/protocol/how-the-re-protocol-work"
         },
         {
-          "label": "Re Protocol reUSD and reUSDe comparison",
-          "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+          "label": "Re Protocol FAQ — daily NAV and price update",
+          "url": "https://docs.re.xyz/"
         }
       ]
     },

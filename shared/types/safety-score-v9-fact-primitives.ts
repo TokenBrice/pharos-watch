@@ -55,6 +55,7 @@ export const V9EvidenceResponsibilitySchema = z.enum([
   "integration-missing",
   "producer-failed",
   "method-unsupported",
+  "published-evidence-expired",
 ]);
 export type V9EvidenceResponsibility = z.infer<typeof V9EvidenceResponsibilitySchema>;
 

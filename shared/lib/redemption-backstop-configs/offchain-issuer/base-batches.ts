@@ -1,10 +1,29 @@
 import { defineBatch, type RedemptionBackstopRegistryEntry } from "../factory";
-import { documentedBoundSupplyFull, documentedVariableFee, issuerBase, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, documentedVariableFee, fixedFee, issuerBase, sourceRef } from "../shared";
 import { reviewedDirectRedemptionSupplyFull, REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts";
 
 type RedemptionDocs = NonNullable<RedemptionBackstopRegistryEntry["config"]["docs"]>;
+type RedemptionV9RouteReviewTerms = NonNullable<
+  RedemptionBackstopRegistryEntry["config"]["v9RouteReviewTerms"]
+>;
+
+const WARS_BOUNDED_TERMS_GAP: RedemptionV9RouteReviewTerms = {
+  scoringDisposition: "bounded-terms-gap",
+  missingScoringFields: ["capacity", "settlement", "cost"],
+  rationale:
+    "Ripio establishes a 1:1 local-currency redemption mechanism, but reviewed public materials do not establish executable capacity, bank settlement SLA, or all-in redemption cost.",
+  reviewedAt: "2026-08-24",
+  docs: [
+    sourceRef("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins", [
+      "route",
+      "capacity",
+      "fees",
+      "access",
+    ]),
+  ],
+};
 
 const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
   "a7a5-old-vector": [
@@ -13,7 +32,11 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
     sourceRef("A7A5 transparency", "https://docs.a7a5.io/legal/transparency", ["capacity"]),
   ],
   "audx-aussie-dollar-token": [
-    sourceRef("AUDX", "https://www.audxtoken.com/", ["route", "capacity", "fees", "settlement"]),
+    sourceRef(
+      "AUDX White Paper v1.8 and Terms of Token Sale",
+      "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+      ["route", "capacity", "fees", "access", "settlement"],
+    ),
   ],
   "brl1-brl1": [sourceRef("BRL1 how it works", "https://brl1.io/en/como_funciona", ["route", "capacity", "access"])],
   "cetes-etherfuse": [
@@ -261,6 +284,19 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     ),
   ).map((entry) => ({
     ...entry,
+    config:
+      entry.id === "audx-aussie-dollar-token"
+        ? {
+            ...entry.config,
+            costModel: fixedFee(100, "AUDX Terms of Token Sale specify a 1% redemption fee"),
+            v9RouteReviewTerms: { settlementModel: "days" as const },
+          }
+        : entry.id === "wars-argentine-peso"
+          ? {
+              ...entry.config,
+              v9RouteReviewTerms: WARS_BOUNDED_TERMS_GAP,
+            }
+          : entry.config,
     overrideReason: "Non-USD review cohort upgrades issuer defaults to documented-bound capacity.",
   })),
   ...addDocumentedBoundSourceRefs(

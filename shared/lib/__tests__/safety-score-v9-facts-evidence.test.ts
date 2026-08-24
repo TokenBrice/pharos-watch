@@ -186,6 +186,7 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
       "integration-missing",
       "producer-failed",
       "method-unsupported",
+      "published-evidence-expired",
     ]);
     const retained = createV9FactGap({
       gapId: "gap:retained",
@@ -205,5 +206,48 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
     const current = createV9FactGapV3({ ...retained, responsibility: "producer-failed" });
     expect(V9FactGapV3Schema.parse(current)).toEqual(current);
     expect(() => createV9FactGapV3({ ...retained, responsibility: "publisher-late" as never })).toThrow();
+  });
+
+  it("assigns expired published evidence to Pharos and keeps absent or unknown history fail-closed", () => {
+    const expiredPublication = createV9EvidenceReference(
+      {
+        evidenceId: "e:expired-publication",
+        sourceId: "issuer-reserve-report",
+        sourceGenerationId: "issuer-reserve-report:g1",
+        disposition: "published",
+        observedAtSec: 700,
+        publishedAtSec: 710,
+        maxAgeSec: 200,
+      },
+      1_000,
+    );
+    const gap = {
+      gapId: "gap:expired-publication",
+      reasonCode: "missing-latest-assurance-report" as const,
+      ownerDomain: "backing" as const,
+      policyRuleId: "backing.assurance.current",
+      observationState: "stale" as const,
+      path: collateralExposureV9Path("reserve:cash"),
+      message: "The published assurance report is outside the freshness window.",
+      evidenceRefIds: [expiredPublication.evidenceId],
+      responsibility: "issuer-undisclosed" as const,
+    };
+
+    expect(createV9FactGapV3({
+      ...gap,
+      evidenceHistory: { publishedBy: "issuer", references: [expiredPublication] },
+    }).responsibility).toBe("published-evidence-expired");
+    expect(createV9FactGapV3({
+      ...gap,
+      evidenceHistory: { publishedBy: "parent", references: [expiredPublication] },
+    }).responsibility).toBe("published-evidence-expired");
+    expect(createV9FactGapV3({
+      ...gap,
+      evidenceHistory: { publishedBy: "issuer", references: [] },
+    }).responsibility).toBe("issuer-undisclosed");
+    expect(createV9FactGapV3({
+      ...gap,
+      evidenceHistory: { publishedBy: "unknown", references: [expiredPublication] },
+    }).responsibility).toBe("issuer-undisclosed");
   });
 });

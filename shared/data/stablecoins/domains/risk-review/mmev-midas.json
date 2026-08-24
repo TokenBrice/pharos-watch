@@ -22,22 +22,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Midas describes mMEV as a Liquid Yield Token for an MEV Capital-managed, delta-neutral strategy and separately identifies on-chain liquidation calls as one possible strategy activity. The reviewed product materials do not describe mMEV tokenholders opening borrower-owned debt positions or a token-level collateral threshold, liquidation engine, backstop, or shutdown branch; risks in underlying DeFi protocols are not an mMEV CDP branch to inventory under V9.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Midas documents mMEV as a NAV-accreting Liquid Yield Token for a delta-neutral strategy and identifies the token's NAV-based valuation and redemption rails. The underlying strategy may interact with liquidation venues, but mMEV itself has no borrower-owned collateral branch; its NAV is the applicable top-level value authority.",
       "sources": [
         {
-          "label": "Midas mMEV product documentation",
-          "url": "https://docs.midas.app/tokens/mmev"
-        },
-        {
-          "label": "Midas mMEV risk disclosure",
-          "url": "https://docs.midas.app/tokens/mmev/risks"
-        },
-        {
-          "label": "Midas mMEV smart contracts",
-          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+          "label": "Midas mToken pricing (last updated 2026-08-21)",
+          "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
         }
       ]
     },

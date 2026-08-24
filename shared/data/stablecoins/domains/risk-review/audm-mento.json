@@ -66,11 +66,15 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "At Celo block 72127154, AUDm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/AUDm exchange using rate feed 0x646bD504C3864Ea5b8A6B6D25743721f61864A07, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The current Mento reserve API lists active CDP troves only for GBPm, JPYm, and CHFm, not AUDm, so AUDm has no live borrower-specific oracle/liquidation branch to enumerate.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
+      "rationale": "At Celo block 72127154 (2026-07-14T11:18:32Z), AUDm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/AUDm mint/burn exchange using rate feed 0x646bD504C3864Ea5b8A6B6D25743721f61864A07, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The reviewed deployment and reserve evidence identified no live AUDm borrower-specific CDP or liquidation branch, so the price-sensitive Broker conversion rate is scored as a top-level mint/redemption authority without branch rows.",
       "sources": [
+        {
+          "label": "Celo block 72127154 (2026-07-14T11:18:32Z)",
+          "url": "https://celo.blockscout.com/block/72127154"
+        },
         {
           "label": "Mento BiPoolManager source",
           "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"

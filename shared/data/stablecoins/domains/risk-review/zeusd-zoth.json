@@ -13,13 +13,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-DRAIN data review",
-      "rationale": "The tracked V1 router stores collateral value and ZeUSD debt in a deposit NFT at mint, then burns that exact debt and returns the recorded collateral. It exposes no borrower-position repricing, health threshold, or forced-liquidation path. At finalized Ethereum block 25531731 the tracked router proxy still resolved to the reviewed V1 implementation and its shared deposit/redemption pause was active; Zoth's separately deployed V2 is outside this record.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "The tracked ZeUSD V1 router records collateral value and ZeUSD debt at mint, then requires the recorded debt to be burned before returning the recorded collateral. That mint/redemption valuation is a price-sensitive top-level authority even though V1 has no continuing health check or forced-liquidation branch; Zoth's separately deployed V2 is outside this record. The disposition is therefore top-level-only.",
       "sources": [
         {
-          "label": "Zoth contract deployments and V1/V2 boundary",
+          "label": "Zoth contract deployments and V1/V2 boundary (last updated 2025-07-10)",
           "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
         },
         {
@@ -27,7 +27,7 @@
           "url": "https://eth.blockscout.com/address/0xea25b537209ec4aefbc7252c6a49b132639ea677?tab=contract"
         },
         {
-          "label": "Finalized Ethereum block 25531731",
+          "label": "Finalized Ethereum block 25531731 (2026-07-14)",
           "url": "https://eth.blockscout.com/block/25531731"
         }
       ]

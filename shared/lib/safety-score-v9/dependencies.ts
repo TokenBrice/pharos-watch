@@ -97,6 +97,43 @@ export interface V9DependencyEvaluationPlan {
   planDigest: string;
 }
 
+/**
+ * Resolve a presentation asset to the independent liability at the root of
+ * its serial-claim chain. Ambiguous or cyclic serial identity fails closed to
+ * the presentation asset so an unresolved graph cannot relax a common-mode
+ * census.
+ */
+function resolveV9RootLiabilityId(
+  assetId: string,
+  serialPaths: readonly V9DependencyPathPlan[],
+): string {
+  const upstreamsByAssetId = new Map<string, Set<string>>();
+  for (const path of serialPaths) {
+    if (path.role !== "serial-claim") continue;
+    const upstreams = upstreamsByAssetId.get(path.assetId) ?? new Set<string>();
+    upstreams.add(path.upstreamAssetId);
+    upstreamsByAssetId.set(path.assetId, upstreams);
+  }
+
+  const visited = new Set<string>();
+  let current = assetId;
+  while (true) {
+    if (visited.has(current)) return assetId;
+    visited.add(current);
+    const upstreams = upstreamsByAssetId.get(current);
+    if (upstreams === undefined || upstreams.size === 0) return current;
+    if (upstreams.size !== 1) return assetId;
+    current = [...upstreams][0]!;
+  }
+}
+
+export function distinctV9RootLiabilityIds(
+  assetIds: readonly string[],
+  serialPaths: readonly V9DependencyPathPlan[],
+): string[] {
+  return [...new Set(assetIds.map((assetId) => resolveV9RootLiabilityId(assetId, serialPaths)))].sort(compareText);
+}
+
 export interface V9UpstreamResult {
   assetId: string;
   /** Whole-asset final score. Serial claims inherit this exact result. */

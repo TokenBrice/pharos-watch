@@ -30,26 +30,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-30",
-      "reviewer": "Kimi T20 wave-2 unknown reduction",
-      "rationale": "Re-opened Lumi docs 2026-07-30: LUAUSD is minted by staking LUA against the protocol's internal floor price, which is defined by Lumi's own segmented LUA bonding-curve minting function rather than an external price feed. The staking flow has vesting and an early-redemption penalty (0-30%) instead of borrower collateral ratios, health factors, or liquidation auctions, and the reviewed LUAUSD UtilityToken source contains no oracle, price-feed, or liquidation dependency. Stabilization runs through Lumi's AMO rebalancing its own Curve pool, again an internal AMM path. The oracle/liquidation branch is therefore reviewed as genuinely not applicable to this oracleless internal-pricing design; residual opacity about the AMO's exact trigger conditions is retained in the summary rather than scored as an external-oracle exposure.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Lumi's own documentation says LUAUSD is minted against an internal LUA floor price and that the AMO rebalances its Curve pool. That internal floor and AMO rebalance are price-sensitive top-level authorities; the reviewed staking path has no borrower-specific collateral-health or liquidation branches, so no branch inventory is required.",
       "sources": [
         {
-          "label": "Lumi staking and stablecoin documentation",
-          "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
-        },
-        {
-          "label": "Lumi LUA minting documentation",
+          "label": "Lumi LUA minting documentation (updated 2024-10-09)",
           "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
-        },
-        {
-          "label": "Lumi Finance LUAUSD token docs",
-          "url": "https://lumi-finance.gitbook.io/docs/tokens/luausd"
-        },
-        {
-          "label": "Sourcify verified LUAUSD UtilityToken source (Arbitrum)",
-          "url": "https://sourcify.dev/server/v2/contract/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c"
         }
       ]
     },

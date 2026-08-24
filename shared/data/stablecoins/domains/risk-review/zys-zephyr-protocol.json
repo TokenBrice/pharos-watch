@@ -34,18 +34,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "Zephyr documents ZYS as a share of the ZSD yield reserve that provides variable yield from ZSD holdings. ZYS holders do not open borrower positions or control collateral liquidation, so there are no ZYS-specific collateral or liquidation branches to inventory; the underlying ZSD parent carries the protocol-wide reserve and oracle risk.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "ZYS has no borrower-specific collateral or liquidation branches, but Zephyr mints ZYS against deposited ZSD and redeems it at its changing share value in the ZSD Yield Reserve. The reserve also mints yield ZSD by the USD value of a ZEPH block-reward allocation, so ZYS has price-sensitive top-level share valuation and inherited reserve-pricing authority that is scoreable without branch rows.",
       "sources": [
         {
-          "label": "Zephyr official documentation",
-          "url": "https://zephyrprotocol.com/documentation"
-        },
-        {
-          "label": "Zephyr repository",
-          "url": "https://github.com/ZephyrProtocol/zephyr"
+          "label": "Zephyr Protocol v2.0.0 ZSD Yield hardfork announcement (2024-09-30)",
+          "url": "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
         }
       ]
     },

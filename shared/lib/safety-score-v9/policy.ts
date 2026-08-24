@@ -1,4 +1,5 @@
 import candidatePolicyAsset from "../../data/safety-score-v9/methodology-policy-candidate-v1.json";
+import { CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS } from "../../data/safety-score-v9/chain-maturity-reviews-v1";
 import {
   V9MethodologyPolicySchema,
   V9ReasonCodeSchema,
@@ -29,6 +30,46 @@ function compareCodeUnits(left: string, right: string): number {
 
 function sortedUnique<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)].sort(compareCodeUnits);
+}
+
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function policyWithRegistryMatureChains(rawPolicy: unknown): unknown {
+  if (!isUnknownRecord(rawPolicy)) return rawPolicy;
+  const semantic = rawPolicy.semantic;
+  if (!isUnknownRecord(semantic)) return rawPolicy;
+  const materiality = semantic.materiality;
+  if (!isUnknownRecord(materiality)) return rawPolicy;
+
+  const authoredMatureChains = materiality.matureChains;
+  if (authoredMatureChains !== undefined) {
+    if (
+      !Array.isArray(authoredMatureChains) ||
+      !authoredMatureChains.every((value): value is string => typeof value === "string")
+    ) {
+      throw new Error("Safety Score v9 matureChains must be an array of reviewed chain slugs");
+    }
+    const authored = sortedUnique(authoredMatureChains);
+    const reviewed = sortedUnique(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS);
+    if (authored.length !== reviewed.length || authored.some((value, index) => value !== reviewed[index])) {
+      throw new Error(
+        "Safety Score v9 matureChains must derive from chain-maturity-reviews-v1.ts",
+      );
+    }
+  }
+
+  return {
+    ...rawPolicy,
+    semantic: {
+      ...semantic,
+      materiality: {
+        ...materiality,
+        matureChains: [...CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS],
+      },
+    },
+  };
 }
 
 function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayload {
@@ -143,7 +184,7 @@ export function loadV9MethodologyPolicy(
   rawPolicy: unknown,
   rawScoreBearingGates: unknown = V9_SCORE_BEARING_GATES_POLICY_V923,
 ): V9ValidatedPolicyWithScoreBearingGates {
-  const basePolicy = V9MethodologyPolicySchema.parse(rawPolicy);
+  const basePolicy = V9MethodologyPolicySchema.parse(policyWithRegistryMatureChains(rawPolicy));
   const scoreBearingGates = parseV9ScoreBearingGatesPolicy(rawScoreBearingGates);
   const policy = {
     ...basePolicy,

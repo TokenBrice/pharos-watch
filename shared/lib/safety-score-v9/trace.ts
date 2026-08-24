@@ -1,6 +1,6 @@
 import type { V9Grade, V9QualityPillar, V9ReasonCode } from "../../types/safety-score-v9";
-import { sha256Hex } from "../sha256";
-import { stableJsonStringifyV1 } from "../stable-json";
+import { sha256HexFromUtf8Chunks } from "../sha256";
+import { stableJsonStringifyChunksV1 } from "../stable-json";
 import type { V9ScoreAdjustmentTrace } from "./formula";
 import type { V9ProductionScoreTrace } from "./score";
 import { compareText } from "./primitives";
@@ -57,5 +57,7 @@ export function computeV9ResultDigest(traces: readonly V9ProductionScoreTrace[])
   const compact = [...traces]
     .sort((left, right) => compareText(left.assetId, right.assetId))
     .map(projectCompactV9ScoreTrace);
-  return sha256Hex(stableJsonStringifyV1({ domain: V9_RESULT_DIGEST_DOMAIN, results: compact }));
+  return sha256HexFromUtf8Chunks(
+    stableJsonStringifyChunksV1({ domain: V9_RESULT_DIGEST_DOMAIN, results: compact }),
+  );
 }

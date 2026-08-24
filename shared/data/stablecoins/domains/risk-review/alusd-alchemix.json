@@ -46,18 +46,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex ORCL curation batch 15",
-      "rationale": "Alchemix documents alUSD loans as self-repaying and non-liquidating. A borrower may self-liquidate by repaying debt with collateral, but the protocol does not forcibly liquidate borrower positions, so there is no market-specific oracle and collateral-liquidation branch to enumerate.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Alchemix has no borrower-specific liquidation oracle branch, but its alUSD Alchemist uses an internal expected-value mark for yield-token collateral: a value drop can disable deposits, withdrawals, and liquidations, and an administrator can reset that mark with snap(). The internal collateral-value authority is therefore a scoreable top-level control without inventing liquidation-feed branches.",
       "sources": [
         {
-          "label": "Alchemix user docs",
-          "url": "https://v2-docs.alchemix.fi/"
-        },
-        {
-          "label": "Alchemix Alchemist overview",
-          "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist"
+          "label": "Alchemix Multisig Admin Rights (updated 2026-07-06)",
+          "url": "https://v2-docs.alchemix.fi/alchemix-dao/the-alchemix-dao/governance-process/multisig-admin-rights"
         }
       ]
     },

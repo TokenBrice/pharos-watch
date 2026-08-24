@@ -2359,12 +2359,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.35",
+    "methodologyVersion": "9.4",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.35",
+    "version": "9.4",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2386,6 +2386,8 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
 The endpoint reads only the accepted `report-cards:v9` publication and its `report-cards:v9:publication-health` row. Missing, malformed, or incomplete accepted state returns `503`; an identity mismatch between otherwise valid rows serves the authenticated publication as explicitly held. The handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
 Rateable cards contain mandatory `backing`, `exit`, and `control` breakdowns. Each card may also carry `backingFromLiveReserves`; current report-v5 publications set it to `true` exactly when the compiled V9 fact set used accepted live reserve exposures for Backing, independently of the reserve detail-page badge. The field is optional only for rollout compatibility with a retained pre-report-v5 publication. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
+
+Evidence facts use the canonical responsibility values `integration-missing`, `issuer-undisclosed`, `measured-adverse`, `method-unsupported`, `producer-failed`, and `published-evidence-expired`; bounded uncertainty uses the same vocabulary except `measured-adverse`. The last value means an issuer or upstream parent published the referenced evidence but the Pharos copy is stale; it does not mean the issuer failed to disclose it. Current publications include the matching responsibility summary, while authenticated pre-9.19 snapshots retain their legacy summary order when per-fact paths are absent.
 
 `breakdowns.exit.primaryRoute.capacity` describes the selected route rather than market-wide liquidity. It exposes `executableUsd`, `requestedNotionalUsd`, `completionRatio`, request and observed cost bounds, settlement delay and scoring horizon, chain, protocol, pool, evidence kind, and evidence timestamp. Exit alternatives expose their own horizon, delay, confidence factor, and compact capacity summary so the evidence-confidence tradeoff against a higher-capacity alternative remains visible. Issuer redemption remains a separate daily, queued, or eventual route; exchange volume, aggregate DEX TVL, and issuer reserves are not interchangeable with executable capacity on one selected route.
 

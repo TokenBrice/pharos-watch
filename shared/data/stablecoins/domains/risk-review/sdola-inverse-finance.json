@@ -50,14 +50,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Inverse documents sDOLA as a DOLA savings wrapper: users deposit and withdraw DOLA while FiRM revenue accrues through the exchange rate. sDOLA holders do not open FiRM borrower positions, so there are no sDOLA collateral-market or liquidation branches to inventory; the underlying DOLA parent carries the separate FiRM oracle profile.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-a oracle applicability review",
+      "rationale": "sDOLA holders do not open FiRM borrower positions, so sDOLA has no local collateral-market or liquidation branches and DOLA retains its separate parent review. The ERC-4626 wrapper nevertheless mints and redeems shares at a DOLA:sDOLA exchange rate that rises as streamed DBR rewards are converted into DOLA, making that vault quote a price-sensitive top-level authority.",
       "sources": [
         {
-          "label": "Inverse sDOLA product guide",
-          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/tokens/sdola"
+          "label": "Inverse DAO launch proposal for DSA and sDOLA (published 2024-01-24)",
+          "url": "https://forum.inverse.finance/t/launch-dsa-and-sdola/361"
         },
         {
           "label": "Inverse FiRM product guide",

@@ -95,8 +95,14 @@ describe("Safety Score v9 methodology policy", () => {
     // the same credit as other low-confidence evidence instead of leaving the
     // capacity denominator outright. No other exit weight, factor, or ceiling
     // moves; the digest rotates with the added key.
+    // Reserve evidence expiry now separates a 365-day classification review
+    // from a 31-day composition window plus seven-day reporting grace. These
+    // score-bearing gate names and values rotate the semantic digest.
+    // 2026-08-24 chain-maturity adjudication: matureChains is derived from the
+    // dated five-gate registry and adds cardano, conflux, gnosis, hedera,
+    // klaytn (Kaia), rootstock, and sui. The digest rotates with that set.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "68fa3395909504621c4b40f86402b4f5d2989dbf6ec661df67f5b65d3c221324",
+      "c10342b0d35780de7f9d5fa571443db683505e5a4da1b54ee64b869623c0a1bc",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
       V9_SCORE_BEARING_GATES_POLICY_V923,
@@ -119,6 +125,14 @@ describe("Safety Score v9 methodology policy", () => {
     expect(resolved.ceiling!.limit).toBeGreaterThan(
       V9_CANDIDATE_POLICY_V1.policy.semantic.structural.namedReasonCeilings["control-unverified"],
     );
+  });
+
+  it("separates annual reserve-classification review from monthly composition freshness and grace", () => {
+    expect(V9_SCORE_BEARING_GATES_POLICY_V923.evidenceExpiry).toMatchObject({
+      reviewedReserveClassificationMaxAgeSec: 365 * 86_400,
+      reviewedReserveCompositionMaxAgeSec: 31 * 86_400,
+      reviewedReserveCompositionGraceSec: 7 * 86_400,
+    });
   });
 
   it("changes the semantic digest for every formerly external score-bearing gate family", () => {

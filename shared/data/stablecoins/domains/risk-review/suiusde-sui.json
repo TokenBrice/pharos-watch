@@ -18,18 +18,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Official Sui material describes suiUSDe as an issuer-managed Ethena Whitelabel synthetic dollar backed by a portfolio of digital assets and short futures, not as a permissionless borrowing market where users open collateralized debt positions subject to per-collateral onchain liquidation branches.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "suiUSDe has no issuer-side borrower liquidation markets, but Ethena Whitelabel manages a value-sensitive backing allocation for the token, and the announced design values a portfolio of digital assets and corresponding short futures positions. That system-wide valuation and rebalancing authority is scoreable; DeepBook borrower liquidations are third-party consumption, not suiUSDe issuance branches.",
       "sources": [
         {
-          "label": "Sui suiUSDe launch announcement",
+          "label": "Sui suiUSDe design announcement (published 2025-10-01)",
           "url": "https://blog.sui.io/suig-ethena-suiusde-stablecoin/"
         },
         {
-          "label": "eSui Dollar mainnet launch",
-          "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
+          "label": "Ethena Whitelabel: suiUSDe backing allocation and reserves (last updated 2026-02)",
+          "url": "https://whitelabel.ethena.fi/"
         }
       ]
     },

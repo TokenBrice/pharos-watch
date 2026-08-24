@@ -115,6 +115,7 @@
     "worker/src/lib/safety-score-v9-consumer-freshness.ts": 100,
     "worker/src/lib/safety-score-v9-extension.ts": 96.5,
     "worker/src/lib/safety-score-v9-extension-bridge.ts": 100,
+    "worker/src/lib/safety-score-v9-extension-incidents.ts": 57.44,
     "worker/src/lib/safety-score-v9-extension-mechanism.ts": 95.3,
     "worker/src/lib/safety-score-v9-extension-oracle.ts": 100,
     "worker/src/lib/safety-score-v9-extension-operational-resilience.ts": 100,

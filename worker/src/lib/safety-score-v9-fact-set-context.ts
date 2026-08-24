@@ -3,6 +3,7 @@ import {
   createV9EvidenceReference,
   createV9FactStatus,
   requiredV9Applicability,
+  type V9PublishedEvidenceAttribution,
 } from "@shared/lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
@@ -26,6 +27,7 @@ export interface AssetBuildContext {
   readonly asset: AssetExtension;
   readonly researchPayloadSha256: string;
   readonly evidence: Map<string, V9EvidenceReferenceV2>;
+  readonly evidencePublisherById: Map<string, V9PublishedEvidenceAttribution>;
   readonly gaps: Map<string, V9FactGapV3>;
 }
 
@@ -122,7 +124,7 @@ export function componentResearchEvidence(context: AssetBuildContext, componentK
         `Safety Score v9 component ${context.asset.assetId}:${componentKey} has unknown evidence ${evidenceKey}`,
       );
     }
-    return addEvidence(
+    const evidenceId = addEvidence(
       context,
       createV9EvidenceReference(
         {
@@ -139,7 +141,39 @@ export function componentResearchEvidence(context: AssetBuildContext, componentK
         context.fixedInput.clockSec,
       ),
     );
+    context.evidencePublisherById.set(evidenceId, evidence.publishedBy ?? "unknown");
+    return evidenceId;
   });
+}
+
+export function evidenceHistoryFor(
+  context: AssetBuildContext,
+  evidenceRefIds: readonly string[],
+): {
+  publishedBy: V9PublishedEvidenceAttribution;
+  references: V9EvidenceReferenceV2[];
+} {
+  const references = evidenceRefIds.flatMap((evidenceId) => {
+    const reference = context.evidence.get(evidenceId);
+    return reference ? [reference] : [];
+  });
+  const publishers = new Set(
+    evidenceRefIds.map((evidenceId) => context.evidencePublisherById.get(evidenceId) ?? "unknown"),
+  );
+  return {
+    publishedBy: publishers.size === 1 ? [...publishers][0]! : "unknown",
+    references,
+  };
+}
+
+function stalePublishedEvidenceFallback(
+  observationState: Exclude<V9FactStatusV2["observationState"], "known">,
+  references: readonly V9EvidenceReferenceV2[],
+  fallback: V9EvidenceResponsibility,
+): V9EvidenceResponsibility {
+  return observationState === "stale" && references.some((reference) => reference.disposition === "published")
+    ? "issuer-undisclosed"
+    : fallback;
 }
 
 export function assertKnownComponentEvidenceCurrent(
@@ -220,6 +254,8 @@ export function normalizeReviewedFactStatus(
     throw new Error(descriptor.staleEvidenceError);
   }
   const evidenceRefIds = keepEvidence ? evidenceIds : [];
+  const evidenceHistory = evidenceHistoryFor(context, evidenceRefIds);
+  const fallbackResponsibility = descriptor.responsibility ?? reviewedGapResponsibility(original.observationState);
   const gapId = addGap(
     context,
     createV9FactGapV3({
@@ -228,10 +264,15 @@ export function normalizeReviewedFactStatus(
       ownerDomain: descriptor.ownerDomain,
       policyRuleId: original.applicability.policyRuleId,
       observationState: original.observationState,
-      responsibility: descriptor.responsibility ?? reviewedGapResponsibility(original.observationState),
+      responsibility: stalePublishedEvidenceFallback(
+        original.observationState,
+        evidenceHistory.references,
+        fallbackResponsibility,
+      ),
       path: { kind: "local-component", componentKey: descriptor.componentKey },
       message: descriptor.message,
       evidenceRefIds,
+      evidenceHistory,
     }),
   );
   return createV9FactStatus({
@@ -269,6 +310,7 @@ export function missingLocalFact(
       path: { kind: "local-component", componentKey: args.componentKey },
       message: args.message,
       evidenceRefIds: args.evidenceRefIds,
+      evidenceHistory: evidenceHistoryFor(context, args.evidenceRefIds ?? []),
     }),
   );
   return {
@@ -294,6 +336,7 @@ export function createAssetBuildContext(
     asset,
     researchPayloadSha256,
     evidence: new Map(),
+    evidencePublisherById: new Map(),
     gaps: new Map(),
   };
 }

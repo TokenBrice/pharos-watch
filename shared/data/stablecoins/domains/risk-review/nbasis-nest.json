@@ -18,18 +18,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex ORCL curation batch 18",
-      "rationale": "Nest documents nBASIS as a vault token representing a share of a basis-trade strategy. Users deposit supported stablecoins to mint shares and redeem shares for the vault's redemption asset; the reviewed product and integration material does not describe borrower debt positions, collateral-ratio checks, or liquidatable collateral markets.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Nest's nBASIS vault mints and redeems shares against the strategy's NAV, and the official price-update endpoint publishes the vault valuation. That NAV/exchange-rate quote is a price-sensitive top-level authority; nBASIS has no borrower debt positions, collateral-ratio checks, or liquidatable collateral market to inventory.",
       "sources": [
         {
-          "label": "Nest available vaults",
-          "url": "https://docs.nest.credit/about/available-vaults/"
-        },
-        {
-          "label": "Nest nBASIS integration guide",
-          "url": "https://docs.nest.credit/developers/integration-guides/nbasis/"
+          "label": "Nest official nBASIS NAV price-update API (source timestamp 2026-07-25)",
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
         }
       ]
     },

@@ -26,22 +26,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "USDf is issued through a whitelisted, issuer-operated collateral account and hedging system rather than permissionless onchain CDP markets. Falcon applies dynamic overcollateralization and may liquidate innovative-mint collateral against an agreed threshold, but its terms define spot pricing as an internal determination and do not expose onchain per-market oracle, auction, bad-debt, or shutdown branches for V9 to inventory.",
+      "disposition": "unresolved",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Falcon's internal spot price is unquestionably price-sensitive: it determines USDf mint amounts, innovative-mint liquidation triggers, and maturity payouts. However, the reviewed terms establish user-selected, collateral-specific liquidation and strike parameters without publishing the complete supported-collateral and production pricing-branch inventory, so neither a single top-level path nor a complete multi-branch model can be verified from public sources.",
       "sources": [
         {
-          "label": "Falcon Finance terms of use",
+          "label": "Falcon Finance terms: internal spot pricing and collateral-specific liquidation (last updated 2026-08-12)",
           "url": "https://docs.falcon.finance/resources/terms-of-use"
         },
         {
-          "label": "Falcon overcollateralization ratio",
-          "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/overcollateralization-ratio"
-        },
-        {
-          "label": "Falcon USDf peg stability",
-          "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-peg-stability"
+          "label": "Falcon Innovative Mint: user-set liquidation and strike parameters (last updated 2025-08-25)",
+          "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-minting-mechanisms/innovative-mint"
         }
       ]
     },

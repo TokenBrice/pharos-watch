@@ -94,6 +94,14 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: undisclosedReviewedFee(
       "Direct 1:1 issuance and redemption through AnchorX for CNH transfers; public fee schedule not disclosed",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "AnchorX establishes a direct CNH redemption mechanism, but reviewed public materials do not establish executable capacity, bank-credit settlement timing, or all-in redemption cost.",
+      reviewedAt: "2026-08-24",
+      docs: [sourceRef("AnchorX website", "https://www.anchorx.org/", ["route", "capacity"])],
+    },
     docs: [sourceRef("AnchorX website", "https://www.anchorx.org/", ["route", "capacity"])],
   },
   "idrt-rupiah-token": {
@@ -134,6 +142,20 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: undisclosedReviewedFee(
       "Juno documents quote-based MXNB conversions into USDC or USDT with pair-specific min/max limits, but it does not publish a fixed redemption or conversion fee schedule",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Juno documents quote-specific MXNB conversion limits, but no dated public terms establish the scored notional's executable limit, settlement SLA, or conversion cost.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef(
+          "Juno MXNB and USD stablecoin conversions",
+          "https://docs.bitso.com/juno/docs/conversions-between-mxnb-and-usd-stablecoins",
+          ["route", "capacity", "fees"],
+        ),
+      ],
+    },
     docs: [
       sourceRef(
         "Juno MXNB and USD stablecoin conversions",
@@ -201,6 +223,22 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: documentedVariableFee(
       "Brale pricing lists stablecoin offramp as included with API plans, while wire and ACH payout rails can still carry transfer fees",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Brale's agreement preserves private limits and delay rights, while public pricing does not establish the scored notional's executable capacity, settlement SLA, or all-in payout-rail cost.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef("Brale business user agreement", "https://brale.xyz/legal/business-user-agreement", [
+          "route",
+          "capacity",
+          "access",
+          "settlement",
+        ]),
+        sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
+      ],
+    },
     docs: [
       sourceRef("SBC stablecoin page", "https://brale.xyz/stablecoins/SBC", ["route", "capacity"]),
       sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
@@ -285,6 +323,21 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "documented-bound", basis: "hot-buffer" },
     settlementModel: "days",
     costModel: fixedFee(7, "Midas documents a 0.07% redemption fee"),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+      rationale:
+        "The reviewed 7 bps redemption fee is retained, but the published atomic-capacity percentage is a target and the 1-7-business-day fallback does not establish a binding calendar-day SLA.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", [
+          "route",
+          "capacity",
+          "settlement",
+        ]),
+        sourceRef("Midas transparency", "https://midas.app/transparency", ["capacity"]),
+      ],
+    },
     reviewedAt: "2026-05-17",
     docs: [
       sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", [
@@ -308,8 +361,27 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
     settlementModel: "days",
     costModel: {
-      ...documentedVariableFee("You will also be charged a redemption fee of 20bps on any redemptions."),
-      feeBpsMax: 20,
+      ...documentedVariableFee(
+        "USDY InstantManager's default redemption fee configuration returned 0 bps at Ethereum block 25,825,933; individual user fee overrides may apply",
+        "formula",
+      ),
+      feeBpsMin: 0,
+    },
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef(
+          "USDY InstantManager verified source",
+          "https://eth.blockscout.com/address/0xa42613c243b67bf6194ac327795b926b4b491f15?tab=contract",
+          ["route", "settlement"],
+        ),
+        sourceRef("Ethereum block 25825933", "https://eth.blockscout.com/block/25825933", [
+          "route",
+          "settlement",
+        ]),
+      ],
     },
     reviewedAt: "2026-05-17",
     docs: [
@@ -318,6 +390,11 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef(
         "Ondo USDY STEP application",
         "https://forum.arbitrum.foundation/t/ondo-finance-usdy-llc-step-application/23593",
+        ["fees"],
+      ),
+      sourceRef(
+        "USDY InstantManager redemption-fee contract",
+        "https://eth.blockscout.com/address/0xe1cb24077d77d2fe763fcac63e5653d97dc8d20c?tab=contract",
         ["fees"],
       ),
     ],
@@ -416,6 +493,17 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: undisclosedReviewedFee(
       "USDN users mint and redeem via USDC through Noble Express; public redemption fees are not disclosed",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Noble materials establish the USDN architecture and a secondary StableSwap venue, but dated issuer terms do not establish a holder redemption commitment and the venue lacks measured capacity, cost, and settlement evidence.",
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef("NASD terms", "https://dollar.noble.xyz/terms-of-use", ["route", "access"]),
+        sourceRef("Noble USDN launch", "https://noble.xyz/blog/introducing-usdn", ["route", "capacity"]),
+      ],
+    },
     docs: [
       sourceRef("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/", ["route", "capacity"]),
       sourceRef("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/", ["route", "capacity"]),

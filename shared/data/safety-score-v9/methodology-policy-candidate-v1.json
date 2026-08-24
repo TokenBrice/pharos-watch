@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.35",
+  "releaseVersion": "9.4",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -255,19 +255,6 @@
         "kind": "critical-dependency",
         "severity": "high"
       },
-      "matureChains": [
-        "arbitrum",
-        "avalanche",
-        "base",
-        "bsc",
-        "ethereum",
-        "hyperliquid",
-        "optimism",
-        "polygon",
-        "solana",
-        "tron",
-        "xrpl"
-      ],
       "commonModeShareThreshold": 0.1,
       "commonModeHighShareThreshold": 0.25,
       "matureVenues": [

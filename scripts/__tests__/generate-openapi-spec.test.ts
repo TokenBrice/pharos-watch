@@ -42,6 +42,13 @@ describe("OpenAPI runtime response contracts", () => {
     ).toEqual(YIELD_ADAPTER_LIFECYCLE_VALUES);
   });
 
+  it("publishes the expired-evidence responsibility in the report-card schema", () => {
+    const document = buildOpenApiDocument();
+    const reportCardsSchema = document.components.schemas.ReportCardsV9Response;
+
+    expect(JSON.stringify(reportCardsSchema)).toContain("published-evidence-expired");
+  });
+
   it("keeps every named endpoint response tied to the typed runtime registry", () => {
     const registeredNames = new Set(Object.keys(PUBLIC_API_RESPONSE_SCHEMAS));
     const endpoints: readonly PublicApiArtifactEndpoint[] = PUBLIC_API_ARTIFACT_ENDPOINTS;

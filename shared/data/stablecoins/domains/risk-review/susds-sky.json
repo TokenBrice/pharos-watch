@@ -86,14 +86,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "Sky documents sUSDS as an ERC-4626 savings token whose users deposit USDS for shares and withdraw USDS without protocol fees. It does not originate borrower debt or operate collateral-ratio-triggered liquidations. The variantOf relationship preserves the complete USDS parent branch review.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "sUSDS's ERC-4626 conversion functions use the savings accumulator to value USDS assets per share for deposits, minting, withdrawals, and redemption, making the share exchange rate a price-sensitive top-level authority. The wrapper has no borrower debt or local liquidation markets, so no branch rows are required.",
       "sources": [
         {
-          "label": "Sky sUSDS documentation",
-          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+          "label": "Sky sUSDS implementation (source revision 2024-06-05)",
+          "url": "https://github.com/sky-ecosystem/sdai/blob/eea30a68bbed2dc808698b19c96e8f4561701294/src/SNst.sol"
         },
         {
           "label": "Sky Oracle Security Module documentation",

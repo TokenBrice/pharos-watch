@@ -13,18 +13,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex ORCL curation batch 20",
-      "rationale": "Lorenzo describes sUSD1+ as a value-accruing stable token whose redemption value increases as managed RWA, CeFi, and DeFi strategies generate returns. The reviewed product material describes an OTF/NAV receipt flow, not borrower-specific collateral positions or oracle-triggered liquidation branches.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Lorenzo's sUSD1+ OTF is a non-rebasing fund-share token: the unit price and final redemption amount are calculated from the OTF's Unit NAV on the processing day. That NAV is a price-sensitive top-level redemption authority, while the reviewed OTF has no borrower-specific debt or liquidation branches; the disposition is top-level-only.",
       "sources": [
         {
-          "label": "Lorenzo Protocol product overview",
-          "url": "https://lorenzo-protocol.org/"
+          "label": "Lorenzo USD1+ OTF mainnet launch (2025-07-21)",
+          "url": "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/"
         },
         {
-          "label": "Lorenzo USD1+ OTF guide",
-          "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/"
+          "label": "Lorenzo sUSD1+ OTF redemption guide (2026-03-27)",
+          "url": "https://lorenzo-protocol.ghost.io/susd1-otf-redemption-guide/"
         }
       ]
     },

@@ -23,12 +23,12 @@
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-DRAIN data review",
-      "rationale": "The verified USDR AssetToken permits Core-authorized minters to mint directly. At finalized Ethereum block 25531699, the minter set comprised three EOAs and RingLaunchpad; the verified launchpad deploys and wraps tokens and seeds AMM liquidity, not borrower vaults. No current minter exposes a borrower-owned collateral position, collateral-ratio check, or liquidation engine, so market-specific oracle branches do not apply to USDR issuance.",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "The verified USDR AssetToken mint path accepts only an account and amount, and the reviewed Core roles expose no collateral-ratio gate, reserve-ratio input, oracle call, NAV, exchange-rate quote, or liquidation engine. At finalized Ethereum block 25531699 on 2026-07-14, the current minter set was three EOAs and RingLaunchpad; the launchpad only deploys generic tokens and seeds AMM liquidity. The PCV/bonding-curve description is not tied to a price-sensitive authority in the tracked USDR issuance path, so not-applicable remains correct.",
       "sources": [
         {
-          "label": "USDR AssetToken verified source",
+          "label": "USDR AssetToken verified source (mint takes account and amount)",
           "url": "https://eth.blockscout.com/address/0x4ea40dcee961675683e0a2e1721bd49cb9bca913?tab=contract"
         },
         {
@@ -40,7 +40,7 @@
           "url": "https://eth.blockscout.com/address/0x8814a2aa2384d65672c7dc0650454e56f62fba8b?tab=contract"
         },
         {
-          "label": "Finalized Ethereum block 25531699",
+          "label": "Finalized Ethereum block 25531699 (2026-07-14)",
           "url": "https://eth.blockscout.com/block/25531699"
         }
       ]

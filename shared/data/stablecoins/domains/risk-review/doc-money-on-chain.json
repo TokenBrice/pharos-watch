@@ -62,14 +62,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Money On Chain documents one shared C0 bucket whose global rBTC coverage determines protocol states. DOC holders mint and redeem against the pooled system rather than opening borrower-specific debt positions, and the terminal liquidation state is a global, irreversible settlement that permits DOC redemption at the last available price. There are therefore no collateral-market liquidation branches to inventory.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-a oracle applicability review",
+      "rationale": "Money On Chain has no borrower-specific collateral or liquidation branches, but its shared C0 system uses the BTC/USD oracle price to calculate DOC's rBTC mint/redemption conversion and global coverage state. That price-sensitive, system-wide conversion authority is therefore scored as a top-level control without inventing borrower branches.",
       "sources": [
         {
-          "label": "Money On Chain main concepts",
-          "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+          "label": "Money On Chain main concepts (document commit 2023-04-26)",
+          "url": "https://github.com/money-on-chain/main-RBTC-contract/blob/de4c382df42a6d95001c4778f363ec3488449566/docs/rationale/main-concepts.md"
         },
         {
           "label": "Money On Chain system states",

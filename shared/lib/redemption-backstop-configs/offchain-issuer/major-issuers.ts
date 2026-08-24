@@ -280,7 +280,20 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "xusd-straitsx": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("No platform conversion fee; bank or network fees may apply"),
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      reviewedAt: "2026-07-18",
+      docs: [
+        sourceRef(
+          "StraitsX purchasing and redemption terms",
+          "https://www.straitsx.com/legal/purchasing-and-redemption",
+          ["route"],
+        ),
+      ],
+    },
+    costModel: documentedVariableFee(
+      "StraitsX terms require the prevailing website redemption fee plus an S$1 administrative fee and applicable network fees",
+    ),
     docs: [
       sourceRef(
         "StraitsX XUSD overview",
@@ -321,6 +334,22 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usd1-world-liberty-financial": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      settlementDelaySec: 172_800,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale:
+        "BitGo's dated terms establish processing within two business days when required information is complete, but executable capacity remains discretionary and the client-platform fee is not publicly quantified.",
+      reviewedAt: "2026-03-25",
+      docs: [
+        sourceRef(
+          "BitGo coin minting and redemption services terms",
+          "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+          ["route", "capacity", "fees", "settlement"],
+        ),
+      ],
+    },
     costModel: undisclosedReviewedFee(),
     docs: [sourceRef("World Liberty Financial USD1", "https://worldlibertyfinancial.com/usd1", ["route", "capacity"])],
   },

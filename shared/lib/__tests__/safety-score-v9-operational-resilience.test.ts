@@ -483,4 +483,30 @@ describe("Safety Score v9 operational resilience", () => {
     expect(result.contributions).toEqual([]);
     expect(result.blockerCodes).toEqual(["activeMaterialIncident"]);
   });
+
+  it("retains resolved incident history without masquerading as an active blocker", () => {
+    const input = facts();
+    if (input.incidentReview.state !== "reviewed") throw new Error("Expected reviewed facts");
+    input.incidentReview.incidents = [
+      {
+        incidentKey: "resolved-control",
+        name: "Resolved control incident",
+        category: "control",
+        state: "resolved",
+        occurredAt: "2025-01-01",
+        resolvedAt: "2025-01-10",
+        confidence: "independent-assurance",
+        evidenceRefIds: ["incident"],
+      },
+    ];
+    const result = evaluateV9OperationalResilience(
+      input,
+      MEASURED_DEPTH,
+      POLICY,
+      NO_BLOCKERS,
+    );
+    expect(result.eligible).toBe(true);
+    expect(result.blockerCodes).toEqual([]);
+    expect(result.pillarCredits).toEqual({ backing: 3, exit: 8, control: 3 });
+  });
 });

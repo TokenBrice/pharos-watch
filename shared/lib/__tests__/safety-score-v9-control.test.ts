@@ -680,6 +680,20 @@ describe("Safety Score v9 economic control", () => {
       );
     });
 
+    it("applies resolved supply-integrity history without inventing a live mint authority", () => {
+      const result = evaluateV9EconomicControl(
+        args({
+          mint: noMint(),
+          resolvedIncidentAgeMonths: 11,
+        }),
+      );
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        posture: "none-resolved",
+        score: MERGED_MINT_SIGNALS.resolvedIncidentQualityCaps.recent,
+      });
+      expect(result.structuralFailures).toEqual([]);
+    });
+
     it("waives the externally-owned-key penalty for reviewed MPC or HSM custody", () => {
       const eoaMint = (keyCustody: V9DeploymentControlFactV2["keyCustody"]) =>
         boundedAdminMint({

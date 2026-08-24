@@ -816,9 +816,12 @@ export function makeV9QueuedRedemptionFixedInput(
 }
 
 /** `usdc-circle` with a documented-terms redemption whose fee is undisclosed. */
-export function makeV9BoundedUnknownFeeRedemptionFixedInput() {
+export function makeV9BoundedUnknownFeeRedemptionFixedInput(
+  options: { clockSec?: number } = {},
+) {
   const assetId = "usdc-circle";
-  const base = makeV9FixedInput({ assetId });
+  const base = makeV9FixedInput({ assetId, clockSec: options.clockSec });
+  const observedAtSec = base.clockSec - 100;
   const redemption: RedemptionBackstopEntry = {
     stablecoinId: "usdc-circle",
     score: null,
@@ -858,7 +861,7 @@ export function makeV9BoundedUnknownFeeRedemptionFixedInput() {
     feeBps: null,
     queueEnabled: false,
     methodologyVersion: "4.18",
-    updatedAt: V9_FIXTURE_OBSERVED_AT_SEC,
+    updatedAt: observedAtSec,
     docs: {
       label: "Fixture redemption terms",
       url: "https://example.com/redemption",
@@ -872,8 +875,8 @@ export function makeV9BoundedUnknownFeeRedemptionFixedInput() {
     inputFreshness: {
       ...base.inputFreshness,
       redemptionBackstops: {
-        updatedAt: V9_FIXTURE_OBSERVED_AT_SEC,
-        ageSeconds: V9_FIXTURE_CLOCK_SEC - V9_FIXTURE_OBSERVED_AT_SEC,
+        updatedAt: observedAtSec,
+        ageSeconds: base.clockSec - observedAtSec,
         stale: false,
       },
     },

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import {
+  getRedemptionBackstopConfig,
+  type RedemptionBackstopConfig,
+} from "@shared/lib/redemption-backstops";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { createReportCardsFixedInput, type ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -72,6 +76,36 @@ function fixedInputStub(
     pegDataById: {},
   } as unknown as ReportCardsFixedInput;
 }
+
+function withV9RouteReviewTerms<T>(
+  stablecoinId: string,
+  terms: NonNullable<RedemptionBackstopConfig["v9RouteReviewTerms"]>,
+  run: () => T,
+): T {
+  const config = getRedemptionBackstopConfig(stablecoinId);
+  if (!config) throw new Error(`Missing redemption config fixture for ${stablecoinId}`);
+  const previous = config.v9RouteReviewTerms;
+  config.v9RouteReviewTerms = terms;
+  try {
+    return run();
+  } finally {
+    if (previous === undefined) delete config.v9RouteReviewTerms;
+    else config.v9RouteReviewTerms = previous;
+  }
+}
+
+const FASTER_REVIEWED_SETTLEMENT = {
+  settlementModel: "days",
+  settlementDelaySec: 2 * 86_400,
+  reviewedAt: "2026-07-01",
+  docs: [
+    {
+      label: "Issuer redemption terms",
+      url: "https://example.com/redemption-terms",
+      supports: ["settlement"],
+    },
+  ],
+} satisfies NonNullable<RedemptionBackstopConfig["v9RouteReviewTerms"]>;
 
 function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput {
   const route: ExitRouteObservation = {
@@ -208,6 +242,97 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
+  it("keeps an unmarked documented-bound route scoreable under the existing projection", () => {
+    const row = supplyFullRow();
+    const fixedInput = fixedInputStub(row);
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]).toMatchObject({
+      lane: "redemption",
+      coverageClass: "exact-lower-bound",
+    });
+    expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]).toMatchObject({
+      observation: { evidenceKind: "documented-terms", scoreEligible: true },
+    });
+  });
+
+  it("projects a bounded terms gap as diagnostic without mutating the frozen redemption row", () => {
+    const row = supplyFullRow({
+      stablecoinId: "xo-exodus",
+      settlementModel: "same-day",
+      feeBps: 0,
+    });
+    const frozenRow = structuredClone(row);
+    const fixedInput = fixedInputStub(row);
+    const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]!;
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
+
+    expect(getRedemptionBackstopConfig(row.stablecoinId)?.v9RouteReviewTerms).toMatchObject({
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+    });
+    expect(retained.observation).toMatchObject({
+      evidenceKind: "documented-terms",
+      scoreEligible: false,
+      executableUsd: 5_000_000,
+    });
+    expect(review).toMatchObject({
+      lane: "redemption",
+      coverageClass: "diagnostic",
+      executionCosts: expect.arrayContaining([
+        expect.objectContaining({ executionCostBps: 0 }),
+      ]),
+    });
+    expect(row).toEqual(frozenRow);
+    expect(row).not.toHaveProperty("v9RouteReviewTerms");
+    expect(row).not.toHaveProperty("scoringDisposition");
+  });
+
+  it("records capacity, settlement, and cost gaps distinctly while retaining partial terms", () => {
+    const expectedMissingFields = {
+      "axcnh-anchorx": ["capacity", "settlement", "cost"],
+      "brla-brla-digital": ["capacity", "settlement", "cost"],
+      "gbpsafo-spiko": ["capacity", "settlement", "cost"],
+      "jaaa-janus-henderson-anemoy": ["capacity", "settlement", "cost"],
+      "mapollo-midas": ["capacity", "settlement", "cost"],
+      "mf-one-midas": ["capacity", "settlement"],
+      "mhyper-midas": ["capacity", "settlement"],
+      "mmev-midas": ["capacity", "settlement", "cost"],
+      "mtbill-midas": ["capacity", "settlement"],
+      "mxnb-juno": ["capacity", "settlement", "cost"],
+      "qcad-stablecorp": ["capacity", "settlement", "cost"],
+      "sbc-brale": ["capacity", "settlement", "cost"],
+      "usd1-world-liberty-financial": ["capacity", "cost"],
+      "usdn-noble": ["capacity", "settlement", "cost"],
+      "vbill-vaneck": ["capacity", "settlement", "cost"],
+      "wars-argentine-peso": ["capacity", "settlement", "cost"],
+      "xo-exodus": ["settlement"],
+    } as const;
+
+    for (const [assetId, missingScoringFields] of Object.entries(expectedMissingFields)) {
+      expect(getRedemptionBackstopConfig(assetId)?.v9RouteReviewTerms).toMatchObject({
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields,
+        reviewedAt: expect.any(String),
+        rationale: expect.any(String),
+        docs: expect.arrayContaining([expect.objectContaining({ url: expect.any(String) })]),
+      });
+    }
+
+    expect(getRedemptionBackstopConfig("xo-exodus")?.costModel).toMatchObject({
+      kind: "fee-bps",
+      feeBps: 0,
+    });
+    expect(getRedemptionBackstopConfig("usd1-world-liberty-financial")?.v9RouteReviewTerms).toMatchObject({
+      settlementModel: "days",
+      settlementDelaySec: 172_800,
+      missingScoringFields: ["capacity", "cost"],
+    });
+    expect(getRedemptionBackstopConfig("mtbill-midas")?.costModel).toMatchObject({
+      kind: "fee-bps",
+      feeBps: 7,
+    });
+  });
+
   it("preserves the captured redemption model-confidence rollup", () => {
     const fixedInput = fixedInputStub(supplyFullRow({ modelConfidence: "high" }));
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
@@ -264,6 +389,57 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       settlementSlaSec: null,
       settlementHorizonSec: 14 * 86_400,
       minRedeemUsd: 100_000,
+    });
+  });
+
+  it("projects an evidence-backed faster settlement into the scored SLA", () => {
+    const row = supplyFullRow({
+      stablecoinId: "msusd-main-street",
+      settlementModel: "days",
+      settlementDelaySec: undefined,
+    });
+
+    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+        settlementModel: "bounded-delay",
+        settlementSlaSec: 2 * 86_400,
+      });
+    });
+  });
+
+  it("does not re-widen an evidence-backed faster settlement horizon", () => {
+    const row = supplyFullRow({
+      stablecoinId: "msusd-main-street",
+      settlementModel: "days",
+      settlementDelaySec: undefined,
+    });
+    const fixedInput = fixedInputStub(row);
+
+    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
+      expect(
+        buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]?.observation
+          .settlementHorizonSec,
+      ).toBe(14 * 86_400);
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.settlementHorizonSec).toBe(
+        2 * 86_400,
+      );
+    });
+  });
+
+  it("expires a faster reviewed settlement back to the conservative captured horizon", () => {
+    const row = supplyFullRow({
+      stablecoinId: "msusd-main-street",
+      settlementModel: "days",
+      settlementDelaySec: undefined,
+    });
+    const staleClock = Date.UTC(2027, 6, 2) / 1_000;
+
+    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row, staleClock), row.stablecoinId)[0]).toMatchObject({
+        settlementModel: "bounded-delay",
+        settlementSlaSec: null,
+        settlementHorizonSec: 14 * 86_400,
+      });
     });
   });
 

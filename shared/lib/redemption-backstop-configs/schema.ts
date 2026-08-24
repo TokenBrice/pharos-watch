@@ -17,7 +17,7 @@ import {
   PositiveNumberSchema,
 } from "../../types";
 import type { RedemptionDocSource } from "../../types";
-import { isRedemptionSettlementAtLeastAsConservative } from "./settlement";
+import { isRedemptionSettlementFaster } from "./settlement";
 
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
@@ -105,9 +105,16 @@ const RedemptionCostShapeSchema = {
 };
 
 const RedemptionCostTermsSchema = z.strictObject(RedemptionCostShapeSchema);
+const RedemptionV9RouteScoringFieldSchema = z.enum(["capacity", "settlement", "cost"]);
 const RedemptionV9RouteReviewTermsSchema = z.strictObject({
   minRedeemUsd: NonNegativeNumberSchema.optional(),
   settlementModel: RedemptionSettlementModelSchema.optional(),
+  settlementDelaySec: z.number().int().nonnegative().optional(),
+  scoringDisposition: z.literal("bounded-terms-gap").optional(),
+  missingScoringFields: z.array(RedemptionV9RouteScoringFieldSchema).min(1).optional(),
+  rationale: z.string().min(1).optional(),
+  reviewedAt: ReviewedAtSchema.optional(),
+  docs: z.array(RedemptionDocSourceSchema).min(1).optional(),
 });
 const RedemptionV9ComposedDexExitSchema = z.strictObject({
   intermediateAssetId: z.string().min(1),
@@ -160,9 +167,11 @@ export const RedemptionBackstopConfigSchema = z
     /**
      * Reviewed route constraints projected only by the Safety Score V9 adapter.
      *
-     * Validation permits only settlement semantics that are at least as
-     * conservative as the frozen V8 config. Runtime projection also preserves
-     * any stricter constraint carried by the captured redemption row.
+     * Conservative corrections need no citation because they can only lower a
+     * score. Faster settlement semantics require an explicit cited SLA. A
+     * bounded scoring gap requires dated review documents and a field-specific
+     * withholding rationale. Runtime projection also preserves any stricter
+     * constraint carried by the captured redemption row.
      */
     v9RouteReviewTerms: RedemptionV9RouteReviewTermsSchema.optional(),
     /**
@@ -215,15 +224,74 @@ export const RedemptionBackstopConfigSchema = z
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
-    const reviewedSettlement = config.v9RouteReviewTerms?.settlementModel;
+    const reviewedSettlement = config.v9RouteReviewTerms;
+    if (reviewedSettlement?.scoringDisposition === "bounded-terms-gap") {
+      if (reviewedSettlement.missingScoringFields === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["v9RouteReviewTerms", "missingScoringFields"],
+          message: "A bounded V9 route-terms gap requires at least one missing scoring field",
+        });
+      } else if (
+        new Set(reviewedSettlement.missingScoringFields).size !==
+        reviewedSettlement.missingScoringFields.length
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["v9RouteReviewTerms", "missingScoringFields"],
+          message: "V9 route missingScoringFields cannot contain duplicates",
+        });
+      }
+      if (reviewedSettlement.rationale === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["v9RouteReviewTerms", "rationale"],
+          message: "A bounded V9 route-terms gap requires a score-withholding rationale",
+        });
+      }
+      if (reviewedSettlement.reviewedAt === undefined || reviewedSettlement.docs === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["v9RouteReviewTerms", "scoringDisposition"],
+          message: "A bounded V9 route-terms gap requires reviewedAt and at least one docs source",
+        });
+      }
+    } else if (
+      reviewedSettlement?.missingScoringFields !== undefined ||
+      reviewedSettlement?.rationale !== undefined
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["v9RouteReviewTerms", "scoringDisposition"],
+        message: "V9 route gap fields require scoringDisposition=bounded-terms-gap",
+      });
+    }
+    const fasterSettlementModel =
+      reviewedSettlement?.settlementModel !== undefined &&
+      isRedemptionSettlementFaster(reviewedSettlement.settlementModel, config.settlementModel);
     if (
-      reviewedSettlement &&
-      !isRedemptionSettlementAtLeastAsConservative(reviewedSettlement, config.settlementModel)
+      fasterSettlementModel &&
+      (reviewedSettlement.settlementDelaySec === undefined ||
+        reviewedSettlement.reviewedAt === undefined ||
+        reviewedSettlement.docs === undefined)
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["v9RouteReviewTerms", "settlementModel"],
-        message: "V9 reviewed settlement cannot be faster than the frozen settlement model",
+        message:
+          "Faster V9 reviewed settlement requires settlementDelaySec, reviewedAt, and at least one docs source",
+      });
+    }
+    if (
+      !fasterSettlementModel &&
+      reviewedSettlement?.settlementDelaySec !== undefined &&
+      (reviewedSettlement.reviewedAt === undefined || reviewedSettlement.docs === undefined)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["v9RouteReviewTerms", "settlementDelaySec"],
+        message:
+          "Explicit V9 reviewed settlement SLA requires reviewedAt and at least one docs source",
       });
     }
     if (config.outputAssets) {

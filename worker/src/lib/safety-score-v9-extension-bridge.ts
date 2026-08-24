@@ -626,6 +626,7 @@ export function adaptBridgeReview(
     componentKeys: reviewStale ? ["economic-control:bridge"] : ["economic-control:bridge", "control"],
     sourceId: "stablecoin-meta.bridge-route-risk",
     reviewedAt: profile.reviewedAt,
+    publishedBy: "unknown",
     confidence,
     sources: profile.sources,
     payload: profile,

@@ -22,11 +22,15 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-15",
-      "reviewer": "TERRA-ULTRA oracle review",
-      "rationale": "USP is an issuer-operated, KYC-gated NAV product with a centralized issuance and redemption workflow, not a permissionless CDP with borrower collateral and liquidation branches.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
+      "rationale": "USP is an issuer-operated, KYC-gated NAV product, not a permissionless CDP with borrower collateral and liquidation branches. Its Funding Manager nevertheless calculates minting, redemption, and yield from the Oracle Module's authorized issuance and redemption prices; Piku's dated price example also identifies the Chainlink-compatible adapter as the canonical USP valuation reference. Those prices are a price-sensitive top-level issuance/redemption authority that must be scored without inventing liquidation branches.",
       "sources": [
+        {
+          "label": "Piku USP price documentation (example dated 2026-03-24)",
+          "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/minting-and-redemption/how-to-get-usp-price"
+        },
         {
           "label": "Piku USP workflow contracts",
           "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"

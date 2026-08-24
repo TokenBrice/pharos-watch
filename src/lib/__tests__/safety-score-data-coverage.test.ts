@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import {
   buildDataCoverageModel,
@@ -9,13 +10,26 @@ import {
 function withGaps(
   card: SafetyScoreV9CurrentCard,
   summaries: Array<{
-    responsibility: "integration-missing" | "issuer-undisclosed" | "measured-adverse" | "method-unsupported" | "producer-failed";
+    responsibility: V9EvidenceResponsibility;
     factCount: number;
     criticalFactCount: number;
     reasonCodes: string[];
   }>,
 ): SafetyScoreV9CurrentCard {
-  const base = card.scoreTrace.evidenceResponsibility.summaries.map((summary) => {
+  const currentSummaries = card.scoreTrace.evidenceResponsibility.summaries.some(
+    (summary) => summary.responsibility === "published-evidence-expired",
+  )
+    ? card.scoreTrace.evidenceResponsibility.summaries
+    : [
+        ...card.scoreTrace.evidenceResponsibility.summaries,
+        {
+          responsibility: "published-evidence-expired" as const,
+          factCount: 0,
+          criticalFactCount: 0,
+          reasonCodes: [],
+        },
+      ];
+  const base = currentSummaries.map((summary) => {
     const override = summaries.find((entry) => entry.responsibility === summary.responsibility);
     return override ? { ...summary, ...override } : summary;
   }) as SafetyScoreV9CurrentCard["scoreTrace"]["evidenceResponsibility"]["summaries"];
@@ -101,6 +115,35 @@ describe("buildDataCoverageModel", () => {
       "issuer-undisclosed",
     ]);
     expect(model.gapOwners[0]!.share).toBeCloseTo(5 / 6);
+  });
+
+  it("counts expired published evidence as a Pharos-owned coverage gap", () => {
+    const response = makeReportCardsV9Response({
+      cards: [
+        withGaps(makeV9Card({ id: "aaa-one" }), [
+          {
+            responsibility: "published-evidence-expired",
+            factCount: 3,
+            criticalFactCount: 0,
+            reasonCodes: ["missing-latest-assurance-report"],
+          },
+        ]),
+      ],
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.openGapCount).toBe(3);
+    expect(model.gapOwners).toContainEqual(expect.objectContaining({
+      responsibility: "published-evidence-expired",
+      label: "Pharos copy is out of date",
+      count: 3,
+    }));
+    expect(model.gapTypes).toContainEqual({
+      code: "missing-latest-assurance-report",
+      label: "No current attestation or audit",
+      assetCount: 1,
+    });
   });
 
   it("counts gap types by affected assets and labels them in plain English", () => {

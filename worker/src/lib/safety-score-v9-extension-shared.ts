@@ -11,6 +11,7 @@
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import type { StablecoinLink, StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
@@ -84,22 +85,36 @@ export class ReviewEvidenceBuilder {
     componentKeys: readonly string[];
     sourceId: string;
     reviewedAt: string;
+    observedAt?: string;
+    publishedAt?: string;
+    publishedBy?: V9PublishedEvidenceAttribution;
     confidence?: ResearchEvidence["confidence"];
     sources?: readonly StablecoinLink[];
     payload: unknown;
     maxAgeSec?: number | null;
   }): string[] {
-    const observedAtSec = isoDateStartSec(args.reviewedAt, this.clockSec, `${this.assetId}:${args.sourceId}`);
+    isoDateStartSec(args.reviewedAt, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
+    const observedAtSec = isoDateStartSec(
+      args.observedAt ?? args.reviewedAt,
+      this.clockSec,
+      `${this.assetId}:${args.sourceId}:observed`,
+    );
+    const publishedAtSec = args.publishedAt
+      ? isoDateStartSec(args.publishedAt, this.clockSec, `${this.assetId}:${args.sourceId}:published`)
+      : null;
     const sources = args.sources?.length
       ? [...args.sources].sort(
           (left, right) => compareText(left.url, right.url) || compareText(left.label, right.label),
         )
       : [null];
     const evidenceKeys = sources.map((source, index) => {
-      const contentSha256 = domainDigest("safety-score-v9.reviewed-metadata-evidence.v1", {
+      const contentSha256 = domainDigest("safety-score-v9.reviewed-metadata-evidence.v2", {
         assetId: this.assetId,
         sourceId: args.sourceId,
         reviewedAt: args.reviewedAt,
+        observedAt: args.observedAt ?? args.reviewedAt,
+        publishedAt: args.publishedAt ?? null,
+        publishedBy: args.publishedBy ?? "unknown",
         confidence: args.confidence ?? "manual-review",
         source,
         payload: args.payload,
@@ -109,7 +124,8 @@ export class ReviewEvidenceBuilder {
         evidenceKey,
         sourceId: args.sourceId,
         observedAtSec,
-        publishedAtSec: null,
+        publishedAtSec,
+        ...(args.publishedBy === undefined ? {} : { publishedBy: args.publishedBy }),
         url: source?.url ?? null,
         contentSha256,
         confidence: args.confidence ?? "manual-review",
