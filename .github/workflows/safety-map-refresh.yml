@@ -84,11 +84,12 @@ name: Safety Map Refresh
 
 on:
   # Enable ONLY after the post-merge workflow_dispatch test passes and the owner
-  # actions above are done. 07:20 UTC leaves ~45 min of headroom before the
-  # 08:05 UTC digest cron, deliberately wide because Actions schedules are
-  # routinely delayed 5-20 minutes at peak (plan §11.2a).
+  # actions above are done. 06:20 UTC leaves ~105 min of headroom before the
+  # 08:05 UTC digest cron. The original 07:20 slot missed the 2026-08-24 digest
+  # after GitHub delayed it by 47 minutes, so the larger buffer is operational,
+  # not cosmetic (plan §11.2a).
   schedule:
-    - cron: "20 7 * * *"
+    - cron: "20 6 * * *"
   workflow_dispatch:
 
 permissions:

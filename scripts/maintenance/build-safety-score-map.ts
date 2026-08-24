@@ -2,22 +2,22 @@
  * Build the Safety Score map: a landscape Twitter-post-size (1600x900, rendered
  * at 2x) editorial infographic of the graded stablecoin universe.
  *
- * Composition (bubble map): every graded coin appears as its logo, sized by
- * circulating supply (area-proportional with a legibility floor), packed into
- * horizontal grade strata A-F. Size carries the economic story — the A band
- * holds the giants, the lower tiers read as shrinking gravel — and white
- * score chips label every coin large enough to name.
+ * Composition (orbital map): every graded coin appears as its logo, sized by
+ * circulating supply (area-proportional with a legibility floor), arranged in
+ * concentric grade orbits around an A-tier core. Size carries the economic
+ * story while distance from the core carries the safety tier; small markers
+ * integrated between the paths identify each grade without a detached legend.
  *
  * Two editions share one composition:
- *   --edition=daily    stable output name, "DATA AS OF <date>" stamp, no issue
- *                      furniture. Regenerated unattended and published to
- *                      /safety-scores/map.
+ *   --edition=daily    stable output name with the capture date in the footer
+ *                      and no issue furniture. Regenerated unattended and
+ *                      published to /safety-scores/map.
  *   --edition=monthly  month-stamped archive name plus the monthly issue
  *                      lockup. Triggered deliberately and reviewed by a human.
  *
- * Archive/output naming uses the run date (UTC); the visible stamp uses the
- * report-card capture clock (asOfSec). Every number on the poster is computed
- * from the fetched data — no headline figure is ever a literal.
+ * Archive/output naming uses the run date (UTC); visible date provenance uses
+ * the report-card capture clock (asOfSec). Every number on the poster is
+ * computed from the fetched data — no headline figure is ever a literal.
  *
  * Usage:
  *   npm run build:safety-score-map
@@ -47,7 +47,7 @@ import { parseArgs } from "node:util";
 import { firefox } from "playwright";
 import sharp from "sharp";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { GRADE_POSTER_TEXT_COLORS, GRADE_RADAR_COLORS } from "@shared/lib/classification";
+import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 import { GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { escapeXml } from "../lib/og-svg.mts";
@@ -60,7 +60,7 @@ const NEWSREADER_FONT = resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable
 const NEWSREADER_ITALIC_FONT = resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Italic-Variable.subset.woff2");
 const JETBRAINS_MONO_FONT = resolve(REPO_ROOT, "src/assets/fonts/JetBrainsMono-Variable.woff2");
 const BRICOLAGE_FONT = resolve(REPO_ROOT, "src/assets/fonts/BricolageGrotesque-Variable.woff2");
-const BRAND_MARK = resolve(REPO_ROOT, "public/pharos-mark-on-light.svg");
+const BRAND_MARK = resolve(REPO_ROOT, "public/pharos-mark-on-dark.svg");
 const LOGOS_JSON = resolve(REPO_ROOT, "data/logos.json");
 const PUBLIC_DIR = resolve(REPO_ROOT, "public");
 const OUT_DIR = resolve(REPO_ROOT, "agents/safety-score-map");
@@ -69,16 +69,10 @@ const WIDTH = 1600;
 const HEIGHT = 900;
 const DEVICE_SCALE = 2;
 const MARGIN_X = 64;
-const CONTENT_W = WIDTH - MARGIN_X * 2;
-const FOOTER_RULE_Y = 848;
-const RAIL_WIDTH = 170;
-const FLOW_X = MARGIN_X + RAIL_WIDTH;
-const FLOW_RIGHT = WIDTH - MARGIN_X;
-const BODY_TOP = 192;
-// The headline stat owns a reserved column inside the A stratum. Reserving it
-// in layout is what stops the poster's one sentence from silently vanishing
-// when a wider A pack eats the left void.
-const ANNOTATION_W = 310;
+const FOOTER_RULE_Y = 864;
+const BODY_TOP = 128;
+const GALAXY_CX = 800;
+const GALAXY_CY = 495;
 
 // Data freshness ceiling for an unattended render: a stalled report-card
 // producer must fail the job, not publish week-old scores under today's date.
@@ -87,35 +81,47 @@ const MAX_DATA_AGE_SEC = 48 * 3600;
 // map is drawing floors instead of data.
 const MIN_JOIN_COVERAGE = 0.95;
 
-// Palette: editorial shell neutrals shared with the OG templates.
-const INK = "#171719";
-const INK_SECONDARY = "#5f6570";
-const HAIRLINE = "#e4e7eb";
-const RULE = "#d9dce1";
+// Palette: a midnight editorial shell lets the classification colors read as
+// orbital signals instead of spreadsheet rules.
+const INK = "#f5f7fb";
+const INK_SECONDARY = "#9aa6ba";
+const HAIRLINE = "#2a3448";
+const RULE = "#263044";
 const FROST_BLUE = "#4bc4de";
 
 // Letter-tier hex tokens come from the shared classification palette.
 const TIER_ORDER = ["A", "B", "C", "D", "F"] as const;
 type Tier = (typeof TIER_ORDER)[number];
 const TIER_COLORS = GRADE_RADAR_COLORS;
-const TIER_TEXT_COLORS = GRADE_POSTER_TEXT_COLORS;
+
+interface OrbitZone {
+  innerRx: number;
+  innerRy: number;
+  outerRx: number;
+  outerRy: number;
+}
+
+// Closed, wide ellipses use the landscape canvas instead of concentrating the
+// universe in its middle. Radial gaps keep adjacent tiers visually distinct.
+const ORBIT_ZONES: Record<Tier, OrbitZone> = {
+  A: { innerRx: 0, innerRy: 0, outerRx: 300, outerRy: 190 },
+  B: { innerRx: 320, innerRy: 210, outerRx: 430, outerRy: 245 },
+  C: { innerRx: 450, innerRy: 260, outerRx: 550, outerRy: 285 },
+  D: { innerRx: 570, innerRy: 300, outerRx: 650, outerRy: 320 },
+  F: { innerRx: 670, innerRy: 330, outerRx: 735, outerRy: 359 },
+};
 
 // Bubble sizing: area tracks circulating supply, floored for presence. The
 // largest coin anchors the scale; the fit loop shrinks it until the strata
 // stack above the footer.
-const R_MAX_TARGET = 150;
-// The A tier floors higher so "every A is exceptional" survives at poster
-// scale; the gravel floor is the fit loop's second degradation axis.
-const R_MIN_A = 14;
-const GRAVEL_FLOORS = [7, 6, 5] as const;
-const CHIP_MIN_R = 15;
-// Always name this many coins per stratum, whatever their radius: "who is the
-// biggest D coin" is the newsiest fact on the poster.
-const CHIP_TOP_N = 3;
+const R_MAX_TARGET = 68;
+const MIN_LOGO_SCALE = 1.25 * 1.25;
+const R_MIN_A = 7 * MIN_LOGO_SCALE;
+const GRAVEL_FLOORS = [5 * MIN_LOGO_SCALE] as const;
+const BUBBLE_GAP = 2.5;
 
 // Only these codepoints are covered by all four embedded faces. Anything else
-// falls through to a machine-dependent glyph with the wrong advance, which
-// silently breaks monoWidth()'s exact 0.6em math.
+// falls through to a machine-dependent glyph and can visibly change the map.
 const RENDERABLE_TEXT = /^[\x20-\x7e·–—°€£¥]*$/;
 const unsupportedGlyphs = new Set<string>();
 
@@ -179,11 +185,6 @@ function formatUsdCompact(value: number): string {
   if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
   return `$${Math.round(value / 1e3)}K`;
-}
-
-// JetBrains Mono advance is 0.6em; text widths are exact, not estimated.
-function monoWidth(text: string, fontSize: number): number {
-  return text.length * fontSize * 0.6;
 }
 
 // U+20AE and friends are absent from every embedded face; transliterate the
@@ -255,81 +256,128 @@ interface Bubble {
 
 interface BandLayout {
   tier: Tier;
-  y: number;
-  height: number;
+  zone: OrbitZone;
   bubbles: Bubble[];
   totalCount: number;
   totalMcap: number;
-  flowLeft: number; // left edge of this stratum's usable flow area
-}
-
-interface TierGaps {
-  colGap: number;
-  vGap: number;
-  padTop: number;
-  padBottom: number;
 }
 
 interface FitDiagnostic {
   tier: string;
   count: number;
-  usedWidth: number;
-  innerH: number;
-  deficit: number;
+  placed: number;
+  radius: number;
 }
 
-// The A stratum breathes (room for chips below its tail bubbles); lower
-// strata pack tighter as the gravel shrinks.
-const TIER_GAPS: Record<Tier, TierGaps> = {
-  A: { colGap: 42, vGap: 26, padTop: 16, padBottom: 26 },
-  B: { colGap: 10, vGap: 8, padTop: 20, padBottom: 20 },
-  C: { colGap: 8, vGap: 7, padTop: 18, padBottom: 18 },
-  D: { colGap: 7, vGap: 6, padTop: 12, padBottom: 12 },
-  F: { colGap: 7, vGap: 6, padTop: 12, padBottom: 12 },
-};
+function ellipseValue(x: number, y: number, rx: number, ry: number): number {
+  return (x * x) / (rx * rx) + (y * y) / (ry * ry);
+}
 
-/**
- * Column packing: bubbles flow left to right, stacking vertically inside each
- * column while the stack fits the band's inner height. Deterministic, and
- * tolerant of non-monotone radii. Returns local center coords (origin at the
- * flow area's top-left) plus the used width; `fits` is false when the band
- * overflows the available width.
- */
-function packColumns(
-  radii: readonly number[],
-  innerH: number,
-  colGap: number,
-  vGap: number,
-  availW: number,
-): { centers: Array<{ x: number; y: number }>; usedWidth: number; fits: boolean } {
-  const centers: Array<{ x: number; y: number }> = new Array(radii.length);
-  let colX = 0;
-  let colW = 0;
-  let colUsed = 0;
-  let colStart = 0;
-  const finalizeColumn = (endIdx: number) => {
-    // Center the finished column's stack vertically inside the band.
-    const offset = (innerH - colUsed) / 2;
-    for (let j = colStart; j < endIdx; j++) centers[j].y += offset;
-  };
-  for (let i = 0; i < radii.length; i++) {
-    const d = radii[i] * 2;
-    const needed = colUsed === 0 ? d : colUsed + vGap + d;
-    if (colUsed > 0 && needed > innerH) {
-      finalizeColumn(i);
-      colX += colW + colGap;
-      colW = 0;
-      colUsed = 0;
-      colStart = i;
+function circleFitsOrbit(zone: OrbitZone, cx: number, cy: number, r: number): boolean {
+  const x = cx - GALAXY_CX;
+  const y = cy - GALAXY_CY;
+  const outerRx = zone.outerRx - r;
+  const outerRy = zone.outerRy - r;
+  if (!(outerRx > 0 && outerRy > 0) || ellipseValue(x, y, outerRx, outerRy) > 1) return false;
+  if (zone.innerRx === 0) return true;
+  return ellipseValue(x, y, zone.innerRx + r, zone.innerRy + r) >= 1;
+}
+
+function bubblesOverlap(a: Pick<Bubble, "cx" | "cy" | "r">, b: Pick<Bubble, "cx" | "cy" | "r">): boolean {
+  return Math.hypot(a.cx - b.cx, a.cy - b.cy) < a.r + b.r + BUBBLE_GAP;
+}
+
+function snailCandidates(
+  zone: OrbitZone,
+  r: number,
+  index: number,
+  count: number,
+): Array<{ x: number; y: number }> {
+  const candidates: Array<{ x: number; y: number }> = [];
+  if (index === 0) return [{ x: GALAXY_CX, y: GALAXY_CY }];
+  const maxRx = zone.outerRx - r;
+  const maxRy = zone.outerRy - r;
+
+  // After the two central anchors, give every A asset a stable "district" on
+  // one clockwise Paris-style escargot. Local alternates only rescue changes
+  // in bubble size; they never restart the search from an arbitrary location.
+  const progress = (index - 2) / Math.max(count - 3, 1);
+  const baseRx = 105 + progress * 95;
+  const baseRy = 85 + progress * 55;
+  const baseAngle = 0.95 + progress * Math.PI * 2;
+  for (let expansion = 0; expansion <= 18; expansion++) {
+    for (let offsetStep = 0; offsetStep <= 14; offsetStep++) {
+      const offsets = offsetStep === 0 ? [0] : [offsetStep * 0.008, -offsetStep * 0.008];
+      for (const offset of offsets) {
+        const theta = baseAngle + offset;
+        candidates.push({
+          x: GALAXY_CX + Math.min(maxRx, baseRx + expansion * 2) * Math.cos(theta),
+          y: GALAXY_CY + Math.min(maxRy, baseRy + expansion * 1.4) * Math.sin(theta),
+        });
+      }
     }
-    const top = colUsed === 0 ? 0 : colUsed + vGap;
-    centers[i] = { x: colX + radii[i], y: top + radii[i] };
-    colUsed = top + d;
-    colW = Math.max(colW, d);
   }
-  finalizeColumn(radii.length);
-  const usedWidth = colX + colW;
-  return { centers, usedWidth, fits: usedWidth <= availW };
+  return candidates;
+}
+
+function packEllipticalOrbit(
+  radii: readonly number[],
+  orbitRx: number,
+  orbitRy: number,
+  phase: number,
+): Array<{ x: number; y: number }> | null {
+  if (radii.length === 0) return [];
+
+  // Sample the centerline densely enough to map equal arc lengths back onto
+  // the ellipse. This prevents the crowded short-axis ends produced by equal
+  // angle spacing and lets every tier complete the full closed path.
+  const sampleCount = 4096;
+  const cumulative = new Array<number>(sampleCount + 1).fill(0);
+  let previousX = orbitRx;
+  let previousY = 0;
+  for (let i = 1; i <= sampleCount; i++) {
+    const theta = (i / sampleCount) * Math.PI * 2;
+    const x = orbitRx * Math.cos(theta);
+    const y = orbitRy * Math.sin(theta);
+    cumulative[i] = cumulative[i - 1] + Math.hypot(x - previousX, y - previousY);
+    previousX = x;
+    previousY = y;
+  }
+  const perimeter = cumulative[sampleCount];
+  const required = radii.map((radius, index) => radius + radii[(index + 1) % radii.length] + BUBBLE_GAP);
+  const requiredLength = required.reduce((sum, distance) => sum + distance, 0);
+  if (!Number.isFinite(perimeter) || requiredLength > perimeter) return null;
+  const slack = (perimeter - requiredLength) / radii.length;
+
+  const pointAtArc = (rawArc: number): { x: number; y: number } => {
+    const arc = ((rawArc % perimeter) + perimeter) % perimeter;
+    let low = 0;
+    let high = sampleCount;
+    while (low + 1 < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (cumulative[mid] <= arc) low = mid;
+      else high = mid;
+    }
+    const span = cumulative[high] - cumulative[low];
+    const fraction = span > 0 ? (arc - cumulative[low]) / span : 0;
+    const theta = ((low + fraction) / sampleCount) * Math.PI * 2;
+    return {
+      x: GALAXY_CX + orbitRx * Math.cos(theta),
+      y: GALAXY_CY + orbitRy * Math.sin(theta),
+    };
+  };
+
+  const centers: Array<{ x: number; y: number }> = [];
+  let arc = (((phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2)) * perimeter;
+  for (let i = 0; i < radii.length; i++) {
+    centers.push(pointAtArc(arc));
+    arc += required[i] + slack;
+  }
+  for (let i = 0; i < centers.length; i++) {
+    const next = centers[(i + 1) % centers.length];
+    if (Math.hypot(centers[i].x - next.x, centers[i].y - next.y) < required[i]) return null;
+  }
+  return centers;
 }
 
 function layoutBands(
@@ -350,184 +398,80 @@ function layoutBands(
   const radiusOf = (coin: MapCoin) => Math.max(floorOf(coin.tier), k * Math.sqrt(Math.max(coin.mcap, 0)));
 
   const bands: BandLayout[] = [];
-  let y = BODY_TOP;
+  const placedAcrossTiers: Bubble[] = [];
   for (const tier of TIER_ORDER) {
-    // Every stratum is ordered by score, so x-position tracks the grade the
-    // poster is about rather than restating the area encoding.
+    // Large assets claim the cleanest orbital positions first. The orbit itself
+    // carries grade, so angle is intentionally decorative rather than a second
+    // unlabelled score axis.
     const coins = graded
       .filter((coin) => coin.tier === tier)
-      .sort((a, b) => b.score - a.score || b.mcap - a.mcap || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+      .sort((a, b) => b.mcap - a.mcap || b.score - a.score || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     if (coins.length === 0) continue;
-    const gaps = TIER_GAPS[tier];
+    const zone = ORBIT_ZONES[tier];
+    const bubbles: Bubble[] = [];
     const radii = coins.map(radiusOf);
-    for (let i = 0; i < radii.length; i++) {
-      if (!Number.isFinite(radii[i])) throw new Error(`Non-finite radius for ${coins[i].id} (mcap=${coins[i].mcap})`);
+    if (radii.some((radius) => !Number.isFinite(radius))) {
+      const index = radii.findIndex((radius) => !Number.isFinite(radius));
+      throw new Error(`Non-finite radius for ${coins[index].id} (mcap=${coins[index].mcap})`);
     }
-    // The A stratum yields its left column to the headline stat.
-    const flowLeft = tier === "A" ? FLOW_X + ANNOTATION_W : FLOW_X;
-    const availW = FLOW_RIGHT - flowLeft;
-    // Populous gravel tiers need deeper strata than their biggest bubble:
-    // grow the inner height until the columns fit the flow width.
-    let innerH = Math.max(Math.max(...radii) * 2, 40);
-    let packed = packColumns(radii, innerH, gaps.colGap, gaps.vGap, availW);
-    while (!packed.fits && innerH < 200) {
-      innerH += 8;
-      packed = packColumns(radii, innerH, gaps.colGap, gaps.vGap, availW);
+    if (tier === "A") {
+      for (let i = 0; i < coins.length; i++) {
+        const coin = coins[i];
+        const r = radii[i];
+        // USDT is first by supply and therefore takes the literal center. USDC
+        // is tangent to it on the right; the remaining assets keep their
+        // explicit district positions on the outward escargot.
+        const candidates = i === 1
+          ? [{ x: GALAXY_CX + radii[0] + r + BUBBLE_GAP, y: GALAXY_CY }]
+          : snailCandidates(zone, r, i, coins.length);
+        const point = candidates.find(({ x, y }) => {
+          if (!circleFitsOrbit(zone, x, y, r)) return false;
+          const candidate = { cx: x, cy: y, r };
+          return !placedAcrossTiers.some((other) => bubblesOverlap(candidate, other));
+        });
+        if (!point) {
+          diag?.push({ tier, count: coins.length, placed: bubbles.length, radius: r });
+          return null;
+        }
+        const bubble = { coin, cx: point.x, cy: point.y, r };
+        bubbles.push(bubble);
+        placedAcrossTiers.push(bubble);
+      }
+    } else {
+      const orbitRx = (zone.innerRx + zone.outerRx) / 2;
+      const orbitRy = (zone.innerRy + zone.outerRy) / 2;
+      const centers = packEllipticalOrbit(radii, orbitRx, orbitRy, TIER_ORDER.indexOf(tier) * 0.47 - Math.PI / 2);
+      if (!centers) {
+        diag?.push({ tier, count: coins.length, placed: 0, radius: Math.max(...radii) });
+        return null;
+      }
+      for (let i = 0; i < coins.length; i++) {
+        const bubble = { coin: coins[i], cx: centers[i].x, cy: centers[i].y, r: radii[i] };
+        if (!circleFitsOrbit(zone, bubble.cx, bubble.cy, bubble.r)) {
+          diag?.push({ tier, count: coins.length, placed: i, radius: bubble.r });
+          return null;
+        }
+        if (placedAcrossTiers.some((other) => bubblesOverlap(bubble, other))) {
+          diag?.push({ tier, count: coins.length, placed: i, radius: bubble.r });
+          return null;
+        }
+        bubbles.push(bubble);
+        placedAcrossTiers.push(bubble);
+      }
     }
-    if (!packed.fits) {
-      diag?.push({ tier, count: coins.length, usedWidth: packed.usedWidth, innerH, deficit: packed.usedWidth - availW });
-      return null;
-    }
-    const height = gaps.padTop + innerH + gaps.padBottom;
-    // Every stratum centers in its flow area so the strata read as a composed
-    // stack rather than left-flushed packer output.
-    const xOffset = Math.max((availW - packed.usedWidth) / 2, 0);
-    const bubbles = coins.map((coin, i) => ({
-      coin,
-      cx: flowLeft + xOffset + packed.centers[i].x,
-      cy: y + gaps.padTop + packed.centers[i].y,
-      r: radii[i],
-    }));
     bands.push({
       tier,
-      y,
-      height,
+      zone,
       bubbles,
       totalCount: coins.length,
       totalMcap: coins.reduce((sum, coin) => sum + coin.mcap, 0),
-      flowLeft,
     });
-    y += height;
-  }
-  if (y > FOOTER_RULE_Y - 10) {
-    diag?.push({ tier: "stack", count: graded.length, usedWidth: 0, innerH: y - BODY_TOP, deficit: y - (FOOTER_RULE_Y - 10) });
-    return null;
   }
   return { bands, k, gravelFloor };
 }
 
-// --- Chip placement -------------------------------------------------------
-
-interface PlacedChip {
-  id: string;
-  tier: Tier;
-  symbol: string;
-  score: string;
-  size: number;
-  symW: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-const CHIP_TOP = BODY_TOP - 8;
-const CHIP_BOTTOM = FOOTER_RULE_Y - 4;
-
 function intersects(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }): boolean {
   return a.x < b.x + b.w + 1 && b.x < a.x + a.w + 1 && a.y < b.y + b.h + 1 && b.y < a.y + a.h + 1;
-}
-
-/**
- * Chip placement with real collision rejection. Candidates are tried in a
- * deterministic order (below, above, then each nudged by a quarter width);
- * the first that clears every already-placed chip and stays inside its band
- * wins, then the same order relaxed to the poster's chip bounds. Forced chips
- * (the A honour roll and each tier's largest names) are placed first so they
- * win the contested space. A chip with nowhere to go is dropped, never drawn
- * overlapping.
- */
-function placeChips(
-  bands: readonly BandLayout[],
-  labelledMcap: ReadonlySet<string>,
-): { chips: PlacedChip[]; omitted: string[] } {
-  interface Candidate {
-    bubble: Bubble;
-    band: BandLayout;
-    forced: boolean;
-    symbol: string;
-    score: string;
-    size: number;
-    w: number;
-    h: number;
-    symW: number;
-  }
-  const wanted: Candidate[] = [];
-  for (const band of bands) {
-    const topByMcap = new Set(
-      [...band.bubbles]
-        .sort((a, b) => b.coin.mcap - a.coin.mcap)
-        .slice(0, CHIP_TOP_N)
-        .map((bubble) => bubble.coin.id),
-    );
-    for (const bubble of band.bubbles) {
-      const forced = band.tier === "A" || topByMcap.has(bubble.coin.id);
-      if (!forced && bubble.r < CHIP_MIN_R) continue;
-      const size = bubble.r >= 56 ? 13 : 11;
-      const symbol = mapLabel(bubble.coin.symbol);
-      // Bubble area already encodes supply; only the two giants carry the
-      // figure, where the number is the story rather than a repeat.
-      const score = labelledMcap.has(bubble.coin.id)
-        ? `${bubble.coin.score} · ${formatUsdCompact(bubble.coin.mcap)}`
-        : String(bubble.coin.score);
-      const symW = monoWidth(`${symbol} `, size);
-      wanted.push({
-        bubble,
-        band,
-        forced,
-        symbol,
-        score,
-        size,
-        symW,
-        w: monoWidth(`${symbol} ${score}`, size) + 14,
-        h: size + 9,
-      });
-    }
-  }
-  wanted.sort((a, b) => Number(b.forced) - Number(a.forced));
-
-  const chips: PlacedChip[] = [];
-  const omitted: string[] = [];
-  for (const cand of wanted) {
-    const { bubble, band, w, h } = cand;
-    const { cx, cy, r } = bubble;
-    const centers: number[] = [];
-    // A giant's chip rides its own rim; it is far larger than the label.
-    if (r >= 56) centers.push(cy + r - h / 2 + 2);
-    const below = cy + r + h / 2 + 3;
-    const above = cy - r - h / 2 - 3;
-    centers.push(below, above);
-    const offsets = [0, -w / 4, w / 4];
-    const positions: Array<{ x: number; y: number }> = [];
-    for (const dx of offsets) {
-      for (const chipCy of centers) {
-        const x = Math.min(Math.max(cx - w / 2 + dx, band.flowLeft - 8), FLOW_RIGHT - w + 8);
-        positions.push({ x, y: chipCy - h / 2 });
-      }
-    }
-    const fitsBand = (p: { y: number }) => p.y >= band.y + 1 && p.y + h <= band.y + band.height - 1;
-    const inBounds = (p: { y: number }) => p.y >= CHIP_TOP && p.y + h <= CHIP_BOTTOM;
-    const free = (p: { x: number; y: number }) => !chips.some((c) => intersects({ ...p, w, h }, c));
-    const chosen =
-      positions.find((p) => fitsBand(p) && inBounds(p) && free(p)) ?? positions.find((p) => inBounds(p) && free(p)) ?? null;
-    if (!chosen) {
-      omitted.push(bubble.coin.id);
-      continue;
-    }
-    chips.push({
-      id: bubble.coin.id,
-      tier: band.tier,
-      symbol: cand.symbol,
-      score: cand.score,
-      size: cand.size,
-      symW: cand.symW,
-      x: chosen.x,
-      y: chosen.y,
-      w,
-      h,
-    });
-  }
-  return { chips, omitted };
 }
 
 // --- Composition linter ---------------------------------------------------
@@ -540,21 +484,20 @@ export interface CompositionRect {
   h: number;
 }
 
-export interface CompositionBand {
+export interface CompositionOrbit {
   tier: string;
-  y: number;
-  height: number;
+  zone: OrbitZone;
   bubbles: ReadonlyArray<{ id: string; cx: number; cy: number; r: number }>;
 }
 
 /**
  * Pure-geometry validation of a laid-out scene: chip-vs-chip overlap, chips
- * crossing the footer rule or the poster bounds, bands overflowing the footer,
- * bubbles escaping their stratum, and any non-finite coordinate. Returns one
- * string per violation; an empty array means the composition is sound.
+ * crossing the footer rule or poster bounds, bubbles escaping their assigned
+ * orbit, bubble collisions, and any non-finite coordinate. Returns one string
+ * per violation; an empty array means the composition is sound.
  */
 export function validateComposition(input: {
-  bands: readonly CompositionBand[];
+  orbits: readonly CompositionOrbit[];
   chips: readonly CompositionRect[];
   footerRuleY?: number;
   bodyTop?: number;
@@ -563,23 +506,42 @@ export function validateComposition(input: {
   const bodyTop = input.bodyTop ?? BODY_TOP;
   const violations: string[] = [];
 
-  for (const band of input.bands) {
-    for (const [label, value] of [
-      ["y", band.y],
-      ["height", band.height],
-    ] as const) {
-      if (!Number.isFinite(value)) violations.push(`band ${band.tier}: non-finite ${label} (${value})`);
+  const allBubbles: Array<{ id: string; cx: number; cy: number; r: number }> = [];
+  for (const orbit of input.orbits) {
+    for (const [label, value] of Object.entries(orbit.zone)) {
+      if (!Number.isFinite(value)) violations.push(`orbit ${orbit.tier}: non-finite ${label} (${value})`);
     }
-    if (band.y + band.height > footerRuleY - 10) {
-      violations.push(`band ${band.tier}: overflows the footer rule (bottom ${(band.y + band.height).toFixed(1)} > ${footerRuleY - 10})`);
+    if (
+      orbit.zone.innerRx < 0 ||
+      orbit.zone.innerRy < 0 ||
+      orbit.zone.outerRx <= orbit.zone.innerRx ||
+      orbit.zone.outerRy <= orbit.zone.innerRy
+    ) {
+      violations.push(`orbit ${orbit.tier}: invalid inner/outer radii`);
     }
-    for (const bubble of band.bubbles) {
+    if (
+      GALAXY_CX - orbit.zone.outerRx < MARGIN_X - 8 ||
+      GALAXY_CX + orbit.zone.outerRx > WIDTH - MARGIN_X + 8 ||
+      GALAXY_CY - orbit.zone.outerRy < bodyTop - 8 ||
+      GALAXY_CY + orbit.zone.outerRy > footerRuleY - 10
+    ) {
+      violations.push(`orbit ${orbit.tier}: crosses the body bounds`);
+    }
+    for (const bubble of orbit.bubbles) {
       if (!Number.isFinite(bubble.cx) || !Number.isFinite(bubble.cy) || !Number.isFinite(bubble.r)) {
         violations.push(`bubble ${bubble.id}: non-finite geometry (${bubble.cx}, ${bubble.cy}, r=${bubble.r})`);
         continue;
       }
-      if (bubble.cy - bubble.r < band.y - 0.5 || bubble.cy + bubble.r > band.y + band.height + 0.5) {
-        violations.push(`bubble ${bubble.id}: escapes band ${band.tier}`);
+      if (!circleFitsOrbit(orbit.zone, bubble.cx, bubble.cy, bubble.r)) {
+        violations.push(`bubble ${bubble.id}: escapes orbit ${orbit.tier}`);
+      }
+      allBubbles.push(bubble);
+    }
+  }
+  for (let i = 0; i < allBubbles.length; i++) {
+    for (let j = i + 1; j < allBubbles.length; j++) {
+      if (bubblesOverlap(allBubbles[i], allBubbles[j])) {
+        violations.push(`bubble overlap: ${allBubbles[i].id} / ${allBubbles[j].id}`);
       }
     }
   }
@@ -664,24 +626,20 @@ function stampCopy(edition: Edition, issue: number | null, asOf: Date): StampCop
 
 function buildSvg({
   bands,
-  chips,
   logos,
   brandMark,
   methodologyVersion,
   gradedCount,
-  notRatedCount,
   asOfSec,
   edition,
   issue,
   floorMcap,
 }: {
   bands: readonly BandLayout[];
-  chips: readonly PlacedChip[];
   logos: ReadonlyMap<string, string | null>;
   brandMark: string;
   methodologyVersion: string;
   gradedCount: number;
-  notRatedCount: number;
   asOfSec: number;
   edition: Edition;
   issue: number | null;
@@ -695,118 +653,116 @@ function buildSvg({
   const parts: string[] = [];
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" width="${WIDTH}" height="${HEIGHT}">`);
   parts.push(`<defs><style>text { font-kerning: normal; font-variant-numeric: tabular-nums; }</style>`);
+  parts.push(`<radialGradient id="space" cx="50%" cy="54%" r="76%"><stop offset="0" stop-color="#18243a"/><stop offset="0.46" stop-color="#0c1220"/><stop offset="1" stop-color="#05070d"/></radialGradient>`);
   // CSS circle() clip-paths silently no-op on SVG images in Firefox; a real
   // clipPath in objectBoundingBox units crops every bubble regardless of size.
   parts.push(`<clipPath id="bubble-clip" clipPathUnits="objectBoundingBox"><circle cx="0.5" cy="0.5" r="0.5"/></clipPath></defs>`);
 
-  // Light editorial shell shared with the OG templates. The top rule takes the
-  // grade-A green so green means exactly one thing on this poster.
-  parts.push(`<rect width="${WIDTH}" height="${HEIGHT}" fill="#f8f8fa"/>`);
-  parts.push(`<rect width="${WIDTH}" height="4" fill="${TIER_COLORS.A}"/>`);
+  parts.push(`<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#space)"/>`);
+  parts.push(`<rect width="${WIDTH}" height="4" fill="${FROST_BLUE}"/>`);
 
-  // Masthead: beacon mark + the single frost-blue beam reaching the top rule.
+  // A deterministic star field gives the orbital metaphor texture without
+  // introducing random daily churn into a publication artifact.
+  let starSeed = 0x50484152;
+  for (let i = 0; i < 112; i++) {
+    starSeed = (Math.imul(starSeed, 1664525) + 1013904223) >>> 0;
+    const x = 42 + (starSeed % 1516);
+    starSeed = (Math.imul(starSeed, 1664525) + 1013904223) >>> 0;
+    const y = BODY_TOP + (starSeed % (FOOTER_RULE_Y - BODY_TOP - 8));
+    starSeed = (Math.imul(starSeed, 1664525) + 1013904223) >>> 0;
+    const radius = 0.45 + (starSeed % 14) / 10;
+    const opacity = 0.12 + (starSeed % 32) / 100;
+    parts.push(`<circle cx="${x}" cy="${y}" r="${radius.toFixed(1)}" fill="#dbeafe" fill-opacity="${opacity.toFixed(2)}"/>`);
+  }
+
+  // One-line masthead: brand lockup and map title share the same visual row.
   // Methodology and capture date live in the footer, stated once.
-  const markSize = 32;
+  const markSize = 40;
   const markX = MARGIN_X;
-  const markY = 16;
+  const markY = 10;
   const markCx = markX + markSize / 2;
   parts.push(`<polygon points="${markCx - 2.5},${markY + 1} ${markCx + 2.5},${markY + 1} ${markCx + 1},4 ${markCx - 1},4" fill="${FROST_BLUE}"/>`);
   parts.push(`<image href="${brandMark}" x="${markX}" y="${markY}" width="${markSize}" height="${markSize}"/>`);
-  parts.push(svgText({ x: markX + markSize + 12, y: markY + markSize / 2 + 8, size: 21, text: "Pharos", font: "sans", weight: 700, spacing: "-0.3" }));
+  parts.push(svgText({ x: markX + markSize + 11, y: 40, size: 22, text: "Pharos", font: "sans", weight: 700, spacing: "-0.3" }));
+  parts.push(`<line x1="217" y1="12" x2="217" y2="54" stroke="${RULE}" stroke-width="1"/>`);
+  parts.push(svgText({ x: 244, y: 50, size: 40, text: "The Stablecoin Safety Map", font: "serif", weight: 500, spacing: "-0.5" }));
+  parts.push(svgText({ x: 246, y: 72, size: 9, text: "SAFETY GRAVITATES INWARD", weight: 700, fill: FROST_BLUE, spacing: "2.1" }));
   if (stamp.issue) {
-    parts.push(svgText({ x: WIDTH - MARGIN_X, y: markY + markSize / 2 + 6, size: 11, text: stamp.issue, weight: 700, fill: INK_SECONDARY, anchor: "end", spacing: "2.2" }));
+    parts.push(svgText({ x: WIDTH - MARGIN_X, y: 40, size: 10, text: stamp.issue, weight: 700, fill: INK_SECONDARY, anchor: "end", spacing: "2.2" }));
   }
-  parts.push(`<line x1="${MARGIN_X}" y1="64" x2="${WIDTH - MARGIN_X}" y2="64" stroke="${RULE}" stroke-width="1"/>`);
+  parts.push(`<line x1="${MARGIN_X}" y1="92" x2="${WIDTH - MARGIN_X}" y2="92" stroke="${RULE}" stroke-width="1"/>`);
 
-  // Title block. The stamp lockup is all mono: serif is the editorial voice,
-  // mono the data voice, sans the brand lockup alone.
-  parts.push(svgText({ x: MARGIN_X, y: 134, size: 54, text: "The Stablecoin Safety Map", font: "serif", weight: 500, spacing: "-0.5" }));
-  parts.push(svgText({ x: WIDTH - MARGIN_X, y: 110, size: 11, text: stamp.eyebrow, weight: 700, fill: INK_SECONDARY, anchor: "end", spacing: "2.2" }));
-  parts.push(svgText({ x: WIDTH - MARGIN_X, y: 136, size: 20, text: stamp.headline, weight: 600, anchor: "end" }));
+  // B–F are closed ranked galaxies: the line follows the exact deterministic
+  // supply order used to place their stablecoins. A keeps its line-free
+  // escargot so the center remains visually distinct.
+  for (const band of bands) {
+    if (band.tier === "A" || band.bubbles.length < 2) continue;
+    const points = band.bubbles.map((bubble) => `${bubble.cx.toFixed(1)},${bubble.cy.toFixed(1)}`).join(" ");
+    parts.push(`<polygon points="${points}" fill="none" stroke="${TIER_COLORS[band.tier]}" stroke-width="1.1" stroke-opacity="0.32" stroke-linejoin="round"/>`);
+  }
 
+  // Bubbles: circle-clipped logos with a narrow grade-color rim.
   for (const band of bands) {
     const color = TIER_COLORS[band.tier];
-    const textColor = TIER_TEXT_COLORS[band.tier];
-
-    if (band.tier === "A") {
-      parts.push(`<rect x="${MARGIN_X}" y="${band.y}" width="${CONTENT_W}" height="${band.height}" fill="${color}" fill-opacity="0.03"/>`);
-    }
-    if (band.y > BODY_TOP) {
-      parts.push(`<line x1="${MARGIN_X}" y1="${band.y}" x2="${WIDTH - MARGIN_X}" y2="${band.y}" stroke="${HAIRLINE}" stroke-width="1"/>`);
-    }
-    parts.push(`<rect x="${MARGIN_X}" y="${band.y + 10}" width="2" height="${band.height - 20}" fill="${color}"/>`);
-
-    // Tier rail: the A stratum gets the tall editorial rail; compressed
-    // strata use the compact inline form. Rail stats are all 11px.
-    const railX = MARGIN_X + 18;
-    const share = ((band.totalMcap / totalMcap) * 100).toFixed(1);
-    if (band.tier === "A") {
-      parts.push(svgText({ x: railX, y: band.y + 76, size: 78, text: "A", font: "serif", weight: 560, fill: textColor }));
-      const lines = [`Score ${tierRange("A")}`, `${band.totalCount} coins`, `${formatUsdCompact(band.totalMcap)} · ${share}%`];
-      lines.forEach((line, i) => {
-        parts.push(svgText({ x: railX + 2, y: band.y + 100 + i * 16, size: 11, text: line, fill: INK_SECONDARY }));
-      });
-    } else {
-      parts.push(svgText({ x: railX, y: band.y + band.height / 2 + 11, size: 30, text: band.tier, font: "serif", weight: 560, fill: textColor }));
-      parts.push(svgText({ x: railX + 34, y: band.y + band.height / 2 - 3, size: 11, text: `${tierRange(band.tier)} · ${band.totalCount} coins`, fill: INK_SECONDARY }));
-      parts.push(svgText({ x: railX + 34, y: band.y + band.height / 2 + 12, size: 11, text: `${formatUsdCompact(band.totalMcap)} · ${share}%`, fill: INK_SECONDARY }));
-    }
-
-    // The headline stat owns the A stratum's reserved column: scarcity first,
-    // every figure computed from the data being drawn.
-    if (band.tier === "A") {
-      const annX = FLOW_X + 16;
-      const annCy = band.y + band.height / 2;
-      parts.push(svgText({ x: annX, y: annCy - 18, size: 60, text: String(band.totalCount), font: "serif", weight: 600, fill: textColor, spacing: "-1" }));
-      parts.push(svgText({ x: annX, y: annCy + 14, size: 17, text: `of ${gradedCount} stablecoins earn an A.`, font: "serif", weight: 500 }));
-      parts.push(svgText({ x: annX, y: annCy + 38, size: 17, text: `They hold ${share}% of all supply.`, font: "serif", weight: 500 }));
-    }
-
-    // Bubbles: circle-clipped logos with a hairline keyline. Chips render on
-    // a later layer so labels sit above neighboring bubbles.
     for (const bubble of band.bubbles) {
       const { coin, cx, cy, r } = bubble;
       const logo = logos.get(coin.id) ?? null;
+      const ringWidth = r >= 10 ? 2.2 : 1.3;
+      const innerR = Math.max(r - ringWidth, r * 0.68);
+      parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${color}"/>`);
       if (logo) {
-        const size = r * 2;
-        parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="#ffffff"/>`);
+        const size = innerR * 2;
+        parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${innerR.toFixed(1)}" fill="#ffffff"/>`);
         parts.push(
-          `<g transform="translate(${(cx - r).toFixed(1)} ${(cy - r).toFixed(1)})"><image href="${logo}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" clip-path="url(#bubble-clip)"/></g>`,
+          `<g transform="translate(${(cx - innerR).toFixed(1)} ${(cy - innerR).toFixed(1)})"><image href="${logo}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" clip-path="url(#bubble-clip)"/></g>`,
         );
       } else {
-        parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${HAIRLINE}"/>`);
+        parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${innerR.toFixed(1)}" fill="${HAIRLINE}"/>`);
         if (r >= 6) {
           parts.push(svgText({ x: cx, y: cy + r * 0.36, size: Math.max(Math.round(r * 0.9), 7), text: mapLabel(coin.symbol).slice(0, 1), fill: INK_SECONDARY, anchor: "middle" }));
         }
       }
-      parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="rgba(23,23,25,0.18)" stroke-width="1"/>`);
     }
   }
 
-  // Chip layer: placed and collision-checked before render.
-  for (const chip of chips) {
-    const chipCy = chip.y + chip.h / 2;
-    parts.push(`<rect x="${chip.x.toFixed(1)}" y="${chip.y.toFixed(1)}" width="${chip.w.toFixed(1)}" height="${chip.h}" rx="${chip.h / 2}" fill="#ffffff" fill-opacity="0.94" stroke="${HAIRLINE}" stroke-width="1"/>`);
-    parts.push(svgText({ x: chip.x + 7, y: chipCy + chip.size * 0.36, size: chip.size, text: chip.symbol, weight: 600 }));
-    parts.push(svgText({ x: chip.x + 7 + chip.symW, y: chipCy + chip.size * 0.36, size: chip.size, text: chip.score, weight: 650, fill: TIER_TEXT_COLORS[chip.tier] }));
+  // Small native markers sit in the breathing room just outside each path.
+  // They identify orbit and census count without becoming a detached legend.
+  const markerAngle = -2.5;
+  for (const band of bands) {
+    const ux = Math.cos(markerAngle);
+    const uy = Math.sin(markerAngle);
+    let x = GALAXY_CX + (band.zone.outerRx + 10) * ux;
+    let y = GALAXY_CY + (band.zone.outerRy + 8) * uy;
+    if (band.tier === "A") {
+      // A occupies only part of its reserved core zone. Anchor its marker to
+      // the escargot's real support edge so it stays close as membership and
+      // supply sizes change, while retaining a safe logo-to-label gutter.
+      const occupiedExtent = Math.max(
+        ...band.bubbles.map((bubble) =>
+          (bubble.cx - GALAXY_CX) * ux + (bubble.cy - GALAXY_CY) * uy + bubble.r,
+        ),
+      );
+      x = GALAXY_CX + (occupiedExtent + 24) * ux;
+      y = GALAXY_CY + (occupiedExtent + 24) * uy;
+    }
+    parts.push(svgText({ x, y: y + 3, size: 10, text: `${band.tier} · ${band.totalCount}`, fill: TIER_COLORS[band.tier], weight: 750, anchor: "middle", spacing: "1" }));
   }
 
   // Footer: the poster's single informative strip. Everything the deck and the
   // masthead used to duplicate is stated here, once.
   parts.push(`<line x1="${MARGIN_X}" y1="${FOOTER_RULE_Y}" x2="${WIDTH - MARGIN_X}" y2="${FOOTER_RULE_Y}" stroke="${RULE}" stroke-width="1"/>`);
-  parts.push(svgText({ x: MARGIN_X, y: FOOTER_RULE_Y + 24, size: 19, text: "Watching the peg.", font: "serifItalic", weight: 500 }));
-  parts.push(svgText({ x: WIDTH - MARGIN_X, y: FOOTER_RULE_Y + 23, size: 15, text: "Every grade, every source -> pharos.watch", weight: 700, anchor: "end" }));
+  parts.push(svgText({ x: MARGIN_X, y: FOOTER_RULE_Y + 17, size: 16, text: "Watching the peg.", font: "serifItalic", weight: 500 }));
+  parts.push(svgText({ x: WIDTH - MARGIN_X, y: FOOTER_RULE_Y + 17, size: 13, text: "Every grade, every source -> pharos.watch", weight: 700, anchor: "end" }));
   const notes = [
     `Methodology v${methodologyVersion}`,
-    `data as of ${dateLabel}`,
-    // "N not rated" would imply N is the whole ungraded remainder; it is only
-    // the in-scoring slice, so the footer says exactly that.
-    `${gradedCount} graded stablecoins${notRatedCount > 0 ? `, ${notRatedCount} in scoring, not yet rated` : ""}`,
+    dateLabel,
+    `${gradedCount} graded`,
     `${formatUsdCompact(totalMcap)} mapped`,
-    "sized by circulating supply, ordered by score",
-    `coins under ~${formatUsdCompact(floorMcap)} shown at minimum size`,
+    "area = supply",
+    `minimum below ~${formatUsdCompact(floorMcap)}`,
+    "orbit = safety tier",
   ];
-  parts.push(svgText({ x: WIDTH / 2, y: FOOTER_RULE_Y + 42, size: 11, text: notes.join(" · "), fill: INK_SECONDARY, anchor: "middle" }));
+  parts.push(svgText({ x: WIDTH / 2, y: FOOTER_RULE_Y + 31, size: 8, text: notes.join(" · "), fill: INK_SECONDARY, anchor: "middle" }));
   parts.push(`</svg>`);
   return parts.join("\n");
 }
@@ -823,7 +779,7 @@ function buildHtml(svg: string): string {
   return `<!doctype html>
 <html><head><meta charset="utf-8"/>
 <style>${fontFace("Newsreader", NEWSREADER_FONT, "200 800")}${fontFace("Newsreader", NEWSREADER_ITALIC_FONT, "200 800", true)}${fontFace("JetBrains Mono", JETBRAINS_MONO_FONT, "100 800")}${fontFace("Bricolage Grotesque", BRICOLAGE_FONT, "200 800")}
-  html, body { margin: 0; padding: 0; background: #f8f8fa; }
+  html, body { margin: 0; padding: 0; background: #05070d; }
   svg { display: block; }
 </style>
 </head>
@@ -875,7 +831,7 @@ function buildAltText({
 }): string {
   const sentences = [
     `The Stablecoin Safety Map, ${stampLabel}, by Pharos.`,
-    `All ${gradedCount} graded stablecoins in five safety tiers, each shown as its logo sized by circulating supply; ${formatUsdCompact(totalMcap)} mapped.`,
+    `All ${gradedCount} graded stablecoins in five concentric safety orbits, with USDT and USDC anchoring a line-free spiral A core, B, C, D, and F connected in supply-rank order, and each logo sized by circulating supply; ${formatUsdCompact(totalMcap)} mapped.`,
     `Methodology v${methodologyVersion}, data as of ${dateLabel}.`,
   ];
   for (const tier of tiers) {
@@ -940,9 +896,8 @@ function assertSaneDeltas(path: string | null, gradedCount: number, notRatedCoun
 
 function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number; gravelFloor: number } {
   let diag: FitDiagnostic[] = [];
-  // Scale is the first degradation axis; the gravel floor is the second, and
-  // it is the one that matters once bubble count rather than bubble size is
-  // what overflows the vertical budget.
+  // Large bubbles may shrink to protect the composition, but the publication
+  // floor is fixed: recognizability must not silently degrade to make it fit.
   for (const gravelFloor of GRAVEL_FLOORS) {
     for (let scale = 1; scale >= 0.55; scale *= 0.96) {
       diag = [];
@@ -951,10 +906,10 @@ function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number
     }
   }
   const detail = diag
-    .map((d) => `${d.tier}: ${d.count} coins, usedWidth ${d.usedWidth.toFixed(0)}, innerH ${d.innerH.toFixed(0)}, over by ${d.deficit.toFixed(0)}px`)
+    .map((d) => `${d.tier}: placed ${d.placed}/${d.count} coins before radius ${d.radius.toFixed(1)} stopped fitting`)
     .join("; ");
   throw new Error(
-    `Could not fit the bubble strata above the footer at any scale or gravel floor (tried ${GRAVEL_FLOORS.join("/")}). ${detail || "no diagnostics captured"}`,
+    `Could not fit the orbital map above the footer at any scale or gravel floor (tried ${GRAVEL_FLOORS.join("/")}). ${detail || "no diagnostics captured"}`,
   );
 }
 
@@ -1027,21 +982,14 @@ async function main(): Promise<void> {
   // below this supply every gravel bubble renders at the same minimum size.
   const floorMcap = (gravelFloor / k) ** 2;
 
-  const topTwoIds = new Set(
-    [...graded]
-      .sort((a, b) => b.mcap - a.mcap)
-      .slice(0, 2)
-      .map((coin) => coin.id),
-  );
-  const { chips, omitted } = placeChips(bands, topTwoIds);
-  if (omitted.length > 0) {
-    console.warn(`[safety-score-map] ${omitted.length} chips dropped for want of a collision-free slot: ${omitted.slice(0, 12).join(", ")}`);
-  }
+  // Per-coin chips made the orbital edition read as an arbitrary label sample.
+  // The composition now uses only native grade/count markers between paths.
+  const chips: CompositionRect[] = [];
+  const omitted: string[] = [];
   const violations = validateComposition({
-    bands: bands.map((band) => ({
+    orbits: bands.map((band) => ({
       tier: band.tier,
-      y: band.y,
-      height: band.height,
+      zone: band.zone,
       bubbles: band.bubbles.map((bubble) => ({ id: bubble.coin.id, cx: bubble.cx, cy: bubble.cy, r: bubble.r })),
     })),
     chips,
@@ -1067,12 +1015,10 @@ async function main(): Promise<void> {
   const brandMark = `data:image/svg+xml;base64,${readFileSync(BRAND_MARK).toString("base64")}`;
   const svg = buildSvg({
     bands,
-    chips,
     logos,
     brandMark,
     methodologyVersion: reportCards.methodology.version,
     gradedCount: graded.length,
-    notRatedCount,
     asOfSec: reportCards.asOfSec,
     edition,
     issue,
@@ -1116,7 +1062,7 @@ async function main(): Promise<void> {
     const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: DEVICE_SCALE });
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
     // document.fonts.ready resolves even when a face FAILS to load, and the
-    // fallback metrics silently break monoWidth()'s exact math. Check each
+    // fallback metrics visibly change the publication artifact. Check each
     // family explicitly.
     const missingFonts = await page.evaluate(async () => {
       await document.fonts.ready;

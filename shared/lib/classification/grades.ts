@@ -32,14 +32,6 @@ export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
   NR: "bg-muted text-muted-foreground border-muted",
 };
 
-export const GRADE_POSTER_TEXT_COLORS: Record<Exclude<ReportCardGradeRange, "NR">, string> = {
-  A: "#047857",
-  B: "#2563eb",
-  C: "#b45309",
-  D: "#c2410c",
-  F: "#dc2626",
-};
-
 export const REPORT_CARD_GRADE_RANGE_METADATA: Record<ReportCardGradeRange, ReportCardGradeRangeMetadata> = {
   A: {
     barClassName: "bg-emerald-500",

@@ -12,7 +12,7 @@ import { SafetyMapPoster } from "./poster";
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Safety Map: All Graded Coins by Tier",
   description:
-    "A downloadable poster of every stablecoin Pharos grades, drawn as supply-sized logos inside their A-to-F Safety Score bands and rebuilt daily.",
+    "A downloadable poster of every stablecoin Pharos grades, drawn as supply-sized logos across concentric A-to-F Safety Score orbits and rebuilt daily.",
   canonical: "/safety-scores/map/",
   // The poster itself is served from KV by a Pages Function, so it is not a file
   // in `out/` and cannot be a same-origin og:image. Use the dynamic Safety
@@ -24,22 +24,22 @@ const HOW_TO_READ = [
   {
     term: "Each circle is one stablecoin",
     detail:
-      "Coins are drawn as their own logo, so the map reads as a census of the market rather than an abstract chart. Every actively graded stablecoin appears exactly once.",
+      "Coins are drawn as their own logo with a thin rim in their Safety Score colour, so the map reads as a census of the market rather than an abstract chart. Every actively graded stablecoin appears exactly once.",
   },
   {
-    term: "Circle area is circulating supply",
+    term: "Circle area tracks circulating supply",
     detail:
-      "Sizing is by area, not diameter, so two coins that look twice the size really do carry twice the supply. A handful of very large issuers dominate the picture — that is the finding, not a drawing artifact.",
+      "Above the disclosed legibility floor, sizing is proportional by area rather than diameter. Smaller assets share a minimum logo size so every stablecoin remains recognizable; the footer states the corresponding supply threshold for each render.",
   },
   {
-    term: "Rows are Safety Score bands",
+    term: "Orbits are Safety Score tiers",
     detail:
-      "Coins are stacked into five bands running A at the top to F at the bottom. Each band carries its own letter and a fixed top-to-bottom order, so the grade never depends on reading the colour alone.",
+      "USDT and USDC anchor the line-free spiral A-grade core. B, C, D, and F each complete a wide path whose line connects its stablecoins in supply-rank order. Small markers identify every path, so classification never depends on reading colour alone.",
   },
   {
     term: "The footer carries the provenance",
     detail:
-      "Methodology version, the data-as-of timestamp, and the count of tracked coins that are not rated all sit along the bottom edge, so the image stays self-describing once it leaves this page.",
+      "Methodology version, data date, graded count, mapped supply, and the two visual encodings sit along the bottom edge, so the image stays self-describing once it leaves this page.",
   },
 ] as const;
 
@@ -60,7 +60,7 @@ export default function SafetyScoreMapPage() {
         changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
       }}
       leadParagraphs={[
-        "The whole graded stablecoin universe on one page: every coin Pharos rates, sized by circulating supply and sorted into its Safety Score band.",
+        "The whole graded stablecoin universe on one page: every coin Pharos rates, sized by circulating supply and arranged around a spiral A-grade core in concentric Safety Score orbits.",
       ]}
     >
       <div className="space-y-10">
