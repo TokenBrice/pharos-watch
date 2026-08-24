@@ -154,10 +154,14 @@ export function routeSafetyScoreV9ControlIncidents(
   };
 }
 
-const WRAPPER_INCIDENT_FACT_KEYS = [
-  "shareAccountingNavOracle",
-  "measuredUnwind",
-] as const satisfies readonly V9WrapperLocalFactKey[];
+/**
+ * The wrapper-local facts a share-accounting/unwind incident can speak to. Only
+ * the type is needed: routing reads the posture by key rather than iterating.
+ */
+type WrapperIncidentFactKey = Extract<
+  V9WrapperLocalFactKey,
+  "shareAccountingNavOracle" | "measuredUnwind"
+>;
 
 const WRAPPER_ASSESSMENT_RANK: Readonly<Record<V9WrapperRiskAssessment, number>> = {
   none: 0,
@@ -169,13 +173,13 @@ const WRAPPER_ASSESSMENT_RANK: Readonly<Record<V9WrapperRiskAssessment, number>>
 
 function incidentAssessment(
   incident: V9WrapperLocalIncident,
-  factKey: (typeof WRAPPER_INCIDENT_FACT_KEYS)[number],
+  factKey: WrapperIncidentFactKey,
 ): V9WrapperRiskAssessment {
   return incident.posture[factKey];
 }
 
 function routeWrapperDimension(
-  factKey: (typeof WRAPPER_INCIDENT_FACT_KEYS)[number],
+  factKey: WrapperIncidentFactKey,
   fact: V9WrapperLocalDimensionFact,
   incidents: readonly V9WrapperLocalIncident[],
   evidenceRefIds: readonly string[],
@@ -224,7 +228,7 @@ export function routeSafetyScoreV9WrapperIncidents(
   facts: V9WrapperLocalFacts,
   incidents: readonly V9ReviewedIncident[],
   evidenceRefIds: Readonly<
-    Record<(typeof WRAPPER_INCIDENT_FACT_KEYS)[number], readonly string[]>
+    Record<WrapperIncidentFactKey, readonly string[]>
   >,
 ): V9WrapperLocalFacts {
   const wrapperIncidents = incidents.filter(
