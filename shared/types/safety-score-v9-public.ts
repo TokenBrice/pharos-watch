@@ -510,10 +510,15 @@ const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
   .strict()
   .superRefine((evidence, ctx) => {
     const actualResponsibilities = evidence.summaries.map((summary) => summary.responsibility);
+    // Two independent compatibility dimensions, deliberately not conflated:
+    // per-fact disclosure paths arrived in 9.19, and the sixth owner
+    // (`published-evidence-expired`) arrived in 9.4. A stored publication can
+    // therefore carry per-fact paths and still predate the sixth owner, so the
+    // legacy order stays readable whatever `facts` says. Newly written
+    // publications are held to the full order by the codec's version gate,
+    // which is where a write-time contract belongs.
     const legacyResponsibilities = RESPONSIBILITIES.slice(0, -1);
-    const supportedResponsibilities = evidence.facts === undefined
-      ? [legacyResponsibilities, RESPONSIBILITIES]
-      : [RESPONSIBILITIES];
+    const supportedResponsibilities = [legacyResponsibilities, RESPONSIBILITIES];
     if (
       !supportedResponsibilities.some(
         (expected) => JSON.stringify(actualResponsibilities) === JSON.stringify(expected),
@@ -522,9 +527,7 @@ const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["summaries"],
-        message: evidence.facts === undefined
-          ? "V9 evidence responsibility summaries without per-fact paths must preserve a supported canonical owner order"
-          : "V9 evidence responsibility summaries must cover every owner in canonical order",
+        message: "V9 evidence responsibility summaries must preserve a supported canonical owner order",
       });
     }
     const expectedTotal = evidence.summaries.reduce((sum, summary) => sum + summary.factCount, 0);

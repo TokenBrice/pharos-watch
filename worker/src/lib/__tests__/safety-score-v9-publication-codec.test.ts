@@ -153,6 +153,61 @@ describe("Safety Score V9 publication codec", () => {
     ).rejects.toThrow(/v9\.19\+ publications require per-fact disclosure paths/);
   });
 
+  it("reads a stored publication that has per-fact paths but predates the sixth owner", async () => {
+    // The exact shape that took production down on the 9.4 release: written by
+    // a post-9.19 Worker, so `facts` is present, but by a pre-9.4 one, so the
+    // sixth responsibility owner is absent. Keying compatibility on `facts`
+    // alone rejected it and the canonical publication became unreadable.
+    const publication = makeWorkerSafetyScoreV9Publication({
+      policyVersion: "9.35",
+    });
+    const envelope = JSON.parse(
+      await serializeSafetyScoreV9Publication(publication),
+    ) as Record<string, unknown>;
+    const storedPublication = JSON.parse(
+      gunzipSync(Buffer.from(String(envelope.payload), "base64")).toString("utf8"),
+    ) as typeof publication;
+    for (const card of storedPublication.cards) {
+      card.scoreTrace.evidenceResponsibility.summaries =
+        card.scoreTrace.evidenceResponsibility.summaries.filter(
+          (summary) => summary.responsibility !== "published-evidence-expired",
+        );
+      card.scoreTrace.evidenceResponsibility.totalFactCount =
+        card.scoreTrace.evidenceResponsibility.summaries.reduce(
+          (sum, summary) => sum + summary.factCount,
+          0,
+        );
+    }
+    expect(storedPublication.cards[0]!.scoreTrace.evidenceResponsibility.facts).toBeDefined();
+    const payload = stableJsonStringifyV1(storedPublication);
+    const compressed = gzipSync(Buffer.from(payload));
+    const stored = stableJsonStringifyV1({
+      ...envelope,
+      payloadSha256: createHash("sha256").update(payload).digest("hex"),
+      uncompressedBytes: Buffer.byteLength(payload),
+      compressedBytes: compressed.byteLength,
+      payload: compressed.toString("base64"),
+    });
+
+    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
+      storedPublication,
+    );
+  });
+
+  it("rejects post-9.4 serialization that omits an evidence responsibility owner", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication({
+      policyVersion: "9.4",
+    });
+    publication.cards[0]!.scoreTrace.evidenceResponsibility.summaries =
+      publication.cards[0]!.scoreTrace.evidenceResponsibility.summaries.filter(
+        (summary) => summary.responsibility !== "published-evidence-expired",
+      );
+
+    await expect(
+      serializeSafetyScoreV9Publication(publication),
+    ).rejects.toThrow(/v9\.4\+ publications require every evidence responsibility owner/);
+  });
+
   it("rejects a malformed retired stressStateDigest", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = stableJsonStringifyV1({
