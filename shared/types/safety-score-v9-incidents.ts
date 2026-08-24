@@ -13,13 +13,9 @@ const CanonicalKeySchema = CanonicalTextSchema.refine(
   "Value must be a canonical lowercase identifier",
 );
 
-const V9IncidentDomainSchema = z.enum([
-  "control",
-  "wrapper-local",
-  "operational",
-  "peg",
-]);
-export type V9IncidentDomain = z.infer<typeof V9IncidentDomainSchema>;
+// The domain vocabulary is validated by the four `z.literal("…")` discriminants
+// on the incident union below, so a parallel enum would be a second source of
+// truth for the same list. Derive the exported type from the union instead.
 
 const V9IncidentSourceSchema = z
   .object({
@@ -226,6 +222,7 @@ export const V9ReviewedIncidentSchema = z
     }
   });
 export type V9ReviewedIncident = z.infer<typeof V9ReviewedIncidentSchema>;
+export type V9IncidentDomain = V9ReviewedIncident["domain"];
 export type V9ControlIncident = Extract<V9ReviewedIncident, { domain: "control" }>;
 export type V9WrapperLocalIncident = Extract<V9ReviewedIncident, { domain: "wrapper-local" }>;
 export type V9OperationalIncident = Extract<V9ReviewedIncident, { domain: "operational" }>;

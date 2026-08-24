@@ -390,7 +390,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-incidents.ts",
-      "sha256": "767a893321c307017629912cba193e3dd0d56de7ebc5099828d24fd958985137"
+      "sha256": "580d8b90ad1303f93950f375d537a2069464f471123ea7594376cf2cc094ef3e"
     },
     {
       "path": "shared/types/safety-score-v9-mechanism-overlays.ts",
@@ -577,7 +577,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "f1562d9bdf8db70336973b7ac7ad3ab639a0d16db943b9a9d03a92cb91616b6c"
     }
   ],
-  "digest": "db4fce00f0731842931bc7dd2b82d29621b1aab2d8037424571f01eadee92e72"
+  "digest": "6523b307c8760dfd666d3ab61447d0c8f9f947b52e44f382746423df7d8c87b1"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
