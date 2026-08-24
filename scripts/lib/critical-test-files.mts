@@ -253,16 +253,26 @@ export function escapeCoverageIncludeGlob(file: string): string {
   return file.replace(/[\\[\](){}*?!+@|]/g, "\\$&");
 }
 
-export function buildCriticalCoverageArgs(extraArgs: readonly string[] = []): string[] {
+function buildCriticalCoverageOptions(): string[] {
   return [
-    "run",
     "--coverage",
     "--coverage.thresholds.lines=0",
     // Scope v8 remapping to the enrolled critical source. Per-file numbers for
     // the enrolled files are unchanged, but the reporter stops remapping the
     // rest of the loaded module graph — the heaviest part of this invocation.
     ...CRITICAL_FILES.map((file) => `--coverage.include=${escapeCoverageIncludeGlob(file)}`),
+  ];
+}
+
+export function buildCriticalCoverageArgs(extraArgs: readonly string[] = []): string[] {
+  return [
+    "run",
+    ...buildCriticalCoverageOptions(),
     ...CRITICAL_TEST_FILES,
     ...extraArgs,
   ];
+}
+
+export function buildCriticalCoverageMergeArgs(reportsDirectory = ".vitest-reports"): string[] {
+  return [...buildCriticalCoverageOptions(), `--merge-reports=${reportsDirectory}`];
 }

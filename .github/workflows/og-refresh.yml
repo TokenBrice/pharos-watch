@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
-          tooling-cache: "true"
+          browser-cache: "true"
           install-playwright-chromium: "true"
       - name: Capture OG screenshots from production
         env:

@@ -40,6 +40,12 @@ const baseConfig: NextConfig = {
   },
 };
 
+function releaseTypeScriptConfig(): Partial<Pick<NextConfig, "typescript">> {
+  return process.env.PHAROS_RELEASE_PR_TYPECHECKED === "1"
+    ? { typescript: { ignoreBuildErrors: true } }
+    : {};
+}
+
 async function devRewrites() {
   // When SITE_API_SHARED_SECRET is configured in .env.local, route through
   // the local dev proxy (scripts/maintenance/dev-api-proxy.ts) which injects the secret
@@ -80,10 +86,11 @@ export default function createNextConfig(phase: string): NextConfig {
   if (phase === PHASE_DEVELOPMENT_SERVER) {
     return {
       ...baseConfig,
+      ...releaseTypeScriptConfig(),
       allowedDevOrigins: devAllowedOrigins(),
       rewrites: devRewrites,
     };
   }
 
-  return baseConfig;
+  return { ...baseConfig, ...releaseTypeScriptConfig() };
 }
