@@ -308,8 +308,27 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
     settlementModel: "days",
     costModel: {
-      ...documentedVariableFee("You will also be charged a redemption fee of 20bps on any redemptions."),
-      feeBpsMax: 20,
+      ...documentedVariableFee(
+        "USDY InstantManager's default redemption fee configuration returned 0 bps at Ethereum block 25,825,933; individual user fee overrides may apply",
+        "formula",
+      ),
+      feeBpsMin: 0,
+    },
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef(
+          "USDY InstantManager verified source",
+          "https://eth.blockscout.com/address/0xa42613c243b67bf6194ac327795b926b4b491f15?tab=contract",
+          ["route", "settlement"],
+        ),
+        sourceRef("Ethereum block 25825933", "https://eth.blockscout.com/block/25825933", [
+          "route",
+          "settlement",
+        ]),
+      ],
     },
     reviewedAt: "2026-05-17",
     docs: [
@@ -318,6 +337,11 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef(
         "Ondo USDY STEP application",
         "https://forum.arbitrum.foundation/t/ondo-finance-usdy-llc-step-application/23593",
+        ["fees"],
+      ),
+      sourceRef(
+        "USDY InstantManager redemption-fee contract",
+        "https://eth.blockscout.com/address/0xe1cb24077d77d2fe763fcac63e5653d97dc8d20c?tab=contract",
         ["fees"],
       ),
     ],

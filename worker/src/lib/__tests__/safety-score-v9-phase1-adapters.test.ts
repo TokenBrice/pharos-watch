@@ -558,7 +558,9 @@ describe("Phase 1 D6 reviewed curated fallback admission", () => {
       eligibleReserveMeta({
         proofOfReserves: undefined,
         liveReservesConfig: LIVE_RESERVES_CONFIG,
-        reserveReview: { ...base.reserveReview!, compositionAsOf: "2026-06-15" },
+        // 46 days before CLOCK_SEC: outside the 31-day composition window and
+        // outside the 7-day reporting grace that now follows it.
+        reserveReview: { ...base.reserveReview!, compositionAsOf: "2026-06-01" },
       }),
       eligibleReserveMeta({
         proofOfReserves: undefined,

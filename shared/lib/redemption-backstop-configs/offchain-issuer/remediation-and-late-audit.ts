@@ -182,12 +182,13 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "xo-exodus": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
-    costModel: undisclosedReviewedFee(
-      "Exodus XO documents 1:1 fiat mint and redemption via MoonPay using M0 Protocol infrastructure; MoonPay fiat-ramp fees apply while public docs reviewed do not publish a separate XO protocol redemption fee",
+    costModel: fixedFee(
+      0,
+      "MoonPay currently charges no fee for stablecoin redemption; bank, wallet, processing, network, ecosystem, or pass-through banking fees may still apply",
     ),
     docs: [
       sourceRef("Exodus Pay", "https://www.exodus.com/exodus-pay", ["route", "capacity"]),
-      sourceRef("MoonPay", "https://www.moonpay.com/", ["route"]),
+      sourceRef("MoonPay Stablecoin Terms", "https://www.moonpay.com/legal/stablecoin_terms", ["route", "fees"]),
     ],
     notes: [
       "Solana SPL Token-2022 mint with pausable, permanent-delegate, and transfer-hook authorities held by MoonPay",

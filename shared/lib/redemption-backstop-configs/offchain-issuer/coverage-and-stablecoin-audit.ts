@@ -1,9 +1,10 @@
 import type { RedemptionDocSource } from "../../../types";
-import type { RedemptionBackstopConfig } from "../shared";
+import type { RedemptionBackstopConfig, RedemptionV9RouteReviewTerms } from "../shared";
 import {
   cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
   documentedVariableFee,
+  fixedFee,
   undisclosedReviewedFee,
   issuerBase,
   sourceRef,
@@ -119,6 +120,32 @@ const spikoProspectus = () =>
     "access",
     "settlement",
   ]);
+const spikoProspectusSettlementReview = (
+  settlementDelaySec: number,
+  settlementModel?: "same-day",
+): RedemptionV9RouteReviewTerms => ({
+  ...(settlementModel ? { settlementModel } : {}),
+  settlementDelaySec,
+  reviewedAt: "2026-07-29",
+  docs: [
+    sourceRef(
+      "Spiko SICAV prospectus",
+      "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+      ["route"],
+    ),
+  ],
+});
+const spikoCashAndCarrySettlementReview = (): RedemptionV9RouteReviewTerms => ({
+  settlementDelaySec: 172_800,
+  reviewedAt: "2026-08-11",
+  docs: [
+    sourceRef(
+      "Spiko Cash & Carry product article",
+      "https://www.spiko.io/blog/spiko-cash-carry-everything-you-need-to-know-about-our-new-product",
+      ["route"],
+    ),
+  ],
+});
 
 const SPIKO_FEE_DISCLOSURES: Record<string, { statement: string; url: string }> = {
   "eutbl-spiko": {
@@ -165,6 +192,7 @@ const SPIKO_FUNDS: readonly [
   currency: "eur" | "non-eur",
   productRef: RedemptionDocSource | null,
   note: string,
+  settlementReview: (() => RedemptionV9RouteReviewTerms) | null,
 ][] = [
   [
     "ustbl-spiko",
@@ -172,6 +200,7 @@ const SPIKO_FUNDS: readonly [
     "non-eur",
     null,
     "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    () => spikoProspectusSettlementReview(86_400, "same-day"),
   ],
   [
     "safo-spiko-usd",
@@ -179,6 +208,7 @@ const SPIKO_FUNDS: readonly [
     "non-eur",
     sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
     "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    () => spikoProspectusSettlementReview(86_400, "same-day"),
   ],
   [
     "spkcc-spiko",
@@ -186,6 +216,7 @@ const SPIKO_FUNDS: readonly [
     "non-eur",
     sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
     "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    spikoCashAndCarrySettlementReview,
   ],
   [
     "uktbl-spiko",
@@ -197,6 +228,7 @@ const SPIKO_FUNDS: readonly [
       "access",
     ]),
     "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    () => spikoProspectusSettlementReview(86_400, "same-day"),
   ],
   [
     "gbpsafo-spiko",
@@ -204,6 +236,7 @@ const SPIKO_FUNDS: readonly [
     "non-eur",
     sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
     "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    null,
   ],
   [
     "eutbl-spiko",
@@ -211,6 +244,7 @@ const SPIKO_FUNDS: readonly [
     "eur",
     null,
     "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+    () => spikoProspectusSettlementReview(86_400, "same-day"),
   ],
   [
     "eursafo-spiko",
@@ -218,6 +252,7 @@ const SPIKO_FUNDS: readonly [
     "eur",
     sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
     "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+    () => spikoProspectusSettlementReview(86_400, "same-day"),
   ],
   [
     "eurspkcc-spiko",
@@ -225,11 +260,12 @@ const SPIKO_FUNDS: readonly [
     "eur",
     sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
     "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+    spikoCashAndCarrySettlementReview,
   ],
 ];
 
 const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
-  SPIKO_FUNDS.map(([id, ticker, currency, productRef, note]): [string, RedemptionBackstopConfig] => {
+  SPIKO_FUNDS.map(([id, ticker, currency, productRef, note, settlementReview]): [string, RedemptionBackstopConfig] => {
     const baseDocs = currency === "eur" ? spikoEurBaseDocs() : spikoBaseDocs();
     const feeDisclosure = SPIKO_FEE_DISCLOSURES[id];
     return [
@@ -243,6 +279,7 @@ const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.from
           ...documentedVariableFee(feeDisclosure.statement),
           feeBpsMax: 0,
         },
+        ...(settlementReview ? { v9RouteReviewTerms: settlementReview() } : {}),
         docs: [
           ...baseDocs,
           ...(productRef ? [productRef] : []),
@@ -338,10 +375,16 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "gbpe-monerium": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    v9RouteReviewTerms: { settlementModel: "queued" },
     costModel: undisclosedReviewedFee(
       "Monerium fee schedule and terms govern bank-transfer redemption; public materials reviewed do not publish a single fixed GBPe redemption fee",
     ),
     docs: [
+      sourceRef(
+        "Monerium business terms",
+        "https://monerium.com/policies/business-terms-of-service/",
+        ["route", "access", "settlement"],
+      ),
       sourceRef("Monerium financial information", "https://monerium.com/financial-information/", [
         "route",
         "capacity",
@@ -663,9 +706,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Backed documents bToken redemption into stablecoins or cash within T+3; public materials reviewed do not publish one fixed bC3M redemption fee",
-    ),
+    costModel: fixedFee(50, "Backed lists a 0.5% issuance/redemption fee for bC3M"),
     docs: [
       backedRedemptionRef(),
       sourceRef("Backed bC3M product", "https://assets.backed.fi/products/bc3m", ["capacity", "fees", "access"]),
@@ -679,10 +720,17 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     routeStatus: "open",
-    costModel: undisclosedReviewedFee(
-      "CADD trust terms define 1:1 CAD redemption less any administrative fee; public materials reviewed do not publish one fixed redemption fee",
-    ),
+    costModel: {
+      ...documentedVariableFee("Greater of C$50 or 0.25% of gross redemption proceeds, plus applicable taxes"),
+      feeBpsMax: 25,
+    },
     docs: [
+      sourceRef("CADD terms and conditions", "https://tetradg.com/cadd-terms-and-conditions/", [
+        "route",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("CADD trust indenture", "https://tetradg.com/tetra-trust-indenture/", [
         "route",
         "capacity",

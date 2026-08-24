@@ -379,26 +379,39 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     telemetrySubject: "the staking contract's USDe holdings",
     settlementConstraint: "the documented 7-day cooldown",
   }),
-  "syusd-aegis": erc4626ReserveTelemetryQueueConfig({
-    reviewedAt: REVIEWED_WRAPPER_QUEUE_AT,
-    settlementModel: "days",
-    costModel: fixedFee(0, "Aegis docs describe sYUSD staking and unstaking with 0% protocol fee"),
-    docs: [
-      sourceRef("Aegis sYUSD docs", "https://docs.aegis.im/tokens/syusd-yield-bearing-token", [
-        "route",
-        "capacity",
-        "fees",
-        "settlement",
-      ]),
-      sourceRef("Aegis smart contracts", "https://docs.aegis.im/smart-contracts", ["route"]),
-    ],
-    notes: [
-      "sYUSD exits through a documented 7-day cooldown back into YUSD at the live staking-vault exchange rate",
-      "The wrapper queue is distinct from YUSD's own primary-market redemption path and does not assume a separate instant-liquidity buffer beyond the contract's cooldown release",
-    ],
-    telemetrySubject: "the staking vault's YUSD holdings",
-    settlementConstraint: "the cooldown",
-  }),
+  "syusd-aegis": {
+    ...erc4626ReserveTelemetryQueueConfig({
+      reviewedAt: REVIEWED_WRAPPER_QUEUE_AT,
+      settlementModel: "days",
+      costModel: fixedFee(0, "Aegis docs describe sYUSD staking and unstaking with 0% protocol fee"),
+      docs: [
+        sourceRef("Aegis sYUSD docs", "https://docs.aegis.im/tokens/syusd-yield-bearing-token", [
+          "route",
+          "capacity",
+          "fees",
+          "settlement",
+        ]),
+        sourceRef("Aegis smart contracts", "https://docs.aegis.im/smart-contracts", ["route"]),
+      ],
+      notes: [
+        "sYUSD exits through a documented 7-day cooldown back into YUSD at the live staking-vault exchange rate",
+        "The wrapper queue is distinct from YUSD's own primary-market redemption path and does not assume a separate instant-liquidity buffer beyond the contract's cooldown release",
+      ],
+      telemetrySubject: "the staking vault's YUSD holdings",
+      settlementConstraint: "the cooldown",
+    }),
+    v9RouteReviewTerms: {
+      settlementDelaySec: 604_800,
+      reviewedAt: "2026-08-24",
+      docs: [
+        sourceRef(
+          "sYUSD Ethereum contract read at block 25825927",
+          "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+          ["route"],
+        ),
+      ],
+    },
+  },
   "witry-brix": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_CONFIG_ONLY_GAPS_AT),
@@ -734,6 +747,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     executionModel: "rules-based-nav",
     outputAssetType: "stable-basket",
     costModel: fixedFee(25, "OnRe docs list a 25 bps redemption fee"),
+    v9RouteReviewTerms: {
+      settlementModel: "queued",
+      reviewedAt: "2026-05-28",
+      docs: [
+        sourceRef("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions", ["route"]),
+      ],
+    },
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     docs: [
       sourceRef("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions", [
@@ -746,7 +766,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef("OnRe transparency", "https://app.onre.finance/earn/transparency", ["capacity"]),
     ],
     notes: [
-      "OnRe currently documents weekly redemption capacity up to 2.5% of NAV, a target liquidity reserve up to 20% of NAV, and payouts in USDC or USDG for verified/accredited holders.",
+      "OnRe currently targets monthly redemption capacity up to 2.5% of NAV, reserves up to 15% of underwriting capital for liquidity, and pays USDC or USDG to verified/accredited holders.",
     ],
   },
   "apyusd-apyx": erc4626ReserveTelemetryQueueConfig({
@@ -772,29 +792,42 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     telemetrySubject: "the vault's idle apxUSD balance",
     settlementConstraint: "the documented unlock window",
   }),
-  "savusd-avant": erc4626ReserveTelemetryQueueConfig({
-    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "StakedAvUSDV2 ERC-4626 (0x06d47f3fb376649c3a9dafe069b3d6e35572219e) charges no exit fee: on-chain previewRedeem == convertToAssets, source shows a vesting-only adjustment; the Avant redemption 'fee' applies to the downstream avUSD leg",
-    ),
-    docs: [
-      sourceRef(
-        "Avant staking avAssets",
-        "https://docs.avantprotocol.com/overview/using-the-avant-protocol/staking-avtokens-avusd-avbtc",
-        ["route", "capacity", "fees", "access", "settlement"],
+  "savusd-avant": {
+    ...erc4626ReserveTelemetryQueueConfig({
+      reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+      settlementModel: "days",
+      executionModel: "rules-based-nav",
+      costModel: fixedFee(
+        0,
+        "StakedAvUSDV2 ERC-4626 (0x06d47f3fb376649c3a9dafe069b3d6e35572219e) charges no exit fee: on-chain previewRedeem == convertToAssets, source shows a vesting-only adjustment; the Avant redemption 'fee' applies to the downstream avUSD leg",
       ),
-      sourceRef(
-        "Avant unstaking savAssets",
-        "https://docs.avantprotocol.com/overview/using-the-avant-protocol/unstaking-savassets",
-        ["settlement", "capacity"],
-      ),
-    ],
-    telemetrySubject: "the staking vault's idle avUSD balance",
-    settlementConstraint: "the one-day cooldown",
-  }),
+      docs: [
+        sourceRef(
+          "Avant staking avAssets",
+          "https://docs.avantprotocol.com/overview/using-the-avant-protocol/staking-avtokens-avusd-avbtc",
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
+        sourceRef(
+          "Avant unstaking savAssets",
+          "https://docs.avantprotocol.com/overview/using-the-avant-protocol/unstaking-savassets",
+          ["settlement", "capacity"],
+        ),
+      ],
+      telemetrySubject: "the staking vault's idle avUSD balance",
+      settlementConstraint: "the one-day cooldown",
+    }),
+    v9RouteReviewTerms: {
+      settlementDelaySec: 86_400,
+      reviewedAt: "2026-08-19",
+      docs: [
+        sourceRef(
+          "Avant unstaking savAssets",
+          "https://docs.avantprotocol.com/overview/using-the-avant-protocol/unstaking-savassets",
+          ["route"],
+        ),
+      ],
+    },
+  },
   "srusde-strata": erc4626ReserveTelemetryQueueConfig({
     reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
     accessModel: "whitelisted-onchain",
@@ -847,10 +880,14 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: documentedVariableFee(
-      "Hyperbeat docs describe instant redemption to USDT0 with a 0.5% fee when liquidity exists, or classic redemption within three working days with no fee",
-      "formula",
-    ),
+    costModel: fixedFee(0, "Hyperbeat docs state classic redemption completes within two days with no fee"),
+    v9RouteReviewTerms: {
+      settlementDelaySec: 172_800,
+      reviewedAt: "2026-01-06",
+      docs: [
+        sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", ["route"]),
+      ],
+    },
     docs: [
       sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", [
         "route",
