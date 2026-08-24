@@ -22,10 +22,10 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "DUSD is minted from USDT or USDC into a managed vault and offchain hedging system, and redemption uses a seven-day unwind period. StandX monitors collateral, hedge positions, and liquidation triggers operationally, but users do not open permissionless per-collateral debt positions with independently inventoried onchain auction, backstop, and shutdown branches.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "StandX's managed collateral and hedging system takes aggregated market prices as inputs to value DUSD mint collateral, monitor hedge and liquidation conditions, and execute redemption unwinds. That system-wide pricing is a top-level authority; users do not open borrower-specific debt positions with independently inventoried liquidation branches.",
       "sources": [
         {
           "label": "StandX DUSD architecture",
@@ -38,6 +38,10 @@
         {
           "label": "StandX DUSD redemption",
           "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+        },
+        {
+          "label": "RigSec StandX Protocol Security Assessment (report dated 2025-05-03; scoped PriceOracle input)",
+          "url": "https://github.com/standx-labs/stand_audit/blob/main/RigSec_StandX_DUSD_EVM_Audit.pdf"
         }
       ]
     },

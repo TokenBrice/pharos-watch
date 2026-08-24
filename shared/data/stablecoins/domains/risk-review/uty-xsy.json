@@ -30,26 +30,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "YieldPoint documents one Base hub vault: users deposit USDC to mint UTY, backing is swept to a custodian, and redemption uses an asynchronous withdrawal queue. XSY describes protocol-managed strategy modules rather than borrower-owned debt positions. Therefore per-collateral oracle and liquidation branches do not apply; exchange liquidation of managed hedges remains strategy risk.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "UTY has no borrower-specific collateral or liquidation branches, but XSY routes protocol backing into rules-driven strategy modules that construct long-spot and short-perpetual hedges and can be updated as venues change. Those protocol-wide hedge and rebalancing decisions consume market value even though the Base vault mints and redeems UTY at a fixed 1:1 USDC rate, so the opaque top-level pricing authority remains scoreable without branch rows.",
       "sources": [
         {
-          "label": "YieldPoint core flows",
+          "label": "YieldPoint core flows (last modified 2026-04-24)",
           "url": "https://docs.yieldpoint.io/protocol/architecture/flows"
         },
         {
-          "label": "YieldPoint contracts",
-          "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
-        },
-        {
-          "label": "XSY protocol mechanics",
+          "label": "XSY protocol mechanics (last updated 2025-12-02)",
           "url": "https://xsy-1.gitbook.io/xsy-main/protocol-mechanics"
-        },
-        {
-          "label": "XSY risks",
-          "url": "https://xsy-1.gitbook.io/xsy-main/risks"
         }
       ]
     },

@@ -54,14 +54,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 oracle review",
-      "rationale": "dUSD is minted and redeemed against protocol reserves, while dLEND separately values borrower collateral and manages liquidations. dUSD itself is disabled as dLEND collateral and is not a borrower-owned debt position with token-level liquidation branches, so the CDP branch inventory is not applicable; reserve and lending oracle dependencies remain captured in the profile summary.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-a oracle applicability review",
+      "rationale": "dUSD is not a borrower-owned CDP position and is disabled as dLEND collateral, so it has no dUSD-specific liquidation branches. Its reserve vault nevertheless reads asset prices to value supported collateral and determine reserve-asset mint/redemption amounts, making the shared reserve valuation path a price-sensitive top-level authority.",
       "sources": [
         {
-          "label": "dTRINITY dUSD protocol documentation",
-          "url": "https://docs.dtrinity.org/protocol-components/dusd"
+          "label": "dTRINITY CollateralVault and OracleAware source (document commit 2025-10-23)",
+          "url": "https://github.com/dtrinity/ethereum-solidity-contracts/blob/18a03cef7ffed1b782518db84cb6ee862dad702a/contracts/dstable/CollateralVault.sol"
         },
         {
           "label": "dTRINITY dLEND oracle and liquidation documentation",

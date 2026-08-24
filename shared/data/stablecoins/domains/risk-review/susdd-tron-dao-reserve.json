@@ -50,14 +50,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "USDD documents sUSDD as an ERC-4626 tokenized vault minted when users deposit USDD and redeemable back to USDD through its exchange rate. The savings wrapper does not originate borrower debt or operate collateral-ratio-triggered liquidations. The variantOf relationship preserves the complete USDD parent branch review.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "sUSDD's ERC-4626 vault exchange rate values deposited USDD against shares for minting and redemption, so it is a price-sensitive top-level authority. The savings wrapper does not originate borrower debt or operate collateral-ratio liquidations; its USDD dependency preserves the parent exposure without local branch rows.",
       "sources": [
         {
-          "label": "USDD sUSDD mechanism",
-          "url": "https://docs.usdd.io/susdd-mechanism"
+          "label": "USDD sUSDD mechanism (document revision 2026-04-10)",
+          "url": "https://github.com/decentralized-usd/docs/blob/880fc18979a9215a4468ec98eabdda7288a08c6d/usdd/en/system-architecture/susdd-mechanism.md"
         },
         {
           "label": "USDD oracle architecture",

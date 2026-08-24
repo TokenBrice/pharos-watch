@@ -38,18 +38,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "Zephyr describes ZSD as a protocol reserve liability backed by ZEPH, with minting gated by a system-wide reserve ratio. Users do not open borrower-specific collateral positions, so the reviewed design exposes no market-specific collateral or liquidation branches to inventory.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "ZSD has no borrower-specific collateral or liquidation branches, but Zephyr prices protocol-wide mint and redemption conversions through an oracle and gates minting with the resulting system-wide reserve ratio. That price-sensitive top-level conversion and reserve-ratio authority is scoreable without branch rows.",
       "sources": [
         {
-          "label": "Zephyr official documentation",
-          "url": "https://zephyrprotocol.com/documentation"
-        },
-        {
-          "label": "Zephyr repository",
-          "url": "https://github.com/ZephyrProtocol/zephyr"
+          "label": "Zephyr Protocol whitepaper (2023-06-05)",
+          "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
         }
       ]
     },

@@ -22,21 +22,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Midas documents mHYPER as a Liquid Yield Token whose value follows a reference portfolio NAV and lists the product's token, oracle, issuance-vault, and redemption-vault contract surfaces. The reviewed product materials do not describe borrower-owned debt positions, collateral thresholds, liquidation auctions, or a token-level liquidation backstop for mHYPER, so the V9 collateral-liquidation branch inventory does not apply.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Midas documents mHYPER as a NAV-tracking Liquid Yield Token and lists its token, mHYPER/USD oracle, issuance vault, and redemption vault. That NAV quote controls top-level valuation and mint/redemption conversion; mHYPER has no borrower-owned debt or token-level liquidation branch to inventory.",
       "sources": [
         {
-          "label": "Midas mHYPER smart contracts",
-          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
-        },
-        {
-          "label": "Midas About page",
-          "url": "https://docs.midas.app/"
-        },
-        {
-          "label": "Midas mToken pricing",
+          "label": "Midas mToken pricing (last updated 2026-08-21)",
           "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
         }
       ]

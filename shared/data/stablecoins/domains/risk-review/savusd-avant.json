@@ -38,22 +38,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex Prompt 6b oracle review",
-      "rationale": "Avant documents savUSD as the yield-bearing token received when avUSD is staked and returned as avUSD through an unstaking cooldown. The wrapper does not create borrower debt positions or operate a separate collateral-liquidation engine, so no savUSD market-specific oracle or liquidation branches exist; upstream avUSD and strategy exposures remain separate.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "savUSD has no borrower-specific liquidation markets, but its continuously increasing savUSD/avUSD exchange rate values the wrapper claim and determines how much avUSD a holder receives on unstaking. That price-sensitive top-level exchange-rate authority is scoreable without collateral branch rows.",
       "sources": [
         {
-          "label": "Avant savUSD staking guide",
-          "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/staking-for-savassets"
+          "label": "Avant core tokens: savUSD/avUSD exchange rate accrues strategy yield (last updated 2026-08-19)",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens"
         },
         {
-          "label": "Avant savUSD unstaking guide",
+          "label": "Avant savUSD unstaking guide (last updated 2026-08-19)",
           "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/unstaking-savassets"
-        },
-        {
-          "label": "Avant contract registry",
-          "url": "https://docs.avantprotocol.com/security/contract-addresses"
         }
       ]
     },

@@ -27,13 +27,21 @@
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "vCred describes an AI liquidity layer with vaults, single-side staking, and market-making strategies for perpetual venues. The reviewed product page does not describe borrower CDPs, collateralized debt positions, or oracle-triggered liquidation branches for vCRED itself.",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "The exact tracked vCRED deployment is a plain owner-mintable and holder-burnable ERC-20 with no oracle, NAV, exchange-rate, redemption, or rebalance input. vCRED's separately described market-making vaults consume market data, but the primary product materials describe the tracked token itself as a staking and access token rather than a priced vault receipt. No price-sensitive authority for vCRED minting, redemption, valuation, or rebalancing is therefore established.",
       "sources": [
         {
-          "label": "vCred product site",
-          "url": "https://vcred.trade/"
+          "label": "Hemi explorer verified vCRED implementation (deployment dated 2025-05-19)",
+          "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+        },
+        {
+          "label": "Hemi vCRED creation transaction (2025-05-19)",
+          "url": "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2"
+        },
+        {
+          "label": "vCRED AI-powered smart Market Maker article (2023-05-16)",
+          "url": "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
         }
       ]
     },

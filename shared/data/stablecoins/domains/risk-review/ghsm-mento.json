@@ -59,14 +59,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Mento's current reserve API reports active CDP troves only for GBPm, JPYm, and CHFm, all against USDm; it reports no active GHSm troves. Mento's current Celo/CDP docs identify GBPm as the live collateralized stable path, while oracle-priced FPMM assets use the swap-rate path. There is therefore no current GHSm borrower-specific liquidation branch to inventory under V9.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-a oracle applicability review",
+      "rationale": "Mento's current migration plan expressly keeps GHSm on its live V2 USDm/GHSm FX pool rather than migrating it to the borrower-CDP model used by GBPm, JPYm, and CHFm. GHSm therefore has no borrower-specific liquidation branch, but its live Broker pool uses the USDm/GHSm oracle rate to quote swaps that mint or burn GHSm, making that exchange-rate path a price-sensitive top-level authority.",
       "sources": [
         {
-          "label": "Mento stable assets on Celo",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          "label": "Mento MGP-18 V2 deprecation proposal (published 2026-08-17)",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
         },
         {
           "label": "Mento stable token contracts",

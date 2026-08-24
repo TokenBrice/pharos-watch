@@ -30,18 +30,22 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Unitas documents whitelist-restricted minting and redemption against deposited USDC, followed by protocol-managed allocation into JLP and hedged perpetual positions. It does not document borrower-specific debt, collateral-ratio thresholds, or liquidatable collateral branches for USDu issuance.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Unitas's protocol-managed delta-neutral portfolio uses collateral and hedge marks to monitor margin, PnL, exposure, and liquidity, with bots rebalancing hedge sizes about hourly to keep net exposure aligned. Those internal market-value inputs affect the top-level redemption and reserve operation; USDu has no borrower-specific debt or liquidation branches, so the disposition is top-level-only.",
       "sources": [
         {
-          "label": "Unitas minting USDu",
+          "label": "Unitas off-exchange settlement (last updated 2026-04-01; hedge rebalancing and margin/PnL)",
+          "url": "https://docs.unitas.so/backing-custody-and-security/overview/off-exchange-settlement-oes-in-unitas"
+        },
+        {
+          "label": "Unitas minting USDu (last updated 2026-03-20)",
           "url": "https://docs.unitas.so/solution-design/minting-usdu"
         },
         {
-          "label": "Unitas delta-neutral stability",
-          "url": "https://docs.unitas.so/solution-overview/delta-neutral-stability"
+          "label": "Unitas Terms of Service (last updated 2025-06-08; current exchange-rate redemption)",
+          "url": "https://docs.unitas.so/resources/terms-of-service"
         }
       ]
     },

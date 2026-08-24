@@ -26,13 +26,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 oracle review",
-      "rationale": "LeverUp documents lvUSD as an automatically minted liquidity-layer asset backed by USDC positions, with TWAP-based price anchoring and protocol auctions/redemptions when the token trades below its target. The reviewed product description does not expose borrower-owned collateral positions, per-market collateral thresholds, or a token-level liquidation branch, so the V9 collateral-liquidation inventory does not apply.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "LeverUp documents lvUSD as a liquidity-layer asset whose peg is managed by protocol-internal TWAP anchoring, LV auctions, and redemption quotas. Those internal price and redemption controls are a top-level authority; the product does not expose borrower-owned collateral positions or per-market liquidation branches to inventory.",
       "sources": [
         {
-          "label": "LeverUp lvUSD stablecoin documentation",
+          "label": "LeverUp lvUSD stablecoin documentation (updated 2025-12-29)",
           "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
         }
       ]

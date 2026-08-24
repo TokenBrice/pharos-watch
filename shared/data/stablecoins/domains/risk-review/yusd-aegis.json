@@ -18,13 +18,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Aegis documents permissioned minting from deposited USDT, USDC, or DAI and pooled backing through BTC spot positions hedged with COIN-M perpetuals. The reviewed issuer materials do not describe borrower-specific debt, collateral-ratio thresholds, or a collateral liquidation branch for YUSD issuance.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Aegis's YUSD strategy uses BTC spot collateral and COIN-M perpetuals whose hedge and reserve operations depend on BTC spot/perpetual marks to keep the dollar value stable. This is a price-sensitive top-level internal strategy authority, not a borrower liquidation branch; YUSD has no borrower-owned debt or collateral liquidation paths, so the disposition is top-level-only.",
       "sources": [
         {
-          "label": "Aegis YUSD minting",
+          "label": "Aegis product documentation (date modified 2025-05-20; BTC spot/perpetual strategy and YUSD value)",
+          "url": "https://aegis.im/"
+        },
+        {
+          "label": "Aegis YUSD minting (© 2025; approved collateral mint path)",
           "url": "https://aegis.im/mint"
         },
         {

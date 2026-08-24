@@ -46,18 +46,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "K3 documents sBOLD as an ERC-4626 vault that allocates deposited BOLD across Liquity V2 Stability Pools and swaps liquidation gains back to BOLD. The wrapper has share accounting and swap valuation but does not originate borrower debt or operate collateral-ratio liquidation branches. The variantOf relationship preserves the complete BOLD parent review.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "sBOLD's ERC-4626 accounting values Stability Pool assets per share, and its oracle registry prices liquidation gains for swaps back to BOLD. Those exchange-rate and swap valuations are price-sensitive top-level authorities; the wrapper originates no borrower debt and has no local collateral-ratio liquidation branches.",
       "sources": [
         {
-          "label": "K3 sBOLD technical details",
-          "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+          "label": "K3 BaseSBold implementation (source revision 2025-05-27)",
+          "url": "https://github.com/K3Capital/sBOLD/blob/4f52b863cb27ce9f610650d0874521b6d85fce94/contracts/base/BaseSBold.sol"
         },
         {
-          "label": "Liquity V2 contracts and mainnet addresses",
-          "url": "https://github.com/liquity/bold/"
+          "label": "K3 oracle registry (source revision 2025-01-10)",
+          "url": "https://github.com/K3Capital/sBOLD/blob/585ce74a9c8156360e74244fdead478d72480026/contracts/oracle/Registry.sol"
         }
       ]
     },

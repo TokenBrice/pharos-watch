@@ -22,14 +22,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "HBD is protocol-level debt backed by the value of HIVE and converted under one consensus-wide price-feed and debt-ratio rule set. Holders do not open borrower-specific collateral positions, and Hive exposes no separately liquidatable collateral markets requiring branch rows.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Hive's consensus-wide median HIVE/HBD feed is a price-sensitive top-level authority: it sets the conversion value and feeds the protocol debt-ratio haircut that constrains HBD issuance. HBD has no borrower-specific collateral positions or separately liquidatable markets, so the authority is scored without branch rows.",
       "sources": [
         {
-          "label": "Hive whitepaper price-feed consensus",
-          "url": "https://gitlab.syncad.com/hive/hive-whitepaper/-/blob/master/whitepaper/3technical.tex"
+          "label": "Hive whitepaper price-feed consensus (document revision 2020-09-28)",
+          "url": "https://gitlab.syncad.com/hive/hive-whitepaper/-/blob/f73d76473e76785bbf414767f0c2495e21d8505e/whitepaper/3technical.tex"
         },
         {
           "label": "Hive median-feed implementation",

@@ -35,13 +35,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "At Celo block 72127154, CADm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/CADm exchange using rate feed 0x20869cF54Ead821C45DFb2aB0C23d2e10Fbb65A4, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The current Mento reserve API lists active CDP troves only for GBPm, JPYm, and CHFm, not CADm, so CADm has no live borrower-specific oracle/liquidation branch to enumerate.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
+      "rationale": "At Celo block 72127154 (2026-07-14T11:18:32Z), CADm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/CADm mint/burn exchange using rate feed 0x20869cF54Ead821C45DFb2aB0C23d2e10Fbb65A4, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The pinned deployment registry (2026-07-17) and reviewed reserve evidence identified no live CADm borrower-specific CDP or liquidation branch, so the price-sensitive Broker conversion rate is scored as a top-level mint/redemption authority without branch rows.",
       "sources": [
         {
-          "label": "Pinned Mento Celo deployment registry",
+          "label": "Celo block 72127154 (2026-07-14T11:18:32Z)",
+          "url": "https://celo.blockscout.com/block/72127154"
+        },
+        {
+          "label": "Pinned Mento Celo deployment registry (commit dated 2026-07-17)",
           "url": "https://github.com/mento-protocol/deployments-v2/blob/7b02f6a61c1eb646742c74b516f827b2c305acf1/packages/contracts/contracts.json"
         },
         {

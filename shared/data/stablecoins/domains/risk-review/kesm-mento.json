@@ -43,13 +43,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
-      "rationale": "At finalized Celo block 72780426 (2026-07-22T00:46:24Z), KESm broker() returned the Mento Broker and its sole exchange provider exposed exchange 0x89de88b8eb790de26f4649f543cb6893d93635c728ac857f0926e842fb0d298b pairing USDm with KESm. The pool used reference feed 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169, a 360-second reset/expiry window, minimumReports 1, and one active SortedOracles reporter. The pinned backing config classifies KESm as reserve-backed, the pinned deployment registry has no KESm borrower branch, and the live reserve API listed debt-bearing troves only for GBPm, JPYm, and CHFm. KESm therefore has a Broker conversion-oracle path rather than borrower-specific oracle and liquidation branches to enumerate.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
+      "rationale": "At finalized Celo block 72780426 (2026-07-22T00:46:24Z), KESm broker() returned the Mento Broker and its sole exchange provider exposed a USDm/KESm mint/burn exchange using reference feed 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169, a 360-second reset/expiry window, minimumReports 1, and one active SortedOracles reporter. The pinned backing config classifies KESm as reserve-backed, the pinned deployment registry has no KESm borrower branch, and the reviewed reserve API listed debt-bearing troves only for GBPm, JPYm, and CHFm. KESm therefore has no borrower-specific liquidation branch, but its price-sensitive Broker conversion rate is a top-level mint/redemption authority that must be scored.",
       "sources": [
         {
-          "label": "Finalized Celo block 72780426",
+          "label": "Finalized Celo block 72780426 (2026-07-22T00:46:24Z)",
           "url": "https://celo.blockscout.com/block/72780426"
         },
         {

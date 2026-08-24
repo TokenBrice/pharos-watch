@@ -34,17 +34,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Aave documents Umbrella as an automated safety module that stakes assets and burns or slashes the staked receipt to cover protocol deficits. stkGHO depositors do not open GHO borrower positions, so there are no stkGHO collateral-market or liquidation branches to inventory; the underlying GHO parent carries the separate Aave oracle profile.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-b oracle applicability review",
+      "rationale": "Aave documents Umbrella StakeTokens as ERC-4626 vaults whose redeemable underlying value changes when the automated deficit-cover mechanism slashes stake, and the implementation values the stake-token underlying when determining coverage. This creates a price-sensitive top-level stkGHO exchange-rate and slashing authority. stkGHO depositors do not open GHO borrower positions, so no collateral-liquidation branch rows apply; the underlying GHO parent carries its separate Aave reserve-oracle exposure.",
       "sources": [
         {
-          "label": "Aave Umbrella help",
-          "url": "https://aave.com/help/umbrella/umbrella"
+          "label": "Aave Umbrella activation ARFC (published 2025-03-20)",
+          "url": "https://governance.aave.com/t/arfc-aave-umbrella-activation/21521"
         },
         {
-          "label": "Aave Umbrella development proposal",
+          "label": "Aave Umbrella development proposal (published 2024-07-24)",
           "url": "https://governance.aave.com/t/bgd-aave-safety-module-umbrella/18366"
         }
       ]

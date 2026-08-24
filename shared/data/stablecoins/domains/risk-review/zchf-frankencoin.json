@@ -43,16 +43,16 @@
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Frankencoin documents position liquidation through permissionless challenges and auctions. The auction determines the collateral market price and liquidates a position when the highest bid remains below its liquidation price, so there is no collateral-price oracle branch to enumerate.",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Frankencoin's permissionless challenge auction discovers the collateral market price and liquidates a position without an external feed or internal valuation authority. The reviewed auction is a market mechanism rather than a retained oracle, NAV, exchange-rate, or internal-mark path for minting, redemption, or rebalancing; no oracle branch or top-level oracle component is applicable, so not-applicable remains correct.",
       "sources": [
         {
           "label": "Frankencoin collateralized minting",
           "url": "https://docs.frankencoin.com/positions"
         },
         {
-          "label": "Frankencoin challenges and auctions",
+          "label": "Frankencoin challenges and auctions (last updated 2024-10-17)",
           "url": "https://docs.frankencoin.com/positions/auctions"
         },
         {

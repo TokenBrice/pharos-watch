@@ -46,22 +46,22 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "USDe is minted and redeemed through signed orders accepted by Ethena's offchain pricing and hedging services, while backing assets are paired with centrally managed derivatives hedges. It does not expose user CDP markets with per-collateral onchain liquidation thresholds, liquidation auctions, backstops, or shutdown branches, so the V9 collateral-liquidation branch families do not apply.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Ethena's offchain service constructs price-sensitive mint and redemption quotes from exchange market data and validates them against Pyth and RedStone while managing the backing hedge book. This is a top-level pricing authority; USDe exposes no borrower-specific CDP markets requiring collateral-liquidation branch rows.",
       "sources": [
         {
-          "label": "Ethena minting USDe documentation",
-          "url": "https://docs.ethena.fi/solution-design/minting-usde"
+          "label": "Ethena minting USDe documentation (page updated 2024-10-30)",
+          "url": "https://docs.ethena.fi/technical-design/minting-usde"
         },
         {
           "label": "Ethena hedging system documentation",
           "url": "https://docs.ethena.fi/solution-design/hedging-system"
         },
         {
-          "label": "Ethena oracle documentation",
-          "url": "https://docs.ethena.fi/solution-design/use-of-oracles"
+          "label": "Ethena oracle documentation (page updated 2024-10-30)",
+          "url": "https://docs.ethena.fi/technical-design/use-of-oracles"
         }
       ]
     },

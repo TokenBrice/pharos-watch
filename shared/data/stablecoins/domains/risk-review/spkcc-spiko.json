@@ -22,17 +22,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Spiko describes SPKCC as a regulated fund share whose strategy rotates between BTC or ETH cash-and-carry trades and Treasury bills. Primary-market access is permissioned and fund NAV is calculated and published for the share; tokenholders do not open borrower-owned collateral positions, so there are no SPKCC collateral-market or liquidation branches to inventory.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-b oracle applicability review",
+      "rationale": "Spiko documents that CACEIS calculates the fund-share NAV and that Spiko and Chainlink publish that official token price on-chain through an AggregatorV3-compatible oracle. The NAV is the price-sensitive authority for valuing the permissioned fund share. SPKCC has no borrower-owned collateral positions, so that authority is scored at the top level without collateral-liquidation branch rows.",
       "sources": [
         {
-          "label": "Spiko Cash and Carry",
+          "label": "Spiko Cash and Carry product page (product source; oracle architecture dated below)",
           "url": "https://www.spiko.io/spiko-cash-and-carry"
         },
         {
-          "label": "Spiko smart contracts",
+          "label": "Spiko's Smart Contracts (published 2025-05-04)",
           "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
         }
       ]

@@ -22,22 +22,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Midas describes mRe7YIELD as a Liquid Yield Token whose NAV follows a Re7 Capital-managed strategy and lists Ethereum and Etherlink token, NAV-oracle, issuance-vault, and redemption-vault contracts. The reviewed product materials do not describe borrower-owned debt positions, collateral thresholds, liquidation auctions, or a token-level liquidation backstop for mRe7YIELD, so the V9 collateral-liquidation branch inventory does not apply.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracleless-a review",
+      "rationale": "Midas documents mRe7YIELD as a NAV-tracking Liquid Yield Token and lists its Ethereum and Etherlink token, NAV-oracle, issuance-vault, and redemption-vault contracts. The NAV quote is a price-sensitive top-level valuation and mint/redemption authority; no borrower-owned debt or token-level liquidation branch exists for mRe7YIELD.",
       "sources": [
         {
-          "label": "Midas mRe7YIELD product documentation",
-          "url": "https://docs.midas.app/tokens/mre7yield"
-        },
-        {
-          "label": "Midas mRe7YIELD smart contracts",
-          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
-        },
-        {
-          "label": "Midas mRe7YIELD risks",
-          "url": "https://docs.midas.app/tokens/mre7yield/risks"
+          "label": "Midas mToken pricing (last updated 2026-08-21)",
+          "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
         }
       ]
     },

@@ -51,25 +51,21 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Mento's current reserve API reports active CDP troves only for GBPm, JPYm, and CHFm, all against USDm; it reports no active ZARm troves. Mento's current Celo/CDP docs identify GBPm as the live collateralized stable path, while oracle-priced FPMM assets use the swap-rate path. There is therefore no current ZARm borrower-specific liquidation branch to inventory under V9.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-b oracle applicability review",
+      "rationale": "Mento's primary reserve inventory observed on 2026-08-24 reports active borrower troves only for GBPm, JPYm, and CHFm, not ZARm. ZARm therefore remains on the non-borrower oracle-priced stable-asset path, where Mento's external rate source supplies the mint and exchange quote and BreakerBox gates its validity. That price-sensitive authority is scored at the top level without collateral-liquidation branch rows.",
       "sources": [
         {
-          "label": "Mento stable assets on Celo",
+          "label": "Mento stable assets on Celo (current protocol documentation; oracle page revision dated below)",
           "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
         },
         {
-          "label": "Mento stable token contracts",
-          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
-        },
-        {
-          "label": "Mento FPMM oracles and circuit breakers",
+          "label": "Mento FPMM oracles and circuit breakers (source revision 2026-04-17)",
           "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
         },
         {
-          "label": "Mento reserve analytics API",
+          "label": "Mento reserve analytics API (live primary inventory observed 2026-08-24)",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       ]

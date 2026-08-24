@@ -39,17 +39,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Yuzu documents syzUSD as a technical staking wrapper: users convert yzUSD into syzUSD shares and can unstake back to yzUSD. The reviewed wrapper has no borrower-owned debt positions or separate collateral/liquidation branches; underlying yzUSD mechanics remain a parent-asset dependency.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Yuzu's syzUSD wrapper uses a share price/exchange rate to convert yzUSD into syzUSD shares and back as strategy yield accrues. That wrapper-local rate is a price-sensitive top-level redemption authority; syzUSD has no borrower-owned debt or separate liquidation branches, while underlying yzUSD remains a dependency.",
       "sources": [
         {
-          "label": "Yuzu syzUSD documentation",
+          "label": "Yuzu syzUSD documentation (last updated 2026-03-12)",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
         },
         {
-          "label": "Yuzu yzUSD documentation",
+          "label": "Yuzu yzUSD documentation (last updated 2026-08-07)",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
         }
       ]

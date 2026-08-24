@@ -26,13 +26,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Djed is an autonomous reserve contract that mints and burns DJED and the SHEN reserve coin against one shared base-coin reserve. Users do not open borrower-specific collateral positions, and the reviewed design exposes no market-specific oracle or liquidation branches.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "Djed has no borrower-specific liquidation markets, but its shared reserve contract consumes an oracle-provided ADA/USD pricing index to price system-wide DJED and SHEN mint and redemption operations and to maintain the reserve ratio. That price-sensitive authority is scoreable without inventing collateral branches.",
       "sources": [
         {
-          "label": "IOG Djed design article",
+          "label": "IOG Djed design article (published 2021-08-18)",
           "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
         }
       ]

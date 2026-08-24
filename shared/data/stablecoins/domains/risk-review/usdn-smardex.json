@@ -46,17 +46,17 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "USDN is minted and redeemed against the protocol's shared wstETH vault while a separate long-only perpetual supplies matched trading exposure. The oracle liquidates leveraged long positions, not borrower-specific USDN collateralized debt positions, so there are no stablecoin collateral-market branches to inventory.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "USDN protocol actions, including minting and redemption against the shared wstETH vault, require a user-supplied Pyth price validated through the protocol's oracle flow with fallback behavior. The same pricing also governs long-position liquidation, but USDN has no borrower-specific collateralized-debt markets requiring stablecoin branch rows.",
       "sources": [
         {
           "label": "USDN protocol balance",
           "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-balance"
         },
         {
-          "label": "USDN price submission and validation",
+          "label": "USDN price submission and validation (page updated 2025-02-24)",
           "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol/1.-providing-a-price"
         }
       ]

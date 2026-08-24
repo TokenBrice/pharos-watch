@@ -26,13 +26,13 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "YieldFi defines yUSD as a market-neutral series whose NAV is based on Series Assets and whose collateral and liquidation policies are not applicable. Tokenholders redeem against the series and do not open borrower positions, so there are no yUSD collateral-market or liquidation branches to inventory.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-b oracle applicability review",
+      "rationale": "YieldFi's yUSD terms define NAV from Series Assets less Series Liabilities, require on-chain assets to be valued with Chainlink or equivalent pricing, and use the resulting series value for tokenholder redemption. That NAV is a price-sensitive top-level authority. Tokenholders do not open borrower positions and the terms mark collateral and liquidation policies inapplicable, so no collateral-liquidation branch rows apply.",
       "sources": [
         {
-          "label": "YieldFi yUSD token terms",
+          "label": "YieldFi yUSD token terms (document last updated 2026-03-18)",
           "url": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
         }
       ]

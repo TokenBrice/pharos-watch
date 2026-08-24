@@ -34,18 +34,18 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Parallel USDp is minted, burned, and redeemed through the Parallelizer Module against a DAO-whitelisted basket priced at oracle value. The reviewed implementation exposes no borrower-specific debt positions, collateral health checks, or liquidation engine for USDp holders; asset depeg handling uses adaptive mint/burn fees and proportional redemption instead of CDP liquidation branches.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex external-b oracle applicability review",
+      "rationale": "Parallel's production Parallelizer prices each whitelisted basket asset with external oracle and exchange-rate feeds and uses that value to calculate USDp mint and burn amounts, adaptive fees, and proportional redemption. The reviewed implementation exposes no borrower-specific debt positions, collateral health checks, or liquidation engine for USDp holders, so the basket valuation authority is scored at the top level without collateral-liquidation branch rows.",
       "sources": [
         {
-          "label": "Parallel USDp implementation",
+          "label": "Parallel USDp implementation (production documentation; Parallelizer README revision 2025-09-18)",
           "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation"
         },
         {
-          "label": "Parallelizer Module",
-          "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          "label": "Parallel Parallelizer primary repository README (revision 2025-09-18)",
+          "url": "https://github.com/parallel-protocol/parallel-parallelizer/commit/ce8706fb52637fb0eea7d3152c6b8b146bf7592e"
         }
       ]
     },

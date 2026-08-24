@@ -22,14 +22,14 @@
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "Ethena documents sUSDe as a vault where users deposit USDe, receive shares, and burn shares for proportionate USDe. sUSDe does not create borrower-owned debt positions or collateral-liquidation markets; the underlying USDe parent carries the separately reviewed offchain pricing and hedging-system exposure.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "OpenAI Codex W1b oracle applicability review",
+      "rationale": "sUSDe's vault exchange rate values each share against the USDe held by the staking contract for minting and redemption, so the pro-rata share quote is a price-sensitive top-level authority. sUSDe creates no borrower-owned debt positions or collateral-liquidation markets, and therefore needs no branch rows.",
       "sources": [
         {
-          "label": "Ethena staking USDe documentation",
-          "url": "https://docs.ethena.fi/solution-design/staking-usde"
+          "label": "Ethena staking USDe documentation (page updated 2026-07-13)",
+          "url": "https://docs.ethena.fi/technical-design/staking-usde"
         },
         {
           "label": "Ethena oracle documentation",
