@@ -59,40 +59,67 @@ function stringifyCanonical(value: unknown): string {
   return `{${entries.join(",")}}`;
 }
 
+const CANONICAL_CHUNK_TARGET = 64 * 1024;
+
 function* stringifyCanonicalChunks(value: unknown): Generator<string> {
-  if (value === null) {
-    yield "null";
-    return;
-  }
-  if (value === undefined) return;
+  const stackValues: unknown[] = [value];
+  const stackRaw: boolean[] = [false];
+  let chunk = "";
 
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    yield JSON.stringify(value);
-    return;
-  }
-  if (Array.isArray(value)) {
-    yield "[";
-    for (let index = 0; index < value.length; index += 1) {
-      if (index > 0) yield ",";
-      yield* stringifyCanonicalChunks(value[index]);
+  while (stackValues.length > 0) {
+    const current = stackValues.pop();
+    const raw = stackRaw.pop()!;
+    if (raw) {
+      chunk += current as string;
+    } else if (current === null) {
+      chunk += "null";
+    } else if (current !== undefined && (
+      typeof current === "string" ||
+      typeof current === "number" ||
+      typeof current === "boolean"
+    )) {
+      chunk += JSON.stringify(current);
+    } else if (Array.isArray(current)) {
+      stackValues.push("]");
+      stackRaw.push(true);
+      for (let index = current.length - 1; index >= 0; index -= 1) {
+        stackValues.push(current[index]);
+        stackRaw.push(false);
+        if (index > 0) {
+          stackValues.push(",");
+          stackRaw.push(true);
+        }
+      }
+      chunk += "[";
+    } else if (current !== undefined) {
+      const objectValue = current as Record<string, unknown>;
+      const keys = Object.keys(objectValue)
+        .filter((key) => objectValue[key] !== undefined)
+        .sort();
+      stackValues.push("}");
+      stackRaw.push(true);
+      for (let index = keys.length - 1; index >= 0; index -= 1) {
+        const key = keys[index]!;
+        stackValues.push(objectValue[key]);
+        stackRaw.push(false);
+        stackValues.push(":");
+        stackRaw.push(true);
+        stackValues.push(JSON.stringify(key));
+        stackRaw.push(true);
+        if (index > 0) {
+          stackValues.push(",");
+          stackRaw.push(true);
+        }
+      }
+      chunk += "{";
     }
-    yield "]";
-    return;
-  }
 
-  const objectValue = value as Record<string, unknown>;
-  const keys = Object.keys(objectValue)
-    .filter((key) => objectValue[key] !== undefined)
-    .sort();
-  yield "{";
-  for (let index = 0; index < keys.length; index += 1) {
-    const key = keys[index]!;
-    if (index > 0) yield ",";
-    yield JSON.stringify(key);
-    yield ":";
-    yield* stringifyCanonicalChunks(objectValue[key]);
+    if (chunk.length >= CANONICAL_CHUNK_TARGET) {
+      yield chunk;
+      chunk = "";
+    }
   }
-  yield "}";
+  if (chunk.length > 0) yield chunk;
 }
 
 /** Deterministic JSON for runtime-neutral identity and digest projections. */

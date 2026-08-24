@@ -2,8 +2,8 @@ import {
   compareText,
   type V9FailureDomainRef,
 } from "../../types/safety-score-v9-fact-primitives";
-import { sha256Hex } from "../sha256";
-import { stableJsonStringifyV1 } from "../stable-json";
+import { sha256HexFromUtf8Chunks } from "../sha256";
+import { stableJsonStringifyChunksV1 } from "../stable-json";
 
 // Canonical ordering is a determinism-digest input; it has one definition.
 export { compareText };
@@ -24,7 +24,9 @@ export function canonicalDomains(domains: readonly V9FailureDomainRef[]): V9Fail
 }
 
 export function domainDigest(domain: string, payload: unknown): string {
-  return sha256Hex(stableJsonStringifyV1({ domain, payload }));
+  return sha256HexFromUtf8Chunks(
+    stableJsonStringifyChunksV1({ domain, payload }),
+  );
 }
 
 export function deepFreeze<T>(value: T): Readonly<T> {
