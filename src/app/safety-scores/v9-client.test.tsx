@@ -67,6 +67,9 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByText("Can I get my value out?")).toBeTruthy();
     expect(screen.getByText("Who can change or break the system?")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Find your coin" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Open the Safety Score Map" }).getAttribute("href")).toBe(
+      "/safety-scores/map/",
+    );
   });
 
   it("filters the card grid by the existing grade controls", () => {
