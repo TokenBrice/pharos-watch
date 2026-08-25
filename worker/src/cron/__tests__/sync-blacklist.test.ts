@@ -107,10 +107,8 @@ vi.mock("../../lib/alchemy-logs", () => ({
 vi.mock("../../lib/evm-logs", () => ({
   createBudget: vi.fn((limit = 900) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((b: { count: number; limit: number }) => b.count >= b.limit),
-  createRateLimiter: vi.fn(
-    () =>
-      async <T>(fn: () => Promise<T>) =>
-        fn(),
+  createRateLimiter: vi.fn((requestsPerSecond: number) =>
+    Object.assign(async <T>(fn: () => Promise<T>) => fn(), { requestsPerSecond }),
   ),
   decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
   decodeAddressWord: vi.fn((hex: string | null | undefined) =>
@@ -177,7 +175,7 @@ vi.mock("@shared/lib/chains", () => ({
 }));
 
 import { syncBlacklist, type SyncBlacklistOptions } from "../sync-blacklist";
-import { fetchEvmLogsForTopicWithCompleteness, getEvmBlockNumber } from "../../lib/evm-logs";
+import { createRateLimiter, fetchEvmLogsForTopicWithCompleteness, getEvmBlockNumber } from "../../lib/evm-logs";
 import type { EtherscanLogEntry, EvmLogFetchResult } from "../../lib/evm-logs";
 import { batchExecute } from "../../lib/db";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
@@ -371,6 +369,40 @@ describe("syncBlacklist", () => {
     expect(meta.eventsFetched).toBe(1);
     expect(meta.enrichAttempted).toBe(0);
     expect(meta.currentBalanceCacheUpdated).toBe(0);
+  });
+
+  it("reports the provider limiter rates actually in use, not the producer default", async () => {
+    const db = makeDb();
+
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    // The scheduled slot injects a faster Etherscan limiter than the producer's
+    // own default; TronGrid keeps the default. Metadata must show both.
+    const result = await syncBlacklist(
+      buildTestOpts({ db, externalEtherscanRL: createRateLimiter(4) }),
+    );
+    const meta = JSON.parse(result.metadata);
+
+    expect(meta.etherscanLimiterRequestsPerSecond).toBe(4);
+    expect(meta.tronLimiterRequestsPerSecond).toBe(3);
+  });
+
+  it("falls back to the producer default Etherscan rate when no limiter is injected", async () => {
+    const db = makeDb();
+
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    const meta = JSON.parse(result.metadata);
+
+    expect(meta.etherscanLimiterRequestsPerSecond).toBe(3);
+    expect(meta.tronLimiterRequestsPerSecond).toBe(3);
   });
 
   it("records thrown config scan exceptions and continues the sync", async () => {

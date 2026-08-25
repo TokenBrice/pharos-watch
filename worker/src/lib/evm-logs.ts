@@ -23,13 +23,20 @@ export function budgetExhausted(budget: SubrequestBudget): boolean {
 
 // --- Rate limiting ---
 
-export type RateLimitedFetch = <T>(fn: () => Promise<T>) => Promise<T>;
+// The configured throughput travels with the limiter so callers that report it
+// (cron run metadata) read the rate actually in force rather than restating a
+// default an injected limiter may have replaced. Hand-rolled limiters may omit
+// it, so treat it as unknown rather than assuming a default.
+export type RateLimitedFetch = {
+  <T>(fn: () => Promise<T>): Promise<T>;
+  readonly requestsPerSecond?: number;
+};
 
 export function createRateLimiter(requestsPerSecond: number): RateLimitedFetch {
   let pending = Promise.resolve();
   const interval = Math.ceil(1000 / requestsPerSecond);
 
-  return function <T>(fn: () => Promise<T>): Promise<T> {
+  const limiter = function <T>(fn: () => Promise<T>): Promise<T> {
     const execute = pending.then(async () => {
       const result = await fn();
       await new Promise((r) => setTimeout(r, interval));
@@ -41,6 +48,8 @@ export function createRateLimiter(requestsPerSecond: number): RateLimitedFetch {
     );
     return execute;
   };
+
+  return Object.assign(limiter, { requestsPerSecond });
 }
 
 // --- Helpers ---

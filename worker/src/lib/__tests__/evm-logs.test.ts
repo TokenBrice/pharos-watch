@@ -216,6 +216,10 @@ describe("createRateLimiter", () => {
     vi.useRealTimers();
   });
 
+  it("exposes the configured requests-per-second so callers can report it", () => {
+    expect(createRateLimiter(4).requestsPerSecond).toBe(4);
+  });
+
   it("executes function and returns result", async () => {
     const limiter = createRateLimiter(10); // 10 req/s = 100ms interval
     const promise = limiter(() => Promise.resolve(42));
