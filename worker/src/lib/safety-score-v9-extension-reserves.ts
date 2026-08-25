@@ -284,15 +284,16 @@ function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta): bo
 }
 
 /**
- * D6: admit reviewed static rows only when an independent attestor corroborates
- * a prudential issuer. Rows directly reconciled by a verified audit or
- * examination retain independent evidence strength; corroborated issuer rows
- * keep the candidate policy's confidence haircut.
+ * Shared admission predicate for an independently attested full composition.
+ * Supervision is deliberately not part of it: an independent audit is evidence
+ * about the *reserves*, prudential supervision is evidence about the *issuer*,
+ * and the two decide different things. Admission is decided here; the rung the
+ * composition enters at is decided by each caller below.
  */
-export function buildSafetyScoreV9ReviewedStaticReserveRows(
+function independentlyAttestedComposition(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
-): ReviewedStaticReserveRows | null {
+): ReserveSlice[] | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const proof = meta.proofOfReserves;
@@ -311,7 +312,6 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
     reviewAtSec === null ||
     compositionAtSec === null ||
     !validateReserveCompositionTotal(rows, "full") ||
-    meta.mintAuthority?.supervision !== "prudential" ||
     proof?.type !== "independent-audit" ||
     !attestorIndependent ||
     !proof.provider?.trim() ||
@@ -327,12 +327,52 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
   ) {
     return null;
   }
-  const evidenceClass = hasDirectIndependentReserveAssurance(meta) ? "independent" : "issuer-attested";
+  return normalizeReviewedStaticReserveRows(rows);
+}
+
+/**
+ * D6: admit reviewed static rows only when an independent attestor corroborates
+ * a prudential issuer. Rows directly reconciled by a verified audit or
+ * examination retain independent evidence strength; corroborated issuer rows
+ * keep the candidate policy's confidence haircut.
+ */
+export function buildSafetyScoreV9ReviewedStaticReserveRows(
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+): ReviewedStaticReserveRows | null {
+  if (meta.mintAuthority?.supervision !== "prudential") return null;
+  const rows = independentlyAttestedComposition(meta, clockSec);
+  if (rows === null) return null;
   return {
-    rows: normalizeReviewedStaticReserveRows(rows),
-    evidenceClass,
+    rows,
+    evidenceClass: hasDirectIndependentReserveAssurance(meta) ? "independent" : "issuer-attested",
     provenance: "curated",
   };
+}
+
+/**
+ * The rung between full issuer-attested credit and nothing at all.
+ *
+ * An issuer without prudential supervision can still publish an independently
+ * attested composition. Discarding it reported the asset as having no reserve
+ * composition whatsoever, which is a worse claim than the evidence supports and
+ * let a single stale upstream feed erase an entire backing pillar. It enters as
+ * `static-validated`, one rung down, so it earns reduced credit under the
+ * shorter composition freshness bound and degrades as it ages.
+ *
+ * Never returns `independent`: direct assurance describes the reserves and must
+ * not lift an unsupervised issuer back to full strength through this path. The
+ * caller decides *whether* this rung is reachable, so an asset whose live
+ * producer is deliberately excluded from falling back is not rescued here.
+ */
+export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+): ReviewedStaticReserveRows | null {
+  if (meta.mintAuthority?.supervision === "prudential") return null;
+  const rows = independentlyAttestedComposition(meta, clockSec);
+  if (rows === null) return null;
+  return { rows, evidenceClass: "static-validated", provenance: "audited-fallback" };
 }
 
 /**
@@ -412,6 +452,10 @@ export function addReviewedStaticReserveEvidence(
     const compositionAtSec = conservativeDateEndSec(review.compositionAsOf, clockSec);
     const reportAtSec = report ? conservativeDateEndSec(report.publishedAt, clockSec) : null;
     const periodEndSec = report ? conservativeDateEndSec(report.periodEnd, clockSec) : null;
+    // Mirrors the admission gate above minus its age bound, so a composition
+    // that would otherwise have been admitted is still reported as published
+    // evidence that expired. Supervision is deliberately absent from both:
+    // it sets the rung, not whether the issuer published at all.
     const expiredButOtherwiseAdmissible =
       rows.length > 0 &&
       review.scope === "full-composition" &&
@@ -420,7 +464,6 @@ export function addReviewedStaticReserveEvidence(
       reviewAtSec !== null &&
       compositionAtSec !== null &&
       validateReserveCompositionTotal(rows, "full") &&
-      meta.mintAuthority?.supervision === "prudential" &&
       proof?.type === "independent-audit" &&
       attestorIndependent &&
       Boolean(proof?.provider?.trim()) &&
@@ -452,6 +495,39 @@ export function addReviewedStaticReserveEvidence(
         proofOfReserves: proof,
       },
       maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
+    });
+    return;
+  }
+  if (admitted.provenance === "audited-fallback" && report) {
+    // The composition carries a named independent report, so it must keep the
+    // issuer attribution and the report's own dates. Emitting it as an
+    // anonymous standalone review would discard the publisher and, once the
+    // window lapses, blame the issuer for a document they did publish.
+    const auditedSources = [...review.sources, ...report.sources].filter(
+      (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
+    );
+    evidence.add({
+      componentKeys: [
+        "reviewed-static-reserves",
+        ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
+      ],
+      sourceId: "stablecoin-meta.reviewed-audited-fallback-reserves",
+      reviewedAt: review.reviewedAt,
+      observedAt: report.periodEnd,
+      publishedAt: report.publishedAt,
+      publishedBy: "issuer",
+      confidence: confidenceForResearch(report.confidence),
+      sources: auditedSources,
+      payload: {
+        reserveReview: review,
+        reserves: admitted.rows,
+        evidenceClass: admitted.evidenceClass,
+        provenance: admitted.provenance,
+        proofOfReserves: meta.proofOfReserves,
+      },
+      // The shorter composition bound, so the rung degrades as it ages instead
+      // of riding the 365-day audit window it was admitted under.
+      maxAgeSec: REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
     });
     return;
   }

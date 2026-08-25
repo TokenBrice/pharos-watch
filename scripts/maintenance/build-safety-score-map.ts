@@ -142,7 +142,7 @@ const SUBGRADE_LANE_DEGRADE_STEPS = 16;
 const SUBGRADE_LANE_REFERENCE_POPULATION = 40;
 const SUBGRADE_LANE_MAX_DEMAND_FACTOR = 2;
 const SUBGRADE_LANE_PACK_PHASES = 24;
-const MAX_ANGULAR_GAP_MEAN_MULTIPLE = 3;
+const MAX_EMPTY_ARC_MEAN_MULTIPLE = 3;
 
 // The compact header keeps only the visual grammar needed to decode the map.
 export const CHART_KEY_PANEL: Rect = { x: 800, y: 18, w: 736, h: 48 };
@@ -743,7 +743,60 @@ function snailCandidates(
   return candidates;
 }
 
-function packEllipticalOrbit(
+interface EllipseArcSampler {
+  perimeter: number;
+  /** Arc length from theta 0, measured along the ellipse rather than a circle. */
+  arcAtTheta(theta: number): number;
+  pointAtArc(arc: number): { x: number; y: number };
+}
+
+/**
+ * Sample an ellipse centerline densely enough to convert between angle and
+ * true arc length in both directions. Equal angles are not equal distances on
+ * an ellipse, so both placement and the emptiness linter need this rather than
+ * a mean-radius approximation.
+ */
+function createEllipseArcSampler(rx: number, ry: number): EllipseArcSampler {
+  const sampleCount = 4096;
+  const fullTurn = Math.PI * 2;
+  const cumulative = new Array<number>(sampleCount + 1).fill(0);
+  let previousX = rx;
+  let previousY = 0;
+  for (let i = 1; i <= sampleCount; i++) {
+    const theta = (i / sampleCount) * fullTurn;
+    const x = rx * Math.cos(theta);
+    const y = ry * Math.sin(theta);
+    cumulative[i] = cumulative[i - 1]! + Math.hypot(x - previousX, y - previousY);
+    previousX = x;
+    previousY = y;
+  }
+  const perimeter = cumulative[sampleCount]!;
+  return {
+    perimeter,
+    arcAtTheta(theta: number): number {
+      const turns = ((theta % fullTurn) + fullTurn) % fullTurn;
+      const position = (turns / fullTurn) * sampleCount;
+      const low = Math.min(sampleCount - 1, Math.floor(position));
+      return cumulative[low]! + (position - low) * (cumulative[low + 1]! - cumulative[low]!);
+    },
+    pointAtArc(rawArc: number): { x: number; y: number } {
+      const arc = ((rawArc % perimeter) + perimeter) % perimeter;
+      let low = 0;
+      let high = sampleCount;
+      while (low + 1 < high) {
+        const mid = Math.floor((low + high) / 2);
+        if (cumulative[mid]! <= arc) low = mid;
+        else high = mid;
+      }
+      const span = cumulative[high]! - cumulative[low]!;
+      const fraction = span > 0 ? (arc - cumulative[low]!) / span : 0;
+      const theta = ((low + fraction) / sampleCount) * fullTurn;
+      return { x: GALAXY_CX + rx * Math.cos(theta), y: GALAXY_CY + ry * Math.sin(theta) };
+    },
+  };
+}
+
+export function packEllipticalOrbit(
   radii: readonly number[],
   orbitRx: number,
   orbitRy: number,
@@ -754,54 +807,22 @@ function packEllipticalOrbit(
     return [{ x: GALAXY_CX + orbitRx * Math.cos(phase), y: GALAXY_CY + orbitRy * Math.sin(phase) }];
   }
 
-  // Sample the centerline densely enough to map equal arc lengths back onto
-  // the ellipse. This prevents the crowded short-axis ends produced by equal
-  // angle spacing and lets every tier complete the full closed path.
-  const sampleCount = 4096;
-  const cumulative = new Array<number>(sampleCount + 1).fill(0);
-  let previousX = orbitRx;
-  let previousY = 0;
-  for (let i = 1; i <= sampleCount; i++) {
-    const theta = (i / sampleCount) * Math.PI * 2;
-    const x = orbitRx * Math.cos(theta);
-    const y = orbitRy * Math.sin(theta);
-    cumulative[i] = cumulative[i - 1] + Math.hypot(x - previousX, y - previousY);
-    previousX = x;
-    previousY = y;
-  }
-  const perimeter = cumulative[sampleCount];
-  const required = radii.map((radius, index) => radius + radii[(index + 1) % radii.length] + BUBBLE_GAP);
+  // Equal arc lengths, not equal angles: the latter crowds the short-axis ends.
+  const { perimeter, pointAtArc } = createEllipseArcSampler(orbitRx, orbitRy);
+  const required = radii.map((radius, index) => radius + radii[(index + 1) % radii.length]! + BUBBLE_GAP);
   const requiredLength = required.reduce((sum, distance) => sum + distance, 0);
   if (!Number.isFinite(perimeter) || requiredLength > perimeter) return null;
   const slack = (perimeter - requiredLength) / radii.length;
-
-  const pointAtArc = (rawArc: number): { x: number; y: number } => {
-    const arc = ((rawArc % perimeter) + perimeter) % perimeter;
-    let low = 0;
-    let high = sampleCount;
-    while (low + 1 < high) {
-      const mid = Math.floor((low + high) / 2);
-      if (cumulative[mid] <= arc) low = mid;
-      else high = mid;
-    }
-    const span = cumulative[high] - cumulative[low];
-    const fraction = span > 0 ? (arc - cumulative[low]) / span : 0;
-    const theta = ((low + fraction) / sampleCount) * Math.PI * 2;
-    return {
-      x: GALAXY_CX + orbitRx * Math.cos(theta),
-      y: GALAXY_CY + orbitRy * Math.sin(theta),
-    };
-  };
 
   const centers: Array<{ x: number; y: number }> = [];
   let arc = (((phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2)) * perimeter;
   for (let i = 0; i < radii.length; i++) {
     centers.push(pointAtArc(arc));
-    arc += required[i] + slack;
+    arc += required[i]! + slack;
   }
   for (let i = 0; i < centers.length; i++) {
-    const next = centers[(i + 1) % centers.length];
-    if (Math.hypot(centers[i].x - next.x, centers[i].y - next.y) < required[i]) return null;
+    const next = centers[(i + 1) % centers.length]!;
+    if (Math.hypot(centers[i]!.x - next.x, centers[i]!.y - next.y) < required[i]!) return null;
   }
   return centers;
 }
@@ -1118,28 +1139,53 @@ export interface CompositionOrbit {
 
 export interface AngularDistribution {
   count: number;
-  meanGap: number;
-  maxGap: number;
+  /** Widest span between two neighbours that no mark occupies, in px. */
+  maxEmptyArc: number;
+  /** Mean unoccupied span, so anomalous emptiness can be told from uniform sparseness. */
+  meanEmptyArc: number;
+  /** Diameter of the median mark plus its gaps: the smallest hole a mark could have filled. */
+  markFootprint: number;
 }
 
+/**
+ * Measure how much of a band's circumference is genuinely EMPTY.
+ *
+ * This used to compare centre-to-centre angles against the uniform mean, which
+ * measures the wrong thing: bubble area encodes supply, so a single dominant
+ * asset legitimately spans a wide angle while leaving no space beside it. That
+ * flagged the largest holding in a band as if it were a hole. What the poster
+ * actually must not ship is a bare arc, so subtract the marks and measure what
+ * is left between their edges.
+ */
 export function measureAngularDistribution(orbit: CompositionOrbit): AngularDistribution | null {
   if (orbit.zone.innerRx <= 0 || orbit.bubbles.length < 2) return null;
   const guideRx = (orbit.zone.innerRx + orbit.zone.outerRx) / 2;
   const guideRy = (orbit.zone.innerRy + orbit.zone.outerRy) / 2;
   if (![guideRx, guideRy].every((value) => Number.isFinite(value) && value > 0)) return null;
-  const angles = orbit.bubbles
-    .map((bubble) => Math.atan2((bubble.cy - GALAXY_CY) / guideRy, (bubble.cx - GALAXY_CX) / guideRx))
-    .sort((a, b) => a - b);
-  if (!angles.every(Number.isFinite)) return null;
-  const fullTurn = Math.PI * 2;
-  const gaps = angles.map((angle, index) => {
-    const next = angles[(index + 1) % angles.length];
-    return ((next - angle + fullTurn) % fullTurn);
+  const marks = orbit.bubbles
+    .map((bubble) => ({
+      r: bubble.r,
+      theta: Math.atan2((bubble.cy - GALAXY_CY) / guideRy, (bubble.cx - GALAXY_CX) / guideRx),
+    }))
+    .sort((left, right) => left.theta - right.theta);
+  if (!marks.every((mark) => Number.isFinite(mark.theta))) return null;
+  // True ellipse arc length via the shared cumulative sampler, not a
+  // mean-radius approximation: equal angles are not equal distances, and the
+  // widest dead zone can span more than half the turn, where the chord between
+  // its two edges is short precisely because it measures the full way round.
+  const { arcAtTheta, perimeter } = createEllipseArcSampler(guideRx, guideRy);
+  const empties = marks.map((mark, index) => {
+    const next = marks[(index + 1) % marks.length]!;
+    const sweep = (arcAtTheta(next.theta) - arcAtTheta(mark.theta) + perimeter) % perimeter;
+    return sweep - mark.r - next.r;
   });
+  const diameters = marks.map((mark) => mark.r * 2).sort((left, right) => left - right);
+  const median = diameters[Math.floor(diameters.length / 2)]!;
   return {
-    count: angles.length,
-    meanGap: fullTurn / angles.length,
-    maxGap: Math.max(...gaps),
+    count: marks.length,
+    maxEmptyArc: Math.max(...empties),
+    meanEmptyArc: empties.reduce((sum, value) => sum + value, 0) / empties.length,
+    markFootprint: median + BUBBLE_GAP * 2,
   };
 }
 
@@ -1194,17 +1240,19 @@ export function validateComposition(input: {
       allBubbles.push(bubble);
     }
     const angularDistribution = measureAngularDistribution(orbit);
+    // A bare arc is a hole a mark could have filled: big enough for the median
+    // mark, and anomalous rather than uniform sparseness across a thin band.
     if (
       angularDistribution &&
-      angularDistribution.maxGap > angularDistribution.meanGap * MAX_ANGULAR_GAP_MEAN_MULTIPLE
+      angularDistribution.maxEmptyArc > angularDistribution.markFootprint &&
+      angularDistribution.maxEmptyArc > angularDistribution.meanEmptyArc * MAX_EMPTY_ARC_MEAN_MULTIPLE
     ) {
-      const toDegrees = 180 / Math.PI;
       violations.push(
-        `orbit ${orbit.tier}: angular gap ${
-          (angularDistribution.maxGap * toDegrees).toFixed(1)
-        }deg exceeds ${MAX_ANGULAR_GAP_MEAN_MULTIPLE}x mean ${
-          (angularDistribution.meanGap * toDegrees).toFixed(1)
-        }deg`,
+        `orbit ${orbit.tier}: bare arc ${
+          angularDistribution.maxEmptyArc.toFixed(1)
+        }px fits a ${angularDistribution.markFootprint.toFixed(1)}px mark and exceeds ${MAX_EMPTY_ARC_MEAN_MULTIPLE}x mean ${
+          angularDistribution.meanEmptyArc.toFixed(1)
+        }px`,
       );
     }
   }

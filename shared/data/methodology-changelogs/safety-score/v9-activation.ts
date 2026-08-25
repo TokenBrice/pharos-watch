@@ -1,5 +1,23 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_AUDITED_RESERVE_FALLBACK: MethodologyChangelogEntry = {
+  version: "9.41",
+  title: "A stale reserve feed degrades backing instead of erasing it",
+  date: "2026-08-25",
+  effectiveAt: 1787640000,
+  summary:
+    "An issuer without prudential supervision could publish an independently attested reserve composition and still be reported as having no reserve composition at all, because admission required supervision and the asset's only other source was a live feed. One upstream feed going stale then removed an entire backing pillar. Such a composition is now admitted one rung down, as static-validated evidence under the shorter composition window, and it keeps the issuer attribution so an expired document is reported as expired rather than undisclosed.",
+  impact: [
+    "Admission and strength are separated: an independent audit is evidence about the reserves, prudential supervision is evidence about the issuer. Supervision no longer decides whether a composition is admitted, only the rung it enters at. An unsupervised issuer's audited composition enters as `static-validated` and can never reach `independent` strength through this path, so the supervision gap still costs the asset its ceiling",
+    "The rung is reachable only where a live reserve producer was observed returning nothing for that capture. An asset with no live producer keeps the existing standalone path, and an asset whose producer is excluded from falling back is not rescued",
+    "Audited fallback evidence is emitted with the report's own publisher and dates instead of as an anonymous standalone review, and it carries the 31-day composition window plus the 7-day reporting grace rather than the 365-day audit window it was admitted under, so the rung degrades as the composition ages",
+    "Because the publisher is retained, a lapsed composition now resolves to `published-evidence-expired` rather than `issuer-undisclosed`. The public copy for that value stops stating that an issuer has not disclosed reserves it did in fact publish. Unknown provenance continues to fail closed",
+    "On the fixed-input release replay, 8 assets move and 6 change grade, all upward: fdusd-first-digital, xagm-matrixdock, vnxau-vnx, tryb-bilira, wcop-ripio, and wmxn-ripio flip, with audx-aussie-dollar-token and wbrl-ripio moving inside their grade. Every mover has a live producer that was observed falling back",
+  ],
+  commits: ["a1034c254"],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_EVIDENCE_SCOPE_AND_FRESHNESS: MethodologyChangelogEntry = {
   version: "9.4",
   title: "Evidence, scope, freshness, and incidents become explicit",

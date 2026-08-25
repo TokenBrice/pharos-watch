@@ -446,6 +446,10 @@ export function buildReserves(context: AssetBuildContext): {
         componentKey: "reserve-composition",
         reasonCode: "missing-reserve-composition",
         ownerDomain: "backing",
+        // Fallback only: `resolveV9EvidenceResponsibility` upgrades this to
+        // `published-evidence-expired` when the stale evidence carries an
+        // attributable publisher. Deciding it here would mislabel a document
+        // whose publisher is unknown as something the issuer published.
         responsibility: "issuer-undisclosed",
         policyRuleId: "v9.backing.reserve-composition",
         message: expiredPublishedHistory

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  packEllipticalOrbit,
   validateComposition,
   type CompositionOrbit,
   type CompositionRect,
@@ -195,9 +196,38 @@ describe("validateComposition — orbit integrity", () => {
       r: 2,
     }));
 
-    expect(validateComposition({ orbits: [orbit("C", zone, bubbles)], chips: [] })).toContain(
-      "orbit C: angular gap 341.7deg exceeds 3x mean 72.0deg",
+    expect(validateComposition({ orbits: [orbit("C", zone, bubbles)], chips: [] }).join(" ")).toContain(
+      "orbit C: bare arc",
     );
+  });
+
+  it("accepts a dominant mark that spans a wide angle without leaving a hole", () => {
+    // Bubble area encodes supply, so one asset can be an order of magnitude
+    // wider than its neighbours — USDT against the rest of the C band. Its
+    // centre then sits far from theirs while no space is left beside it.
+    // Measuring centre-to-centre angle read that as a dead zone and refused to
+    // publish the poster at all.
+    //
+    // Placement comes from the production packer rather than a hand-rolled
+    // walk, so this cannot pass by sharing an approximation with the linter:
+    // the packer resolves positions by true arc length and the overlap check
+    // is exact geometry.
+    const zone = { innerRx: 220, innerRy: 140, outerRx: 340, outerRy: 260 };
+    const orbitRx = (zone.innerRx + zone.outerRx) / 2;
+    const orbitRy = (zone.innerRy + zone.outerRy) / 2;
+    const radii = [54, ...Array.from({ length: 60 }, () => 8)];
+
+    const centers = packEllipticalOrbit(radii, orbitRx, orbitRy, 0);
+    expect(centers).not.toBeNull();
+    const bubbles = centers!.map((center, index) => ({
+      id: `coin-${index}`,
+      cx: center.x,
+      cy: center.y,
+      r: radii[index]!,
+    }));
+
+    // The whole scene must be clean, not merely free of bare-arc strings.
+    expect(validateComposition({ orbits: [orbit("C", zone, bubbles)], chips: [] })).toEqual([]);
   });
 });
 

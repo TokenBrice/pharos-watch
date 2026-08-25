@@ -88,6 +88,7 @@ import {
   addReserveClassificationEvidence,
   addReviewedStaticReserveEvidence,
   buildReviewedReserveClassifications,
+  buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
@@ -116,6 +117,7 @@ export type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared
 export { deriveOracleBranchMateriality };
 export {
   buildReviewedReserveClassifications,
+  buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
@@ -1519,12 +1521,18 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const cycle = cycleByAsset.get(assetId);
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
       const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
+      // The audited fallback rung applies only where a live producer was
+      // observed returning nothing this capture. It sits inside that gate, not
+      // ahead of it, so an asset excluded from falling back is not rescued; and
+      // it is deliberately absent from the standalone branch, where no live
+      // producer exists and nothing has gone stale.
       const reviewedStaticReserveRows =
         liveReserves.length === 0
           ? buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) ??
             (meta.liveReservesConfig != null
               ? liveToFallbackAssetIds.has(assetId)
-                ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec)
+                ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec) ??
+                  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec)
                 : null
               : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec))
           : null;
