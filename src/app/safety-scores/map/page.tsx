@@ -64,25 +64,7 @@ export default function SafetyScoreMapPage() {
       ]}
     >
       <div className="space-y-10">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-          <SafetyMapPoster />
-          <aside className="pharos-card-shell space-y-3 p-5">
-            <div className="space-y-1">
-              <p className="pharos-kicker">Live lookup</p>
-              <h2 className="pharos-section-title">Find your coin</h2>
-            </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              See the current grade, score, supply, and report card for a stablecoin from the live
-              Safety Scores data.
-            </p>
-            <Link
-              href="/safety-scores/?coin="
-              className="pharos-focus-ring inline-flex min-h-11 items-center justify-center rounded-md border border-border/60 px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/60"
-            >
-              Find your coin by symbol or name &rarr;
-            </Link>
-          </aside>
-        </div>
+        <SafetyMapPoster />
 
         <section aria-labelledby="safety-map-how-to-read" className="space-y-4">
           <h2 id="safety-map-how-to-read" className="pharos-section-title">
