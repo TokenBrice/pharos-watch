@@ -127,6 +127,7 @@
     "safety-score-v9:diff": "tsx worker/scripts/diff-safety-score-v9-replays.ts",
     "safety-score-v9:movers": "node --import tsx scripts/maintenance/diff-safety-score-v9-movers.ts",
     "safety-score-v9:expiry-queue": "tsx worker/scripts/list-curation-expiry-queue.ts",
+    "safety-score-v9:live-withheld": "tsx worker/scripts/check-safety-score-v9-live-withheld.ts",
     "safety-score-v9:replay-summary": "node --import tsx scripts/maintenance/summarize-safety-score-v9-replay.ts",
     "safety-score-v9:b1-root-ledger": "tsx worker/scripts/generate-safety-score-v9-b1-root-ledger.ts",
     "safety-score-v9:calibration-analysis": "tsx scripts/maintenance/analyze-safety-score-v9-calibration.mjs",

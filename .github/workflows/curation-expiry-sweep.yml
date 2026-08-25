@@ -40,7 +40,7 @@ jobs:
             --exact-cache-export agents/sweep/capture.raw.json \
             --output agents/sweep/capture.json
           echo "clock_sec=$(jq -r .clockSec agents/sweep/capture.json)" >> "$GITHUB_OUTPUT"
-      - name: Replay and generate the curation worklist and expiry queue
+      - name: Replay and generate the curation worklist, expiry queue, and live-withheld report
         id: generate
         env:
           CLOCK_SEC: ${{ steps.capture.outputs.clock_sec }}
@@ -64,15 +64,21 @@ jobs:
             --replay agents/sweep/replay.json \
             --output agents/sweep/expiry-queue.md 2>&1 | tee agents/sweep/queue-command.log
           queue_status=${PIPESTATUS[0]}
+          npm run safety-score-v9:live-withheld -- \
+            --replay agents/sweep/replay.json \
+            --output agents/sweep/live-withheld.md 2>&1 | tee agents/sweep/live-withheld-command.log
+          live_withheld_status=${PIPESTATUS[0]}
           echo "replay_status=$replay_status" >> "$GITHUB_OUTPUT"
           echo "worklist_status=$worklist_status" >> "$GITHUB_OUTPUT"
           echo "queue_status=$queue_status" >> "$GITHUB_OUTPUT"
+          echo "live_withheld_status=$live_withheld_status" >> "$GITHUB_OUTPUT"
       - name: Open or update the sweep issue
         env:
           GH_TOKEN: ${{ github.token }}
           REPLAY_STATUS: ${{ steps.generate.outputs.replay_status }}
           WORKLIST_STATUS: ${{ steps.generate.outputs.worklist_status }}
           QUEUE_STATUS: ${{ steps.generate.outputs.queue_status }}
+          LIVE_WITHHELD_STATUS: ${{ steps.generate.outputs.live_withheld_status }}
         shell: bash
         run: |
           set -euo pipefail
@@ -83,33 +89,54 @@ jobs:
             echo
             echo "Generated from commit \`${GITHUB_SHA}\` on $(date -u +%F). Read-only review queues; no product data was changed. Drain per docs/process/safety-score-curation-expiry-sweep.md."
             echo
-            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}."
+            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}, live-withheld=${LIVE_WITHHELD_STATUS}."
+            echo
+            echo "## Live-withheld counterfactual grade-drop report"
+            echo '```text'
+            if [ -f agents/sweep/live-withheld.md ]; then
+              awk 'NR <= 160 {print} NR == 161 {print "... output truncated after 160 lines ..."}' agents/sweep/live-withheld.md
+            else
+              echo "Live-withheld report unavailable."
+            fi
+            echo '```'
             echo
             echo "## Curated reserve expiry queue"
             echo '```text'
-            if [ -f agents/sweep/expiry-queue.md ]; then sed -n '1,160p' agents/sweep/expiry-queue.md; else echo "Queue unavailable."; fi
+            if [ -f agents/sweep/expiry-queue.md ]; then
+              awk 'NR <= 160 {print} NR == 161 {print "... output truncated after 160 lines ..."}' agents/sweep/expiry-queue.md
+            else
+              echo "Queue unavailable."
+            fi
             echo '```'
             echo
             echo "## Dependency and backing worklist streams"
             echo '```text'
             if [ -f agents/sweep/worklist.md ]; then
-              awk '/^## /{keep = ($0 ~ /Dependencies|Backing/)} keep' agents/sweep/worklist.md | sed -n '1,200p'
+              awk '
+                /^## / {keep = ($0 ~ /Dependencies|Backing/)}
+                keep {
+                  if (shown < 200) { print; shown++ }
+                  else if (!truncated) { print "... output truncated after 200 lines ..."; truncated = 1 }
+                }
+              ' agents/sweep/worklist.md
             else
               echo "Worklist unavailable."
             fi
             echo '```'
             echo
-            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ]; then
+            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ]; then
               echo "## Generation failures"
               for spec in \
                 "replay:$REPLAY_STATUS:agents/sweep/replay-command.log" \
                 "worklist:$WORKLIST_STATUS:agents/sweep/worklist-command.log" \
-                "expiry queue:$QUEUE_STATUS:agents/sweep/queue-command.log"; do
+                "expiry queue:$QUEUE_STATUS:agents/sweep/queue-command.log" \
+                "live-withheld:$LIVE_WITHHELD_STATUS:agents/sweep/live-withheld-command.log"; do
                 IFS=: read -r label status log_file <<< "$spec"
                 if [ "$status" != 0 ]; then
                   echo "### $label (status $status)"
                   echo '```text'
                   tail -30 "$log_file"
+                  echo "... log truncated to the last 30 lines ..."
                   echo '```'
                 fi
               done
@@ -127,7 +154,7 @@ jobs:
           # Fail the run, not just the issue body, when any generator broke —
           # same rationale as agent-maintenance-candidates: a green run must
           # mean the queues are trustworthy.
-          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ]; then
+          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ]; then
             echo "::error title=Curation sweep incomplete::See the sweep issue for command status and available output."
             exit 1
           fi

@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import type { StablecoinMeta } from "@shared/types/core";
-import {
-  buildCurationExpiryQueue,
-  renderCurationExpiryQueue,
-} from "../list-curation-expiry-queue";
+import { buildCurationExpiryQueue, renderCurationExpiryQueue } from "../list-curation-expiry-queue";
 
 // 2026-08-20T13:17:29Z, the clock of the incident capture this queue was built for.
 const CLOCK_SEC = 1_787_231_849;
@@ -11,6 +9,39 @@ const DAY = 86_400;
 
 function isoDaysAgo(days: number): string {
   return new Date((CLOCK_SEC - days * DAY) * 1_000).toISOString().slice(0, 10);
+}
+
+function isoDaysAfter(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00.000Z`) + days * DAY * 1_000).toISOString().slice(0, 10);
+}
+
+function auditedMeta(id: string, compositionAsOf: string): StablecoinMeta {
+  const base = eligibleReserveMeta({
+    id,
+    mechanismArchetype: "fiat-cash",
+    launchDate: "2020-01-01",
+    mintAuthority: { ...eligibleReserveMeta().mintAuthority!, supervision: "attestation-only" },
+    liveReservesConfig: {
+      adapter: "curated-validated",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "onchain-solana" } },
+    },
+    reserveReview: {
+      ...eligibleReserveMeta().reserveReview!,
+      reviewedAt: compositionAsOf,
+      compositionAsOf,
+    },
+    proofOfReserves: {
+      ...eligibleReserveMeta().proofOfReserves!,
+      latestReport: {
+        ...eligibleReserveMeta().proofOfReserves!.latestReport!,
+        periodEnd: compositionAsOf,
+        publishedAt: isoDaysAfter(compositionAsOf, 1),
+      },
+    },
+  });
+  return base as unknown as StablecoinMeta;
 }
 
 function curatedMeta(id: string, compositionAsOf: string, reviewOverrides: Record<string, unknown> = {}): StablecoinMeta {
@@ -43,6 +74,7 @@ function curatedMeta(id: string, compositionAsOf: string, reviewOverrides: Recor
 
 function replayFixture(options: {
   liveReserveMap?: Record<string, unknown>;
+  liveToFallbackCoins?: string[];
   supplyById?: Record<string, number>;
 } = {}) {
   return {
@@ -50,6 +82,7 @@ function replayFixture(options: {
       fixedInput: {
         clockSec: CLOCK_SEC,
         liveReserveMap: options.liveReserveMap ?? {},
+        liveToFallbackCoins: options.liveToFallbackCoins ?? [],
       },
       evaluatedSet: {
         assets: Object.entries(options.supplyById ?? {}).map(([assetId, circulatingUsd]) => ({
@@ -80,7 +113,7 @@ describe("buildCurationExpiryQueue", () => {
 
     const rows = buildCurationExpiryQueue(
       replayFixture({
-        liveReserveMap: { "live-covered": { slices: [] } },
+        liveReserveMap: { "live-covered": [{ name: "live", pct: 100, risk: "low" }] },
         supplyById: { "big-expiring": 5_000_000, "small-expiring": 10_000 },
       }),
       10,
@@ -93,6 +126,31 @@ describe("buildCurationExpiryQueue", () => {
     ]);
     expect(rows.every((row) => row.hasCollateralLinks)).toBe(true);
     expect(rows.every((row) => row.adapterState === "none")).toBe(true);
+  });
+
+  it("keeps audited fallback admitted at the 38-day evidence transition, but lists loss of admission and excludes gated assets", () => {
+    const auditedNearEvidenceBound = auditedMeta("audited-near-evidence-bound", isoDaysAgo(36));
+    const auditedNearAdmissionBound = auditedMeta("audited-near-admission-bound", isoDaysAgo(360));
+    const excludedFromFallback = auditedMeta("excluded-from-fallback", isoDaysAgo(360));
+    const rows = buildCurationExpiryQueue(
+      replayFixture({
+        liveToFallbackCoins: ["audited-near-evidence-bound", "audited-near-admission-bound"],
+        supplyById: {
+          "audited-near-evidence-bound": 10,
+          "audited-near-admission-bound": 20,
+          "excluded-from-fallback": 30,
+        },
+      }),
+      10,
+      new Map([
+        ["audited-near-evidence-bound", auditedNearEvidenceBound],
+        ["audited-near-admission-bound", auditedNearAdmissionBound],
+        ["excluded-from-fallback", excludedFromFallback],
+      ]),
+    );
+    // The 38-day evidence transition changes strength/ceiling but does not
+    // remove audited admission; the counterfactual report owns that signal.
+    expect(rows.map((row) => row.assetId)).toEqual(["audited-near-admission-bound"]);
   });
 
   it("renders the documented column set and an explicit empty state", () => {
