@@ -60,6 +60,10 @@ describe("Safety Score v9 backing fact-set reserve history", () => {
       reasonCode: "missing-reserve-composition",
       message: "The last published reserve composition is older than the v9 freshness bound.",
       observationState: "stale",
+      // The public label for `issuer-undisclosed` is "the issuer has not
+      // disclosed this". This issuer did disclose and our window lapsed, so
+      // attributing it to them is a false statement about the issuer.
+      responsibility: "published-evidence-expired",
       evidenceRefIds: expect.arrayContaining([expect.any(String)]),
     });
     expect(reserveGap!.evidenceRefIds.length).toBeGreaterThan(0);
@@ -87,6 +91,7 @@ describe("Safety Score v9 backing fact-set reserve history", () => {
       reasonCode: "missing-reserve-composition",
       message: "No reserve composition is present in the exact fixed input.",
       observationState: "missing",
+      responsibility: "issuer-undisclosed",
       evidenceRefIds: [],
     });
     expect(asset.reserveStatus).toMatchObject({

@@ -7,6 +7,7 @@ import { SAFETY_SCORE_V6 } from "../../data/methodology-changelogs/safety-score/
 import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/v7";
 import { SAFETY_SCORE_V8 } from "../../data/methodology-changelogs/safety-score/v8";
 import {
+  SAFETY_SCORE_V9_AUDITED_RESERVE_FALLBACK,
   SAFETY_SCORE_V9_EVIDENCE_SCOPE_AND_FRESHNESS,
   SAFETY_SCORE_V9_CAP_REASON_PRECEDENCE,
   SAFETY_SCORE_V9_CAP_AND_EVIDENCE_CLARIFICATIONS,
@@ -55,6 +56,7 @@ const safetyScore = createMethodologyVersion({
   currentVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
   changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
+    SAFETY_SCORE_V9_AUDITED_RESERVE_FALLBACK,
     SAFETY_SCORE_V9_EVIDENCE_SCOPE_AND_FRESHNESS,
     SAFETY_SCORE_V9_CAP_REASON_PRECEDENCE,
     SAFETY_SCORE_V9_CAP_AND_EVIDENCE_CLARIFICATIONS,

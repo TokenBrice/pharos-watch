@@ -14,6 +14,7 @@ import type { ReserveSlice } from "@shared/types/reserves";
 import {
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
+  buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
   resolveSafetyScoreV9AssetIssuerKey,
   type V9ExtensionRegistryMeta,
@@ -280,6 +281,45 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(admitted?.rows).toHaveLength(2);
   });
 
+  it("admits an unsupervised issuer's audited composition one rung down, never at independent strength", () => {
+    // Tether's shape: an independently attested full composition from an issuer
+    // with no prudential supervision. Discarding it entirely reported the asset
+    // as having no reserve composition at all, which is a worse claim than the
+    // evidence supports; crediting it fully would erase the supervision gap.
+    const unsupervised = eligibleReserveMeta({
+      mintAuthority: { ...eligibleReserveMeta().mintAuthority!, supervision: "attestation-only" },
+    });
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(unsupervised, CLOCK_SEC)).toBeNull();
+    const admitted = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unsupervised, CLOCK_SEC);
+    expect(admitted).toMatchObject({ evidenceClass: "static-validated" });
+    expect(admitted?.rows).toHaveLength(2);
+  });
+
+  it("keeps direct independent assurance from lifting an unsupervised issuer to independent strength", () => {
+    // Direct assurance describes the reserves; supervision describes the
+    // issuer. The rung must be pinned before any strength test runs, otherwise
+    // a strong attestation silently restores full credit through the fallback.
+    const base = eligibleReserveMeta();
+    const reportSource = base.proofOfReserves!.latestReport!.sources[0]!;
+    const directlyAssuredButUnsupervised = eligibleReserveMeta({
+      mintAuthority: { ...base.mintAuthority!, supervision: "attestation-only" },
+      reserveReview: { ...base.reserveReview!, sources: [reportSource] },
+      proofOfReserves: {
+        ...base.proofOfReserves!,
+        latestReport: { ...base.proofOfReserves!.latestReport!, assuranceMethod: "examination" },
+      },
+    });
+
+    const supervised = buildSafetyScoreV9ReviewedStaticReserveRows(
+      { ...directlyAssuredButUnsupervised, mintAuthority: base.mintAuthority },
+      CLOCK_SEC,
+    );
+    expect(supervised).toMatchObject({ evidenceClass: "independent" });
+
+    const admitted = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(directlyAssuredButUnsupervised, CLOCK_SEC);
+    expect(admitted).toMatchObject({ evidenceClass: "static-validated" });
+  });
+
   it("retains full confidence when the verified examination directly reconciles the reviewed composition", () => {
     const base = eligibleReserveMeta();
     const reportSource = base.proofOfReserves!.latestReport!.sources[0]!;
@@ -365,11 +405,11 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(admitted!.rows.reduce((sum, row) => sum + row.pct / 100, 0)).toBeLessThanOrEqual(1.000001);
   });
 
-  it("fails closed for non-prudential, self-attested, onchain-only, or unsourced reports", () => {
+  it("fails closed for self-attested, onchain-only, or unsourced reports", () => {
+    // Absent supervision is no longer in this list: it selects the rung rather
+    // than refusing admission, and is pinned separately above. What still fails
+    // closed is the absence of independent attestation itself.
     const base = eligibleReserveMeta();
-    const nonPrudential = eligibleReserveMeta({
-      mintAuthority: { ...base.mintAuthority!, supervision: "attestation-only" },
-    });
     const selfAttested = eligibleReserveMeta({
       proofOfReserves: { ...base.proofOfReserves!, attestorTier: "self" },
     });
@@ -386,7 +426,6 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       },
     });
 
-    expect(buildSafetyScoreV9ReviewedStaticReserveRows(nonPrudential, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(selfAttested, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(onchainOnly, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(unsourced, CLOCK_SEC)).toBeNull();

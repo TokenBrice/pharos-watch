@@ -393,7 +393,7 @@ const ReviewedStaticReserveRowsSchema = z
       (row) => `${computeSafetyScoreV9ReserveExposureKey(row)}:${stableJsonStringifyV1(row)}`,
     ).refine((rows) => rows.length > 0, { message: "Reviewed static reserve admission requires rows" }),
     evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]),
-    provenance: z.enum(["curated", "curated-fallback"]).default("curated"),
+    provenance: z.enum(["curated", "curated-fallback", "audited-fallback"]).default("curated"),
   })
   .strict();
 

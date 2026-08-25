@@ -396,7 +396,7 @@ const V9ReserveExposureFactV2Schema = z
     exposureKey: CanonicalTextSchema,
     classificationKey: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
-    provenance: z.enum(["live", "curated", "curated-fallback"]),
+    provenance: z.enum(["live", "curated", "curated-fallback", "audited-fallback"]),
     evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]).optional(),
     status: V9FactStatusV2Schema,
     name: CanonicalTextSchema,
