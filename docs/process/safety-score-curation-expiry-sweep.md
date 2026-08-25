@@ -11,10 +11,16 @@ entire sweep; do not combine worklists or dates from different producer cycles.
 
 The sweep is also automated: `.github/workflows/curation-expiry-sweep.yml` runs this
 procedure every Tuesday (and on manual dispatch) with the deploy pipeline's Cloudflare
-credentials, then publishes the expiry queue and the worklist's Dependencies/Backing
-streams into the pinned "Safety Score curation expiry sweep" issue. The workflow run
-fails when any generator breaks, so a green run means the queues are trustworthy.
-Draining the queues stays operator work — follow the steps below.
+credentials, then publishes the live-withheld counterfactual report, expiry queue, and
+the worklist's Dependencies/Backing streams into the pinned "Safety Score curation
+expiry sweep" issue. The workflow run fails when any generator breaks, so a green run
+means the queues are trustworthy. Draining the queues stays operator work — follow the
+steps below.
+
+**Operator contract:** the sweep operator reviews and drains the `DEP`/`RESV`,
+pre-expiry, and live-withheld rows weekly. Mark a high-supply counterfactual grade drop
+as high priority in the pinned issue, record the next action or blocker before the next
+producer cycle, and keep it open until the fallback path is reviewed.
 
 ## 1. Capture the current production input
 
@@ -74,7 +80,7 @@ An item is cleared only when its reason code disappears from a fresh replay-gene
 worklist. Do not hand-edit generated rows, date-bump a review without re-verifying its
 composition, or hide an unresolved evidence gap by changing confidence.
 
-## 4. Add the 21-day pre-expiry queue
+## 4. Add the 10-day pre-expiry queue
 
 The worklist reports gaps that already affect the replay. It does not list every still
 admitted composition approaching expiry. Run this extraction against the same replay;
@@ -86,15 +92,23 @@ for assets with no live reserve snapshot in that capture, sorted by descending s
 npm run safety-score-v9:expiry-queue -- --replay "${replay}"
 ```
 
-The queue is derived with the same admission gates production scoring uses
-(`buildSafetyScoreV9ReviewedCuratedFallbackReserveRows` /
-`buildSafetyScoreV9ReviewedStandaloneReserveRows`), re-evaluated at the capture clock
-plus the lookahead (`--days`, default 10), so it cannot drift from the 31-day window,
-the 7-day reporting grace, the zero-known-unknown gate, or the separate 365-day
-classification path. Only
-compositions that are admitted today and stop being admitted within the lookahead are
-listed — currently-inadmissible compositions already surface in the worklist's `RESV`
-and `DEP` streams and are deliberately excluded here.
+The queue is derived with the same admission gates production scoring uses, in
+production order: `buildSafetyScoreV9ReviewedStaticReserveRows`, then (only when
+the asset is in `fixedInput.liveToFallbackCoins`)
+`buildSafetyScoreV9ReviewedAuditedFallbackReserveRows` and
+`buildSafetyScoreV9ReviewedCuratedFallbackReserveRows`, or
+`buildSafetyScoreV9ReviewedStandaloneReserveRows` when there is no live producer.
+It is re-evaluated at the capture clock plus the lookahead (`--days`, default 10),
+so it cannot drift from the 31-day window, the 7-day reporting grace, the
+one-year audited admission path, or the separate 365-day classification path.
+Only compositions that are admitted today and stop being admitted within the
+lookahead are listed — currently-inadmissible compositions already surface in the
+worklist's `RESV` and `DEP` streams and are deliberately excluded here.
+
+The queue is about to become inadmissible, not about to lose evidence strength. An
+audited fallback crossing its 38-day evidence bound remains admitted for the
+one-year audited path; its strength/ceiling transition belongs to the
+live-withheld counterfactual report below.
 
 The columns are asset ID, evaluated-set circulating USD (drain priority, largest
 first), curated `compositionAsOf`, age in days, whether the composition carries
@@ -103,18 +117,51 @@ dependency-creating collateral links, and the adapter state (`none` or
 they have no current `RESV` or `DEP` row. A fresh live snapshot in a later cycle
 removes the asset from this preventive queue; it does not retroactively make this
 cycle's missing snapshot live.
+## 5. Check the live-withheld counterfactual
 
-## 5. Close the weekly sweep
+The expiry queue only answers whether a reviewed composition is about to stop being
+admitted. Run the deterministic counterfactual report separately to answer what each
+currently live-backed asset would publish if its producer went silent:
+
+```bash
+withheld="agents/v9-captures/live-withheld-${stamp}.md"
+npm run safety-score-v9:live-withheld -- \
+  --replay "${replay}" \
+  --output "${withheld}"
+```
+
+The report replays one isolated transform per live-backed asset: it removes that
+asset's live rows and provenance, adds the asset to `liveToFallbackCoins`, reseals
+`baseInputGenerationId`, and runs the normal V9 compiler/evaluator. Isolation keeps
+dependency scores from changing because an unrelated producer was withheld. Rows
+are sorted by evaluated-set circulating USD and include live/fallback scores and
+grades, the admitting fallback tier, that tier's evidence ceiling, and the
+counterfactual binding-cap kind. A fallback with no admission is reported as the
+most severe outcome, not dropped.
+
+Assets already present in `liveToFallbackCoins` are excluded: their producer
+silence is already realized in this capture and is owned by the worklist/expiry
+lanes. The report intentionally does not estimate live-feed headroom. Replay is
+structurally blind to the upstream feed bound: `liveToFallbackCoins` was computed
+at capture time, while `maxSourceAgeSec` is consumed by cron sync. The fixed
+capture retains only live provenance `{ source, fetchedAt }`; upstream
+`sourceTimestamp` is available in D1 `reserve_composition.metadata` and needs a
+future operations lane to warn before demotion.
+
+## 6. Close the weekly sweep
 
 Record blockers outside the generated worklist; regenerate rather than checking off or
 deleting its rows manually. Once reviewed changes are present in production, take a new
-production capture and repeat the replay, worklist, and pre-expiry extraction.
+production capture and repeat the replay, worklist, pre-expiry extraction, and
+counterfactual report.
 
 | Check | Done when |
 | --- | --- |
 | `DEP` / `RESV` drain | Each supply-prioritized item disappeared or has a current, evidence-backed blocker. |
 | Pre-expiry review | Every listed composition was refreshed, received a live snapshot, or has a documented blocker before the 31-day window plus 7-day reporting grace closes. |
-| Measurement | The closing worklist and pre-expiry list come from one fresh capture replayed with its own `clockSec`. |
+| Live-withheld review | Each high-supply grade-drop row has a reviewed fallback path, a current producer action, or a documented blocker/escalation in the pinned issue. |
+| Measurement | The closing worklist, pre-expiry list, and counterfactual report come from one fresh capture replayed with its own `clockSec`. |
+
 
 ## Artifact hygiene
 
@@ -127,4 +174,4 @@ production input on every weekly sweep. Follow the equivalence harness's
 ## Related
 
 - [Safety Score V9 equivalence harness](./safety-score-equivalence-harness.md) — production capture and deterministic replay procedure.
-- [Script inventory](../scripts.md) — capture, replay, diff, summary, and curation-worklist CLI contracts.
+- [Script inventory](../scripts.md) — capture, replay, diff, summary, curation-worklist, expiry-queue, and live-withheld CLI contracts.

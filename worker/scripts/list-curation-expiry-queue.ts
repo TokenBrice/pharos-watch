@@ -1,12 +1,14 @@
-// Lists active assets whose curated reserve composition is still admitted for
+// Lists active assets whose reviewed reserve composition is still admitted for
 // scoring today but crosses an admission gate within the lookahead window —
 // the preventive complement to the curation worklist, which already owns every
 // currently-inadmissible composition. Admission is evaluated with the same
-// gates production scoring uses (`buildSafetyScoreV9ReviewedStandaloneReserveRows`
-// / `buildSafetyScoreV9ReviewedCuratedFallbackReserveRows`), re-run at
+// gates production scoring uses (`buildSafetyScoreV9ReviewedStaticReserveRows`,
+// `buildSafetyScoreV9ReviewedAuditedFallbackReserveRows`,
+// `buildSafetyScoreV9ReviewedCuratedFallbackReserveRows`, and
+// `buildSafetyScoreV9ReviewedStandaloneReserveRows`), re-run at
 // `clockSec + lookahead`: composition age is the only time-dependent input, so
 // the queue cannot drift from the 31-day composition window plus its 7-day
-// reporting grace, the zero-known-unknown gate, or the D6 prudential/audit path.
+// reporting grace, the one-year audited path, or the D6 prudential path.
 //
 // Usage:
 //   npm run safety-score-v9:expiry-queue -- \
@@ -16,8 +18,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
+  buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
+  buildSafetyScoreV9ReviewedStaticReserveRows,
 } from "../src/lib/safety-score-v9-extension-reserves";
 import {
   assertCliUsage,
@@ -37,6 +41,7 @@ const ReplaySchema = z
           .object({
             clockSec: z.number().int().positive(),
             liveReserveMap: z.record(z.string(), z.unknown()).default({}),
+            liveToFallbackCoins: z.array(z.string()).default([]),
           })
           .loose(),
         evaluatedSet: z
@@ -88,17 +93,26 @@ export function buildCurationExpiryQueue(
   const futureClockSec = fixedInput.clockSec + lookaheadDays * 86_400;
   const rows: QueueRow[] = [];
   for (const [assetId, meta] of metaById) {
-    if (fixedInput.liveReserveMap[assetId] != null) continue;
+    const liveRows = fixedInput.liveReserveMap[assetId];
+    if (Array.isArray(liveRows) && liveRows.length > 0) continue;
     const registryMeta = meta as never;
-    const admit =
-      meta.liveReservesConfig != null
-        ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows
-        : buildSafetyScoreV9ReviewedStandaloneReserveRows;
+    const admitAt = (clockSec: number) => {
+      const staticRows = buildSafetyScoreV9ReviewedStaticReserveRows(registryMeta, clockSec);
+      if (staticRows !== null) return staticRows;
+      if (meta.liveReservesConfig != null) {
+        if (!fixedInput.liveToFallbackCoins.includes(assetId)) return null;
+        return (
+          buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(registryMeta, clockSec) ??
+          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(registryMeta, clockSec)
+        );
+      }
+      return buildSafetyScoreV9ReviewedStandaloneReserveRows(registryMeta, clockSec);
+    };
     // Currently-inadmissible compositions already surface in the worklist's
     // RESV/DEP streams; this queue is preventive and lists only admitted
     // compositions that stop being admitted within the lookahead.
-    if (admit(registryMeta, fixedInput.clockSec) === null) continue;
-    if (admit(registryMeta, futureClockSec) !== null) continue;
+    if (admitAt(fixedInput.clockSec) === null) continue;
+    if (admitAt(futureClockSec) !== null) continue;
     const review = meta.reserveReview;
     const reserves = meta.reserves ?? [];
     if (reserves.length === 0 || review?.compositionAsOf == null) continue;
