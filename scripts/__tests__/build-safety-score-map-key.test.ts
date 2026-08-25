@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BAND_GUIDE_DASHARRAY,
   CHART_KEY_PANEL,
+  bubblesOverlap,
   classifyLogoPlate,
   centerHeroPair,
   computeDemandOrbitZones,
@@ -16,6 +17,7 @@ import {
   supplyMassBarWidth,
 } from "../maintenance/build-safety-score-map";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { validateAnnotationScene } from "../lib/map-annotations";
 
 describe("Safety Map PSI footer", () => {
   it("uses the canonical one-decimal PSI level and condition band", () => {
@@ -111,6 +113,43 @@ describe("Safety Map supply mass and demand bands", () => {
     expect((left * 68 ** 2 + right * 42 ** 2) / (68 ** 2 + 42 ** 2)).toBeCloseTo(800, 10);
     expect(left).toBeLessThan(800);
     expect(right).toBeGreaterThan(800);
+  });
+
+  it("keeps the constructed hero pair legal under both collision predicates", () => {
+    // `centerHeroPair` places the leaders at exactly `r0 + r1 + BUBBLE_GAP`, but
+    // rebuilds that distance from two area-weighted divisions. A strict `<`
+    // against the same sum therefore rejected a pair the layout had just built to
+    // spec for ~44% of radius pairs (1-2 ULP short), which made a successful
+    // render depend on the day's supply values: the poster published 2026-08-21
+    // through 2026-08-24 and then could not fit at any scale on 2026-08-25 once
+    // USDT re-entered tier A. Sweep realistic leader ratios rather than pinning
+    // one pair, because the defect only appears for specific radii.
+    for (let leader = 20; leader <= 70; leader += 0.5) {
+      for (const ratio of [0.3, 0.4028, 0.45, 0.55, 0.635, 0.75, 0.9, 1]) {
+        const follower = leader * ratio;
+        const [left, right] = centerHeroPair(leader, follower);
+        const pair = [
+          { cx: left, cy: 0, r: leader },
+          { cx: right, cy: 0, r: follower },
+        ] as const;
+        expect(bubblesOverlap(pair[0], pair[1])).toBe(false);
+        expect(
+          validateAnnotationScene(
+            {
+              frame: { x: -400, y: -400, w: 1600, h: 900 },
+              circles: pair.map((bubble, index) => ({
+                id: `hero-${index}`,
+                role: "bubble" as const,
+                cx: bubble.cx,
+                cy: bubble.cy,
+                r: bubble.r,
+              })),
+            },
+            { bubbleGap: 2.5, labelGap: 1, leaderGap: 1 },
+          ).filter((item) => item.code === "bubble-bubble"),
+        ).toEqual([]);
+      }
+    }
   });
 
   it("renders a 0.7% bar at exactly 0.7% of the track with no minimum", () => {

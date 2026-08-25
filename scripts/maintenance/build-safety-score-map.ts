@@ -695,8 +695,22 @@ function circleFitsOrbit(zone: OrbitZone, cx: number, cy: number, r: number): bo
   return ellipseValue(x, y, zone.innerRx + r, zone.innerRy + r) >= 1;
 }
 
-function bubblesOverlap(a: Pick<Bubble, "cx" | "cy" | "r">, b: Pick<Bubble, "cx" | "cy" | "r">): boolean {
-  return Math.hypot(a.cx - b.cx, a.cy - b.cy) < a.r + b.r + BUBBLE_GAP;
+/**
+ * `BUBBLE_GAP` is the *minimum legal* separation, so a pair sitting at exactly
+ * that distance must pass. `centerHeroPair` builds the A-tier leaders at
+ * precisely `r0 + r1 + BUBBLE_GAP`, but it reconstructs that separation from two
+ * independent area-weighted divisions, which lands 1-2 ULP below the sum for
+ * roughly 44% of radius pairs. A strict `<` therefore rejected a pair the layout
+ * had just built to spec, and because the rejection depends on the rounding of
+ * that day's supply values it made a successful render a coin flip: the poster
+ * published on 2026-08-21 through 2026-08-24 and then could not fit at any scale
+ * on 2026-08-25. The relative epsilon is ~1e-7px at these coordinates -- far
+ * below one device pixel, and seven orders of magnitude above the observed
+ * floating-point deficit.
+ */
+export function bubblesOverlap(a: Pick<Bubble, "cx" | "cy" | "r">, b: Pick<Bubble, "cx" | "cy" | "r">): boolean {
+  const minimumSeparation = a.r + b.r + BUBBLE_GAP;
+  return Math.hypot(a.cx - b.cx, a.cy - b.cy) < minimumSeparation * (1 - 1e-9);
 }
 
 export function centerHeroPair(leftRadius: number, rightRadius: number): readonly [number, number] {
@@ -747,6 +761,7 @@ interface EllipseArcSampler {
   perimeter: number;
   /** Arc length from theta 0, measured along the ellipse rather than a circle. */
   arcAtTheta(theta: number): number;
+  thetaAtArc(arc: number): number;
   pointAtArc(arc: number): { x: number; y: number };
 }
 
@@ -771,6 +786,19 @@ function createEllipseArcSampler(rx: number, ry: number): EllipseArcSampler {
     previousY = y;
   }
   const perimeter = cumulative[sampleCount]!;
+  const thetaAtArc = (rawArc: number): number => {
+    const arc = ((rawArc % perimeter) + perimeter) % perimeter;
+    let low = 0;
+    let high = sampleCount;
+    while (low + 1 < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (cumulative[mid]! <= arc) low = mid;
+      else high = mid;
+    }
+    const span = cumulative[high]! - cumulative[low]!;
+    const fraction = span > 0 ? (arc - cumulative[low]!) / span : 0;
+    return ((low + fraction) / sampleCount) * fullTurn;
+  };
   return {
     perimeter,
     arcAtTheta(theta: number): number {
@@ -779,18 +807,9 @@ function createEllipseArcSampler(rx: number, ry: number): EllipseArcSampler {
       const low = Math.min(sampleCount - 1, Math.floor(position));
       return cumulative[low]! + (position - low) * (cumulative[low + 1]! - cumulative[low]!);
     },
-    pointAtArc(rawArc: number): { x: number; y: number } {
-      const arc = ((rawArc % perimeter) + perimeter) % perimeter;
-      let low = 0;
-      let high = sampleCount;
-      while (low + 1 < high) {
-        const mid = Math.floor((low + high) / 2);
-        if (cumulative[mid]! <= arc) low = mid;
-        else high = mid;
-      }
-      const span = cumulative[high]! - cumulative[low]!;
-      const fraction = span > 0 ? (arc - cumulative[low]!) / span : 0;
-      const theta = ((low + fraction) / sampleCount) * fullTurn;
+    thetaAtArc,
+    pointAtArc(arc: number): { x: number; y: number } {
+      const theta = thetaAtArc(arc);
       return { x: GALAXY_CX + rx * Math.cos(theta), y: GALAXY_CY + ry * Math.sin(theta) };
     },
   };
@@ -881,54 +900,37 @@ function packSubgradeLaneOrbit(
   offsetY: number,
   referencePhase: number,
 ): Array<{ x: number; y: number }> | null {
-  const point = (index: number, theta: number) => ({
-    x: GALAXY_CX + (orbitRx + directions[index] * offsetX) * Math.cos(theta),
-    y: GALAXY_CY + (orbitRy + directions[index] * offsetY) * Math.sin(theta),
-  });
-  const requiredGap = (from: number, to: number, theta: number): number | null => {
-    const start = point(from, theta);
-    const requiredDistance = radii[from] + radii[to] + BUBBLE_GAP;
-    let high = Math.PI / 512;
-    while (high <= Math.PI / 2 && Math.hypot(start.x - point(to, theta + high).x, start.y - point(to, theta + high).y) < requiredDistance) {
-      high *= 2;
-    }
-    if (high > Math.PI / 2) return null;
-    let low = 0;
-    for (let iteration = 0; iteration < 32; iteration++) {
-      const mid = (low + high) / 2;
-      const candidate = point(to, theta + mid);
-      if (Math.hypot(start.x - candidate.x, start.y - candidate.y) < requiredDistance) low = mid;
-      else high = mid;
-    }
-    return high;
+  const sampler = createEllipseArcSampler(orbitRx, orbitRy);
+  const required = radii.map((radius, index) => radius + radii[(index + 1) % radii.length]! + BUBBLE_GAP);
+  const requiredLength = required.reduce((sum, distance) => sum + distance, 0);
+  if (requiredLength > sampler.perimeter) return null;
+  const slack = (sampler.perimeter - requiredLength) / radii.length;
+  const point = (index: number, arc: number) => {
+    const projectedTheta = sampler.thetaAtArc(arc);
+    const laneRx = orbitRx + directions[index] * offsetX;
+    const laneRy = orbitRy + directions[index] * offsetY;
+    const theta = Math.atan2(
+      (orbitRy / laneRy) * Math.sin(projectedTheta),
+      (orbitRx / laneRx) * Math.cos(projectedTheta),
+    );
+    return {
+      x: GALAXY_CX + laneRx * Math.cos(theta),
+      y: GALAXY_CY + laneRy * Math.sin(theta),
+    };
   };
 
   for (let phaseStep = 0; phaseStep < SUBGRADE_LANE_PACK_PHASES; phaseStep++) {
     const phase = referencePhase + (phaseStep / SUBGRADE_LANE_PACK_PHASES) * Math.PI * 2;
-    const gaps: number[] = [];
-    let theta = phase;
-    let complete = true;
-    for (let index = 0; index < radii.length - 1; index++) {
-      const gap = requiredGap(index, index + 1, theta);
-      if (gap == null) {
-        complete = false;
-        break;
-      }
-      gaps.push(gap);
-      theta += gap;
-    }
-    if (!complete) continue;
-    const closingGap = requiredGap(radii.length - 1, 0, theta);
-    if (closingGap == null) continue;
-    const requiredAngle = theta + closingGap - phase;
-    if (requiredAngle > Math.PI * 2) continue;
-    const slack = (Math.PI * 2 - requiredAngle) / radii.length;
+    let arc = sampler.arcAtTheta(phase);
     const placed: Array<{ x: number; y: number }> = [];
-    theta = phase;
     for (let index = 0; index < radii.length; index++) {
-      placed.push(point(index, theta));
-      if (index < gaps.length) theta += gaps[index] + slack;
+      placed.push(point(index, arc));
+      arc += required[index]! + slack;
     }
+
+    // Radial lanes must preserve the centerline packer's equal edge-to-edge
+    // guide-arc slack. Repacking in angle space pooled slack beside an ellipse's
+    // long-axis ends, opening a fillable bare arc after lane displacement.
     let overlaps = false;
     for (let i = 0; i < placed.length && !overlaps; i++) {
       for (let j = 0; j < i; j++) {

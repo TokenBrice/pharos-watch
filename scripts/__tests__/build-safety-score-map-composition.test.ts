@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   packEllipticalOrbit,
+  placeSubgradeRadialLanes,
   validateComposition,
   type CompositionOrbit,
   type CompositionRect,
@@ -227,6 +228,34 @@ describe("validateComposition — orbit integrity", () => {
     }));
 
     // The whole scene must be clean, not merely free of bare-arc strings.
+    expect(validateComposition({ orbits: [orbit("C", zone, bubbles)], chips: [] })).toEqual([]);
+  });
+
+  it("keeps radial subgrade lanes evenly composed on a census-heavy ellipse", () => {
+    const zone = {
+      innerRx: 415.3239472694313,
+      innerRy: 239.52932292421156,
+      outerRx: 594.586875056807,
+      outerRy: 316.12348297881755,
+    };
+    // This is the 2026-08-25 C-band shape at scale 1 with a census one mark
+    // above the live 126: enough distributed slack to expose angle-vs-arc drift.
+    const orbitRx = (zone.innerRx + zone.outerRx) / 2;
+    const orbitRy = (zone.innerRy + zone.outerRy) / 2;
+    const radii = Array.from({ length: 127 }, (_, index) => index === 112 ? 8.590876036344266 : 7.8125);
+    const grades = radii.map((_, index) => ["C+", "C", "C-"][index % 3]!);
+    const packed = packEllipticalOrbit(radii, orbitRx, orbitRy, 0.47);
+    expect(packed).not.toBeNull();
+
+    const lanes = placeSubgradeRadialLanes(packed!, radii, grades, zone);
+    expect(lanes).not.toBeNull();
+    const bubbles = lanes!.centers.map((center, index) => ({
+      id: `coin-${index}`,
+      cx: center.x,
+      cy: center.y,
+      r: radii[index]!,
+    }));
+
     expect(validateComposition({ orbits: [orbit("C", zone, bubbles)], chips: [] })).toEqual([]);
   });
 });
