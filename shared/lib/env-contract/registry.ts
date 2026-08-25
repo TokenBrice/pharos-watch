@@ -163,7 +163,7 @@ export const ENV_BINDINGS = [
   {
     key: "TRONGRID_API_KEY",
     valueType: "string",
-    description: "TronGrid API credential used by Tron blacklist sync and SunSwap exact-execution reads.",
+    description: "TronGrid API credential used by Tron blacklist sync and Tron live-reserve reads.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
