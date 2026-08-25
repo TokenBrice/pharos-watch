@@ -320,6 +320,39 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(admitted).toMatchObject({ evidenceClass: "static-validated" });
   });
 
+  it("refuses the audited fallback for a prudential issuer, which owns the higher rung", () => {
+    // The two builders partition on supervision, so a supervised issuer must
+    // never reach the lower rung and quietly lose its ceiling.
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(eligibleReserveMeta(), CLOCK_SEC)).toBeNull();
+  });
+
+  it("keeps the issuer and report dates on audited fallback evidence", () => {
+    // This is what makes an expired composition resolve to
+    // `published-evidence-expired` rather than `issuer-undisclosed`: emitting
+    // it as an anonymous standalone review would drop the publisher and blame
+    // the issuer for a document they did publish.
+    const metadata = eligibleReserveMeta({
+      mintAuthority: { ...eligibleReserveMeta().mintAuthority!, supervision: "attestation-only" },
+    });
+    const admitted = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(metadata, CLOCK_SEC);
+    expect(admitted).toMatchObject({ evidenceClass: "static-validated", provenance: "audited-fallback" });
+
+    const evidence = new ReviewEvidenceBuilder(metadata.id, CLOCK_SEC);
+    addReviewedStaticReserveEvidence(metadata, admitted, evidence, CLOCK_SEC);
+    const compiled = evidence.finish();
+    const emitted = compiled.researchEvidence.find(
+      (entry) => entry.sourceId === "stablecoin-meta.reviewed-audited-fallback-reserves",
+    );
+    expect(emitted).toMatchObject({
+      publishedBy: "issuer",
+      observedAtSec: Date.parse("2026-06-30T00:00:00.000Z") / 1_000,
+      publishedAtSec: Date.parse("2026-07-10T00:00:00.000Z") / 1_000,
+    });
+    expect(compiled.componentEvidence).toContainEqual(
+      expect.objectContaining({ componentKey: "reviewed-static-reserves" }),
+    );
+  });
+
   it("retains full confidence when the verified examination directly reconciles the reviewed composition", () => {
     const base = eligibleReserveMeta();
     const reportSource = base.proofOfReserves!.latestReport!.sources[0]!;
